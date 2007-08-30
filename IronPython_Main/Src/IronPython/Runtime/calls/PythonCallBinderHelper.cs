@@ -23,305 +23,608 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
 
-    class PythonCallBinderHelper<T> : BinderHelper<T, CallAction> {
-        private List<Type[]> _testTypes = new List<Type []>();
-        private object[] _args;
+    class PythonCallBinderHelper<T> : CallBinderHelper<T, CallAction> {
+        private List<Type[]> _testTypes = new List<Type[]>();
         private bool _canTemplate, _altVersion;
-        private List<object> _templateData;
 
         private static Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>> PythonCallTemplateBuilders = new Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>>();
 
-        public PythonCallBinderHelper(CodeContext context, CallAction action, object []args)
-            : base(context, action) {
-            _args = args;
+        public PythonCallBinderHelper(CodeContext context, CallAction action, object[] args)
+            : base(context, action, args) {
         }
 
-        public StandardRule<T> MakeRule() {
-            DynamicType dt = _args[0] as DynamicType;
+        public new StandardRule<T> MakeRule() {
+            DynamicType dt = Arguments[0] as DynamicType;
             if (dt != null) {
-                if (Action.IsSimple || Action.IsParamsCall()) {
-                    if (IsStandardDotNetType(dt)) {
-                        // If CreateInstance can't do it then we'll fall back to a dynamic call rule.
-                        // In the future CreateInstanceBinderHelper should always return a rule successfully.
-                        return new CreateInstanceBinderHelper<T>(Context, 
-                            CreateInstanceAction.Make(Action.ArgumentInfos)).MakeRule(_args) ?? 
-                                CallBinderHelper<T>.MakeDynamicCallRule(Action, Binder, CompilerHelpers.ObjectTypes(_args));
-                    } else if (IsMixedNewStyleOldStyle(dt)) {
-                        return MakeDynamicTypeRule(dt);
-                    } else {                                            
-                        _canTemplate = IsTemplatable(dt);
-                        DynamicType[] types = CompilerHelpers.ObjectTypes(_args);
-
-                        return MakePythonTypeCallRule(dt, types, ArrayUtils.RemoveFirst(types));
-                    }
+                if (IsStandardDotNetType(dt)) {
+                    return new CreateInstanceBinderHelper<T>(Context, CreateInstanceAction.Make(Action.ArgumentInfos), Arguments).MakeRule();
                 }
 
-                return MakeDynamicTypeRule(dt);
+                // TODO: this should move into DynamicType's IDynamicObject implementation when that exists
+                return MakePythonTypeCallRule(dt);
             }
 
-            return null;    // fall back to default implementation
+            // fall back to default implementation
+            return null;
         }
 
-        private StandardRule<T> MakePythonTypeCallRule(DynamicType creating, DynamicType[] types, DynamicType[] argTypes) {
-            StandardRule<T> rule = new StandardRule<T>();
-            // TODO: Pass in MethodCandidate when we support kw-args
-            if (!TooManyArgsForDefaultNew(creating, ArgumentCount(Action, rule) > 0)) {
-                Expression createExpr = MakeCreationExpression(creating, rule);
-                if (createExpr != null) {
-                    Statement target = MakeInitTarget(creating, rule, createExpr);
+        private StandardRule<T> MakePythonTypeCallRule(DynamicType creating) {
+            List<Expression> body = new List<Expression>();
+            ArgumentValues ai = MakeArgumentInfo();
+            NewAdapter newAdapter;
+            InitAdapter initAdapter;
 
-                    if (target != null) {
-                        Debug.Assert(!_canTemplate || _testTypes.Count == 0);
-                        rule.SetTest(
-                            Ast.AndAlso(
-                                Ast.TypeIs(rule.Parameters[0], typeof(DynamicType)),
-                                CreateInstanceBinderHelper<T>.MakeTypeTestForParams(Action, rule, _args, 
-                                    Ast.AndAlso(
-                                        MakeTypeTestForCreateInstance(creating, rule),
-                                        MakeNecessaryTests(rule, 
-                                            _testTypes,
-                                            ArrayUtils.Insert(
-                                                rule.Parameters[0], 
-                                                CallBinderHelper<T>.GetArgumentExpressions(null, Action, rule, _args)))
-                                    )
-                                )                                    
-                            )
-                        );
+            if (TooManyArgsForDefaultNew(creating, ai.Expressions.Length > 0)) {
+                return MakeIncorrectArgumentsRule(ai);
+            }
 
-                        rule.SetTarget(target);
+            GetAdapters(creating, ai, out newAdapter, out initAdapter);
 
-                        if (_canTemplate) {
-                            CopyTemplateToRule(Context, creating, rule);
-                        }
+            // get the expression for calling __new__
+            Expression createExpr = newAdapter.GetExpression(Binder, Rule);
+            if (createExpr == null) {
+                Rule.SetTarget(newAdapter.GetError(Binder, Rule));
+                MakeErrorTests(ai);
+                return Rule;
+            }
 
-                        return rule;
-                    }
+            // then get the statement for calling __init__
+            Variable allocatedInst = Rule.GetTemporary(createExpr.ExpressionType, "newInst");
+            Expression tmpRead = Ast.Read(allocatedInst);
+            Expression initCall = initAdapter.MakeInitCall(Binder, Rule, tmpRead);
+            if (initCall == null) {
+                // init can fail but if __new__ returns a different type
+                // no exception is raised.
+                initCall = Ast.Void(initAdapter.GetError(Binder, Rule));
+            }
+
+            // then get the call to __del__ if we need one
+            if (HasFinalizer(creating)) {
+                body.Add(Ast.Assign(allocatedInst, createExpr));
+                body.Add(GetFinalizerInitialization(allocatedInst));
+            }
+
+            // add the call to init if we need to
+            if (initCall != tmpRead) {
+                if (body.Count == 0) body.Add(Ast.Assign(allocatedInst, createExpr));
+
+                if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.ExpressionType)) {
+                    // return type of object, we need to check the return type before calling __init__.
+                    body.Add(
+                        Ast.Condition(
+                            Ast.TypeIs(Ast.ReadDefined(allocatedInst), creating.UnderlyingSystemType),
+                            initCall,
+                            Ast.Null()
+                        )
+                    );
+                } else {
+                    // just call the __init__ method, no type check necessary (TODO: need null check?)
+                    body.Add(initCall);
                 }
             }
-            return MakeDynamicTypeRule(creating);
-        }       
 
-        /// <summary>
-        /// Calls the .NET ctor or __new__ for the creating type.    Returns null if the types aren't compatbile
-        /// w/ the arguments.
-        /// </summary>
-        private Expression MakeCreationExpression(DynamicType creating, StandardRule<T> rule) {
-            Expression createExpr = null;
-            DynamicTypeSlot newInst;
+            // and build the target from everything we have
+            if (body.Count == 0) {
+                // no init or del
+                Rule.SetTarget(Rule.MakeReturn(Binder, createExpr));
+            } else {
+                body.Add(Ast.Read(allocatedInst));
+                Rule.SetTarget(Rule.MakeReturn(Binder, Ast.Comma(body.Count - 1, body.ToArray())));
+            }
+
+            MakeTests(ai, newAdapter, initAdapter);
+
+            if (_canTemplate) {
+                CopyTemplateToRule(Context, creating, newAdapter.TemplateKey, initAdapter.TemplateKey);
+            }
+
+            return Rule;
+        }
+
+        #region Adapter support
+
+        private void GetAdapters(DynamicType creating, ArgumentValues ai, out NewAdapter newAdapter, out InitAdapter initAdapter) {
+            DynamicTypeSlot newInst, init;
             creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
-            if (newInst == InstanceOps.New) {
-                // parameterless ctor, call w/ no args
-                MethodCandidate cand = creating.IsSystemType ?
-                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, ArrayUtils.EmptyTypes) :
-                    CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder, creating, new Type[] { typeof(DynamicType) });
+            creating.TryResolveSlot(Context, Symbols.Init, out init);
+
+            newAdapter = GetNewAdapter(ai, creating, newInst);
+            initAdapter = GetInitAdapter(ai, creating, init);
+            _canTemplate = newAdapter.TemplateKey != null && initAdapter.TemplateKey != null;
+        }
+
+        private InitAdapter GetInitAdapter(ArgumentValues ai, DynamicType creating, DynamicTypeSlot init) {
+            if (IsMixedNewStyleOldStyle(creating)) {
+                return new MixedInitAdapter(ai, Action);
+            } else if ((init == InstanceOps.Init && !HasFinalizer(creating)) || (creating == TypeCache.DynamicType && Arguments.Length == 2)) {
+                return new DefaultInitAdapter(ai, Action);
+            } else if (init is BuiltinMethodDescriptor) {
+                return new BuiltinInitAdapter(ai, Action, ((BuiltinMethodDescriptor)init).Template);
+            } else if (init is BuiltinFunction) {
+                return new BuiltinInitAdapter(ai, Action, (BuiltinFunction)init);
+            } else {
+                return new InitAdapter(ai, Action);
+            }
+        }
+
+        private NewAdapter GetNewAdapter(ArgumentValues ai, DynamicType creating, DynamicTypeSlot newInst) {
+            if (IsMixedNewStyleOldStyle(creating)) {
+                return new MixedNewAdapter(ai, Action);
+            } else if (newInst == InstanceOps.New) {
+                return new DefaultNewAdapter(ai, Action, creating);
+            } else if (newInst is ConstructorFunction) {
+                return new ConstructorNewAdapter(ai, Action, ((ConstructorFunction)newInst));
+            } else if (newInst is BuiltinFunction) {
+                return new BuiltinNewAdapter(ai, Action, ((BuiltinFunction)newInst));
+            }
+
+            return new NewAdapter(ai, Action);
+        }
+
+        private class CallAdapter {
+            private Type[] _testTypes;
+            private CallAction _action;
+            private ArgumentValues _argInfo;
+
+            public CallAdapter(ArgumentValues ai, CallAction action) {
+                _action = action;
+                _argInfo = ai;
+            }
+
+            public Type[] TestTypes {
+                get { return _testTypes; }
+                set { _testTypes = value; }
+            }
+
+            protected CallAction Action {
+                get { return _action; }
+            }
+
+            protected ArgumentValues Arguments {
+                get { return _argInfo; }
+            }
+
+            /// <summary>
+            /// Returns the key to use for templating or null if templating isn't support.
+            /// 
+            /// Typical return value is a value type or reference type which has value equality
+            /// semantics to indicate whether or not this is compatible with another templated rule.
+            /// </summary>
+            public virtual object TemplateKey {
+                get {
+                    return null;
+                }
+            }
+        }
+
+        private class ArgumentValues {
+            /// <summary>
+            /// The actual arguments passed for the call, including the callable object.
+            /// </summary>
+            public object[] Arguments;
+            /// <summary>
+            /// The expression arguments for the call, expanded to include params / dict params arguments.  Excludes the callable object.
+            /// </summary>
+            public Expression[] Expressions;
+            /// <summary>
+            /// The names of named arguments, expanded to include dictionary params arguments.
+            /// </summary>
+            public SymbolId[] Names;
+            /// <summary>
+            /// The types of the arguments excluding the callable object.  This is expanded to include the types in a
+            /// params array and params dictionary as well.
+            /// </summary>
+            public Type[] Types;
+
+            public ArgumentValues(object[] args, Expression[] argExprs, SymbolId[] names, Type[] types) {
+                Arguments = args;
+                Expressions = argExprs;
+                Names = names;
+                Types = types;
+            }
+        }
+
+        #endregion
+
+        #region __new__ adapters
+
+        private class NewAdapter : CallAdapter {
+            public NewAdapter(ArgumentValues ai, CallAction action)
+                : base(ai, action) {
+            }
+
+            public virtual Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
+                return Ast.Action.Call(
+                        GetDynamicNewAction(),
+                        typeof(object),
+                        ArrayUtils.Insert<Expression>(
+                            Ast.Call(
+                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                typeof(DynamicMixin).GetMethod("GetMember"),
+                                Ast.CodeContext(),
+                                Ast.Null(),
+                                Ast.Constant(Symbols.NewInst)
+                            ),                        
+                            rule.Parameters
+                        )
+                    );
+            }
+
+            public virtual Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+                throw new InvalidOperationException();
+            }
+
+            protected CallAction GetDynamicNewAction() {
+                if (Action.IsSimple) return CallAction.Simple;
+
+                return CallAction.Make(ArrayUtils.Insert(ArgumentInfo.Simple, Action.ArgumentInfos));
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can template
+                    return 1;
+                }
+            }
+        }
+
+        private class DefaultNewAdapter : NewAdapter {
+            private DynamicType _creating;
+
+            public DefaultNewAdapter(ArgumentValues ai, CallAction action, DynamicType creating)
+                : base(ai, action) {
+                _creating = creating;
+            }
+
+            public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
+                MethodCandidate cand = _creating.IsSystemType ?
+                    GetTypeConstructor(binder, _creating, ArrayUtils.EmptyTypes) :
+                    GetTypeConstructor(binder, _creating, new Type[] { typeof(DynamicType) });
 
                 Debug.Assert(cand != null);
-                createExpr = cand.Target.MakeExpression(Binder,
+                return cand.Target.MakeExpression(binder,
                     rule,
-                    creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
-                    creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(DynamicType) });
-            } else if (newInst is ConstructorFunction) {
-                // ctor w/ parameters, call w/ args
-                Type [] types = creating.IsSystemType ?
-                    CallBinderHelper<T>.GetArgumentTypes(Action, _args) :
-                    ArrayUtils.Insert(typeof(DynamicType), CallBinderHelper<T>.GetArgumentTypes(Action, _args));
+                    _creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
+                    _creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(DynamicType) });
+            }
 
-                MethodCandidate cand = CreateInstanceBinderHelper<T>.GetTypeConstructor(Binder,
-                        creating,
-                        types);
+            public override object TemplateKey {
+                get {
+                    // we can template
+                    return RuntimeHelpers.True;
+                }
+            }
+        }
+
+        private class ConstructorNewAdapter : NewAdapter {
+            private DynamicType _creating;
+            private ConstructorFunction _ctor;
+
+            public ConstructorNewAdapter(ArgumentValues ai, CallAction action, ConstructorFunction ctor)
+                : base(ai, action) {
+                _creating = (DynamicType)ai.Arguments[0];
+                _ctor = ctor;
+            }
+
+            public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
+                Type[] types = _creating.IsSystemType ? Arguments.Types : ArrayUtils.Insert(typeof(DynamicType), Arguments.Types);
+
+                MethodBinder mb = GetMethodBinder(binder);
+                MethodCandidate cand = mb.MakeBindingTarget(CallType.None, types);
 
                 if (cand != null) {
-                    createExpr = cand.Target.MakeExpression(Binder,
+                    return cand.Target.MakeExpression(binder,
                         rule,
-                        creating.IsSystemType ?
-                            CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, _args) :
-                            ArrayUtils.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(cand, Action, rule, _args)));
+                        _creating.IsSystemType ? Arguments.Expressions : ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions));
                 }
-            } else {
-                // type has __new__, call that w/ the cls parameter
-                BuiltinFunction bf = newInst as BuiltinFunction;
-                if (bf != null) {
-                    createExpr = CallPythonNew(creating, bf, rule);
-                } else {
-                    createExpr = CallResolvedNew(rule);
+                return null;
+            }
+
+            private MethodBinder GetMethodBinder(ActionBinder binder) {
+                return MethodBinder.MakeBinder(binder, DynamicTypeOps.GetName(_creating), _creating.UnderlyingSystemType.GetConstructors(), BinderType.Normal, Arguments.Names);
+            }
+
+            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+                MethodBinder mb = GetMethodBinder(binder);
+                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _creating.UnderlyingSystemType.GetConstructors(), rule, Arguments.Arguments);
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can't template
+                    return null;
                 }
             }
-            return createExpr;
         }
 
-        private ActionExpression CallResolvedNew(StandardRule<T> rule) {
-            return Ast.Action.Call(
-                GetDynamicNewAction(),
-                typeof(object),
-                ArrayUtils.Insert<Expression>(
-                    Ast.Call(
-                        Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
-                        typeof(DynamicMixin).GetMethod("GetMember"),
-                        new Expression[] { 
-                            Ast.CodeContext(),
-                            Ast.Null(),
-                            Ast.Constant(Symbols.NewInst),
-                        }
+        private class BuiltinNewAdapter : NewAdapter {
+            private DynamicType _creating;
+            private BuiltinFunction _ctor;
+
+            public BuiltinNewAdapter(ArgumentValues ai, CallAction action, BuiltinFunction ctor)
+                : base(ai, action) {
+                _creating = (DynamicType)ai.Arguments[0];
+                _ctor = ctor;
+            }
+
+            public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
+                Type[] types = ArrayUtils.Insert(typeof(DynamicType), Arguments.Types);
+
+                MethodBinder mb = GetMethodBinder(binder);
+
+                Type[] testTypes;
+                MethodCandidate mc = mb.MakeBindingTarget(CallType.None, types, out testTypes);
+                Expression[] parameters = ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions);
+                if (mc != null) {
+                    if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
+                    return mc.Target.MakeExpression(binder, rule, parameters);
+                }
+                return null;
+
+            }
+
+            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+                MethodBinder mb = GetMethodBinder(binder);
+                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _ctor.Targets, rule, Arguments.Arguments);
+            }
+
+            private MethodBinder GetMethodBinder(ActionBinder binder) {
+                return MethodBinder.MakeBinder(binder, DynamicTypeOps.GetName(_creating), _ctor.Targets, BinderType.Normal, Arguments.Names);
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can't template
+                    return null;
+                }
+            }
+        }
+
+        private class MixedNewAdapter : NewAdapter {
+            public MixedNewAdapter(ArgumentValues ai, CallAction action)
+                : base(ai, action) {
+            }
+
+
+            public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
+                return Ast.Action.Call(
+                        GetDynamicNewAction(),
+                        typeof(object),
+                        ArrayUtils.Insert<Expression>(
+                            Ast.Call(
+                                null,
+                                typeof(PythonOps).GetMethod("GetMixedMember"),
+                                Ast.CodeContext(),
+                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Constant(null),
+                                Ast.Constant(Symbols.NewInst)
+                            ),
+                            rule.Parameters
+                        )
+                    );
+            }
+        }
+
+        #endregion
+
+        #region __init__ adapters
+
+        private class InitAdapter : CallAdapter {
+            public InitAdapter(ArgumentValues ai, CallAction action)
+                : base(ai, action) {
+            }
+
+            public virtual Expression MakeInitCall(ActionBinder binder, StandardRule<T> rule, Expression createExpr) {
+                return
+                    Ast.Action.Call(
+                        Action,
+                        typeof(object),
+                        ArrayUtils.Insert<Expression>(
+                            Ast.Call(
+                                null,
+                                typeof(PythonOps).GetMethod("GetInitMember"),
+                                Ast.CodeContext(),
+                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                createExpr
+                            ),
+                            ArrayUtils.RemoveFirst(rule.Parameters)
+                        )
+                    );
+            }
+
+            public virtual Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+                throw new InvalidOperationException();
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can template
+                    return 1;
+                }
+            }
+        }
+
+        private class DefaultInitAdapter : InitAdapter {
+            public DefaultInitAdapter(ArgumentValues ai, CallAction action)
+                : base(ai, action) {
+            }
+
+            public override Expression MakeInitCall(ActionBinder binder, StandardRule<T> rule, Expression createExpr) {
+                // default init, we can just return the value from __new__
+                return createExpr;
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can template
+                    return RuntimeHelpers.True;
+                }
+            }
+        }
+
+        private class BuiltinInitAdapter : InitAdapter {
+            private BuiltinFunction _method;
+            private DynamicType _creating;
+
+            public BuiltinInitAdapter(ArgumentValues ai, CallAction action, BuiltinFunction method)
+                : base(ai, action) {
+                _method = method;
+                _creating = (DynamicType)ai.Arguments[0];
+            }
+
+            public override Expression MakeInitCall(ActionBinder binder, StandardRule<T> rule, Expression createExpr) {
+                if (_method == InstanceOps.Init.Template) {
+                    // we have a default __init__, don't call it.
+                    return createExpr;
+                }
+
+                Type[] testTypes;
+                MethodBinder mb = GetMethodBinder(binder);
+                MethodCandidate mc = mb.MakeBindingTarget(CallType.None, ArrayUtils.Insert(_creating.UnderlyingSystemType, Arguments.Types), out testTypes);
+
+                if (mc != null) {
+                    if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
+                    return mc.Target.MakeExpression(
+                            binder,
+                            rule,
+                            ArrayUtils.Insert<Expression>(createExpr, Arguments.Expressions)
+                        );
+
+                } else {
+                    testTypes = Arguments.Types;
+                }
+
+                return null;
+            }
+
+            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+                MethodBinder mb = GetMethodBinder(binder);
+
+                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _method.Targets, rule, Arguments.Arguments);
+            }
+
+            private MethodBinder GetMethodBinder(ActionBinder binder) {
+                return MethodBinder.MakeBinder(binder, "__init__", _method.Targets, BinderType.Normal, Arguments.Names);
+            }
+
+            public override object TemplateKey {
+                get {
+                    // we can't template
+                    return null;
+                }
+            }
+        }
+
+        private class MixedInitAdapter : InitAdapter {
+            public MixedInitAdapter(ArgumentValues ai, CallAction action)
+                : base(ai, action) {
+            }
+
+            public override Expression MakeInitCall(ActionBinder binder, StandardRule<T> rule, Expression createExpr) {
+                return
+                    Ast.Action.Call(
+                        Action,
+                        typeof(object),
+                        ArrayUtils.Insert<Expression>(
+                            Ast.Call(
+                                null,
+                                typeof(PythonOps).GetMethod("GetMixedMember"),
+                                Ast.CodeContext(),
+                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                createExpr,
+                                Ast.Constant(Symbols.Init)
+                            ),
+                            ArrayUtils.RemoveFirst(rule.Parameters)
+                        )
+                    );
+            }
+        }
+
+        #endregion
+
+        #region Misc. Helpers
+
+        private StandardRule<T> MakeIncorrectArgumentsRule(ArgumentValues ai) {
+            Rule.SetTarget(
+                Rule.MakeError(
+                    Binder,
+                    Ast.New(
+                        typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                        Ast.Constant("default __new__ does not take parameters")
+                    )
+                )
+            );
+            MakeErrorTests(ai);
+            return Rule;
+        }
+
+        private void MakeTests(ArgumentValues ai, NewAdapter newAdapter, InitAdapter initAdapter) {
+            MakeSplatTests();
+
+            Rule.SetTest(
+                Ast.AndAlso(
+                    Ast.AndAlso(
+                        Test,
+                        MakeNecessaryTests(Rule, new Type[][] { newAdapter.TestTypes, initAdapter.TestTypes }, ai.Expressions)
                     ),
-                    rule.Parameters
+                    MakeTypeTestForCreateInstance((DynamicType)Arguments[0], Rule)
                 )
             );
         }
 
-        private CallAction GetDynamicNewAction() {
-            if (Action.IsSimple) return CallAction.Simple;
-
-            return CallAction.Make(ArrayUtils.Insert(ArgumentInfo.Simple, Action.ArgumentInfos));
+        private void MakeErrorTests(ArgumentValues ai) {
+            MakeSplatTests();
+            Rule.SetTest(
+                Ast.AndAlso(
+                    Ast.AndAlso(
+                        Test,
+                        MakeNecessaryTests(Rule, new Type[][] { ai.Types }, ai.Expressions)
+                    ),
+                    MakeTypeTestForCreateInstance((DynamicType)Arguments[0], Rule)
+                )
+            );
         }
 
-        /// <summary>
-        /// Generates code to call the __init__ method.  Returns null if the call is imcompatible.
-        /// </summary>
-        private Statement MakeInitTarget(DynamicType creating, StandardRule<T> rule, Expression createExpr) {
-            DynamicTypeSlot init;
-            creating.TryResolveSlot(Context, Symbols.Init, out init);
-            bool hasDel = HasFinalizer(creating);
+        private bool IsStandardDotNetType(DynamicType type) {
+            return type.IsSystemType &&
+                !PythonTypeCustomizer.IsPythonType(type.UnderlyingSystemType) &&            
+                !type.UnderlyingSystemType.IsDefined(typeof(PythonSystemTypeAttribute), true) &&
+                !typeof(Delegate).IsAssignableFrom(type.UnderlyingSystemType) &&
+                !type.UnderlyingSystemType.IsArray;
+        }
 
-            Statement target = null;
-            if ((init == InstanceOps.Init && !hasDel) || (creating == TypeCache.DynamicType && _args.Length == 2)) {
-                // default init, we can just return the value from __new__
-                target = rule.MakeReturn(Binder, createExpr);
-            } else {
-                Variable variable = rule.GetTemporary(createExpr.ExpressionType, "newInst");
-                Expression assignment = Ast.Assign(variable, createExpr);
-                Expression initCall = null;
+        private Expression GetFinalizerInitialization(Variable variable) {
+            return Ast.Call(
+                null,
+                typeof(PythonOps).GetMethod("InitializeForFinalization"),
+                Ast.ReadDefined(variable)
+            );
+        }
 
-                // get the target for the __init__ call, if we can
-                BuiltinMethodDescriptor bmd = init as BuiltinMethodDescriptor;
-                if (bmd != null) {
-                    initCall = CallInitBuiltin(creating, bmd, rule, variable);
-                } else {
-                    // call init w/ result from new
-                    initCall = CallInitDynamic(rule, variable);
-                }
+        private bool HasFinalizer(DynamicType creating) {
+            DynamicTypeSlot del;
+            bool hasDel = creating.TryResolveSlot(Context, Symbols.Unassign, out del);
+            return hasDel;
+        }
 
-                // make the appropriate call to the __init__ method
-                if (initCall != null) {
-                    Statement body = GetTargetWithOptionalFinalization(hasDel, variable, initCall);
-
-                    if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.ExpressionType)) {
-                        // return type of object, we need to check the return type before calling __init__.
-                        target = CallInitChecked(creating, rule, variable, assignment, body);
-                    } else {
-                        // just call the __init__ method, no type check necessary (TODO: need null check?)
-                        target = CallInitUnchecked(rule, variable, assignment, body);
+        private static bool IsMixedNewStyleOldStyle(DynamicType dt) {
+            if (!Mro.IsOldStyle(dt)) {
+                foreach (DynamicType baseType in dt.ResolutionOrder) {
+                    if (Mro.IsOldStyle(baseType)) {
+                        // mixed new-style/old-style class, we can't handle
+                        // __init__ in an old-style class yet (it doesn't show
+                        // up in a slot).
+                        return true;
                     }
                 }
-            }
-
-            return target;
-        }
-
-        private Statement GetTargetWithOptionalFinalization(bool hasDel, Variable variable, Expression initCall) {
-            Statement body = Ast.Statement(initCall);
-            if (hasDel) {
-                body = Ast.Block(
-                    body,
-                    Ast.Statement(
-                        Ast.Call(
-                            null,
-                            typeof(PythonOps).GetMethod("InitializeForFinalization"),
-                            Ast.ReadDefined(variable)
-                        )
-                    )
-                );
-            }
-
-            return body;
-        }
-
-        private BlockStatement CallInitUnchecked(StandardRule<T> rule, Variable variable, Expression assignment, Statement body) {
-            return Ast.Block(
-                Ast.Statement(assignment),
-                body,
-                rule.MakeReturn(Binder, Ast.ReadDefined(variable))
-            );
-        }
-
-        private BlockStatement CallInitChecked(DynamicType creating, StandardRule<T> rule, Variable variable, Expression assignment, Statement body) {
-            return Ast.Block(
-                Ast.Statement(assignment),
-                Ast.IfThen(
-                    Ast.TypeIs(Ast.ReadDefined(variable), creating.UnderlyingSystemType),
-                    body
-                ),
-                rule.MakeReturn(Binder, Ast.ReadDefined(variable))
-            );
-        }
-
-        private Expression CallInitBuiltin(DynamicType creating, BuiltinMethodDescriptor bmd, StandardRule<T> rule, Variable variable) {
-            Expression initCall = null;
-            if (bmd == InstanceOps.Init) {
-                // we have a default __init__, don't call it.
-                initCall = Ast.Void(Ast.Empty());
-            } else {
-                MethodBinder mb = MethodBinder.MakeBinder(Binder, "__init__", bmd.Template.Targets, BinderType.Normal);
-                Type []testTypes;
-                MethodCandidate mc = mb.MakeBindingTarget(CallType.None,
-                    ArrayUtils.Insert(creating.UnderlyingSystemType, CallBinderHelper<T>.GetArgumentTypes(Action, _args)), out testTypes);
-                if (mc != null) {
-                    _testTypes.Add(testTypes);
-                    initCall = mc.Target.MakeExpression(Binder,
-                        rule,
-                        ArrayUtils.Insert<Expression>(Ast.Read(variable), CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, _args)));
-                }
-            }
-            return initCall;
-        }
-
-        private ActionExpression CallInitDynamic(StandardRule<T> rule, Variable self) {
-            return Ast.Action.Call(
-                Action,
-                typeof(object),
-                ArrayUtils.Insert<Expression>(
-                    Ast.Call(
-                        Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
-                        typeof(DynamicMixin).GetMethod("GetMember"),
-                        Ast.CodeContext(),
-                        Ast.ReadDefined(self),
-                        Ast.Constant(Symbols.Init)
-                    ),
-                    ArrayUtils.RemoveFirst(rule.Parameters)
-                )
-            );
-        }
-
-        /// <summary>
-        /// Checks if we have a default new and init - in this case if we have any
-        /// arguments we don't allow the call.
-        /// </summary>
-        private bool TooManyArgsForDefaultNew(DynamicType creating, bool hasArgs) {
-            if (hasArgs) {
-                return HasDefaultNewAndInit(creating);
-            }
-            return false;
-        }
-
-        private bool IsTemplatable(DynamicType creating) {
-            if (creating == TypeCache.DynamicType) return false;
-
-            if (!creating.IsSystemType && !HasFinalizer(creating)) {
-                DynamicTypeSlot newInst, init;
-                creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
-                creating.TryResolveSlot(Context, Symbols.Init, out init);
-
-                if (init != InstanceOps.Init && init is BuiltinMethodDescriptor) return false;
-                if (newInst != InstanceOps.New && (newInst is ConstructorFunction || newInst is BuiltinFunction)) return false;
-
-                return true;
             }
             return false;
         }
@@ -342,132 +645,37 @@ namespace IronPython.Runtime.Calls {
             return HasDefaultNew(creating) && HasDefaultInit(creating);
         }
 
-        private bool HasFinalizer(DynamicType creating) {
-            DynamicTypeSlot del;
-            bool hasDel = creating.TryResolveSlot(Context, Symbols.Unassign, out del);
-            return hasDel;
-        }
-
         /// <summary>
-        /// Generates an Expression which calls the Python __new__ method w/ the class parameter
+        /// Checks if we have a default new and init - in this case if we have any
+        /// arguments we don't allow the call.
         /// </summary>
-        private Expression CallPythonNew(DynamicType creating, BuiltinFunction newInst, StandardRule<T> rule) {
-            Type[] types = ArrayUtils.Insert(typeof(DynamicType), CallBinderHelper<T>.GetArgumentTypes(Action, _args));
-
-            MethodBinder mb = MethodBinder.MakeBinder(Binder,
-                DynamicTypeOps.GetName(creating),
-                newInst is ConstructorFunction ? ((ConstructorFunction)newInst).ConstructorTargets : newInst.Targets,
-                BinderType.Normal);
-
-            Type[] testTypes;
-            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, types, out testTypes);
-            Expression[] parameters = ArrayUtils.Insert(rule.Parameters[0], CallBinderHelper<T>.GetArgumentExpressions(mc, Action, rule, _args));
-            Expression createExpr = null;
-            if (mc != null) {
-                _testTypes.Add(testTypes);
-                createExpr = mc.Target.MakeExpression(Binder, rule, parameters);
-            }
-            return createExpr;
-        }
-
-        private bool IsStandardDotNetType(DynamicType type) {
-            return type.IsSystemType &&
-                !PythonTypeCustomizer.IsPythonType(type.UnderlyingSystemType) &&            // TODO: Remove Python specific checks
-                !typeof(Delegate).IsAssignableFrom(type.UnderlyingSystemType) &&
-                !type.UnderlyingSystemType.IsArray;   
-        }
-
-        private StandardRule<T> MakeDynamicTypeRule(DynamicType dt) {
-            DynamicType[] types = CompilerHelpers.ObjectTypes(_args);
-            if (Action != CallAction.Simple) {
-                return CallBinderHelper<T>.MakeDynamicCallRule(Action, Binder, types);
-            }
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, String.Format("dynamic type rule {0}", dt.Name));
-            if (dt.GetType() != typeof(DynamicType)) {
-                return CallBinderHelper<T>.MakeDynamicCallRule(Action, Binder, types);
-            }
-
-            StandardRule<T> rule = new StandardRule<T>();
-            Expression[] exprs = rule.Parameters;
-            Expression[] finalExprs = ArrayUtils.RemoveFirst(exprs);
-
-            rule.SetTest(
-                Ast.AndAlso(
-                    Ast.TypeIs(rule.Parameters[0], typeof(DynamicType)), 
-                    CreateInstanceBinderHelper<T>.MakeTypeTestForCreateInstance(dt, rule)
-                )
-            );
-
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.Call(
-                        null,
-                        typeof(DynamicTypeOps).GetMethod("CallWorker", new Type[] { typeof(CodeContext), typeof(DynamicType), typeof(object[]) }),
-                        Ast.CodeContext(),
-                        Ast.Cast(rule.Parameters[0], typeof(DynamicType)),
-                        Ast.NewArray(typeof(object[]), finalExprs)
-                    )
-                )
-            );
-
-            return rule;
-        }
-
-        private static bool IsMixedNewStyleOldStyle(DynamicType dt) {
-            if (!Mro.IsOldStyle(dt)) {
-                foreach (DynamicType baseType in dt.ResolutionOrder) {
-                    if (Mro.IsOldStyle(baseType)) {
-                        // mixed new-style/old-style class, we can't handle
-                        // __init__ in an old-style class yet (it doesn't show
-                        // up in a slot).
-                        return true;
-                    }
-                }
+        private bool TooManyArgsForDefaultNew(DynamicType creating, bool hasArgs) {
+            if (hasArgs) {
+                return HasDefaultNewAndInit(creating);
             }
             return false;
         }
 
-        private struct ShareableTemplateKey : IEquatable<ShareableTemplateKey> {
-            private Type _type;
-            private bool _altVersion, _hasDefaultInit, _hasDefaultNew;
-            private Action _action;
+        /// <summary>
+        /// Generates an expression which calls a .NET constructor directly.
+        /// </summary>
+        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, Type[] argTypes) {
+            // type has no __new__ override, call .NET ctor directly
+            MethodBinder mb = MethodBinder.MakeBinder(binder,
+                DynamicTypeOps.GetName(creating),
+                creating.UnderlyingSystemType.GetConstructors(),
+                BinderType.Normal);
 
-            public ShareableTemplateKey(Action action, Type type, bool altVersion, bool hasDefaultInit, bool hasDefaultNew) {
-                _type = type;
-                _altVersion = altVersion;
-                _hasDefaultInit = hasDefaultInit;
-                _hasDefaultNew = hasDefaultNew;
-                _action = action;
+            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, argTypes);
+            if (mc != null && mc.Target.Method.IsPublic) {
+                return mc;
             }
-
-            #region IEquatable<ShareableTemplateKey> Members
-
-            public bool Equals(ShareableTemplateKey other) {
-                return other._action == _action &&
-                    other._type == _type &&
-                    other._altVersion == _altVersion &&
-                    other._hasDefaultInit == _hasDefaultInit &&
-                    other._hasDefaultNew == _hasDefaultNew;
-            }
-
-            #endregion
-        }
-        private void CopyTemplateToRule(CodeContext context, DynamicType t, StandardRule<T> rule) {
-            TemplatedRuleBuilder<T> builder;
-
-            lock (PythonCallTemplateBuilders) {
-                ShareableTemplateKey key = new ShareableTemplateKey(Action, t.UnderlyingSystemType, _altVersion, HasDefaultInit(t), HasDefaultNew(t));
-                if (!PythonCallTemplateBuilders.TryGetValue(key, out builder)) {
-                    PythonCallTemplateBuilders[key] = rule.GetTemplateBuilder();
-                    return;
-                }
-            }
-
-            builder.CopyTemplateToRule(context, rule, _templateData.ToArray());
+            return null;
         }
 
+        /// <summary>
+        /// Creates a test which tests the specific version of the type.
+        /// </summary>
         public Expression MakeTypeTestForCreateInstance(DynamicType creating, StandardRule<T> rule) {
             _altVersion = creating.Version == DynamicType.DynamicVersion;
             string vername = _altVersion ? "AlternateVersion" : "Version";
@@ -476,7 +684,6 @@ namespace IronPython.Runtime.Calls {
             Expression versionExpr;
             if (_canTemplate) {
                 versionExpr = rule.AddTemplatedConstant(typeof(int), version);
-                AddTemplateData(version);
             } else {
                 versionExpr = Ast.Constant(version);
             }
@@ -489,9 +696,83 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private void AddTemplateData(int version) {
-            if (_templateData == null) _templateData = new List<object>();
-            _templateData.Add(version);
+        private class ShareableTemplateKey : IEquatable<ShareableTemplateKey> {
+            private Type _type;
+            private bool _altVersion;
+            private Action _action;
+            private object[] _args;
+
+            public ShareableTemplateKey(Action action, Type type, bool altVersion, params object[] args) {
+                _type = type;
+                _altVersion = altVersion;
+                _args = args;
+                _action = action;
+            }
+
+            public override bool Equals(object obj) {
+                ShareableTemplateKey other = obj as ShareableTemplateKey;
+                if (other == null) return false;
+
+                return Equals(other);
+            }
+
+            public override int GetHashCode() {
+                int res = _type.GetHashCode() ^ _altVersion.GetHashCode() ^ _action.GetHashCode();
+                foreach (object o in _args) {
+                    res ^= o.GetHashCode();
+                }
+                return res;
+            }
+
+            #region IEquatable<ShareableTemplateKey> Members
+
+            public bool Equals(ShareableTemplateKey other) {
+                if (other._action == _action &&
+                    other._type == _type &&
+                    other._altVersion == _altVersion) {
+                    if (_args.Length == other._args.Length) {
+                        for (int i = 0; i < _args.Length; i++) {
+                            if (!_args[i].Equals(other._args[i])) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                }
+
+                return false;
+            }
+
+            #endregion
         }
+
+        private void CopyTemplateToRule(CodeContext context, DynamicType t, params object[] templateData) {
+            TemplatedRuleBuilder<T> builder;
+
+            lock (PythonCallTemplateBuilders) {
+                ShareableTemplateKey key =
+                    new ShareableTemplateKey(Action,
+                    t.UnderlyingSystemType,
+                    t.Version == DynamicMixin.DynamicVersion,
+                    ArrayUtils.Insert<object>(HasFinalizer(t), templateData));
+                if (!PythonCallTemplateBuilders.TryGetValue(key, out builder)) {
+                    PythonCallTemplateBuilders[key] = Rule.GetTemplateBuilder();
+                    return;
+                }
+            }
+
+            builder.CopyTemplateToRule(context, Rule);
+        }
+
+        private ArgumentValues MakeArgumentInfo() {
+            SymbolId[] names;
+            Type[] argumentTypes;
+            Expression[] argExpr = MakeArgumentExpressions();
+            GetArgumentNamesAndTypes(out names, out argumentTypes);
+            ArgumentValues ai = new ArgumentValues(Arguments, argExpr, names, argumentTypes);
+            return ai;
+        }
+
+        #endregion
     }
 }

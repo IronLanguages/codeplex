@@ -34,12 +34,12 @@ namespace IronPython.Runtime.Operations {
 
     public static class CharOps {
         [SpecialName]
-        public static bool Equal(char self, char other) {
+        public static bool Equals(char self, char other) {
             return self == other;
         }
 
         [SpecialName]
-        public static bool NotEqual(char self, char other) {
+        public static bool NotEquals(char self, char other) {
             return self != other;
         }
 

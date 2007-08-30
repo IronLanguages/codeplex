@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -45,8 +45,9 @@ namespace Microsoft.Scripting.Actions {
         internal Expression[] _parameters;
         internal Variable[] _paramVariables;
         internal List<Variable> _temps;
-        internal VariableReference[] _references; 
-        
+        internal VariableReference[] _references;
+        private bool _error;
+
         internal StandardRule() { }
 
         /// <summary>
@@ -78,7 +79,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public void SetTest(Expression test) {
-            if (test == null) throw new ArgumentNullException("test");
+            Contract.RequiresNotNull(test, "test");
             if (_test != null) throw new InvalidOperationException();
             _test = test;
         }
@@ -87,20 +88,26 @@ namespace Microsoft.Scripting.Actions {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.ExpressionType != typeof(void)) {
                 Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
-                return Ast.Return(
-                    Ast.Comma(
-                        1,
-                        Ast.Assign(variable, expr),
-                        binder.ConvertExpression(Ast.ReadDefined(variable), ReturnType)
-                    )
-                );
+                Expression read = Ast.ReadDefined(variable);
+                Expression conv = binder.ConvertExpression(read, ReturnType);
+                if (conv == read) return Ast.Return(expr);
+
+                return Ast.Return(Ast.Comma(1, Ast.Assign(variable, expr), conv));
             }
             return Ast.Return(binder.ConvertExpression(expr, ReturnType));
         }
 
         public Statement MakeError(ActionBinder binder, Expression expr) {
+            _error = true;
             return Ast.Statement(Ast.Throw(expr));
         }
+
+        public bool IsError {
+            get {
+                return _error;
+            }
+        }
+
 
         public void AddTest(Expression expression) {
             Assert.NotNull(expression);
@@ -112,7 +119,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public void SetTarget(Statement target) {
-            if (target == null) throw new ArgumentNullException("test");
+            Contract.RequiresNotNull(target, "target");
             _target = target;
         }
 
@@ -170,8 +177,8 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
     public class StandardRule<T> : StandardRule {
-        private int _templateCount;
         private SmallRuleSet<T> _ruleSet;
+        private List<object> _templateData;
 
         public StandardRule() {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
@@ -402,13 +409,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         #region Factory Methods
-        public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params DynamicType[] types) {
+        public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params Type[] types) {
             StandardRule<T> ret = new StandardRule<T>();
-            MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
-            
+            MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, types);
+
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(binder, ret, ret.Parameters, CompilerHelpers.ConvertToTypes(types))));
+            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(binder, ret, ret.Parameters, types)));
             return ret;
+        }
+
+        public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params DynamicType[] types) {
+            return Simple(binder, target, CompilerHelpers.ConvertToTypes(types));
         }
 
         public static StandardRule<T> TypeError(string message, params DynamicType[] types) {
@@ -464,7 +475,7 @@ namespace Microsoft.Scripting.Actions {
         /// Adds a templated constant that can enable code sharing across rules.
         /// </summary>
         public Expression AddTemplatedConstant(Type type, object value) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
             if (value != null) {
                 if (!type.IsAssignableFrom(value.GetType())) {
                     throw new ArgumentException("type must be assignable from value");
@@ -475,8 +486,11 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
+            if (_templateData == null) _templateData = new List<object>(1);
             Type genType = typeof(TemplatedValue<>).MakeGenericType(type);
-            object template = Activator.CreateInstance(genType, value, _templateCount++);
+            object template = Activator.CreateInstance(genType, value, _templateData.Count);
+
+            _templateData.Add(value);
             return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
         }
 
@@ -487,14 +501,21 @@ namespace Microsoft.Scripting.Actions {
         /// <returns></returns>
         public TemplatedRuleBuilder<T> GetTemplateBuilder() {
             if (_test == null || _target == null) throw new InvalidOperationException();
-            if (_templateCount == 0) throw new InvalidOperationException("no template arguments created");
+            if (_templateData == null) throw new InvalidOperationException("no template arguments created");
 
             return new TemplatedRuleBuilder<T>(this);
         }
 
         internal int TemplateParameterCount {
             get {
-                return _templateCount;
+                if (_templateData == null) return 0;
+                return _templateData.Count;
+            }
+        }
+
+        internal object[] TemplateData {
+            get {
+                return _templateData.ToArray();
             }
         }
 

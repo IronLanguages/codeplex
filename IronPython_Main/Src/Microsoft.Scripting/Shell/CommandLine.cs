@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -55,9 +55,9 @@ namespace Microsoft.Scripting.Shell {
         /// either run a single file, a single command, or enter the interactive loop.
         /// </summary>
         public int Run(IScriptEngine engine, IConsole console, ConsoleOptions options) {
-            if (engine == null) throw new ArgumentNullException("engine");
-            if (console == null) throw new ArgumentNullException("console");
-            if (options == null) throw new ArgumentNullException("options");
+            Contract.RequiresNotNull(engine, "engine");
+            Contract.RequiresNotNull(console, "console");
+            Contract.RequiresNotNull(options, "options");
 
             _engine = engine;
             _options = options;
@@ -96,13 +96,16 @@ namespace Microsoft.Scripting.Shell {
                 return -1;
 #endif
             } finally {
-                try {
-                    engine.Shutdown();
-                } catch (Exception e) {
-                    _console.WriteLine("", Style.Error);
-                    _console.WriteLine("Error in sys.exitfunc:", Style.Error);
-                    _console.Write(engine.FormatException(e), Style.Error);
-                }
+                Shutdown(engine);
+            }
+        }
+
+        protected virtual void Shutdown(IScriptEngine engine) {
+            try {
+                engine.Shutdown();
+            } catch (Exception e) {
+                _console.WriteLine("", Style.Error);
+                _console.Write(engine.FormatException(e), Style.Error);
             }
         }
         
@@ -336,10 +339,11 @@ namespace Microsoft.Scripting.Shell {
 
                 string code = b.ToString();
 
-                InteractiveCodeProperties props = _engine.GetInteractiveCodeProperties(code);
+                SourceCodeProperties props = _engine.GetCodeProperties(code, SourceCodeKind.InteractiveCode);
 
-                if (InteractiveCodePropertiesEnum.IsValidAndComplete(props, allowIncompleteStatement))
-                    return code;
+                if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {
+                    return props != SourceCodeProperties.IsEmpty ? code : null;
+                }
 
                 if (_options.AutoIndent && _options.AutoIndentSize != 0) {
                     autoIndentSize = GetNextAutoIndentSize(code);

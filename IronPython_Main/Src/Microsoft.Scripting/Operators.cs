@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -104,9 +104,9 @@ namespace Microsoft.Scripting {
         ///<summary>Operator for performing ge</summary>
         GreaterThanOrEqual,
         ///<summary>Operator for performing eq</summary>
-        Equal,
+        Equals,
         ///<summary>Operator for performing ne</summary>
-        NotEqual,
+        NotEquals,
         ///<summary>Operator for performing lg</summary>
         LessThanGreaterThan,
         ///<summary>Operator for performing in-place add</summary>
@@ -340,12 +340,15 @@ namespace Microsoft.Scripting {
         RightShiftUnsigned,         //Operator for performing rshiftu
         InPlaceRightShiftUnsigned,  //Operator for performing in-place rshiftu
         ReverseRightShiftUnsigned,  //Operator for performing reverse rshiftu
+        RightShiftSigned,  
         Not,                        // boolean negation
-        PreFixIncrement,
-        PrefixDecrement,
-        PostFixIncrement,
-        PostfixDecrement,
+        Increment,
+        Decrement,
+        Assign,
         IsFalse,
+        Or,
+        And,
+        Comma,
 
         // TODO: What about these operators?  Should they go away?
         GetState,                   // Python reduce protocol

@@ -324,10 +324,10 @@ namespace IronPython.Runtime.Types {
                 foreach(MethodInfo mi in imap.TargetMethods) {
                     if (mi.Name.EndsWith("ValueEquals")) {
                         if (_equalsHelper == null) _equalsHelper = GetMethodSet("ValueEqualsMethod", 3);
-                        AddProtocolMethod(Symbols.OperatorEqual, mi.DeclaringType, _equalsHelper);
+                        AddProtocolMethod(Symbols.OperatorEquals, mi.DeclaringType, _equalsHelper);
                     } else if (mi.Name.EndsWith("ValueNotEquals")) {
                         if (_notEqualsHelper == null) _notEqualsHelper = GetMethodSet("ValueNotEqualsMethod", 3);
-                        AddProtocolMethod(Symbols.OperatorNotEqual, mi.DeclaringType, _notEqualsHelper);
+                        AddProtocolMethod(Symbols.OperatorNotEquals, mi.DeclaringType, _notEqualsHelper);
                     } else if (mi.Name.EndsWith("GetValueHashCode")) {
                         AddProtocolMethod(Symbols.Hash, "ValueHashMethod");
                     }
@@ -339,8 +339,8 @@ namespace IronPython.Runtime.Types {
                     equalsMethod.DeclaringType == sysType && 
                     (equalsMethod.Attributes & MethodAttributes.NewSlot)==0) {  
                   
-                    AddProtocolMethod(Symbols.OperatorEqual, "EqualsMethod");
-                    AddProtocolMethod(Symbols.OperatorNotEqual, "NotEqualsMethod");
+                    AddProtocolMethod(Symbols.OperatorEquals, "EqualsMethod");
+                    AddProtocolMethod(Symbols.OperatorNotEquals, "NotEqualsMethod");
                 }
 
                 MethodInfo getHashCode = sysType.GetMethod("GetHashCode", new Type[] {});

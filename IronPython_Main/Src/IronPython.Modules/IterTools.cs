@@ -196,7 +196,7 @@ namespace IronPython.Modules {
             private bool _fFinished = false;
             private object _key;
             private FastDynamicSite<object, object, object> _callSite;
-            private FastDynamicSite<object, object, bool> _eqSite = FastDynamicSite<object,object,bool>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Equal));
+            private FastDynamicSite<object, object, bool> _eqSite = FastDynamicSite<object,object,bool>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Equals));
 
             public GroupBy(object iterable) {
                 InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));

@@ -29,7 +29,7 @@ namespace IronPython.Runtime.Operations {
     public static class EnumOps {
 
         [SpecialName]
-        public static bool Equal(object self, object other) {
+        public static new bool Equals(object self, object other) {
             if (self is Enum) {
                 if (other is Enum) {
                     Type selfType = self.GetType();
@@ -62,8 +62,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
-        public static bool NotEqual(object self, object other) {
-            return !Equal(self, other);
+        public static bool NotEquals(object self, object other) {
+            return !Equals(self, other);
         }
 
         [SpecialName]

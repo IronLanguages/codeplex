@@ -52,11 +52,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(decimal x, decimal y) {
+        public static bool Equals(decimal x, decimal y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(decimal x, decimal y) {
+        public static bool NotEquals(decimal x, decimal y) {
             return x != y;
         }
 

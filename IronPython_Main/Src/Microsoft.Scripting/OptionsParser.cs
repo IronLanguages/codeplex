@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Generation;
 using System.Globalization;
 using System.Runtime.Serialization;
 using Microsoft.Scripting.Utils;
@@ -72,18 +73,18 @@ namespace Microsoft.Scripting {
         }
 
         public virtual ConsoleOptions GetDefaultConsoleOptions() {
-            throw new NotSupportedException();
+            return new ConsoleOptions();
         }
 
         public virtual EngineOptions GetDefaultEngineOptions() {
-            throw new NotSupportedException();
+            return new EngineOptions();
         }
 
         public IList<string> IgnoredArgs { get { return _ignoredArgs; } }
         
         /// <exception cref="InvalidOptionException">On error.</exception>
         public virtual void Parse(string[] args) {
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(args, "args");
 
             if (_globalOptions == null) _globalOptions = new ScriptDomainOptions();
 
@@ -101,7 +102,85 @@ namespace Microsoft.Scripting {
         }
 
         protected virtual void ParseArgument(string arg) {
-            throw new NotImplementedException();
+            Contract.RequiresNotNull(arg, "arg");
+
+            // the following extension switches are in alphabetic order
+            switch (arg) {
+                case "-c":
+                    ConsoleOptions.Command = PeekNextArg();
+                    break;
+
+                case "-h":
+                case "-help":
+                case "-?":
+                    ConsoleOptions.PrintUsageAndExit = true;
+                    IgnoreRemainingArgs();
+                    break;
+
+                case "-i": ConsoleOptions.Introspection = true; break;
+
+                case "-V":
+                    ConsoleOptions.PrintVersionAndExit = true;
+                    IgnoreRemainingArgs();
+                    break;
+
+                case "-O": GlobalOptions.DebugMode = false; break;
+                case "-D": GlobalOptions.EngineDebug = true; break;
+
+                case "-X:AssembliesDir":
+
+                    string dir = PopNextArg();
+
+                    if (!ScriptDomainManager.CurrentManager.PAL.DirectoryExists(dir))
+                        throw new System.IO.DirectoryNotFoundException(String.Format("Directory '{0}' doesn't exist.", dir));
+
+                    GlobalOptions.BinariesDirectory = dir;
+                    break;
+
+                case "-OO":
+                    GlobalOptions.DebugMode = false;
+                    GlobalOptions.StripDocStrings = true;
+                    break;
+
+                case "-X:Interpret": EngineOptions.InterpretedMode = true; break;
+                case "-X:Frames": GlobalOptions.Frames = true; break;
+                case "-X:GenerateAsSnippets": GlobalOptions.GenerateModulesAsSnippets = true; break;
+                case "-X:GenerateReleaseAssemblies": GlobalOptions.AssemblyGenAttributes &= ~AssemblyGenAttributes.GenerateDebugAssemblies; break;
+                case "-X:ILDebug": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.ILDebug; break;
+
+                case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
+                // TODO: #if !IRONPYTHON_WINDOW
+                case "-X:ColorfulConsole": ConsoleOptions.ColorfulConsole = true; break;
+                case "-X:ExceptionDetail": EngineOptions.ExceptionDetail = true; break;
+                case "-X:TabCompletion": ConsoleOptions.TabCompletion = true; break;
+                case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
+                //#endif
+                case "-X:NoOptimize": GlobalOptions.DebugCodeGeneration = true; break;
+                case "-X:Optimize": GlobalOptions.DebugCodeGeneration = false; break;
+                case "-X:NoTraceback": GlobalOptions.DynamicStackTraceSupport = false; break;
+
+                case "-X:ShowRules": GlobalOptions.ShowRules = true; break;
+                case "-X:DumpASTs": GlobalOptions.DumpASTs = true; break;
+                case "-X:ShowASTs": GlobalOptions.ShowASTs = true; break;
+
+
+                case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
+                case "-X:SaveAssemblies": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.SaveAndReloadAssemblies; break;
+                case "-X:ShowClrExceptions": EngineOptions.ShowClrExceptions = true; break;
+                case "-X:StaticMethods": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.GenerateStaticMethods; break;
+                case "-X:TrackPerformance": // accepted but ignored on retail builds
+#if DEBUG
+                    GlobalOptions.TrackPerformance = true;
+#endif
+                    break;
+
+                default:
+                    ConsoleOptions.FileName = arg;
+                    // The language-specific parsers may want to do something like this to pass arguments to the script
+                    //   PushArgBack();
+                    //   EngineOptions.Arguments = PopRemainingArgs();
+                    break;
+            }
         }
 
         protected void IgnoreRemainingArgs() {
@@ -137,37 +216,54 @@ namespace Microsoft.Scripting {
             return new InvalidOptionException(String.Format(Resources.InvalidOptionValue, value, option));
         }
 
-        public abstract void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments);
+        public virtual void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
 
-        public virtual void PrintHelp(TextWriter output) {
-            if (output == null) throw new ArgumentNullException("output");
+            commandLine = "[options] [file|- [arguments]]";
 
-            string command_line, comments;
-            string[,] options, environment_variables;
+            options = new string[,] {
+                { "-c cmd",                 "Program passed in as string (terminates option list)" },
+                { "-h",                     "Display usage" },
+#if !IRONPYTHON_WINDOW
+                { "-i",                     "Inspect interactively after running script" },
+#endif
+                { "-V",                     "Print the version number and exit" },
+                { "-O",                     "Enable optimizations" },
+#if DEBUG
+                { "-D",                     "EngineDebug mode" },
+#endif
+                { "-OO",                    "Remove doc-strings in addition to the -O optimizations" },
+    
+               
+                { "-X:AutoIndent",          "" },
+                { "-X:AssembliesDir",       "Set the directory for saving generated assemblies" },
+#if !SILVERLIGHT
+                { "-X:ColorfulConsole",     "Enable ColorfulConsole" },
+#endif
+                { "-X:ExceptionDetail",     "Enable ExceptionDetail mode" },
+                { "-X:Interpret",           "Enable interpreted mode" },
+                { "-X:Frames",              "Generate custom frames" },
+                { "-X:GenerateAsSnippets",  "Generate code to run in snippet mode" },
+                { "-X:ILDebug",             "Output generated IL code to a text file for debugging" },
+                { "-X:MaxRecursion",        "Set the maximum recursion level" },
+                { "-X:NoOptimize",          "Disable JIT optimization in generated code" },
+                { "-X:NoTraceback",         "Do not emit traceback code" },
+                { "-X:PassExceptions",      "Do not catch exceptions that are unhandled by script code" },
+                { "-X:PrivateBinding",      "Enable binding to private members" },
+                { "-X:SaveAssemblies",      "Save generated assemblies" },
+                { "-X:ShowClrExceptions",   "Display CLS Exception information" },
+                { "-X:SlowOps",             "Enable fast ops" },
+                { "-X:StaticMethods",       "Generate static methods only" },
+#if !SILVERLIGHT
+                { "-X:TabCompletion",       "Enable TabCompletion mode" },
+#endif
+#if DEBUG
+                { "-X:TrackPerformance",    "Track performance sensitive areas" },
+#endif
+           };
 
-            GetHelp(out command_line, out options, out environment_variables, out comments);
+            environmentVariables = new string[0, 0];
 
-            if (command_line != null) {
-                output.WriteLine("{0}: {1}", Resources.Usage, command_line);
-                output.WriteLine();
-            }
-
-            if (options != null) {
-                output.WriteLine("{0}:", Resources.Options);
-                ArrayUtils.PrintTable(output, options);
-                output.WriteLine();
-            }
-
-            if (environment_variables != null) {
-                output.WriteLine("{0}:", Resources.EnvironmentVariables);
-                ArrayUtils.PrintTable(output, environment_variables);
-                output.WriteLine();
-            }
-
-            if (comments != null) {
-                output.Write(comments);
-                output.WriteLine();
-            }
+            comments = null;
         }
     }
 }

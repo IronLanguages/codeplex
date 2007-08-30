@@ -21,7 +21,7 @@ internal sealed class PythonWindowsConsoleHost : ConsoleHost {
 
     protected override void Initialize() {
         base.Initialize();
-        this.Options.LanguageProvider = PythonEngine.CurrentEngine.LanguageProvider;
+        this.Options.LanguageProvider = ScriptEnvironment.GetEnvironment().GetLanguageProvider(typeof(PythonLanguageProvider));
         // TODO: this.Options.NoConsole = true;
     }
     

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -435,8 +435,8 @@ namespace Microsoft.Scripting.Generation {
         /// Tries to emit a cast in a language independent way. If not successful, returns false.
         /// </summary>
         public bool TryEmitCast(Type fromType, Type toType, bool implicitOnly) {
-            if (fromType == null) throw new ArgumentNullException("fromType");
-            if (toType == null) throw new ArgumentNullException("toType");
+            Contract.RequiresNotNull(fromType, "fromType");
+            Contract.RequiresNotNull(toType, "toType");
 
             if (fromType == toType) {
                 return true;
@@ -493,7 +493,7 @@ namespace Microsoft.Scripting.Generation {
             // downcast:
             if (!toType.IsValueType) {
                 if (implicitOnly) return false;
-                if (!toType.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+                if (!toType.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, toType.FullName));
                 Emit(OpCodes.Castclass, toType);
                 return true;
             }
@@ -594,7 +594,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="type"></param>
         public void EmitBoxing(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
             Debug.Assert(typeof(void).IsValueType);
 
             if (type.IsValueType) {
@@ -645,7 +645,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal void EmitYield(Expression expr, YieldTarget target) {
-            if (expr == null) throw new ArgumentNullException("expr");
+            Contract.RequiresNotNull(expr, "expr");
 
             EmitSetGeneratorReturnValue(expr);
             EmitUpdateGeneratorLocation(target.Index);
@@ -720,7 +720,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public Slot GetLocalTmp(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             for (int i = 0; i < _freeSlots.Count; i++) {
                 Slot slot = _freeSlots[i];
@@ -734,8 +734,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public Slot GetNamedLocal(Type type, string name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
 
             LocalBuilder lb = DeclareLocal(type);
             if (EmitDebugInfo) lb.SetLocalSymInfo(name);
@@ -789,7 +789,7 @@ namespace Microsoft.Scripting.Generation {
             set {
                 //Debug.Assert(_contextSlot == null); // shouldn't change after creation
 
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 if (!typeof(CodeContext).IsAssignableFrom(value.Type))
                     throw new ArgumentException("ContextSlot must be assignable from CodeContext", "value");
 
@@ -853,9 +853,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitGet(Slot slot, SymbolId name, bool check) {
-            if (slot == null) {
-                throw new ArgumentNullException("slot");
-            }
+            Contract.RequiresNotNull(slot, "slot");
+
             slot.EmitGet(this);
             if (check) {
                 slot.EmitCheck(this, name);
@@ -953,8 +952,8 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a strongly typed array from a list of expressions.
         /// </summary>
         public void EmitArrayFromExpressions(Type elementType, IList<Expression> items) {
-            if (elementType == null) throw new ArgumentNullException("elementType");
-            if (items == null) throw new ArgumentNullException("items");
+            Contract.RequiresNotNull(elementType, "elementType");
+            Contract.RequiresNotNull(items, "items");
 
             EmitArray(elementType, items.Count, delegate(int index) {
                 items[index].EmitAs(this, elementType);
@@ -966,7 +965,7 @@ namespace Microsoft.Scripting.Generation {
         /// is strongly typed.
         /// </summary>
         public void EmitArray<T>(IList<T> items) {
-            if (items == null) throw new ArgumentNullException("items");
+            Contract.RequiresNotNull(items, "items");
 
             EmitInt(items.Count);
             Emit(OpCodes.Newarr, typeof(T));
@@ -978,13 +977,60 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        public void EmitTuple(Type tupleType, int count, EmitArrayHelper emit) {
+            EmitTuple(tupleType, 0, count, emit);
+        }
+
+        private void EmitTuple(Type tupleType, int start, int end, EmitArrayHelper emit) {
+            int size = end - start;
+
+            if (size > NewTuple.MaxSize) {
+                int multiplier = 1;
+                while (size > NewTuple.MaxSize) {
+                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
+                    multiplier *= NewTuple.MaxSize;
+                }
+                for (int i = 0; i < size; i++) {
+                    int newStart = start + (i * multiplier);
+                    int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
+
+                    PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", i));
+                    Debug.Assert(pi != null);
+                    EmitTuple(pi.PropertyType, newStart, newEnd, emit);
+                }
+            } else {
+                for (int i = start; i < end; i++) {
+                    emit(i);
+                }
+            }
+
+            // fill in emptys with null.
+            Type[] genArgs = tupleType.GetGenericArguments();
+            for (int i = size; i < genArgs.Length; i++) {
+                EmitNull();
+            }
+
+            EmitTupleNew(tupleType);
+        }
+
+        private void EmitTupleNew(Type tupleType) {
+            ConstructorInfo[] cis = tupleType.GetConstructors();
+            foreach (ConstructorInfo ci in cis) {
+                if (ci.GetParameters().Length != 0) {
+                    EmitNew(ci);
+                    break;
+                }
+            }
+        }
+
+
         /// <summary>
         /// Emits an array of values of count size.  The items are emitted via the callback
         /// which is provided with the current item index to emit.
         /// </summary>
         public void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
-            if (elementType == null) throw new ArgumentNullException("elementType");
-            if (emit == null) throw new ArgumentNullException("emit");
+            Contract.RequiresNotNull(elementType, "elementType");
+            Contract.RequiresNotNull(emit, "emit");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             EmitInt(count);
@@ -1063,14 +1109,14 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitPropertyGet(Type type, string name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
 
             EmitPropertyGet(type.GetProperty(name));
         }
 
         public void EmitPropertyGet(PropertyInfo pi) {
-            if (pi == null) throw new ArgumentNullException("pi");
+            Contract.RequiresNotNull(pi, "pi");
 
             if (!pi.CanRead) throw new InvalidOperationException(Resources.CantReadProperty);
 
@@ -1078,14 +1124,14 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitPropertySet(Type type, string name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
 
             EmitPropertySet(type.GetProperty(name));
         }
 
         public void EmitPropertySet(PropertyInfo pi) {
-            if (pi == null) throw new ArgumentNullException("pi");
+            Contract.RequiresNotNull(pi, "pi");
 
             if (!pi.CanRead) throw new InvalidOperationException(Resources.CantWriteProperty);
 
@@ -1093,7 +1139,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitFieldAddress(FieldInfo fi) {
-            if (fi == null) throw new ArgumentNullException("fi");
+            Contract.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Ldsflda, fi);
@@ -1103,14 +1149,14 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitFieldGet(Type type, String name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
 
             EmitFieldGet(type.GetField(name));
         }
 
         public void EmitFieldGet(FieldInfo fi) {
-            if (fi == null) throw new ArgumentNullException("fi");
+            Contract.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Ldsfld, fi);
@@ -1120,7 +1166,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitFieldSet(FieldInfo fi) {
-            if (fi == null) throw new ArgumentNullException("fi");
+            Contract.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Stsfld, fi);
@@ -1130,7 +1176,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitNew(ConstructorInfo ci) {
-            if (ci == null) throw new ArgumentNullException("ci");
+            Contract.RequiresNotNull(ci, "ci");
 
             if (ci.DeclaringType.ContainsGenericParameters) {
                 EmitIllegalNew(ci);
@@ -1140,21 +1186,21 @@ namespace Microsoft.Scripting.Generation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public void EmitIllegalNew(ConstructorInfo ci) {
-            if (ci == null) throw new ArgumentNullException("ci");
+            Contract.RequiresNotNull(ci, "ci");
 
             //TODO Python would like a 'TypeError' == 'ArgumentTypeException' here
             throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, Resources.IllegalNew_GenericParams, ci.DeclaringType));
         }
 
         public void EmitNew(Type type, Type[] paramTypes) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (paramTypes == null) throw new ArgumentNullException("paramTypes");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(paramTypes, "paramTypes");
 
             EmitNew(type.GetConstructor(paramTypes));
         }
 
         public void EmitCall(MethodInfo mi) {
-            if (mi == null) throw new ArgumentNullException("mi");
+            Contract.RequiresNotNull(mi, "mi");
 
             if (mi.IsVirtual && !mi.DeclaringType.IsValueType) {
                 Emit(OpCodes.Callvirt, mi);
@@ -1164,17 +1210,17 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitCall(Type type, String name) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
-            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
+            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
 
             EmitCall(type.GetMethod(name));
         }
 
         public void EmitCall(Type type, String name, Type[] paramTypes) {
-            if (type == null) throw new ArgumentNullException("type");
-            if (name == null) throw new ArgumentNullException("name");
-            if (paramTypes == null) throw new ArgumentNullException("paramTypes");
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(paramTypes, "paramTypes");
 
             EmitCall(type.GetMethod(name, paramTypes));
         }
@@ -1228,7 +1274,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitType(Type type) {
-            if (type == null) throw new ArgumentNullException("type");            
+            Contract.RequiresNotNull(type, "type");            
             if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
                 // can't ldtoken on a non-visible type, refer to it via a runtime constant...
                 EmitConstant(new RuntimeConstant(type));
@@ -1241,8 +1287,8 @@ namespace Microsoft.Scripting.Generation {
 
         // Not to be used with virtual methods
         public void EmitDelegateConstruction(CodeGen delegateFunction, Type delegateType) {            
-            if (delegateFunction == null) throw new ArgumentNullException("delegateFunction");
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(delegateFunction, "delegateFunction");
+            Contract.RequiresNotNull(delegateType, "delegateType");
 
             if (delegateFunction.MethodInfo is DynamicMethod || delegateFunction.ConstantPool.IsBound) {
                 Delegate d = delegateFunction.CreateDelegate(delegateType);
@@ -1258,7 +1304,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Ldind* instruction for the appropriate type
         /// </summary>
         public void EmitLoadValueIndirect(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int)) Emit(OpCodes.Ldind_I4);
@@ -1281,7 +1327,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Stind* instruction for the appropriate type.
         /// </summary>
         public void EmitStoreValueIndirect(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int)) Emit(OpCodes.Stind_I4);
@@ -1303,9 +1349,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="type"></param>
         public void EmitLoadElement(Type type) {
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
+            Contract.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(System.SByte)) {
@@ -1338,7 +1382,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Stelem* instruction for the appropriate type.
         /// </summary>
         public void EmitStoreElement(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int) || type == typeof(uint)) {
@@ -1368,7 +1412,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitString(string value) {
-            if (value == null) throw new ArgumentNullException("value");
+            Contract.RequiresNotNull(value, "value");
 
             Emit(OpCodes.Ldstr, (string)value);
         }
@@ -1652,7 +1696,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitUnbox(Type type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             Emit(OpCodes.Unbox_Any, type);
         }
@@ -1758,7 +1802,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
         public Delegate CreateDelegate(Type delegateType) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(delegateType, "delegateType");
 
             if (ConstantPool.IsBound) {
                 return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, _constantPool.Data);
@@ -1768,18 +1812,15 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public Delegate CreateDelegate(Type delegateType, object target) {
-            if (delegateType == null) throw new ArgumentNullException("delegateType");
+            Contract.RequiresNotNull(delegateType, "delegateType");
             Debug.Assert(!ConstantPool.IsBound);
 
             return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
         }
 
         public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
-            if (paramTypes == null) throw new ArgumentNullException("paramTypes");
-            //if (paramNames == null) throw new ArgumentNullException("paramNames");
-            for (int i = 0; i < paramTypes.Count; i++) {
-                if (paramTypes[i] == null) throw new ArgumentNullException("paramTypes[" + i.ToString() + "]");
-            }
+            Contract.RequiresNonNullItems(paramTypes, "paramTypes");
+            //Contract.RequiresNotNull(paramNames, "paramNames");
 
             CodeGen res;
             if (!DynamicMethod) {
@@ -1967,7 +2008,7 @@ namespace Microsoft.Scripting.Generation {
             // This ensures that it is not a DynamicMethod
             Debug.Assert(_typeGen != null);
 
-            string full_method_name = ((_methodInfo.DeclaringType != null) ? _methodInfo.DeclaringType.FullName + "." : "") + _methodInfo.Name;
+            string full_method_name = ((_methodInfo.DeclaringType != null) ? _methodInfo.DeclaringType.Name + "." : "") + _methodInfo.Name;
 
             string filename = String.Format("gen_{0}_{1}.il", IOUtils.ToValidFileName(full_method_name), 
                 System.Threading.Interlocked.Increment(ref count));

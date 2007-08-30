@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class BoundAssignment : Expression {
@@ -32,8 +33,8 @@ namespace Microsoft.Scripting.Ast {
 
         internal BoundAssignment(SourceSpan span, Variable variable, Expression value, Operators op)
             : base(span) {
-            if (variable == null) throw new ArgumentNullException("variable");
-            if (value == null) throw new ArgumentNullException("value");
+            Contract.RequiresNotNull(variable, "variable");
+            Contract.RequiresNotNull(value, "value");
             _variable = variable;
             _value = value;
             _op = op;
@@ -152,9 +153,15 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static Statement Write(Variable rhsVariable, Expression lhsValue) {
-            return Statement(Assign(rhsVariable, lhsValue));
+        public static Statement Write(Variable lhsVariable, Variable rhsVariable) {
+            return Statement(Assign(lhsVariable, Ast.Read(rhsVariable)));
         }
+
+        public static Statement Write(Variable lhsVariable, Expression rhsValue) {
+            return Statement(Assign(lhsVariable, rhsValue));
+        }
+
+        // TODO: rename rhs <-> lhs
 
         public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Expression lhsValue) {
             return Statement(AssignField(Read(rhsVariable), rhsField, lhsValue));

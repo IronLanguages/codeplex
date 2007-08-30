@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -25,6 +25,7 @@ using System.Globalization;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -125,8 +126,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static object[] Evaluate(IList<Expression> items, CodeContext context) {
-            if (items == null) throw new ArgumentNullException("items");
-            if (context == null) throw new ArgumentNullException("environment");
+            Contract.RequiresNotNull(items, "items");
+            Contract.RequiresNotNull(context, "context");
 
             object[] ret = new object[items.Count];
             for (int i = 0; i < items.Count; i++) {
@@ -137,6 +138,70 @@ namespace Microsoft.Scripting.Ast {
 
         internal virtual object EvaluateAssign(CodeContext context, object value) {
             throw new InvalidOperationException("byref call w/ no address " + GetType());
+        }
+
+        internal static Type GetNonNullableType(Type type) {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                return type.GetGenericArguments()[0];
+            }
+            return type;
+        }
+
+        internal static bool IsNumeric(Type type) {
+            type = GetNonNullableType(type);
+            if (!type.IsEnum) {
+                switch (Type.GetTypeCode(type)) {
+                    case TypeCode.Char:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.Int64:
+                    case TypeCode.Double:
+                    case TypeCode.Single:
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                    case TypeCode.UInt64:
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool IsArithmetic(Type type) {
+            type = GetNonNullableType(type);
+            if (!type.IsEnum) {
+                switch (Type.GetTypeCode(type)) {
+                    case TypeCode.Int16:
+                    case TypeCode.Int32:
+                    case TypeCode.Int64:
+                    case TypeCode.Double:
+                    case TypeCode.Single:
+                    case TypeCode.UInt16:
+                    case TypeCode.UInt32:
+                    case TypeCode.UInt64:
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool IsIntegerOrBool(Type type) {
+            if (!type.IsEnum) {
+                switch (Type.GetTypeCode(type)) {
+                    case TypeCode.Int64:
+                    case TypeCode.Int32:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt64:
+                    case TypeCode.UInt32:
+                    case TypeCode.UInt16:
+                    case TypeCode.Boolean:
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                        return true;
+                }
+            } 
+            return false;
         }
     }
 }

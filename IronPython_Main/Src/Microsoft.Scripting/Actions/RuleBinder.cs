@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -57,8 +57,10 @@ namespace Microsoft.Scripting.Actions {
             return true;
         }
 
-        public override bool Walk(DynamicTryStatementHandler node) {
-            node.Ref = GetOrMakeRef(node.Variable);
+        public override bool Walk(CatchBlock node) {
+            if (node.Variable != null) {
+                node.Ref = GetOrMakeRef(node.Variable);
+            }
             return true;
         }
 

@@ -58,6 +58,15 @@ namespace IronPython.Runtime.Operations {
 
 #endif
 
+        public static Type GetClrType(ClrModule self, Type type) {
+            return type;
+        }
+        
+        public static DynamicType GetDynamicType(ClrModule self, Type t) {
+            return DynamicHelpers.GetDynamicTypeFromType(t);
+        }
+
+
         [PythonName("accepts")]
         public static object Accepts(ClrModule self, params object[] types) {
             return new ArgChecker(types);

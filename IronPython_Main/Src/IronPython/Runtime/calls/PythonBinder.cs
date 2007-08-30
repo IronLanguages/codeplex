@@ -39,6 +39,7 @@ using IronPython.Runtime.Operations;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
+        private static Dictionary<Type, Type> _extTypes = new Dictionary<Type,Type>();
 
         public PythonBinder(CodeContext context)
             : base(context) {
@@ -50,12 +51,10 @@ using IronPython.Runtime.Operations;
                     return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
                 case ActionKind.GetMember:
                     return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action).MakeRule(args);
-                case ActionKind.SetMember:
-                    return null;    // default implementation is good enough.
                 case ActionKind.Call:
                     return new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
                 default:
-                    throw new NotImplementedException(action.ToString());
+                    return null;
             }
         }
 
@@ -241,23 +240,26 @@ using IronPython.Runtime.Operations;
         }
 
 
-        public override Statement MakeInvalidParametersError(MethodBinder binder, CallAction action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
+        public override Statement MakeInvalidParametersError(MethodBinder binder, Action action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
             if (binder.IsBinaryOperator) {
-                int argsReceived = args.Length - 1 + GetParamsArgumentCountAdjust(action, args);
-                if (action.HasDictionaryArgument()) {
-                    argsReceived--;
-                }
-
-                foreach(MethodBase mb in targets) {
-                    ParameterInfo [] pis = mb.GetParameters();
-                    int argsNeeded = pis.Length;
-                    if (mb.IsStatic && callType == CallType.ImplicitInstance) {
-                        argsNeeded--;
+                CallAction ca = action as CallAction;
+                if (ca != null) {
+                    int argsReceived = args.Length - 1 + GetParamsArgumentCountAdjust(ca, args);
+                    if (ca.HasDictionaryArgument()) {
+                        argsReceived--;
                     }
 
-                    // only return NotImplemented if we match on # of args
-                    if (argsNeeded == argsReceived || (CompilerHelpers.IsParamsMethod(mb) && argsNeeded <= argsReceived)) {
-                        return rule.MakeReturn(this, Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented")));
+                    foreach (MethodBase mb in targets) {
+                        ParameterInfo[] pis = mb.GetParameters();
+                        int argsNeeded = pis.Length;
+                        if (mb.IsStatic && callType == CallType.ImplicitInstance) {
+                            argsNeeded--;
+                        }
+
+                        // only return NotImplemented if we match on # of args
+                        if (argsNeeded == argsReceived || (CompilerHelpers.IsParamsMethod(mb) && argsNeeded <= argsReceived)) {
+                            return rule.MakeReturn(this, Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented")));
+                        }
                     }
                 }
             }
@@ -267,7 +269,7 @@ using IronPython.Runtime.Operations;
 
         #region .NET member binding
 
-        public override MemberInfo[] GetMember(Type type, string name) {
+        public override MemberInfo[] GetMember(Action action, Type type, string name) {
             // Python type customization:
             switch (name) {
                 case "__str__":
@@ -298,7 +300,7 @@ using IronPython.Runtime.Operations;
 
 
             // normal binding
-            MemberInfo[] res = base.GetMember(type, name);
+            MemberInfo[] res = base.GetMember(action, type, name);
             if (res.Length > 0) {
                 return res;
             }
@@ -334,7 +336,7 @@ using IronPython.Runtime.Operations;
             if (_memberMapping.TryGetValue(name, out newNames)) {
                 List<MemberInfo> oldRes = new List<MemberInfo>();
                 foreach (string newName in newNames) {
-                    oldRes.AddRange(base.GetMember(type, newName));
+                    oldRes.AddRange(base.GetMember(action, type, newName));
                 }
                 return oldRes.ToArray();
             }
@@ -446,5 +448,21 @@ using IronPython.Runtime.Operations;
         }
 
         #endregion
+
+        protected override IList<Type> GetExtensionTypes(Type t) {
+            Type res;
+            if (_extTypes.TryGetValue(t, out res)) {
+                List<Type> list = new List<Type>();
+                list.Add(res);
+                list.AddRange(base.GetExtensionTypes(t));
+                return list;
+            }
+
+            return base.GetExtensionTypes(t);
+        }
+
+        internal static void RegisterType(Type extended, Type extension) {
+            _extTypes[extended] = extension;
+        }
     }
 }

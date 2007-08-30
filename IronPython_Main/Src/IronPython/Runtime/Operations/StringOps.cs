@@ -1101,11 +1101,11 @@ namespace IronPython.Runtime.Operations {
             return string.CompareOrdinal(x, y) >= 0;
         }
         [SpecialName]
-        public static bool Equal(string x, string y) {
+        public static bool Equals(string x, string y) {
             return string.Equals(x, y);
         }
         [SpecialName]
-        public static bool NotEqual(string x, string y) {
+        public static bool NotEquals(string x, string y) {
             return !string.Equals(x, y);
         }
 

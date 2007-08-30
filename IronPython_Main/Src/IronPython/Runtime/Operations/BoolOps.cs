@@ -94,28 +94,28 @@ namespace IronPython.Runtime.Operations {
 
         // Binary Operations - Comparisons
         [SpecialName]
-        public static bool Equal(bool x, bool y) {
+        public static bool Equals(bool x, bool y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(bool x, bool y) {
+        public static bool NotEquals(bool x, bool y) {
             return x != y;
         }
         [SpecialName]
-        public static bool Equal(bool x, int y) {
+        public static bool Equals(bool x, int y) {
             return (x ? 1 : 0) == y;
         }
         [SpecialName]
-        public static bool NotEqual(bool x, int y) {
+        public static bool NotEquals(bool x, int y) {
             return (x ? 1 : 0) != y;
         }
         [SpecialName]
-        public static bool Equal(int x, bool y) {
-            return Equal(y, x);
+        public static bool Equals(int x, bool y) {
+            return Equals(y, x);
         }
         [SpecialName]
-        public static bool NotEqual(int x, bool y) {
-            return NotEqual(y, x);
+        public static bool NotEquals(int x, bool y) {
+            return NotEquals(y, x);
         }
 
         // Conversion operators

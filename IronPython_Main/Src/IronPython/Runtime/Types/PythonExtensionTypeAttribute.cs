@@ -47,6 +47,7 @@ namespace IronPython.Runtime.Types {
             : base(extends, extensionType) {
 
             Initialize();
+            PythonBinder.RegisterType(extends, extensionType);
         }
 
         private void Initialize() {

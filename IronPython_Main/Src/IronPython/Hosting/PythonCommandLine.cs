@@ -25,6 +25,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
 using System.Reflection;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
    
@@ -53,6 +54,18 @@ namespace IronPython.Hosting {
                 Console.WriteLine(nonIntegerCode.ToString(), Style.Error);
             }
             return exitCode;
+        }
+
+        protected override void Shutdown(IScriptEngine engine) {
+            Contract.RequiresNotNull(engine, "engine");
+
+            try {
+                engine.Shutdown();
+            } catch (Exception e) {
+                Console.WriteLine("", Style.Error);
+                Console.WriteLine("Error in sys.exitfunc:", Style.Error);
+                Console.Write(engine.FormatException(e), Style.Error);
+            }
         }
         
         #region Initialization

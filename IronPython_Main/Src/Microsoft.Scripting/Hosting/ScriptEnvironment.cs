@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -32,7 +32,6 @@ namespace Microsoft.Scripting.Hosting {
         
         // convenience API:
 #if !SILVERLIGHT
-        SourceFileUnit CreateSourceFileUnit(string path);
         void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput);
 #endif
 
@@ -55,8 +54,6 @@ namespace Microsoft.Scripting.Hosting {
         void PublishModule(IScriptModule module, string publicName);
         IDictionary<string, IScriptModule> GetPublishedModules();
         
-        ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
-
         // TODO: remove exceptionHandler parameter - just a SL hack
         Delegate GetDelegate(object callableObject, Type delegateType, Action<Exception> exceptionHandler);
         
@@ -108,7 +105,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public static IScriptEnvironment Create(ScriptEnvironmentSetup setup, AppDomain domain) {
-            if (domain == null) throw new ArgumentNullException("domain");
+            Contract.RequiresNotNull(domain, "domain");
 
             if (domain == AppDomain.CurrentDomain) {
                 return Create(setup);
@@ -122,7 +119,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public static IScriptEnvironment GetEnvironment(AppDomain domain) {
-            if (domain == null) throw new ArgumentNullException("domain");
+            Contract.RequiresNotNull(domain, "domain");
 
             if (domain == AppDomain.CurrentDomain) {
                 return GetEnvironment();
@@ -197,18 +194,6 @@ namespace Microsoft.Scripting.Hosting {
             return _manager.CompileModule(name, kind, new Scope(dictionary), options, errorSink, sourceUnits);
         }
 
-
-        /// <summary>
-        /// Compiles a source unit in the current environment.
-        /// Used by remote hosts that need to compile source units in different app-domain than they are running in.
-        /// <c>options</c> can be <c>null</c>
-        /// <c>errorSink</c> can be <c>null</c>
-        /// </summary>
-        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
-            return sourceUnit.Compile(options, errorSink);
-        }
-
         public void PublishModule(IScriptModule module) {
             _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module"));
         }
@@ -238,7 +223,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public void SetVariables(IAttributesCollection dictionary) {
-            if (dictionary == null) throw new ArgumentNullException("dictionary");
+            Contract.RequiresNotNull(dictionary, "dictionary");
             _manager.Variables = dictionary;
         }
 
@@ -264,11 +249,6 @@ namespace Microsoft.Scripting.Hosting {
         #region Convenience API (not available for Silverlight to make the assembly smaller)
 
 #if !SILVERLIGHT
-
-        public SourceFileUnit CreateSourceFileUnit(string path) {
-            string extension = Path.GetExtension(path);
-            return new SourceFileUnit(_manager.GetLanguageProviderByFileExtension(extension).GetEngine(), path, Encoding.Default);
-        }
 
         public void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput) {
             if (input != null) Console.SetIn(input);

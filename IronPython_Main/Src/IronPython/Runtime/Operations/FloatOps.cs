@@ -192,11 +192,11 @@ namespace IronPython.Runtime.Operations {
             return Compare(x, y) >= 0;
         }
         [SpecialName]
-        public static bool Equal(double x, BigInteger y) {
+        public static bool Equals(double x, BigInteger y) {
             return Compare(x, y) == 0;
         }
         [SpecialName]
-        public static bool NotEqual(double x, BigInteger y) {
+        public static bool NotEquals(double x, BigInteger y) {
             return Compare(x, y) != 0;
         }
 
@@ -237,11 +237,11 @@ namespace IronPython.Runtime.Operations {
             return Compare(x, y) >= 0;
         }
         [SpecialName]
-        public static bool Equal(double x, decimal y) {
+        public static bool Equals(double x, decimal y) {
             return Compare(x, y) == 0;
         }
         [SpecialName]
-        public static bool NotEqual(double x, decimal y) {
+        public static bool NotEquals(double x, decimal y) {
             return Compare(x, y) != 0;
         }
 
@@ -269,11 +269,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Double x, int y) {
+        public static bool Equals(Double x, int y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Double x, int y) {
+        public static bool NotEquals(Double x, int y) {
             return x != y;
         }
 

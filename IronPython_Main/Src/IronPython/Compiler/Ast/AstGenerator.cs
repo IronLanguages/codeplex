@@ -28,8 +28,9 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
-    public class AstGenerator {
+    internal class AstGenerator {
         private readonly MSAst.CodeBlock _block;
         private List<MSAst.Variable> _temps;
         private readonly CompilerContext _context;
@@ -41,6 +42,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         public AstGenerator(MSAst.CodeBlock block, CompilerContext context, bool print) {
+            Assert.NotNull(context);
+
             _block = block;
             _context = context;
             _print = print;
@@ -70,8 +73,8 @@ namespace IronPython.Compiler.Ast {
             get { return _loopDepth > 0; }
         }
 
-        internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast, bool print) {
-            return new AstGenerator(null, context, print).Transform(ast);
+        internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast) {
+            return new AstGenerator(null, context).Transform(ast);
         }
 
         public void AddError(string message, SourceSpan span) {
@@ -90,8 +93,8 @@ namespace IronPython.Compiler.Ast {
             return _block.CreateTemporaryVariable(name, type);
         }
 
-        public MSAst.Variable MakeGeneratorTemp(SymbolId name, Type type) {
-            return _block.CreateGeneratorTempVariable(name, type);
+        public MSAst.Variable MakeGeneratorTemp(string name, Type type) {
+            return _block.CreateGeneratorTempVariable(SymbolTable.StringToId(name), type);
         }
 
         public MSAst.BoundExpression MakeTempExpression(string name, SourceSpan span) {
@@ -107,7 +110,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.BoundExpression MakeGeneratorTempExpression(string name, Type type, SourceSpan span) {
-            return Ast.Read(span, MakeGeneratorTemp(SymbolTable.StringToId(name), type));
+            return Ast.Read(span, MakeGeneratorTemp(name, type));
         }
 
         public void FreeTemp(MSAst.BoundExpression be) {
@@ -218,18 +221,6 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.IfStatementTest[] Transform(IfStatementTest[] from) {
             Debug.Assert(from != null);
             MSAst.IfStatementTest[] to = new MSAst.IfStatementTest[from.Length];
-            for (int i = 0; i < from.Length; i++) {
-                Debug.Assert(from[i] != null);
-                to[i] = from[i].Transform(this);
-            }
-            return to;
-        }
-
-        internal MSAst.DynamicTryStatementHandler[] Transform(TryStatementHandler[] from) {
-            if (from == null) {
-                return null;
-            }
-            MSAst.DynamicTryStatementHandler[] to = new MSAst.DynamicTryStatementHandler[from.Length];
             for (int i = 0; i < from.Length; i++) {
                 Debug.Assert(from[i] != null);
                 to[i] = from[i].Transform(this);

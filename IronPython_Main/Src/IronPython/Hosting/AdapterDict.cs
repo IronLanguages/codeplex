@@ -37,17 +37,19 @@ namespace IronPython.Hosting {
         IDictionary<string, object> dict; // the underlying dictionary
 
         public StringDictionaryAdapterDict(IDictionary<string, object> d) {
-            if (d == null) throw new ArgumentNullException();
+            Contract.RequiresNotNull(d, "d");
+
             dict = d;
         }
 
         public IDictionary<string, object> UnderlyingDictionary { get { return dict; } }
 
         static SymbolId GetSymbolIdKey(object key) {
-            if (key == null)
-                throw new ArgumentNullException("key");
+            Contract.RequiresNotNull(key, "key");
+
             if (!(key is string))
                 throw new NotSupportedException("Cannot add or delete non-string attribute");
+
             return SymbolTable.StringToId((string)key);
         }
 

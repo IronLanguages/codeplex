@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
@@ -40,30 +41,36 @@ namespace IronPython.Compiler.Ast {
             get { return _var; }
         }
 
-/*
-        mgr = (EXPR)
-        exit = mgr.__exit__  # Not calling it yet
-        value = mgr.__enter__()
-        exc = True
-        try:
-            VAR = value  # Only if "as VAR" is present
-            BLOCK
-        except:
-            # The exceptional case is handled here
-            exc = False
-            if not exit(*sys.exc_info()):
-                raise
-            # The exception is swallowed if exit() returns true
-        finally:
-            # The normal and non-local-goto cases are handled here
-            if exc:
-                exit(None, None, None)
-*/
-
+        /// <summary>
+        /// WithStatement is translated to the DLR AST equivalent to
+        /// the following Python code snippet (from with statement spec):
+        /// 
+        /// mgr = (EXPR)
+        /// exit = mgr.__exit__  # Not calling it yet
+        /// value = mgr.__enter__()
+        /// exc = True
+        /// try:
+        ///     VAR = value  # Only if "as VAR" is present
+        ///     BLOCK
+        /// except:
+        ///     # The exceptional case is handled here
+        ///     exc = False
+        ///     if not exit(*sys.exc_info()):
+        ///         raise
+        ///     # The exception is swallowed if exit() returns true
+        /// finally:
+        ///     # The normal and non-local-goto cases are handled here
+        ///     if exc:
+        ///         exit(None, None, None)
+        /// 
+        /// </summary>
         internal override MSAst.Statement Transform(AstGenerator ag) {
+            // Five statements in the result...
             MSAst.Statement[] statements = new MSAst.Statement[5];
-            
+
+            //******************************************************************
             // 1. mgr = (EXPR)
+            //******************************************************************
             MSAst.BoundExpression manager = ag.MakeTempExpression("with_manager", SourceSpan.None);
             statements[0] = AstGenerator.MakeAssignment(
                 manager.Variable,
@@ -71,7 +78,9 @@ namespace IronPython.Compiler.Ast {
                 new SourceSpan(Start, _header)
             );
 
+            //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
+            //******************************************************************
             MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit", SourceSpan.None);
             statements[1] = AstGenerator.MakeAssignment(
                 exit.Variable,
@@ -82,7 +91,9 @@ namespace IronPython.Compiler.Ast {
                 )
             );
 
+            //******************************************************************
             // 3. value = mgr.__enter__()
+            //******************************************************************
             MSAst.BoundExpression value = ag.MakeTempExpression("with_value", SourceSpan.None);
             statements[2] = AstGenerator.MakeAssignment(
                 value.Variable,
@@ -97,89 +108,123 @@ namespace IronPython.Compiler.Ast {
                 )
             );
 
+            //******************************************************************
             // 4. exc = True
-            MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", SourceSpan.None);
+            //******************************************************************
+            MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", typeof(bool), SourceSpan.None);
             statements[3] = AstGenerator.MakeAssignment(
                 exc.Variable,
                 Ast.True()
             );
 
-            // 5. if not exit(*sys.exc_info()):
-            //        raise
-            MSAst.Statement if_not_exit_raise = Ast.IfThen(
-                Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
-                Ast.Statement(Ast.Rethrow())
-            );
+            //******************************************************************
+            //  5. The final try statement:
+            //
+            //  try:
+            //      VAR = value  # Only if "as VAR" is present
+            //      BLOCK
+            //  except:
+            //      # The exceptional case is handled here
+            //      exc = False
+            //      if not exit(*sys.exc_info()):
+            //          raise
+            //      # The exception is swallowed if exit() returns true
+            //  finally:
+            //      # The normal and non-local-goto cases are handled here
+            //      if exc:
+            //          exit(None, None, None)
+            //******************************************************************
 
-            // Create null argument for later use in the call to exit
-            MSAst.Expression null_arg = Ast.Null();
+            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception), SourceSpan.None);
 
-            statements[4] = Ast.DynamicTry(
-                // try statement location
-                Span,
-                _header,
+            statements[4] =
+                // try:
+                Ast.Try(
+                    // try statement location
+                    Span, _header,
 
-                // try statement body
-                _var != null ?
-                    Ast.Block(
-                        _body.Span,
-                        _var.TransformSet(ag, value, Operators.None),
-                        ag.Transform(_body)
-                    ) :
-                    ag.Transform(_body),
-
-                // try statement handler
-                new MSAst.DynamicTryStatementHandler[] {
-                    new MSAst.DynamicTryStatementHandler(
-                        null,               // no test
-                        null,               // no target
-
+                    // try statement body
+                    _var != null ?
                         Ast.Block(
-                            // exc = False
-                            AstGenerator.MakeAssignment(
-                                exc.Variable,
-                                Ast.False()
-                            ),
+                            _body.Span,
+                            // VAR = value
+                            _var.TransformSet(ag, value, Operators.None),
+                            // BLOCK
+                            ag.Transform(_body)
+                        ) :
+                        // BLOCK
+                        ag.Transform(_body)
 
-                            // if not exit(*sys.exc_info()):
-                            //    raise
-
-                            if_not_exit_raise
+                // except:
+                ).Catch(typeof(Exception), exception.Variable,
+                    Ast.Try(
+                        // Python specific exception handling code
+                        Ast.Statement(
+                            Ast.Call(
+                                null,
+                                AstGenerator.GetHelperMethod("PushExceptionHandler"),
+                                exception
+                            )
+                        ),
+                        // Python specific exception handling code
+                        Ast.Statement(
+                            Ast.Call(
+                                null,
+                                AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
+                            )
+                        ),
+                        // exc = False
+                        AstGenerator.MakeAssignment(
+                            exc.Variable,
+                            Ast.False()
+                        ),
+                        //  if not exit(*sys.exc_info()):
+                        //      raise
+                        Ast.IfThen(
+                            Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
+                            Ast.Statement(Ast.Rethrow())
                         )
-                    ),
-                },
-                // try statement "else" statement
-                null,
-
-                // try statement "finally"
-                Ast.IfThen(
-                    exc,
-                    Ast.Statement(
-                        Ast.Action.Call(
-                            _contextManager.Span,
-                            CallAction.Simple,
-                            typeof(object),
-                            exit,
-                            null_arg,
-                            null_arg,
-                            null_arg
+                    ).Finally(
+                        // Python specific exception handling code
+                        Ast.Statement(
+                            Ast.Call(
+                                null,
+                                AstGenerator.GetHelperMethod("PopExceptionHandler")
+                            )
                         )
                     )
-                )
-            );
+                // finally:
+                ).Finally(
+                    //  if exc:
+                    //      exit(None, None, None)
+                    Ast.IfThen(
+                        exc,
+                        Ast.Statement(
+                            Ast.Action.Call(
+                                _contextManager.Span,
+                                CallAction.Simple,
+                                typeof(object),
+                                exit,
+                                Ast.Null(),
+                                Ast.Null(),
+                                Ast.Null()
+                            )
+                        )
+                    )
+                );
 
             return Ast.Block(_body.Span, statements);
         }
 
         private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {
+            // exit(*sys.exc_info())
             return Ast.Action.Call(
                 CallAction.Make(new ArgumentInfo(MSAst.ArgumentKind.List)),
                 typeof(bool),
                 exit,
                 Ast.Call(
                     null,
-                    AstGenerator.GetHelperMethod("ExtractSysExcInfo"),
-                    Ast.CodeContext()
+                    AstGenerator.GetHelperMethod("GetExceptionInfo")
                 )
             );
         }

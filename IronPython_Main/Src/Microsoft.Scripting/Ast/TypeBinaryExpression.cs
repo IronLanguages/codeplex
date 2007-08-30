@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -85,7 +85,7 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
-            if (!type.IsVisible) throw new ArgumentException(Resources.TypeMustBeVisible);
+            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
             if (type.IsByRef) throw new ArgumentException("type must not be ByRef");
 
             return TypeIs(SourceSpan.None, expression, type);

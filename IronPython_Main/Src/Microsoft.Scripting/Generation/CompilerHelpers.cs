@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -22,6 +22,7 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using System.IO;
 
 namespace Microsoft.Scripting.Generation {
     public static class CompilerHelpers {
@@ -195,7 +196,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static void EmitStackTraceTryBlockStart(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a try for traceback support
@@ -205,9 +206,9 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public static void EmitStackTraceFaultBlock(CodeGen cg, string name, string displayName) {
-            if (cg == null) throw new ArgumentNullException("cg");
-            if (name == null) throw new ArgumentNullException("name");
-            if (displayName == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(cg, "cg");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(displayName, "displayName");
 
             if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
@@ -228,7 +229,7 @@ namespace Microsoft.Scripting.Generation {
                 cg.EmitString(name);
                 cg.EmitString(displayName);
                 cg.EmitGetCurrentLine();
-                cg.EmitCall(typeof(RuntimeHelpers), "UpdateStackTrace");
+                cg.EmitCall(typeof(ExceptionHelpers), "UpdateStackTrace");
 
                 // end the exception block
                 if (cg.IsDynamicMethod) {
@@ -265,10 +266,17 @@ namespace Microsoft.Scripting.Generation {
         public static CodeGen CreateDynamicCodeGenerator(CompilerContext context) {
             CodeGen cg;
 
+            string typeName = "";
+#if DEBUG
+            if (!String.IsNullOrEmpty(context.SourceUnit.Id)) {
+                typeName = ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(context.SourceUnit.Id)));
+            }
+#endif
+
             if (NeedDebuggableDynamicCodeGenerator(context)) {
                 cg = CreateDebuggableDynamicCodeGenerator(
                     context,
-                    context.SourceUnit.Name,
+                    typeName,
                     typeof(object),
                     new Type[] { typeof(CodeContext) },
                     null,
@@ -276,7 +284,7 @@ namespace Microsoft.Scripting.Generation {
                 );
             } else {
                 cg = CreateDynamicCodeGenerator(
-                    context.SourceUnit.Name,
+                    typeName,
                     typeof(object),
                     new Type[] { typeof(CodeContext) },
                     new ConstantPool());
@@ -305,8 +313,8 @@ namespace Microsoft.Scripting.Generation {
                 case Operators.LessThanOrEqual: return Operators.GreaterThanOrEqual;
                 case Operators.GreaterThan: return Operators.LessThan;
                 case Operators.GreaterThanOrEqual: return Operators.LessThanOrEqual;
-                case Operators.Equal: return Operators.Equal;
-                case Operators.NotEqual: return Operators.NotEqual;
+                case Operators.Equals: return Operators.Equals;
+                case Operators.NotEquals: return Operators.NotEquals;
                 default:
                     if (op >= Operators.Add && op <= Operators.Xor) {
                         return (Operators)((int)op + (int)Operators.ReverseAdd - (int)Operators.Add);
@@ -315,26 +323,37 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        public static Operators InPlaceOperatorToOperator(Operators op) {
+            switch (op) {
+                case Operators.InPlaceAdd: return Operators.Add;
+                case Operators.InPlaceBitwiseAnd: return Operators.BitwiseAnd;
+                case Operators.InPlaceBitwiseOr: return Operators.BitwiseOr;
+                case Operators.InPlaceDivide: return Operators.Divide;
+                case Operators.InPlaceFloorDivide: return Operators.FloorDivide;
+                case Operators.InPlaceLeftShift: return Operators.LeftShift;
+                case Operators.InPlaceMod: return Operators.Mod;
+                case Operators.InPlaceMultiply: return Operators.Multiply;
+                case Operators.InPlacePower: return Operators.Power;
+                case Operators.InPlaceRightShift: return Operators.RightShift;
+                case Operators.InPlaceSubtract: return Operators.Subtract;
+                case Operators.InPlaceTrueDivide: return Operators.TrueDivide;
+                case Operators.InPlaceXor: return Operators.Xor;
+                case Operators.InPlaceRightShiftUnsigned: return Operators.RightShiftUnsigned;
+                default: return Operators.None;
+            }
+
+        }
         public static bool IsComparisonOperator(Operators op) {
             switch (op) {
                 case Operators.LessThan: return true;
                 case Operators.LessThanOrEqual: return true;
                 case Operators.GreaterThan: return true;
                 case Operators.GreaterThanOrEqual: return true;
-                case Operators.Equal: return true;
-                case Operators.NotEqual: return true;
+                case Operators.Equals: return true;
+                case Operators.NotEquals: return true;
                 case Operators.Compare: return true;
             }
             return false;
-        }
-
-        // TODO remove this method as we move from DynamicType to Type
-        public static DynamicType[] ObjectTypes(object[] args) {
-            DynamicType[] types = new DynamicType[args.Length];
-            for (int i = 0; i < args.Length; i++) {
-                types[i] = DynamicHelpers.GetDynamicType(args[i]);
-            }
-            return types;
         }
 
         // TODO remove this method as we move from DynamicType to Type

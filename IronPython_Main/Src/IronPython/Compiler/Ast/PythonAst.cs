@@ -25,10 +25,14 @@ using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Utils;
 
     public class PythonAst : ScopeStatement {
-        private Statement _body;
-        private bool _module;
+        private readonly Statement _body;
+        private readonly bool _isModule;
+        private readonly bool _trueDivision;
+        private readonly bool _printExpressions;
+
         private PythonVariable _docVariable;
 
         /// <summary>
@@ -45,9 +49,27 @@ namespace IronPython.Compiler.Ast {
 
         private MSAst.CodeBlock _block;
 
-        public PythonAst(Statement body, bool module) {
+        /// <summary>
+        /// True division is enabled in this AST.
+        /// </summary>
+        public bool TrueDivision {
+            get { return _trueDivision; }
+        }
+
+        /// <summary>
+        /// Interactive code: expression statements print their value.
+        /// </summary>
+        public bool PrintExpressions {
+            get { return _printExpressions; }
+        }
+
+        public PythonAst(Statement body, bool isModule, bool trueDivision, bool printExpressions) {
+            Contract.RequiresNotNull(body, "body");
+
             _body = body;
-            _module = module;
+            _isModule = isModule;
+            _trueDivision = trueDivision;
+            _printExpressions = printExpressions;
         }
 
         public Statement Body {
@@ -55,7 +77,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         public bool Module {
-            get { return _module; }
+            get { return _isModule; }
         }
 
         internal PythonVariable DocVariable {
@@ -126,7 +148,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.CodeBlock TransformToAst(AstGenerator ag, CompilerContext context) {
-            string name = context.SourceUnit.Name ?? "<undefined>";
+            string name = context.SourceUnit.Id ?? "<undefined>";
             MSAst.CodeBlock ast = Ast.CodeBlock(_body.Span, name);
             ast.IsGlobal = true;
 
@@ -136,12 +158,12 @@ namespace IronPython.Compiler.Ast {
             CreateVariables(ast);
 
             // Use the PrintExpression value for the body (global level code)
-            AstGenerator body = new AstGenerator(ast, ag.Context, ag.PrintExpressions);
+            AstGenerator body = new AstGenerator(ast, ag.Context, _printExpressions);
 
             MSAst.Statement bodyStmt = body.Transform(_body);
             MSAst.Statement docStmt;
 
-            if (_module && _body.Documentation != null) {
+            if (_isModule && _body.Documentation != null) {
                 docStmt = Ast.Statement(
                     Ast.Assign(
                         _docVariable.Variable,

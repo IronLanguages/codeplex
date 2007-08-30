@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -138,7 +138,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public CodeGen DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
-            if (baseMethod == null) throw new ArgumentNullException("baseMethod");
+            Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
             attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
@@ -162,7 +162,7 @@ namespace Microsoft.Scripting.Generation {
             MethodAttributes.Abstract | MethodAttributes.ReservedMask;
 
         public CodeGen DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
-            if (baseMethod == null) throw new ArgumentNullException("baseMethod");
+            Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
             Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.Generation {
 
         public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, 
             object[] defaultVals, CustomAttributeBuilder[] cabs, ConstantPool constantPool) {
-            if (paramTypes == null) throw new ArgumentNullException("paramTypes");
+            Contract.RequiresNotNull(paramTypes, "paramTypes");
             if (paramNames == null) {
                 if (defaultVals != null) throw new ArgumentException("must provide paramNames when providing defaultVals");
                 if (cabs != null) throw new ArgumentException("must provide paramNames when providing cabs");
@@ -234,7 +234,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void SetCustomAttribute(Type type, object[] values) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             Type[] types = new Type[values.Length];
             for (int i = 0; i < types.Length; i++) {

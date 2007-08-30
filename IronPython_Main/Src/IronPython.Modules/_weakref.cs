@@ -29,6 +29,8 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
@@ -77,13 +79,14 @@ namespace IronPython.Modules {
         public static object @ref = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonWeakReference));
 
         [PythonName("proxy")]
-        public static object Proxy(object @object) {
-            return Proxy(@object, null);
+        public static object Proxy(CodeContext context, object @object) {
+            return Proxy(context, @object, null);
         }
+
         [PythonName("proxy")]
-        public static object Proxy(object @object, object callback) {
+        public static object Proxy(CodeContext context, object @object, object callback) {
             if (PythonOps.IsCallable(@object)) {
-                return PythonCallableWeakRefProxy.MakeNew(@object, callback);
+                return PythonCallableWeakRefProxy.MakeNew(context, @object, callback);
             } else {
                 return PythonWeakRefProxy.MakeNew(@object, callback);
             }
@@ -260,10 +263,10 @@ namespace IronPython.Modules {
             private static bool RefEquals(CodeContext context, object x, object y) {
                 object ret;
 
-                ret = DynamicHelpers.GetDynamicType(x).InvokeBinaryOperator(context, Operators.Equal, x, y);
+                ret = DynamicHelpers.GetDynamicType(x).InvokeBinaryOperator(context, Operators.Equals, x, y);
                 if (ret != PythonOps.NotImplemented) return (bool)ret;
 
-                ret = DynamicHelpers.GetDynamicType(y).InvokeBinaryOperator(context, Operators.Equal, y, x);
+                ret = DynamicHelpers.GetDynamicType(y).InvokeBinaryOperator(context, Operators.Equals, y, x);
                 if (ret != PythonOps.NotImplemented) return (bool)ret;
 
                 return x.Equals(y);
@@ -475,7 +478,7 @@ namespace IronPython.Modules {
                 PythonWeakRefProxy wrp = other as PythonWeakRefProxy;
                 if (wrp != null) return !PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
 
-                return PythonSites.NotEqualRetBool(GetObject(), other);
+                return PythonSites.NotEqualsRetBool(GetObject(), other);
             }
             #endregion
 
@@ -495,10 +498,11 @@ namespace IronPython.Modules {
             IValueEquality,
             ICustomMembers {
 
-            WeakHandle target;
+            private FastDynamicSite<object, object[], object> _site;
+            private WeakHandle _target;
 
             #region Python Constructors
-            internal static object MakeNew(object @object, object callback) {
+            internal static object MakeNew(CodeContext context, object @object, object callback) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
                 if (callback == null) {
@@ -514,15 +518,16 @@ namespace IronPython.Modules {
                     }
                 }
 
-                return new PythonCallableWeakRefProxy(@object, callback);
+                return new PythonCallableWeakRefProxy(context, @object, callback);
             }
             #endregion
 
             #region Constructors
 
-            private PythonCallableWeakRefProxy(object target, object callback) {
+            private PythonCallableWeakRefProxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
-                this.target = new WeakHandle(target, false);
+                _target = new WeakHandle(target, false);
+                _site = FastDynamicSite<object, object[], object>.Create(context, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
             }
             #endregion
 
@@ -530,12 +535,12 @@ namespace IronPython.Modules {
             ~PythonCallableWeakRefProxy() {
                 // remove our self from the chain...
                 try {
-                    IWeakReferenceable iwr = target.Target as IWeakReferenceable;
+                    IWeakReferenceable iwr = _target.Target as IWeakReferenceable;
                     if (iwr != null) {
                         WeakRefTracker wrt = iwr.GetWeakRef();
                         wrt.RemoveHandler(this);
                     }
-                    target.Free();
+                    _target.Free();
                 } catch (InvalidOperationException) {
                     // target was freed
                 }
@@ -556,7 +561,7 @@ namespace IronPython.Modules {
 
             bool TryGetObject(out object result) {
                 try {
-                    result = target.Target;
+                    result = _target.Target;
                     if (result == null) return false;
                     GC.KeepAlive(this);
                     return true;
@@ -614,7 +619,7 @@ namespace IronPython.Modules {
             #region ICodeFormattable Members
 
             string ICodeFormattable.ToCodeString(CodeContext context) {
-                object obj = target.Target;
+                object obj = _target.Target;
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
                     IdDispenser.GetId(this),
@@ -627,7 +632,7 @@ namespace IronPython.Modules {
             #region ICallableWithCodeContext Members
 
             object ICallableWithCodeContext.Call(CodeContext context, object[] args) {
-                return PythonOps.CallWithContext(context, GetObject(), args);
+                return _site.Invoke(GetObject(), args);
             }
 
             #endregion
@@ -706,7 +711,7 @@ namespace IronPython.Modules {
                 PythonCallableWeakRefProxy wrp = other as PythonCallableWeakRefProxy;
                 if (wrp != null) return !GetObject().Equals(wrp.GetObject());
 
-                return PythonSites.NotEqualRetBool(GetObject(), other);
+                return PythonSites.NotEqualsRetBool(GetObject(), other);
             }
             #endregion
 

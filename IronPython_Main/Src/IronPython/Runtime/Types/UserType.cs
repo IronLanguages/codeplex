@@ -184,7 +184,7 @@ namespace IronPython.Runtime.Types {
 
             object newInst;
             if (fastDict.TryGetValue(Symbols.NewInst, out newInst) && newInst is PythonFunction) {
-                fastDict[Symbols.NewInst] = new StaticMethod(newInst);
+                fastDict[Symbols.NewInst] = new staticmethod(newInst);
             }
 
             PopulateDefaultDictionary(fastDict);

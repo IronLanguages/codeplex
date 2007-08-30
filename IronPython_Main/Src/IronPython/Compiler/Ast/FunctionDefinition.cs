@@ -27,6 +27,7 @@ using Microsoft.Scripting.Actions;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Hosting;
 
     public class FunctionDefinition : ScopeStatement {
         protected Statement _body;
@@ -263,8 +264,6 @@ namespace IronPython.Compiler.Ast {
                 if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
             }
 
-            string filename = _sourceUnit.DisplayName;
-
             MSAst.Expression ret = Ast.Call(
                 new SourceSpan(Start, Header),
                 null,                                                           // instance
@@ -277,7 +276,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.Constant(flags),                                            // 6. flags
                 Ast.Constant(_body.Documentation),                              // 7. doc string or null
                 Ast.Constant(this.Start.Line),                                  // 8. line number
-                Ast.Constant(filename)                                          // 9. filename
+                Ast.Constant(_sourceUnit.GetSymbolDocument(this.Start.Line))    // 9. filename
             );
 
             // add decorators

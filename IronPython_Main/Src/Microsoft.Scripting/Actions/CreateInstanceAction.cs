@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -38,6 +38,21 @@ namespace Microsoft.Scripting.Actions {
             return CreateInstanceAction.Simple;
         }
 
+        public static new CreateInstanceAction Make(params Arg[] args) {
+            ArgumentInfo[] argkind = new ArgumentInfo[args.Length];
+            bool nonSimple = false;
+            for (int i = 0; i < args.Length; i++) {
+                argkind[i] = args[i].Info;
+                if (args[i].Kind != ArgumentKind.Simple) nonSimple = true;
+            }
+
+            if (nonSimple) {
+                return new CreateInstanceAction(argkind);
+            }
+
+            return CreateInstanceAction.Simple;
+        }
+
         public static new CreateInstanceAction Simple {
             get {
                 return _simple;
@@ -50,17 +65,7 @@ namespace Microsoft.Scripting.Actions {
 
         public bool Equals(CreateInstanceAction other) {
             if (other != null) {
-                if (other.ArgumentCount != ArgumentCount) {
-                    return false;
-                }
-
-                for (int i = 0; i < other.ArgumentInfos.Length; i++) {
-                    if (!other.ArgumentInfos[i].Equals(ArgumentInfos[i])) {
-                        return false;
-                    }
-                }
-
-                return true;
+                return ArgumentInfo.ArrayEquals(ArgumentInfos, other.ArgumentInfos);
             }
             return false;
         }

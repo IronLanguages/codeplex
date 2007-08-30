@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
@@ -26,8 +27,8 @@ namespace IronPython.Compiler.Ast {
         private readonly Expression _left, _right;
 
         public AndExpression(Expression left, Expression right) {
-            if (left == null) throw new ArgumentNullException("left");
-            if (right == null) throw new ArgumentNullException("right");
+            Contract.RequiresNotNull(left, "left");
+            Contract.RequiresNotNull(right, "right");
 
             _left = left;
             _right = right;

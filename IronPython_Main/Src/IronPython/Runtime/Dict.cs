@@ -28,6 +28,7 @@ using IronPython.Compiler;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
 
@@ -371,17 +372,20 @@ namespace IronPython.Runtime {
             return ret;
         }
 
+        private static FastDynamicSite<DynamicType, object> _fromkeysSite;
         [PythonClassMethod("fromkeys")]
         public static object FromKeys(CodeContext context, DynamicType cls, object seq) {
             return FromKeys(context, cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {
+        public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {            
             XRange xr = seq as XRange;
             if (xr != null) {
+                if (_fromkeysSite == null) _fromkeysSite = FastDynamicSite<DynamicType, object>.Create(DefaultContext.Default, CallAction.Simple);
+
                 int n = xr.GetLength();
-                object ret = PythonOps.CallWithContext(context, cls);
+                object ret = _fromkeysSite.Invoke(cls);
                 if (ret.GetType() == typeof(PythonDictionary)) {
                     PythonDictionary dr = ret as PythonDictionary;
                     for (int i = 0; i < n; i++) {

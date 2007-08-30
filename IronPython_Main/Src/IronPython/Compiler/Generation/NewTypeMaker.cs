@@ -28,18 +28,19 @@ using System.Diagnostics.SymbolStore;
 using System.Reflection;
 using System.Reflection.Emit;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
-using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -110,6 +111,8 @@ namespace IronPython.Compiler.Generation {
                     dict[SymbolTable.StringToId(name)] = new ReflectedSlotProperty(name, ret, i);
                 }
             }
+
+            DynamicSiteHelpers.InitializeFields(DefaultContext.Default, ret, true);
 
             return ret;
         }

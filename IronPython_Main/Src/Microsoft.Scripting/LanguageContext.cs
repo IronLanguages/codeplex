@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -26,6 +26,9 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using System.Runtime.CompilerServices;
 using System.Reflection;
+using Microsoft.Scripting.Utils;
+using System.Diagnostics;
+using System.IO;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -33,20 +36,22 @@ namespace Microsoft.Scripting {
     /// </summary>
     public abstract class LanguageContext : ICloneable {
         private static ModuleGlobalCache _noCache;
-        [ThreadStatic]
-        internal static List<Exception> _currentExceptions;
 
         /// <summary>
         /// Keeps track of exceptions being handled in interpreted mode (so we can support rethrow statements).
         /// </summary>
         [ThreadStatic]
         internal static List<Exception> _caughtExceptions;
-        
+
         public virtual ActionBinder Binder {
             get { return Engine.DefaultBinder; }
         }
 
-        public abstract ScriptEngine Engine { get; }
+        public virtual ScriptEngine Engine {
+            get {
+                return null;
+            }
+        }
 
         /// <summary>
         /// Provides the ContextId which includes members that should only be shown for this LanguageContext.
@@ -62,15 +67,20 @@ namespace Microsoft.Scripting {
         protected LanguageContext() {
         }
 
+        public static LanguageContext FromEngine(IScriptEngine engine) {
+            ScriptEngine localEngine = RemoteWrapper.GetLocalArgument<ScriptEngine>(engine, "engine");
+            return localEngine.LanguageContext;
+        }
+
         #region Module Context
 
         public ModuleContext GetModuleContext(ScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
             return module.GetModuleContext(ContextId);
         }
         
         public ModuleContext EnsureModuleContext(ScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
             ModuleContext context = module.GetModuleContext(ContextId);
             
             if (context == null) {
@@ -104,33 +114,79 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        //TODO rename and comment
-        public virtual ScriptCode CompileAst(CompilerContext context, CodeBlock body) {
-            body.BindClosures();
-#if DEBUG
-            AstWriter.Dump(body, context);
-#endif
-            return new ScriptCode(body, this, context);
+        #region Source Code Parsing & Compilation
+
+        /// <summary>
+        /// Parses the source code within a specified compiler context. 
+        /// The source unit to parse is held on by the context.
+        /// </summary>
+        /// <param name="context">Compiler context.</param>
+        /// <returns><b>null</b> on failure.</returns>
+        /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
+        public abstract CodeBlock ParseSourceCode(CompilerContext context);
+
+        /// <summary>
+        /// Updates code properties of the specified source unit. 
+        /// The default implementation invokes code parsing. 
+        /// </summary>
+        public virtual void UpdateSourceCodeProperties(CompilerContext context) {
+            Contract.RequiresNotNull(context, "context");
+
+            CodeBlock block = ParseSourceCode(context);
+
+            if (!context.SourceUnit.CodeProperties.HasValue) {
+                context.SourceUnit.CodeProperties = (block != null) ? SourceCodeProperties.None : SourceCodeProperties.IsInvalid;
+            }
         }
 
-        // TODO:
+        public ScriptCode CompileSourceCode(SourceUnit sourceUnit) {
+            return CompileSourceCode(sourceUnit, null, null);
+        }
+        
+        public ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options) {
+            return CompileSourceCode(sourceUnit, options, null);
+        }
+
+        public ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+
+            if (options == null) options = GetCompilerOptions();
+            if (errorSink == null) errorSink = Engine.GetCompilerErrorSink();
+
+            CompilerContext compilerContext = new CompilerContext(sourceUnit, options, errorSink);
+
+            CodeBlock block = ParseSourceCode(compilerContext);
+
+            if (block == null) {
+                throw new SyntaxErrorException();
+            }
+
+            block.BindClosures();
+
+#if DEBUG
+            AstWriter.Dump(block, compilerContext);
+#endif
+
+            // TODO: ParseSourceCode can update CompilerContext.Options
+            return new ScriptCode(block, Engine.GetLanguageContext(compilerContext.Options), compilerContext);
+        }
+
+        public virtual StreamReader GetSourceReader(Stream stream, Encoding defaultEncoding) {
+            return new StreamReader(stream, defaultEncoding);
+        }
+
+        #endregion
+
+#if !SILVERLIGHT
+        // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
+        public virtual SourceUnit GenerateSourceCode(System.CodeDom.CodeObject codeDom) {
+            throw new NotImplementedException();
+        }
+#endif
+
         public virtual ScriptCode Reload(ScriptCode original, ScriptModule module) {
-            string path;
-            SourceFileUnit sfu = original.SourceUnit as SourceFileUnit;
-            if (sfu != null) {
-                path = sfu.Path;
-            } else {
-                path = module.FileName;
-            }
-
-            ScriptEngine engine = this.Engine;
-            if (engine == null) {
-                engine = (ScriptEngine)original.SourceUnit.Engine;
-            }
-
-            SourceFileUnit su = new SourceFileUnit(engine, path, module.ModuleName, Encoding.Default);
-
-            return ScriptCode.FromCompiledCode(su.Compile(engine.GetModuleCompilerOptions(module)));
+            original.SourceUnit.Reload();
+            return CompileSourceCode(original.SourceUnit, Engine.GetModuleCompilerOptions(module));
         }
 
         /// <summary>
@@ -199,72 +255,6 @@ namespace Microsoft.Scripting {
         protected internal virtual Exception MissingName(SymbolId name) {
             return new MissingMemberException(String.Format(CultureInfo.CurrentCulture, Resources.NameNotDefined, SymbolTable.IdToString(name)));
         }
-
-        //TODO: - Review the design to see if these have to be made abstract
-        #region Exception handling
-
-        /// <summary>
-        /// Called to get the exception to throw for the provided value.  Value depends upon the
-        /// expression that is emitted in the ThrowStatement.  
-        /// 
-        /// For best results languages should map their exceptions as closely as possible to 
-        /// .NET exceptions.  The created exception can have its original value stored in
-        /// the Data property of the .NET exception.  The user can then be provided the original
-        /// exception either via ExtractException or CheckException.
-        /// 
-        /// Returns the exception to be thrown.
-        /// </summary>
-        /// <param name="value">The language defined value to be thrown.</param>
-        public virtual Exception ThrowException(object value) {
-            return value as Exception ?? new Exception(value.ToString());   // TODO: Wrap value, can't throw RuntimeWrappedException            
-        }
-        
-        /// <summary>
-        /// Called once at the start of the catch block before evaluating the catch clauses.
-        /// 
-        /// The language can update any internal processing state here.
-        /// 
-        /// The return value of ExtractException will be passed to CheckException to
-        /// perform the tests.  The return value of CheckException will be the value
-        /// the ultimately sees.
-        /// 
-        /// The default implementation always returns the .NET Exception object.
-        /// </summary>
-        public virtual object PushExceptionHandler(CodeContext context, Exception exception) {
-            return exception;
-        }
-
-        /// <summary>
-        /// Called while processing an exception to see if the caught object is handled by
-        /// the handler specified by the test object.  Return null if the exception should
-        /// not be handled or the exception object expsoed to the user.
-        /// 
-        /// The default implementation checks to see if the test IsTrue and if so returns
-        /// the exception object, otherwise returns null.
-        /// </summary>        
-        public virtual object CheckException(object exception, object test) {
-            return IsTrue(test) ? exception : null;
-        }
-
-        /// <summary>
-        /// Clears any exception handling state at the end of a catch block.  By default this
-        /// function is a nop.
-        /// </summary>
-        public virtual void PopExceptionHandler() {
-        }
-
-        /// <summary>
-        /// Gets the list of exceptions that are currently being handled by the user. 
-        /// 
-        /// These represent active catch blocks on the stack.
-        /// </summary>
-        protected List<Exception> CurrentExceptions {
-            get {
-                return _currentExceptions;
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// Returns a ModuleGlobalCache for the given name.  

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 #if !SILVERLIGHT // CodeDom objects are not available in Silverlight
 
@@ -36,11 +37,9 @@ namespace Microsoft.Scripting.Hosting {
         abstract protected void WriteFunctionDefinition(CodeMemberMethod func);
         abstract protected string QuoteString(string val);
 
-        public SourceUnit GenerateCode(IScriptEngine engine, CodeObject codeDom) {
-            CodeMemberMethod method = codeDom as CodeMemberMethod;
-            if (method == null) {
-                throw new ArgumentException("codeDom must be a CodeMemberMethod");
-            }
+        public SourceUnit GenerateCode(CodeObject codeDom, IScriptEngine engine) {
+            Contract.RequiresNotNull(engine, "engine");
+            Contract.Requires(codeDom is CodeMemberMethod);
 
             // Convert the CodeDom to source code
             if (_writer != null) {
@@ -48,7 +47,7 @@ namespace Microsoft.Scripting.Hosting {
             }
             _writer = new PositionTrackingWriter();
 
-            WriteFunctionDefinition(method);
+            WriteFunctionDefinition((CodeMemberMethod)codeDom);
 
             return CreateSourceUnit(engine);
         }
@@ -63,12 +62,7 @@ namespace Microsoft.Scripting.Hosting {
 
             string code = _writer.ToString();
 
-            SourceUnit src;
-            if (sourcePath != null) {
-                src = new SourceFileUnit(engine, sourcePath, sourcePath, code);
-            } else {
-                src = new SourceCodeUnit(engine, code);
-            }
+            SourceUnit src = SourceUnit.CreateFileUnit(engine, sourcePath, code);
             src.SetLineMapping(_writer.GetLineMap());
             src.SetDocumentMapping(fileMap);
             return src;

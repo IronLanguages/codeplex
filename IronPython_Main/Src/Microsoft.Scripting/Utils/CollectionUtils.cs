@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -22,8 +22,8 @@ namespace Microsoft.Scripting.Utils {
     public static class CollectionUtils {
 
         public static void AddRange<T>(ICollection<T> collection, IEnumerable<T> items) {
-            if (collection == null) throw new ArgumentNullException("collection");
-            if (items == null) throw new ArgumentNullException("items");
+            Contract.RequiresNotNull(collection, "collection");
+            Contract.RequiresNotNull(items, "items");
 
             foreach (T item in items) {
                 collection.Add(item);
@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Utils {
         public static IEnumerator<S> ToCovariant<T, S>(IEnumerator<T> enumerator)
             where T : S {
 
-            if (enumerator == null) throw new ArgumentNullException("enumerator");
+            Contract.RequiresNotNull(enumerator, "enumerator");
 
             while (enumerator.MoveNext()) {
                 yield return enumerator.Current;
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Utils {
             private IEnumerable<T> _enumerable;
 
             public CovariantConvertor(IEnumerable<T> enumerable) {
-                if (enumerable == null) throw new ArgumentNullException("enumerable");
+                Contract.RequiresNotNull(enumerable, "enumerable");
                 _enumerable = enumerable;
             }
 
@@ -81,8 +81,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static bool TrueForAll<T>(IList<T> collection, Predicate<T> predicate) {
-            if (collection == null) throw new ArgumentNullException("collection");
-            if (predicate == null) throw new ArgumentNullException("predicate");
+            Contract.RequiresNotNull(collection, "collection");
+            Contract.RequiresNotNull(predicate, "predicate");
 
             foreach (T item in collection) {
                 if (!predicate(item)) return false;

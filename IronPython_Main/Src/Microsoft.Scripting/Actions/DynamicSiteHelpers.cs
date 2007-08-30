@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -70,12 +70,22 @@ namespace Microsoft.Scripting.Actions {
         //
 
         public static void InitializeFields(CodeContext context, Type type) {
+            InitializeFields(context, type, false);
+        }
+
+        public static void InitializeFields(CodeContext context, Type type, bool reusable) {
             if (type == null) return;
 
             const string slotStorageName = "#SlotStorage";
             foreach (FieldInfo fi in type.GetFields()) {
                 if (fi.Name.StartsWith(slotStorageName)) {
-                    object value = ConstantPool.GetConstantData(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
+                    object value;
+                    if (reusable) {
+                        value = ConstantPool.GetConstantDataReusable(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
+                    } else {
+                        value = ConstantPool.GetConstantData(Int32.Parse(fi.Name.Substring(slotStorageName.Length)));
+                    }
+                    Debug.Assert(value != null);
                     FastDynamicSite fds = value as FastDynamicSite;
                     if (fds != null) {
                         fds.Context = context;

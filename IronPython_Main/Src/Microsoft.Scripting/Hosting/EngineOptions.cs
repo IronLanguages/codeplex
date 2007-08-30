@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
@@ -27,8 +28,6 @@ namespace Microsoft.Scripting {
         private bool _interpret;
         private bool _pdc;
         
-        #region Public accessors
-
         /// <summary>
         /// Enable CLR debugging of script code executed using ScriptEngine.Execute. This allows debugging the script with 
         /// a CLR debugger. It does not apply to the ScriptEngine.Evaluate set of APIs since it is not possible to step
@@ -85,10 +84,15 @@ namespace Microsoft.Scripting {
             set { _showClrExceptions = value; }
         }
 
-        #endregion
+        internal protected EngineOptions() {
 
-        public EngineOptions Clone() {
-            return (EngineOptions)MemberwiseClone();
+        }
+
+        protected EngineOptions(EngineOptions options) {
+            Contract.RequiresNotNull(options, "options");
+            _clrDebuggingEnabled = options._clrDebuggingEnabled;
+            _exceptionDetail = options._exceptionDetail;
+            _showClrExceptions = options._showClrExceptions;
         }
     }
 }

@@ -303,7 +303,7 @@ def gen_binaryops(cw, ty):
     cw.write("// Binary Operations - Comparisons")
     for symbol, name in [('<', 'LessThan'), ('<=', 'LessThanOrEqual'),
                           ('>', 'GreaterThan'), ('>=', 'GreaterThanOrEqual'),
-                          ('==', 'Equal'), ('!=', 'NotEqual')]:
+                          ('==', 'Equals'), ('!=', 'NotEquals')]:
         write_binop1(cw, simple_body, name, ty, symbol=symbol, return_type='bool')
     
             

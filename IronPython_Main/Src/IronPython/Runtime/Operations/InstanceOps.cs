@@ -71,7 +71,7 @@ namespace IronPython.Runtime.Operations {
         internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
         internal static BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
         internal static BuiltinFunction NonDefaultNewInst = CreateNonDefaultNew();
-        internal static object Init = CreateInitMethod();
+        internal static BuiltinMethodDescriptor Init = CreateInitMethod();
 
         static InstanceOps() {
             // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
@@ -349,10 +349,10 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        private static object CreateInitMethod() {
+        private static BuiltinMethodDescriptor CreateInitMethod() {
             MethodBase mb1 = typeof(InstanceOps).GetMethod("DefaultInit");
             MethodBase mb2 = typeof(InstanceOps).GetMethod("DefaultInitKW");
-            return BuiltinFunction.MakeMethod("__init__",
+            return (BuiltinMethodDescriptor)BuiltinFunction.MakeMethod("__init__",
                 new MethodBase[] { mb1, mb2 },
                 FunctionType.Method | FunctionType.AlwaysVisible | FunctionType.SkipThisCheck | FunctionType.OpsFunction).GetDescriptor();
         }

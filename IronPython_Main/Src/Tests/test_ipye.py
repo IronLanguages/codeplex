@@ -322,39 +322,11 @@ def skip_test_CreateLambda_Division():
     Assert(result < 1)
 
 
-def test_error_expression():
-    '''
-    Only purpose of this test is to hit IronPython.Compiler.ErrorExpression.
-    This is not possible without creating our own error sink which does not throw
-    any exceptions from the Add method which in turn is invoked by a Parser
-    object.
-    '''
-    global pe
-    import Microsoft
-    
-    if sys.executable.lower().find("\\debug\\") != -1:
-        #The debug binaries contain an assert which kills ipy.exe on the "[." 
-        #evaluation
-        return
-    
-    class TestErrorSink(Microsoft.Scripting.Hosting.ErrorSink):
-        def Add(self, su, msg, span, errorCode, severity):
-            pass
-
-    copts = pe.GetDefaultCompilerOptions()
-    scu = Microsoft.Scripting.SourceCodeUnit(pe, "[.")
-    sink = TestErrorSink()
-    cc = Microsoft.Scripting.CompilerContext(scu, copts, sink)
-    AssertError(TypeError, pe.Compiler.ParseExpressionCode, cc)
-
 def test_get_exception_message():
     ex = System.Exception("BAD")
     tName, tType = pe.GetExceptionMessage(ex)
     AreEqual(tName, "Exception: BAD")
     AreEqual(tType, "Exception")
-
-def test_script_compiler():
-    Assert(pe.ScriptCompiler!=None)  
 
 def test_publishmodule():
     AssertError(TypeError, pe.PublishModule, None)

@@ -293,16 +293,13 @@ namespace IronPython.Runtime {
         internal static TraceBack RawTraceBack;
 
         [PythonName("exc_clear")]
-        public void ClearException(CodeContext context) {
-            context.LanguageContext.PopExceptionHandler();            
+        public void ClearException() {
+            PythonOps.PopExceptionHandler();
         }
 
         [PythonName("exc_info")]
-        public Tuple ExceptionInfo(CodeContext context) {
-            PythonContext pc = context.LanguageContext as PythonContext;
-            if (pc != null) return pc.GetExceptionInfo();
-
-            return Tuple.MakeTuple(null, null, null);
+        public Tuple ExceptionInfo() {
+            return PythonOps.GetExceptionInfo();
         }
 
         [PythonName("exec_prefix")]
@@ -542,7 +539,7 @@ namespace IronPython.Runtime {
             PythonExtensionTypeAttribute._sysState = this;
             // Load builtins from IronPython.Modules
             Assembly ironPythonModules;
-            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(VersionInfo.GetIronPythonAssembly("IronPython.Modules"));
+            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(GetIronPythonAssembly("IronPython.Modules"));
             _autoLoadBuiltins.Add(ironPythonModules);
 
             foreach(Assembly builtinsAssembly in _autoLoadBuiltins) {
@@ -586,6 +583,14 @@ namespace IronPython.Runtime {
                 }
                 builtin_module_names = Tuple.MakeTuple(keys);
             }
+        }
+
+        public static string GetIronPythonAssembly(string baseName) {
+#if SIGNED
+            return baseName + ", Version=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ", Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+#else
+        return baseName;
+#endif
         }
     }
 }

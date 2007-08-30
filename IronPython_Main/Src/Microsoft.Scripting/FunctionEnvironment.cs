@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -80,7 +81,7 @@ namespace Microsoft.Scripting {
         }
 
         public FunctionEnvironmentNDictionary(object [] envValues, SymbolId[] names) {
-            if (envValues == null) throw new ArgumentNullException("envValues");
+            Contract.RequiresNotNull(envValues, "envValues");
 
             PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "FuncEnv " + envValues.Length);
             Debug.Assert(names.Length <= envValues.Length);

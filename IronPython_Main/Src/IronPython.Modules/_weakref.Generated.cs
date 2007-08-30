@@ -89,8 +89,8 @@ namespace IronPython.Modules {
             AddWrapperOperator(Symbols.OperatorGreaterThan, res);
             AddWrapperOperator(Symbols.OperatorLessThanOrEqual, res);
             AddWrapperOperator(Symbols.OperatorGreaterThanOrEqual, res);
-            AddWrapperOperator(Symbols.OperatorEqual, res);
-            AddWrapperOperator(Symbols.OperatorNotEqual, res);
+            AddWrapperOperator(Symbols.OperatorEquals, res);
+            AddWrapperOperator(Symbols.OperatorNotEquals, res);
             AddWrapperOperator(Symbols.OperatorLessThanGreaterThan, res);
 
             // *** END GENERATED CODE ***

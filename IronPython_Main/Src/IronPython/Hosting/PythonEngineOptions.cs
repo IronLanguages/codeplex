@@ -95,7 +95,7 @@ namespace IronPython {
             set { _preferComDispatchOverTypeInfo = value; }
         }
 
-        public new PythonEngineOptions Clone() {
+        public PythonEngineOptions Clone() {
             PythonEngineOptions result = (PythonEngineOptions)MemberwiseClone();
             result._arguments = (string[])_arguments.Clone();
             result._warningFilters = new List<string>(_warningFilters);

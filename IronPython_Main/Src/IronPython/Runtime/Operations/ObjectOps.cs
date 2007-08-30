@@ -332,7 +332,7 @@ namespace IronPython.Runtime.Operations {
                 // test is object types + test on the parameter being looked up.  The input name is
                 // either an object or a string so we call the appropriaet overload on string.
                 return Ast.AndAlso(
-                    res.MakeTestForTypes(CompilerHelpers.ObjectTypes(args), 0),
+                    res.MakeTestForTypes(DynamicTypeOps.ObjectTypes(args), 0),
                     Ast.Call(
                         Ast.Constant(strAttr),
                         typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].ExpressionType }),

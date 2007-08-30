@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -38,13 +38,25 @@ namespace Microsoft.Scripting.Ast {
         private readonly bool _forceWrapperMethod;
         private readonly bool _stronglyTyped;
         private readonly Type _delegateType;
+        private readonly bool _isDeclarative;
         
+#if DEBUG
+        internal bool ForceWrapperMethod {
+            get { return _forceWrapperMethod; }
+        }
+
+        internal bool IsStronglyTyped {
+            get { return _stronglyTyped; }
+        }
+
+        internal Type DelegateType {
+            get { return _delegateType; }
+        }
+#endif
         /// <summary>
         /// Whether this expression declares the block. If so, the declaring code's variable are accessible from within the block (a closure is created).
         /// Otherwise, the block is only referred to by the containing block and do not share it's scope.
         /// </summary>
-        private readonly bool _isDeclarative;
-
         public bool IsDeclarative {
             get { return _isDeclarative; }
         }

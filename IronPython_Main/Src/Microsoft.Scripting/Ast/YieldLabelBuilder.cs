@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -23,22 +23,18 @@ namespace Microsoft.Scripting.Ast {
             public enum TryStatementState {
                 Try,
                 Handler,
-                Finally,
-                Else
+                Finally
             };
 
-            private readonly DynamicTryStatement _statement;
+            private readonly TryStatement _statement;
             private TryStatementState _state;
+            private int _handler;
 
-            public ExceptionBlock(DynamicTryStatement stmt)
-                : this(TryStatementState.Try, stmt) {
-            }
+            public ExceptionBlock(TryStatement statement) {
+                Debug.Assert(statement != null);
 
-            public ExceptionBlock(TryStatementState state, DynamicTryStatement stmt) {
-                Debug.Assert(stmt != null);
-
-                _state = state;
-                _statement = stmt;
+                _state = TryStatementState.Try;
+                _statement = statement;
             }
 
             internal TryStatementState State {
@@ -46,26 +42,27 @@ namespace Microsoft.Scripting.Ast {
                 set { _state = value; }
             }
 
-            internal TargetLabel TopTarget {
-                get {
-                    return _statement.EnsureTopTarget();
-                }
+            internal int Handler {
+                get { return _handler; }
+                set { _handler = value; }
             }
 
-            public void AddYieldTarget(TargetLabel tl, int index) {
-                switch (_state) {
+            /// <summary>
+            /// Adds yield target to the current try statement and returns the label
+            /// to which the outer code must jump to to route properly to this label.
+            /// </summary>
+            internal TargetLabel AddYieldTarget(TargetLabel label, int index) {
+                switch (State) {
                     case TryStatementState.Try:
-                        _statement.AddTryYieldTarget(tl, index);
-                        break;
+                        return _statement.AddTryYieldTarget(label, index);
                     case TryStatementState.Handler:
-                        _statement.AddCatchYieldTarget(tl, index);
-                        break;
+                        return _statement.AddCatchYieldTarget(label, index, _handler);
                     case TryStatementState.Finally:
-                        _statement.AddFinallyYieldTarget(tl, index);
-                        break;
-                    case TryStatementState.Else:
-                        _statement.AddElseYieldTarget(tl, index);
-                        break;
+                        return _statement.AddFinallyYieldTarget(label, index);
+
+                    default:
+                        Debug.Assert(false, "Invalid try statement state " + State.ToString());
+                        throw new System.InvalidOperationException();
                 }
             }
         }
@@ -86,36 +83,33 @@ namespace Microsoft.Scripting.Ast {
 
         #region AstWalker method overloads
 
-        public override bool Walk(DynamicTryStatement node) {
-            ExceptionBlock tb = new ExceptionBlock(node);
+        public override bool Walk(TryStatement node) {
+            ExceptionBlock block = new ExceptionBlock(node);
 
-            _tryBlocks.Push(tb);
+            _tryBlocks.Push(block);
             node.Body.Walk(this);
 
-            if (node.Handlers != null) {
-                tb.State = ExceptionBlock.TryStatementState.Handler;
-                foreach (DynamicTryStatementHandler handler in node.Handlers) {
-                    handler.Walk(this);
+            IList<CatchBlock> handlers = node.Handlers;
+            if (handlers != null) {
+                block.State = ExceptionBlock.TryStatementState.Handler;
+                for (int handler = 0; handler < handlers.Count; handler++) {
+                    block.Handler = handler;
+                    handlers[handler].Body.Walk(this);
                 }
             }
 
-            if (node.ElseStatement != null) {
-                tb.State = ExceptionBlock.TryStatementState.Else;
-                node.ElseStatement.Walk(this);
-            }
-
             if (node.FinallyStatement != null) {
-                tb.State = ExceptionBlock.TryStatementState.Finally;
+                block.State = ExceptionBlock.TryStatementState.Finally;
                 node.FinallyStatement.Walk(this);
             }
 
-            ExceptionBlock eb = _tryBlocks.Pop();
-            Debug.Assert((object)tb == (object)eb);
+            Debug.Assert((object)block == (object)_tryBlocks.Peek());
+            _tryBlocks.Pop();
 
             return false;
         }
 
-        public override void PostWalk(DynamicTryStatement node) {
+        public override void PostWalk(TryStatement node) {
             _temps += node.GetGeneratorTempCount();
         }
 
@@ -126,12 +120,11 @@ namespace Microsoft.Scripting.Ast {
             node.Target = new YieldTarget(index, label);
 
             foreach (ExceptionBlock eb in _tryBlocks) {
-                eb.AddYieldTarget(label, index);
+                // The exception statement must determine
+                // the label for the enclosing code to jump to
+                // to return to the given yield target
 
-                // From enclosing lexical scopes, one must jump
-                // to the try block label in order to jump to any
-                // of the enclosed yield targets.
-                label = eb.TopTarget;
+                label = eb.AddYieldTarget(label, index);
             }
 
             // Insert the top target to the top yields

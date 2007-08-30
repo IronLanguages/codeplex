@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
     /// <summary>
@@ -72,7 +73,7 @@ namespace Microsoft.Scripting.Types {
         /// <param name="type"></param>
         /// <param name="dynamicType"></param>
         public static DynamicType SetDynamicType(Type type, DynamicType dynamicType) {
-            if (dynamicType == null) throw new ArgumentNullException("dynamicType");
+            Contract.RequiresNotNull(dynamicType, "dynamicType");
 
             lock (_dynamicTypes) {
                 // HACK: Work around until Ops doesn't have SaveDynamicType and this is entirely thread safe.
@@ -88,7 +89,7 @@ namespace Microsoft.Scripting.Types {
         /// Creates an instance of the dynamic type and runs appropriate class initialization
         /// </summary>
         public object CreateInstance(CodeContext context, params object[] args) {
-            if (args == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(args, "args");
 
             Initialize();
 
@@ -106,8 +107,8 @@ namespace Microsoft.Scripting.Types {
         /// Creats an instance of the object using keyword parameters.
         /// </summary>
         public object CreateInstance(CodeContext context, object[] args, string[] names) {
-            if (names == null) throw new ArgumentNullException("names");
-            if (names == null) throw new ArgumentNullException("args");
+            Contract.RequiresNotNull(names, "names");
+            Contract.RequiresNotNull(names, "names");
 
             Initialize();
 
@@ -225,7 +226,7 @@ namespace Microsoft.Scripting.Types {
         public Type MakeGenericType(params DynamicType[] types) {
             Initialize();
 
-            if (types == null) throw new ArgumentNullException("types");
+            Contract.RequiresNotNull(types, "types");
             if (!UnderlyingSystemType.ContainsGenericParameters)
                 throw new InvalidOperationException(Resources.InvalidOperation_MakeGenericOnNonGeneric);
 

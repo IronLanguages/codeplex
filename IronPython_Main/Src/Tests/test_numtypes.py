@@ -32,23 +32,32 @@ class mylong(long): pass
 class myfloat(float): pass
 class mycomplex(complex): pass
 
-biops = [
+biops_math_simple = [
     ("add", add),
     ("sub", sub),
     ("mul", mul),
     ("div", div),
+    ]
+
+biops_math_other = [
     ("floordiv", floordiv),
     ("truediv", truediv),
     ("mod", mod),
     ("pow", pow),
-        
+    #("divmod", divmod), !!! not supporting divmod on non-standard types
+    ]
+
+biops_bool_simple = [
     ("and", and_),
     ("or", or_),
     ("xor", xor),
+    ]    
+
+biops_bool_shift = [
     ("lshift", lshift),
     ("rshift", rshift),
-    #("divmod", divmod), !!! not supporting divmod on non-standard types
     ]
+    
     
 unops = [
     ("neg", neg),
@@ -308,34 +317,47 @@ if is_cli or is_silverlight:
     ftypes = [Single, Double]
     all = get_values(values, itypes, ftypes)
 
-@skip('win32')
-def test_validate_binary_ops1():
-    total = validate_binary_ops(all, biops[:(len(biops)+1)/2])
-    print total, "tests ran."
 
-@skip('win32')
-def test_validate_binary_ops2():
-    total = validate_binary_ops(all, biops[(len(biops)+1)/2:])
-    print total, "tests ran."
 
-@skip('win32')
-def test_validate_unary_ops():
-    total = validate_unary_ops(all)
-    print total, "tests ran."
-    
-@skip('win32')
-def test_validate_constructors():
-    total = validate_constructors(values)
-    print total, "tests ran."
+RUN_ALL = False
+if len(sys.argv)<=1 or __name__ != '__main__': 
+    RUN_ALL = True
+elif not sys.argv[1] in [str(x) for x in range(1, 6)]: raise Exception("Bad params!")
 
-if len(sys.argv) == 1 or __name__ != '__main__': 
-    run_test(__name__)
-elif sys.argv[1] == '1':
-    test_validate_binary_ops1()
-    test_validate_unary_ops()
-    test_validate_constructors()
-elif sys.argv[1] == '2': 
-    test_validate_binary_ops2()
-else:
-    print sys.argv
-    Fail("unknown args")
+if RUN_ALL or sys.argv[1] == '1':
+    @skip('win32')
+    def test_validate_biops_bool_simple():
+        total = validate_binary_ops(all, biops_bool_simple)
+        print total, "tests ran."
+
+if RUN_ALL or sys.argv[1] == '2':
+    @skip('win32')
+    def test_validate_biops_bool_shift():
+        total = validate_binary_ops(all, biops_bool_shift)
+        print total, "tests ran."
+        
+if RUN_ALL or sys.argv[1] == '3':
+    @skip('win32')
+    def test_validate_biops_math_simple():
+        total = validate_binary_ops(all, biops_math_simple)
+        print total, "tests ran."
+
+if RUN_ALL or sys.argv[1] == '4':
+    @skip('win32')
+    def test_validate_biops_math_other():
+        total = validate_binary_ops(all, biops_math_other)
+        print total, "tests ran."
+
+if RUN_ALL or sys.argv[1] == '5':
+    @skip('win32')
+    def test_validate_unary_ops():
+        total = validate_unary_ops(all)
+        print total, "tests ran."
+  
+    @skip('win32')
+    def test_validate_constructors():
+        total = validate_constructors(values)
+        print total, "tests ran."
+
+
+run_test(__name__)

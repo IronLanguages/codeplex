@@ -44,8 +44,6 @@ namespace IronPython.Hosting {
     public sealed class PythonEngine : ScriptEngine, IDisposable {
         private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         
-        private readonly PythonScriptCompiler _compiler;
-        
         internal static readonly SingletonFactory Factory = new SingletonFactory(
             delegate(PythonLanguageProvider provider, PythonEngineOptions options) { return new PythonEngine(provider, options); },
             GetSetupInformation);
@@ -53,7 +51,6 @@ namespace IronPython.Hosting {
         // singleton:
         private readonly SystemState _systemState;
         private readonly Importer _importer;
-        private readonly PythonErrorSink _defaultErrorSink;
         private readonly PythonModuleContext _defaultModuleContext;
         private readonly PythonBinder _binder;
         internal readonly object _exceptionType;
@@ -79,16 +76,6 @@ namespace IronPython.Hosting {
             get { return (PythonEngineOptions)base.Options; }
         }
 
-        public PythonScriptCompiler ScriptCompiler {
-            get { return _compiler; }
-        }
-
-        public override ScriptCompiler Compiler {
-            get {
-                return _compiler;
-            }
-        }
-
         public override ActionBinder DefaultBinder {
             get {
                 return _binder;
@@ -98,6 +85,12 @@ namespace IronPython.Hosting {
         public PythonModuleContext DefaultModuleContext {
             get {
                 return _defaultModuleContext;
+            }
+        }
+
+        internal PythonContext PythonContext {
+            get {
+                return (PythonContext)LanguageContext;
             }
         }
 
@@ -121,20 +114,18 @@ namespace IronPython.Hosting {
         /// To be called by <see cref="GetLocalService"/> only.
         /// </summary>
         private PythonEngine(PythonLanguageProvider provider, PythonEngineOptions engineOptions)
-            : base(provider, engineOptions) {
+            : base(provider, engineOptions, new PythonContext()) {
 
             // singletons:
-            _defaultErrorSink = new PythonErrorSink(false);
             _defaultModuleContext = new PythonModuleContext(null);
             _importer = new Importer(this);
 
+            PythonContext.PythonEngine = this;
             DefaultContext.CreateContexts(this);
 
             _binder = new PythonBinder(DefaultContext.DefaultCLS);
            
             _systemState = new SystemState();
-            _compiler = new PythonScriptCompiler(this);
-            
 
             _exceptionType = ExceptionConverter.GetPythonException("Exception");
             _systemState.Initialize();
@@ -212,8 +203,8 @@ namespace IronPython.Hosting {
         /// with the module will be reclaimed after that.
         /// </param>
         public ScriptModule CreateModule(string moduleName, IDictionary<string, object> globals, ModuleOptions options) {
-            if (moduleName == null) throw new ArgumentNullException("moduleName");
-            if (globals == null) throw new ArgumentNullException("globals");
+            Contract.RequiresNotNull(moduleName, "moduleName");
+            Contract.RequiresNotNull(globals, "globals");
 
             IAttributesCollection globalDict = globals as IAttributesCollection ?? GetGlobalsDictionary(globals);
             ScriptModule module = MakePythonModule(moduleName, new Scope(globalDict), options);
@@ -222,7 +213,7 @@ namespace IronPython.Hosting {
         }
 
         public override void PublishModule(IScriptModule module) {
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(module, "module");
 
             // TODO: remote modules here...
             _systemState.modules[module.ModuleName] = module;
@@ -238,7 +229,7 @@ namespace IronPython.Hosting {
 
         // scope can be null
         public ScriptModule MakePythonModule(string name, Scope scope, ModuleOptions options) {
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(name, "name");
             if (scope == null) scope = new Scope(new SymbolDictionary());
 
             ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule(name, scope);
@@ -265,7 +256,7 @@ namespace IronPython.Hosting {
         }
         
         public void Execute(string scriptCode, ScriptModule module, IDictionary<string, object> locals) {
-            Execute(new SourceCodeUnit(this, scriptCode), module, locals);
+            Execute(SourceUnit.CreateSnippet(this, scriptCode), module, locals);
         }
 
         /// <summary>
@@ -277,17 +268,17 @@ namespace IronPython.Hosting {
         /// <param name="scope">The scope to execute the code in.</param>
         /// <param name="locals">Dictionary of locals</param>
         public void Execute(SourceUnit sourceUnit, ScriptModule module, IDictionary<string, object> locals) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            Contract.RequiresNotNull(module, "module");
 
-            ScriptCode code = ScriptCode.FromCompiledCode(sourceUnit.Compile(GetModuleCompilerOptions(module), _defaultErrorSink));
-            ModuleContext moduleContext = DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
+            ScriptCode code = LanguageContext.CompileSourceCode(sourceUnit, GetModuleCompilerOptions(module), GetCompilerErrorSink());
+            ModuleContext moduleContext = LanguageContext.EnsureModuleContext(module);
             code.Run(locals != null ? new Scope(module.Scope, GetAttrDict(locals)) : module.Scope, moduleContext);
         }
 
         public object Evaluate(string expression, ScriptModule module, IDictionary<string, object> locals) {
-            if (expression == null) throw new ArgumentNullException("expression");
-            if (module == null) throw new ArgumentNullException("module");
+            Contract.RequiresNotNull(expression, "expression");
+            Contract.RequiresNotNull(module, "module");
 
             if (locals != null) {
                 Scope newScope = new Scope(module.Scope, GetAttrDict(locals));
@@ -348,14 +339,17 @@ namespace IronPython.Hosting {
         }
 
         internal static string FormatPythonSyntaxError(SyntaxErrorException e) {
+            string sourceLine = e.GetCodeLine();
+            
             return String.Format(
                 "  File \"{1}\", line {2}{0}" +
                 "    {3}{0}" +
                 "    {4}^{0}" +
                 "{5}: {6}{0}", 
                 Environment.NewLine,
-                e.FileName, e.Line > 0 ? e.Line.ToString() : "?",
-                (e.LineText != null) ? e.LineText.Replace('\t', ' ') : null,
+                e.GetSymbolDocumentName(), 
+                e.Line > 0 ? e.Line.ToString() : "?",
+                (sourceLine != null) ? sourceLine.Replace('\t', ' ') : null,
                 new String(' ', e.Column != 0 ? e.Column - 1 : 0),
                 GetPythonExceptionClassName(ExceptionConverter.ToPython(e)), e.Message);
         }
@@ -599,13 +593,13 @@ namespace IronPython.Hosting {
 
         //TODO simplify
         public ScriptModule CreateOptimizedModule(string fileName, string moduleName, bool publishModule, bool skipFirstLine) {
-            if (fileName == null) throw new ArgumentNullException("fileName");
-            if (moduleName == null) throw new ArgumentNullException("moduleName");
+            Contract.RequiresNotNull(fileName, "fileName");
+            Contract.RequiresNotNull(moduleName, "moduleName");
 
-            SourceFileUnit file_unit = new SourceFileUnit(this, fileName, moduleName, _systemState.DefaultEncoding);
+            SourceUnit sourceUnit = SourceUnit.CreateFileUnit(this, fileName, _systemState.DefaultEncoding);
             PythonCompilerOptions options = (PythonCompilerOptions)GetDefaultCompilerOptions();
             options.SkipFirstLine = skipFirstLine;
-            ScriptModule module = file_unit.CompileToModule(options, GetDefaultErrorSink());
+            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, ScriptModuleKind.Default, null, options, null, sourceUnit); 
 
             if (publishModule) {
                 _systemState.modules[moduleName] = module;
@@ -669,49 +663,6 @@ namespace IronPython.Hosting {
 #endif
         }
 
-        public override StreamReader GetSourceReader(Stream stream, ref Encoding encoding) {
-            Debug.Assert(stream != null && encoding != null);
-            Debug.Assert(stream.CanSeek && stream.CanRead);
-            
-            // we choose ASCII by default, if the file has a Unicode pheader though
-            // we'll automatically get it as unicode.
-            Encoding default_encoding = encoding;
-            encoding = StringUtils.AsciiEncoding;
-
-            long start_position = stream.Position;
-
-            StreamReader sr = new StreamReader(stream, StringUtils.AsciiEncoding);
-            string line = sr.ReadLine();
-            bool gotEncoding = false;
-
-            // magic encoding must be on line 1 or 2
-            if (line != null && !(gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding))) {
-                line = sr.ReadLine();
-
-                if (line != null) {
-                    gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding);
-                }
-            }
-
-            if (gotEncoding && sr.CurrentEncoding != StringUtils.AsciiEncoding && encoding != sr.CurrentEncoding)
-            {
-                // we have both a BOM & an encoding type, throw an error
-                throw new IOException("file has both Unicode marker and PEP-263 file encoding");
-            }
-
-            if (encoding == null)
-                throw new IOException("unknown encoding type");
-
-            // re-read w/ the correct encoding type...
-            stream.Seek(start_position, SeekOrigin.Begin);
-
-            return new StreamReader(stream, encoding);
-        }
-
-        public override SourceUnit CreateStandardInputSourceUnit(string code) {
-            return new SourceCodeUnit(this, code, "<stdin>");
-        }
-
         public SystemState SystemState {
             get {
                 return _systemState;
@@ -726,8 +677,8 @@ namespace IronPython.Hosting {
 
         #region Factories
 
-        public override ErrorSink GetDefaultErrorSink() {
-            return _defaultErrorSink;
+        public override ErrorSink GetCompilerErrorSink() {
+            return new CompilerErrorSink();
         }
 
         public override CompilerOptions GetDefaultCompilerOptions() {
@@ -737,11 +688,13 @@ namespace IronPython.Hosting {
         public override CompilerOptions GetModuleCompilerOptions(ScriptModule module) {
             Assert.NotNull(module);
 
-            PythonCompilerOptions result = new PythonCompilerOptions(Options.DivisionOptions == PythonDivisionOptions.New);
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.GetModuleContext(module);
+            PythonCompilerOptions result = new PythonCompilerOptions();
+            PythonModuleContext moduleContext = (PythonModuleContext)LanguageContext.GetModuleContext(module);
 
             if (moduleContext != null) {
                 result.TrueDivision = moduleContext.TrueDivision;
+            } else {
+                result.TrueDivision = Options.DivisionOptions == PythonDivisionOptions.New;
             }
 
             return result;
@@ -762,7 +715,7 @@ namespace IronPython.Hosting {
         #region Runtime Code Sense
 
         protected override string[] FormatObjectMemberNames(IList<object> names) {
-            if (names == null) throw new ArgumentNullException("value");
+            Contract.RequiresNotNull(names, "names");
 
             string[] result = new string[names.Count];
 

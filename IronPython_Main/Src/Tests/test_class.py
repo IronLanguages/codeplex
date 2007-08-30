@@ -2085,4 +2085,14 @@ def test_missing_attr():
     def f(): a.dne
     AssertErrorWithMessage(AttributeError, "'foo' object has no attribute 'dne'", f)
 
+def test_method():
+    class tst_oc:
+        def root(): return 2
+
+    class tst_nc:
+        def root(): return 2
+
+    AssertError(TypeError, tst_oc.root)
+    AssertError(TypeError, tst_nc.root)
+    
 run_test(__name__)

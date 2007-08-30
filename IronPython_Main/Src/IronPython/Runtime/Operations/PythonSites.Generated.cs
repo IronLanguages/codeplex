@@ -168,17 +168,17 @@ namespace IronPython.Runtime.Operations {
             return GreaterThanOrEqualBooleanSharedSite.Invoke(x, y);
         }
 
-        private static FastDynamicSite<object, object, object> NotEqualSharedSite =
-            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.NotEqual));
+        private static FastDynamicSite<object, object, object> NotEqualsSharedSite =
+            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.NotEquals));
 
-        public static object NotEqual(object x, object y) {
-            return NotEqualSharedSite.Invoke(x, y);
+        public static object NotEquals(object x, object y) {
+            return NotEqualsSharedSite.Invoke(x, y);
         }
-        private static FastDynamicSite<object, object, bool> NotEqualBooleanSharedSite =
-            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.NotEqual));
+        private static FastDynamicSite<object, object, bool> NotEqualsBooleanSharedSite =
+            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.NotEquals));
 
-        public static bool NotEqualRetBool(object x, object y) {
-            return NotEqualBooleanSharedSite.Invoke(x, y);
+        public static bool NotEqualsRetBool(object x, object y) {
+            return NotEqualsBooleanSharedSite.Invoke(x, y);
         }
 
         // *** END GENERATED CODE ***

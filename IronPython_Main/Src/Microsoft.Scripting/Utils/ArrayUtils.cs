@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -33,8 +33,8 @@ namespace Microsoft.Scripting.Utils {
 
         public static TOutput[] ConvertAll<TInput, TOutput>(TInput[] input, Converter<TInput, TOutput> conv) {
 #if SILVERLIGHT
-            if (input == null) throw new ArgumentNullException("input");
-            if (conv == null) throw new ArgumentNullException("conv");
+            Contract.RequiresNotNull(input, "input");
+            Contract.RequiresNotNull(conv, "conv");
 
             TOutput[] res = new TOutput[input.Length];
             for (int i = 0; i < input.Length; i++) {
@@ -69,8 +69,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void PrintTable(TextWriter output, string[,] table) {
-            if (output == null) throw new ArgumentNullException("output");
-            if (table == null) throw new ArgumentNullException("table");
+            Contract.RequiresNotNull(output, "output");
+            Contract.RequiresNotNull(table, "table");
 
             int max_width = 0;
             for (int i = 0; i < table.GetLength(0); i++) {
@@ -122,7 +122,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] ShiftRight<T>(T[] array, int count) {
-            if (array == null) throw new ArgumentNullException("array");
+            Contract.RequiresNotNull(array, "array");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             T[] result = new T[array.Length + count];
@@ -131,7 +131,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] ShiftLeft<T>(T[] array, int count) {
-            if (array == null) throw new ArgumentNullException("array");
+            Contract.RequiresNotNull(array, "array");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             T[] result = new T[array.Length - count];
@@ -153,7 +153,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] Append<T>(T[] array, T item) {
-            if (array == null) throw new ArgumentNullException("array");
+            Contract.RequiresNotNull(array, "array");
 
             System.Array.Resize<T>(ref array, array.Length + 1);
             array[array.Length - 1] = item;
@@ -161,7 +161,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] AppendRange<T>(T[] array, IList<T> items, int additionalItemCount) {
-            if (array == null) throw new ArgumentNullException("array");
+            Contract.RequiresNotNull(array, "array");
             if (additionalItemCount < 0) throw new ArgumentOutOfRangeException("additionalItemCount");
 
             int j = array.Length;
@@ -173,6 +173,30 @@ namespace Microsoft.Scripting.Utils {
             }
 
             return array;
+        }
+
+        public static T[,] Concatenate<T>(T[,] array1, T[,] array2) {
+            int columnsCount = array1.GetLength(1);
+            Debug.Assert(array2.GetLength(1) == columnsCount);
+
+            int row1Count = array1.GetLength(0);
+            int row2Count = array2.GetLength(0);
+            int totalRowsCount = row1Count + row2Count;
+            T[,] result = new T[totalRowsCount, columnsCount];
+
+            for (int i = 0; i < row1Count; i++) {
+                for (int j = 0; j < columnsCount; j++) {
+                    result[i, j] = array1[i, j];
+                }
+            }
+
+            for (int i = 0; i < row2Count; i++) {
+                for (int j = 0; j < columnsCount; j++) {
+                    result[(i + row1Count), j] = array2[i, j];
+                }
+            }
+
+            return result;
         }
 
         public static void SwapLastTwo<T>(T[] array) {
@@ -188,7 +212,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] RemoveLast<T>(T[] array) {
-            if (array == null) throw new ArgumentNullException("array");
+            Contract.RequiresNotNull(array, "array");
 
             System.Array.Resize(ref array, array.Length - 1);
             return array;

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -28,6 +28,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -35,15 +36,25 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     internal abstract class OptimizedModuleGenerator {
         private ScriptCode[] _scriptCodes;
+        private string _moduleName;
         private Dictionary<LanguageContext, ScopeAllocator> _allocators = new Dictionary<LanguageContext, ScopeAllocator>();
         private List<CodeContext> _codeContexts = new List<CodeContext>();
 
-        protected OptimizedModuleGenerator(params ScriptCode[] scriptCodes) {
-            _scriptCodes = scriptCodes;
+        public string ModuleName {
+            get { return _moduleName; }
         }
 
-        public static OptimizedModuleGenerator Create(params ScriptCode[] scriptCodes) {
-            if (scriptCodes == null) throw new ArgumentNullException("scriptCodes");
+        protected OptimizedModuleGenerator(string moduleName, params ScriptCode[] scriptCodes) {
+            Assert.NotNull(moduleName);
+            Assert.NotNullItems(scriptCodes);
+
+            _scriptCodes = scriptCodes;
+            _moduleName = moduleName;
+        }
+
+        public static OptimizedModuleGenerator Create(string moduleName, params ScriptCode[] scriptCodes) {
+            Contract.RequiresNotNull(moduleName, "moduleName");
+            Contract.RequiresNotNull(scriptCodes, "scriptCodes");
             if (scriptCodes.Length == 0) throw new ArgumentException("scriptCodes", "must have at least one ScriptCode");
             if (scriptCodes.Length != 1) throw new ArgumentException("scriptCodes", "only one ScriptCode currently supported");
 
@@ -58,14 +69,14 @@ namespace Microsoft.Scripting.Generation {
                     new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Demand();
 
 #endif
-                    return new StaticFieldModuleGenerator(scriptCodes);
+                    return new StaticFieldModuleGenerator(moduleName, scriptCodes);
 #if !SILVERLIGHT
                 } catch (SecurityException) {
                 }
 #endif
             }
 
-            return new TupleModuleGenerator(scriptCodes);
+            return new TupleModuleGenerator(moduleName, scriptCodes);
         }
 
         /// <summary>
@@ -184,8 +195,8 @@ namespace Microsoft.Scripting.Generation {
     class TupleModuleGenerator : OptimizedModuleGenerator {
         private Dictionary<LanguageContext, TupleSlotFactory> _languages = new Dictionary<LanguageContext, TupleSlotFactory>();
 
-        public TupleModuleGenerator(params ScriptCode[] scriptCodes)
-            : base(scriptCodes) {
+        public TupleModuleGenerator(string moduleName, params ScriptCode[] scriptCodes)
+            : base(moduleName, scriptCodes) {
         }
 
         private class LanguageInfo {
@@ -239,8 +250,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public StaticFieldModuleGenerator(params ScriptCode[] scriptCodes)
-            : base(scriptCodes) {
+        public StaticFieldModuleGenerator(string moduleName, params ScriptCode[] scriptCodes)
+            : base(moduleName, scriptCodes) {
         }
 
         #region Abstract overrides
@@ -248,7 +259,7 @@ namespace Microsoft.Scripting.Generation {
         protected override SlotFactory CreateSlotFactory(ScriptCode scriptCode) {
             AssemblyGen ag = CreateModuleAssembly(scriptCode);
 
-            TypeGen tg = GenerateModuleGlobalsType(scriptCode.CompilerContext.SourceUnit.Name, ag);
+            TypeGen tg = GenerateModuleGlobalsType(ag);
             StaticFieldSlotFactory factory = new StaticFieldSlotFactory(tg);
 
             _languages[scriptCode.LanguageContext] = new LanguageInfo(factory, tg);
@@ -310,7 +321,7 @@ namespace Microsoft.Scripting.Generation {
             int cnt = 0;
             for (; ; ) {
                 try {
-                    ag = new AssemblyGen(scriptCode.CompilerContext.SourceUnit.Name, outDir, fileName + ext, genAttrs);
+                    ag = new AssemblyGen(fileName, outDir, fileName + ext, genAttrs);
                     break;
                 } catch (IOException) {
                     // If a file already exits with the same name, try the next name in the sequence.
@@ -324,20 +335,29 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private static void GetCompiledSourceUnitAssemblyLocation(SourceUnit sourceUnit, out string outDir, out string fileName) {
-            SourceFileUnit file_unit = sourceUnit as SourceFileUnit;
+            outDir = ScriptDomainManager.Options.BinariesDirectory;
 
-            if (file_unit != null) {
-                string fullPath = ScriptDomainManager.CurrentManager.Host.NormalizePath(file_unit.Path);
-                outDir = ScriptDomainManager.Options.BinariesDirectory == null ? Path.GetDirectoryName(fullPath) : ScriptDomainManager.Options.BinariesDirectory;
-                fileName = Path.GetFileNameWithoutExtension(fullPath);
-            } else {
-                outDir = null;
-                fileName = IOUtils.ToValidFileName(sourceUnit.Name);
+            if (String.IsNullOrEmpty(sourceUnit.Id)) {
+                fileName = Guid.NewGuid().ToString();
+                return;
             }
+
+            string path = IOUtils.ToValidPath(sourceUnit.Id);
+
+            if (outDir == null) {
+                try {
+                    outDir = Path.GetDirectoryName(path);
+                } catch (PathTooLongException) {
+                    outDir = null;
+                }
+            }
+
+            fileName = Path.GetFileNameWithoutExtension(path);
+            Debug.Assert(!String.IsNullOrEmpty(fileName));
         }
 
-        private static TypeGen GenerateModuleGlobalsType(string moduleName, AssemblyGen ag) {
-            TypeGen tg = ag.DefinePublicType(moduleName + "$mod_" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary));
+        private TypeGen GenerateModuleGlobalsType(AssemblyGen ag) {
+            TypeGen tg = ag.DefinePublicType(ModuleName + "$mod_" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary));
             tg.AddCodeContextField();
             tg.DefaultConstructor = tg.TypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
 

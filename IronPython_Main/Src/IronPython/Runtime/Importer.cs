@@ -505,20 +505,20 @@ namespace IronPython.Runtime {
         }
 
         private ScriptModule LoadModuleFromSource(CodeContext context, string name, string path) {
-            SourceFileUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(_engine, path, name);
-            if (null == sourceUnit) {
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(_engine, path, _engine.SystemState.DefaultEncoding);
+            if (sourceUnit == null) {
                 return null;
             }
-            return LoadFromSourceUnit(sourceUnit);
+            return LoadFromSourceUnit(sourceUnit, name, path);
         }
 
         private object LoadPackageFromSource(CodeContext context, string name, string path) {
             return LoadModuleFromSource(context, name, Path.Combine(path, "__init__.py"));
         }
 
-        private ScriptModule LoadFromSourceUnit(SourceFileUnit sourceUnit) {
-            ScriptModule res = InitializeModule(sourceUnit.Name, sourceUnit.CompileToModule(), true);
-            ScriptDomainManager.CurrentManager.PublishModule(res, ScriptDomainManager.CurrentManager.Host.NormalizePath(sourceUnit.Path));
+        private ScriptModule LoadFromSourceUnit(SourceUnit sourceUnit, string name, string path) {
+            ScriptModule res = InitializeModule(name, ScriptDomainManager.CurrentManager.CompileModule(name, sourceUnit), true);
+            ScriptDomainManager.CurrentManager.PublishModule(res, path);
             return res;
         }
     }

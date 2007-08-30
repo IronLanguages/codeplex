@@ -55,7 +55,7 @@ namespace IronPython.Hosting {
 
         /// <exception cref="Exception">On error.</exception>
         protected override void ParseArgument(string arg) {
-            if (arg == null) throw new ArgumentNullException("arg");
+            Contract.RequiresNotNull(arg, "arg");
 
             Debug.Assert(_consoleOptions != null && _engineOptions != null);
 
@@ -66,68 +66,12 @@ namespace IronPython.Hosting {
                     _engineOptions.Arguments[0] = arg;
                     break;
 
-                case "-h":
-                case "-help":
-                case "-?":
-                    _consoleOptions.PrintUsageAndExit = true;
-                    IgnoreRemainingArgs();
-                    break;
-
-                case "-V": 
-                    _consoleOptions.PrintVersionAndExit = true;
-                    IgnoreRemainingArgs();
-                    break;
-
-                case "-O": GlobalOptions.DebugMode = false; break;
-                case "-D": GlobalOptions.EngineDebug = true; break;
-
-                // the following extension switches are in alphabetic order
-                case "-X:AssembliesDir":
-
-                    string dir = PopNextArg();
-
-                    if (!ScriptDomainManager.CurrentManager.PAL.DirectoryExists(dir))
-                        throw new System.IO.DirectoryNotFoundException(String.Format("Directory '{0}' doesn't exist.", dir));
-
-                    GlobalOptions.BinariesDirectory = dir;
-                    break;
-
-
-                case "-X:Interpret": _engineOptions.InterpretedMode = true; break;
-                case "-X:Frames": GlobalOptions.Frames = true; break;
-                case "-X:GenerateAsSnippets": GlobalOptions.GenerateModulesAsSnippets = true; break;
-                case "-X:GenerateReleaseAssemblies": GlobalOptions.AssemblyGenAttributes &= ~AssemblyGenAttributes.GenerateDebugAssemblies; break;
-                case "-X:ILDebug": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.ILDebug; break;
-
-                case "-X:PassExceptions": _consoleOptions.HandleExceptions = false; break;
-                case "-X:PreferComDispatch": _engineOptions.PreferComDispatchOverTypeInfo = true; break;
-// TODO: #if !IRONPYTHON_WINDOW
-                case "-X:ColorfulConsole": _consoleOptions.ColorfulConsole = true; break;
-                case "-X:ExceptionDetail": _engineOptions.ExceptionDetail = true; break;
-                case "-X:TabCompletion": _consoleOptions.TabCompletion = true; break;
-                case "-X:AutoIndent": _consoleOptions.AutoIndent = true; break;
-                case "-i": _consoleOptions.Introspection = true; break;
-//#endif
-                case "-X:NoOptimize": GlobalOptions.DebugCodeGeneration = true; break;
-                case "-X:Optimize": GlobalOptions.DebugCodeGeneration = false; break;
-                case "-X:NoTraceback": GlobalOptions.DynamicStackTraceSupport = false; break;
-                
                 case "-X:MaxRecursion":
                     int max_rec;
                     if (!StringUtils.TryParseInt32(PopNextArg(), out max_rec))
                         throw new InvalidOptionException(String.Format("The argument for the {0} option must be an integer.", arg));
 
                     _engineOptions.MaximumRecursion = max_rec;
-                    break;
-
-                case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
-                case "-X:SaveAssemblies": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.SaveAndReloadAssemblies; break;
-                case "-X:ShowClrExceptions": _engineOptions.ShowClrExceptions = true; break;
-                case "-X:StaticMethods": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.GenerateStaticMethods; break;
-                case "-X:TrackPerformance": // accepted but ignored on retail builds
-#if DEBUG
-                    GlobalOptions.TrackPerformance = true;
-#endif
                     break;
 
                 case "-x": _engineOptions.SkipFirstSourceLine = true; break;
@@ -137,10 +81,6 @@ namespace IronPython.Hosting {
                 case "-E": _consoleOptions.IgnoreEnvironmentVariables = true; break;
                 case "-t": _engineOptions.IndentationInconsistencySeverity = Severity.Warning; break;
                 case "-tt": _engineOptions.IndentationInconsistencySeverity = Severity.Error; break;
-                case "-OO":
-                    GlobalOptions.DebugMode = false;
-                    GlobalOptions.StripDocStrings = true;
-                    break;
 
                 case "-Q":
                     string level = PopNextArg();
@@ -167,80 +107,49 @@ namespace IronPython.Hosting {
                     _engineOptions.WarningFilters.Add(PopNextArg());
                     break;
 
+                case "-X:PreferComDispatch": _engineOptions.PreferComDispatchOverTypeInfo = true; break;
+
                 default:
-                    _consoleOptions.FileName = arg;
-                    PushArgBack();
-                    _engineOptions.Arguments = PopRemainingArgs();
+                    base.ParseArgument(arg);
+
+                    if (ConsoleOptions.FileName != null) {
+                        PushArgBack();
+                        _engineOptions.Arguments = PopRemainingArgs();
+                    }
                     break;
             }
         }
 
         public override void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
-
-            commandLine = "[options] [file|- [arguments]]";
+            string [,] standardOptions;
+            base.GetHelp(out commandLine, out standardOptions, out environmentVariables, out comments);
             
-            options = new string[,] {
-                { "-c cmd",                 "Program passed in as string (terminates option list)" },
-                { "-h",                     "Display usage" },
-                { "-x",                     "Skip first line of the source" },
-                { "-V",                     "Print the Python version number and exit" },
-                { "-O",                     "Enable optimizations" },
+            string [,] pythonOptions = new string[,] {
 #if !IRONPYTHON_WINDOW
-                { "-i",                     "Inspect interactively after running script" },
                 { "-v",                     "Verbose (trace import statements) (also PYTHONVERBOSE=x)" },
-#endif
-#if DEBUG
-                { "-D",                     "EngineDebug mode" },
 #endif
                 { "-x",                     "Skip first line of the source" },
                 { "-u",                     "Unbuffered stdout & stderr" },
                 { "-E",                     "Ignore environment variables" },
-                { "-OO",                    "Remove doc-strings in addition to the -O optimizations" },
                 { "-Q arg",                 "Division options: -Qold (default), -Qwarn, -Qwarnall, -Qnew" },
                 { "-S",                     "Don't imply 'import site' on initialization" },
                 { "-t",                     "Issue warnings about inconsistent tab usage" },
                 { "-tt",                    "Issue errors for inconsistent tab usage" },
                 { "-W arg",                 "Warning control (arg is action:message:category:module:lineno)" },
 
-                { "-X:AutoIndent",          "" },
-                { "-X:AssembliesDir",       "Set the directory for saving generated assemblies" },
-#if !SILVERLIGHT
-                { "-X:ColorfulConsole",     "Enable ColorfulConsole" },
-#endif
-                { "-X:ExceptionDetail",     "Enable ExceptionDetail mode" },
-                { "-X:Interpret",           "Enable interpreted mode" },
-                { "-X:Frames",              "Generate custom frames" },
-                { "-X:GenerateAsSnippets",  "Generate code to run in snippet mode" },
-                { "-X:ILDebug",             "Output generated IL code to a text file for debugging" },
                 { "-X:MaxRecursion",        "Set the maximum recursion level" },
-#if !SILVERLIGHT
-                { "-X:MTA",                 "Run in multithreaded apartment" },
-#endif
-                { "-X:NoOptimize",          "Disable JIT optimization in generated code" },
-                { "-X:NoTraceback",         "Do not emit traceback code" },
-                { "-X:PassExceptions",      "Do not catch exceptions that are unhandled by Python code" },
-#if !SILVERLIGHT
-                { "-X:PreferComDispatch",   "Prefer calling COM methods using IDispatch" },
-#endif
-                { "-X:PrivateBinding",      "Enable binding to private members" },
-                { "-X:SaveAssemblies",      "Save generated assemblies" },
-                { "-X:ShowClrExceptions",   "Display CLS Exception information" },
-                { "-X:SlowOps",             "Enable fast ops" },
-                { "-X:StaticMethods",       "Generate static methods only" },
-#if !SILVERLIGHT
-                { "-X:TabCompletion",       "Enable TabCompletion mode" },
-#endif
-#if DEBUG
-                { "-X:TrackPerformance",    "Track performance sensitive areas" },
-#endif
-           };
+                { "-X:PreferComDispatch",   "Enable direct support for IDispatch COM objects" },    
+            };
 
+            // Append the Python-specific options and the standard options
+            options = ArrayUtils.Concatenate(pythonOptions, standardOptions);
+
+            Debug.Assert(environmentVariables.GetLength(0) == 0); // No need to append if the default is empty
             environmentVariables = new string[,] {
                 { "IRONPYTHONPATH",        "Path to search for module" },
                 { "IRONPYTHONSTARTUP",     "Startup module" }
             };
 
-            comments = null;
         }
     }
 }

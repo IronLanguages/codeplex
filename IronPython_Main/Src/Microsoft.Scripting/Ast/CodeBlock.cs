@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -365,7 +365,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public void CreateSlots(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             if (HasEnvironment) {
                 // we're an environment slot, we need our own environment slot, and we're
@@ -479,10 +479,11 @@ namespace Microsoft.Scripting.Ast {
 #else
                 MethodBase method = null;
 #endif
-                RuntimeHelpers.UpdateStackTrace(context, method, _name,
-                    context.ModuleContext.CompilerContext.SourceUnit.DisplayName,
-                    context.Scope.SourceLocation.Line);
-                RuntimeHelpers.AssociateDynamicStackFrames(e);
+                SourceUnit sourceUnit = context.ModuleContext.CompilerContext.SourceUnit;
+                int line = context.Scope.SourceLocation.Line;
+
+                ExceptionHelpers.UpdateStackTrace(context, method, _name, sourceUnit.GetSymbolDocument(line), sourceUnit.MapLine(line));
+                ExceptionHelpers.AssociateDynamicStackFrames(e);
                 throw ExceptionHelpers.UpdateForRethrow(e);
             }
         }
@@ -533,7 +534,7 @@ namespace Microsoft.Scripting.Ast {
         public object ExecuteWithChildContext(CodeContext parent, params object[] args) {
             // Fast path for if we have emitted this code block as a delegate
             if (_delegate != null) {
-                return RuntimeHelpers.CallWithContext(parent, _delegate, args);
+                return ReflectionUtils.InvokeDelegate(_delegate, args);
             }
 
             if (parent.LanguageContext.Engine.Options.ProfileDrivenCompilation) {
@@ -544,7 +545,7 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
                 if (_delegate != null) {
-                    return RuntimeHelpers.CallWithContext(parent, _delegate, args);
+                    return ReflectionUtils.InvokeDelegate(_delegate, args);
                 }
             }
             
@@ -895,7 +896,15 @@ namespace Microsoft.Scripting.Ast {
             // emit the actual body
             EmitBody(impl);
 
-            CompilerHelpers.EmitStackTraceFaultBlock(impl, _name, impl.HasContext ? impl.Context.SourceUnit.DisplayName : _name);
+            string displayName;
+            
+            if (impl.HasContext) {
+                displayName = impl.Context.SourceUnit.GetSymbolDocument(Span.Start.Line) ?? _name;
+            } else {
+                displayName = _name;
+            }
+
+            CompilerHelpers.EmitStackTraceFaultBlock(impl, _name, displayName);
         }
 
         public virtual void EmitBody(CodeGen cg) {
@@ -994,8 +1003,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static CodeBlock EventHandlerBlock(string name, EventInfo eventInfo) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (eventInfo == null) throw new ArgumentNullException("eventInfo");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(eventInfo, "eventInfo");
 
             ParameterInfo returnInfo;
             ParameterInfo[] parameterInfos;

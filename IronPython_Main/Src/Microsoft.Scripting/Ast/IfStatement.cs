@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -17,6 +17,7 @@ using System.Reflection.Emit;
 using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 using System;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -26,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
 
         internal IfStatement(SourceSpan span, IfStatementTest[] tests, Statement @else)
             : base(span) {
-            if (tests == null) throw new ArgumentNullException("tests");
+            Contract.RequiresNotNull(tests, "tests");
 
             _tests = tests;
             _else = @else;

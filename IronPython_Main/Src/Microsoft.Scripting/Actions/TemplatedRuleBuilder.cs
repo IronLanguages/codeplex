@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -49,16 +49,14 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Updates the provided rule to use the previously created templated rule with the newly provided parameters.
         /// </summary>        
-        public void CopyTemplateToRule(CodeContext context, StandardRule<T> rule, params object[] newData) {
-            if (newData.Length != _rule.TemplateParameterCount) {
-                throw new ArgumentException(String.Format("Expected {0} template parameters, got {1}", _rule.TemplateParameterCount, newData.Length));
+        public void CopyTemplateToRule(CodeContext context, StandardRule<T> rule) {
+            if (_rule.TemplateParameterCount != rule.TemplateParameterCount) {
+                throw new ArgumentException(String.Format("Incompatible rules.  Expected {0} template parameters, got {1}", _rule.TemplateParameterCount, rule.TemplateParameterCount));
             }
-
-            Debug.Assert(_rule.TemplateParameterCount == rule.TemplateParameterCount);
 
             Delegate existingDelegate = (Delegate)(object)_rule.MonomorphicRuleSet.GetOrMakeTarget(context);
 
-            rule.MonomorphicRuleSet.RawTarget = CloneDelegate(newData, existingDelegate);
+            rule.MonomorphicRuleSet.RawTarget = CloneDelegate(rule.TemplateData, existingDelegate);
         }
 
         private T CloneDelegate(object[] newData, Delegate existingDelegate) {

@@ -453,12 +453,6 @@ def gen_python_methods(cw):
 
 CodeGenerator("Python Call Operations", gen_python_methods).doit()
 
-def gen_call_methods(cw):
-    for nparams in range(MAX_ARGS+1):
-        gen_callcontext_meth(nparams, cw)
-
-CodeGenerator("Call Runtime Helpers", gen_call_methods).doit()
-
 def gen_count(cw):
     cw.write("public const int MaximumCallArgs = %s;" % MAX_ARGS)
 

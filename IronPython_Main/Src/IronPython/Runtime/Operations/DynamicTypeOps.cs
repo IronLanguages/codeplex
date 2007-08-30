@@ -108,7 +108,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
-        public static bool Equal(DynamicType self, DynamicType other) {
+        public static bool Equals(DynamicType self, DynamicType other) {
             if (self == null) {
                 return other == null;
             } else if (other == null) {
@@ -363,6 +363,15 @@ namespace IronPython.Runtime.Operations {
 
         internal static string GetName(object o) {
             return GetName(DynamicHelpers.GetDynamicType(o));
+        }
+
+        // TODO remove this method as we move from DynamicType to Type
+        internal static DynamicType[] ObjectTypes(object[] args) {
+            DynamicType[] types = new DynamicType[args.Length];
+            for (int i = 0; i < args.Length; i++) {
+                types[i] = DynamicHelpers.GetDynamicType(args[i]);
+            }
+            return types;
         }
     }
 }

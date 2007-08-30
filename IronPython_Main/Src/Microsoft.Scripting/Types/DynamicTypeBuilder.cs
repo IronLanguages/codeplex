@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
     public class DynamicTypeBuilder : DynamicMixinBuilder {
@@ -24,8 +25,8 @@ namespace Microsoft.Scripting.Types {
         /// Creates a new DynamicTypeBuilder for a DynamicMixin with the specified name
         /// </summary>
         public DynamicTypeBuilder(string name, Type underlyingSystemType) {
-            if (name == null) throw new ArgumentNullException("name");
-            if (underlyingSystemType == null) throw new ArgumentNullException("underlyingSystemType");
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(underlyingSystemType, "underlyingSystemType");
 
             _building = new DynamicType(underlyingSystemType);
             _building.Name = name;
@@ -46,7 +47,7 @@ namespace Microsoft.Scripting.Types {
         /// Gets the DynamicTypeBuilder for a pre-existing DynamicType.
         /// </summary>
         public static DynamicTypeBuilder GetBuilder(DynamicType type) {
-            if (type == null) throw new ArgumentNullException("type");
+            Contract.RequiresNotNull(type, "type");
 
             lock (type.SyncRoot) {
                 if (type.Builder == null) {
@@ -97,7 +98,7 @@ namespace Microsoft.Scripting.Types {
         /// Adds a new base type to the type being constructed
         /// </summary>
         public void AddBaseType(DynamicType baseType) {
-            if (baseType == null) throw new ArgumentNullException("baseType");
+            Contract.RequiresNotNull(baseType, "baseType");
 
             _building.AddBaseType(baseType);
         }

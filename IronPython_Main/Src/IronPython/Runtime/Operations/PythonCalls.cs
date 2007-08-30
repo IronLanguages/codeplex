@@ -19,7 +19,10 @@ using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {
         public static object Call(object func, params object[] args) {
-            return RuntimeHelpers.CallWithContext(DefaultContext.Default, func, args);
+            FastCallable fc = func as FastCallable;
+            if (fc != null) return fc.Call(DefaultContext.Default, args);
+
+            return PythonOps.CallWithContext(DefaultContext.Default, func, args);
         }
     }
 }

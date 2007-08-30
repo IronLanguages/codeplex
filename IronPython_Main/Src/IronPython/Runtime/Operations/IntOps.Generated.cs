@@ -219,11 +219,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(SByte x, SByte y) {
+        public static bool Equals(SByte x, SByte y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(SByte x, SByte y) {
+        public static bool NotEquals(SByte x, SByte y) {
             return x != y;
         }
 
@@ -543,28 +543,28 @@ namespace IronPython.Runtime.Operations {
             return Int16Ops.GreaterThanOrEqual((Int16)x, (Int16)y);
         }
         [SpecialName]
-        public static bool Equal(Byte x, Byte y) {
+        public static bool Equals(Byte x, Byte y) {
             return x == y;
         }
         [SpecialName]
-        public static bool Equal(Byte x, SByte y) {
-            return Int16Ops.Equal((Int16)x, (Int16)y);
+        public static bool Equals(Byte x, SByte y) {
+            return Int16Ops.Equals((Int16)x, (Int16)y);
         }
         [SpecialName]
-        public static bool Equal(SByte x, Byte y) {
-            return Int16Ops.Equal((Int16)x, (Int16)y);
+        public static bool Equals(SByte x, Byte y) {
+            return Int16Ops.Equals((Int16)x, (Int16)y);
         }
         [SpecialName]
-        public static bool NotEqual(Byte x, Byte y) {
+        public static bool NotEquals(Byte x, Byte y) {
             return x != y;
         }
         [SpecialName]
-        public static bool NotEqual(Byte x, SByte y) {
-            return Int16Ops.NotEqual((Int16)x, (Int16)y);
+        public static bool NotEquals(Byte x, SByte y) {
+            return Int16Ops.NotEquals((Int16)x, (Int16)y);
         }
         [SpecialName]
-        public static bool NotEqual(SByte x, Byte y) {
-            return Int16Ops.NotEqual((Int16)x, (Int16)y);
+        public static bool NotEquals(SByte x, Byte y) {
+            return Int16Ops.NotEquals((Int16)x, (Int16)y);
         }
 
         // Conversion operators
@@ -773,11 +773,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Int16 x, Int16 y) {
+        public static bool Equals(Int16 x, Int16 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Int16 x, Int16 y) {
+        public static bool NotEquals(Int16 x, Int16 y) {
             return x != y;
         }
 
@@ -1097,28 +1097,28 @@ namespace IronPython.Runtime.Operations {
             return Int32Ops.GreaterThanOrEqual((Int32)x, (Int32)y);
         }
         [SpecialName]
-        public static bool Equal(UInt16 x, UInt16 y) {
+        public static bool Equals(UInt16 x, UInt16 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool Equal(UInt16 x, Int16 y) {
-            return Int32Ops.Equal((Int32)x, (Int32)y);
+        public static bool Equals(UInt16 x, Int16 y) {
+            return Int32Ops.Equals((Int32)x, (Int32)y);
         }
         [SpecialName]
-        public static bool Equal(Int16 x, UInt16 y) {
-            return Int32Ops.Equal((Int32)x, (Int32)y);
+        public static bool Equals(Int16 x, UInt16 y) {
+            return Int32Ops.Equals((Int32)x, (Int32)y);
         }
         [SpecialName]
-        public static bool NotEqual(UInt16 x, UInt16 y) {
+        public static bool NotEquals(UInt16 x, UInt16 y) {
             return x != y;
         }
         [SpecialName]
-        public static bool NotEqual(UInt16 x, Int16 y) {
-            return Int32Ops.NotEqual((Int32)x, (Int32)y);
+        public static bool NotEquals(UInt16 x, Int16 y) {
+            return Int32Ops.NotEquals((Int32)x, (Int32)y);
         }
         [SpecialName]
-        public static bool NotEqual(Int16 x, UInt16 y) {
-            return Int32Ops.NotEqual((Int32)x, (Int32)y);
+        public static bool NotEquals(Int16 x, UInt16 y) {
+            return Int32Ops.NotEquals((Int32)x, (Int32)y);
         }
 
         // Conversion operators
@@ -1267,11 +1267,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Int32 x, Int32 y) {
+        public static bool Equals(Int32 x, Int32 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Int32 x, Int32 y) {
+        public static bool NotEquals(Int32 x, Int32 y) {
             return x != y;
         }
 
@@ -1583,28 +1583,28 @@ namespace IronPython.Runtime.Operations {
             return Int64Ops.GreaterThanOrEqual((Int64)x, (Int64)y);
         }
         [SpecialName]
-        public static bool Equal(UInt32 x, UInt32 y) {
+        public static bool Equals(UInt32 x, UInt32 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool Equal(UInt32 x, Int32 y) {
-            return Int64Ops.Equal((Int64)x, (Int64)y);
+        public static bool Equals(UInt32 x, Int32 y) {
+            return Int64Ops.Equals((Int64)x, (Int64)y);
         }
         [SpecialName]
-        public static bool Equal(Int32 x, UInt32 y) {
-            return Int64Ops.Equal((Int64)x, (Int64)y);
+        public static bool Equals(Int32 x, UInt32 y) {
+            return Int64Ops.Equals((Int64)x, (Int64)y);
         }
         [SpecialName]
-        public static bool NotEqual(UInt32 x, UInt32 y) {
+        public static bool NotEquals(UInt32 x, UInt32 y) {
             return x != y;
         }
         [SpecialName]
-        public static bool NotEqual(UInt32 x, Int32 y) {
-            return Int64Ops.NotEqual((Int64)x, (Int64)y);
+        public static bool NotEquals(UInt32 x, Int32 y) {
+            return Int64Ops.NotEquals((Int64)x, (Int64)y);
         }
         [SpecialName]
-        public static bool NotEqual(Int32 x, UInt32 y) {
-            return Int64Ops.NotEqual((Int64)x, (Int64)y);
+        public static bool NotEquals(Int32 x, UInt32 y) {
+            return Int64Ops.NotEquals((Int64)x, (Int64)y);
         }
 
         // Conversion operators
@@ -1802,11 +1802,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Int64 x, Int64 y) {
+        public static bool Equals(Int64 x, Int64 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Int64 x, Int64 y) {
+        public static bool NotEquals(Int64 x, Int64 y) {
             return x != y;
         }
 
@@ -2115,28 +2115,28 @@ namespace IronPython.Runtime.Operations {
             return BigIntegerOps.GreaterThanOrEqual((BigInteger)x, (BigInteger)y);
         }
         [SpecialName]
-        public static bool Equal(UInt64 x, UInt64 y) {
+        public static bool Equals(UInt64 x, UInt64 y) {
             return x == y;
         }
         [SpecialName]
-        public static bool Equal(UInt64 x, Int64 y) {
-            return BigIntegerOps.Equal((BigInteger)x, (BigInteger)y);
+        public static bool Equals(UInt64 x, Int64 y) {
+            return BigIntegerOps.Equals((BigInteger)x, (BigInteger)y);
         }
         [SpecialName]
-        public static bool Equal(Int64 x, UInt64 y) {
-            return BigIntegerOps.Equal((BigInteger)x, (BigInteger)y);
+        public static bool Equals(Int64 x, UInt64 y) {
+            return BigIntegerOps.Equals((BigInteger)x, (BigInteger)y);
         }
         [SpecialName]
-        public static bool NotEqual(UInt64 x, UInt64 y) {
+        public static bool NotEquals(UInt64 x, UInt64 y) {
             return x != y;
         }
         [SpecialName]
-        public static bool NotEqual(UInt64 x, Int64 y) {
-            return BigIntegerOps.NotEqual((BigInteger)x, (BigInteger)y);
+        public static bool NotEquals(UInt64 x, Int64 y) {
+            return BigIntegerOps.NotEquals((BigInteger)x, (BigInteger)y);
         }
         [SpecialName]
-        public static bool NotEqual(Int64 x, UInt64 y) {
-            return BigIntegerOps.NotEqual((BigInteger)x, (BigInteger)y);
+        public static bool NotEquals(Int64 x, UInt64 y) {
+            return BigIntegerOps.NotEquals((BigInteger)x, (BigInteger)y);
         }
 
         // Conversion operators
@@ -2281,11 +2281,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Single x, Single y) {
+        public static bool Equals(Single x, Single y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Single x, Single y) {
+        public static bool NotEquals(Single x, Single y) {
             return x != y;
         }
 
@@ -2395,11 +2395,11 @@ namespace IronPython.Runtime.Operations {
             return x >= y;
         }
         [SpecialName]
-        public static bool Equal(Double x, Double y) {
+        public static bool Equals(Double x, Double y) {
             return x == y;
         }
         [SpecialName]
-        public static bool NotEqual(Double x, Double y) {
+        public static bool NotEquals(Double x, Double y) {
             return x != y;
         }
 

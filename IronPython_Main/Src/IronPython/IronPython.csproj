@@ -146,7 +146,6 @@
     <Compile Include="Compiler\Generation\NewTypeMaker.cs" />
     <Compile Include="Compiler\Generation\PythonCodeDomCodeGen.cs" />
     <Compile Include="Compiler\PythonTokenCategorizer.cs" />
-    <Compile Include="Compiler\CompilerException.cs" />
     <Compile Include="Compiler\Parser.cs" />
     <Compile Include="Compiler\Token.cs" />
     <Compile Include="Compiler\Tokenizer.cs" />
@@ -160,13 +159,12 @@
     <Compile Include="Hosting\PythonCompilerOptions.cs" />
     <Compile Include="Hosting\PythonConsoleOptions.cs" />
     <Compile Include="Hosting\PythonEngineOptions.cs" />
-    <Compile Include="Hosting\PythonErrorSink.cs" />
+    <Compile Include="Hosting\CompilerErrorSink.cs" />
     <Compile Include="Hosting\ResourceFile.cs" />
     <Compile Include="Hosting\PythonLanguageProvider.cs" />
     <Compile Include="Hosting\PythonOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Visibility.cs" />
-    <Compile Include="Compiler\Generation\PythonScriptCompiler.cs" />
     <Compile Include="Hosting\PythonEngine.cs" />
     <Compile Include="Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -237,7 +235,6 @@
     <Compile Include="Runtime\Operations\PythonCalls.cs" />
     <Compile Include="Runtime\Operations\PythonCalls.Generated.cs" />
     <Compile Include="Runtime\Operations\PythonSites.Generated.cs" />
-    <Compile Include="Runtime\Operations\ReflectedAssemblyOps.cs" />
     <Compile Include="Runtime\Operations\ReflectedEventOps.cs" />
     <Compile Include="Runtime\Operations\ReflectedExtensionPropertyOps.cs" />
     <Compile Include="Runtime\Operations\ReflectedFieldOps.cs" />
@@ -308,9 +305,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Lib\site.py">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">

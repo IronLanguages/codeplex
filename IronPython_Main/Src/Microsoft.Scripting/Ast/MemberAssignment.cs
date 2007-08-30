@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -122,15 +123,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static MemberAssignment AssignField(SourceSpan span, Expression expression, Type type, string field, Expression value) {
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
-            if (field == null) {
-                throw new ArgumentNullException("field");
-            }
-            if (value == null) {
-                throw new ArgumentNullException("value");
-            }
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(field, "field");
+            Contract.RequiresNotNull(value, "value");
+
             FieldInfo fi = type.GetField(field);
             if (fi == null) {
                 throw new ArgumentException(String.Format("Type {0} doesn't have field {1}", type, field));
@@ -155,12 +151,8 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="value">Value to set this field to.</param>
         /// <returns>New instance of Member expression</returns>
         public static MemberAssignment AssignField(SourceSpan span, Expression expression, FieldInfo field, Expression value) {
-            if (field == null) {
-                throw new ArgumentNullException("field");
-            }
-            if (value == null) {
-                throw new ArgumentNullException("value");
-            }
+            Contract.RequiresNotNull(field, "field");
+            Contract.RequiresNotNull(value, "value");
 
             if (expression == null ^ field.IsStatic) {
                 throw new ArgumentException("field");
@@ -174,15 +166,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static MemberAssignment AssignProperty(SourceSpan span, Expression expression, Type type, string property, Expression value) {
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
-            if (property == null) {
-                throw new ArgumentNullException("property");
-            }
-            if (value == null) {
-                throw new ArgumentNullException("value");
-            }
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(property, "property");
+            Contract.RequiresNotNull(value, "value");
+
             PropertyInfo pi = type.GetProperty(property);
             if (pi == null) {
                 throw new ArgumentException(String.Format("Type {0} doesn't have property {1}", type, property));

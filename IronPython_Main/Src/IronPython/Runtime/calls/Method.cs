@@ -103,7 +103,10 @@ namespace IronPython.Runtime.Calls {
                 firstArg);
         }
 
-        private object CheckSelf(object self) {
+        /// <summary>
+        /// Validates that the current self object is usable for this method.  Called from generated code.
+        /// </summary>
+        public object CheckSelf(object self) {
             if (!PythonOps.IsInstance(self, DeclaringClass)) throw BadSelf(self);
             return self;
         }
@@ -288,9 +291,129 @@ namespace IronPython.Runtime.Calls {
 
         StandardRule<T> IDynamicObject.GetRule<T>(Action action, CodeContext context, object[] args) {
             Assert.NotNull(action, context, args);
+
+            if (action.Kind == ActionKind.Call) {
+                return GetCallRule<T>((CallAction)action, context);
+            }
             
             // get default rule:
             return null;
+        }
+
+        private StandardRule<T> GetCallRule<T>(CallAction action, CodeContext context) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(Method));
+            
+            Expression[] notNullArgs = GetNotNullInstanceArguments(rule);
+            Expression nullSelf;
+            if (rule.Parameters.Length != 1) {
+                Expression[] nullArgs = GetNullInstanceArguments(rule, action);
+                nullSelf = Ast.Action.Call(action, typeof(object), nullArgs);
+            } else {
+                // no instance, CheckSelf on null throws.                
+                nullSelf = Ast.Call(
+                    Ast.Cast(rule.Parameters[0], typeof(Method)),
+                    typeof(Method).GetMethod("CheckSelf"),
+                    Ast.Constant(null)
+                );
+            }
+
+            rule.SetTarget(
+                rule.MakeReturn(context.LanguageContext.Binder,
+                    Ast.Condition(
+                        Ast.NotEqual(
+                            Ast.ReadProperty(
+                                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                                typeof(Method).GetProperty("Self")
+                            ),
+                            Ast.Constant(null)
+                        ),
+                        Ast.Action.Call(GetNotNullCallAction(action), typeof(object), notNullArgs),
+                        nullSelf
+                    )
+                )
+            );
+            return rule;
+        }
+
+        private static Expression[] GetNullInstanceArguments<T>(StandardRule<T> rule, CallAction action) {
+            Debug.Assert(rule.Parameters.Length > 1);
+
+            Expression[] args = (Expression[])rule.Parameters.Clone();
+            args[0] = Ast.ReadProperty(
+                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                typeof(Method).GetProperty("Function")
+            );
+            Expression self;
+
+            if (action == CallAction.Simple || 
+                action.ArgumentInfos[0].IsSimple || 
+                action.ArgumentInfos[0].Kind == ArgumentKind.Instance) {
+                self = rule.Parameters[1];
+            } else if (action.ArgumentInfos[0].Kind != ArgumentKind.List) {
+                self = Ast.Constant(null);
+            } else {                
+                // list, check arg[0] and then return original list.  If not a list,
+                // or we have no items, then check against null & throw.
+                args[1] =
+                    Ast.Comma(1,
+                        CheckSelf<T>(
+                            rule,
+                            Ast.Condition(
+                                Ast.AndAlso(
+                                    Ast.TypeIs(rule.Parameters[1], typeof(IList<object>)),
+                                    Ast.NotEqual(
+                                        Ast.ReadProperty(
+                                            Ast.Cast(rule.Parameters[1], typeof(ICollection)),
+                                            typeof(ICollection).GetProperty("Count")
+                                        ),
+                                        Ast.Constant(0)
+                                    )
+                                ),
+                                Ast.Call(
+                                    Ast.Cast(rule.Parameters[1], typeof(IList<object>)),
+                                    typeof(IList<object>).GetMethod("get_Item"),
+                                    Ast.Constant(0)
+                                ),
+                                Ast.Constant(null)
+                            )
+                        ),
+                        rule.Parameters[1]
+                    );
+                return args;
+            }
+            
+            args[1] = CheckSelf<T>(rule, self);
+            return args;
+        }
+
+        private static Expression CheckSelf<T>(StandardRule<T> rule, Expression self) {
+            return Ast.Call(
+                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                typeof(Method).GetMethod("CheckSelf"),
+                self
+            );
+        }
+
+        private static Expression[] GetNotNullInstanceArguments<T>(StandardRule<T> rule) {
+            Expression[] args = ArrayUtils.Insert(
+                (Expression)Ast.ReadProperty(
+                    Ast.Cast(rule.Parameters[0], typeof(Method)),
+                    typeof(Method).GetProperty("Function")
+                ),
+                rule.Parameters);
+
+            args[1] = Ast.ReadProperty(
+                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                typeof(Method).GetProperty("Self")
+            );
+            return args;
+        }
+
+        private static CallAction GetNotNullCallAction(CallAction action) {
+            if (action == CallAction.Simple) return action;
+
+            return CallAction.Make(ArrayUtils.Insert(new ArgumentInfo(ArgumentKind.Simple), action.ArgumentInfos));
         }
 
         #endregion

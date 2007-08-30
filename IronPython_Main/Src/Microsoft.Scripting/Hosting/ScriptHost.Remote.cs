@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -41,7 +42,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public RemoteScriptHost(IScriptHost host) {
-            if (host == null) throw new ArgumentNullException("host");
+            Contract.RequiresNotNull(host, "host");
             if (!(host is ILocalObject)) throw new ArgumentException("host");
             _host = host;
         }
@@ -71,11 +72,11 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Source Units
 
-        public SourceFileUnit TryGetSourceFileUnit(IScriptEngine engine, string path, string name) {
-            return _host.TryGetSourceFileUnit(engine, path, name);
+        public SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
+            return _host.TryGetSourceFileUnit(engine, path, encoding);
         }
 
-        public SourceFileUnit ResolveSourceFileUnit(string name) {
+        public SourceUnit ResolveSourceFileUnit(string name) {
             return _host.ResolveSourceFileUnit(name);
         }
 

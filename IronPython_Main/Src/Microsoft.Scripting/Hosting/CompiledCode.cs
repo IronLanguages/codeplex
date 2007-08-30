@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Runtime.Remoting;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -51,7 +52,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public IScriptModule MakeModule(string name) {
-            if (name == null) throw new ArgumentNullException("name");
+            Contract.RequiresNotNull(name, "name");
             return ScriptDomainManager.CurrentManager.CreateModule(name, _code);
         }
 
@@ -82,15 +83,15 @@ namespace Microsoft.Scripting.Hosting {
         /// The module must be local with respect to the compiled code object.
         /// </summary>
         public object Evaluate(IScriptModule module) {
-            ScriptModule local_module;
+            ScriptModule localModule;
 
             if (module == null) {
-                local_module = RemoteWrapper.TryGetLocal<ScriptModule>(ScriptDomainManager.CurrentManager.Host.DefaultModule);
+                localModule = RemoteWrapper.TryGetLocal<ScriptModule>(ScriptDomainManager.CurrentManager.Host.DefaultModule);
             } else {
-                local_module = RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module");
+                localModule = RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module");
             }
 
-            return _code.Run(local_module);
+            return _code.Run(localModule);
         }
 
 #if !SILVERLIGHT

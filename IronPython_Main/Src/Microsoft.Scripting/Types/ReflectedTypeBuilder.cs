@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -25,7 +25,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
@@ -829,10 +828,10 @@ namespace Microsoft.Scripting.Types {
             ot["op_BitwiseOr"] = new OperatorMapping(Operators.BitwiseOr, false, true, false, true);
             ot["op_LeftShift"] = new OperatorMapping(Operators.LeftShift, false, true, false, true);
             ot["op_RightShift"] = new OperatorMapping(Operators.RightShift, false, true, false, true);
-            ot["op_Equality"] = new OperatorMapping(Operators.Equal, false, true, false, true);
+            ot["op_Equality"] = new OperatorMapping(Operators.Equals, false, true, false, true);
             ot["op_GreaterThan"] = new OperatorMapping(Operators.GreaterThan, false, true, false, true);
             ot["op_LessThan"] = new OperatorMapping(Operators.LessThan, false, true, false, true);
-            ot["op_Inequality"] = new OperatorMapping(Operators.NotEqual, false, true, false, true);
+            ot["op_Inequality"] = new OperatorMapping(Operators.NotEquals, false, true, false, true);
             ot["op_GreaterThanOrEqual"] = new OperatorMapping(Operators.GreaterThanOrEqual, false, true, false, true);
             ot["op_LessThanOrEqual"] = new OperatorMapping(Operators.LessThanOrEqual, false, true, false, true);
 
@@ -886,9 +885,8 @@ namespace Microsoft.Scripting.Types {
             ot["InPlaceBitwiseOr"] = ot["op_BitwiseOrAssignment"];
             ot["InPlaceExclusiveOr"] = ot["op_ExclusiveOrAssignment"];
 
-
-            ot["Equal"] = ot["op_Equality"];
-            ot["NotEqual"] = ot["op_Inequality"];
+            ot["Equals"] = ot["op_Equality"];
+            ot["NotEquals"] = ot["op_Inequality"];
             ot["GreaterThan"] = ot["op_GreaterThan"];
             ot["LessThan"] = ot["op_LessThan"];
             ot["GreaterThanOrEqual"] = ot["op_GreaterThanOrEqual"];

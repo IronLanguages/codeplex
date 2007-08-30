@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -370,51 +370,6 @@ namespace Microsoft.Scripting.Ast {
             // Remember the result
             _bits.SetAll(false);
             _bits.Or(result);
-            return false;
-        }
-
-        // DynamicTryStatement
-        public override bool Walk(DynamicTryStatement node) {
-            BitArray save = _bits;
-            _bits = new BitArray(_bits);
-
-            // Flow the body
-            node.Body.Walk(this);
-
-            if (node.ElseStatement != null) {
-                // Else is flown only after completion of Try with same bits
-                node.ElseStatement.Walk(this);
-            }
-
-
-            if (node.Handlers != null) {
-                foreach (DynamicTryStatementHandler tsh in node.Handlers) {
-                    // Restore to saved state
-                    _bits.SetAll(false);
-                    _bits.Or(save);
-
-                    // Flow the test
-                    if (tsh.Test != null) {
-                        tsh.Test.Walk(this);
-                    }
-
-                    // Define the target
-                    if (tsh.Variable != null) {
-                        Define(tsh.Variable);
-                    }
-
-                    // Flow the body
-                    tsh.Body.Walk(this);
-                }
-            }
-
-            _bits = save;
-
-            if (node.FinallyStatement != null) {
-                // Flow finally - this executes no matter what
-                node.FinallyStatement.Walk(this);
-            }
-
             return false;
         }
 

@@ -134,14 +134,14 @@ namespace IronPython.Modules {
             }
 
             [PythonName("release")]
-            public void Release(CodeContext context, params object[] param) {
-                Release(context);
+            public void Release(params object[] param) {
+                Release();
             }
 
             [PythonName("release")]
-            public void Release(CodeContext context) {
+            public void Release() {
                 if (Interlocked.Exchange<Thread>(ref curHolder, null) == null) {
-                    throw PythonOps.MakeException(context, error, "lock isn't help", null);
+                    throw PythonOps.MakeException(error, "lock isn't help", null);
                 }
                 if (blockEvent != null) {
                     // if this isn't set yet we race, it's handled in Acquire()

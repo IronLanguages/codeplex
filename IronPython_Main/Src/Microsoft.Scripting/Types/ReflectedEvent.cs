@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -22,7 +22,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Types {
@@ -148,6 +147,12 @@ namespace Microsoft.Scripting.Types {
                 _event = reflectedEvent;
                 _instance = instance;
                 _ownerType = ownerType;
+            }
+
+            // this one's correct, InPlaceAdd is wrong but we still have some dependencies on the wrong name.
+            [SpecialName]
+            public object op_AdditionAssignment(CodeContext context, object func) {
+                return InPlaceAdd(context, func);
             }
 
             [SpecialName]

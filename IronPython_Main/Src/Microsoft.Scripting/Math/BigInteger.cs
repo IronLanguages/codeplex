@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Math {
         /// (inverse of ToByteArray())
         /// </summary>
         public static BigInteger Create(byte[] v) {
-            if (v == null) throw new ArgumentNullException("v");
+            Contract.RequiresNotNull(v, "v");
             if (v.Length == 0) return Create(0);
 
             int byteCount = v.Length;
@@ -227,7 +227,7 @@ namespace Microsoft.Scripting.Math {
         [CLSCompliant(false)]
         public BigInteger(int sign, params uint[] data)
         {
-            if (data == null) throw new ArgumentNullException("data");
+            Contract.RequiresNotNull(data, "data");
             if (sign != -1 && sign != 0 && sign != 1) throw new ArgumentException(MathResources.InvalidArgument, "sign");
             if (GetLength(data) != 0) {
                 if (sign == 0) throw new ArgumentException(MathResources.InvalidArgument, "sign");

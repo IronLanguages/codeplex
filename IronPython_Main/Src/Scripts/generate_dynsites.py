@@ -211,13 +211,27 @@ def gen_uninitialized_type(cw):
 
 
 executor = """\
-StandardRule<DynamicSiteTarget<%(typeargs)s>> rule%(k)d = 
-    binder.GetRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args);
+while(true) {
+    StandardRule<DynamicSiteTarget<%(typeargs)s>> rule%(k)d = 
+        binder.GetRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args);
 
-using (context.Scope.TemporaryVariableContext(rule%(k)d.TemporaryVariables, rule%(k)d.ParamVariables, args)) {
-    result = (bool)rule%(k)d.Test.Evaluate(context);
-    Debug.Assert(result);
-    return rule%(k)d.Target.Execute(context);
+    using (context.Scope.TemporaryVariableContext(rule%(k)d.TemporaryVariables, rule%(k)d.ParamVariables, args)) {
+        result = (bool)rule%(k)d.Test.Evaluate(context);
+        if (!result) {
+            // The test may evaluate as false if:
+            // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+            //    generating invalid rules.
+            // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+            //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+            //    side-effects are visible to Execute below.
+            // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+            // the interpreter and the language binders are flushed out
+            Debug.Assert(result);
+            continue;
+        }
+
+        return rule%(k)d.Target.Execute(context);
+    }
 }"""
 
 big_executor = '''\
@@ -226,21 +240,35 @@ Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(
 Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
 Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
 MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
-object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
-Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
-Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
-Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
-    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
-Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
-    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+while(true) {
+    object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
+    Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
+    Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
+    Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
+        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+    Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
+        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
 
 
-NewTuple t = NewTuple.MakeTuple(tupleType, args);
-object[] tupArg = new object[] {t};
-using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
-    result = (bool)test.Evaluate(context);
-    Debug.Assert(result);
-    return target.Execute(context);
+    NewTuple t = NewTuple.MakeTuple(tupleType, args);
+    object[] tupArg = new object[] {t};
+    using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
+        result = (bool)test.Evaluate(context);
+        if (!result) {
+            // The test may evaluate as false if:
+            // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
+            //    generating invalid rules.
+            // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
+            //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
+            //    side-effects are visible to Execute below.
+            // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
+            // the interpreter and the language binders are flushed out
+            Debug.Assert(result);
+            continue;
+        }
+
+        return target.Execute(context);
+    }
 }'''
 
 def gen_execute(cw):

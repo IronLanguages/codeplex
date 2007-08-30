@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -16,6 +16,7 @@
 using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -31,14 +32,14 @@ namespace Microsoft.Scripting.Generation {
             _codeGen = cg;
         }
         public override void EmitGet(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
 
             cg.Emit(OpCodes.Ldloc, _localBuilder);
         }
         public override void EmitGetAddr(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
 
@@ -46,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitSet(CodeGen cg) {
-            if (cg == null) throw new ArgumentNullException("cg");
+            Contract.RequiresNotNull(cg, "cg");
 
             Debug.Assert(cg == _codeGen);
             cg.Emit(OpCodes.Stloc, _localBuilder);

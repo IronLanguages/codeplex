@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -17,8 +17,10 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class ActionExpression : Expression {
@@ -28,9 +30,10 @@ namespace Microsoft.Scripting.Ast {
 
         internal ActionExpression(SourceSpan span, Action action, IList<Expression> arguments, Type result)
             : base(span) {
-            if (action == null) throw new ArgumentNullException("action");
-            if (arguments == null) throw new ArgumentNullException("arguments");
-            if (result == null) throw new ArgumentNullException("result");
+            Contract.RequiresNonNullItems(arguments, "arguments");
+            Contract.RequiresNotNull(action, "action");
+            Contract.RequiresNotNull(arguments, "arguments");
+            Contract.RequiresNotNull(result, "result");
 
             _action = action;
             _arguments = arguments;
@@ -103,7 +106,7 @@ namespace Microsoft.Scripting.Ast {
                 // tuple parameters
                 Debug.Assert(parameters.Length == first + 1);
 
-                CreateTupleInstance(cg, site.Type.GetGenericArguments()[0], 0, _arguments.Count);
+                cg.EmitTuple(site.Type.GetGenericArguments()[0], _arguments.Count, delegate(int index) { _arguments[index].Emit(cg); });
             } else {
                 // Emit the arguments
                 for (int arg = 0; arg < _arguments.Count; arg++) {
@@ -115,48 +118,6 @@ namespace Microsoft.Scripting.Ast {
 
             // Emit the site invoke
             cg.EmitCall(site.Type, "Invoke");
-        }
-
-        private void CreateTupleInstance(CodeGen cg, Type tupleType, int start, int end) {
-            int size = end - start;
-
-            if (size > NewTuple.MaxSize) {
-                int multiplier = 1;
-                while (size > NewTuple.MaxSize) {
-                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
-                    multiplier *= NewTuple.MaxSize;
-                }
-                for (int i = 0; i < size; i++) {
-                    int newStart = start + (i * multiplier);
-                    int newEnd = System.Math.Min(end, start + ((i + 1) * multiplier));
-
-                    PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", i));
-                    Debug.Assert(pi != null);
-                    CreateTupleInstance(cg, pi.PropertyType, newStart, newEnd);
-                }
-            } else {
-                for (int i = start; i < end; i++) {
-                    _arguments[i].Emit(cg);
-                }
-            }
-
-            // fill in emptys with null.
-            Type[] genArgs = tupleType.GetGenericArguments();
-            for (int i = size; i < genArgs.Length; i++) {
-                cg.EmitNull();
-            }
-           
-            EmitTupleNew(cg, tupleType);
-        }
-
-        private static void EmitTupleNew(CodeGen cg, Type tupleType) {
-            ConstructorInfo[] cis = tupleType.GetConstructors();
-            foreach (ConstructorInfo ci in cis) {
-                if (ci.GetParameters().Length != 0) {
-                    cg.EmitNew(ci);
-                    break;
-                }
-            }
         }
 
         public override void Walk(Walker walker) {
@@ -299,6 +260,29 @@ namespace Microsoft.Scripting.Ast {
             /// <param name="arguments">Array of arguments for the action expression</param>
             /// <returns>New instance of the ActionExpression</returns>
             public static ActionExpression Call(SourceSpan span, CallAction action, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, action, arguments, result);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a CreateInstance action.
+            /// </summary>
+            /// <param name="action">The create instance  action to perform.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Create(CreateInstanceAction action, Type result, params Expression[] arguments) {
+                return Call(SourceSpan.None, action, result, arguments);
+            }
+
+            /// <summary>
+            /// Creates ActionExpression representing a CreateInstance action.
+            /// </summary>
+            /// <param name="span">SourceSpan to associate with the expression</param>
+            /// <param name="action">The create instance action to perform.</param>
+            /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
+            /// <param name="arguments">Array of arguments for the action expression</param>
+            /// <returns>New instance of the ActionExpression</returns>
+            public static ActionExpression Create(SourceSpan span, CreateInstanceAction action, Type result, params Expression[] arguments) {
                 return new ActionExpression(span, action, arguments, result);
             }
         }

@@ -60,6 +60,13 @@ namespace IronPython.Runtime.Types {
             return ret;
         }
 
+        [SpecialName, PythonName("__repr__")]
+        public static object Repr(Assembly self) {
+            Assembly asmSelf = self as Assembly;
+
+            return "<Assembly " + asmSelf.FullName + ">";
+        }
+
         private static TopReflectedPackage GetReflectedAssembly(Assembly assem) {
             Debug.Assert(assem != null);
             lock (assemblyMap) {

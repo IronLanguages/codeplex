@@ -30,13 +30,30 @@ using IronPython.Compiler.Ast;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 
     /// <summary>
     /// Summary description for Parser.
     /// </summary>
-    public class Parser : IDisposable { // TODO: remove IDisposable
+    internal class Parser : IDisposable { // TODO: remove IDisposable
+        private class TokenizerErrorSink : ErrorSink {
+            private readonly Parser _parser;
+
+            public TokenizerErrorSink(Parser parser) {
+                Assert.NotNull(parser);
+                _parser = parser;
+            }
+
+            public override void Add(SourceUnit sourceUnit, string message, SourceSpan span, int errorCode, Severity severity) {
+                if (_parser._errorCode == 0) {
+                    _parser._errorCode = errorCode;
+                }
+                _parser.ErrorSink.Add(sourceUnit, message, span, errorCode, severity);
+            }
+        }
+
         // immutable properties:
         private readonly Tokenizer _tokenizer;
 
@@ -46,6 +63,11 @@ namespace IronPython.Compiler {
 
         // resettable properties:
         private SourceUnit _sourceUnit;
+
+        /// <summary>
+        /// Language features initialized on parser construction and possibly updated during parsing. 
+        /// The code can set the language features (e.g. "from __future__ import division").
+        /// </summary>
         private PythonLanguageFeatures _languageFeatures;
 
         // state:
@@ -56,16 +78,14 @@ namespace IronPython.Compiler {
         private string _privatePrefix;
         private bool _parsingStarted;
         private SourceUnitReader _sourceReader;
-
-        // TODO: remove when TrueDivision gets to AST statements:
-        PythonCompilerOptions _compilerOptions;
+        private int _errorCode;
 
         public ErrorSink ErrorSink {
             get {
                 return _errors;
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 _errors = value;
             }
         }
@@ -75,9 +95,13 @@ namespace IronPython.Compiler {
                 return _sink;
             }
             set {
-                if (value == null) throw new ArgumentNullException("value");
+                Contract.RequiresNotNull(value, "value");
                 _sink = value;
             }
+        }
+
+        public int ErrorCode {
+            get { return _errorCode; }
         }
 
         private bool AllowWithStatement {
@@ -90,10 +114,12 @@ namespace IronPython.Compiler {
 
         #region Construction
 
-        public Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
-            if (tokenizer == null) throw new ArgumentNullException("tokenizer");
-            if (errorSink == null) throw new ArgumentNullException("errorSink");
-            if (parserSink == null) throw new ArgumentNullException("parserSink");
+        private Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
+            Contract.RequiresNotNull(tokenizer, "tokenizer");
+            Contract.RequiresNotNull(errorSink, "errorSink");
+            Contract.RequiresNotNull(parserSink, "parserSink");
+
+            tokenizer.Errors = new TokenizerErrorSink(this);
 
             _tokenizer = tokenizer;
             _errors = errorSink;
@@ -107,10 +133,10 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
-            if (context == null) throw new ArgumentNullException("context");
-            if (options == null) throw new ArgumentNullException("options");
+            Contract.RequiresNotNull(context, "context");
+            Contract.RequiresNotNull(options, "options");
 
-            PythonCompilerOptions compiler_options = context.Options as PythonCompilerOptions;
+            PythonCompilerOptions compilerOptions = context.Options as PythonCompilerOptions;
             if (options == null) {
                 throw new ArgumentException(Resources.PythonContextRequired);
             }
@@ -120,7 +146,7 @@ namespace IronPython.Compiler {
             try {
                 reader = context.SourceUnit.GetReader();
 
-                if (compiler_options.SkipFirstLine) {
+                if (compilerOptions.SkipFirstLine) {
                     reader.ReadLine();
                 }
             } catch (IOException e) {
@@ -132,19 +158,15 @@ namespace IronPython.Compiler {
             tokenizer.Initialize(null, reader, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
-            Parser result = new Parser(tokenizer, context.Errors, context.ParserSink, compiler_options.LanguageFeatures);
-
-            // TODO: remove when TrueDivision gets to AST statements:
-            result._compilerOptions = compiler_options;
+            Parser result = new Parser(tokenizer, context.Errors, context.ParserSink, compilerOptions.LanguageFeatures);
             result._sourceReader = reader;
-
             return result;
         }
 
         #endregion
 
         public void Reset(SourceUnit sourceUnit, PythonLanguageFeatures languageFeatures) {
-            if (sourceUnit == null) throw new ArgumentNullException("sourceUnit");
+            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _sourceUnit = sourceUnit;
             _languageFeatures = languageFeatures;
@@ -155,6 +177,7 @@ namespace IronPython.Compiler {
             _privatePrefix = null;
 
             _parsingStarted = false;
+            _errorCode = 0;
         }
 
         public void Reset() {
@@ -180,11 +203,17 @@ namespace IronPython.Compiler {
 
         private SourceLocation GetStart() {
             Debug.Assert(_token.Token != null, "No token fetched");
+            if (_token.Token.Kind == TokenKind.EndOfFile) {
+                return SourceSpan.None.End;
+            }
             return _token.Span.Start;
         }
 
         private SourceSpan GetSpan() {
             Debug.Assert(_token.Token != null, "No token fetched");
+            if (_token.Token.Kind == TokenKind.EndOfFile) {
+                return SourceSpan.None;
+            }
             return _token.Span;
         }
 
@@ -243,11 +272,8 @@ namespace IronPython.Compiler {
             }
         }
 
-        private void EatName(SymbolId id) {
-            if (!PeekName(id)) {
-                ReportSyntaxError(IronPython.Resources.ExpectingIdentifier + SymbolTable.IdToString(id));
-            }
-
+        private void SkipName(SymbolId id) {
+            Debug.Assert(PeekName(id));
             NextToken();
         }
 
@@ -288,8 +314,11 @@ namespace IronPython.Compiler {
         }
 
         internal void ReportSyntaxError(SourceLocation start, SourceLocation end, string message, int errorCode) {
-            SourceSpan errorLoc = _sourceUnit.MapLine(new SourceSpan(start, end));
-            _errors.Add(_sourceUnit, message, errorLoc, errorCode, Severity.Error);
+            // save the first one, the next error codes may be induced errors:
+            if (_errorCode == 0) {
+                _errorCode = errorCode;
+            }
+            _errors.Add(_sourceUnit, message, new SourceSpan(start, end), errorCode, Severity.FatalError);
         }
 
         #endregion
@@ -335,7 +364,7 @@ namespace IronPython.Compiler {
         //single_input: Newline | simple_stmt | compound_stmt Newline
         //eval_input: testlist Newline* ENDMARKER
         //file_input: (Newline | stmt)* ENDMARKER
-        public Statement ParseFileInput() {
+        public PythonAst ParseFile(bool makeModule) {
             StartParsing();
 
             List<Statement> l = new List<Statement>();
@@ -395,16 +424,16 @@ namespace IronPython.Compiler {
 
             SuiteStatement ret = new SuiteStatement(stmts);
             ret.SetLoc(SourceLocation.MinValue, GetEnd());
-            return ret;
+            return new PythonAst(ret, makeModule, TrueDivision, false);
         }
 
-        static readonly char[] newLineChar = new char[] { '\n' };
-        static readonly char[] whiteSpace = { ' ', '\t' };
+        private static readonly char[] newLineChar = new char[] { '\n' };
+        private static readonly char[] whiteSpace = { ' ', '\t' };
 
         // Given the interactive text input for a compound statement, calculate what the
         // indentation level of the next line should be
         public static int GetNextAutoIndentSize(string text, int autoIndentTabWidth) {
-            if (text == null) throw new ArgumentNullException("text");
+            Contract.RequiresNotNull(text, "text");
 
             Debug.Assert(text[text.Length - 1] == '\n');
             string[] lines = text.Split(newLineChar);
@@ -434,44 +463,42 @@ namespace IronPython.Compiler {
         /// Parse one or more lines of interactive input
         /// </summary>
         /// <returns>null if input is not yet valid but could be with more lines</returns>
-        public Statement ParseInteractiveInput(bool allowIncompleteStatement, bool throwOnError, out InteractiveCodeProperties properties) {
+        public PythonAst ParseInteractiveCode(out SourceCodeProperties properties) {
             bool parsingMultiLineCmpdStmt;
             bool isEmptyStmt = false;
 
-            properties = InteractiveCodeProperties.None;
+            properties = SourceCodeProperties.None;
 
-            try {
-                StartParsing();
-                Statement ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt, out isEmptyStmt);
+        
+            StartParsing();
+            Statement ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt, out isEmptyStmt);
 
-                if (isEmptyStmt) properties |= InteractiveCodeProperties.IsEmpty;
-
-                if (parsingMultiLineCmpdStmt && allowIncompleteStatement) {
-                    properties |= InteractiveCodeProperties.IsIncompleteStatement;
-                    return null;
-                } if (isEmptyStmt) {
-                    return null;
-                } else {
-                    return ret;
+            if (_errorCode == 0) {
+                if (isEmptyStmt) {
+                    properties = SourceCodeProperties.IsEmpty;
+                } else if (parsingMultiLineCmpdStmt) {
+                    properties = SourceCodeProperties.IsIncompleteStatement;
                 }
-            } catch (SyntaxErrorException se) {
-                // Check if it's a real syntax error, or if its just an incomplete multi-line statement
-                if ((se.ErrorCode & ErrorCodes.IncompleteMask) != 0) {
-                    if ((se.ErrorCode & ErrorCodes.IncompleteToken) != 0) {
-                        properties |= InteractiveCodeProperties.IsIncompleteToken;
+
+                if (isEmptyStmt) {
+                    return null;
+                }
+
+                return new PythonAst(ret, false, TrueDivision, true);
+            } else {
+                if ((_errorCode & ErrorCodes.IncompleteMask) != 0) {
+                    if ((_errorCode & ErrorCodes.IncompleteToken) != 0) {
+                        properties = SourceCodeProperties.IsIncompleteToken;
                         return null;
                     }
 
-                    if ((se.ErrorCode & ErrorCodes.IncompleteStatement) != 0) {
-                        properties |= InteractiveCodeProperties.IsIncompleteStatement;
-                        if (allowIncompleteStatement) return null;
+                    if ((_errorCode & ErrorCodes.IncompleteStatement) != 0) {
+                        properties = SourceCodeProperties.IsIncompleteStatement;
+                        return null;
                     }
                 }
 
-                properties |= InteractiveCodeProperties.IsInvalid;
-
-                // It looks like a real syntax error. Rethrow the exception if required:
-                if (throwOnError) throw;
+                properties = SourceCodeProperties.IsInvalid;
                 return null;
             }
         }
@@ -518,22 +545,22 @@ namespace IronPython.Compiler {
             return s;
         }
 
-        public Statement ParseSingleStatement() {
+        public PythonAst ParseSingleStatement() {
             StartParsing();
 
             EatOptionalNewlines();
             Statement statement = ParseStmt();
             EatEndOfInput();
-            return statement;
+            return new PythonAst(statement, false, TrueDivision, false);
         }
 
-        public Expression ParseExpression() {
+        public PythonAst ParseExpression() {
             // TODO: move from source unit  .TrimStart(' ', '\t')
 
-            return ParseTestListAsExpression();
+            return new PythonAst(new ReturnStatement(ParseTestListAsExpression()), false, TrueDivision, false);
         }
 
-        public Expression ParseTestListAsExpression() {
+        private Expression ParseTestListAsExpression() {
             StartParsing();
 
             Expression expression = ParseTestListAsExpr(false);
@@ -857,10 +884,6 @@ namespace IronPython.Compiler {
                     }
                 }
             }
-
-            // TODO: remove when TrueDivision gets to AST statements:
-            if (_compilerOptions != null)
-                _compilerOptions.TrueDivision = TrueDivision;
 
             FromImportStatement ret = new FromImportStatement(dname, names, asNames, fromFuture);
             ret.SetLoc(start, GetEnd());
@@ -1345,12 +1368,12 @@ namespace IronPython.Compiler {
 
         //with_stmt: 'with' test [ 'as' with_var ] ':' suite
         private WithStatement ParseWithStmt() {
-            EatName(Symbols.With);
+            SkipName(Symbols.With);
             SourceLocation start = GetStart();
             Expression contextManager = ParseTest();
             Expression var = null;
             if (PeekName(Symbols.As)) {
-                EatName(Symbols.As);
+                SkipName(Symbols.As);
                 var = ParseTest();
             }
 
@@ -1611,8 +1634,8 @@ namespace IronPython.Compiler {
                     case TokenKind.LessThanOrEqual: NextToken(); op = PythonOperator.LessThanOrEqual; break;
                     case TokenKind.GreaterThan: NextToken(); op = PythonOperator.GreaterThan; break;
                     case TokenKind.GreaterThanOrEqual: NextToken(); op = PythonOperator.GreaterThanOrEqual; break;
-                    case TokenKind.Equal: NextToken(); op = PythonOperator.Equal; break;
-                    case TokenKind.NotEqual: NextToken(); op = PythonOperator.NotEqual; break;
+                    case TokenKind.Equals: NextToken(); op = PythonOperator.Equal; break;
+                    case TokenKind.NotEquals: NextToken(); op = PythonOperator.NotEqual; break;
                     case TokenKind.LessThanGreaterThan: NextToken(); op = PythonOperator.NotEqual; break;
 
                     case TokenKind.KeywordIn: NextToken(); op = PythonOperator.In; break;
@@ -2112,11 +2135,13 @@ namespace IronPython.Compiler {
             SourceLocation lStart = GetStart();
             SourceLocation lEnd = GetEnd();
             int grouping = _tokenizer.GroupingLevel;
+            bool hasRightParenthesis;
 
             Expression ret;
             //  Empty tuple
             if (MaybeEat(TokenKind.RightParenthesis)) {
                 ret = MakeTupleOrExpr(new List<Expression>(), false);
+                hasRightParenthesis = true;
             } else {
                 Expression test = ParseTest();
                 if (MaybeEat(TokenKind.Comma)) {
@@ -2129,13 +2154,15 @@ namespace IronPython.Compiler {
                     // "(" test ")"
                     ret = test is ParenthesisExpression ? test : new ParenthesisExpression(test);
                 }
-                Eat(TokenKind.RightParenthesis);
+                hasRightParenthesis = Eat(TokenKind.RightParenthesis);
             }
 
             SourceLocation rStart = GetStart();
             SourceLocation rEnd = GetEnd();
 
-            _sink.MatchPair(new SourceSpan(lStart, lEnd), new SourceSpan(rStart, rEnd), grouping);
+            if (hasRightParenthesis) {
+                _sink.MatchPair(new SourceSpan(lStart, lEnd), new SourceSpan(rStart, rEnd), grouping);
+            }
 
             ret.SetLoc(lStart, rEnd);
             return ret;
@@ -2467,19 +2494,6 @@ namespace IronPython.Compiler {
             }
 
             return new CallExpression(target, args, hasArgsTuple, hasKeywordDict, keywordCount, extraArgs);
-        }
-
-        internal FunctionDefinition ParseFunctionBody(FunctionDefinition function) {
-            PushFunction(function);
-            // TODO: ParseFileInput is too liberal, allows from __future__ import ...
-            Statement body = ParseFileInput();
-            PopFunction();
-
-            function.Body = body;
-            function.SetLoc(body.Span);
-            function.Header = body.Start;
-
-            return function;
         }
 
         #endregion
