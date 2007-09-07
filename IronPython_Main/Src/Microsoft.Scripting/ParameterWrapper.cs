@@ -58,13 +58,16 @@ namespace Microsoft.Scripting {
             _isParamsDict = info.IsDefined(typeof(ParamDictionaryAttribute), false);
         }
 
-        public static int? CompareParameters(IList<ParameterWrapper> parameters1, IList<ParameterWrapper> parameters2) {
+        public static int? CompareParameters(IList<ParameterWrapper> parameters1, IList<ParameterWrapper> parameters2, Type[] actualTypes) {
             Debug.Assert(parameters1.Count == parameters2.Count);
+            Debug.Assert(parameters1.Count == actualTypes.Length);
+
             int? ret = 0;
             for (int i = 0; i < parameters1.Count; i++) {
                 ParameterWrapper p1 = parameters1[i];
                 ParameterWrapper p2 = parameters2[i];
-                int? cmp = p1.CompareTo(p2);
+                int? cmp = p1.CompareTo(p2, actualTypes[i]);
+                
                 switch (ret) {
                     case 0:
                         ret = cmp; break;
@@ -124,6 +127,44 @@ namespace Microsoft.Scripting {
             else if (_binder.PreferConvert(t2, t1)) return +1;
 
             return null;
+        }
+
+        private int? SelectBestConversionFor(Type actualType, Type candidateOne, Type candidateTwo, NarrowingLevel level) {
+            Type ret = _binder.SelectBestConversionFor(actualType, candidateOne, candidateTwo, level);
+            if (ret != null) {
+                if (ret == candidateOne) {
+                    return +1;
+                } else if (ret == candidateTwo) {
+                    return -1;
+                }
+            }
+            return null;
+        }
+
+        public int? CompareTo(ParameterWrapper other, Type actualType) {
+            //+1 if t1, -1 if t2, null if no resolution
+
+            Type t1 = Type;
+            Type t2 = other.Type;
+            if (t1 == t2) return 0;
+            int? ret = null;
+
+            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.None);
+            if (ret != null) {
+                return ret;
+            }
+
+            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.Preferred);
+            if (ret != null) {
+                return ret;
+            }
+
+            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.All);
+            if (ret != null) {
+                return ret;
+            }
+
+            return CompareTo(other);
         }
 
         public SymbolId Name {

@@ -37,12 +37,6 @@ namespace Microsoft.Scripting {
     public abstract class LanguageContext : ICloneable {
         private static ModuleGlobalCache _noCache;
 
-        /// <summary>
-        /// Keeps track of exceptions being handled in interpreted mode (so we can support rethrow statements).
-        /// </summary>
-        [ThreadStatic]
-        internal static List<Exception> _caughtExceptions;
-
         public virtual ActionBinder Binder {
             get { return Engine.DefaultBinder; }
         }
@@ -297,38 +291,6 @@ namespace Microsoft.Scripting {
         /// <returns>returns null by default.</returns>
         public virtual object DeleteMember(CodeContext context, object target, SymbolId name) {
             return null;
-        }
-
-        /// <summary>
-        /// Get the value of the member with given name from the target
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">The target to get the member from</param>
-        /// <param name="name">Name of the member</param>
-        /// <returns></returns>
-        public virtual object GetMember(CodeContext context, object target, SymbolId name) {
-            return null;
-        }
-
-        /// <summary>
-        /// Get the value of the bound member with given name from the target
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">The target to get the bound member from</param>
-        /// <param name="name">Name of the member</param>
-        /// <returns></returns>
-        public virtual object GetBoundMember(CodeContext context, object target, SymbolId name) {
-            return null;
-        }
-
-        /// <summary>
-        /// Sets the value of the member with given name on the target.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="target">The target on which to set the member</param>
-        /// <param name="name">Name of the member to set</param>
-        /// <param name="value">The new value for the member</param>
-        public virtual void SetMember(CodeContext context, object target, SymbolId name, object value) {
         }
 
         /// <summary>

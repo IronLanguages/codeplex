@@ -272,14 +272,24 @@ namespace Microsoft.Scripting.Ast {
             return NotImplemented(node);
         }
 
-        // CodeBlockExpression
-        public override bool Walk(CodeBlockExpression node) {
+        private void DumpCodeBlockExpression(CodeBlockExpression node) {
             int id = Enqueue(node.Block);
-            Write(String.Format(".block ({0}   #{1}) {2}{3}{4}", node.Block.Name, id,
+            Write(String.Format(".block {0} ({1}   #{2}) {3}{4}{5}", node.DelegateType.Name, node.Block.Name, id,
                 node.ForceWrapperMethod ? " ForceWrapperMethod" : "",
                 node.IsStronglyTyped ? " IsStronglyTyped" : "",
                 node.IsDeclarative ? " IsDeclarative" : ""));
+        }
+
+        // CodeBlockExpression
+        public override bool Walk(CodeBlockExpression node) {
+            // Walk gets called only if IsDeclarative==true
+            // So we do the real work in PostWalk
+            Debug.Assert(node.IsDeclarative);
             return false;
+        }
+
+        public override void PostWalk(CodeBlockExpression node) {
+            DumpCodeBlockExpression(node);
         }
 
         // CodeContextExpression

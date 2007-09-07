@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -43,7 +44,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected override object DoEvaluate(CodeContext context) {
-            _statement.Execute(context);
+            object ret = _statement.Execute(context);
+            // The interpreter is not able to deal with control flow inside of expressions
+            Debug.Assert(ret == Statement.NextStatement);
             return null;
         }
 

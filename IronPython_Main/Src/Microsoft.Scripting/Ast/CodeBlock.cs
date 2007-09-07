@@ -586,7 +586,7 @@ namespace Microsoft.Scripting.Ast {
 
             bool delayedEmit = context.LanguageContext.Engine.Options.ProfileDrivenCompilation;
             // Walk the tree to determine whether to emit this CodeBlock or interpret it
-            if (FastEvalWalker.CanEvaluate(this, delayedEmit)) {
+            if (InterpretChecker.CanEvaluate(this, delayedEmit)) {
                 // Hold onto our declaring context in case we decide to emit ourselves later
                 _declaringContext = context.ModuleContext.CompilerContext;
                 _forceWrapperMethod = forceWrapperMethod;

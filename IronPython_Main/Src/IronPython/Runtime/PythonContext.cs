@@ -366,18 +366,6 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        public override object GetMember(CodeContext context, object target, SymbolId name) {
-            return PythonOps.GetBoundAttr(context, target, name);
-        }
-
-        public override object GetBoundMember(CodeContext context, object target, SymbolId name) {
-            return PythonOps.GetBoundAttr(context, target, name);
-        }
-
-        public override void SetMember(CodeContext context, object target, SymbolId name, object value) {
-            PythonOps.SetAttr(context, target, name, value);
-        }
-
         public override object Call(CodeContext context, object function, object[] args) {
             return PythonOps.CallWithContext(context, function, args);
         }

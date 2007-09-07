@@ -49,10 +49,11 @@ namespace Microsoft.Scripting.Ast {
             get { return _stronglyTyped; }
         }
 
+#endif
         internal Type DelegateType {
             get { return _delegateType; }
         }
-#endif
+
         /// <summary>
         /// Whether this expression declares the block. If so, the declaring code's variable are accessible from within the block (a closure is created).
         /// Otherwise, the block is only referred to by the containing block and do not share it's scope.
@@ -95,6 +96,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected override object DoEvaluate(CodeContext context) {
+            Debug.Assert(_delegateType == null); // We currently cannot create a strongly-typed delegate
             return _block.GetDelegateForInterpreter(context, _forceWrapperMethod);
         }
 

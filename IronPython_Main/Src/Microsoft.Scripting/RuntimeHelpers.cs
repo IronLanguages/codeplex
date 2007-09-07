@@ -227,29 +227,6 @@ namespace Microsoft.Scripting {
         }
 
         /// <summary>
-        /// Called from the generated code. a helper to get a member from the target with a given name.
-        /// </summary>
-        public static object GetMember(CodeContext context, object target, SymbolId name) {
-            return context.LanguageContext.GetMember(context, target, name);
-        }
-
-        /// <summary>
-        /// Called from the generated code. a helper to get a bound member from the target with a given name.
-        /// </summary>
-        public static object GetBoundMember(CodeContext context, object target, SymbolId name) {
-            return context.LanguageContext.GetBoundMember(context, target, name);
-        }
-
-        /// <summary>
-        /// Called from the generated code, a helper to set a member on the target with a given name.
-        /// The unusual order of parameters makes it easier to do a codegen for this call.
-        /// </summary>
-        public static object SetMember(object value, object target, SymbolId name, CodeContext context) {
-            context.LanguageContext.SetMember(context, target, name, value);
-            return value;
-        }
-
-        /// <summary>
         /// Called from the generated code, a helper to call a function with "this" and array of arguments.
         /// </summary>
         public static object CallWithThis(CodeContext context, object function, object instance, object[] args) {

@@ -78,10 +78,8 @@ namespace Microsoft.Scripting.Generation {
 
 #if SILVERLIGHT  // AssemblyBuilderAccess.RunAndSave, Environment.CurrentDirectory
             asmname.Name = moduleName;
-            _myAssembly = domain.DefineDynamicAssembly(asmname, AssemblyBuilderAccess.Run, EmitDebugInfo);
-            
-            // there is a single predefined module in Silverlight assembly (debug info ignored):
-            _myModule = (ModuleBuilder)_myAssembly.ManifestModule;
+            _myAssembly = domain.DefineDynamicAssembly(asmname, AssemblyBuilderAccess.Run);
+            _myModule = _myAssembly.DefineDynamicModule(moduleName, EmitDebugInfo);
 #else
             try {
                 outDir = Path.GetFullPath(String.IsNullOrEmpty(outDir) ? Environment.CurrentDirectory : outDir);

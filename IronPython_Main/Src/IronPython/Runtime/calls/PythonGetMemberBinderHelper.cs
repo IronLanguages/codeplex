@@ -162,7 +162,7 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeDynamicRule(Type targetType) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.SetTarget(rule.MakeReturn(Binder, Ast.Call(null,
-                    typeof(RuntimeHelpers).GetMethod("GetBoundMember"),
+                    typeof(PythonOps).GetMethod("GetBoundAttr"),
                     Ast.CodeContext(),
                     rule.Parameters[0],
                     Ast.Constant(Action.Name))));

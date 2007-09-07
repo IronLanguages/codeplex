@@ -550,38 +550,51 @@ namespace Microsoft.Scripting {
                 }
             }
 
-            if (applicableTargets.Count == 1) {
-                return applicableTargets;
-            }
-            if (applicableTargets.Count > 1) {
-                MethodCandidate target = FindBest(callType, applicableTargets);
-                if (target != null) {
-                    return new List<MethodCandidate>(new MethodCandidate[] { target });
-                } else {
-                    return applicableTargets;
-                }
+            List<MethodCandidate> result = null;
+            if (TryGetApplicableTarget(callType, applicableTargets, types, out result)) {
+                return result;
             }
 
             //no targets are applicable without narrowing conversions, so try those
-
             foreach (MethodCandidate target in _targets) {
                 if (target.IsApplicable(types, names, NarrowingLevel.Preferred)) {
                     applicableTargets.Add(new MethodCandidate(target, NarrowingLevel.Preferred));
                 }
             }
 
-            if (applicableTargets.Count == 0) {
-                foreach (MethodCandidate target in _targets) {
-                    NarrowingLevel nl = _binder.IsBinaryOperator ? NarrowingLevel.Operator : NarrowingLevel.All;
-                    if (target.IsApplicable(types, names, nl)) {
-                        applicableTargets.Add(new MethodCandidate(target, nl));
-                    }
-                }
+            if (TryGetApplicableTarget(callType, applicableTargets, types, out result)) {
+                return result;
             }
+       
+            foreach (MethodCandidate target in _targets) {
+                NarrowingLevel nl = _binder.IsBinaryOperator ? NarrowingLevel.Operator : NarrowingLevel.All;
+                if (target.IsApplicable(types, names, nl)) {
+                    applicableTargets.Add(new MethodCandidate(target, nl));
+                }
+            }            
 
             return applicableTargets;
         }
-       
+
+        private bool TryGetApplicableTarget(CallType callType, List<MethodCandidate> applicableTargets, Type[] actualTypes, out List<MethodCandidate> result) {
+            result = null;
+            if (applicableTargets.Count == 1) {
+                result = applicableTargets;
+                return true;
+            }
+            if (applicableTargets.Count > 1) {
+                MethodCandidate target = FindBest(callType, applicableTargets, actualTypes);
+                if (target != null) {
+                    result = new List<MethodCandidate>(new MethodCandidate[] { target });
+                    return true;
+                } else {
+                    result = applicableTargets;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private Type[] GetTypesForTest(MethodCandidate target, Type[] types, CallType callType, IList<MethodCandidate> candidates) {
             // if we have a single target we need no tests.
             // if we have a binary operator we have to test to return NotImplemented
@@ -635,17 +648,17 @@ namespace Microsoft.Scripting {
             return false;
         }
 
-        private static bool IsBest(MethodCandidate candidate, List<MethodCandidate> applicableTargets, CallType callType) {
+        private static bool IsBest(MethodCandidate candidate, List<MethodCandidate> applicableTargets, CallType callType, Type[] actualTypes) {
             foreach (MethodCandidate target in applicableTargets) {
                 if (candidate == target) continue;
-                if (candidate.CompareTo(target, callType) != +1) return false;
+                if (candidate.CompareTo(target, callType, actualTypes) != +1) return false;
             }
             return true;
         }
 
-        private static MethodCandidate FindBest(CallType callType, List<MethodCandidate> applicableTargets) {
+        private static MethodCandidate FindBest(CallType callType, List<MethodCandidate> applicableTargets, Type[] actualTypes) {
             foreach (MethodCandidate candidate in applicableTargets) {
-                if (IsBest(candidate, applicableTargets, callType)) return candidate;
+                if (IsBest(candidate, applicableTargets, callType, actualTypes)) return candidate;
             }
             return null;
         }
