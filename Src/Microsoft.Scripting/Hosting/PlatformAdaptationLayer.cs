@@ -46,10 +46,10 @@ namespace Microsoft.Scripting.Hosting {
             _assemblyFullNames.Add("agclr", "agclr, Version=0.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
             _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=8.1.0.0, PublicKeyToken=b03f5f7f11d50a3a");
 
-            AssemblyName dlrAssembly = new AssemblyName(GetType().Assembly.FullName);            
+            AssemblyName dlrAssembly = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);            
             foreach (string asm in new string[] {
                 "Microsoft.Scripting",
-                "Microsoft.Scripting.SilverLight",
+                "Microsoft.Scripting.Silverlight",
                 "IronPython",
                 "IronPython.Modules",
                 "Microsoft.JScript.Compiler",

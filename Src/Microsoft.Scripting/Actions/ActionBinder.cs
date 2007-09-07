@@ -151,6 +151,13 @@ namespace Microsoft.Scripting.Actions {
         public abstract bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel level);
 
         /// <summary>
+        /// Selects the best (of two) candidates for conversion from actualType
+        /// </summary>
+        public virtual Type SelectBestConversionFor(Type actualType, Type candidateOne, Type candidateTwo, NarrowingLevel level) {
+            return null;
+        }
+
+        /// <summary>
         /// Provides ordering for two parameter types if there is no conversion between the two parameter types.
         /// 
         /// Returns true to select t1, false to select t2.

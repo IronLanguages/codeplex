@@ -217,5 +217,42 @@ namespace Microsoft.Scripting.Utils {
             System.Array.Resize(ref array, array.Length - 1);
             return array;
         }
+
+        public static T[] RemoveAt<T>(T[] array, int indexToRemove) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.Requires(indexToRemove >= 0 && indexToRemove < array.Length, "index");
+
+            T[] result = new T[array.Length - 1];
+            if (indexToRemove > 0) {
+                Array.Copy(array, 0, result, 0, indexToRemove);
+            }
+            int remaining = array.Length - indexToRemove - 1;
+            if (remaining > 0) {
+                Array.Copy(array, array.Length - remaining, result, result.Length - remaining, remaining);
+            }
+            return result;
+        }
+
+        public static T[] InsertAt<T>(T[] array, int index, params T[] items) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(items, "items");
+            Contract.Requires(index >= 0 && index <= array.Length, "index");
+
+            if (items.Length == 0) {
+                return Copy(array);
+            }
+
+            T[] result = new T[array.Length + items.Length];
+            if (index > 0) {
+                Array.Copy(array, 0, result, 0, index);
+            }
+            Array.Copy(items, 0, result, index, items.Length);
+
+            int remaining = array.Length - index;
+            if (remaining > 0) {
+                Array.Copy(array, array.Length - remaining, result, result.Length - remaining, remaining);
+            }
+            return result;
+        }
     }
 }

@@ -28,11 +28,17 @@ namespace Microsoft.Scripting {
     public static class ExceptionHelpers {
         private const string prevStackTraces = "PreviousStackTraces";
 
+        /// <summary>
+        /// Keeps track of exceptions being handled in interpreted mode (so we can support rethrow statements).
+        /// </summary>
         [ThreadStatic]
-        internal static List<Exception> _currentExceptions;
+        internal static List<Exception> _caughtExceptions;
 
         [ThreadStatic]
-        internal static List<DynamicStackFrame> _stackFrames;
+        private static List<Exception> _currentExceptions;
+
+        [ThreadStatic]
+        private static List<DynamicStackFrame> _stackFrames;
 
         /// <summary>
         /// Gets the list of exceptions that are currently being handled by the user. 
@@ -42,6 +48,16 @@ namespace Microsoft.Scripting {
         public static List<Exception> CurrentExceptions {
             get {
                 return _currentExceptions;
+            }
+        }
+
+        public static Exception LastException {
+            get {
+                if (_caughtExceptions != null && _caughtExceptions.Count > 0) {
+                    return _caughtExceptions[_caughtExceptions.Count - 1];
+                } else {
+                    throw new InvalidOperationException("No exception");
+                }
             }
         }
 

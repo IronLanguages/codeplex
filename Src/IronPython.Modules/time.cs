@@ -44,15 +44,34 @@ namespace IronPython.Modules {
 
         private const int minYear = 1900;   // minimum year for python dates (CLS dates are bigger)
 
-        public static double altzone = TimeZone.CurrentTimeZone.GetDaylightChanges(DateTime.Now.Year).Delta.TotalSeconds;
-        public static bool daylight = DateTime.Now.IsDaylightSavingTime();
-        public static double timezone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalSeconds;
-        public static string tzname = TimeZone.CurrentTimeZone.StandardName;
+        public static int altzone;
+        public static int daylight;
+        public static int timezone;
+        public static string tzname;
         public static bool accept2dyear = true;
 
 #if !SILVERLIGHT    // System.Diagnostics.Stopwatch
         private static Stopwatch sw;
 #endif
+
+        static PythonTime() {
+            daylight = DateTime.Now.IsDaylightSavingTime() ? 1 : 0;
+
+            // altzone, timezone are offsets from UTC in seconds, so they always fit in the
+            // -13*3600 to 13*3600 range and are safe to cast to ints
+#if !SILVERLIGHT
+            tzname = TimeZone.CurrentTimeZone.StandardName;
+            altzone = (int)-TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalSeconds;
+            timezone = altzone;
+            if (daylight != 0) {
+                timezone += (int)TimeZone.CurrentTimeZone.GetDaylightChanges(DateTime.Now.Year).Delta.TotalSeconds;
+            }
+#else
+            tzname = TimeZoneInfo.Local.StandardName;
+            timezone = (int)-TimeZoneInfo.Local.BaseUtcOffset.TotalSeconds;
+            altzone = (int)-TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
+#endif
+        }
 
         [PythonName("asctime")]
         public static string AscTime() {

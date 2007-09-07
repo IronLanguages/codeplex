@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Ast {
 
         protected override object DoEvaluate(CodeContext context) {
             if (_val == null) {
-                throw LanguageContext._caughtExceptions[LanguageContext._caughtExceptions.Count - 1];
+                throw ExceptionHelpers.LastException;
             } else {
                 throw (Exception)context.LanguageContext.Binder.Convert(_val.Evaluate(context), typeof(Exception));
             }

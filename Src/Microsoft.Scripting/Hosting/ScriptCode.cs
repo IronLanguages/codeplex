@@ -102,7 +102,7 @@ namespace Microsoft.Scripting {
             bool doEvaluation = tryEvaluate || _languageContext.Engine.Options.InterpretedMode;
             if (_simpleTarget == null && _optimizedTarget == null
                 && doEvaluation
-                && Ast.FastEvalWalker.CanEvaluate(CodeBlock, _languageContext.Engine.Options.ProfileDrivenCompilation)) {
+                && Ast.InterpretChecker.CanEvaluate(CodeBlock, _languageContext.Engine.Options.ProfileDrivenCompilation)) {
                 return CodeBlock.TopLevelExecute(codeContext);
             }
 

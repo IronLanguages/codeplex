@@ -122,12 +122,12 @@ namespace Microsoft.Scripting {
             return true;
         }
 
-        public int? CompareParameters(MethodCandidate other) {
-            return ParameterWrapper.CompareParameters(this._parameters, other._parameters);
+        public int? CompareParameters(MethodCandidate other, Type[] actualTypes) {
+            return ParameterWrapper.CompareParameters(this._parameters, other._parameters, actualTypes);
         }
 
-        public int CompareTo(MethodCandidate other, CallType callType) {
-            int? cmpParams = CompareParameters(other);
+        public int CompareTo(MethodCandidate other, CallType callType, Type[] actualTypes) {
+            int? cmpParams = CompareParameters(other, actualTypes);
             if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
 
             int ret = Target.CompareEqualParameters(other.Target);

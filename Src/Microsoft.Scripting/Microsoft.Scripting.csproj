@@ -129,7 +129,7 @@
     <Compile Include="Ast\AbstractContext.cs" />
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
     <Compile Include="Ast\DoStatementBuilder.cs" />
-    <Compile Include="Ast\FastEvalWalker.cs" />
+    <Compile Include="Ast\InterpretChecker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
     <Compile Include="Generation\KeywordArgBuilder.cs" />
