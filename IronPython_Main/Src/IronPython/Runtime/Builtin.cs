@@ -617,13 +617,11 @@ namespace IronPython.Runtime {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
             } else if ((sm = o as ScriptModule) != null) {
-                IList<object> names = sm.GetCustomMemberNames(context);
-
-                foreach (string name in names) {
-                    if (name == "__class__" || name == "__builtins__") continue;
+                foreach (SymbolId si in sm.Scope.Keys) {
+                    if (si == Symbols.Class || si == Symbols.Builtins) continue;
 
                     object value;
-                    if (sm.TryGetBoundCustomMember(context, SymbolTable.StringToId(name), out value)) {
+                    if (sm.Scope.TryGetName(context.LanguageContext, si, out value)) {
                         help(context, doced, doc, indent + 1, value);
                     }
                 }
@@ -1315,15 +1313,11 @@ namespace IronPython.Runtime {
         }
 
         public static object vars(CodeContext context, object @object) {
-            object result;
-            try {
-                result = new PythonDictionary(PythonOps.GetAttrDict(context, @object));
-            } catch (MissingMemberException e) {
-                if (e.Message.Contains("has no attribute '__dict__'"))
-                    throw PythonOps.TypeError("vars() argument must have __dict__ attribute");
-                throw;
+            object value;
+            if (!PythonOps.TryGetBoundAttr(@object, Symbols.Dict, out value)) {
+                throw PythonOps.TypeError("vars() argument must have __dict__ attribute");
             }
-            return result;
+            return value;
         }
 
         public static object xrange = DynamicHelpers.GetDynamicTypeFromType(typeof(XRange)); //PyXRange.pytype;

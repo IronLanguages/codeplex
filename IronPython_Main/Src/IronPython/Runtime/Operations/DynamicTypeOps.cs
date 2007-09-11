@@ -160,7 +160,7 @@ namespace IronPython.Runtime.Operations {
 
         [PropertyMethod, PythonName("__module__")]
         public static string GetModule(DynamicType self) {
-            if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly)) {
+            if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(self.UnderlyingSystemType)) {
                 string moduleName = null;
                 Type curType = self.UnderlyingSystemType;
                 while (curType != null) {
@@ -234,7 +234,7 @@ namespace IronPython.Runtime.Operations {
             return CallWorker(context, cls, args\u03c4);
         }
 
-        public static object CallWorker(CodeContext context, DynamicType dt, object[] args) {
+        internal static object CallWorker(CodeContext context, DynamicType dt, object[] args) {
             object newObject = PythonOps.CallWithContext(context, GetTypeNew(context, dt), ArrayUtils.Insert<object>(dt, args));
 
             if (ShouldInvokeInit(dt, DynamicHelpers.GetDynamicType(newObject), args.Length)) {
@@ -344,16 +344,19 @@ namespace IronPython.Runtime.Operations {
                 (cls != TypeCache.DynamicType || argCnt > 1);
         }
 
+        internal static string GetName(Type type) {
+            string name;
+            if (!PythonTypeCustomizer.SystemTypes.TryGetValue(type, out name) &&
+                NameConverter.TryGetName(type, out name) == NameType.None) {
+                name = type.Name;
+            }
+            return name;
+        }
+
         internal static string GetName(DynamicType dt) {
             string name;
             if (dt.IsSystemType) {
-                if (!PythonTypeCustomizer.SystemTypes.TryGetValue(dt.UnderlyingSystemType, out name)) {
-                    if (dt.Name == dt.UnderlyingSystemType.Name) {
-                        name = NameConverter.GetTypeName(dt.UnderlyingSystemType);
-                    } else {
-                        name = dt.Name;
-                    }
-                }
+                return GetName(dt.UnderlyingSystemType);
             } else {
                 name = dt.Name;
             }
@@ -372,6 +375,22 @@ namespace IronPython.Runtime.Operations {
                 types[i] = DynamicHelpers.GetDynamicType(args[i]);
             }
             return types;
+        }
+
+        internal static Type[] ConvertToTypes(DynamicType[] dynamicTypes) {
+            Type[] types = new Type[dynamicTypes.Length];
+            for (int i = 0; i < dynamicTypes.Length; i++) {
+                types[i] = ConvertToType(dynamicTypes[i]);
+            }
+            return types;
+        }
+
+        private static Type ConvertToType(DynamicType dynamicType) {
+            if (dynamicType.IsNull) {
+                return None.Type;
+            } else {
+                return dynamicType.UnderlyingSystemType;
+            }
         }
     }
 }

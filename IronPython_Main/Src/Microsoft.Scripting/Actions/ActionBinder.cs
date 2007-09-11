@@ -70,13 +70,8 @@ namespace Microsoft.Scripting.Actions {
             if (rule != null) {
                 return rule;
             }
-#if DEBUG
-            string name = "";
-            if (args[0] is DynamicType) {
-                name = ((DynamicType)args[0]).Name;
-            }
-            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "MakeRule " + action.ToString() + " " + name);
-#endif
+
+            PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "MakeRule " + action.ToString() + " " + CompilerHelpers.GetType(args[0]).Name);
              
             IDynamicObject ndo = args[0] as IDynamicObject;
             if (ndo != null) {
@@ -130,6 +125,8 @@ namespace Microsoft.Scripting.Actions {
                     return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action, args).MakeRule();
                 case ActionKind.DoOperation:
                     return new DoOperationBinderHelper<T>(callerContext, (DoOperationAction)action, args).MakeRule();
+                case ActionKind.DeleteMember:
+                    return new DeleteMemberBinderHelper<T>(callerContext, (DeleteMemberAction)action, args).MakeRule();
                 default:
                     throw new NotImplementedException(action.ToString());
             }
@@ -192,11 +189,31 @@ namespace Microsoft.Scripting.Actions {
         /// The default implemetnation first searches the type, then the flattened heirachy of the type, and then
         /// registered extension methods.
         /// </summary>
-        public virtual MemberInfo[] GetMember(Action action, Type type, string name) {
-            MemberInfo[] members = type.GetMember(name);
-            if (members.Length == 0) {
+        public virtual MemberGroup GetMember(Action action, Type type, string name) {            
+            MemberGroup members = type.GetMember(name);
+
+            // check for generic types w/ arity...
+            Type[] types = type.GetNestedTypes(BindingFlags.Public);
+            string genName = name + ReflectionUtils.GenericArityDelimiter;
+            List<Type> genTypes = null;
+            foreach (Type t in types) {
+                if (t.Name.StartsWith(genName)) {
+                    if (genTypes == null) genTypes = new List<Type>();
+                    genTypes.Add(t);
+                }
+            }
+
+            if (genTypes != null) {
+                List<MemberTracker> mt = new List<MemberTracker>(members);
+                foreach (Type t in genTypes) {
+                    mt.Add(t);
+                }
+                return new MemberGroup(mt.ToArray());
+            }
+            
+            if (members.Count == 0) {
                 members = type.GetMember(name, BindingFlags.FlattenHierarchy | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
-                if (members.Length == 0) {
+                if (members.Count == 0) {
                     members = GetExtensionMembers(type, name);
                 }
             }
@@ -227,6 +244,14 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Ast.Constant(name)
                 )
             );
+        }
+
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual Statement MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return MakeReadOnlyMemberError<T>(rule, type, name);
         }
 
         public virtual Statement MakeInvalidParametersError(MethodBinder binder, Action action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
@@ -336,30 +361,45 @@ namespace Microsoft.Scripting.Actions {
             return paramsCount;
         }
 
-        public MemberInfo[] GetExtensionMembers(Type type, string name) {
+        public MemberGroup GetExtensionMembers(Type type, string name) {
             Type curType = type;
             do {
                 IList<Type> extTypes = GetExtensionTypes(curType);
-                List<MemberInfo> members = new List<MemberInfo>();
+                List<MemberTracker> members = new List<MemberTracker>();
 
                 foreach (Type ext in extTypes) {
                     foreach (MemberInfo mi in ext.GetMember(name)) {
                         members.Add(mi);
                     }
 
+                    // TODO: Support indexed getters/setters w/ multiple methods
+                    MethodInfo getter = null, setter = null, deleter = null;
                     foreach (MemberInfo mi in ext.GetMember("Get" + name)) {
                         if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
-                        // TODO: ExtProperties
+                        
+                        Debug.Assert(getter == null);
+                        getter = (MethodInfo)mi;
                     }
 
                     foreach (MemberInfo mi in ext.GetMember("Set" + name)) {
                         if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
-                        // TODO: ExtProperties
+                        Debug.Assert(setter == null);
+                        setter = (MethodInfo)mi;
+                    }
+
+                    foreach (MemberInfo mi in ext.GetMember("Delete" + name)) {
+                        if (!mi.IsDefined(typeof(PropertyMethodAttribute), false)) continue;
+                        Debug.Assert(deleter == null);
+                        deleter = (MethodInfo)mi;
+                    }
+
+                    if (getter != null || setter != null || deleter != null) {
+                        members.Add(new ExtensionPropertyTracker(name, getter, setter, deleter, curType));
                     }
                 }
 
                 if (members.Count != 0) {
-                    return members.ToArray();
+                    return new MemberGroup(members.ToArray());
                 }
 
                 curType = curType.BaseType;
@@ -372,5 +412,21 @@ namespace Microsoft.Scripting.Actions {
             // consult globally registered types
             return DynamicHelpers.GetExtensionTypes(t);
         }
+
+        protected internal virtual bool AllowKeywordArgumentConstruction(Type t) {
+            return true;
+        }
+
+        /// <summary>
+        /// Provides an opportunity for languages to replace all MemberInfo's with their own type.
+        /// 
+        /// Alternatlely a language can expose MemberInfo's directly.
+        /// </summary>
+        /// <param name="memberTracker"></param>
+        /// <returns></returns>
+        protected internal virtual Expression ReturnMemberTracker(MemberTracker memberTracker) {
+            return Ast.Ast.RuntimeConstant(memberTracker);
+        }
     }
 }
+

@@ -28,7 +28,8 @@ namespace Microsoft.Scripting.Actions {
         : BinderHelper<T, TActionKind> where TActionKind : MemberAction {
         private StandardRule<T> _rule;              // the rule being produced
         private Type _strongBoxType;                // null or the specific instantiated type of StrongBox
-        private object[] _args;                     // the arguments we're creating a rule for
+        private object[] _args;                     // the arguments we're creating a rule for 
+        private Statement _body = Ast.Empty();      // the body of the rule as it's built up
         private object _target;
 
         public MemberBinderHelper(CodeContext context, TActionKind action, object []args)
@@ -58,7 +59,7 @@ namespace Microsoft.Scripting.Actions {
             get {
                 if (_strongBoxType == null) return _rule.Parameters[0];
 
-                return Ast.ReadField(Ast.Cast(_rule.Parameters[0], _strongBoxType), _strongBoxType.GetField("Value"));
+                return Ast.Call(null, typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(_strongBoxType.GetGenericArguments()), _rule.Parameters[0]);
             }
         }
 
@@ -85,15 +86,15 @@ namespace Microsoft.Scripting.Actions {
             get { return SymbolTable.IdToString(Action.Name); }
         }
 
-        protected MemberTypes GetMemberType(MemberInfo[] members, out Expression error) {
+        protected TrackerTypes GetMemberType(MemberGroup members, out Expression error) {
             error = null;
-            MemberTypes memberType = MemberTypes.All;
-            for (int i = 0; i < members.Length; i++) {
-                MemberInfo mi = members[i];
+            TrackerTypes memberType = TrackerTypes.All;
+            for (int i = 0; i < members.Count; i++) {
+                MemberTracker mi = members[i];
                 if (mi.MemberType != memberType) {
-                    if (memberType != MemberTypes.All) {
+                    if (memberType != TrackerTypes.All) {
                         error = MakeAmbigiousMatchError(members);
-                        return MemberTypes.All;
+                        return TrackerTypes.All;
                     }
                     memberType = mi.MemberType;
                 }
@@ -117,9 +118,9 @@ namespace Microsoft.Scripting.Actions {
                 );
         }
 
-        private static Expression MakeAmbigiousMatchError(MemberInfo[] members) {
+        private static Expression MakeAmbigiousMatchError(MemberGroup members) {
             StringBuilder sb = new StringBuilder();
-            foreach (MemberInfo mi in members) {
+            foreach (MethodTracker mi in members) {
                 if (sb.Length != 0) sb.Append(", ");
                 sb.Append(mi.MemberType);
                 sb.Append(" : ");
@@ -129,5 +130,41 @@ namespace Microsoft.Scripting.Actions {
             return Ast.New(typeof(AmbiguousMatchException).GetConstructor(new Type[] { typeof(string) }),
                         Ast.Constant(sb.ToString()));
         }
+
+        protected void MakeMissingMemberError(Type type) {
+            Body = Ast.Block(Body, Binder.MakeMissingMemberError(Rule, type, StringName));
+        }
+
+        protected void MakeReadOnlyMemberError(Type type) {
+            Body = Ast.Block(Body, Binder.MakeReadOnlyMemberError(Rule, type, StringName));
+        }
+
+        protected void MakeUndeletableMemberError(Type type) {
+            Body = Ast.Block(Body, Binder.MakeUndeletableMemberError(Rule, type, StringName));
+        }
+
+        protected Statement Body {
+            get {
+                return _body;
+            }
+            set {
+                _body = value;
+            }
+        }
+
+        protected object[] Arguments {
+            get {
+                return _args;
+            }
+        }
+
+        protected static bool IsStaticProperty(PropertyTracker tracker, MethodInfo setter) {
+            if (tracker.IsExtension) {
+                return setter.IsDefined(typeof(StaticExtensionMethodAttribute), false);
+            }
+
+            return setter.IsStatic;
+        }
+
     }
 }

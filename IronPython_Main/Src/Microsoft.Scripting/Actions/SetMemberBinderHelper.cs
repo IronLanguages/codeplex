@@ -39,21 +39,25 @@ namespace Microsoft.Scripting.Actions {
             Rule.MakeTest(StrongBoxType ?? targetType);
 
             if (Target is ICustomMembers) {
-                return MakeSetCustomMemberRule(targetType);
+                MakeSetCustomMemberRule(targetType);
+            } else {
+                MakeSetMemberRule(targetType);
             }
 
-            return MakeSetMemberRule(targetType);
+            Rule.SetTarget(Body);
+
+            return Rule;
         }
 
-        private StandardRule<T> MakeSetMemberRule(Type type) {
-            if (MakeOperatorSetMemberBody(type)) {
-                return Rule;
+        private void MakeSetMemberRule(Type type) {
+            if (MakeOperatorSetMemberBody(type, "SetMember")) {
+                return;
             }
 
-            MemberInfo[] members = Binder.GetMember(Action, type, StringName);
+            MemberGroup members = Binder.GetMember(Action, type, StringName);
 
             // if lookup failed try the strong-box type if available.
-            if (members.Length == 0 && StrongBoxType != null) {
+            if (members.Count == 0 && StrongBoxType != null) {
                 type = StrongBoxType;
                 StrongBoxType = null;
 
@@ -61,33 +65,37 @@ namespace Microsoft.Scripting.Actions {
             }
 
             Expression error;
-            MemberTypes memberTypes = GetMemberType(members, out error);
-            if (error != null) {
-                Rule.MakeError(Binder, error);
-                return Rule;
-            }
-
-            switch (memberTypes) {
-                case MemberTypes.Method:
-                case MemberTypes.NestedType:
-                case MemberTypes.TypeInfo:
-                case MemberTypes.Constructor: return MakeReadOnlyMemberError(type);
-                case MemberTypes.Event: return MakeEventValidation(type, members);
-                case MemberTypes.Field: return MakeFieldRule(type, members);
-                case MemberTypes.Property: return MakePropertyRule(type, members);
-                case MemberTypes.All:
-                    // no match
-                    return MakeMissingMemberError(type);
-                default:
-                    throw new InvalidOperationException();
+            TrackerTypes memberTypes = GetMemberType(members, out error);
+            if (error == null) {
+                switch (memberTypes) {
+                    case TrackerTypes.Method:
+                    case TrackerTypes.TypeGroup:
+                    case TrackerTypes.Type:
+                    case TrackerTypes.Constructor: MakeReadOnlyMemberError(type); break;
+                    case TrackerTypes.Event: MakeEventValidation(type, members); break;
+                    case TrackerTypes.Field: MakeFieldRule(type, members); break;
+                    case TrackerTypes.Property: MakePropertyRule(type, members); break;
+                    case TrackerTypes.All:
+                        // no match
+                        if (MakeOperatorSetMemberBody(type, "SetMemberAfter")) {
+                            return;
+                        }
+                        MakeMissingMemberError(type);
+                        break;
+                    default:
+                        throw new InvalidOperationException();
+                }
+            } else {
+                Body = Ast.Block(Body, Rule.MakeError(Binder, error));
             }
         }
 
-        private StandardRule<T> MakeEventValidation(Type type, MemberInfo[] members) {
-            ReflectedEvent ev = ReflectionCache.GetReflectedEvent((EventInfo)members[0]);
+        private StandardRule<T> MakeEventValidation(Type type, MemberGroup members) {
+            ReflectedEvent ev = ReflectionCache.GetReflectedEvent(((EventTracker)members[0]).Event);
 
             // handles in place addition of events - this validates the user did the right thing, probably too Python specific.
-            Rule.SetTarget(
+            Body = Ast.Block(
+                Body,
                 Rule.MakeReturn(Binder,
                     Ast.Call(
                         Ast.RuntimeConstant(ev),
@@ -103,8 +111,8 @@ namespace Microsoft.Scripting.Actions {
             return Rule;
         }
 
-        private StandardRule<T> MakePropertyRule(Type targetType, MemberInfo[] properties) {
-            PropertyInfo info = (PropertyInfo)properties[0];
+        private void MakePropertyRule(Type targetType, MemberGroup properties) {
+            PropertyTracker info = (PropertyTracker)properties[0];
 
             MethodInfo setter = info.GetSetMethod(true);
 
@@ -116,20 +124,21 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (setter != null) {
-                if (setter.IsStatic) {
+                if (IsStaticProperty(info, setter)) {
                     // TODO: Too python specific
-                    Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
+                    Body = Ast.Block(Body, Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
                 } else if (setter.ContainsGenericParameters) {
-                    Rule.SetTarget(Rule.MakeError(Binder, MakeGenericPropertyExpression()));
+                    Body = Ast.Block(Body, Rule.MakeError(Binder, MakeGenericPropertyExpression()));
                 } else if (setter.IsPublic && !setter.DeclaringType.IsValueType) {
-                    Rule.SetTarget(Rule.MakeReturn(Binder, MakeReturnValue(MakeCallExpression(setter, Rule.Parameters))));
+                    Body = Ast.Block(Body, Rule.MakeReturn(Binder, MakeReturnValue(MakeCallExpression(setter, Rule.Parameters))));
                 } else {
                     // TODO: Should be able to do better w/ value types.
-                    Rule.SetTarget(Rule.MakeReturn(
+                    Body = Ast.Block(Body, 
+                        Rule.MakeReturn(
                             Binder,
                             MakeReturnValue(
                                 Ast.Call(
-                                    Ast.RuntimeConstant(info),
+                                    Ast.RuntimeConstant(((ReflectedPropertyTracker)info).Property), // TODO: Private binding on extension properties
                                     typeof(PropertyInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object), typeof(object[]) }),
                                     Instance,
                                     Rule.Parameters[1],
@@ -140,17 +149,17 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
             } else {
-                Rule.SetTarget(Binder.MakeMissingMemberError(Rule, targetType, StringName));
+                Body = Ast.Block(Body, Binder.MakeMissingMemberError(Rule, targetType, StringName));
             }
-            return Rule;
         }
 
-        private StandardRule<T> MakeFieldRule(Type targetType, MemberInfo[] fields) {
-            FieldInfo field = (FieldInfo)fields[0];
+        private void MakeFieldRule(Type targetType, MemberGroup fields) {
+            FieldTracker field = (FieldTracker)fields[0];
 
             if (field.DeclaringType.IsGenericType && field.DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
                 // work around a CLR bug where we can't access generic fields from dynamic methods.
-                Rule.SetTarget(
+                Body = Ast.Block(
+                    Body, 
                     Rule.MakeReturn(Binder,
                         MakeReturnValue(
                             Ast.Call(
@@ -163,11 +172,11 @@ namespace Microsoft.Scripting.Actions {
                     )
                 );
             } else if (field.DeclaringType.IsValueType) {
-                Rule.SetTarget(Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(ArrayUtils.EmptyTypes))));
+                Body = Ast.Block(Body, Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(ArrayUtils.EmptyTypes))));
             } else if (field.IsInitOnly || (field.IsStatic && targetType != field.DeclaringType)) {     // TODO: Field static check too python specific
-                Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
+                Body = Ast.Block(Body, Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
-                Rule.SetTarget(
+                Body = Ast.Block(Body, 
                     Rule.MakeReturn(
                         Binder,
                         MakeReturnValue(
@@ -175,19 +184,20 @@ namespace Microsoft.Scripting.Actions {
                                 field.IsStatic ?
                                     null :
                                     Ast.Cast(Rule.Parameters[0], field.DeclaringType),
-                                field,
+                                field.Field,
                                 Binder.ConvertExpression(Rule.Parameters[1], field.FieldType)
                             )
                         )
                     )
                 );
             } else {
-                Rule.SetTarget(
+                Body = Ast.Block(
+                    Body, 
                     Rule.MakeReturn(
                         Binder,
                         MakeReturnValue(
                             Ast.Call(
-                                Ast.RuntimeConstant(field),
+                                Ast.RuntimeConstant(field.Field),
                                 typeof(FieldInfo).GetMethod("SetValue", new Type[] { typeof(object), typeof(object) }),
                                 field.IsStatic ? Ast.Constant(null) : Instance,
                                 Rule.Parameters[1]
@@ -196,12 +206,10 @@ namespace Microsoft.Scripting.Actions {
                     )
                 );
             }
-
-            return Rule;
         }
 
-        private StandardRule<T> MakeSetCustomMemberRule(Type targetType) {
-            Rule.SetTarget(
+        private void MakeSetCustomMemberRule(Type targetType) {
+            Body = Ast.Block(Body, 
                 Rule.MakeReturn(Binder,
                     MakeReturnValue(
                         Ast.Call(
@@ -214,7 +222,6 @@ namespace Microsoft.Scripting.Actions {
                     )
                 )
             );
-            return Rule;
         }
 
         private Expression MakeReturnValue(Expression expression) {
@@ -222,32 +229,22 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
-        private bool MakeOperatorSetMemberBody(Type type) {
-            MethodInfo setMem = GetMethod(type, "SetMember");
+        private bool MakeOperatorSetMemberBody(Type type, string name) {
+            MethodInfo setMem = GetMethod(type, name);
             if (setMem != null && setMem.IsSpecialName) {
-                Expression[] args = setMem.IsStatic ? 
-                    new Expression[] { Rule.Parameters[0], Ast.Constant(StringName), Rule.Parameters[1] } :
-                    new Expression[] { Ast.Constant(StringName), Rule.Parameters[1] };
+                Expression call = MakeCallExpression(setMem, Rule.Parameters[0], Ast.Constant(StringName), Rule.Parameters[1]);
+                Statement ret;
 
-                Rule.SetTarget(Rule.MakeReturn(Binder,
-                    Ast.Call(
-                    setMem.IsStatic ? null : Instance,
-                    setMem,
-                    args)
-                ));
-                return true;
+                if (setMem.ReturnType == typeof(bool)) {
+                    ret = Ast.If(call, Rule.MakeReturn(Binder, Rule.Parameters[1]));
+                } else {
+                    ret = Rule.MakeReturn(Binder, Ast.Comma(1, call, Rule.Parameters[1]));
+                }
+                Body = Ast.Block(Body, ret);
+                return setMem.ReturnType != typeof(bool);
             }
+
             return false;
-
-        }
-        private StandardRule<T> MakeMissingMemberError(Type type) {
-            Rule.SetTarget(Binder.MakeMissingMemberError(Rule, type, StringName));
-            return Rule;
-        }
-
-        private StandardRule<T> MakeReadOnlyMemberError(Type type) {
-            Rule.SetTarget(Binder.MakeReadOnlyMemberError(Rule, type, StringName));
-            return Rule;
         }
     }
 }

@@ -21,6 +21,7 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -29,27 +30,31 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(Assembly), typeof(PythonAssemblyOps))]
 namespace IronPython.Runtime.Types {
     public static class PythonAssemblyOps {
-        private static Dictionary<Assembly, TopReflectedPackage> assemblyMap = new Dictionary<Assembly, TopReflectedPackage>();
+        private static Dictionary<Assembly, TopNamespaceTracker> assemblyMap = new Dictionary<Assembly, TopNamespaceTracker>();
 
         [SpecialName]
         public static object GetBoundMember(Assembly self, string name) {
-            TopReflectedPackage reflectedAssembly = GetReflectedAssembly(self);
+            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(self);
 
             if (name == "__dict__") {
-                return new PythonDictionary(reflectedAssembly.GetCustomMemberDictionary(DefaultContext.Default));
+                return new WrapperDictionary(reflectedAssembly);
             }
-            object value;
-            if (reflectedAssembly.TryGetBoundCustomMember(DefaultContext.Default, SymbolTable.StringToId(name), out value)) {
-                return value;
+            MemberTracker mem = reflectedAssembly.TryGetPackageAny(name);
+            if (mem != null) {
+                if (mem.MemberType == TrackerTypes.Type) {
+                    return DynamicHelpers.GetDynamicTypeFromType(((TypeTracker)mem).Type);
+                }
+                // namespace or type collision
+                return mem;
             }
             return OperationFailed.Value;
         }
 
         [SpecialName]
         public static IList<SymbolId> GetMemberNames(Assembly self) {
-            TopReflectedPackage reflectedAssembly = GetReflectedAssembly(self);
+            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(self);
 
-            IList<object> res = reflectedAssembly.GetCustomMemberNames(DefaultContext.Default);
+            ICollection<object> res = reflectedAssembly.Keys;
             List<SymbolId> ret = new List<SymbolId>();
             foreach (object o in res) {
                 if (o is string) {
@@ -67,14 +72,14 @@ namespace IronPython.Runtime.Types {
             return "<Assembly " + asmSelf.FullName + ">";
         }
 
-        private static TopReflectedPackage GetReflectedAssembly(Assembly assem) {
+        private static TopNamespaceTracker GetReflectedAssembly(Assembly assem) {
             Debug.Assert(assem != null);
             lock (assemblyMap) {
-                TopReflectedPackage reflectedAssembly;
+                TopNamespaceTracker reflectedAssembly;
                 if (assemblyMap.TryGetValue(assem, out reflectedAssembly))
                     return reflectedAssembly;
 
-                reflectedAssembly = new TopReflectedPackage(true);
+                reflectedAssembly = new TopNamespaceTracker(true);
                 reflectedAssembly.LoadAssembly(assem);
                 assemblyMap[assem] = reflectedAssembly;
 

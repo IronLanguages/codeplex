@@ -744,6 +744,10 @@ def test_constructor_function():
         AreEqual(constr.__name__, "__new__")
         AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)" + newline)
 
+def test_class_property():
+    """__class__ should work on standard .NET types and should return the type object associated with that class"""
+    import System
+    AreEqual(System.Environment.Version.__class__, System.Version)
 
 run_test(__name__)
 

@@ -33,10 +33,10 @@ namespace IronPython.Runtime.Operations {
         [PropertyMethod, PythonName("__module__")]
         public static string GetModule(BuiltinFunction self) {
             if (self.Targets.Length > 0) {
-                DynamicType declaringType = self.DeclaringType;
+                DynamicType declaringType = DynamicHelpers.GetDynamicTypeFromType(self.DeclaringType);
 
                 DynamicTypeSlot dts;
-                if (!self.DeclaringType.TryLookupSlot(DefaultContext.Default, Symbols.Module, out dts))
+                if (!declaringType.TryLookupSlot(DefaultContext.Default, Symbols.Module, out dts))
                     return "__builtin__";   //!!! ???
 
                 object val;

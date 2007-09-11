@@ -41,8 +41,22 @@ namespace IronPython.Runtime.Operations {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
         private static Dictionary<DynamicType, object> nativelyPickleableTypes = null;
 
-        public static readonly DynamicTypeSlot __class__ = new DynamicTypeTypeSlot();
-        public static readonly DynamicTypeSlot __module__ = new DynamicTypeValueSlot("__builtin__");
+        [PropertyMethod, PythonName("__class__")]
+        public static DynamicType Get__class__(object self) {
+            return DynamicHelpers.GetDynamicType(self);
+        }
+
+        [PropertyMethod, PythonName("__class__")]
+        public static void Set__class__(CodeContext context, object self, object value) {
+            if (!new DynamicTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetDynamicType(self), value)) {
+                throw PythonOps.TypeError("__class__ assignment can only be performed on user defined types");
+            }
+        }
+
+        [PropertyMethod, PythonName("__module__")]
+        public static string Get__module__(object self) {
+            return "__builtin__";
+        }
 
         [SpecialName]
         public static string __repr__(object self) {
@@ -299,13 +313,11 @@ namespace IronPython.Runtime.Operations {
             private StandardRule<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, DynamicType selfType, object[] args) {
                 DynamicTypeSlot dts;
                 if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
-                    StandardRule<T> rule = new StandardRule<T>();
-
-                    PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr));
+                    PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr), args);                    
                     
-                    if (helper.TryMakeGetMemberRule(rule, selfType, dts, GetTargetObject(rule, args))) {
-                        rule.SetTest(MakeTest(args, strAttr, rule));
-                        return rule;
+                    if (helper.TryMakeGetMemberRule(selfType, dts, GetTargetObject(helper.InternalRule, args))) {
+                        helper.InternalRule.SetTest(MakeTest(args, strAttr, helper.InternalRule));
+                        return helper.InternalRule;
                     }
                 }
                 return null;
@@ -332,7 +344,7 @@ namespace IronPython.Runtime.Operations {
                 // test is object types + test on the parameter being looked up.  The input name is
                 // either an object or a string so we call the appropriaet overload on string.
                 return Ast.AndAlso(
-                    res.MakeTestForTypes(DynamicTypeOps.ObjectTypes(args), 0),
+                    PythonBinderHelper.MakeTestForTypes(res, DynamicTypeOps.ObjectTypes(args), 0),
                     Ast.Call(
                         Ast.Constant(strAttr),
                         typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].ExpressionType }),

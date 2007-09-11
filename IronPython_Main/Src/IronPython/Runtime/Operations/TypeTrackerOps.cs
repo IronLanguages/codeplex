@@ -15,34 +15,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-[assembly: PythonExtensionType(typeof(TypeCollision), typeof(TypeCollisionOps))]
+[assembly: PythonExtensionType(typeof(TypeTracker), typeof(TypeTrackerOps))]
 namespace IronPython.Runtime.Operations {
-    public static class TypeCollisionOps {
-        [SpecialName, PythonName("__repr__")]
-        public static string ToCodeRepresentation(TypeCollision self) {
-            StringBuilder sb = new StringBuilder("<types ");
-            bool pastFirstType = false;
-            foreach(Type type in self.Types) {
-                if (pastFirstType) { 
-                    sb.Append(", ");
-                }
-                DynamicType dt = DynamicHelpers.GetDynamicTypeFromType(type);
-                sb.Append(PythonOps.StringRepr(DynamicTypeOps.GetName(dt)));
-                pastFirstType = true;
-            }
-            sb.Append(">");
-
-            return sb.ToString();
+    public static class TypeTrackerOps {
+        [PropertyMethod]
+        public static IDictionary<object, object> Get__dict__(CodeContext context, TypeTracker self) {
+            return new PythonDictionary(DynamicHelpers.GetDynamicTypeFromType(self.Type).GetCustomMemberDictionary(context));
         }
-
     }
 }

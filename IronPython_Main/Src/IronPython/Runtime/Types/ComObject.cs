@@ -127,7 +127,7 @@ namespace IronPython.Runtime.Types {
                         DynamicType newType = new ComTypeBuilder().DoBuild("System.__ComObject", ComObject.comObjectType, null, ContextId.Empty);
                         if (Interlocked.CompareExchange<DynamicType>(ref _comType, newType, null) == null) {
                             DynamicType.SetDynamicType(ComObject.comObjectType, newType);
-                            DynamicHelpers.ExtendOneType(new PythonExtensionTypeAttribute(ComObject.comObjectType, typeof(ComOps)), newType, false);
+                            PythonOps.ExtendOneType(new PythonExtensionTypeAttribute(ComObject.comObjectType, typeof(ComOps)), newType);
 
                             return newType;
                         }

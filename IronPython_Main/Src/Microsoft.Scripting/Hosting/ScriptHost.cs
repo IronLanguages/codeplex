@@ -49,6 +49,14 @@ namespace Microsoft.Scripting.Hosting {
         /// host tis created (the host is created prior module creation so that it could be notified about the creation).
         /// </summary>
         IScriptModule DefaultModule { get; } // throws InvalidOperationException if no default module is available
+
+        /// <summary>
+        /// Provides the host with a mechanism for catching exceptions thrown by
+        /// user code in event handlers.
+        /// TODO: this is a workaround for Silverlight, this will be removed at
+        /// some point in the future.
+        /// </summary>
+        Action<Exception> EventExceptionHandler { get; }
     }
 
     public class ScriptHost : IScriptHost, ILocalObject {
@@ -99,6 +107,10 @@ namespace Microsoft.Scripting.Hosting {
             ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule("<default>", null, ScriptCode.EmptyArray);
             Utilities.MemoryBarrier();
             Interlocked.CompareExchange<ScriptModule>(ref defaultModule, module, null);
+        }
+
+        public virtual Action<Exception> EventExceptionHandler {
+            get { return null; }
         }
 
         #region Virtual File System

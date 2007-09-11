@@ -34,6 +34,10 @@ namespace Microsoft.Scripting.Hosting {
             get { return (ILocalObject)_host; }
         }
 
+        public Action<Exception> EventExceptionHandler {
+            get { return null; }
+        }
+
         #region Construction
 
         internal RemoteScriptHost() {

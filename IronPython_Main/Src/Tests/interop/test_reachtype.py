@@ -19,7 +19,7 @@ def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lowe
 
 merlin_root = environ_var("MERLIN_ROOT")
 sys.path.append(merlin_root + r"\Languages\IronPython\Tests")
-sys.path.append(merlin_root + r"\Test\ClrAssembly")
+sys.path.append(merlin_root + r"\Test\ClrAssembly\bin")
 
 from lib.assert_util import *
 
@@ -27,10 +27,10 @@ skiptest("silverlight")
 
 # in order to make peverify happy
 from lib.file_util import filecopy, delete_files
-filecopy(merlin_root + r"\Test\ClrAssembly\typesample.dll", sys.exec_prefix + r"\typesample.dll")
+filecopy(merlin_root + r"\Test\ClrAssembly\bin\loadtypesample.dll", sys.exec_prefix + r"\loadtypesample.dll")
 
 import clr
-clr.AddReference("typesample")
+clr.AddReference("loadtypesample")
 
 keywords = ['pass', 'import', 'def', 'exec', 'except']
 bultin_funcs = ['abs', 'type', 'file']
@@ -215,4 +215,4 @@ def test_type_causing_load_exception():
 run_test(__name__)    
 
 # will not succeed in the SaveAssemblies mode
-delete_files(sys.exec_prefix + r"\typesample.dll")
+delete_files(sys.exec_prefix + r"\loadtypesample.dll")

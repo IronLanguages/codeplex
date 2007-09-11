@@ -122,9 +122,5 @@ namespace Microsoft.Scripting.Types {
         public void SetExtensionType(Type type) {
             _building.ExtensionType = type;
         }
-
-        public void DisallowConstructorKeywordArguments(ContextId context) {
-            _building.DisallowConstructorKeywordArguments(context);
-        }
     }
 }

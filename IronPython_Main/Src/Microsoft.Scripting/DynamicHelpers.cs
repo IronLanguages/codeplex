@@ -19,13 +19,14 @@ using System.Text;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using Microsoft.Scripting.Utils;
 
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
     public static class DynamicHelpers {
-        private static TopReflectedPackage _topPackage;
+        private static TopNamespaceTracker _topNamespace;
 
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
         private static Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
@@ -114,14 +115,14 @@ namespace Microsoft.Scripting {
             if (o == null) return DynamicType.NullType;
 
             return GetDynamicTypeFromType(o.GetType());
-        }       
+        }
 
-        public static TopReflectedPackage TopPackage {
+        public static TopNamespaceTracker TopNamespace {
             get {
-                if (_topPackage == null)
-                    Interlocked.CompareExchange<TopReflectedPackage>(ref _topPackage, new TopReflectedPackage(), null);
+                if (_topNamespace == null)
+                    Interlocked.CompareExchange<TopNamespaceTracker>(ref _topNamespace, new TopNamespaceTracker(), null);
 
-                return _topPackage;
+                return _topNamespace;
             }
         }
 
@@ -189,17 +190,7 @@ namespace Microsoft.Scripting {
         public static void RegisterAssembly(Assembly assembly) {
             object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
             foreach (ExtensionTypeAttribute et in attrs) {
-                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends));
-            }
-        }
-
-        /// <summary>
-        /// Registers a set of extension methods from the provided assemly.
-        /// </summary>
-        public static void RegisterLanguageAssembly(Assembly assembly) {
-            object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
-            foreach (ExtensionTypeAttribute et in attrs) {
-                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends), false);
+                RegisterOneExtension(et.Extends, et.Type);
             }
         }
 
@@ -211,26 +202,57 @@ namespace Microsoft.Scripting {
                 }
                 extensions.Add(extension);
             }
+
+            ExtensionTypeAttribute.RegisterType(extending, extension);
+
+            FireExtensionEvent(extending, extension);
         }
 
-        public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
-            ExtendOneType(et, dt, true);
-        }
-
-        public static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt, bool publish) {
-            // new-style extensions:
-            if(publish) RegisterOneExtension(et.Extends, et.Type);
-
-            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
-
-            DynamicTypeExtender.ExtendType(dt, et.Type, et.Transformer);
-
-            if (et.EnableDerivation) {
-                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetIsExtensible();
-            } else if (et.DerivationType != null) {
-                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
+        private static void FireExtensionEvent(Type extending, Type extension) {
+            EventHandler<TypeExtendedEventArgs> ev = _extended;
+            if (ev != null) {
+                ev(null, new TypeExtendedEventArgs(extending, extension));
             }
         }
+
+        public class TypeExtendedEventArgs : EventArgs {
+            public TypeExtendedEventArgs(Type extending, Type extension) {
+                Extending = extending;
+                Extension = extension;
+            }
+
+            public Type Extending;
+            public Type Extension;
+        }
+
+        /// <summary>
+        /// Provides a notification when a language agnostic extension event has been registered.
+        /// 
+        /// Maybe just a work around until Python can pull out the extension types on-demand or 
+        /// if we require extension to be registered w/ an engine.
+        /// </summary>
+        public static event EventHandler<TypeExtendedEventArgs> TypeExtended {
+            add {
+                List<KeyValuePair<Type, Type>> existing = new List<KeyValuePair<Type,Type>>();
+                lock (_extensionTypes) {
+                    _extended += value;
+
+                    foreach (KeyValuePair<Type, List<Type>> kvp in _extensionTypes) {
+                        foreach(Type t in kvp.Value) {
+                            existing.Add(new KeyValuePair<Type, Type>(kvp.Key, t));
+                        }
+                    }
+                }
+                foreach (KeyValuePair<Type, Type> extended in existing) {
+                    FireExtensionEvent(extended.Key, extended.Value);
+                }
+            }
+            remove {
+                _extended -= value;
+            }
+        }
+
+        private static EventHandler<TypeExtendedEventArgs> _extended;
 
         internal static Type[] GetExtensionTypes(Type t) {
             lock (_extensionTypes) {

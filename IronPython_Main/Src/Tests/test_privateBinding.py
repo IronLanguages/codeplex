@@ -63,7 +63,7 @@ else:
         
         # mixed namespace
         import Microsoft.Scripting
-        x = Microsoft.Scripting.Types.TopReflectedPackage
+        x = Microsoft.Scripting.Actions.TopNamespaceTracker
         
         clsPart._ClsPart__privateField = 1
         AreEqual(clsPart._ClsPart__privateField, 1)

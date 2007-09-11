@@ -18,23 +18,29 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting {
+
+    /// <summary>
+    /// Provides a list of all the members of an instance.  ie. all the keys in the 
+    /// dictionary of the object. Note that it can contain objects that are not strings. 
+    /// 
+    /// Such keys can be added in IronPython using syntax like:
+    ///     obj.__dict__[100] = someOtherObject
+    /// </summary>
+    public interface IMembersList {
+        IList<object> GetCustomMemberNames(CodeContext context);
+    }
+
     /// <summary>
     /// This interface objects to specify how to look up members (for code like "obj.member").
     /// If an object does not implement this interface, its DynamicType is then asked to find the member.
     /// </summary>
-    public interface ICustomMembers {
+    public interface ICustomMembers : IMembersList {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryGetCustomMember(CodeContext context, SymbolId name, out object value);
         bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value);
         void SetCustomMember(CodeContext context, SymbolId name, object value);
         bool DeleteCustomMember(CodeContext context, SymbolId name);
 
-        /// <returns>The returned List contains all the members of the instance. ie. all the keys in the 
-        /// dictionary of the object. Note that it can contain objects that are not strings. Such keys can be
-        /// added using syntax like:
-        ///     obj.__dict__[100] = someOtherObject
-        /// </returns>
-        IList<object> GetCustomMemberNames(CodeContext context);
         IDictionary<object, object> GetCustomMemberDictionary(CodeContext context);
     }
 }

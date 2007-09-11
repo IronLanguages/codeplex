@@ -27,7 +27,7 @@ from lib.process_util import *
 skiptest("silverlight")
 
 saved = environ_var('IRONPYTHONPATH')
-nt.environ['IRONPYTHONPATH'] = merlin_root + r"\Test\ClrAssembly;" + merlin_root + r"\Languages\IronPython\Tests"
+nt.environ['IRONPYTHONPATH'] = merlin_root + r"\Test\ClrAssembly\bin;" + merlin_root + r"\Languages\IronPython\Tests"
 
 try:
     directory = testpath.public_testdir + r"\interop\loadorder"

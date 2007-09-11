@@ -355,25 +355,7 @@ namespace Microsoft.Scripting.Generation {
             }
             return false;
         }
-
-        // TODO remove this method as we move from DynamicType to Type
-        public static Type ConvertToType(DynamicType dynamicType) {
-            if (dynamicType.IsNull) {
-                return None.Type;
-            } else {
-                return dynamicType.UnderlyingSystemType;
-            }
-        }
-
-        // TODO remove this method as we move from DynamicType to Type
-        public static Type[] ConvertToTypes(DynamicType[] dynamicTypes) {
-            Type[] types = new Type[dynamicTypes.Length];
-            for (int i = 0; i < dynamicTypes.Length; i++) {
-                types[i] = ConvertToType(dynamicTypes[i]);
-            }
-            return types;
-        }
-
+        
         /// <summary>
         /// Returns the System.Type for any object, including null.  The type of null
         /// is represented by None.Type and all other objects just return the 
@@ -455,6 +437,103 @@ namespace Microsoft.Scripting.Generation {
                 t = t.BaseType;
             }
             return t;
+        }
+
+        public static MethodBase[] GetConstructors(Type t) {
+            if (t.IsArray) {
+                // The JIT verifier doesn't like new int[](3) even though it appears as a ctor.
+                // We could do better and return newarr in the future.
+                return new MethodBase[] { GetArrayCtor(t) };
+            }
+
+            BindingFlags bf = BindingFlags.Instance | BindingFlags.Public;
+            if (ScriptDomainManager.Options.PrivateBinding) {
+                bf |= BindingFlags.NonPublic;
+            }
+
+            ConstructorInfo[] ci = t.GetConstructors(bf);
+
+            if (t.IsValueType) {
+                // structs don't define a parameterless ctor, add a generic method for that.
+                return ArrayUtils.Insert<MethodBase>(GetStructDefaultCtor(t), ci);
+            }
+
+            if (typeof(Delegate).IsAssignableFrom(t)) {
+                return ArrayUtils.Insert<MethodBase>(GetDelegateCtor(t), ci);
+            }
+
+            return ci;
+        }
+
+        private static MethodBase GetStructDefaultCtor(Type t) {
+            return typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(t);
+        }
+
+        private static MethodBase GetArrayCtor(Type t) {
+            return typeof(RuntimeHelpers).GetMethod("CreateArray").MakeGenericMethod(t.GetElementType());
+        }
+
+        private static MethodBase GetDelegateCtor(Type t) {
+            return typeof(RuntimeHelpers).GetMethod("CreateDelegate").MakeGenericMethod(t);
+        }
+
+        public static bool HasImplicitConversion(Type fromType, Type toType) {
+            if (CompilerHelpers.HasImplicitConversion(fromType, toType, toType.GetMember("op_Implicit"))) {
+                return true;
+            }
+
+            Type curType = fromType;
+            do {
+                if (CompilerHelpers.HasImplicitConversion(fromType, toType, curType.GetMember("op_Implicit"))) {
+                    return true;
+                }
+                curType = curType.BaseType;
+            } while (curType != null);
+
+            return false;
+        }
+
+        public static bool TryImplicitConversion(Object value, Type to, out object result) {
+            if (CompilerHelpers.TryImplicitConvert(value, to, to.GetMember("op_Implicit"), out result)) {
+                return true;
+            }
+
+            Type curType = CompilerHelpers.GetType(value);
+            do {
+                if(CompilerHelpers.TryImplicitConvert(value, to, curType.GetMember("op_Implicit"), out result)) {
+                    return true;
+                }
+                curType = curType.BaseType;
+            } while (curType != null);
+
+            return false;
         }        
+
+        private static bool TryImplicitConvert(Object value, Type to, MemberInfo[] implicitConv, out object result) {
+            foreach (MethodInfo mi in implicitConv) {
+                if (to.IsValueType == mi.ReturnType.IsValueType && to.IsAssignableFrom(mi.ReturnType)) {
+                    if (mi.IsStatic) {
+                        result = mi.Invoke(null, new object[] { value });
+                    } else {
+                        result = mi.Invoke(value, ArrayUtils.EmptyObjects);
+                    }
+                    return true;
+                }
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool HasImplicitConversion(Type fromType, Type to, MemberInfo[] implicitConv) {
+            foreach (MethodInfo mi in implicitConv) {
+                if (mi.ReturnType == to && mi.GetParameters()[0].ParameterType.IsAssignableFrom(fromType)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
     }
 }

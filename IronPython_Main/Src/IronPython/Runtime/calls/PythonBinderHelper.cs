@@ -22,9 +22,10 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Types;
 
 namespace IronPython.Runtime.Calls {
-    class PythonBinderHelper {
+    static class PythonBinderHelper {
         public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, StandardRule<T> rule) {
             int simpleArgCount = action.Operation == Operators.GetItem ? 2 : 3;
 
@@ -52,6 +53,91 @@ namespace IronPython.Runtime.Calls {
             return exprargs;
         }
 
+        public static void MakeTest(StandardRule rule, params DynamicType[] types) {
+            rule.SetTest(MakeTestForTypes(rule, types, 0));
+        }
+
+        public static Expression MakeTypeTest(StandardRule rule, DynamicType type, int index) {
+            return MakeTypeTest(rule, type, rule.Parameters[index]);
+        }
+
+        public static Expression MakeTestForTypes(StandardRule rule, DynamicType[] types, int index) {
+            Expression test = MakeTypeTest(rule, types[index], index);
+            if (index + 1 < types.Length) {
+                Expression nextTests = MakeTestForTypes(rule, types, index + 1);
+                if (test.IsConstant(true)) {
+                    return nextTests;
+                } else if (nextTests.IsConstant(true)) {
+                    return test;
+                } else {
+                    return Ast.AndAlso(test, nextTests);
+                }
+            } else {
+                return test;
+            }
+        }
+
+        public static Expression MakeTypeTest(StandardRule rule, DynamicType type, Expression tested) {
+            if (type == null || type.IsNull) 
+                return Ast.Equal(tested, Ast.Null());
+
+            Type clrType = type.UnderlyingSystemType;
+            bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
+
+            Expression test = StandardRule.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
+
+            if (!isStaticType) {
+                int version = type.Version;
+                if (version != DynamicType.DynamicVersion) {
+                    test = Ast.AndAlso(test,
+                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"), tested, Ast.Constant(version)));
+                    rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
+                } else {
+                    version = type.AlternateVersion;
+                    test = Ast.AndAlso(test,
+                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"), tested, Ast.Constant(version)));
+                    rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).AlternateValidate);
+                }
+            }
+            return test;            
+        }
+
+        public static StandardRule<T> TypeError<T>(string message, params DynamicType[] types) {
+            StandardRule<T> ret = new StandardRule<T>();
+            MakeTest(ret, types);
+            ret.SetTarget(
+                Ast.Statement(Ast.Throw(
+                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                        Ast.Constant(message)))));
+            return ret;
+        }
+
+        private class DynamicTypeValidator {
+            /// <summary>
+            /// Weak reference to the dynamic type. Since they can be collected,
+            /// we need to be able to let that happen and then disable the rule.
+            /// </summary>
+            private WeakReference _dynamicType;
+
+            /// <summary>
+            /// Expected version of the instance's dynamic type
+            /// </summary>
+            private int _version;
+
+            public DynamicTypeValidator(WeakReference dynamicType, int version) {
+                this._dynamicType = dynamicType;
+                this._version = version;
+            }
+
+            public bool Validate() {
+                DynamicType dt = _dynamicType.Target as DynamicType;
+                return dt != null && dt.Version == _version;
+            }
+            public bool AlternateValidate() {
+                DynamicType dt = _dynamicType.Target as DynamicType;
+                return dt != null && dt.AlternateVersion == _version;
+            }
+        }
 
     }
 }

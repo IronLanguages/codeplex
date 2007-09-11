@@ -47,6 +47,12 @@ AreEqual(NS.Target.Flag, "NS.Target")
 AreEqual(NS.Target[int].Flag, "NS.Target`1")
 AreEqual(NS.Target[int, str].Flag, "NS.Target`2")
 
+# still have the old Target...
+AssertError(SystemError, lambda: Target.Flag)
+AreEqual(Target[int].Flag, "NS.Target`1")
+AreEqual(Target[int, str].Flag, "NS.Target`2")
+
+from NS import *
 AreEqual(Target.Flag, "NS.Target")                      # THE DIFF!!!
 AreEqual(Target[int].Flag, "NS.Target`1")
 AreEqual(Target[int, str].Flag, "NS.Target`2")

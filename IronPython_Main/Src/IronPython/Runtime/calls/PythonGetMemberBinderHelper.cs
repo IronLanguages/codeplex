@@ -30,20 +30,16 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Calls {
-    class PythonGetMemberBinderHelper<T> : 
-        BinderHelper<T, GetMemberAction> {
+    class PythonGetMemberBinderHelper<T> : GetMemberBinderHelper<T> {
 
-        public PythonGetMemberBinderHelper(CodeContext context, GetMemberAction action)
-            : base(context, action) {
+        public PythonGetMemberBinderHelper(CodeContext context, GetMemberAction action, object []args)
+            : base(context, action, args) {
         }
 
-        public StandardRule<T> MakeRule(object[] args) {
-            if (args[0] == null) {
-                return MakeDynamicRule(typeof(None));
-            }
-
-            Type type = CompilerHelpers.GetType(args[0]);
-            if (PythonTypeCustomizer.IsPythonType(type)) {
+        public StandardRule<T> MakeRule() {
+            Type type = CompilerHelpers.GetType(Arguments[0]);
+            // we extend None & our standard built-in python types.  DLR doesn't support COM objects natively yet.
+            if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type) || type.IsCOMObject) {
                 // look up in the Dynamictype so that we can 
                 // get our custom method names (e.g. string.startswith)            
                 DynamicType argType = DynamicHelpers.GetDynamicTypeFromType(type);
@@ -51,14 +47,18 @@ namespace IronPython.Runtime.Calls {
 
                 // first try in the default context and see if it's defined
                 if (argType.TryResolveSlot(DefaultContext.Default, Action.Name, out dts)) {
-                    return MakePythonTypeRule(args, dts, argType, false);
+                    return MakePythonTypeRule(dts, argType, false);
                 } else if (argType.TryResolveSlot(DefaultContext.DefaultCLS, Action.Name, out dts)) {
                     // if it's not there but exists in the CLS context we'll add it but hide it.
-                    return MakePythonTypeRule(args, dts, argType, true);                  
+                    return MakePythonTypeRule(dts, argType, true);                  
                 }
             }
 
             return null;
+        }
+
+        internal bool TryMakeGetMemberRule(DynamicType parent, DynamicTypeSlot slot, Expression arg) {
+            return TryMakeGetMemberRule(parent, slot, arg, false);
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Calls {
         /// 
         /// This does not check if the object is unsuitable for producing a GetMember rule.
         /// </summary>
-        internal bool TryMakeGetMemberRule(StandardRule<T> rule, DynamicType parent, DynamicTypeSlot slot, Expression arg) {
+        internal bool TryMakeGetMemberRule(DynamicType parent, DynamicTypeSlot slot, Expression arg, bool clsOnly) {
             ReflectedField rf;
             ReflectedProperty rp;
             ReflectedEvent ev;
@@ -77,108 +77,161 @@ namespace IronPython.Runtime.Calls {
             DynamicType dtValue;
             object value;
 
-            GetMemberBinderHelper<T> helper = new GetMemberBinderHelper<T>(Context, Action, rule, !(slot is BuiltinFunction), arg);
+            Instance = arg;
 
-            Statement body;
+            MakeOperatorGetMemberBody(parent.UnderlyingSystemType, "GetCustomMember");
+
             if ((rf = slot as ReflectedField) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, rf.info);
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rf.info)));
             } else if ((rep = slot as ReflectedExtensionProperty) != null) {
-                return TryMakePropertyGet(rule, rep.ExtInfo.Getter, arg);
+                Statement body;
+                if (TryMakePropertyGet(rep.ExtInfo.Getter, arg, out body)) {
+                    Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, body));
+                    Rule.SetTarget(Body);
+                    return true;
+                }
+                return false;
             } else if ((rp = slot as ReflectedProperty) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, rp.Info);
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rp.Info)));
             } else if ((ev = slot as ReflectedEvent) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ev.Info);
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, ev.Info)));
             } else if ((bf = slot as BuiltinFunction) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ReflectionUtils.GetMethodInfos(bf.Targets));
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMethodCallRule(bf, false)));
             } else if ((bmd = slot as BuiltinMethodDescriptor) != null) {
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, ReflectionUtils.GetMethodInfos(bmd.Template.Targets));
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMethodCallRule(bmd.Template, true)));
             } else if ((vs = slot as DynamicTypeValueSlot) != null &&
                 vs.TryGetValue(Context, null, null, out value) &&
                     ((dtValue = value as DynamicType) != null)) {
 
                 Debug.Assert(dtValue.IsSystemType);
-                body = helper.MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType);
+                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType)));
             } else {
-                Variable tmp = rule.GetTemporary(typeof(object), "res");
+                Variable tmp = Rule.GetTemporary(typeof(object), "res");
 
-                body = Ast.IfThenElse(
-                        Ast.Call(
-                            Ast.Cast(
-                                Ast.WeakConstant(slot),
-                                typeof(DynamicTypeSlot)
-                            ),
-                            typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
-                            Ast.CodeContext(),
-                            arg,
-                            Ast.RuntimeConstant(parent),
-                            Ast.Read(tmp)),
-                        rule.MakeReturn(Binder, Ast.Read(tmp)),
-                        MakeError(parent, rule)
-                       );
+                Body = Ast.Block(Body, 
+                        AddClsCheck(
+                            parent, 
+                            clsOnly, 
+                            Ast.IfThenElse(
+                                Ast.Call(
+                                    Ast.Cast(
+                                        Ast.WeakConstant(slot),
+                                        typeof(DynamicTypeSlot)
+                                    ),
+                                    typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
+                                    Ast.CodeContext(),
+                                    arg,
+                                    Ast.RuntimeConstant(parent),
+                                    Ast.Read(tmp)),
+                                Rule.MakeReturn(Binder, Ast.Read(tmp)),
+                                MakeError(parent)
+                            )
+                        )
+                    );
             }
 
-            rule.SetTarget(body);
+            MakeOperatorGetMemberBody(parent.UnderlyingSystemType, "GetBoundMember");
+
+            Rule.SetTarget(Body);
             return true;
         }
 
-        private StandardRule<T> MakePythonTypeRule(object[] args, DynamicTypeSlot slot, DynamicType argType, bool clsOnly) {
-            StandardRule<T> rule = new StandardRule<T>();
-            if (args[0] is ICustomMembers) {
-                rule.SetTarget(UserTypeOps.MakeCustomMembersBody<T>(Context, Action, DynamicTypeOps.GetName(argType), rule));
-                rule.MakeTest(argType);
-                return rule;
-            }
-            
-            if (TryMakeGetMemberRule(rule, argType, slot, rule.Parameters[0])) {
-                rule.MakeTest(argType);
+        private Statement MakeMethodCallRule(BuiltinFunction target, bool bound) {
+            target = GetCachedTarget(target);
 
-                if (clsOnly) {
-                    rule.SetTarget(
-                        Ast.Block(
-                            Ast.IfThenElse(
-                                Ast.Call(null,
-                                    typeof(PythonOps).GetMethod("IsClsVisible"),
-                                    Ast.CodeContext()
-                                ),
-                                rule.Target,
-                                MakeError(argType, rule)
-                            )
-                        )
-                    );                   
-                }
-                return rule;
+            if (((target.FunctionType & FunctionType.FunctionMethodMask) != FunctionType.Function) || bound) {
+                // for strong box we need to bind the strong box, so we don't use Instance here.
+                return Ast.Block(Body,
+                    Rule.MakeReturn(
+                    Binder,
+                    Ast.New(typeof(BoundBuiltinFunction).GetConstructor(new Type[] { typeof(BuiltinFunction), typeof(object) }),
+                        Ast.RuntimeConstant(target),
+                        Instance
+                    )
+                ));
+            } else {
+                return Ast.Block(Body,
+                    Rule.MakeReturn(
+                        Binder,
+                        Ast.RuntimeConstant(target)
+                    )
+                );
             }
+        }
+
+        /// <summary>
+        /// helper to ensure we always hand out the same BuiltinFunction as the base GetMemberBinderHelper.
+        /// 
+        /// Because ReflectionCache can't always detect reverse methods we only use the cached version if it's
+        /// the same FunctionType.
+        /// </summary>
+        private static BuiltinFunction GetCachedTarget(BuiltinFunction target) {
+            BuiltinFunction cachedTarget = ReflectionCache.GetMethodGroup(target.DeclaringType, target.Name, target.Targets);
+            if (cachedTarget.FunctionType == (target.FunctionType & ~FunctionType.AlwaysVisible)) {
+                target = cachedTarget;
+            }
+            return target;
+        }
+
+        private StandardRule<T> MakePythonTypeRule(DynamicTypeSlot slot, DynamicType argType, bool clsOnly) {
+            if (Arguments[0] is ICustomMembers) {
+                Rule.SetTarget(UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, DynamicTypeOps.GetName(argType), Rule));
+                PythonBinderHelper.MakeTest(Rule, argType);
+                return Rule;
+            }
+                       
+            if (TryMakeGetMemberRule(argType, slot, Rule.Parameters[0], clsOnly)) {
+                PythonBinderHelper.MakeTest(Rule, argType);                
+                return Rule;
+            }
+                                   
             return null;
         }
 
-        private Statement MakeError(DynamicType argType, StandardRule<T> rule) {
-            return rule.MakeError(Binder, Ast.Call(null,
-                            typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                            Ast.Constant(DynamicTypeOps.GetName(argType)),
-                            Ast.Constant(Action.Name)
-                        ));
+        private Statement AddClsCheck(DynamicType argType, bool clsOnly, Statement body) {
+            if (clsOnly) {
+                return
+                    Ast.Block(
+                        Ast.IfThenElse(
+                            Ast.Call(null,
+                                typeof(PythonOps).GetMethod("IsClsVisible"),
+                                Ast.CodeContext()
+                            ),
+                            body,
+                            MakeError(argType)
+                        )
+                    );
+            }
+            return body;
         }
 
-        private StandardRule<T> MakeDynamicRule(Type targetType) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.SetTarget(rule.MakeReturn(Binder, Ast.Call(null,
-                    typeof(PythonOps).GetMethod("GetBoundAttr"),
-                    Ast.CodeContext(),
-                    rule.Parameters[0],
-                    Ast.Constant(Action.Name))));
-            rule.MakeTest(targetType);
-            return rule;
+        private Statement MakeError(DynamicType argType) {
+            if (Action.IsNoThrow) {
+                return Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
+            } else {
+                return Rule.MakeError(Binder, Ast.Call(null,
+                    typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
+                    Ast.Constant(DynamicTypeOps.GetName(argType)),
+                    Ast.Constant(Action.Name)
+                ));
+            }
         }
 
-        private bool TryMakePropertyGet(StandardRule<T> rule, MethodInfo getter, params Expression[] args) {
+        private bool TryMakePropertyGet(MethodInfo getter, Expression arg, out Statement body) {
             if (getter != null && CompilerHelpers.CanOptimizeMethod(getter)) {
-                Statement call = MakeCallStatement(getter, args);
-                if (call != null) {
-                    rule.SetTarget(MakeCallStatement(getter, args));
+                body = MakeCallStatement(getter, arg);
+                if (body != null) {
                     return true;
                 }
             }
+            body = null;
             return false;
+        }
+
+        internal StandardRule<T> InternalRule {
+            get {
+                return Rule;
+            }
         }
     }
 }

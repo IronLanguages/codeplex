@@ -176,7 +176,7 @@ namespace Microsoft.Scripting.Types {
                     stubs = null;
                 } else {
                     // create signature converting stub:
-                    handler = DynamicHelpers.GetDelegate(func, _event.Info.EventHandlerType, ScriptDomainManager.CurrentManager.PAL.EventExceptionHandler);
+                    handler = DynamicHelpers.GetDelegate(func, _event.Info.EventHandlerType, ScriptDomainManager.CurrentManager.Host.EventExceptionHandler);
                     stubs = _event.GetStubList(_instance);
                 }
 

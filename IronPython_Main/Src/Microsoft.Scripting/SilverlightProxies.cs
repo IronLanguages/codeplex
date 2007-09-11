@@ -45,6 +45,14 @@ namespace System {
         }
     }
 
+    // We reference these namespaces via "using"
+    // We don't actually use them because the code is #if !SILVERLIGHT
+    // Rather than fix the usings all over the place, just define these here
+    namespace Runtime.Remoting { class Dummy {} }
+    namespace Runtime.Serialization { class Dummy {} }
+    namespace Security.Policy { class Dummy {} }
+    namespace Xml.XPath { class Dummy {} }
+
     namespace Reflection {
         public enum PortableExecutableKinds {
             ILOnly = 0

@@ -84,8 +84,6 @@ namespace IronPython.Runtime.Types {
                     }
                     t = t.DeclaringType;
                 }
-
-                ((DynamicTypeBuilder)builder).DisallowConstructorKeywordArguments(PythonContext.Id);
             });
         }
 
@@ -97,7 +95,9 @@ namespace IronPython.Runtime.Types {
 
         internal IEnumerable<TransformedName> PythonNameTransformer(MemberInfo mi, TransformReason reason) {
             switch (reason) {
-                case TransformReason.Method: return MethodEnumerator((MethodInfo)mi);
+                case TransformReason.Method:
+                    Debug.Assert(mi.MemberType == MemberTypes.Method);
+                    return MethodEnumerator((MethodInfo)mi);
                 case TransformReason.Field: return FieldEnumerator((FieldInfo)mi);
                 case TransformReason.Operator: return OperatorEnumerator(mi);
                 case TransformReason.Property: return PropertyEnumerator(mi);

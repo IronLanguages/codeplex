@@ -203,6 +203,14 @@ def compileAndLoad(name, filename, *args):
     AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
     return clr.LoadAssemblyFromFile(name)
     
+def test_classname_same_as_ns():
+    sys.path.append(sys.exec_prefix)
+    AreEqual(run_csc("/nologo /t:library /out:\"" + sys.exec_prefix + "\"\\c4.dll \"" + get_local_filename('c4.cs') + "\""), 0)
+    clr.AddReference("c4")
+    import c4
+    Assert(not c4 is c4.c4)
+    Assert(c4!=c4.c4)
+
 def test_local_dll():    
     x = compileAndLoad('c3', get_local_filename('c3.cs') )
 
@@ -220,14 +228,14 @@ def test_local_dll():
     AssertError(AttributeError, lambda: x.Foo2)  # assembly c3 has no type Foo2
     Assert(set(['NestedNamespace', 'Bar']) <= set(dir(x.BarNamespace)))
 
-    x.BarNamespace.Bar = x.Foo
-    AreEqual(repr(x.BarNamespace.Bar), "<type 'Foo'>")
+    def f(): x.BarNamespace.Bar = x.Foo
+    AssertError(AttributeError, f)
     
     def f(): del x.BarNamespace.NotExist
     AssertError(AttributeError, f)
     
-    del x.BarNamespace.Bar
-    AssertError(AttributeError, lambda: x.BarNamespace.Bar)
+    def f(): del x.BarNamespace
+    AssertError(AttributeError, f)
 
 def test_namespaceimport():
     tmp = testpath.temporary_dir

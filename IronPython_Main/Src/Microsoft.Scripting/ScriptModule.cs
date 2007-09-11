@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting {
     [Flags]
@@ -67,20 +68,14 @@ namespace Microsoft.Scripting {
     /// ScriptModule is not thread safe. Host should either lock when multiple threads could 
     /// access the same module or should make a copy for each thread.
     /// </summary>
-    public sealed class ScriptModule : IScriptModule, ICustomMembers, ILocalObject {
-        private static DynamicType ModuleType;
-
-        // WARNING: consider updating MakeCopy when adding fields
-        
+    public sealed class ScriptModule : IScriptModule, IMembersList, ILocalObject {
         private readonly Scope _scope;
         private ScriptCode[] _codeBlocks;
         private ModuleContext[] _moduleContexts; // resizable
         private readonly ScriptModuleKind _kind;
 
-        private ICustomMembers _innerMod;
         private string _name;
         private string _fileName;
-        private bool _packageImported;
         
         /// <summary>
         /// Creates a ScriptModule consisting of multiple ScriptCode blocks (possibly with each
@@ -180,28 +175,7 @@ namespace Microsoft.Scripting {
             get { return _fileName; }
             set { _fileName = value; }
         }
-
-        public ICustomMembers InnerModule {
-            get {
-                return _innerMod;
-            }
-            set {
-                _innerMod = value;
-            }
-        }
-
-        /// <summary>
-        /// True if the package has been imported into this module, otherwise false.
-        /// </summary>
-        public bool PackageImported {
-            get {
-                return _packageImported;
-            }
-            set {
-                _packageImported = value;
-            }
-        }
-
+               
         /// <summary>
         /// Called by the base class to fire the module change event when the
         /// module has been modified.
@@ -215,70 +189,39 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        #region ICustomMembers Members
-
-        private static void EnsureModType() {
-            // Temporary work around until we build types in Microsoft.Scripting.
-            if (ModuleType == null) ModuleType = DynamicHelpers.GetDynamicTypeFromType(typeof(ScriptModule));
-        }
-
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundCustomMember(context, name, out value);
-        }
-
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            if (Scope.TryGetName(context.LanguageContext, name, out value)) {
-                if (value == Uninitialized.Instance) return false;
-
-                IContextAwareMember icaa = value as IContextAwareMember;
-                if (icaa == null || icaa.IsVisible(context, null)) { /* TODO: owner type*/
-                    return true;
+        [SpecialName]
+        public object GetCustomMember(CodeContext context, string name) {
+            object value;
+            if (Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out value)) {
+                if (value != Uninitialized.Instance) {
+                    IContextAwareMember icaa = value as IContextAwareMember;
+                    if (icaa == null || icaa.IsVisible(context, null)) { /* TODO: owner type*/
+                        return value;
+                    }
                 }
-                value = null;
             }
+            return OperationFailed.Value;
+        }
+        
+        [SpecialName]
+        public void SetMemberAfter(CodeContext context, string name, object value) {
+            OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Set, value));
 
-            if (PackageImported && InnerModule.TryGetBoundCustomMember(context, name, out value)) {
+            Scope.SetName(SymbolTable.StringToId(name), value);
+        }
+
+        [SpecialName]
+        public bool DeleteMember(CodeContext context, string name) {
+            if (Scope.TryRemoveName(context.LanguageContext, SymbolTable.StringToId(name))) {
+                OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Delete));
+
                 return true;
-            }
+            } 
 
-            EnsureModType();
-            return ModuleType.TryGetBoundMember(context, this, name, out value);
+            return false;
         }
 
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            DynamicTypeSlot dts;
-            EnsureModType();
-            if (ModuleType.TryLookupSlot(context, name, out dts)) {
-                if (!ModuleType.TrySetMember(context, this, name, value)) {
-                    throw new ArgumentTypeException(String.Format("cannot set {0}", SymbolTable.IdToString(name)));
-                }
-            } else {
-                OnModuleChange(new ModuleChangeEventArgs(name, ModuleChangeType.Set, value));
-
-                Scope.SetName(name, value);
-            }
-        }
-
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            bool isDeleted = true;
-            if (Scope.TryRemoveName(context.LanguageContext, name)) {
-                object dummy;
-                if (PackageImported && InnerModule.TryGetBoundCustomMember(context, name, out dummy))
-                    isDeleted = InnerModule.DeleteCustomMember(context, name);
-
-                OnModuleChange(new ModuleChangeEventArgs(name, ModuleChangeType.Delete));
-
-                return isDeleted;
-            } else if (PackageImported) {
-                isDeleted = InnerModule.DeleteCustomMember(context, name);
-            }
-
-            EnsureModType();
-            if (!ModuleType.TryDeleteMember(context, this, name)) {
-                throw new ArgumentTypeException(String.Format("cannot delete {0}", SymbolTable.IdToString(name)));
-            }
-            return isDeleted;
-        }
+        #region IMembersList
 
         public IList<object> GetCustomMemberNames(CodeContext context) {
             List<object> ret;
@@ -296,34 +239,9 @@ namespace Microsoft.Scripting {
                 }
             } else {
                 ret = new List<object>(Scope.GetAllKeys(context.LanguageContext));
-            }
-
-            if (PackageImported) {
-                foreach (object o in InnerModule.GetCustomMemberNames(context)) {
-                    string strName = o as string;
-                    if (strName == null) continue;
-
-                    if (!Scope.ContainsName(context.LanguageContext, SymbolTable.StringToId(strName))) ret.Add(o);
-                }
-            }
+            }            
 
             return ret;
-        }
-
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            Dictionary<object, object> dict = new Dictionary<object,object>();
-
-            foreach (KeyValuePair<object, object> kvp in Scope.Dict) {
-                dict[kvp.Key] = kvp.Value;
-            }
-
-            if (InnerModule != null) {
-                foreach (KeyValuePair<object, object> kvp in InnerModule.GetCustomMemberDictionary(context)) {
-                    dict[kvp.Key] = kvp.Value;
-                }
-            }
-
-            return dict;
         }
 
         #endregion

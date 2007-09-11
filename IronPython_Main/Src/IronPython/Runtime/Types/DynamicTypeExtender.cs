@@ -21,8 +21,9 @@ using System.Reflection;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting;
 
-namespace Microsoft.Scripting {        
+namespace IronPython.Runtime.Types {        
     /// <summary>
     /// Type extender is used to extend an existing DynamicType based upon
     /// the static members of the provided extension type.

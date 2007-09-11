@@ -98,6 +98,10 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
+        public Action<Exception> EventExceptionHandler {
+            get { return null; }
+        }
+
         #region ILocalObject Members
 
 #if !SILVERLIGHT

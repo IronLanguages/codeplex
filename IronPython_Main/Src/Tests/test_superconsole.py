@@ -31,6 +31,20 @@ SNAP = 0
 if get_environ_variable("THISISSNAP")!=None: 
     SNAP = 1
 
+#if this is a debug build and the assemblies are being saved...peverify is run.
+#for the test to pass, Maui assemblies must be in the AssembliesDir
+if is_peverify_run:
+    clr.AddReference("Microsoft.Scripting")
+    from Microsoft.Scripting import ScriptDomainManager
+    from System.IO import Path
+
+    tempMauiDir = Path.GetTempPath()    
+    
+    print "Copying Maui.Core.dll to %s for peverify..." % (tempMauiDir)
+    if not File.Exists(tempMauiDir + '\\Maui.Core.dll'):
+        File.Copy(testpath.rowan_root + '\\Languages\\IronPython\\External\\Maui\\Maui.Core.dll',
+                  tempMauiDir + '\\Maui.Core.dll')    
+
 #------------------------------------------------------------------------------
 #--Helper functions
 def getTestOutput():

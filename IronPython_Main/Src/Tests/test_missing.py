@@ -243,7 +243,6 @@ def test_main():
     t = GenerateMethods(ag)
     TestCalls(t)
     
-    if trace:
-        ag.Save()
+    ag.Save()
 
 run_test(__name__)

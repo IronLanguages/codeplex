@@ -167,12 +167,8 @@ namespace IronPython.Hosting {
         public override void Shutdown() {
             object callable;
 
-            try {
-                if (PythonOps.TryGetBoundAttr(_systemState, Symbols.SysExitFunc, out callable)) {
-                    PythonCalls.Call(callable);
-                }
-            } finally {
-                base.DumpDebugInfo();
+            if (PythonOps.TryGetBoundAttr(_systemState, Symbols.SysExitFunc, out callable)) {
+                PythonCalls.Call(callable);
             }
         }
 

@@ -21,11 +21,10 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
 
     /// <summary>
     /// A dynamic test that can invalidate a rule at runtime.  The definition of an
@@ -163,6 +162,28 @@ namespace Microsoft.Scripting.Actions {
         public abstract Type ReturnType {
             get;
         }
+
+        public static Expression MakeTypeTestExpression(Type t, Expression expr) {
+            // we must always check for non-sealed types explicitly - otherwise we end up
+            // doing fast-path behavior on a subtype which overrides behavior that wasn't
+            // present for the base type.
+            //TODO there's a question about nulls here
+            if (CompilerHelpers.IsSealed(t) && t == expr.ExpressionType) {
+                if (t.IsValueType) {
+                    return Ast.True();
+                }
+                return Ast.NotEqual(expr, Ast.Null());
+            }
+
+            return Ast.AndAlso(
+                Ast.NotEqual(
+                    expr,
+                    Ast.Null()),
+                Ast.Equal(
+                    Ast.Call(
+                        expr, typeof(object).GetMethod("GetType")),
+                        Ast.Constant(t)));
+        }
     }
 
     /// <summary>
@@ -296,33 +317,10 @@ namespace Microsoft.Scripting.Actions {
         }        
 
         public void MakeTest(params Type[] types) {
-            DynamicType[] dts = GetDynamicTypes(types);
-
-            MakeTest(dts);
-        }
-
-        private static DynamicType[] GetDynamicTypes(Type[] types) {
-            DynamicType[] dts = new DynamicType[types.Length];
-            for (int i = 0; i < types.Length; i++) {
-                dts[i] = DynamicHelpers.GetDynamicTypeFromType(types[i]);
-            }
-            return dts;
-        }
-
-        /// <summary>
-        /// This helper will generate the appropriate tests for an exact match with
-        /// all of the specified DynamicTypes.
-        /// </summary>
-        /// <param name="types"></param>
-        public void MakeTest(params DynamicType[] types) {
             _test = MakeTestForTypes(types, 0);
         }
 
         public Expression MakeTestForTypes(Type[] types, int index) {
-            return MakeTestForTypes(GetDynamicTypes(types), index);
-        }
-
-        public Expression MakeTestForTypes(DynamicType[] types, int index) {
             Expression test = MakeTypeTest(types[index], index);
             if (index+1 < types.Length) {
                 Expression nextTests = MakeTestForTypes(types, index + 1);
@@ -349,64 +347,10 @@ namespace Microsoft.Scripting.Actions {
 
             return MakeTypeTestExpression(type, tested);
         }
-
-        public Expression MakeTypeTest(DynamicType type, int index) {
-            return MakeTypeTest(type, Parameters[index]);
-        }
-
-        public Expression MakeTypeTest(DynamicType type, Expression tested) {
-            if (type == null || type.IsNull) {
-                return Ast.Equal(tested, Ast.Null());
-            } else {
-                Type clrType = type.UnderlyingSystemType;
-                bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
-                               
-                Expression test = MakeTypeTestExpression(type.UnderlyingSystemType, tested);
-
-                if (!isStaticType) {
-                    int version = type.Version;
-                    if (version != DynamicType.DynamicVersion) {
-                        test = Ast.AndAlso(test,
-                            Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
-                                tested, Ast.Constant(version)));
-                        AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
-                    } else {
-                        version = type.AlternateVersion;
-                        test = Ast.AndAlso(test,
-                            Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"),
-                                tested, Ast.Constant(version)));
-                        AddValidator(new DynamicTypeValidator(new WeakReference(type), version).AlternateValidate);
-                    }
-                }
-                return test;
-            }
-        }
-
+        
         public Expression MakeTypeTestExpression(Type t, int param) {
             return MakeTypeTestExpression(t, Parameters[param]);
-        }
-
-        public Expression MakeTypeTestExpression(Type t, Expression expr) {
-            // we must always check for non-sealed types explicitly - otherwise we end up
-            // doing fast-path behavior on a subtype which overrides behavior that wasn't
-            // present for the base type.
-            //TODO there's a question about nulls here
-            if (CompilerHelpers.IsSealed(t) && t == expr.ExpressionType) {
-                if(t.IsValueType) {
-                    return Ast.True();
-                }
-                return Ast.NotEqual(expr, Ast.Null());
-            }
-
-            return Ast.AndAlso(
-                Ast.NotEqual(
-                    expr,
-                    Ast.Null()),
-                Ast.Equal(
-                    Ast.Call(
-                        expr, typeof(object).GetMethod("GetType")),
-                        Ast.Constant(t)));
-        }
+        }        
 
         #region Factory Methods
         public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params Type[] types) {
@@ -416,59 +360,8 @@ namespace Microsoft.Scripting.Actions {
             ret.MakeTest(types);
             ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(binder, ret, ret.Parameters, types)));
             return ret;
-        }
-
-        public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params DynamicType[] types) {
-            return Simple(binder, target, CompilerHelpers.ConvertToTypes(types));
-        }
-
-        public static StandardRule<T> TypeError(string message, params DynamicType[] types) {
-            StandardRule<T> ret = new StandardRule<T>();
-            ret.MakeTest(types);
-            ret.SetTarget(
-                Ast.Statement(Ast.Throw(
-                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        Ast.Constant(message)))));
-            return ret;
-        }
-
-        public static StandardRule<T> AttributeError(string message, params DynamicType[] types) {
-            StandardRule<T> ret = new StandardRule<T>();
-            ret.MakeTest(types);
-            ret.SetTarget(
-                Ast.Statement(Ast.Throw(
-                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleAttributeError"),
-                        Ast.Constant(message)))));
-            return ret;
-        }
-
-        private class DynamicTypeValidator {
-            /// <summary>
-            /// Weak reference to the dynamic type. Since they can be collected,
-            /// we need to be able to let that happen and then disable the rule.
-            /// </summary>
-            private WeakReference _dynamicType;
-
-            /// <summary>
-            /// Expected version of the instance's dynamic type
-            /// </summary>
-            private int _version;
-
-            public DynamicTypeValidator(WeakReference dynamicType, int version) {
-                this._dynamicType = dynamicType;
-                this._version = version;
-            }
-
-            public bool Validate() {
-                DynamicType dt = _dynamicType.Target as DynamicType;
-                return dt != null && dt.Version == _version;
-            }
-            public bool AlternateValidate() {
-                DynamicType dt = _dynamicType.Target as DynamicType;
-                return dt != null && dt.AlternateVersion == _version;
-            }
-        }
-
+        }        
+        
         #endregion
 
         /// <summary>
@@ -492,6 +385,22 @@ namespace Microsoft.Scripting.Actions {
 
             _templateData.Add(value);
             return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
+        }
+
+        public Expression AddTemplatedWeakConstant(Type type, object value) {
+            if (value != null) {
+                if (!type.IsAssignableFrom(value.GetType())) {
+                    throw new ArgumentException("type must be assignable from value");
+                }
+            } else {
+                if (!type.IsValueType) {
+                    throw new ArgumentException("value must not be null for value types");
+                }
+            }
+
+            Expression expr = AddTemplatedConstant(typeof(WeakReference), new WeakReference(value));
+
+            return Ast.ReadProperty(expr, typeof(WeakReference).GetProperty("Target"));
         }
 
         /// <summary>

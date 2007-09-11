@@ -858,7 +858,27 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void OverrideVirtualMethods(Type type, Dictionary<string, bool> specialNames) {
-            foreach (MethodInfo mi in type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)) {
+            // if we have conflicting virtual's do to new slots only override the methods on the
+            // most derived class.
+            Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo> added = new Dictionary<KeyValuePair<string,MethodSignatureInfo>, MethodInfo>();
+            
+            MethodInfo overridden;
+            MethodInfo [] methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            
+            foreach (MethodInfo mi in methods) {
+                KeyValuePair<string, MethodSignatureInfo> key = new KeyValuePair<string, MethodSignatureInfo>(mi.Name, new MethodSignatureInfo(mi.IsStatic, mi.GetParameters()));
+
+                if (!added.TryGetValue(key, out overridden)) {
+                    added[key] = mi;
+                    continue;
+                }
+
+                if (overridden.DeclaringType.IsAssignableFrom(mi.DeclaringType)) {
+                    added[key] = mi;
+                }
+            }
+
+            foreach (MethodInfo mi in added.Values) {
                 if (!ShouldOverrideVirtual(mi)) continue;
 
                 if (mi.IsPublic || mi.IsFamily || mi.IsFamilyOrAssembly) {

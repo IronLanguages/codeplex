@@ -793,7 +793,6 @@ namespace Microsoft.Scripting.Hosting {
         #endregion
 
         public virtual void Shutdown() {
-            DumpDebugInfo();
         }
 
         public void DumpDebugInfo() {

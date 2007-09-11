@@ -140,18 +140,18 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        [StaticExtensionMethod("__hash__")]
-        public static int HashMethod() {
+        [SpecialName, PythonName("__hash__")]
+        public static int HashMethod(object self) {
             return hash;
         }
 
-        [StaticExtensionMethod("__repr__")]
-        public static string ReprMethod() {
+        [SpecialName, PythonName("__repr__")]
+        public static string ReprMethod(object self) {
             return Name;
         }
 
-        [StaticExtensionMethod("__str__")]
-        public static new string ToString() {
+        [SpecialName, PythonName("__str__")]
+        public static string ToString(object self) {
             return Name;
         }
 
@@ -164,21 +164,6 @@ namespace IronPython.Runtime.Types {
             // someone is using  None.__new__ or type(None).__new__ to create
             // a new instance.  Call the type they want to create the instance for.
             return PythonOps.CallWithContext(context, type, prms);
-        }
-
-        [StaticExtensionMethod("__delattr__")]
-        public static void DelAttrMethod(CodeContext context, string name) {
-            TypeInstance.DeleteMember(context, instance, SymbolTable.StringToId(name));
-        }
-
-        [StaticExtensionMethod("__getattribute__")]
-        public static object GetAttributeMethod(CodeContext context, string name) {
-            return TypeInstance.GetBoundMember(context, instance, SymbolTable.StringToId(name));
-        }
-
-        [StaticExtensionMethod("__setattr__")]
-        public static void SetAttrMethod(CodeContext context, string name, object value) {
-            TypeInstance.SetMember(context, instance, SymbolTable.StringToId(name), value);
-        }
+        }        
     }
 }

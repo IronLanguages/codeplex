@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Actions {
 
         public override bool Equals(object obj) {
             MemberAction other = obj as MemberAction;
-            if (other == null) return false;
+            if (other == null || other.GetType() != GetType()) return false;
             return _name == other._name && Kind == other.Kind;
         }
 

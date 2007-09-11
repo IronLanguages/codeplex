@@ -23,6 +23,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
@@ -494,7 +495,9 @@ namespace IronPython.Runtime {
             }
 
             ItemEnumerable ie;
-            if (ItemEnumerable.TryCreate(o, out ie)) {
+            // only user types get converted through ItemEnumerable, otherwise we use the
+            // strong typing of the system types.
+            if ((o is ISuperDynamicObject || o is OldInstance) && ItemEnumerable.TryCreate(o, out ie)) {
                 return ie;
             }
 
@@ -746,7 +749,7 @@ namespace IronPython.Runtime {
             DynamicType DynamicTypeVal = value as DynamicType;
             if (DynamicTypeVal != null) return DynamicTypeVal.UnderlyingSystemType;
 
-            TypeCollision typeCollision = value as TypeCollision;
+            TypeGroup typeCollision = value as TypeGroup;
             if (typeCollision != null) {
                 Type nonGenericType;
                 if (typeCollision.TryGetNonGenericType(out nonGenericType)) {

@@ -41,11 +41,11 @@ namespace IronPython.Runtime.Calls {
             : base(context, action, args) {
         }
 
-        public new StandardRule<T> MakeRule() {
+        public new StandardRule<T> MakeRule() {            
             DynamicType dt = Arguments[0] as DynamicType;
             if (dt != null) {
                 if (IsStandardDotNetType(dt)) {
-                    return new CreateInstanceBinderHelper<T>(Context, CreateInstanceAction.Make(Action.ArgumentInfos), Arguments).MakeRule();
+                    return ((IDynamicObject)dt).GetRule<T>(MakeCreateInstanceAction(Action), Context, Arguments);
                 }
 
                 // TODO: this should move into DynamicType's IDynamicObject implementation when that exists
@@ -592,6 +592,13 @@ namespace IronPython.Runtime.Calls {
                 )
             );
         }
+
+        internal static CreateInstanceAction MakeCreateInstanceAction(CallAction action) {
+            if(action == CallAction.Simple) return CreateInstanceAction.Simple;
+
+            return CreateInstanceAction.Make(action.ArgumentInfos);
+        }
+
 
         private bool IsStandardDotNetType(DynamicType type) {
             return type.IsSystemType &&
