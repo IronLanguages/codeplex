@@ -301,9 +301,9 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // if we received methods from both declaring type & base types we need to filter them
-            Dictionary<Args, MethodInfo> dict = new Dictionary<Args, MethodInfo>();
+            Dictionary<MethodSignatureInfo, MethodInfo> dict = new Dictionary<MethodSignatureInfo, MethodInfo>();
             foreach (MethodInfo mb in methods) {
-                Args args = new Args(mb.IsStatic, mb.GetParameters());
+                MethodSignatureInfo args = new MethodSignatureInfo(mb.IsStatic, mb.GetParameters());
                 MethodInfo other;
 
                 if (dict.TryGetValue(args, out other)) {
@@ -317,46 +317,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return new List<MethodInfo>(dict.Values).ToArray();
-        }
-
-        /// <summary>
-        /// Helper class to remove methods w/ identical signatures.  Used for GetDefaultMembers
-        /// which returns members from all types in the hierarchy.
-        /// </summary>
-        class Args {
-            private ParameterInfo[] _pis;
-            private bool _isStatic;
-
-            public Args(bool isStatic, ParameterInfo[] pis) {
-                _isStatic = isStatic;
-                _pis = pis;
-            }
-
-            public override bool Equals(object obj) {
-                Args args = obj as Args;
-                if (args == null) return false;
-
-                if (args._isStatic != _isStatic || args._pis.Length != _pis.Length) return false;
-
-                for (int i = 0; i < _pis.Length; i++) {
-                    ParameterInfo self = _pis[i];
-                    ParameterInfo other = _pis[i];
-
-                    if (self.ParameterType != other.ParameterType) 
-                        return false;
-                }
-
-                return true;
-            }
-
-            public override int GetHashCode() {
-                int hash = 6551;
-                foreach (ParameterInfo pi in _pis) {
-                    hash ^= pi.ParameterType.GetHashCode();
-                }
-                return hash;
-            }
-        }
+        }        
 
         #endregion
 
@@ -432,8 +393,8 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MethodInfo[] GetApplicableMembers(Type t, OperatorInfo info) {
-            MemberInfo[] members = Binder.GetMember(Action, t, info.Name);
-            if (members.Length == 0 && info.AlternateName != null) {
+            MemberGroup members = Binder.GetMember(Action, t, info.Name);
+            if (members.Count == 0 && info.AlternateName != null) {
                 members = Binder.GetMember(Action, t, info.AlternateName);
             }
 
@@ -441,16 +402,16 @@ namespace Microsoft.Scripting.Actions {
             return FilterNonMethods(t, members);
         }
 
-        private static MethodInfo[] FilterNonMethods(Type t, IList<MemberInfo> members) {
+        private static MethodInfo[] FilterNonMethods(Type t, MemberGroup members) {
             List<MethodInfo> methods = new List<MethodInfo>(members.Count);
-            foreach (MemberInfo mi in members) {
-                if (mi.MemberType == MemberTypes.Method) {
-                    MethodInfo method = (MethodInfo)mi ;
+            foreach (MemberTracker mi in members) {
+                if (mi.MemberType == TrackerTypes.Method) {
+                    MethodInfo method = ((MethodTracker)mi).Method ;
 
                     // don't call object methods for None type, but if someone added
                     // methods to null we'd call those.
                     if (method.DeclaringType != typeof(object) || t != typeof(None)) {
-                        methods.Add((MethodInfo)mi);
+                        methods.Add(method);
                     }
                 }
             }

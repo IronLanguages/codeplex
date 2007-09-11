@@ -31,6 +31,8 @@ using IronPython.Runtime.Calls;
 [assembly: PythonExtensionType(typeof(ClrModule.ReferencesList), typeof(ClrReferencesListOps))]
 namespace IronPython.Runtime.Operations {
     public static class ClrModuleOps {
+        private static DynamicType _strongBoxType;
+
         #region Runtime Type Checking support
 #if !SILVERLIGHT // files, paths
 
@@ -66,6 +68,18 @@ namespace IronPython.Runtime.Operations {
             return DynamicHelpers.GetDynamicTypeFromType(t);
         }
 
+        [PropertyMethod]
+        public static DynamicType GetReference(ClrModule mod) {
+           return GetStrongBox(mod);
+        }
+
+        [PropertyMethod]
+        public static DynamicType GetStrongBox(ClrModule mod) {
+            if (_strongBoxType == null) {
+                _strongBoxType = DynamicHelpers.GetDynamicTypeFromType(typeof(StrongBox<>));
+            }
+            return _strongBoxType;
+        }
 
         [PythonName("accepts")]
         public static object Accepts(ClrModule self, params object[] types) {

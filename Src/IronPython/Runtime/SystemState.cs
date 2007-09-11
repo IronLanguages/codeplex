@@ -26,6 +26,8 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
@@ -33,8 +35,6 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Utils;
-
 
 namespace IronPython.Runtime {
 
@@ -534,7 +534,7 @@ namespace IronPython.Runtime {
             // We should register builtins, if any, from IronPython.dll
             _autoLoadBuiltins.Add(typeof(SystemState).Assembly);
 
-            DynamicHelpers.TopPackage.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
+            DynamicHelpers.TopNamespace.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
 
             PythonExtensionTypeAttribute._sysState = this;
             // Load builtins from IronPython.Modules

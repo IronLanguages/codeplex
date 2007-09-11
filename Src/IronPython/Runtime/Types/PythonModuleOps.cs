@@ -87,24 +87,14 @@ namespace IronPython.Runtime.Types {
         [PythonName("__str__")]
         [SpecialName]
         public static string ToString(ScriptModule module) {
-            if (GetFileName(module) == null) {
-                if (module.InnerModule != null) {
-                    ReflectedPackage rp = module.InnerModule as ReflectedPackage;
-                    if (rp != null) {
-                        if (rp.PackageAssemblies.Count != 1) {
-                            return String.Format("<module '{0}' (CLS module, {1} assemblies loaded)>", module.ModuleName, rp.PackageAssemblies.Count);
-                        } 
-                        return String.Format("<module '{0}' (CLS module from {1})>", module.ModuleName, rp.PackageAssemblies[0].FullName);
-                    } 
-                    return String.Format("<module '{0}' (CLS module)>", module.ModuleName);                    
-                } 
+            if (Get__file__(module) == null) {
                 return String.Format("<module '{0}' (built-in)>", module.ModuleName);
             }
-            return String.Format("<module '{0}' from '{1}'>", module.ModuleName, GetFileName(module));
+            return String.Format("<module '{0}' from '{1}'>", module.ModuleName, Get__file__(module));
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static object GetName(ScriptModule module) {
+        public static object Get__name__(ScriptModule module) {
             object res;
             if (module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.Name, out res)) {
                 return res;
@@ -114,7 +104,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static void SetName(ScriptModule module, object value) {
+        public static void Set__name__(ScriptModule module, object value) {
             module.Scope.SetName(Symbols.Name, value);
 
             string strVal = value as string;
@@ -124,27 +114,22 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection GetDictionary(ScriptModule module) {
-            if (module.PackageImported) {
-                // TODO: Remove bad cast
-                return (IAttributesCollection)module.InnerModule.GetCustomMemberDictionary(DefaultContext.Default);                
-            }
-
+        public static IAttributesCollection Get__dict__(ScriptModule module) {
             return new GlobalsDictionary(module.Scope);
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection SetDictionary(ScriptModule module, object value) {
+        public static IAttributesCollection Set__dict__(ScriptModule module, object value) {
             throw PythonOps.TypeError("readonly attribute");
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection DeleteDictionary(ScriptModule module) {
+        public static IAttributesCollection Delete__dict__(ScriptModule module) {
             throw PythonOps.TypeError("can't set attributes of built-in/extension type 'module'");
         }
         
         [PropertyMethod, PythonName("__file__")]
-        public static string GetFileName(ScriptModule module) {
+        public static string Get__file__(ScriptModule module) {
             object res;
             if (!module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.File, out res)) {
                 return module.FileName;
@@ -153,7 +138,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__file__")]
-        public static void SetFileName(ScriptModule module, string value) {
+        public static void Set__file__(ScriptModule module, string value) {
             module.Scope.SetName(Symbols.File, module.FileName = value);
         }
 

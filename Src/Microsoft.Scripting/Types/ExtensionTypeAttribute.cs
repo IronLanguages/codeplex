@@ -93,8 +93,13 @@ namespace Microsoft.Scripting.Types {
             }
         }
 
+        public static void RegisterType(Type extendedType, Type extensionType) {
+            RegisterType(extendedType, extensionType, DynamicHelpers.GetDynamicTypeFromType(extendedType));
+        }
+
         public static void RegisterType(Type extendedType, Type extensionType, DynamicType dt) {
             if (extensionType == null) return;
+            Debug.Assert(extensionType != null);
 
             lock (ExtensionTypeToType) {
                 if (extendedType != null && extendedType.IsArray) {
@@ -106,7 +111,7 @@ namespace Microsoft.Scripting.Types {
 
                         ExtensionTypeToType[curType] = dt;
                         curType = curType.BaseType;
-                    } while (curType != typeof(object) && !ExtensionTypeToType.ContainsKey(curType));
+                    } while (curType != typeof(object) && curType != null && !ExtensionTypeToType.ContainsKey(curType));
                 }
             }
         }        

@@ -54,13 +54,13 @@ namespace IronPython.Runtime.Calls {
                 if (dt == null) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} needs a type, not a {2}",
                         PythonOps.StringRepr(func.Name),
-                        PythonOps.StringRepr(func.DeclaringType.Name),
+                        PythonOps.StringRepr(DynamicTypeOps.GetName(func.DeclaringType)),
                         PythonOps.StringRepr(DynamicTypeOps.GetName(owner)));
                 }
                 if (!dt.IsSubclassOf(TypeCache.Dict)) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} doesn't apply to type {2}",
                         PythonOps.StringRepr(func.Name),
-                        PythonOps.StringRepr(func.DeclaringType.Name),
+                        PythonOps.StringRepr(DynamicTypeOps.GetName(func.DeclaringType)),
                         PythonOps.StringRepr(DynamicTypeOps.GetName(dt)));
                 }
             }
@@ -78,7 +78,7 @@ namespace IronPython.Runtime.Calls {
             if (bf != null) {
                 return String.Format("<method {0} of {1} objects>",
                     PythonOps.StringRepr(bf.Name),
-                    PythonOps.StringRepr(bf.DeclaringType));
+                    PythonOps.StringRepr(DynamicTypeOps.GetName(bf.DeclaringType)));
             }
 
             return String.Format("<classmethod object at {0}>",

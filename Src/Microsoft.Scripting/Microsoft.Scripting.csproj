@@ -1,4 +1,5 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\silverlight.settings.targets" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -60,6 +61,8 @@
     <NoStdLib>true</NoStdLib>
     <DocumentationFile>..\..\Bin\Silverlight Debug\Microsoft.Scripting.xml</DocumentationFile>
     <NoWarn>1591,618</NoWarn>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>..\..\Utilities\Silverlight\x86ret\</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -71,45 +74,59 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>..\..\Utilities\Silverlight\x86ret\</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') ">
-    </Reference>
-    <Reference Include="System.configuration" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') " />
-    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+    <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="System.configuration" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Utilities\Silverlight\x86ret\mscorlib.dll</HintPath>
+      <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="System, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+    <Reference Include="System, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\Utilities\Silverlight\x86ret\System.dll</HintPath>
+      <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition="'$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release'">
+    <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="ActionOnCallAttribute.cs" />
     <Compile Include="Actions\AbstractObject.cs" />
     <Compile Include="Actions\Action.cs" />
     <Compile Include="Actions\ActionBinder.cs" />
+    <Compile Include="Actions\ConstructorTracker.cs" />
+    <Compile Include="Actions\EventTracker.cs" />
+    <Compile Include="Actions\ExtensionPropertyTracker.cs" />
+    <Compile Include="Actions\FieldTracker.cs" />
+    <Compile Include="Actions\MethodTracker.cs" />
+    <Compile Include="Actions\NamespaceTracker.cs" />
+    <Compile Include="Actions\NestedTypeTracker.cs" />
+    <Compile Include="Actions\PropertyTracker.cs" />
+    <Compile Include="Actions\ReflectedPropertyTracker.cs" />
     <Compile Include="Actions\RuleCache.cs" />
     <Compile Include="Actions\CallAction.cs" />
     <Compile Include="Actions\ConvertToAction.cs" />
     <Compile Include="Actions\CreateInstanceAction.cs" />
     <Compile Include="Actions\CreateInstanceBinderHelper.cs" />
+    <Compile Include="Actions\DeleteMemberAction.cs" />
+    <Compile Include="Actions\DeleteMemberBinderHelper.cs" />
     <Compile Include="Actions\DoOperationBinderHelper.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.Generated.cs" />
     <Compile Include="Actions\DoOperationAction.cs" />
     <Compile Include="Actions\DynamicSiteHelpers.cs" />
     <Compile Include="Actions\EmptyRuleSet.cs" />
+    <Compile Include="Actions\MemberTracker.cs" />
     <Compile Include="Actions\GetMemberAction.cs" />
     <Compile Include="Actions\GetMemberBinderHelper.cs" />
     <Compile Include="Actions\InvokeMemberAction.cs" />
     <Compile Include="Actions\MemberAction.cs" />
     <Compile Include="Actions\MemberBinderHelper.cs" />
+    <Compile Include="Actions\MemberGroup.cs" />
     <Compile Include="Actions\RuleSet.cs" />
     <Compile Include="Actions\RuleTree.cs" />
     <Compile Include="Actions\SetMemberAction.cs" />
@@ -118,6 +135,10 @@
     <Compile Include="Actions\StandardRule.cs" />
     <Compile Include="Actions\RuleBinder.cs" />
     <Compile Include="Actions\TemplatedRuleBuilder.cs" />
+    <Compile Include="Actions\TopNamespaceTracker.cs" />
+    <Compile Include="Actions\TrackerTypes.cs" />
+    <Compile Include="Actions\TypeGroup.cs" />
+    <Compile Include="Actions\TypeTracker.cs" />
     <Compile Include="AssemblyTypeNames.cs" />
     <Compile Include="Ast\AstWriter.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
@@ -135,6 +156,7 @@
     <Compile Include="Generation\KeywordArgBuilder.cs" />
     <Compile Include="Generation\KeywordConstructorReturnBuilder.cs" />
     <Compile Include="Generation\MethodBinderContext.cs" />
+    <Compile Include="Generation\MethodSignatureInfo.cs" />
     <Compile Include="Generation\OutArgBuilder.cs" />
     <Compile Include="Generation\ParamsDictArgBuilder.cs" />
     <Compile Include="Generation\ReturnReferenceArgBuilder.cs" />
@@ -168,7 +190,6 @@
     <Compile Include="Ast\ContinueStatement.cs" />
     <Compile Include="Ast\MemberBinding.cs" />
     <Compile Include="Ast\NewExpression.cs" />
-    <Compile Include="Ast\DeleteDynamicMemberExpression.cs" />
     <Compile Include="Ast\DoStatement.cs" />
     <Compile Include="Ast\EmptyStatement.cs" />
     <Compile Include="Ast\EnvironmentExpression.cs" />
@@ -220,7 +241,6 @@
     <Compile Include="ClrModule.cs" />
     <Compile Include="Types\CoreReflectedTypeBuilder.cs" />
     <Compile Include="DelegateSignatureInfo.cs" />
-    <Compile Include="DynamicTypeExtender.cs" />
     <Compile Include="FunctionType.cs" />
     <Compile Include="Generation\FieldSlotFactory.cs" />
     <Compile Include="Generation\LocalFrameSlotFactory.cs" />
@@ -315,7 +335,6 @@
     <Compile Include="Types\ReflectedField.cs" />
     <Compile Include="Types\ReflectedGetterSetter.cs" />
     <Compile Include="Types\ReflectedIndexer.cs" />
-    <Compile Include="Types\ReflectedPackage.cs" />
     <Compile Include="Types\ReflectedProperty.cs" />
     <Compile Include="Types\ReflectedTypeBuilder.cs" />
     <Compile Include="ReflectionCache.cs" />
@@ -360,7 +379,6 @@
     <Compile Include="TransformDictEnumerator.cs" />
     <Compile Include="Types\TransformedName.cs" />
     <Compile Include="TupleDictionary.cs" />
-    <Compile Include="Types\TypeCollision.cs" />
     <Compile Include="Types\TypeCreatedEventArgs.cs" />
     <Compile Include="Types\DynamicType.cs" />
     <Compile Include="Types\DynamicTypeBuilder.cs" />
@@ -472,7 +490,8 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
+  <Import Project="..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

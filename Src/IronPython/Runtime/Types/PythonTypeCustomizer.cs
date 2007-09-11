@@ -24,11 +24,11 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-
 
 namespace IronPython.Runtime.Types {
     class PythonTypeCustomizer : CoreReflectedTypeBuilder {
@@ -618,7 +618,7 @@ namespace IronPython.Runtime.Types {
             res[typeof(ReflectedIndexer)] = "indexer#";
             res[typeof(ReflectedEvent)] = "event#";
             res[typeof(ValueType)] = "ValueType";   // just hiding it's methods in the inheritance hierarchy
-            res[typeof(TypeCollision)] = "type-collision";
+            res[typeof(TypeGroup)] = "type-collision";
             res[typeof(None)] = "NoneType";
             res[typeof(IAttributesCollection)] = "dict";
 

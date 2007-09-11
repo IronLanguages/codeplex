@@ -153,7 +153,7 @@ namespace Microsoft.Scripting.Actions {
         /// Gets the instance parameter for the bound builtin function call.
         /// </summary>
         private static Expression GetBoundTarget(StandardRule<T> rule, BoundBuiltinFunction bbf) {
-            Type declType = bbf.Target.ClrDeclaringType;
+            Type declType = bbf.Target.DeclaringType;
             Expression self = Ast.ReadProperty(
                 Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                 typeof(BoundBuiltinFunction).GetProperty("Self"));
@@ -278,14 +278,19 @@ namespace Microsoft.Scripting.Actions {
         public Expression MakeCallExpression(MethodInfo method, params Expression[] parameters) {
             ParameterInfo[] infos = method.GetParameters();
             Expression callInst = null;
-            int parameter = 0;
+            int parameter = 0, startArg = 0;
             Expression[] callArgs = new Expression[infos.Length];
-
+            
             if (!method.IsStatic) {
                 callInst = parameters[0];
                 parameter = 1;
             }
-            for (int arg = 0; arg < infos.Length; arg++) {
+            if (infos.Length > 0 && infos[0].ParameterType == typeof(CodeContext)) {
+                startArg = 1;
+                callArgs[0] = Ast.CodeContext();
+            }
+
+            for (int arg = startArg; arg < infos.Length; arg++) {
                 if (parameter < parameters.Length) {
                     callArgs[arg] = Binder.ConvertExpression(
                         parameters[parameter++],

@@ -226,6 +226,10 @@ namespace Microsoft.Scripting.Ast {
                 return new ActionExpression(span, SetMemberAction.Make(name), arguments, result);
             }
 
+            public static Expression DeleteMember(SourceSpan span, SymbolId name, params Expression[] arguments) {
+                return new ActionExpression(span, DeleteMemberAction.Make(name), arguments, typeof(object));
+            }
+
             // TODO:
             public static ActionExpression InvokeMember(SymbolId name, Type result, InvokeMemberActionFlags flags, ArgumentInfo[] argumentInfos, 
                 params Expression[] arguments) {

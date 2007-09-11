@@ -263,6 +263,10 @@ namespace Microsoft.Scripting {
             return new T[args];
         }
 
+        public static T CreateDelegate<T>(object callable) {
+            return (T)(object)DynamicHelpers.GetDelegate(callable, typeof(T), null);
+        }
+
         public static IAttributesCollection GetLocalDictionary(CodeContext context) {
             return context.Scope.Dict;
         }

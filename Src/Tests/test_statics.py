@@ -282,7 +282,7 @@ def test_method():
     AssertErrorWithMessage(AttributeError, "'OverrideAll' object has no attribute 'Method_None'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'Base' object is read-only", f, b)
-    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'OverrideNothing' object is read-only", f, o1)
+    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'Base' object is read-only", f, o1)
     AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'OverrideAll' object is read-only", f, o2)
 
 def test_extra_generics():

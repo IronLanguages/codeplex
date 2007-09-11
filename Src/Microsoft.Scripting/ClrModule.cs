@@ -134,23 +134,7 @@ namespace Microsoft.Scripting {
         }
 
         #endregion
-
-        public DynamicType Reference {
-            get {
-                return StrongBox;
-            }
-        }
-
-        private static DynamicType _strongBoxType;
-        public DynamicType StrongBox {
-            get {
-                if (_strongBoxType == null) {
-                    _strongBoxType = DynamicHelpers.GetDynamicTypeFromType(typeof(StrongBox<>));
-                }
-                return _strongBoxType;
-            }
-        }
-
+        
         #region Private implementation methods
 
         private void AddReference(object reference) {
@@ -171,7 +155,7 @@ namespace Microsoft.Scripting {
 
         private void AddReference(Assembly assembly) {
             // Load the assembly into IronPython
-            if (DynamicHelpers.TopPackage.LoadAssembly(assembly)) {
+            if (DynamicHelpers.TopNamespace.LoadAssembly(assembly)) {
                 // Add it to the references tuple if we
                 // loaded a new assembly.
                 References.Add(assembly);

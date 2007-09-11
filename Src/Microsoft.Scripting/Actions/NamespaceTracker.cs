@@ -19,11 +19,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Types {
+namespace Microsoft.Scripting.Actions {
     public class AssemblyLoadedEventArgs : EventArgs {
         private Assembly _assembly;
 
@@ -39,153 +42,33 @@ namespace Microsoft.Scripting.Types {
     }
 
     /// <summary>
-    /// Represents the top reflected package which contains extra information such as
-    /// all the assemblies loaded and the built-in modules.
+    /// NamespaceTracker represent a CLS namespace.
     /// </summary>
-    public class TopReflectedPackage : ReflectedPackage {
-        private int _initialized;
-        private bool _isolated;
-        private int _lastDiscovery = 0;
-
-        internal TopReflectedPackage()
-            : base(null) {
-            SetTopPackage(this);
-        }
-
-        /// <summary>
-        /// Creates a top reflected package that is optionally isolated
-        /// from all other packages in the system.
-        /// </summary>
-        public TopReflectedPackage(bool isolated)
-            : this() {
-            this._isolated = isolated;
-        }
-
-        public void Clear() {
-            _initialized = 0;
-            _lastDiscovery = 0;
-            _dict = new SymbolDictionary();
-            _packageAssemblies = new List<Assembly>();
-            _typeNames = new Dictionary<Assembly, TypeNames>();
-        }
-
-        #region Public API Surface
-
-        /// <summary>
-        /// returns the package associated with the specified namespace and
-        /// updates the associated module to mark the package as imported.
-        /// </summary>
-        public ScriptModule TryGetPackage(string name) {
-            return TryGetPackage(SymbolTable.StringToId(name));
-        }
-
-        public ScriptModule TryGetPackage(SymbolId name) {
-            ScriptModule pm = TryGetPackageAny(name) as ScriptModule;
-            if (pm != null) {
-                pm.PackageImported = true;
-                return pm;
-            }
-            return null;
-        }
-
-        public object TryGetPackageAny(string name) {
-            return TryGetPackageAny(SymbolTable.StringToId(name));
-        }
-
-        public object TryGetPackageAny(SymbolId name) {
-            Initialize();
-            object ret;
-            if (TryGetMember(name, out ret)) {
-                return ret;
-            }
-            return null;
-        }
-
-        public object TryGetPackageLazy(SymbolId name) {
-            object ret;
-            if (_dict.TryGetValue(name, out ret)) {
-                return ret;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Ensures that the assembly is loaded
-        /// </summary>
-        /// <param name="assem"></param>
-        /// <returns>true if the assembly was loaded for the first time. 
-        /// false if the assembly had already been loaded before</returns>
-        public bool LoadAssembly(Assembly assem) {
-            lock (this) {
-                if (_packageAssemblies.Contains(assem)) {
-                    // The assembly is already loaded. There is nothing more to do
-                    return false;
-                }
-
-                _packageAssemblies.Add(assem);
-            }
-
-            EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
-            if (assmLoaded != null) {
-                assmLoaded(this, new AssemblyLoadedEventArgs(assem));
-            }
-            return true;
-        }
-
-
-        public void Initialize() {
-            if (_initialized != 0) return;
-            if (System.Threading.Interlocked.Exchange(ref _initialized, 1) == 0) {
-
-                // add mscorlib
-                ClrModule.GetInstance().AddReference(typeof(string).Assembly);
-                // add system.dll
-                ClrModule.GetInstance().AddReference(typeof(System.Diagnostics.Debug).Assembly);
-            }
-        }
-
-        #endregion
-
-        protected override void LoadNamespaces() {
-            lock (this) {
-                for (int i = _lastDiscovery; i < PackageAssemblies.Count; i++) {
-                    DiscoverAllTypes(PackageAssemblies[i]);
-                }
-                _lastDiscovery = PackageAssemblies.Count;
-            }
-        }
-
-        public event EventHandler<AssemblyLoadedEventArgs> AssemblyLoaded;
-    }
-
-    /// <summary>
-    /// ReflectedPackages represent a CLS namespace.  ReflectedPackages aren't
-    /// exposed to the user.  Instead PythonModule holds a reference to the 
-    /// ReflectedPackage and the two share the same dictionary for updating
-    /// what is present within the namespace.
-    /// </summary>
-    public class ReflectedPackage : ICustomMembers {
+    public class NamespaceTracker : MemberTracker, IDynamicObject, IAttributesCollection, IMembersList {
         // _dict contains all the currently loaded entries. However, there may be pending types that have
         // not yet been loaded in _typeNames
-        internal IAttributesCollection _dict = new SymbolDictionary();
+        internal Dictionary<string, MemberTracker> _dict = new Dictionary<string, MemberTracker>();
 
         internal List<Assembly> _packageAssemblies = new List<Assembly>();
         internal Dictionary<Assembly, TypeNames> _typeNames = new Dictionary<Assembly, TypeNames>();
 
         private string _fullName; // null for the TopReflectedPackage
-        private TopReflectedPackage _topPackage;
+        private TopNamespaceTracker _topPackage;
+        private int _id;
+
+        private static int _masterId;
 
         #region Protected API Surface
 
-        private ReflectedPackage() {
-            _dict = new SymbolDictionary();
+        private NamespaceTracker() {
+            UpdateId();
         }
 
         public override string ToString() {
             return base.ToString() + ":" + _fullName;
         }
 
-        protected ReflectedPackage(string name)
+        protected NamespaceTracker(string name)
             : this() {
             _fullName = name;
         }
@@ -194,55 +77,39 @@ namespace Microsoft.Scripting.Types {
 
         #region Internal API Surface
 
-        internal ReflectedPackage GetOrMakeChildPackage(string childName, Assembly assem) {
+        internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem) {
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             Debug.Assert(_packageAssemblies.Contains(assem)); // Parent namespace must contain all the assemblies of the child
 
-            object ret;
-            if (_dict.TryGetValue(SymbolTable.StringToId(childName), out ret)) {
+            MemberTracker ret;
+            if (_dict.TryGetValue(childName, out ret)) {
                 // If we have a module, then we add the assembly to the InnerModule
                 // If it's not a module, we'll wipe it out below, eg "def System(): pass" then 
                 // "import System" will result in the namespace being visible.
-                ScriptModule scriptModule = ret as ScriptModule;
-                while (scriptModule != null) {
-                    ReflectedPackage existingChildPackage = scriptModule.InnerModule as ReflectedPackage;
-                    if (existingChildPackage != null) {
-                        if (!existingChildPackage._packageAssemblies.Contains(assem)) {
-                            existingChildPackage._packageAssemblies.Add(assem);
-                        }
-                        return existingChildPackage;
+                NamespaceTracker package = ret as NamespaceTracker;
+                if (package != null) {
+                    if (!package._packageAssemblies.Contains(assem)) {
+                        package._packageAssemblies.Add(assem);
+                        package.UpdateId();
                     }
-
-                    scriptModule = scriptModule.InnerModule as ScriptModule;
+                    return package;
                 }
             }
 
             return MakeChildPackage(childName, assem);
         }
 
-        private ReflectedPackage MakeChildPackage(string childName, Assembly assem) {
-            ReflectedPackage rp = new ReflectedPackage();
+        private NamespaceTracker MakeChildPackage(string childName, Assembly assem) {
+            NamespaceTracker rp = new NamespaceTracker();
             rp.SetTopPackage(_topPackage);
             rp._packageAssemblies.Add(assem);
 
-            ScriptModule smod;
-            
-            //if (/*isolated || !ScriptDomainManager.CurrentManager.TryGetScriptModule(GetFullChildName(childName), out smod)*/) {
-                // no collisions (yet), create a new module for the package.
-                smod = ScriptDomainManager.CurrentManager.CreateModule(childName);
-                smod.PackageImported = true;
-            //}
-            // else there's already a module by this name.  We'll just
-            // set the InnerModule but not make it visible until
-            // the user does an import (and we set PackageImported).
-
             rp._fullName = GetFullChildName(childName);
-            smod.InnerModule = rp;
-            _dict[SymbolTable.StringToId(childName)] = smod;
+            _dict[childName] = rp;
             return rp;
         }
 
-        string GetFullChildName(string childName) {
+        private string GetFullChildName(string childName) {
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             if (_fullName == null) {
                 return childName;
@@ -251,12 +118,11 @@ namespace Microsoft.Scripting.Types {
             return _fullName + Type.Delimiter + childName;
         }
 
-        static DynamicType LoadType(Assembly assem, string fullTypeName) {
+        private static Type LoadType(Assembly assem, string fullTypeName) {
             Type type = assem.GetType(fullTypeName);
             // We should ignore nested types. They will be loaded when the containing type is loaded
             Debug.Assert(!ReflectionUtils.IsNested(type));
-            DynamicType dynamicType = DynamicHelpers.GetDynamicTypeFromType(type);
-            return dynamicType;
+            return type;
         }
 
         internal void AddTypeName(string typeName, Assembly assem) {
@@ -267,21 +133,20 @@ namespace Microsoft.Scripting.Types {
             }
             _typeNames[assem].AddTypeName(typeName);
 
-            string normalizedTypeName = TypeCollision.GetNormalizedTypeName(typeName);
-            if (_dict.ContainsObjectKey(normalizedTypeName)) {
+            string normalizedTypeName = TypeGroup.GetNormalizedTypeName(typeName);
+            if (_dict.ContainsKey(normalizedTypeName)) {
                 // A similarly named type, namespace, or module already exists.
-                DynamicType newDynamicType = LoadType(assem, GetFullChildName(typeName));
-                SymbolId normalizedTypeNameId = SymbolTable.StringToId(normalizedTypeName);
+                Type newType = LoadType(assem, GetFullChildName(typeName));
 
-                object existingValue = _dict[normalizedTypeNameId];
-                IConstructorWithCodeContext existingTypeEntity = existingValue as IConstructorWithCodeContext;
+                object existingValue = _dict[normalizedTypeName];
+                TypeTracker existingTypeEntity = existingValue as TypeTracker;
                 if (existingTypeEntity == null) {
                     // Replace the existing namespace or module with the new type
-                    Debug.Assert(existingValue is ScriptModule);
-                    _dict[normalizedTypeNameId] = newDynamicType;
+                    Debug.Assert(existingValue is NamespaceTracker);
+                    _dict[normalizedTypeName] = newType;
                 } else {
                     // Unify the new type with the existing type
-                    _dict[normalizedTypeNameId] = TypeCollision.UpdateTypeEntity(existingTypeEntity, newDynamicType);
+                    _dict[normalizedTypeName] = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                 }
                 return;
             }
@@ -290,11 +155,11 @@ namespace Microsoft.Scripting.Types {
         /// <summary>
         /// Loads all the types from all assemblies that contribute to the current namespace (but not child namespaces)
         /// </summary>
-        void LoadAllTypes() {
+        private void LoadAllTypes() {
             foreach (TypeNames typeNameList in _typeNames.Values) {
                 foreach (string typeName in typeNameList.GetNormalizedTypeNames()) {
                     object value;
-                    if (!TryGetMember(SymbolTable.StringToId(typeName), out value)) {
+                    if (!TryGetValue(SymbolTable.StringToId(typeName), out value)) {
                         Debug.Assert(false, "We should never get here as TryGetMember should raise a TypeLoadException");
                         throw new TypeLoadException(typeName);
                     }
@@ -304,12 +169,18 @@ namespace Microsoft.Scripting.Types {
 
         #endregion
 
+        public override string Name {
+            get {
+                return _fullName;
+            }
+        }
+
         protected void DiscoverAllTypes(Assembly assem) {
-            ReflectedPackage previousPackage = null;
+            NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
             foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem)) {
-                ReflectedPackage package;
+                NamespaceTracker package;
                 Debug.Assert(typeName.Namespace != String.Empty);
                 if (typeName.Namespace == previousFullNamespace) {
                     // We have a cache hit. We dont need to call GetOrMakePackageHierarchy (which generates
@@ -331,13 +202,13 @@ namespace Microsoft.Scripting.Types {
         /// <param name="assem"></param>
         /// <param name="fullNamespace">Full namespace name. It can be null (for top-level types)</param>
         /// <returns></returns>
-        private ReflectedPackage GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
+        private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
             if (fullNamespace == null) {
                 // null is the top-level namespace
                 return this;
             }
 
-            ReflectedPackage ret = this;
+            NamespaceTracker ret = this;
             string[] pieces = fullNamespace.Split(Type.Delimiter);
             for (int i = 0; i < pieces.Length; i++) {
                 ret = ret.GetOrMakeChildPackage(pieces[i], assem);
@@ -353,7 +224,7 @@ namespace Microsoft.Scripting.Types {
         /// 2. Previous calls to GetCustomMemberNames (eg. "from foo import *" in Python) would not have included this type.
         /// 3. This does not deal with new namespaces added to the assembly
         /// </summary>
-        IConstructorWithCodeContext CheckForUnlistedType(string nameString) {
+        private MemberTracker CheckForUnlistedType(string nameString) {
             string fullTypeName = GetFullChildName(nameString);
             foreach (Assembly assem in _packageAssemblies) {
                 Type type = assem.GetType(fullTypeName, false);
@@ -366,23 +237,34 @@ namespace Microsoft.Scripting.Types {
                     continue;
                 }
 
-                DynamicType dynamicType = DynamicHelpers.GetDynamicTypeFromType(type);
                 // We dont use TypeCollision.UpdateTypeEntity here because we do not handle generic type names                    
-                return dynamicType;
+                return ReflectionCache.GetTypeTracker(type);
             }
 
             return null;
         }
 
-        protected bool TryGetMember(SymbolId name, out object value) {
+        #region IAttributesCollection Members
+
+        public void Add(SymbolId name, object value) {
+            throw new InvalidOperationException();
+        }
+
+        public bool TryGetValue(SymbolId name, out object value) {
+            MemberTracker tmp;
+            bool res = TryGetValue(name, out tmp);
+            value = tmp;
+            return res;
+        }
+
+        public bool TryGetValue(SymbolId name, out MemberTracker value) {
             LoadNamespaces();
 
-            if (_dict.TryGetValue(name, out value)) {
-                if (value == Uninitialized.Instance) return false;
+            if (_dict.TryGetValue(SymbolTable.IdToString(name), out value)) {
                 return true;
             }
 
-            IConstructorWithCodeContext existingTypeEntity = null;
+            MemberTracker existingTypeEntity = null;
             string nameString = SymbolTable.IdToString(name);
 
             if (nameString.IndexOf(Type.Delimiter) != -1) {
@@ -397,7 +279,7 @@ namespace Microsoft.Scripting.Types {
                     continue;
                 }
 
-                existingTypeEntity = kvp.Value.UpdateTypeEntity(existingTypeEntity, nameString);
+                existingTypeEntity = kvp.Value.UpdateTypeEntity((TypeTracker)existingTypeEntity, nameString);
             }
 
             if (existingTypeEntity == null) {
@@ -405,7 +287,7 @@ namespace Microsoft.Scripting.Types {
             }
 
             if (existingTypeEntity != null) {
-                _dict[name] = existingTypeEntity;
+                _dict[SymbolTable.IdToString(name)] = existingTypeEntity;
                 value = existingTypeEntity;
                 return true;
             }
@@ -413,74 +295,122 @@ namespace Microsoft.Scripting.Types {
             return false;
         }
 
-        #region ICustomMembers Members
+        public bool Remove(SymbolId name) {
+            throw new InvalidOperationException();
+        }
 
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            if (TryGetMember(name, out value)) {
-                return true;
+        public bool ContainsKey(SymbolId name) {
+            object dummy;
+            return TryGetValue(name, out dummy);
+        }
+
+        public object this[SymbolId name] {
+            get {
+                object res;
+                if (TryGetValue(name, out res)) {
+                    return res;
+                }
+                throw new KeyNotFoundException();
             }
-
-            return DynamicHelpers.GetDynamicTypeFromType(typeof(ReflectedPackage)).TryGetBoundMember(
-                context,
-                this,
-                name,
-                out value);
+            set {
+                throw new InvalidOperationException();
+            }
         }
 
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetCustomMember(context, name, out value);
-        }
+        public IDictionary<SymbolId, object> SymbolAttributes {
+            get {
+                LoadNamespaces();
 
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            _dict[name] = value;
-        }
-
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            LoadNamespaces();
-
-            if (!_dict.ContainsKey(name)) throw new MissingMemberException(String.Format("could't find {0}", SymbolTable.IdToString(name)));
-
-            _dict[name] = Uninitialized.Instance;
-            return true;
-        }
-
-        public IList<object> GetCustomMemberNames(CodeContext context) {
-            LoadNamespaces();
-
-            List<object> res = new List<object>(_dict.AsObjectKeyedDictionary().Keys);
-
-            foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
-                foreach (string typeName in kvp.Value.GetNormalizedTypeNames()) {
-                    if (!res.Contains(typeName)) {
-                        res.Add(typeName);
+                Dictionary<SymbolId, object> res = new Dictionary<SymbolId, object>();
+                foreach (KeyValuePair<object, object> kvp in this) {
+                    string strkey = kvp.Key as string;
+                    if (strkey != null) {
+                        res[SymbolTable.StringToId(strkey)] = kvp.Value;
                     }
                 }
+
+                return res;
+            }
+        }
+
+        public void AddObjectKey(object name, object value) {
+            throw new InvalidOperationException();
+        }
+
+        public bool TryGetObjectValue(object name, out object value) {
+            string str = name as string;
+            if (str != null) {
+                return TryGetValue(SymbolTable.StringToId(str), out value);
             }
 
-            res.Sort();
+            value = null;
+            return false;
+        }
+
+        public bool RemoveObjectKey(object name) {
+            throw new InvalidOperationException();
+        }
+
+        public bool ContainsObjectKey(object name) {
+            object dummy;
+            return TryGetObjectValue(name, out dummy);
+        }
+
+        public IDictionary<object, object> AsObjectKeyedDictionary() {
+            LoadNamespaces();
+
+            Dictionary<object, object> res = new Dictionary<object, object>();
+            foreach (KeyValuePair<string, MemberTracker> kvp in _dict) {
+                res[kvp.Key] = kvp.Value;
+            }
             return res;
         }
 
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            LoadNamespaces();
-            LoadAllTypes();
+        public int Count {
+            get { return _dict.Count; }
+        }
 
-            return _dict.AsObjectKeyedDictionary();
+        public ICollection<object> Keys {
+            get {
+                LoadNamespaces();
+
+                List<object> res = new List<object>();
+                foreach (string s in _dict.Keys) res.Add(s);
+
+                foreach (KeyValuePair<Assembly, TypeNames> kvp in _typeNames) {
+                    foreach (string typeName in kvp.Value.GetNormalizedTypeNames()) {
+                        if (!res.Contains(typeName)) {
+                            res.Add(typeName);
+                        }
+                    }
+                }
+
+                res.Sort();
+                return res;
+            }
         }
 
         #endregion
 
-        internal static void PublishType(Type t) {
-            EventHandler<TypePublishedEventArgs> tp = TypePublished;
-            if (tp != null) {
-                tp(t.Assembly, new TypePublishedEventArgs(t));
+        #region IEnumerable<KeyValuePair<object,object>> Members
+
+        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+            foreach (object key in Keys) {
+                yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
             }
         }
 
-        /// <summary>
-        /// Provides notification of when a type is loaded so that a language can customize it appropriately.
-        /// </summary>
-        public static event EventHandler<TypePublishedEventArgs> TypePublished;
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            foreach (object key in Keys) {
+                yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
+            }
+        }
+
+        #endregion
 
         public IList<Assembly> PackageAssemblies {
             get {
@@ -494,13 +424,9 @@ namespace Microsoft.Scripting.Types {
             }
         }
 
-        protected void SetTopPackage(TopReflectedPackage pkg) {
+        protected void SetTopPackage(TopNamespaceTracker pkg) {
             _topPackage = pkg;
         }
-
-        #region Private Implementation Details
-
-        #endregion
 
         /// <summary>
         /// This stores all the public non-nested type names in a single namespace and from a single assembly.
@@ -522,27 +448,27 @@ namespace Microsoft.Scripting.Types {
 
             internal bool Contains(string normalizedTypeName) {
                 Debug.Assert(normalizedTypeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
-                Debug.Assert(TypeCollision.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
+                Debug.Assert(TypeGroup.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
 
                 return _simpleTypeNames.Contains(normalizedTypeName) || _genericTypeNames.ContainsKey(normalizedTypeName);
             }
 
-            internal IConstructorWithCodeContext UpdateTypeEntity(IConstructorWithCodeContext existingTypeEntity, string normalizedTypeName) {
+            internal MemberTracker UpdateTypeEntity(TypeTracker existingTypeEntity, string normalizedTypeName) {
                 Debug.Assert(normalizedTypeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
-                Debug.Assert(TypeCollision.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
+                Debug.Assert(TypeGroup.GetNormalizedTypeName(normalizedTypeName) == normalizedTypeName);
 
                 // Look for a non-generic type
                 if (_simpleTypeNames.Contains(normalizedTypeName)) {
-                    DynamicType newDynamicType = LoadType(_assembly, GetFullChildName(normalizedTypeName));
-                    existingTypeEntity = TypeCollision.UpdateTypeEntity(existingTypeEntity, newDynamicType);
+                    Type newType = LoadType(_assembly, GetFullChildName(normalizedTypeName));
+                    existingTypeEntity = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                 }
 
                 // Look for generic types
                 if (_genericTypeNames.ContainsKey(normalizedTypeName)) {
                     List<string> actualNames = _genericTypeNames[normalizedTypeName];
                     foreach (string actualName in actualNames) {
-                        DynamicType newDynamicType = LoadType(_assembly, GetFullChildName(actualName));
-                        existingTypeEntity = TypeCollision.UpdateTypeEntity(existingTypeEntity, newDynamicType);
+                        Type newType = LoadType(_assembly, GetFullChildName(actualName));
+                        existingTypeEntity = TypeGroup.UpdateTypeEntity(existingTypeEntity, ReflectionCache.GetTypeTracker(newType));
                     }
                 }
 
@@ -552,7 +478,7 @@ namespace Microsoft.Scripting.Types {
             internal void AddTypeName(string typeName) {
                 Debug.Assert(typeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
 
-                string normalizedName = TypeCollision.GetNormalizedTypeName(typeName);
+                string normalizedName = TypeGroup.GetNormalizedTypeName(typeName);
                 if (normalizedName == typeName) {
                     _simpleTypeNames.Add(typeName);
                 } else {
@@ -585,18 +511,76 @@ namespace Microsoft.Scripting.Types {
                 return normalizedTypeNames;
             }
         }
-    }
 
-    public class TypePublishedEventArgs : EventArgs {
-        private Type _type;
+        #region IDynamicObject Members
 
-        public TypePublishedEventArgs(Type type) {
-            _type = type;
+        public LanguageContext LanguageContext {
+            get { return InvariantContext.Instance; }
         }
 
-        public Type Type {
+        public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
+            if (action.Kind == ActionKind.GetMember) {
+                return MakeGetMemberRule<T>((GetMemberAction)action, context);
+            }
+            return null;
+        }
+
+        private StandardRule<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context) {
+            object value;
+            if (TryGetValue(action.Name, out value)) {
+                Debug.Assert(value is MemberTracker);
+
+                StandardRule<T> rule = new StandardRule<T>();
+                rule.MakeTest(typeof(NamespaceTracker));
+                rule.AddTest(
+                    Ast.Ast.Equal(
+                        Ast.Ast.ReadProperty(
+                            Ast.Ast.Cast(rule.Parameters[0], typeof(NamespaceTracker)),
+                            typeof(NamespaceTracker).GetProperty("Id")
+                        ),
+                        Ast.Ast.Constant(Id)
+                    )
+                );
+
+                Expression target = context.LanguageContext.Binder.ReturnMemberTracker((MemberTracker)value);
+
+                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+                return rule;
+            }
+            return null;
+        }
+
+        #endregion
+
+        public int Id {
             get {
-                return _type;
+                return _id;
+            }
+        }
+
+        #region IMembersList Members
+
+        public IList<object> GetCustomMemberNames(CodeContext context) {
+            return (IList<object>)Keys;
+        }
+
+        #endregion
+
+        public override TrackerTypes MemberType {
+            get { return TrackerTypes.Namespace; }
+        }
+
+        public override Type DeclaringType {
+            get { return null; }
+        }
+
+        protected void UpdateId() {
+            _id = Interlocked.Increment(ref _masterId);
+            foreach (KeyValuePair<string, MemberTracker> kvp in _dict) {
+                NamespaceTracker ns = kvp.Value as NamespaceTracker;
+                if (ns == null) continue;
+
+                ns.UpdateId();
             }
         }
     }

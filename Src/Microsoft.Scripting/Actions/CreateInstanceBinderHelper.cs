@@ -32,21 +32,19 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public override StandardRule<T> MakeRule() {
-            DynamicType dt = Arguments[0] as DynamicType;
-            if (dt == null || !dt.IsSystemType) {   // base CreateInstance doesn't know how to create non-system types...
-                Type t = CompilerHelpers.GetType(Arguments[0]);
-                if (typeof(IConstructorWithCodeContext).IsAssignableFrom(t)) {
-                    // TODO: This should go away when IConstructorWCC goes away.
-                    Debug.Assert(!Action.HasKeywordArgument());
+            Type t = CompilerHelpers.GetType(Arguments[0]);
+            if (typeof(IConstructorWithCodeContext).IsAssignableFrom(t)) {
+                // TODO: This should go away when IConstructorWCC goes away.
+                Debug.Assert(!Action.HasKeywordArgument());
 
-                    Expression call = Ast.Call(Rule.Parameters[0], typeof(IConstructorWithCodeContext).GetMethod("Construct"), GetICallableParameters(t, Rule));
+                Expression call = Ast.Call(Rule.Parameters[0], typeof(IConstructorWithCodeContext).GetMethod("Construct"), GetICallableParameters(t, Rule));
 
-                    Rule.SetTarget(Rule.MakeReturn(Binder, call));
-                    Rule.MakeTest(t);
+                Rule.SetTarget(Rule.MakeReturn(Binder, call));
+                Rule.MakeTest(t);
 
-                    return Rule;
-                }
+                return Rule;
             }
+            
             return base.MakeRule();
         }
 
@@ -57,53 +55,22 @@ namespace Microsoft.Scripting.Actions {
             if (t != null) {
                 Test = Ast.AndAlso(Test, Ast.Equal(Rule.Parameters[0], Ast.RuntimeConstant(target)));
 
-                if (t.IsArray) {
-                    // The JIT verifier doesn't like new int[](3) even though it appears as a ctor.
-                    // We could do better and return newarr in the future.
-                    return new MethodBase[] { GetArrayCtor(t) };
-                }
-
-                BindingFlags bf = BindingFlags.Instance | BindingFlags.Public;
-                if (ScriptDomainManager.Options.PrivateBinding) {
-                    bf |= BindingFlags.NonPublic;
-                }
-
-                ConstructorInfo[] ci = t.GetConstructors(bf);
-                
-                if (t.IsValueType) {
-                    // structs don't define a parameterless ctor, add a generic method for that.
-                    return ArrayUtils.Insert<MethodBase>(GetStructDefaultCtor(t), ci);
-                }
-
-                return ci;
+                return CompilerHelpers.GetConstructors(t);
             }
 
             return null;
         }
         
         private static Type GetTargetType(object target) {
-            Type t = target as Type;
-            if (t == null) {
-                DynamicType dt = target as DynamicType;
-                if (dt != null) {
-                    t = dt.UnderlyingSystemType;
-                }
+            TypeTracker tt = target as TypeTracker;
+            if (tt != null) {
+                return tt.Type;
             }
-            return t;
+            return target as Type;
         }
-
-        private MethodBase GetStructDefaultCtor(Type t) {
-            return typeof(RuntimeHelpers).GetMethod("CreateInstance").MakeGenericMethod(t);
-        }
-
-        private MethodBase GetArrayCtor(Type t) {
-            return typeof(RuntimeHelpers).GetMethod("CreateArray").MakeGenericMethod(t.GetElementType());
-        }
-
+       
         protected override void MakeCannotCallRule(Type type) {
             string name = type.Name;
-            DynamicType dt = Arguments[0] as DynamicType;
-            if (dt != null) name = dt.Name;
             Type t = Arguments[0] as Type;
             if (t != null) name = t.Name;
 

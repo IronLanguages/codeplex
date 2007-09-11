@@ -50,9 +50,23 @@ using IronPython.Runtime.Operations;
                 case ActionKind.DoOperation:
                     return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
                 case ActionKind.GetMember:
-                    return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action).MakeRule(args);
+                    return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
                 case ActionKind.Call:
-                    return new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
+                    // if call fails Python will try and create an instance as it treats these two operations as the same.
+                    StandardRule<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
+                    if (rule == null) {
+                        rule = base.MakeRule<T>(context, action, args);
+                        // if we know we're callable we won't produce a rule - eventually this interface goes away.
+                        if (rule.IsError && !(args[0] is ICallableWithCodeContext)) {
+                            // try CreateInstance...
+                            CreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((CallAction)action);
+                            StandardRule<T> newRule = GetRule<T>(context, createAct, args);
+                            if (!newRule.IsError) {
+                                return newRule;
+                            }
+                        }
+                    }
+                    return rule;
                 default:
                     return null;
             }
@@ -269,7 +283,7 @@ using IronPython.Runtime.Operations;
 
         #region .NET member binding
 
-        public override MemberInfo[] GetMember(Action action, Type type, string name) {
+        public override MemberGroup GetMember(Action action, Type type, string name) {
             // Python type customization:
             switch (name) {
                 case "__str__":
@@ -300,8 +314,8 @@ using IronPython.Runtime.Operations;
 
 
             // normal binding
-            MemberInfo[] res = base.GetMember(action, type, name);
-            if (res.Length > 0) {
+            MemberGroup res = base.GetMember(action, type, name);
+            if (res.Count > 0) {
                 return res;
             }
             
@@ -313,12 +327,12 @@ using IronPython.Runtime.Operations;
                     const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
                     
                     res = type.GetMember(memberName, bf);
-                    if (res.Length > 0) {
+                    if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
                     }
                     
                     res = type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf);
-                    if (res.Length > 0) {
+                    if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
                     }
                 }
@@ -326,7 +340,7 @@ using IronPython.Runtime.Operations;
 
             // Python exposes protected members as public            
             res = ArrayUtils.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
-            if (res.Length > 0) {
+            if (res.Count > 0) {
                 return res;
             }
 
@@ -334,10 +348,11 @@ using IronPython.Runtime.Operations;
             EnsureMemberMapping();
             string[] newNames;
             if (_memberMapping.TryGetValue(name, out newNames)) {
-                List<MemberInfo> oldRes = new List<MemberInfo>();
+                List<MemberTracker> oldRes = new List<MemberTracker>();
                 foreach (string newName in newNames) {
                     oldRes.AddRange(base.GetMember(action, type, newName));
                 }
+                
                 return oldRes.ToArray();
             }
 
@@ -367,6 +382,20 @@ using IronPython.Runtime.Operations;
             );
         }
 
+        public override Statement MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(this,
+                Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Constant(
+                        String.Format("cannot delete attribute '{0}' of builtin type '{1}'",
+                            name,
+                            DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+                        )
+                    )
+                )
+            );
+        }
+
         private bool ProtectedOnly(MemberInfo input) {
             switch (input.MemberType) {
                 case MemberTypes.Method:
@@ -388,16 +417,16 @@ using IronPython.Runtime.Operations;
         /// 
         /// This matches the v1.0 behavior of private binding.
         /// </summary>
-        private MemberInfo[] FilterFieldAndEvent(MemberInfo []members) {
-            MemberTypes mt = 0;
-            foreach (MemberInfo mi in members) {
+        private MemberGroup FilterFieldAndEvent(MemberGroup members) {
+            TrackerTypes mt = TrackerTypes.None;
+            foreach (MemberTracker mi in members) {
                 mt |= mi.MemberType;
             }
 
-            if (mt == (MemberTypes.Event | MemberTypes.Field)) {
-                List<MemberInfo> res = new List<MemberInfo>();
-                foreach (MemberInfo mi in members) {
-                    if (mi.MemberType == MemberTypes.Event) {
+            if (mt == (TrackerTypes.Event | TrackerTypes.Field)) {
+                List<MemberTracker> res = new List<MemberTracker>();
+                foreach (MemberTracker mi in members) {
+                    if (mi.MemberType == TrackerTypes.Event) {
                         res.Add(mi);
                     }
                 }
@@ -463,6 +492,58 @@ using IronPython.Runtime.Operations;
 
         internal static void RegisterType(Type extended, Type extension) {
             _extTypes[extended] = extension;
+        }
+
+        protected override bool AllowKeywordArgumentConstruction(Type t) {
+            return !PythonTypeCustomizer.IsPythonType(t);
+        }
+
+        protected override Expression ReturnMemberTracker(MemberTracker memberTracker) {
+            switch (memberTracker.MemberType) {
+                case TrackerTypes.TypeGroup:
+                    return Ast.RuntimeConstant(memberTracker);
+                case TrackerTypes.Type:
+                    return ReturnTypeTracker((TypeTracker)memberTracker);
+                case TrackerTypes.MemberGroup:
+                    // member group
+                    return ReturnMemberGroup((MemberGroup)memberTracker);
+            }
+
+            return base.ReturnMemberTracker(memberTracker);
+        }
+
+        private static Expression ReturnTypeTracker(TypeTracker memberTracker) {
+            // all non-group types get exposed as DynamicType's
+            return Ast.RuntimeConstant(DynamicHelpers.GetDynamicTypeFromType(memberTracker.Type));
+        }
+
+        private Expression ReturnMemberGroup(MemberGroup memberGroup) {
+            TrackerTypes types = TrackerTypes.None;
+            foreach (MemberTracker mt in memberGroup) {
+                types |= mt.MemberType;
+            }
+
+            switch (types) {
+                case TrackerTypes.Event:
+                    return Ast.RuntimeConstant(ReflectionCache.GetReflectedEvent(((EventTracker)memberGroup[0]).Event));
+                case TrackerTypes.Field:
+                    return Ast.RuntimeConstant(ReflectionCache.GetReflectedField(((FieldTracker)memberGroup[0]).Field));
+                case TrackerTypes.Property:
+                    PropertyTracker pt = (PropertyTracker)memberGroup[0];
+                    ReflectedPropertyTracker rpt = pt as ReflectedPropertyTracker;
+                    if (rpt != null) {
+                        if (rpt.Property.GetIndexParameters().Length > 0) {
+                            return Ast.RuntimeConstant(ReflectionCache.GetReflectedIndexer(rpt.Property));
+                        } else {
+                            return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property, rpt.GetGetMethod(), rpt.GetSetMethod(), NameType.Property));
+                        }
+                    }
+
+                    throw new InvalidOperationException();
+                default:
+                    return base.ReturnMemberTracker(memberGroup);
+            }
+
         }
     }
 }

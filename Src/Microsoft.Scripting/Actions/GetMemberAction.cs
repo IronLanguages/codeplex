@@ -24,7 +24,11 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// The result of the get should produce a value that is bound to the instance it was extracted from, if possible.
         /// </summary>
-        Bound = 0x01
+        Bound = 0x01,
+        /// <summary>
+        /// Instead of throwing the binder will return OperationFailed.Value if the member does not exist or is write-only.
+        /// </summary>
+        NoThrow,
     }
 
     public class GetMemberAction : MemberAction, IEquatable<GetMemberAction> {
@@ -66,6 +70,12 @@ namespace Microsoft.Scripting.Actions {
         public bool IsBound {
             get {
                 return (_flags & GetMemberBindingFlags.Bound) != 0;
+            }
+        }
+
+        public bool IsNoThrow {
+            get {
+                return (_flags & GetMemberBindingFlags.NoThrow) != 0;
             }
         }
 

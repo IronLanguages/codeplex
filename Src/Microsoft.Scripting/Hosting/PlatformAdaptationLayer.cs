@@ -22,6 +22,7 @@ using System.Collections;
 using System.IO;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -50,6 +51,7 @@ namespace Microsoft.Scripting.Hosting {
             foreach (string asm in new string[] {
                 "Microsoft.Scripting",
                 "Microsoft.Scripting.Silverlight",
+                "System.Silverlight.Scripting",
                 "IronPython",
                 "IronPython.Modules",
                 "Microsoft.JScript.Compiler",
@@ -75,7 +77,7 @@ namespace Microsoft.Scripting.Hosting {
 #if !SILVERLIGHT
             return Assembly.Load(name);
 #else
-            throw new NotImplementedException();
+            return Assembly.Load(LookupFullName(name));
 #endif
         }
 
@@ -90,6 +92,8 @@ namespace Microsoft.Scripting.Hosting {
         public virtual void TerminateScriptExecution(int exitCode) {
 #if !SILVERLIGHT
             System.Environment.Exit(exitCode);
+#else
+            EnvironmentUtils.ExitProcess(exitCode);
 #endif
         }
 
@@ -155,10 +159,6 @@ namespace Microsoft.Scripting.Hosting {
 #else
             throw new NotImplementedException();
 #endif
-        }
-
-        public virtual Action<Exception> EventExceptionHandler {
-            get { return null; }
         }
 
     }

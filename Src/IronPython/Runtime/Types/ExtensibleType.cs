@@ -92,7 +92,7 @@ namespace IronPython.Runtime.Types {
             return Value.DeleteCustomMember(context, name);
         }
 
-        IList<object> ICustomMembers.GetCustomMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetCustomMemberNames(CodeContext context) {
             IList<object> res = Value.GetCustomMemberNames(context);
             foreach (object x in TypeCache.DynamicType.GetCustomMemberNames(context)){
                 res.Add(x);

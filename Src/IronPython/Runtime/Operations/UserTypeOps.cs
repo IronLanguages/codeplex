@@ -88,6 +88,7 @@ namespace IronPython.Runtime.Operations {
             switch (action.Kind) {
                 case ActionKind.GetMember: return MakeGetMemberRule<T>(context, (GetMemberAction)action, args);
                 case ActionKind.SetMember: return MakeSetMemberRule<T>(context, (SetMemberAction)action, args);
+                case ActionKind.DeleteMember: return MakeDeleteMemberRule<T>(context, (DeleteMemberAction)action, args);
                 case ActionKind.DoOperation: return MakeOperationRule<T>(context, (DoOperationAction)action, args);
                 case ActionKind.Call: return MakeCallRule<T>(context, (CallAction)action, args);
                     
@@ -100,7 +101,7 @@ namespace IronPython.Runtime.Operations {
 
             ISuperDynamicObject sdo = (ISuperDynamicObject)args[0];
 
-            rule.MakeTest(sdo.DynamicType);
+            PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
 
             DynamicTypeSlot callSlot;
             Statement body = rule.MakeError(context.LanguageContext.Binder,
@@ -157,7 +158,7 @@ namespace IronPython.Runtime.Operations {
                 MakeGetAttributeRule<T>(context, action, rule, tmp);
             } else if (!(args[0] is ICustomMembers)) {
                 // fast path for accessing properties from a derived type.
-                rule.MakeTest(sdo.DynamicType);
+                PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
 
                 Type t = args[0].GetType();
                 PropertyInfo pi = t.GetProperty(SymbolTable.IdToString(action.Name));
@@ -243,16 +244,20 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 // raise an error if nothing else succeeds (TODO: need to reconcile error handling).
-                body = MakeTypeError<T>(context, sdo.DynamicType, action, rule, body);
+                if (action.IsNoThrow) {
+                    body = Ast.Block(body, ReturnOperationFailed<T>(context, rule));
+                } else {
+                    body = MakeTypeError<T>(context, sdo.DynamicType, action, rule, body);
+                }
 
                 rule.SetTarget(body);
             } else {
                 // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
                 // we'll need to call the base GetRule instead and merge that with our normal lookup
                 // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
-                rule.MakeTest(sdo.DynamicType);
+                PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
 
-                rule.SetTarget(MakeCustomMembersBody(context, action, DynamicTypeOps.GetName(sdo.DynamicType), rule));       
+                rule.SetTarget(MakeCustomMembersGetBody(context, action, DynamicTypeOps.GetName(sdo.DynamicType), rule));       
             }
 
             return rule;
@@ -294,7 +299,7 @@ namespace IronPython.Runtime.Operations {
                 rule.SetTarget(body);
         }
 
-        internal static Statement MakeCustomMembersBody<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
+        internal static Statement MakeCustomMembersGetBody<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
             Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
 
             return Ast.IfThenElse(
@@ -306,14 +311,57 @@ namespace IronPython.Runtime.Operations {
                             Ast.Read(tmp)
                         ),
                         rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp)),
-                        rule.MakeError(context.LanguageContext.Binder,
-                            Ast.Call(null,
-                                typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                                Ast.Constant(typeName),
-                                Ast.Constant(action.Name)
-                            )
-                        )
+                        MakeMissingAttributeError<T>(context, action, typeName, rule)
                     );
+        }
+
+        internal static Statement MakeCustomMembersSetBody<T>(CodeContext context, SetMemberAction action, string typeName, StandardRule<T> rule) {
+            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+
+            return rule.MakeReturn(context.LanguageContext.Binder, 
+                Ast.Comma(
+                    1,
+                    Ast.Call(
+                        Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                        typeof(ICustomMembers).GetMethod("SetCustomMember"),
+                        Ast.CodeContext(),
+                        Ast.Constant(action.Name),
+                        rule.Parameters[1]
+                    ),
+                    rule.Parameters[1]
+                )
+            );                                           
+        }
+
+        internal static Statement MakeCustomMembersDeleteBody<T>(CodeContext context, DeleteMemberAction action, string typeName, StandardRule<T> rule) {
+            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+
+            return rule.MakeReturn(context.LanguageContext.Binder,
+                Ast.Call(
+                    Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                    typeof(ICustomMembers).GetMethod("DeleteCustomMember"),
+                    Ast.CodeContext(),
+                    Ast.Constant(action.Name)
+                )
+            );
+        }
+
+        private static Statement MakeMissingAttributeError<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
+            if (action.IsNoThrow) {
+                return ReturnOperationFailed<T>(context, rule);
+            } else {
+                return MakeThrowingAttributeError<T>(context, action, typeName, rule);
+            }
+        }
+
+        private static Statement MakeThrowingAttributeError<T>(CodeContext context, MemberAction action, string typeName, StandardRule<T> rule) {
+            return rule.MakeError(context.LanguageContext.Binder,
+                Ast.Call(null,
+                    typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
+                    Ast.Constant(typeName),
+                    Ast.Constant(action.Name)
+                )
+            );
         }
         
         /// <summary>
@@ -327,7 +375,7 @@ namespace IronPython.Runtime.Operations {
         private static bool TryGetGetAttribute(CodeContext context, ISuperDynamicObject sdo, out DynamicTypeSlot dts) {
             if (sdo.DynamicType.TryResolveSlot(context, Symbols.GetAttribute, out dts)) {
                 BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
-                if (bmd == null || bmd.DeclaringType != TypeCache.Object ||
+                if (bmd == null || bmd.DeclaringType != typeof(object) ||
                     bmd.Template.Targets.Length != 1 ||
                     bmd.Template.Targets[0].DeclaringType != typeof(ObjectOps) ||
                     bmd.Template.Targets[0].Name != "__getattribute__") {
@@ -403,18 +451,31 @@ namespace IronPython.Runtime.Operations {
                         ),
                         Ast.ReadDefined(tmp)
                     ),
-                    rule.MakeReturn(context.LanguageContext.Binder,
-                        Ast.Action.Call(
-                            CallAction.Simple,
-                            typeof(object),
-                            Ast.ReadDefined(tmp),
-                            Ast.Constant(SymbolTable.IdToString(action.Name))
-                        )
-                    )
-
+                    MakeGetAttrCall<T>(context, action, rule, tmp)
                 )
             );
             return body;
+        }
+
+        private static Statement MakeGetAttrCall<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Variable tmp) {
+            Statement ret = rule.MakeReturn(context.LanguageContext.Binder,
+                Ast.Action.Call(
+                    CallAction.Simple,
+                    typeof(object),
+                    Ast.ReadDefined(tmp),
+                    Ast.Constant(SymbolTable.IdToString(action.Name))
+                )
+            );
+
+            if (action.IsNoThrow) {
+                ret = Ast.Try(ret).Catch(typeof(MissingMemberException), ReturnOperationFailed<T>(context, rule));
+            }
+
+            return ret;
+        }
+
+        private static Statement ReturnOperationFailed<T>(CodeContext context, StandardRule<T> rule) {
+            return rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
         }
 
         private static BlockStatement MakeTypeError<T>(CodeContext context, DynamicType type, GetMemberAction action, StandardRule<T> rule, Statement body) {
@@ -432,7 +493,66 @@ namespace IronPython.Runtime.Operations {
                 
             );
         }
-        
+
+        private static Statement MakeSlotSet<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts) {
+            ReflectedProperty rp = dts as ReflectedProperty;
+            if (rp != null) {
+                // direct dispatch to the property...                
+                MethodInfo setter = rp.Setter;
+                if (setter.IsPublic && setter.DeclaringType.IsVisible) {
+                    Expression[] args = rule.Parameters;
+                    if (setter.IsStatic && !(rp is ReflectedExtensionProperty)) {
+                        args = new Expression[] { rule.Parameters[1] };
+                    }
+
+                    return
+                        rule.MakeReturn(
+                            context.LanguageContext.Binder,
+                            Ast.Comma(1,
+                                new BinderHelper<T, CallAction>(context, CallAction.Simple).MakeCallExpression(setter, args),
+                                rule.Parameters[1]
+                            )
+                        );
+                }
+            }
+
+            return 
+                Ast.If(
+                    Ast.Call(
+                        Ast.WeakConstant(dts),
+                        typeof(DynamicTypeSlot).GetMethod("TrySetValue"),
+                        Ast.CodeContext(),
+                        rule.Parameters[0],
+                        Ast.ReadProperty(
+                            Ast.Cast(
+                                rule.Parameters[0],
+                                typeof(ISuperDynamicObject)),
+                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        ),
+                        rule.Parameters[1]
+                    ),
+                    rule.MakeReturn(context.LanguageContext.Binder, rule.Parameters[1])                
+                );
+        }
+
+        private static Statement MakeSlotDelete<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts) {
+            return
+                Ast.If(
+                    Ast.Call(
+                        Ast.WeakConstant(dts),
+                        typeof(DynamicTypeSlot).GetMethod("TryDeleteValue"),
+                        Ast.CodeContext(),
+                        rule.Parameters[0],
+                        Ast.ReadProperty(
+                            Ast.Cast(
+                                rule.Parameters[0],
+                                typeof(ISuperDynamicObject)),
+                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        )
+                    ),
+                    rule.MakeReturn(context.LanguageContext.Binder, Ast.Null())
+                );
+        }
         private static BlockStatement MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts, Statement body, Variable tmp) {
             return Ast.Block(
                 body,
@@ -479,57 +599,250 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        private static StandardRule<T> MakeDynamicGetMemberRule<T>(SymbolId name, DynamicType targetType) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(targetType);
-            Expression expr = Ast.Call(null,
-                    typeof(PythonOps).GetMethod("GetBoundAttr"),
-                    Ast.CodeContext(),
-                    rule.Parameters[0],
-                    Ast.Constant(name));
-            rule.SetTarget(rule.MakeReturn(PythonEngine.CurrentEngine.DefaultBinder, expr));
-            return rule;
-        }
-
         private static StandardRule<T> MakeSetMemberRule<T>(CodeContext context, SetMemberAction action, object[] args) {
             ISuperDynamicObject sdo = args[0] as ISuperDynamicObject;
+            StandardRule<T> rule = new StandardRule<T>();
 
-            if (sdo.DynamicType.Version != DynamicType.DynamicVersion && !(args[0] is ICustomMembers)) {
-                DynamicTypeSlot dts;
-                sdo.DynamicType.TryResolveSlot(context, action.Name, out dts);
+            if (!(args[0] is ICustomMembers)) {
+                string templateType = null;
+                try {
+                    // call __setattr__ if it exists
+                    DynamicTypeSlot dts;
+                    if (sdo.DynamicType.TryResolveSlot(context, Symbols.SetAttr, out dts) && !IsStandardObjectMethod(dts)) {
+                        MakeSetAttrTarget<T>(context, action, sdo, rule, dts);
+                        templateType = "__setattr__";
+                        return rule;
+                    }
 
-                ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
-                if (rsp != null) {
-                    StandardRule<T> rule = new StandardRule<T>();
-                    rule.MakeTest(sdo.DynamicType);
-                    Variable tmp = rule.GetTemporary(typeof(object), "res");
+                    // then see if we have a set descriptor
+                    sdo.DynamicType.TryResolveSlot(context, action.Name, out dts);
+                    ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
+                    if (rsp != null) {
+                        MakeSlotsSetTarget<T>(context, rule, rsp);
+                        return rule;
+                    }
 
-                    // type has __slots__ defined for this member, call the setter directly
+                    if (dts != null && dts.IsSetDescriptor(context, sdo.DynamicType)) {
+                        rule.SetTarget(MakeSlotSet<T>(context, rule, dts));
+                        return rule;
+                    }
+
+                    // see if we can do a standard .NET binding...
+                    StandardRule<T> baseRule = new SetMemberBinderHelper<T>(context, action, args).MakeNewRule();
+                    if (!baseRule.IsError) {
+                        baseRule.AddTest(PythonBinderHelper.MakeTypeTest(baseRule, sdo.DynamicType, 0));
+                        return baseRule;
+                    }
+
+                    // finally if we have a dictionary set the value there.
+                    if (sdo.HasDictionary) {
+                        MakeDictionarySetTarget<T>(context, action, rule);
+                        templateType = "dictionary";
+                        return rule;
+                    }
+
+                    // otherwise it's an error
+                    rule.SetTarget(MakeThrowingAttributeError(context, action, sdo.DynamicType.Name, rule));
+                    return rule;
+                } finally {
+                    // make the test for the rule depending on if we support templating or not.
+                    if (templateType == null) {
+                        PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
+                    } else {
+                        MakeTemplatedSetMemberTest(context, action, sdo.DynamicType, rule, templateType);
+                    }
+                }
+            } else {
+                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
+                // we'll need to call the base GetRule instead and merge that with our normal lookup
+                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
+                PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
+
+                rule.SetTarget(MakeCustomMembersSetBody(context, action, DynamicTypeOps.GetName(sdo.DynamicType), rule));
+                return rule;
+            }
+        }
+
+        private static StandardRule<T> MakeDeleteMemberRule<T>(CodeContext context, DeleteMemberAction action, object[] args) {
+            ISuperDynamicObject sdo = args[0] as ISuperDynamicObject;
+            StandardRule<T> rule = new StandardRule<T>();
+            PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
+
+            if (!(args[0] is ICustomMembers)) {
+                if (action.Name == Symbols.Class) {
                     rule.SetTarget(
-                        rule.MakeReturn(
-                            context.LanguageContext.Binder,
-                            Ast.Assign(tmp,
-                                Ast.Call(null, rsp.SetterMethod, rule.Parameters[0], rule.Parameters[1])
+                        rule.MakeError(context.LanguageContext.Binder,
+                            Ast.New(
+                                typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                                Ast.Constant("can't delete __class__ attribute")
                             )
                         )
                     );
                     return rule;
                 }
-            }
 
-            return MakeDynamicSetMemberRule<T>(context, action, ((ISuperDynamicObject)args[0]).DynamicType);
+                // call __delattr__ if it exists
+                DynamicTypeSlot dts;
+                if (sdo.DynamicType.TryResolveSlot(context, Symbols.DelAttr, out dts) && !IsStandardObjectMethod(dts)) {
+                    MakeDeleteAttrTarget<T>(context, action, sdo, rule, dts);
+                    return rule;
+                }
+
+                // then see if we have a delete descriptor
+                sdo.DynamicType.TryResolveSlot(context, action.Name, out dts);
+                ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
+                if (rsp != null) {
+                    MakeSlotsDeleteTarget<T>(context, rule, rsp);
+                    return rule;
+                }
+
+                // finally if we have a dictionary set the value there.
+                if (sdo.HasDictionary) {
+                    Statement body = MakeDictionaryDeleteTarget<T>(context, action, rule);
+                    if (dts != null) {
+                        body = Ast.Block(MakeSlotDelete<T>(context, rule, dts), body);
+                    }
+
+                    rule.SetTarget(body);
+                    return rule;
+                }
+
+                if (dts != null) {
+                    rule.SetTarget(MakeSlotDelete<T>(context, rule, dts));
+                    return rule;
+                }
+
+                // otherwise it's an error
+                rule.SetTarget(MakeThrowingAttributeError(context, action, sdo.DynamicType.Name, rule));
+                return rule;
+            } else {
+                // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
+                // we'll need to call the base GetRule instead and merge that with our normal lookup
+                // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
+                rule.SetTarget(MakeCustomMembersDeleteBody(context, action, DynamicTypeOps.GetName(sdo.DynamicType), rule));
+                return rule;
+            }
         }
 
-        private static StandardRule<T> MakeDynamicSetMemberRule<T>(CodeContext context, SetMemberAction action, DynamicType targetType) {
+        private static void MakeSlotsSetTarget<T>(CodeContext context, StandardRule<T> rule, ReflectedSlotProperty rsp) {
+            MakeSlotsSetTarget(context, rule, rsp, rule.Parameters[1]);
+        }
+
+        private static void MakeSlotsDeleteTarget<T>(CodeContext context, StandardRule<T> rule, ReflectedSlotProperty rsp) {
+            MakeSlotsSetTarget(context, rule, rsp, Ast.ReadField(null, typeof(Uninitialized).GetField("Instance")));
+        }
+
+        private static void MakeSlotsSetTarget<T>(CodeContext context, StandardRule<T> rule, ReflectedSlotProperty rsp, Expression value) {
+            Variable tmp = rule.GetTemporary(typeof(object), "res");
+
+            // type has __slots__ defined for this member, call the setter directly
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Assign(tmp,
+                        Ast.Call(null, rsp.SetterMethod, rule.Parameters[0], value)
+                    )
+                )
+            );
+        }
+
+        private static Statement MakeDictionaryDeleteTarget<T>(CodeContext context, DeleteMemberAction action, StandardRule<T> rule) {
+            return 
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Call(
+                        null,
+                        typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
+                        Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                        Ast.Constant(action.Name)
+                    )
+                );
+        }
+
+        private static void MakeDictionarySetTarget<T>(CodeContext context, SetMemberAction action, StandardRule<T> rule) {
+            // return UserTypeOps.SetDictionaryValue(rule.Parameters[0], name, value);
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Call(
+                        null,
+                        typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
+                        Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                        rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
+                        rule.Parameters[1]
+                    )
+                )
+            );
+        }
+
+        private static void MakeSetAttrTarget<T>(CodeContext context, SetMemberAction action, ISuperDynamicObject sdo, StandardRule<T> rule, DynamicTypeSlot dts) {
+            Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
+            // call __setattr__
+            rule.SetTarget(
+                Ast.IfThenElse(
+                    Ast.Call(
+                        rule.AddTemplatedWeakConstant(typeof(DynamicTypeSlot), dts),
+                        typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
+                        Ast.CodeContext(),
+                        rule.Parameters[0],
+                        rule.AddTemplatedWeakConstant(typeof(DynamicType), sdo.DynamicType),
+                        Ast.Read(tmp)
+                    ),
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.Action.Call(
+                            CallAction.Simple,
+                            typeof(object),
+                            Ast.Read(tmp),
+                            rule.AddTemplatedConstant(typeof(string), SymbolTable.IdToString(action.Name)),
+                            rule.Parameters[1]
+                        )
+                    ),
+                    MakeThrowingAttributeError<T>(context, action, sdo.DynamicType.Name, rule)
+                )
+            );
+        }
+
+        private static void MakeDeleteAttrTarget<T>(CodeContext context, DeleteMemberAction action, ISuperDynamicObject sdo, StandardRule<T> rule, DynamicTypeSlot dts) {
+            Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
+            // call __delattr__
+            rule.SetTarget(
+                Ast.IfThenElse(
+                    Ast.Call(
+                        Ast.WeakConstant(dts),
+                        typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
+                        Ast.CodeContext(),
+                        rule.Parameters[0],
+                        Ast.WeakConstant(sdo.DynamicType),
+                        Ast.Read(tmp)
+                    ),
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.Action.Call(
+                            CallAction.Simple,
+                            typeof(object),
+                            Ast.Read(tmp),
+                            Ast.Constant(SymbolTable.IdToString(action.Name))
+                        )
+                    ),
+                    MakeThrowingAttributeError<T>(context, action, sdo.DynamicType.Name, rule)
+                )
+            );
+        }
+
+        private static bool IsStandardObjectMethod(DynamicTypeSlot dts) {
+            BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
+            if (bmd == null) return false;
+            return bmd.Template.Targets[0].DeclaringType == typeof(ObjectOps);
+        }
+
+        private static void MakeTemplatedSetMemberTest<T>(CodeContext context, SetMemberAction action, DynamicType targetType, StandardRule<T> rule, string templateType) {            
             bool altVersion = targetType.Version == DynamicType.DynamicVersion;
             string vername = altVersion ? "AlternateVersion" : "Version";
             int version = altVersion ? targetType.AlternateVersion : targetType.Version;
-            
-            StandardRule<T> rule = new StandardRule<T>();
-
             rule.SetTest(
                 Ast.AndAlso(
-                    rule.MakeTypeTestExpression(targetType.UnderlyingSystemType, rule.Parameters[0]),
+                    StandardRule.MakeTypeTestExpression(targetType.UnderlyingSystemType, rule.Parameters[0]),
                     Ast.Equal(
                         Ast.ReadProperty(
                             Ast.ReadProperty(
@@ -543,26 +856,29 @@ namespace IronPython.Runtime.Operations {
                 )
             );
 
-            Expression expr = Ast.Call(null,
-                    typeof(PythonOps).GetMethod("SetAttr"),
-                    Ast.CodeContext(),
-                    rule.Parameters[0],
-                    rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
-                    rule.Parameters[1]);
-            rule.SetTarget(rule.MakeReturn(PythonEngine.CurrentEngine.DefaultBinder, expr));
-
-            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, altVersion, context, action, rule);
-            return rule;
+            RuleBuilderCache<T>.ParameterizeSetMember(targetType.UnderlyingSystemType, altVersion, context, rule, templateType);
         }
 
         private static class RuleBuilderCache<T> {
-            public static void ParameterizeSetMember(Type type, bool versionOrAltVersion, CodeContext context, Action action, StandardRule<T> rule) {
+            private struct SetMemberKey {
+                public SetMemberKey(Type type, bool version, string templateType) {
+                    Type = type;
+                    VersionOrAltVersion = version;
+                    TemplateType = templateType;
+                }
+
+                public Type Type;
+                public bool VersionOrAltVersion;
+                public string TemplateType;
+            }
+
+            public static void ParameterizeSetMember(Type type, bool versionOrAltVersion, CodeContext context, StandardRule<T> rule, string templateType) {
                 TemplatedRuleBuilder<T> builder;
 
                 lock (SetMemberBuilders) {
-                    KeyValuePair<Type, bool> kvp = new KeyValuePair<Type, bool>(type, versionOrAltVersion);
-                    if (!SetMemberBuilders.TryGetValue(kvp, out builder)) {
-                        SetMemberBuilders[kvp] = rule.GetTemplateBuilder();
+                    SetMemberKey key = new SetMemberKey(type, versionOrAltVersion, templateType);
+                    if (!SetMemberBuilders.TryGetValue(key, out builder)) {
+                        SetMemberBuilders[key] = rule.GetTemplateBuilder();
                         return;
                     }
                 }
@@ -570,7 +886,7 @@ namespace IronPython.Runtime.Operations {
                 builder.CopyTemplateToRule(context, rule);                
             }
 
-            public static Dictionary<KeyValuePair<Type, bool>, TemplatedRuleBuilder<T>> SetMemberBuilders = new Dictionary<KeyValuePair<Type, bool>, TemplatedRuleBuilder<T>>();
+            private static Dictionary<SetMemberKey, TemplatedRuleBuilder<T>> SetMemberBuilders = new Dictionary<SetMemberKey, TemplatedRuleBuilder<T>>();
         }
 
 
@@ -585,7 +901,7 @@ namespace IronPython.Runtime.Operations {
 
                     SymbolId item = action.Operation == Operators.GetItem ? Symbols.GetItem : Symbols.SetItem;
 
-                    rule.MakeTest(DynamicTypeOps.ObjectTypes(args));
+                    PythonBinderHelper.MakeTest(rule, DynamicTypeOps.ObjectTypes(args));
 
                     if (sdo.DynamicType.TryResolveSlot(context, item, out dts)) {
 
@@ -650,7 +966,7 @@ namespace IronPython.Runtime.Operations {
                 bf = bmd.Template;
             }
 
-            return bf.DeclaringType.UnderlyingSystemType != type.UnderlyingSystemType.BaseType;            
+            return bf.DeclaringType != type.UnderlyingSystemType.BaseType;            
         }
 
         private static MethodCallExpression MakeIndexerError<T>(StandardRule<T> rule, SymbolId item) {
@@ -682,6 +998,31 @@ namespace IronPython.Runtime.Operations {
                 ),
                 Ast.ReadDefined(tmp)
             );
+        }
+
+        public static object SetDictionaryValue(ISuperDynamicObject self, SymbolId name, object value) {
+            IAttributesCollection dict = GetDictionary(self);
+
+            return dict[name] = value;
+        }
+
+        public static void RemoveDictionaryValue(ISuperDynamicObject self, SymbolId name) {
+            IAttributesCollection dict = self.Dict;
+            if (dict != null) {
+                if (dict.Remove(name)) {
+                    return;
+                }
+            }
+
+            throw PythonOps.AttributeErrorForMissingAttribute(self.DynamicType, name);
+        }
+
+        private static IAttributesCollection GetDictionary(ISuperDynamicObject self) {
+            IAttributesCollection dict = self.Dict;
+            if (dict == null) {
+                dict = self.SetDict(new SymbolDictionary());
+            }
+            return dict;
         }
 
         /// <summary>

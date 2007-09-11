@@ -255,7 +255,7 @@ namespace Microsoft.Scripting.Generation {
 
                 for (int i = 0; ; i++) {
                     string verifyName = string.Format(CultureInfo.InvariantCulture, "{0}_{1}_{2}{3}", assemblyName, i, rnd.Next(1, 100), assemblyExtension);
-                    verifyName = Path.Combine(pythonPath, verifyName);
+                    verifyName = Path.Combine(Path.GetTempPath(), verifyName);
 
                     try {
                         File.Copy(assemblyFile, verifyName);
@@ -265,7 +265,17 @@ namespace Microsoft.Scripting.Generation {
                     }
                 }
 
-                ProcessStartInfo psi = new ProcessStartInfo(peverifyPath, "\"" + verifyFile + "\"");
+                // copy any DLLs or EXEs created by the process during the run...
+                CopyFilesCreatedSinceStart(Path.GetTempPath(), Environment.CurrentDirectory);
+                CopyDirectory(Path.GetTempPath(), pythonPath);
+                if (ScriptDomainManager.Options.BinariesDirectory != null && ScriptDomainManager.Options.BinariesDirectory != Path.GetTempPath()) {
+                    CopyFilesCreatedSinceStart(Path.GetTempPath(), ScriptDomainManager.Options.BinariesDirectory);
+                }
+                
+                // /IGNORE=80070002 ignores errors related to files we can't find, this happens when we generate assemblies
+                // and then peverify the result.  Note if we can't resolve a token thats in an external file we still
+                // generate an error.
+                ProcessStartInfo psi = new ProcessStartInfo(peverifyPath, "/IGNORE=80070002 \"" + verifyFile + "\"");
                 psi.UseShellExecute = false;
                 psi.RedirectStandardOutput = true;
                 Process proc = Process.Start(psi);
@@ -283,11 +293,13 @@ namespace Microsoft.Scripting.Generation {
                 thread.Join();
                 exitCode = proc.ExitCode;
                 proc.Close();
-            } catch {
+            } catch(Exception e) {
+                strOut = "Unexpected exception: " + e.ToString();
                 exitCode = 1;
             }
 
             if (exitCode != 0) {
+                Console.WriteLine("Verification failed w/ exit code {0}: {1}", exitCode, strOut);
                 throw new VerificationException(String.Format(CultureInfo.CurrentCulture, 
                     Resources.VerificationException,
                     _outFileName, 
@@ -297,6 +309,40 @@ namespace Microsoft.Scripting.Generation {
 
             if (verifyFile != null) {
                 File.Delete(verifyFile);
+            }
+        }
+
+        private void CopyFilesCreatedSinceStart(string pythonPath, string dir) {
+            DateTime start = Process.GetCurrentProcess().StartTime;
+            foreach (string filename in Directory.GetFiles(dir)) {
+                FileInfo fi = new FileInfo(filename);
+                if (fi.Name != _outFileName) {
+                    if (fi.LastWriteTime - start >= TimeSpan.Zero) {
+                        try {
+                            File.Copy(filename, Path.Combine(pythonPath, fi.Name), true);
+                        } catch {
+                            Console.WriteLine("Error copying {0}", filename);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CopyDirectory(string to, string from) {
+            foreach (string filename in Directory.GetFiles(from)) {
+                FileInfo fi = new FileInfo(filename);
+                string toFile = Path.Combine(to, fi.Name);
+                FileInfo toInfo = new FileInfo(toFile);
+
+                if (fi.Extension.ToLower() == ".dll" || fi.Extension.ToLower() == ".exe") {
+                    if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
+                        try {
+                            File.Copy(filename, toFile, true);
+                        } catch { 
+                            Console.WriteLine("Error copying {0}", filename); 
+                        }
+                    }
+                }
             }
         }
 #endif

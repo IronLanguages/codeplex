@@ -438,4 +438,6 @@ else:
     import os
     newline = os.linesep
 
-
+is_peverify_run = False
+if is_cli:    
+    is_peverify_run = sys.exec_prefix.endswith("Debug") and "-X:SaveAssemblies" in System.Environment.CommandLine    

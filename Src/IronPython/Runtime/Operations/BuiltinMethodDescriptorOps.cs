@@ -49,15 +49,10 @@ namespace IronPython.Runtime.Operations {
 
             return String.Format("<classmethod object at {0}>", IdDispenser.GetId(self));
         }
-        /*
-                [PythonName("__get__")]
-                public static object GetAttribute(CodeContext context, BuiltinMethodDescriptor self, object instance) {
-                    return GetAttribute(context, instance, owner);
-                }
 
-                [PythonName("__get__")]
-                public static object GetAttribute(CodeContext context, BuiltinMethodDescriptor self, object instance, object owner) {
-                }
-         */
+        [SpecialName]
+        public static object __str__(BuiltinMethodDescriptor self) {
+            return String.Format("<method '{0}' of '{1}' objects>", self.Name, DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(self.DeclaringType)));
+        }
     }
 }

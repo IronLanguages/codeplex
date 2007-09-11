@@ -216,11 +216,11 @@ namespace IronPython.Runtime {
 
             // do not set names if null to make attribute getter pas thru:
             if (module.ModuleName != null) {
-                PythonModuleOps.SetName(module, module.ModuleName);
+                PythonModuleOps.Set__name__(module, module.ModuleName);
             }
 
             if (module.FileName != null) {
-                PythonModuleOps.SetFileName(module, module.FileName);
+                PythonModuleOps.Set__file__(module, module.FileName);
             }
 
             // If the filename is __init__.py then this is the initialization code
@@ -282,8 +282,8 @@ namespace IronPython.Runtime {
 
                 // We created the module and it only contains Python code. If the user changes
                 // __file__ we'll reload from that file. 
-                string fileName = PythonModuleOps.GetFileName(module);
-
+                string fileName = PythonModuleOps.Get__file__(module);
+                
                 // built-in module: TODO: explicitly mark builtin modules in module context?
                 if (fileName == null) {
                     PythonEngine.Importer.ReloadBuiltin(module);

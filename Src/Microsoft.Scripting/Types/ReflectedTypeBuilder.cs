@@ -26,6 +26,7 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Types {
     public delegate DynamicType TypeBuilderDelegate(Type t);
@@ -500,7 +501,7 @@ namespace Microsoft.Scripting.Types {
                         // Only inherit op_Implicit.  
                         if (!mi.IsSpecialName || mi.Name != "op_Implicit") continue;
 
-                        foreach (TransformedName tn in _transform(curType, TransformReason.Method)) {
+                        foreach (TransformedName tn in _transform(mi, TransformReason.Method)) {
                             if(tn.Name != null) {
                                 AddReflectedMethod(mi, defaultMembers);
                             }
@@ -521,14 +522,19 @@ namespace Microsoft.Scripting.Types {
 
                 foreach (TransformedName tn in _transform(type, TransformReason.NestedType)) {
                     if (tn.Name != null) {
-                        IConstructorWithCodeContext typeEntity = DynamicHelpers.GetDynamicTypeFromType(type);
-                        string name = TypeCollision.GetNormalizedTypeName(tn.Name);
+                        object typeEntity = DynamicHelpers.GetDynamicTypeFromType(type);
+                        string name = TypeGroup.GetNormalizedTypeName(tn.Name);
                         SymbolId nameId = SymbolTable.StringToId(name);
 
                         // Check for colliding generic types with the same name
                         object existingType;
                         if (TryGetValue(nameId, tn.Context, out existingType)) {
-                            typeEntity = TypeCollision.UpdateTypeEntity((IConstructorWithCodeContext)existingType, typeEntity);
+                            DynamicType existingDt = existingType as DynamicType;
+                            if (existingDt != null) {
+                                existingType = ReflectionCache.GetTypeTracker(existingDt.UnderlyingSystemType);
+                            }
+
+                            typeEntity = TypeGroup.UpdateTypeEntity((TypeTracker)existingType, ReflectionCache.GetTypeTracker(type));
                         }
 
                         SetValue(nameId, tn.Context, typeEntity);

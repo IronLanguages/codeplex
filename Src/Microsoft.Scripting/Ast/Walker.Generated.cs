@@ -76,10 +76,6 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(ConversionExpression node) { return true; }
         public virtual void PostWalk(ConversionExpression node) { }
 
-        // DeleteDynamicMemberExpression
-        public virtual bool Walk(DeleteDynamicMemberExpression node) { return true; }
-        public virtual void PostWalk(DeleteDynamicMemberExpression node) { }
-
         // DeleteUnboundExpression
         public virtual bool Walk(DeleteUnboundExpression node) { return true; }
         public virtual void PostWalk(DeleteUnboundExpression node) { }

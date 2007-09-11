@@ -270,8 +270,8 @@ namespace IronPython.Modules {
         private static ScriptModule GenerateAndInitializeModule(CodeContext context, string moduleName, string path, SourceUnit sourceUnit) {
             ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
             
-            PythonModuleOps.SetFileName(module, path);
-            PythonModuleOps.SetName(module, moduleName);
+            PythonModuleOps.Set__file__(module, path);
+            PythonModuleOps.Set__name__(module, moduleName);
 
             return PythonEngine.CurrentEngine.Importer.InitializeModule(moduleName, module, true);
         }

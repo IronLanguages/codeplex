@@ -19,16 +19,23 @@ using System.Text;
 using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
+using System.Reflection;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Types {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     /// <summary>
     /// Represents a DynamicType.  Instances of DynamicType are created via DynamicTypeBuilder.  
     /// </summary>
 #if !SILVERLIGHT
     [DebuggerDisplay("DynamicType: {Name}")]
 #endif
-    public class DynamicType : DynamicMixin, IConstructorWithCodeContext {
+    public class DynamicType : DynamicMixin, IConstructorWithCodeContext, IDynamicObject {
         private List<DynamicType> _bases;                   // the base classes of the type
         private ICallableWithCodeContext _ctor;             // fast implementation of ctor
         private List<WeakReference> _subtypes;              // all of the subtypes of the DynamicTypeect 
@@ -262,14 +269,7 @@ namespace Microsoft.Scripting.Types {
                 lock (_subtypes) return _subtypes.ToArray();
             }
         }
-
-        public bool AllowConstructorArguments(ContextId context) {
-            if (_allowKeywordCtor == null) return true;
-            if (_allowKeywordCtor.Count <= context.Id) return true;
-
-            return _allowKeywordCtor[context.Id];
-        }
-
+        
         /// <summary>
         /// Gets a description of where this type from.  This may include if it's a system type,
         /// language specific information, or other information.  This should be used for displaying
@@ -484,7 +484,7 @@ namespace Microsoft.Scripting.Types {
         }
 
 
-        internal bool IsExtended {
+        public bool IsExtended {
             get {
                 return _extended;
             }
@@ -523,5 +523,58 @@ namespace Microsoft.Scripting.Types {
         }
 
         #endregion
+
+        #region IDynamicObject Members
+
+        public LanguageContext LanguageContext {
+            get { return InvariantContext.Instance; }
+        }
+
+        public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
+            if (action.Kind == ActionKind.CreateInstance) {
+                if (IsSystemType) {
+                    MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
+                    StandardRule<T> rule;
+                    if (ctors.Length > 0) {
+                        rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
+                    } else {
+                        rule = new StandardRule<T>();
+                        rule.SetTarget(
+                           rule.MakeError(context.LanguageContext.Binder,
+                               Ast.New(
+                                   typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                                   Ast.Constant("Cannot create instances of " + Name)
+                               )
+                           )
+                       );
+                    }
+                    rule.AddTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
+                    return rule;
+                } else {
+                    // TODO: Pull in the Python create logic for this when DynamicType moves out of MS.Scripting, this provides
+                    // a minimal level of interop until then.
+                    StandardRule<T> rule = new StandardRule<T>();
+                    Expression call = Ast.Call(
+                        Ast.Cast(rule.Parameters[0], typeof(IConstructorWithCodeContext)), 
+                        typeof(IConstructorWithCodeContext).GetMethod("Construct"), 
+                        ArrayUtils.Insert((Expression)Ast.CodeContext(), ArrayUtils.RemoveFirst(rule.Parameters)));
+
+                    rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, call));
+                    rule.SetTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
+                    return rule;
+                }
+            }
+            return null;
+        }
+
+        #endregion
+
+        public static implicit operator Type(DynamicType self) {
+            return self.UnderlyingSystemType;
+        }
+
+        public static implicit operator TypeTracker(DynamicType self) {
+            return ReflectionCache.GetTypeTracker(self.UnderlyingSystemType);
+        }
     }
 }

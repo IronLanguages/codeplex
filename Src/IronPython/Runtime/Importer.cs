@@ -84,12 +84,12 @@ namespace IronPython.Runtime {
             ScriptModule from = mod as ScriptModule;
             if (from != null) {
                 object ret;
-                if (from.TryGetBoundCustomMember(context, SymbolTable.StringToId(name), out ret)) {
+                if (from.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out ret)) {
                     return ret;
                 }
                    
                 object path;
-                if (from.TryGetBoundCustomMember(context, Symbols.Path, out path)) {
+                if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
                     return ImportNestedModule(context, from, name);
                 }
             } else {
@@ -112,8 +112,16 @@ namespace IronPython.Runtime {
                 } 
 
                 object path;
-                if (from.TryGetBoundCustomMember(context, Symbols.Path, out path)) {
+                if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
                     return ImportNestedModule(context, from, name);
+                }
+            }
+
+            NamespaceTracker rp = mod as NamespaceTracker;
+            if (rp != null) {
+                object val;
+                if (rp.TryGetValue(SymbolTable.StringToId(name), out val)) {
+                    return val;
                 }
             }
 
@@ -141,13 +149,8 @@ namespace IronPython.Runtime {
                     // loaded and then loaded the assembly we want
                     // to make the assembly available now.
 
-                    ScriptModule sm = newmod as ScriptModule;
-                    if (sm != null && sm.InnerModule != null) {
-                        sm.PackageImported = true;
-                        ReflectedPackage rp = sm.InnerModule as ReflectedPackage;
-                        if (rp != null) {
-                            context.ModuleContext.ShowCls = true;
-                        }
+                    if (newmod is NamespaceTracker) {
+                        context.ModuleContext.ShowCls = true;
                     }
                 }
             }
@@ -252,7 +255,7 @@ namespace IronPython.Runtime {
             }
 
             // The parentModule now needs to have __path__ - list
-            if (parentModule.TryGetBoundCustomMember(context, Symbols.Path, out attribute) && (path = attribute as List) != null) {
+            if (parentModule.Scope.TryGetName(context.LanguageContext, Symbols.Path, out attribute) && (path = attribute as List) != null) {
                 // combine the module names
                 full = parentName + "." + name;
                 return true;
@@ -298,17 +301,9 @@ namespace IronPython.Runtime {
         private object ImportTopAbsolute(CodeContext context, string name) {
             object ret;
             if (TryGetExistingModule(name, out ret)) {
-                ScriptModule sm = ret as ScriptModule;
-                if (sm != null && sm.InnerModule != null) {
-                    // if we imported before having the assembly
-                    // loaded and then loaded the assembly we want
-                    // to make the assembly available now.
-                    sm.PackageImported = true;
-
-                    ReflectedPackage rp = sm.InnerModule as ReflectedPackage;
-                    if (rp != null) {
-                        context.ModuleContext.ShowCls = true;
-                    }
+                NamespaceTracker rp = ret as NamespaceTracker;
+                if (rp != null) {
+                    context.ModuleContext.ShowCls = true;
                 }
 
                 return ret;
@@ -327,7 +322,7 @@ namespace IronPython.Runtime {
         }
 
         private bool TryGetNestedModule(CodeContext context, ScriptModule mod, string name, out object nested) {
-            if (PythonOps.TryGetBoundAttr(context, mod, SymbolTable.StringToId(name), out nested)) {
+            if (mod.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out nested)) {
                 if (nested is ScriptModule) return true;
 
                 // This allows from System.Math import *
@@ -371,7 +366,7 @@ namespace IronPython.Runtime {
             }
 
             ScriptModule sm = builtin as ScriptModule;            
-            if (sm != null && sm.TryGetBoundCustomMember(context, Symbols.Import, out import)) {
+            if (sm != null && sm.Scope.TryGetName(context.LanguageContext, Symbols.Import, out import)) {
                 return import;
             }
 
@@ -379,7 +374,7 @@ namespace IronPython.Runtime {
         }
 
         internal object ImportBuiltin(CodeContext context, string name) {
-            DynamicHelpers.TopPackage.Initialize();
+            DynamicHelpers.TopNamespace.Initialize();
 
             if (name.Equals("sys")) return SystemState;
             if (name.Equals("clr")) {
@@ -403,10 +398,23 @@ namespace IronPython.Runtime {
         }
 
         private object ImportReflected(CodeContext context, string name) {
-            object res = DynamicHelpers.TopPackage.TryGetPackageAny(name);
+            MemberTracker res = DynamicHelpers.TopNamespace.TryGetPackageAny(name);
             if (res != null) {
                 context.ModuleContext.ShowCls = true;
-                SystemState.modules[name] = res;
+                object realRes = res;
+
+                switch (res.MemberType) {
+                    case TrackerTypes.Type: realRes = DynamicHelpers.GetDynamicTypeFromType(((TypeTracker)res).Type); break;
+                    case TrackerTypes.Event: realRes = ReflectionCache.GetReflectedEvent(((EventTracker)res).Event); break;
+                    case TrackerTypes.Field: realRes = ReflectionCache.GetReflectedField(((FieldTracker)res).Field); break;
+                    case TrackerTypes.Method:
+                        MethodTracker mt = res as MethodTracker;
+                        realRes = ReflectionCache.GetMethodGroup(mt.DeclaringType, mt.Name, new MemberInfo[] { mt.Method });
+                        break;
+                }
+             
+                SystemState.modules[name] = realRes;                
+                return realRes;
             }
             return res;
         }
@@ -415,32 +423,15 @@ namespace IronPython.Runtime {
         /// Initializes the specified module and returns the user-exposable PythonModule.
         /// </summary>
         internal ScriptModule InitializeModule(string fullName, ScriptModule smod, bool executeModule) {
-            // if we have a collision (both a package & namespace)
-            // then we could have already exposed the ReflectedPackage
-            // out to the user.  Therefore the outer module will alway
-            // be the reflected packge module.
-
-            ScriptModule rpMod = DynamicHelpers.TopPackage.TryGetPackageLazy(SymbolTable.StringToId(fullName)) as ScriptModule;
-            ScriptModule newmod = smod;
-            if (rpMod != null) {
-                smod.InnerModule = rpMod.InnerModule;
-                rpMod.InnerModule = smod;
-
-                smod.PackageImported = true;
-
-                smod = rpMod;
-            }
-
             //Put this in modules dict so we won't reload with circular imports
             SystemState.modules[fullName] = smod;            
             bool success = false;
             try {
-                if(executeModule) newmod.Execute();
+                if(executeModule) smod.Execute();
                 success = true;
             } finally {
                 if (!success) SystemState.modules.Remove(fullName);
             }
-
 
             return smod;
         }
@@ -448,8 +439,8 @@ namespace IronPython.Runtime {
         private List ResolveSearchPath(CodeContext context, ScriptModule mod, out string baseName) {
             baseName = mod.ModuleName;
 
-            object path;
-            if (!PythonOps.TryGetBoundAttr(context, mod, Symbols.Path, out path)) {
+            object path;            
+            if (!mod.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
                 List basePath = path as List;
                 for (; ; ) {
                     int lastDot = baseName.LastIndexOf('.');

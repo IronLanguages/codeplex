@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
 
@@ -56,9 +57,6 @@ namespace Microsoft.Scripting {
 #endif
 
             Type[] types = LoadTypesFromAssembly(assem);
-            foreach (Type t in types) {
-                ReflectedPackage.PublishType(t);
-            }
 
             return GetTypeNames(types);
         }

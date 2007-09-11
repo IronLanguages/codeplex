@@ -52,7 +52,7 @@ namespace IronPython.Runtime {
                     this.__self_class__ = obj;
                     this.__self__ = obj;
                 } else {
-                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type, not {0}", DynamicHelpers.GetDynamicType(obj));
+                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", DynamicTypeOps.GetName(obj), DynamicTypeOps.GetName(type));
                 }
             } else {
                 this.__thisclass__ = type;

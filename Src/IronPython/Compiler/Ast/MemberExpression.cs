@@ -88,10 +88,10 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
             return Ast.Statement(
-                Ast.Delete(
+                Ast.Action.DeleteMember(
                     Span,
-                    ag.Transform(_target),
-                    _name
+                    _name,
+                    ag.Transform(_target)
                 )
             );
         }

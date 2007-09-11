@@ -599,7 +599,8 @@ namespace IronPython.Runtime.Operations {
 
         // TODO: Remove this method, assemblies get registered as packages?
         private static void MakeDynamicTypesTable() {
-            DynamicHelpers.RegisterLanguageAssembly(Assembly.GetExecutingAssembly());
+            RegisterLanguageAssembly(Assembly.GetExecutingAssembly());
+            DynamicHelpers.TypeExtended += new EventHandler<DynamicHelpers.TypeExtendedEventArgs>(DynamicHelpers_TypeExtended);
 
             // TODO: Remove impersonation
             DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
@@ -613,6 +614,10 @@ namespace IronPython.Runtime.Operations {
                     TypeCache.Object});
                 dtb.SetBases(new DynamicType[] { TypeCache.Int32 });
             });
+        }
+
+        private static void DynamicHelpers_TypeExtended(object sender, DynamicHelpers.TypeExtendedEventArgs e) {
+            DynamicTypeExtender.ExtendType(DynamicHelpers.GetDynamicTypeFromType(e.Extending), e.Extension);
         }
                 
         public static bool EqualIsTrue(object x, int y) {
@@ -1308,13 +1313,17 @@ namespace IronPython.Runtime.Operations {
             return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
         }
 
+        private static Dictionary<SymbolId, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<SymbolId, DynamicSite<object, object>>();
         public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
-            ICustomMembers icm = o as ICustomMembers;
-            if (icm != null) {
-                return icm.TryGetBoundCustomMember(context, name, out ret);
+            DynamicSite<object, object> site;
+            lock (_tryGetMemSites) {
+                if (!_tryGetMemSites.TryGetValue(name, out site)) {
+                    _tryGetMemSites[name] = site = DynamicSite<object, object>.Create(GetMemberAction.Make(name, GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow));
+                }
             }
-
-            return DynamicHelpers.GetDynamicType(o).TryGetBoundMember(context, o, name, out ret);
+            
+            ret = site.Invoke(context, o);
+            return ret != OperationFailed.Value;
         }
 
         public static bool HasAttr(CodeContext context, object o, SymbolId name) {
@@ -1327,13 +1336,8 @@ namespace IronPython.Runtime.Operations {
         }
         
         public static object GetBoundAttr(CodeContext context, object o, SymbolId name) {
-            ICustomMembers icm = o as ICustomMembers;
-            if (icm != null) {
-                object value;
-                if (icm.TryGetBoundCustomMember(context, name, out value)) {
-                    return value;
-                }
-               
+            object ret;
+            if (!TryGetBoundAttr(context, o, name, out ret)) {
                 if (o is OldClass) {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
                         ((OldClass)o).Name, SymbolTable.IdToString(name));
@@ -1341,8 +1345,7 @@ namespace IronPython.Runtime.Operations {
                     throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(o)), SymbolTable.IdToString(name));
                 }
             }
-
-            return DynamicHelpers.GetDynamicType(o).GetBoundMember(context, o, name);
+            return ret;           
         }
 
         public static void ObjectSetAttribute(CodeContext context, object o, SymbolId name, object value) {
@@ -1438,10 +1441,11 @@ namespace IronPython.Runtime.Operations {
 
 
         public static IList<object> GetAttrNames(CodeContext context, object o) {
-            ICustomMembers ids = o as ICustomMembers;
+            IMembersList memList = o as IMembersList;
 
-            if (ids != null) {
-                return ids.GetCustomMemberNames(context);
+            if (memList != null) {
+
+                return memList.GetCustomMemberNames(context);
             }
 
             List res = new List();
@@ -1939,10 +1943,10 @@ namespace IronPython.Runtime.Operations {
             IAttributesCollection vars = bodyContext.Scope.Dict;
 
             foreach (object dt in bases) {
-                if (dt is TypeCollision) {
+                if (dt is TypeGroup) {
                     object[] newBases = new object[bases.Length];
                     for (int i = 0; i < bases.Length; i++) {
-                        TypeCollision tc = bases[i] as TypeCollision;
+                        TypeGroup tc = bases[i] as TypeGroup;
                         if (tc != null) {
                             Type nonGenericType;
                             if (!tc.TryGetNonGenericType(out nonGenericType)) {
@@ -2191,7 +2195,7 @@ namespace IronPython.Runtime.Operations {
         public static void PrintExpressionValue(CodeContext context, object value) {
             if (value != null) {
                 Print(PythonOps.StringRepr(value));
-                SystemState.Instance.BuiltinModuleInstance.SetCustomMember(context, Symbols.Underscore, value);
+                SystemState.Instance.BuiltinModuleInstance.SetMemberAfter(context, "_", value);
             }
         }
 
@@ -2262,7 +2266,7 @@ namespace IronPython.Runtime.Operations {
             ScriptModule pnew = newmod as ScriptModule;
             if (pnew != null) {
                 object all;
-                if (pnew.TryGetBoundCustomMember(context, Symbols.All, out all)) {
+                if (pnew.Scope.TryGetName(context.LanguageContext, Symbols.All, out all)) {
                     IEnumerator exports = PythonOps.GetEnumerator(all);
 
                     while (exports.MoveNext()) {
@@ -2778,6 +2782,29 @@ namespace IronPython.Runtime.Operations {
             }
 
             throw AttributeErrorForMissingAttribute(type, name);
+        }
+
+        /// <summary>
+        /// Registers a set of extension methods from the provided assemly.
+        /// </summary>
+        private static void RegisterLanguageAssembly(Assembly assembly) {
+            object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
+            foreach (ExtensionTypeAttribute et in attrs) {
+                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends));
+            }
+        }
+
+        internal static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
+            // new-style extensions:
+            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
+
+            DynamicTypeExtender.ExtendType(dt, et.Type, et.Transformer);
+
+            if (et.EnableDerivation) {
+                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetIsExtensible();
+            } else if (et.DerivationType != null) {
+                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
+            }
         }
     }
 }

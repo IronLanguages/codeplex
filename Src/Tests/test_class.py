@@ -618,10 +618,14 @@ def test_metaclass_call_override():
 	AreEqual(myclass(1,2,3), (1,2,3))
 
 def test_call_type_call():
-	AreEqual(type(type.__call__(object)), object)
+    for stuff in [object, int, str, bool, float]:
+        AreEqual(type(type.__call__(stuff)), stuff)
 	
-	AreEqual(type.__call__(int, 5), 5)
-	AreEqual(type.__call__(int), 0)
+    AreEqual(type.__call__(int, 5), 5)
+    AreEqual(type.__call__(int), 0)
+    
+    AreEqual(type.__call__(bool, True), True)
+    AreEqual(type.__call__(bool), False)
 	
 ############################################################
 def text_mixed_inheritance():
@@ -1398,9 +1402,16 @@ def test_hexoct():
     AssertError(TypeError, hex, bar())
     AssertError(TypeError, oct, bar())
 
+@disabled("CodePlex Work Item 766")
 def test_no_clr_attributes():
     """verify types have no CLR attributes"""
-    
+    for stuff in [int, float, bool, str, None]:
+        for dir_stuff in dir(stuff):
+            if dir_stuff[:1].isalpha():
+                Assert(dir_stuff[:1].islower(), 
+                       "%s should not be an attribute of %s" % (dir_stuff, str(stuff)))
+
+def test_no_clr_attributes_sanity():    
     AreEqual(hasattr(int, 'MaxValue'), False)
     AreEqual(hasattr(int, 'MinValue'), False)
     AreEqual(hasattr(int, 'Abs'), False)

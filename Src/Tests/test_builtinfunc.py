@@ -13,8 +13,10 @@
 #
 #####################################################################################
 
-# CodePlex work item #11812. This has to be run first: importing lib.assert_util masks the bug.
-dir(True)
+#This has to be run first: importing lib.assert_util masked a bug. Just make sure
+#this does not throw
+for stuff in [bool, True, False]:
+    temp = dir(stuff)  
 
 from lib.assert_util import *
 
@@ -263,6 +265,39 @@ def test_type():
 def test_globals():
     Assert(not globals().has_key("_"))
     AreEqual(globals().keys().count("_"), 0)
+
+def test_vars():
+    """vars should look for user defined __dict__ value and directly return the provided value"""
+    
+    class foo(object):
+        def getDict(self):
+                return {'a':2}
+        __dict__ = property(fget=getDict)
+    
+    AreEqual(vars(foo()), {'a':2})
+    
+    class foo(object):
+        def __getattribute__(self, name):
+            if name == "__dict__":
+                    return {'a':2}
+            return object.__getattribute__(self, name)
+
+    AreEqual(vars(foo()), {'a':2})
+    
+    class foo(object):
+        def getDict(self):
+                return 'abc'
+        __dict__ = property(fget=getDict)
+    
+    AreEqual(vars(foo()), 'abc')
+    
+    class foo(object):
+        def __getattribute__(self, name):
+            if name == "__dict__":
+                    return 'abc'
+            return object.__getattribute__(self, name)
+
+    AreEqual(vars(foo()), 'abc')
 
 run_test(__name__)
 

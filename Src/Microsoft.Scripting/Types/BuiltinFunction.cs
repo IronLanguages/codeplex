@@ -105,14 +105,7 @@ namespace Microsoft.Scripting.Types {
                 _name = value;
             }
         }
-
-        public string FriendlyName {
-            get {
-                if (Name == "__init__") return DeclaringType.Name;
-                return Name;
-            }
-        }
-
+        
         public void AddMethod(MethodBase info) {
             Assert.NotNull(info);
 
@@ -166,8 +159,7 @@ namespace Microsoft.Scripting.Types {
 
         public object CallHelper(CodeContext context, object[] args, string[] names, object instance) {
             BinderType binderType = BinderType.Normal;
-            if (_targets[0].IsConstructor &&
-                DynamicHelpers.GetDynamicTypeFromType(_targets[0].DeclaringType).AllowConstructorArguments(context.LanguageContext.ContextId)) {
+            if (_targets[0].IsConstructor && context.LanguageContext.Binder.AllowKeywordArgumentConstruction(_targets[0].DeclaringType)) {
                 binderType = BinderType.Constructor;
             }
 
@@ -297,24 +289,8 @@ namespace Microsoft.Scripting.Types {
         #endregion
 
         #region Internal API Surface
-        public DynamicType DeclaringType {
-            get {
-                MethodBase target = Targets[0];
 
-                if ((FunctionType & FunctionType.OpsFunction) == 0) {
-                    // normal method 
-                    return DynamicHelpers.GetDynamicTypeFromType(target.DeclaringType);
-                } else {
-                    // method declared on ops-type, return the declaring type as
-                    // the type we add methods on to.
-
-                    Debug.Assert(ExtensionTypeAttribute.IsExtensionType(target.DeclaringType), String.Format("Type {0} is not an Ops Type ({1})", target.DeclaringType, Name));
-                    return ExtensionTypeAttribute.GetExtendedTypeFromExtension(target.DeclaringType);
-                }
-            }
-        }
-
-        internal Type ClrDeclaringType {
+        public Type DeclaringType {
             get {
                 MethodBase target = Targets[0];
 
@@ -431,7 +407,7 @@ namespace Microsoft.Scripting.Types {
             get { return template; }
         }
 
-        public DynamicType DeclaringType {
+        public Type DeclaringType {
             get {
                 return template.DeclaringType;
             }
@@ -445,16 +421,6 @@ namespace Microsoft.Scripting.Types {
 
         public override int GetHashCode() {
             return template.GetHashCode();
-        }
-
-        public override string ToString() {
-            DynamicType dt = DeclaringType;
-
-            if (dt != null) {
-                return String.Format("<method '{0}' of '{1}' objects>", Name, dt.Name);
-            } else {
-                return String.Format("<method '{0}' of '{1}' objects>", Name, "<unknown>");
-            }
         }
 
         public string Name {
@@ -506,15 +472,14 @@ namespace Microsoft.Scripting.Types {
             // to a fast check on the CLR types, if they match we can avoid the slower
             // check that involves looking up dynamic types. (self can be null on
             // calls like set.add(None) 
-            if (self != null && self.GetType() == template.ClrDeclaringType) return;
+            if (self != null && self.GetType() == template.DeclaringType) return;
 
-            DynamicType selfType = self == null ? DynamicType.NullType : DynamicHelpers.GetDynamicTypeFromType(self.GetType());
+            Type selfType = CompilerHelpers.GetType(self);
             Debug.Assert(selfType != null);
 
-            DynamicType declType = template.DeclaringType;
-            if (!selfType.IsSubclassOf(declType)) {
+            if (!selfType.IsAssignableFrom(template.DeclaringType)) {
                 // if a conversion exists to the type allow the call.
-                context.LanguageContext.Binder.Convert(self, declType.UnderlyingSystemType);
+                context.LanguageContext.Binder.Convert(self, template.DeclaringType);
             }
             return;
         }

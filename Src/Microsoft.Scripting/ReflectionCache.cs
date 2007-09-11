@@ -21,16 +21,19 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// Provides a cache of reflection members.  Only one set of values is ever handed out per a 
     /// specific request.
     /// </summary>
-    class ReflectionCache {
+    public class ReflectionCache {
         private static Dictionary<MethodBaseCache, BuiltinFunction> _functions = new Dictionary<MethodBaseCache,BuiltinFunction>();
         private static Dictionary<EventInfo, ReflectedEvent> _eventCache = new Dictionary<EventInfo, ReflectedEvent>();
-        private static Dictionary<PropertyInfo, ReflectedIndexer> _indexerCache = new Dictionary<PropertyInfo, ReflectedIndexer>();        
+        private static Dictionary<PropertyInfo, ReflectedIndexer> _indexerCache = new Dictionary<PropertyInfo, ReflectedIndexer>();
+        private static Dictionary<Type, TypeTracker> _typeCache = new Dictionary<Type, TypeTracker>();
+        private static Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
 
         /// <summary>
         /// Gets a singleton method group from the provided type.
@@ -92,6 +95,30 @@ namespace Microsoft.Scripting {
                 if (!_eventCache.TryGetValue(info, out res)) {
                     _eventCache[info] = res = new ReflectedEvent(info, false);
                 }
+            }
+
+            return res;
+        }
+
+        public static ReflectedField GetReflectedField(FieldInfo info) {
+            ReflectedField res;
+
+            lock (_fieldCache) {
+                if (!_fieldCache.TryGetValue(info, out res)) {
+                    _fieldCache[info] = res = new ReflectedField(info, NameType.Field);
+                }
+            }
+
+            return res;
+        }
+
+        public static TypeTracker GetTypeTracker(Type type) {
+            TypeTracker res;
+
+            lock (_typeCache) {
+                if (!_typeCache.TryGetValue(type, out res)) {
+                    _typeCache[type] = res = new NestedTypeTracker(type);
+                }                
             }
 
             return res;

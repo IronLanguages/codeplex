@@ -1,4 +1,5 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\silverlight.settings.targets" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -37,6 +38,8 @@
     <ErrorReport>prompt</ErrorReport>
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>        
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
     <OutputPath>..\..\Bin\Silverlight Release</OutputPath>
@@ -46,20 +49,22 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <NoWarn>618</NoWarn>
+    <SilverlightBuild>true</SilverlightBuild>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>        
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" Condition=" !('$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release') " />
-    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+    <Reference Include="System" Condition=" '$(SilverlightBuild)' != 'true' " />
+    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(ProgramFiles)\Microsoft Silverlightmscorlib.dll</HintPath>
+      <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="System.dll, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release' ">
+    <Reference Include="System.dll, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(ProgramFiles)\Microsoft SilverlightSystem.dll</HintPath>
+      <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition="'$(Configuration)' == 'Silverlight Debug' or '$(Configuration)' == 'Silverlight Release'">
+    <Compile Include="..\..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
     <Compile Include="binascii.cs" />
@@ -110,7 +115,8 @@
       <Name>IronPython %28Languages\IronPython\IronPython%29</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" Condition=" '$(SilverlightTreeBuild)' != 'true' " />
+  <Import Project="..\..\..\silverlight.build.targets" Condition=" '$(SilverlightTreeBuild)' == 'true' " />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

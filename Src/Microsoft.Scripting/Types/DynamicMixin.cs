@@ -1463,8 +1463,10 @@ namespace Microsoft.Scripting.Types {
 
             // search the type
             DynamicMixin myType = DynamicHelpers.GetDynamicType(this);
-            if (this != myType) {
-                return myType.TryGetMember(context, this, name, out value);
+            if (myType.TryResolveSlot(context, name, out dts)) {
+                if (dts.TryGetBoundValue(context, this, myType, out value)) {
+                    return true;
+                }
             }
 
             value = null;
@@ -1481,8 +1483,10 @@ namespace Microsoft.Scripting.Types {
 
             // search the type
             DynamicMixin myType = DynamicHelpers.GetDynamicType(this);
-            if (this != myType) {
-                return myType.TryGetBoundMember(context, this, name, out value);
+            if(myType.TryResolveSlot(context, name, out dts)) {
+                if (dts.TryGetBoundValue(context, this, myType, out value)) {
+                    return true;
+                }
             }
 
             value = null;
@@ -1538,7 +1542,9 @@ namespace Microsoft.Scripting.Types {
                     return true;
             }
 
-            if (IsImmutable) throw new InvalidOperationException(Resources.ImmutableType);
+            if (IsImmutable) {                
+                throw new MissingMemberException(String.Format("'{0}' object has no attribute '{1}'", Name, SymbolTable.IdToString(name)));
+            }
 
             EventHandler<DynamicTypeChangedEventArgs> dtc = OnChange;
             object previous = null;

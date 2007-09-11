@@ -44,6 +44,7 @@ namespace Microsoft.Scripting.Actions {
         private Expression _test;                                   // the test expression, built up and assigned at the end
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we end up producing
         private bool _binaryOperator, _reversedOperator;            // if we're producing a binary operator or a reversed operator (should go away, Python specific).
+        private MethodBase[] _targets;
 
         public CallBinderHelper(CodeContext context, ActionType action, object[] args)
             : base(context, action) {
@@ -52,6 +53,11 @@ namespace Microsoft.Scripting.Actions {
 
             _args = args;
             _test = _rule.MakeTypeTest(CompilerHelpers.GetType(_args[0]), 0);
+        }
+
+        public CallBinderHelper(CodeContext context, ActionType action, object[] args, MethodBase[] targets)
+            : this(context, action, args) {
+            _targets = targets;
         }
 
         public virtual StandardRule<T> MakeRule() {
@@ -317,12 +323,15 @@ namespace Microsoft.Scripting.Actions {
         #region Target acquisition
 
         protected virtual MethodBase[] GetTargetMethods() {
+            if (_targets != null) return _targets;
+
             object target = _args[0];
             MethodBase[] targets;
             BuiltinFunction bf;
             BuiltinMethodDescriptor bmd;
             BoundBuiltinFunction bbf;
             Delegate d;
+            MemberGroup mg;
 
             if ((bf = target as BuiltinFunction) != null) {
                 targets = GetBuiltinFunctionTargets(bf);
@@ -332,6 +341,14 @@ namespace Microsoft.Scripting.Actions {
                 targets = GetBoundBuiltinFunctionTargets(bbf);
             } else if ((d = target as Delegate) != null) {
                 targets = GetDelegateTargets(d);
+            } else if ((mg = target as MemberGroup) != null) {
+                List<MethodInfo> foundTargets = new List<MethodInfo>();
+                foreach (MemberTracker mt in mg) {
+                    if (mt.MemberType == TrackerTypes.Method) {
+                        foundTargets.Add(((MethodTracker)mt).Method);
+                    }
+                }
+                targets = foundTargets.ToArray();                
             } else {
                 targets = GetOperatorTargets(target);
             }
@@ -400,11 +417,11 @@ namespace Microsoft.Scripting.Actions {
             if (!typeof(ICallableWithCodeContext).IsAssignableFrom(targetType) &&
                 !typeof(IFancyCallable).IsAssignableFrom(targetType)) {
 
-                MemberInfo[] callMembers = Binder.GetMember(Action, targetType, "Call");
+                MemberGroup callMembers = Binder.GetMember(Action, targetType, "Call");
                 List<MethodBase> callTargets = new List<MethodBase>();
-                foreach (MemberInfo mi in callMembers) {
-                    if (mi.MemberType == MemberTypes.Method) {
-                        MethodInfo method = (MethodInfo)mi;
+                foreach (MemberTracker mi in callMembers) {
+                    if (mi.MemberType == TrackerTypes.Method) {
+                        MethodInfo method = ((MethodTracker)mi).Method;
                         if (method.IsSpecialName) {
                             callTargets.Add(method);
                         }

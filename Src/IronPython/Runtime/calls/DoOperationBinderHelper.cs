@@ -75,7 +75,7 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeDynamicMatchRule(DynamicType[] types) {
             //TODO figure out caching strategy for these
             StandardRule<T> ret = new StandardRule<T>();
-            ret.MakeTest(types);
+            PythonBinderHelper.MakeTest(ret, types);
             if (Action.IsUnary) {
                 MakeDynamicTarget(DynamicInvokeUnaryOperation, ret);
             } else if (Action.IsInPlace) {
@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Calls {
             if (IsComparision) {
                 return MakeDynamicMatchRule(types);
             } else {
-                return StandardRule<T>.TypeError(
+                return PythonBinderHelper.TypeError<T>(
                        MakeBinaryOpErrorMessage(Action.ToString(), types[0], types[1]),
                        types);
             }
@@ -232,7 +232,7 @@ namespace IronPython.Runtime.Calls {
             GetCombinedTargets(fcmp, rcmp, out fCmpTarget, out rCmpTarget);
 
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
 
             List<Statement> stmts = new List<Statement>();
             if (MakeOneTarget(fTarget, rule, stmts, false, null)) {
@@ -299,7 +299,7 @@ namespace IronPython.Runtime.Calls {
 
             // now build the rule from the targets.
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
 
             // bail if we're comparing to null and the rhs can't do anything special...
             if (xType.IsNull) {
@@ -368,7 +368,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
 
             List<Statement> stmts = new List<Statement>();
             if (MakeOneTarget(fTarget, rule, stmts, false, types)) {
@@ -403,9 +403,9 @@ namespace IronPython.Runtime.Calls {
                     BinderType.Normal);
 
                 StandardRule<T> ret = new StandardRule<T>();
-                ret.MakeTest(types);
+                PythonBinderHelper.MakeTest(ret, types);
 
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.ConvertToTypes(types));
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, DynamicTypeOps.ConvertToTypes(types));
                 if (cand != null) {
                     Expression call;
 
@@ -413,7 +413,7 @@ namespace IronPython.Runtime.Calls {
                         call = cand.Target.MakeExpression(Binder,
                             ret,
                             ret.Parameters,
-                            CompilerHelpers.ConvertToTypes(types));
+                            DynamicTypeOps.ConvertToTypes(types));
                     } else {
                         call = Ast.Comma(0,
                             ret.Parameters[ret.Parameters.Length - 1],
@@ -421,7 +421,7 @@ namespace IronPython.Runtime.Calls {
                                 Binder,
                                 ret,
                                 ret.Parameters,
-                                CompilerHelpers.ConvertToTypes(types))
+                                DynamicTypeOps.ConvertToTypes(types))
                         );
                     }
                     ret.SetTarget(ret.MakeReturn(Binder, call));
@@ -442,12 +442,12 @@ namespace IronPython.Runtime.Calls {
             BuiltinFunction bf;
             return !TryGetStaticFunction(altAction, indexedType, out bf) ||
                         (bf != null && 
-                        bf.DeclaringType != indexedType);
+                        DynamicHelpers.GetDynamicTypeFromType(bf.DeclaringType) != indexedType);
         }        
 
         internal static StandardRule<T> MakeDynamicIndexRule(DoOperationAction action, CodeContext context, DynamicType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
-            ret.MakeTest(types);
+            PythonBinderHelper.MakeTest(ret, types);
             Expression retExpr;
             if (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) {
                 Expression arg;
@@ -495,7 +495,7 @@ namespace IronPython.Runtime.Calls {
             
             Type[] clrtypes = null;
             if (types != null) {
-                clrtypes = CompilerHelpers.ConvertToTypes(types);
+                clrtypes = DynamicTypeOps.ConvertToTypes(types);
                 if (reverse) {
                     Type temp = clrtypes[0];
                     clrtypes[0] = clrtypes[1];
@@ -680,7 +680,7 @@ namespace IronPython.Runtime.Calls {
 
         private MethodCandidate ComparisonTargetFromBinder(MethodBinder binder, DynamicType[] types) {
             if (binder == null) return null;
-            return binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
+            return binder.MakeBindingTarget(CallType.None, DynamicTypeOps.ConvertToTypes(types));
         }
 
         private MethodInfo GetComparisonFallbackMethod(Operators op) {
@@ -933,7 +933,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             if (func == null) {
-                return StandardRule<T>.TypeError(MakeUnaryOpErrorMessage(Action.ToString(), types[0]), types);
+                return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), types[0]), types);
             }
 
             MethodBinder binder = MethodBinder.MakeBinder(Binder,
@@ -943,9 +943,9 @@ namespace IronPython.Runtime.Calls {
 
             Debug.Assert(binder != null);
 
-            MethodCandidate cand = binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
+            MethodCandidate cand = binder.MakeBindingTarget(CallType.None, DynamicTypeOps.ConvertToTypes(types));
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
             rule.SetTarget(rule.MakeReturn(Binder, MakeCall(cand.Target, rule, false)));
             return rule;
         }
@@ -963,7 +963,7 @@ namespace IronPython.Runtime.Calls {
 
             Expression notExpr;
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
 
             if (nonzero == null && len == null) {
                 // always False or True for None
@@ -975,7 +975,7 @@ namespace IronPython.Runtime.Calls {
                     MethodBinderType);
 
                 Debug.Assert(binder != null);
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.None, CompilerHelpers.ConvertToTypes(types));
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.None, DynamicTypeOps.ConvertToTypes(types));
                 notExpr = MakeCall(cand.Target, rule, false);
 
                 if (nonzero != null) {
@@ -1000,7 +1000,7 @@ namespace IronPython.Runtime.Calls {
 
         private StandardRule<T> MakeDynamicNotRule(DynamicType[] types) {
             StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(types);
+            PythonBinderHelper.MakeTest(rule, types);
             rule.SetTarget(
                 rule.MakeReturn(Binder,
                     Ast.Call(null,
@@ -1022,9 +1022,6 @@ namespace IronPython.Runtime.Calls {
 
         public override string ToString() {
             return string.Format("BinaryOperatorAction({0})", Action);
-        }
+        }        
     }
-
-
-
 }
