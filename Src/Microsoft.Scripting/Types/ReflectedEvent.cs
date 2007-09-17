@@ -23,6 +23,7 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Types {
 
@@ -181,9 +182,11 @@ namespace Microsoft.Scripting.Types {
                 }
 
                 // wire the handler up:
-                if (add.IsPublic && add.DeclaringType.IsPublic) {
-                    _event.Info.AddEventHandler(_instance, handler);
-                } else if (ScriptDomainManager.Options.PrivateBinding) {
+                if (!add.DeclaringType.IsPublic) {
+                    add = CompilerHelpers.GetCallableMethod(add);
+                }
+
+                if ((add.IsPublic && add.DeclaringType.IsPublic) || ScriptDomainManager.Options.PrivateBinding) {
                     add.Invoke(_instance, new object[] { handler });
                 } else {
                     throw new ArgumentTypeException("cannot add to private event");
@@ -209,8 +212,11 @@ namespace Microsoft.Scripting.Types {
                     }
                 }
 
-                bool isRemovePublic = remove.IsPublic && remove.DeclaringType.IsPublic;
+                if (!remove.DeclaringType.IsPublic) {
+                    remove = CompilerHelpers.GetCallableMethod(remove);
+                }
 
+                bool isRemovePublic = remove.IsPublic && remove.DeclaringType.IsPublic;
                 if (isRemovePublic || ScriptDomainManager.Options.PrivateBinding) {
                     
                     Delegate handler;
@@ -222,11 +228,7 @@ namespace Microsoft.Scripting.Types {
                     }
 
                     if (handler != null) {
-                        if (isRemovePublic) {
-                            _event.Info.RemoveEventHandler(_instance, handler);
-                        } else {
-                            remove.Invoke(_instance, new object[] { handler });
-                        }
+                        remove.Invoke(_instance, new object[] { handler });
                     }
                 } else {
                     throw new ArgumentTypeException("cannot subtract from private event");

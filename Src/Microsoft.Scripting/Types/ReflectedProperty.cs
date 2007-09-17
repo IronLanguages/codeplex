@@ -36,7 +36,16 @@ namespace Microsoft.Scripting.Types {
             if (TryGetValue(context, instance, DynamicHelpers.GetDynamicType(instance), out value)) {
                 return value;
             }
-            return null;
+            throw new InvalidOperationException("cannot get property");
+        }
+
+        /// <summary>
+        /// Convenience function for users to call directly
+        /// </summary>
+        public void SetValue(CodeContext context, object instance, object value) {
+            if (!TrySetValue(context, instance, DynamicHelpers.GetDynamicType(instance), value)) {
+                throw new InvalidOperationException("cannot set property");
+            }            
         }
 
         public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {

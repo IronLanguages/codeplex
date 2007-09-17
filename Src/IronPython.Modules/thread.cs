@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -41,7 +41,7 @@ namespace IronPython.Modules {
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
         [PythonName("start_new_thread")]
         public static object StartNewThread(CodeContext context, object function, object args, object kwDict) {
-            Tuple tupArgs = args as Tuple;
+            PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
             Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, kwDict).Start);
@@ -53,10 +53,11 @@ namespace IronPython.Modules {
         [Documentation("start_new_thread(function, args, [kwDict]) -> thread id\nCreates a new thread running the given function")]
         [PythonName("start_new_thread")]
         public static object StartNewThread(CodeContext context, object function, object args) {
-            Tuple tupArgs = args as Tuple;
+            PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
             Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, null).Start);
+            t.IsBackground = true;
             t.Start();
 
             return t.ManagedThreadId;
@@ -165,9 +166,9 @@ namespace IronPython.Modules {
         #region Internal Implementation details
         private class ThreadObj {
             object func, kwargs;
-            Tuple args;
+            PythonTuple args;
             CodeContext context;
-            public ThreadObj(CodeContext context, object function, Tuple args, object kwargs) {
+            public ThreadObj(CodeContext context, object function, PythonTuple args, object kwargs) {
                 Debug.Assert(args != null);
                 func = function;
                 this.kwargs = kwargs;

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -289,10 +289,10 @@ namespace IronPython.Runtime.Calls {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(Action action, CodeContext context, object[] args) {
+        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             Assert.NotNull(action, context, args);
 
-            if (action.Kind == ActionKind.Call) {
+            if (action.Kind == DynamicActionKind.Call) {
                 return GetCallRule<T>((CallAction)action, context);
             }
             
@@ -356,7 +356,7 @@ namespace IronPython.Runtime.Calls {
                 // list, check arg[0] and then return original list.  If not a list,
                 // or we have no items, then check against null & throw.
                 args[1] =
-                    Ast.Comma(1,
+                    Ast.Comma(
                         CheckSelf<T>(
                             rule,
                             Ast.Condition(

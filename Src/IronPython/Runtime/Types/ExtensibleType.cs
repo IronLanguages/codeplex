@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -33,15 +33,15 @@ namespace IronPython.Runtime.Types {
         }
         
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType dt, string name, Tuple bases, IAttributesCollection dict) {
+        public static object Make(CodeContext context, DynamicType dt, string name, PythonTuple bases, IAttributesCollection dict) {
             return new ExtensibleType(context, name, bases, dict);
         }
 
         public ExtensibleType(CodeContext context)
-            : base(Compiler.Generation.NewTypeMaker.GetNewType("type", Tuple.MakeTuple(TypeCache.DynamicType), new PythonDictionary())) {                        
+            : base(Compiler.Generation.NewTypeMaker.GetNewType("type", PythonTuple.MakeTuple(TypeCache.DynamicType), new PythonDictionary())) {                        
         }
 
-        public ExtensibleType(CodeContext context, string name, Tuple bases, IAttributesCollection dict)
+        public ExtensibleType(CodeContext context, string name, PythonTuple bases, IAttributesCollection dict)
             :
             base(Compiler.Generation.NewTypeMaker.GetNewType("type", bases, new PythonDictionary())) {
             UserTypeBuilder.Build(context, this, name, bases, dict);

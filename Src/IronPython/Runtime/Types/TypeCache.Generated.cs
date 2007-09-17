@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static DynamicType array, builtinfunction, pythondictionary, frozensetcollection, pythonfunction, builtin, generator, obj, setcollection, dynamictype, str, systemstate, tuple, weakreference, list, pythonfile, scriptmodule, method, enumerate, intType, doubleType, biginteger, complex64, super, oldclass, oldinstance, noneType, boolType;
+        private static DynamicType array, builtinfunction, pythondictionary, frozensetcollection, pythonfunction, builtin, generator, obj, setcollection, dynamictype, str, systemstate, pythontuple, weakreference, list, pythonfile, scriptmodule, method, enumerate, intType, doubleType, biginteger, complex64, super, oldclass, oldinstance, noneType, boolType;
 
         // *** END GENERATED CODE ***
 
@@ -125,10 +125,10 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static DynamicType Tuple {
+        public static DynamicType PythonTuple {
             get {
-                if (tuple == null) tuple = DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple));
-                return tuple;
+                if (pythontuple == null) pythontuple = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple));
+                return pythontuple;
             }
         }
 

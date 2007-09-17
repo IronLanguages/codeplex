@@ -21,14 +21,13 @@ using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class BinderHelper<T, ActionType> where ActionType : Action {
+    public class BinderHelper<T, ActionType> where ActionType : DynamicAction {
         private CodeContext _context;
         private ActionType _action;
         
@@ -38,23 +37,7 @@ namespace Microsoft.Scripting.Actions {
 
             _context = context;
             _action = action;
-        }
-
-        protected static BuiltinFunction TryConvertToBuiltinFunction(object o) {
-            BuiltinMethodDescriptor md = o as BuiltinMethodDescriptor;
-
-            if (md != null) {
-                return md.Template;
-            }
-
-            BoundBuiltinFunction bbf = o as BoundBuiltinFunction;
-            if (bbf != null) {
-                return bbf.Target;
-            }
-
-            return o as BuiltinFunction;
-        }
-
+        }        
 
         protected CodeContext Context {
             get {
@@ -72,102 +55,8 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _context.LanguageContext.Binder;
             }
-        }
-
-        protected StandardRule<T> MakeMethodRule(BuiltinFunction bf, Type targetType) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.New(typeof(BoundBuiltinFunction).GetConstructor(new Type[] { typeof(BuiltinFunction), typeof(object) }),
-                        Ast.RuntimeConstant(bf),
-                        rule.Parameters[0]
-                    )
-                )
-            );
-
-            rule.MakeTest(targetType);
-            return rule;
-        }
-
-        /// <summary>
-        /// Gets the expressions which correspond to each parameter on the calling method.
-        /// </summary>
-        public static Expression[] GetArgumentExpressions(MethodCandidate candidate, CallAction action, StandardRule<T> rule, object[] args) {
-            List<Expression> res = new List<Expression>();
-            object target = args[0];
-
-            BoundBuiltinFunction bbf = target as BoundBuiltinFunction;
-            if (bbf != null) {
-                res.Add(GetBoundTarget(rule, bbf));
-            }
-
-            for (int i = 0; i < ArgumentCount(action, rule); i++) {
-                switch (action.GetArgumentKind(i)) {
-                    case ArgumentKind.Simple:
-                        res.Add(rule.Parameters[i + 1]);
-                        break;
-
-                    case ArgumentKind.Named:
-                        // until everyone supports kw args this may be null but not if our action specifies kw-args.
-                        Debug.Assert(candidate != null);
-
-                        // need to figure out which parameter we represent...
-                        for (int j = 0; j < candidate.Parameters.Count; j++) {
-                            if (candidate.Parameters[j].Name == action.GetArgumentName(i)) {
-                                while (res.Count <= j) {
-                                    res.Add(null);
-                                }
-
-                                res[j] = rule.Parameters[i + 1];
-                                break;
-                            }
-                        }
-                        break;
-
-                    case ArgumentKind.List:
-                        Debug.Assert(i == ArgumentCount(action, rule) - 1);
-
-                        for (int j = 0; j < ((IList<object>)args[args.Length - 1]).Count; j++) {
-                            res.Add(
-                                Ast.Call(
-                                    Ast.Cast(
-                                        rule.Parameters[i + 1],
-                                        typeof(IList<object>)),
-                                    typeof(IList<object>).GetMethod("get_Item"),
-                                    Ast.Constant(j)
-                                )
-                            );
-                        }
-                        break;
-
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
-
-            return res.ToArray();
-        }
-
-        /// <summary>
-        /// Gets the instance parameter for the bound builtin function call.
-        /// </summary>
-        private static Expression GetBoundTarget(StandardRule<T> rule, BoundBuiltinFunction bbf) {
-            Type declType = bbf.Target.DeclaringType;
-            Expression self = Ast.ReadProperty(
-                Ast.Cast(rule.Parameters[0], typeof(BoundBuiltinFunction)),
-                typeof(BoundBuiltinFunction).GetProperty("Self"));
-
-            if (IsStrongBox(bbf.Self)) {                                
-                self = Ast.ReadField(
-                    Ast.Cast(self, bbf.Self.GetType()),
-                    bbf.Self.GetType().GetField("Value")
-                );
-            }
-
-            return self;
-        }
-
+        }        
+               
         public static bool IsStrongBox(object target) {
             Type t = CompilerHelpers.GetType(target);
 
@@ -193,11 +82,7 @@ namespace Microsoft.Scripting.Actions {
                 typeof(IList<object>)
             );
         }
-
-        public static Expression MakeParamsTest(StandardRule<T> rule, object[] args) {
-            return MakeParamsTest(rule, args[args.Length - 1], GetParamsList(rule));
-        }
-
+      
         public static Expression MakeParamsTest(StandardRule<T> rule, object paramArg, Expression listArg) {
             return Ast.AndAlso(
                 Ast.TypeIs(listArg, typeof(ICollection<object>)),
@@ -316,11 +201,7 @@ namespace Microsoft.Scripting.Actions {
             }
             return null;
         }
-
-        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests) {
-            return MakeNecessaryTests(rule, necessaryTests, rule.Parameters);
-        }
-
+       
         public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {            
             Expression typeTest = Ast.Constant(true);
             if (necessaryTests.Count > 0) {

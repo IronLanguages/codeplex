@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -61,7 +61,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            return new Tuple(false, res);
+            return new PythonTuple(false, res);
         }
 
         /// <summary>
@@ -218,7 +218,7 @@ namespace IronPython.Modules {
                             if (!MoveNextHelper(iter)) { _fFinished = true; yield break; }
                         }
                         curKey = GetKey(iter.Current);
-                        yield return Tuple.MakeTuple(curKey, Grouper(iter, curKey));
+                        yield return PythonTuple.MakeTuple(curKey, Grouper(iter, curKey));
                     }
                 }
             }
@@ -316,7 +316,7 @@ namespace IronPython.Modules {
                         args[i] = _iterables[i].Current;
                     }
                     if (_function == null) {
-                        return new Tuple(false, args);
+                        return new PythonTuple(false, args);
                     } else {
                         return _callSite.Invoke(_function, args);
                     }
@@ -404,7 +404,7 @@ namespace IronPython.Modules {
                     for (int i = 0; i < res.Length; i++) {
                         res[i] = iters[i].Current;
                     }
-                    return new Tuple(false, res);
+                    return new PythonTuple(false, res);
                 }
             }
 
@@ -474,7 +474,7 @@ namespace IronPython.Modules {
 
             private IEnumerator<object> Yielder(CodeContext context, object function, IEnumerator iter) {
                 while (MoveNextHelper(iter)) {
-                    Tuple args = iter.Current as Tuple;
+                    PythonTuple args = iter.Current as PythonTuple;
                     if (args == null) throw PythonOps.TypeError("iterator must be a tuple");
 
                     object[] objargs = new object[args.Count];

@@ -36,13 +36,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, Tret> Create(Action action) {
+        public static DynamicSite<T0, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, Tret>(action);
         }
 
@@ -102,13 +102,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, Tret>(context, action);
         }
 
@@ -164,13 +164,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, T1, Tret> Create(Action action) {
+        public static DynamicSite<T0, T1, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, T1, Tret>(action);
         }
 
@@ -230,13 +230,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, T1, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, T1, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, T1, Tret>(context, action);
         }
 
@@ -292,13 +292,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, T1, T2, Tret> Create(Action action) {
+        public static DynamicSite<T0, T1, T2, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, T1, T2, Tret>(action);
         }
 
@@ -358,13 +358,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, T1, T2, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, T1, T2, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, T1, T2, Tret>(context, action);
         }
 
@@ -420,13 +420,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, T1, T2, T3, Tret> Create(Action action) {
+        public static DynamicSite<T0, T1, T2, T3, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, T1, T2, T3, Tret>(action);
         }
 
@@ -486,13 +486,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, T1, T2, T3, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, T1, T2, T3, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, T1, T2, T3, Tret>(context, action);
         }
 
@@ -548,13 +548,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, T1, T2, T3, T4, Tret> Create(Action action) {
+        public static DynamicSite<T0, T1, T2, T3, T4, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, T1, T2, T3, T4, Tret>(action);
         }
 
@@ -614,13 +614,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, T1, T2, T3, T4, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, T1, T2, T3, T4, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, T1, T2, T3, T4, Tret>(context, action);
         }
 
@@ -676,13 +676,13 @@ namespace Microsoft.Scripting.Actions {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
 
-        internal DynamicSite(Action action)
+        internal DynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static DynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(Action action) {
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(DynamicAction action) {
             return new DynamicSite<T0, T1, T2, T3, T4, T5, Tret>(action);
         }
 
@@ -742,13 +742,13 @@ namespace Microsoft.Scripting.Actions {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
 
-        internal FastDynamicSite(CodeContext context, Action action)
+        internal FastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(CodeContext context, Action action) {
+        public static FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret> Create(CodeContext context, DynamicAction action) {
             return new FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret>(context, action);
         }
 
@@ -795,22 +795,22 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity variable based on Tuple size
     /// </summary>
-    public delegate Tret BigDynamicSiteTarget<T0, Tret>(BigDynamicSite<T0, Tret> site, CodeContext context, T0 arg0) where T0 : NewTuple;
+    public delegate Tret BigDynamicSiteTarget<T0, Tret>(BigDynamicSite<T0, Tret> site, CodeContext context, T0 arg0) where T0 : Tuple;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity variable based on Tuple size
     /// </summary>
-    public class BigDynamicSite<T0, Tret> : DynamicSite where T0 : NewTuple {
+    public class BigDynamicSite<T0, Tret> : DynamicSite where T0 : Tuple {
         private BigDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigDynamicSiteTarget<T0, Tret>> _rules;
 
-        internal BigDynamicSite(Action action)
+        internal BigDynamicSite(DynamicAction action)
             : base(action) {
             this._rules = RuleSet<BigDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static BigDynamicSite<T0, Tret> Create(Action action) {
+        public static BigDynamicSite<T0, Tret> Create(DynamicAction action) {
             return new BigDynamicSite<T0, Tret>(action);
         }
 
@@ -827,7 +827,7 @@ namespace Microsoft.Scripting.Actions {
                 return _target(this, context, arg0);
             }
 
-            rule = context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(context, Action, NewTuple.GetTupleValues(arg0));
+            rule = context.LanguageContext.Binder.GetRule<BigDynamicSiteTarget<T0, Tret>>(context, Action, Tuple.GetTupleValues(arg0));
 
     #if DEBUG
             // This is much slower than building the ruleset, since we have to look up the rule every time;
@@ -861,22 +861,22 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity variable based on Tuple size
     /// </summary>
-    public delegate Tret BigFastDynamicSiteTarget<T0, Tret>(BigFastDynamicSite<T0, Tret> site, T0 arg0) where T0 : NewTuple;
+    public delegate Tret BigFastDynamicSiteTarget<T0, Tret>(BigFastDynamicSite<T0, Tret> site, T0 arg0) where T0 : Tuple;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity variable based on Tuple size
     /// </summary>
-    public class BigFastDynamicSite<T0, Tret> : FastDynamicSite where T0 : NewTuple {
+    public class BigFastDynamicSite<T0, Tret> : FastDynamicSite where T0 : Tuple {
         private BigFastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigFastDynamicSiteTarget<T0, Tret>> _rules;
 
-        internal BigFastDynamicSite(CodeContext context, Action action)
+        internal BigFastDynamicSite(CodeContext context, DynamicAction action)
             : base(context, action) {
             this._rules = RuleSet<BigFastDynamicSiteTarget<T0, Tret>>.EmptyRules;
             this._target = this._rules.GetOrMakeTarget(null);
         }
 
-        public static BigFastDynamicSite<T0, Tret> Create(CodeContext context, Action action) {
+        public static BigFastDynamicSite<T0, Tret> Create(CodeContext context, DynamicAction action) {
             return new BigFastDynamicSite<T0, Tret>(context, action);
         }
 
@@ -892,7 +892,7 @@ namespace Microsoft.Scripting.Actions {
                 return _target(this, arg0);
             }
 
-            rule = Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Context, Action, NewTuple.GetTupleValues(arg0));
+            rule = Context.LanguageContext.Binder.GetRule<BigFastDynamicSiteTarget<T0, Tret>>(Context, Action, Tuple.GetTupleValues(arg0));
 
     #if DEBUG
             if (Context.LanguageContext.Engine.Options.InterpretedMode) {

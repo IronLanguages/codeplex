@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Storage MakeEnvironmentReference(SymbolId name, Type type) {
-            return new PropertyEnvironmentReference(_type.GetProperty("Item" + (_index++).ToString("D3")), type);
+            return new PropertyEnvironmentReference(_type, _index++, type);
         }
 
         protected int Index {
@@ -67,7 +67,42 @@ namespace Microsoft.Scripting.Generation {
         public override void EmitStorage(CodeGen cg) {
             cg.EmitNew(StorageType.GetConstructor(ArrayUtils.EmptyTypes));
             cg.Emit(OpCodes.Dup);
-            cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
+            EmitNestedTupleInit(cg, StorageType);
+        }
+
+        private static void EmitNestedTupleInit(CodeGen cg, Type storageType) {
+            if (Tuple.GetSize(storageType) > Tuple.MaxSize) {
+                Slot tmp = cg.GetLocalTmp(storageType);
+                tmp.EmitSet(cg);
+
+                Type[] nestedTuples = storageType.GetGenericArguments();
+                for (int i = 0; i < nestedTuples.Length; i++) {
+                    Type t = nestedTuples[i];
+                    if (t.IsSubclassOf(typeof(Tuple))) {
+                        tmp.EmitGet(cg);
+
+                        cg.EmitNew(t.GetConstructor(ArrayUtils.EmptyTypes));
+                        cg.EmitPropertySet(storageType, String.Format("Item{0:D3}", i));
+
+                        tmp.EmitGet(cg);
+                        cg.EmitPropertyGet(storageType, String.Format("Item{0:D3}", i));
+
+                        EmitNestedTupleInit(cg, t);
+                    }
+                }
+
+                cg.FreeLocalTmp(tmp);
+            } else {
+                int capacity = 0;
+                foreach (Type t in storageType.GetGenericArguments()) {
+                    if (t == typeof(None)) {
+                        break;
+                    }
+                    capacity++;
+                }
+                cg.EmitInt(capacity);
+                cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
+            }
         }
 
         public override void EmitNewEnvironment(CodeGen cg) {
@@ -77,18 +112,26 @@ namespace Microsoft.Scripting.Generation {
                     typeof(SymbolId[]),
                 });
 
-            // emit: dict.Tuple.Item0 = dict, and then leave dict on the stack
+            // emit: dict.Tuple[.Item000...].Item000 = dict, and then leave dict on the stack
 
             cg.EmitNew(ctor);
-
             cg.Emit(OpCodes.Dup);
 
             Slot tmp = cg.GetLocalTmp(EnvironmentType);
             tmp.EmitSet(cg);
 
-            cg.EmitPropertyGet(EnvironmentType, "Tuple");
+            cg.EmitPropertyGet(EnvironmentType, "TupleData");
+
+            PropertyInfo last = null;
+            foreach (PropertyInfo pi in Tuple.GetAccessPath(StorageType, 0)) {
+                if (last != null) {
+                    cg.EmitPropertyGet(last);
+                }
+                last = pi;
+            }
+
             tmp.EmitGet(cg);
-            cg.EmitPropertySet(StorageType, "Item000");
+            cg.EmitPropertySet(last);
 
             cg.FreeLocalTmp(tmp);
         }
@@ -106,7 +149,7 @@ namespace Microsoft.Scripting.Generation {
         [Conditional("DEBUG")]
         private static void ValidateTupleType(Type type) {
             Type curType = type.BaseType;
-            while (curType != typeof(NewTuple)) {
+            while (curType != typeof(Tuple)) {
                 Debug.Assert(curType != typeof(object));
                 curType = curType.BaseType;
             }

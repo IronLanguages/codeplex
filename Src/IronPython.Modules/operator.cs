@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -128,7 +128,7 @@ namespace IronPython.Modules {
         public static object OperatorNot(object o) {
             return PythonOps.Not(o);
         }
-        [PythonName("not__")]
+        [PythonName("__not__")]
         public static object OperatorNotDoubleUnderscore(object o) {
             return PythonOps.Not(o);
         }
@@ -393,6 +393,7 @@ namespace IronPython.Modules {
         public static void SetIndex(object a, object b, object c) {
             PythonOps.SetIndex(a, b, c);
         }
+        [PythonName("__setitem__")]
         public static void OperatorSetIndex(object a, object b, object c) {
             PythonOps.SetIndex(a, b, c);
         }

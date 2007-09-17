@@ -203,12 +203,12 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__reduce__")]
-            public Tuple Reduce() {
-                return Tuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_days, _seconds, _microseconds));
+            public PythonTuple Reduce() {
+                return PythonTuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), PythonTuple.MakeTuple(_days, _seconds, _microseconds));
             }
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(int days, int seconds, int microseconds) {
-                return Tuple.MakeTuple(new PythonTimeDelta(days, seconds, microseconds, 0, 0, 0, 0));
+                return PythonTuple.MakeTuple(new PythonTimeDelta(days, seconds, microseconds, 0, 0, 0, 0));
             }
 
             public override bool Equals(object obj) {
@@ -451,13 +451,13 @@ namespace IronPython.Modules {
             public bool NonZero() { return true; }
 
             [PythonName("__reduce__")]
-            public virtual Tuple Reduce() {
-                return Tuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), Tuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
+            public virtual PythonTuple Reduce() {
+                return PythonTuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), PythonTuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
             }
 
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(CodeContext context, int year, int month, int day) {
-                return Tuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
+                return PythonTuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
             }
 
             [PythonName("replace")]
@@ -528,7 +528,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("isocalendar")]
-            public Tuple GetIsoCalendar() {
+            public PythonTuple GetIsoCalendar() {
                 DateTime firstDayOfLastIsoYear = FirstDayOfIsoYear(_dateTime.Year - 1);
                 DateTime firstDayOfThisIsoYear = FirstDayOfIsoYear(_dateTime.Year);
                 DateTime firstDayOfNextIsoYear = FirstDayOfIsoYear(_dateTime.Year + 1);
@@ -545,7 +545,7 @@ namespace IronPython.Modules {
                     days = (_dateTime - firstDayOfNextIsoYear).Days;
                 }
 
-                return Tuple.MakeTuple(year, days / 7 + 1, days % 7 + 1);
+                return PythonTuple.MakeTuple(year, days / 7 + 1, days % 7 + 1);
             }
 
             [PythonName("isoformat")]

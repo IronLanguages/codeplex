@@ -15,6 +15,7 @@
 
 using System;
 using System.Reflection.Emit;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Generation {    
     public class FunctionEnvironmentSlot : EnvironmentSlot {
@@ -27,12 +28,8 @@ namespace Microsoft.Scripting.Generation {
 
         public override void EmitGetDictionary(CodeGen cg) {
             EmitGet(cg);
-            if (_storageType == typeof(object[])) {
-                cg.Emit(OpCodes.Ldc_I4_0);
-                cg.Emit(OpCodes.Ldelem_Ref);
-                cg.Emit(OpCodes.Castclass, typeof(FunctionEnvironmentNDictionary));
-            } else {
-                cg.EmitPropertyGet(_storageType, "Item000");
+            foreach (PropertyInfo pi in Tuple.GetAccessPath(_storageType, 0)) {
+                cg.EmitPropertyGet(pi);
             }
         }        
     }

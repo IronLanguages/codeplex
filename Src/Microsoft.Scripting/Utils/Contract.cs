@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Collections;
 
 namespace Microsoft.Scripting.Utils {
     public static class Contract {
@@ -27,18 +28,24 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void Requires(bool precondition, string paramName) {
+            Assert.NotEmpty(paramName);
+
             if (!precondition) {
                 throw new ArgumentException("Invalid argument value", paramName);
             }
         }
 
         public static void Requires(bool precondition, string paramName, string message) {
+            Assert.NotEmpty(paramName);
+
             if (!precondition) {
                 throw new ArgumentException(message, paramName);
             }
         }
 
         public static void RequiresNotNull(object value, string paramName) {
+            Assert.NotEmpty(paramName);
+
             if (value == null) {
                 throw new ArgumentNullException(paramName);
             }
@@ -51,25 +58,44 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        public static void RequiresNotEmpty(System.Collections.ICollection collection, string paramName) {
+        public static void RequiresNotEmpty<T>(ICollection<T> collection, string paramName) {
             RequiresNotNull(collection, paramName);
             if (collection.Count == 0) {
                 throw new ArgumentException("Non-empty collection required", paramName);
             }
         }
 
-        public static void RequiresInRange<T>(IList<T> array, int offset, int count, string arrayName, string offsetName, string countName) {
-            RequiresNotNull(arrayName, "arrayName");
-            RequiresNotNull(offsetName, "offsetName");
-            RequiresNotNull(countName, "countName");
+        /// <summary>
+        /// Requires the specified index to point inside the array.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Index is outside the array.</exception>
+        public static void RequiresArrayIndex<T>(IList<T> array, int index, string indexName) {
+            Assert.NotEmpty(indexName);
+            Assert.NotNull(array);
 
-            RequiresNotNull(array, arrayName);
-            if (offset < 0 || offset > array.Count) throw new ArgumentOutOfRangeException(offsetName);
-            if (count < 0 || count > array.Count - offset) throw new ArgumentOutOfRangeException(countName);
+            if (index < 0 || index >= array.Count) throw new ArgumentOutOfRangeException(indexName);
         }
 
-        public static void RequiresNonNullItems<T>(IList<T> array, string arrayName) {
-            RequiresNotNull(arrayName, "arrayName");
+        /// <summary>
+        /// Requires the array to be non-null and the range [offset, offset + count] to be a subset of [0, array.Count].
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Array is <c>null</c>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Offset or count are out of range.</exception>
+        public static void RequiresArrayRange<T>(IList<T> array, int offset, int count, string offsetName, string countName) {
+            Assert.NotEmpty(offsetName);
+            Assert.NotEmpty(countName);
+            Assert.NotNull(array);
+
+            if (count < 0) throw new ArgumentOutOfRangeException(countName);
+            if (offset < 0 || array.Count - offset < count) throw new ArgumentOutOfRangeException(offsetName);
+        }
+
+        /// <summary>
+        /// Requires the array and all its items to be non-null.
+        /// </summary>
+        public static void RequiresNotNullItems<T>(IList<T> array, string arrayName) {
+            Assert.NotNull(arrayName);
             RequiresNotNull(array, arrayName);
 
             for (int i = 0; i < array.Count; i++) {

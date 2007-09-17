@@ -239,8 +239,8 @@ namespace Microsoft.Scripting {
             wrapper = new ModuleGlobalWrapper(context, mgc, name);
         }
 
-        public static TupleType GetTupleDictionaryData<TupleType>(Scope scope) where TupleType : NewTuple {
-            return ((TupleDictionary<TupleType>)scope.Dict).Tuple;
+        public static TupleType GetTupleDictionaryData<TupleType>(Scope scope) where TupleType : Tuple {
+            return ((TupleDictionary<TupleType>)scope.Dict).TupleData;
         }
 
         public static CodeContext CreateNestedCodeContext(CodeContext context, IAttributesCollection locals, bool visible) {
@@ -276,23 +276,14 @@ namespace Microsoft.Scripting {
         /// 
         /// Called from generated code for environment initialization.
         /// </summary>
-        public static void UninitializeEnvironmentTuple(NewTuple tuple) {
-            for (int i = 1; i < tuple.Capacity; i++) {
+        public static void UninitializeEnvironmentTuple(Tuple tuple, int capacity) {
+            Debug.Assert(tuple != null);
+
+            for (int i = 1; i < capacity; i++) {
                 tuple.SetValue(i, Uninitialized.Instance);
             }
         }
-
-        /// <summary>
-        /// Initializes all but the 1st member of an environment array to Uninitialized.Instance.
-        /// 
-        /// Called from generated code for environment initialization.
-        /// </summary>
-        public static void UninitializeEnvironmentArray(object[] array) {
-            for (int i = 1; i < array.Length; i++) {
-                array[i] = Uninitialized.Instance;
-            }
-        }
-
+       
         public static ReflectedEvent.BoundEvent MakeBoundEvent(ReflectedEvent eventObj, object instance, Type type) {
             return new ReflectedEvent.BoundEvent(eventObj, instance, DynamicHelpers.GetDynamicTypeFromType(type));
         }

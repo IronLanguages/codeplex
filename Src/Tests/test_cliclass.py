@@ -457,6 +457,10 @@ def test_explicit_interfaces():
 
     AreEqual(IOverrideTestInterface.x.GetValue(otdc), 'IOverrideTestInterface.x invoked')
     AreEqual(IOverrideTestInterface.y.GetValue(otdc), 'IOverrideTestInterface.y invoked')
+    IOverrideTestInterface.x.SetValue(otdc, 'abc')
+    AreEqual(OverrideTestDerivedClass.Value, 'abcx')
+    IOverrideTestInterface.y.SetValue(otdc, 'abc')
+    AreEqual(OverrideTestDerivedClass.Value, 'abcy')
     
     AreEqual(otdc.y, 'OverrideTestDerivedClass.y invoked')
 
@@ -476,6 +480,47 @@ def test_explicit_interfaces():
         IOverrideTestInterface.__setitem__(otdc, 2, 3)
     except NotImplementedError: pass
     else: AssertUnreachable()
+
+def test_field_helpers():
+    otdc = OverrideTestDerivedClass()
+    OverrideTestDerivedClass.z.SetValue(otdc, 'abc')
+    AreEqual(otdc.z, 'abc')
+    AreEqual(OverrideTestDerivedClass.z.GetValue(otdc), 'abc')
+
+def test_field_descriptor():
+    AreEqual(MySize.width.__get__(MySize()), 0)
+    AreEqual(MySize.width.__get__(MySize(), MySize), 0)
+
+def test_field_const_write():
+    try:
+        MySize.MaxSize = 23
+    except AttributeError, e:
+        Assert(str(e).find('MaxSize') != -1)
+        Assert(str(e).find('MySize') != -1)
+
+    try:
+        ClassWithLiteral.Literal = 23
+    except AttributeError, e:
+        Assert(str(e).find('Literal') != -1)
+        Assert(str(e).find('ClassWithLiteral') != -1)
+
+    try:
+        MySize().MaxSize = 23
+    except AttributeError, e:
+        Assert(str(e).find('MaxSize') != -1)
+        Assert(str(e).find('MySize') != -1)
+
+    try:
+        ClassWithLiteral().Literal = 23
+    except AttributeError, e:
+        Assert(str(e).find('Literal') != -1)
+        Assert(str(e).find('ClassWithLiteral') != -1)
+
+def test_field_const_access():
+    AreEqual(MySize().MaxSize, System.Int32.MaxValue)
+    AreEqual(MySize.MaxSize, System.Int32.MaxValue)
+    AreEqual(ClassWithLiteral.Literal, 5)
+    AreEqual(ClassWithLiteral().Literal, 5)
 
 def test_array():
     import System
@@ -749,5 +794,12 @@ def test_class_property():
     import System
     AreEqual(System.Environment.Version.__class__, System.Version)
 
+def test_generic_only_collision():
+    try:
+        BinderTest.GenericOnlyConflict()
+    except System.TypeLoadException, e:
+        Assert(str(e).find('requires a non-generic type') != -1)
+        Assert(str(e).find('GenericOnlyConflict') != -1)
+        
 run_test(__name__)
 

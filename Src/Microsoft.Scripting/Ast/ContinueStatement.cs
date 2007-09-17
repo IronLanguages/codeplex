@@ -65,6 +65,7 @@ namespace Microsoft.Scripting.Ast {
             return Continue(span, null);
         }
 
+        /// <param name="statement">The statement the label is pointing to (not the label itself).</param>
         public static ContinueStatement Continue(Statement statement) {
             return Continue(SourceSpan.None, statement);
         }

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -234,11 +234,11 @@ namespace IronPython.Runtime.Calls {
         #endregion
 
         #region Private helper functions
-        private Tuple GetArgNames() {
-            if (_code != null) return Tuple.MakeTuple();
+        private PythonTuple GetArgNames() {
+            if (_code != null) return PythonTuple.MakeTuple();
 
             List<string> names = new List<string>();
-            List<Tuple> nested = new List<Tuple>();
+            List<PythonTuple> nested = new List<PythonTuple>();
 
 
             for (int i = 0; i < _func.ArgNames.Length; i++) {
@@ -254,13 +254,13 @@ namespace IronPython.Runtime.Calls {
             for (int i = 0; i < nested.Count; i++) {
                 ExpandArgsTuple(names, nested[i]);
             }
-            return Tuple.Make(names);
+            return PythonTuple.Make(names);
         }
 
-        private void ExpandArgsTuple(List<string> names, Tuple toExpand) {
+        private void ExpandArgsTuple(List<string> names, PythonTuple toExpand) {
             for (int i = 0; i < toExpand.Count; i++) {
-                if (toExpand[i] is Tuple) {
-                    ExpandArgsTuple(names, toExpand[i] as Tuple);
+                if (toExpand[i] is PythonTuple) {
+                    ExpandArgsTuple(names, toExpand[i] as PythonTuple);
                 } else {
                     names.Add(toExpand[i] as string);
                 }

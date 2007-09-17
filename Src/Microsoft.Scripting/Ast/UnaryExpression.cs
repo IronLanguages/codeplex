@@ -81,8 +81,7 @@ namespace Microsoft.Scripting.Ast {
             object x = _operand.Evaluate(context);
             switch (_op) {
                 case UnaryOperators.Cast:
-                    // TODO: static cast only:
-                    return context.LanguageContext.Binder.Convert(x, _expressionType);
+                    return Cast.Explicit(x, _expressionType);
 
                 case UnaryOperators.Not:
                     return ((bool)context.LanguageContext.Binder.Convert(x, typeof(bool))) ? RuntimeHelpers.False : RuntimeHelpers.True;

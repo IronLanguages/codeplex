@@ -17,6 +17,7 @@ using System;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
+
     public class DebugStatement : Statement {
         private readonly string _marker;
 
@@ -43,6 +44,10 @@ namespace Microsoft.Scripting.Ast {
     public static partial class Ast {
         public static DebugStatement DebugMarker(string marker) {
             return new DebugStatement(marker);
+        }
+
+        public static Expression DebugMark(Expression expression, string marker) {
+            return Comma(Ast.Void(DebugMarker(marker)), expression);
         }
     }
 }

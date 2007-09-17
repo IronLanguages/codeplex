@@ -58,48 +58,22 @@ py_types = py_integer_types + py_float_types
 bug_operands = []
 unsupported_operands = [                                                  
                          #System.Decimal +: System.Single, System.Double, long, float
-                         "System.Decimal+System.Single",
-                         "System.Decimal+System.Double",
                          "System.Decimal+long",
-                         "System.Decimal+float",
-                         "System.Single+System.Decimal",
-                         "System.Double+System.Decimal",
                          "long+System.Decimal",
-                         "float+System.Decimal",
                          
                          #System.Decimal -: System.Single, System.Double, long, float
-                         "System.Decimal-System.Single",
-                         "System.Decimal-System.Double",
                          "System.Decimal-long",
-                         "System.Decimal-float",
-                         "System.Single-System.Decimal",
-                         "System.Double-System.Decimal",
                          "long-System.Decimal",
-                         "float-System.Decimal",
                          
                          #System.Decimal *: System.Single, System.Double, long, float
-                         "System.Decimal*System.Single",
-                         "System.Decimal*System.Double",
                          "System.Decimal*long",
-                         "System.Decimal*float",
-                         "System.Single*System.Decimal",
-                         "System.Double*System.Decimal",
                          "long*System.Decimal",
-                         "float*System.Decimal",
                          
                          #System.Decimal /:System.Single, System.Double, long, float
-                         "System.Decimal/System.Single",
-                         "System.Decimal/System.Double",
                          "System.Decimal/long",
-                         "System.Decimal/float",
-                         "System.Single/System.Decimal",
-                         "System.Double/System.Decimal",
                          "long/System.Decimal",
-                         "float/System.Decimal",
                          
                          #System.Decimal //:System.Byte System.SByte 
-			             #System.Int16 System.UInt16 System.Int32 System.UInt32 
-			             #System.Int64 System.UInt64 System.Single, System.Double System.Decimal int long float
                          "System.Decimal//System.Byte", 
                          "System.Decimal//System.SByte", 
                          "System.Decimal//System.Int16", 
@@ -108,12 +82,9 @@ unsupported_operands = [
                          "System.Decimal//System.UInt32", 
                          "System.Decimal//System.Int64", 
                          "System.Decimal//System.UInt64", 
-                         "System.Decimal//System.Single", 
-                         "System.Decimal//System.Double", 
                          "System.Decimal//System.Decimal", 
                          "System.Decimal//int", 
                          "System.Decimal//long",
-                         "System.Decimal//float", 
                          "System.Byte//System.Decimal",
                          "System.SByte//System.Decimal",
                          "System.Int16//System.Decimal",
@@ -122,16 +93,10 @@ unsupported_operands = [
                          "System.UInt32//System.Decimal",
                          "System.Int64//System.Decimal",
                          "System.UInt64//System.Decimal",
-                         "System.Single//System.Decimal",
-                         "System.Double//System.Decimal",
                          "System.Decimal//System.Decimal",
                          "int//System.Decimal",
                          "long//System.Decimal",
-                         "float//System.Decimal",
                          
-                         #System.Decimal **:System.Byte System.SByte
-                         #System.Int16 System.UInt16 System.Int32 System.UInt32 
-                         #System.Int64 System.UInt64 System.Decimal System.Single System.Double int long float
                          "System.Decimal**System.Byte", 
                          "System.Decimal**System.SByte", 
                          "System.Decimal**System.Int16", 
@@ -141,11 +106,8 @@ unsupported_operands = [
                          "System.Decimal**System.Int64", 
                          "System.Decimal**System.UInt64", 
                          "System.Decimal**System.Decimal", 
-                         "System.Decimal**System.Single", 
-                         "System.Decimal**System.Double", 
                          "System.Decimal**int", 
                          "System.Decimal**long",
-                         "System.Decimal**float", 
                          "System.Byte**System.Decimal",
                          "System.SByte**System.Decimal",
                          "System.Int16**System.Decimal",
@@ -155,21 +117,11 @@ unsupported_operands = [
                          "System.Int64**System.Decimal",
                          "System.UInt64**System.Decimal",
                          "System.Decimal**System.Decimal",
-                         "System.Single**System.Decimal",
-                         "System.Double**System.Decimal",
                          "int**System.Decimal",
                          "long**System.Decimal",
-                         "float**System.Decimal",
                          
-                         #System.Decimal %:	System.Single, System.Double, long,  float
-                         "System.Decimal%System.Single",
-                         "System.Decimal%System.Double",
                          "System.Decimal%long",
-                         "System.Decimal%float", 
-                         "System.Single%System.Decimal", 
-                         "System.Double%System.Decimal", 
                          "long%System.Decimal", 
-                         "float%System.Decimal"
                             ] + bug_operands
 
 

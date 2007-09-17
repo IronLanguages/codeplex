@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -197,17 +197,17 @@ namespace IronPython.Runtime {
             object converted;
 
             if (x == null && y == null) {
-                return Tuple.MakeTuple(null, null);
+                return PythonTuple.MakeTuple(null, null);
             }
 
             if (x != null) {
                 if (Converter.TryConvert(y, x.GetType(), out converted)) {
-                    return Tuple.MakeTuple(x, converted);
+                    return PythonTuple.MakeTuple(x, converted);
                 }
             }
             if (y != null) {
                 if (Converter.TryConvert(x, y.GetType(), out converted)) {
-                    return Tuple.MakeTuple(converted, y);
+                    return PythonTuple.MakeTuple(converted, y);
                 }
             }
 
@@ -217,7 +217,7 @@ namespace IronPython.Runtime {
             }
             converted = TryCoerce(context, y, x);
             if (converted != null) {
-                return Tuple.Make(reversed(converted));
+                return PythonTuple.Make(reversed(converted));
             }
 
             throw PythonOps.TypeError("coercion failed");
@@ -299,7 +299,7 @@ namespace IronPython.Runtime {
         }
 
         internal static object SlowDivMod(object x, object y) {
-            return Tuple.MakeTuple(PythonSites.FloorDivide(x, y), PythonSites.Mod(x, y));
+            return PythonTuple.MakeTuple(PythonSites.FloorDivide(x, y), PythonSites.Mod(x, y));
         }
 
         public static object enumerate = DynamicHelpers.GetDynamicTypeFromType(typeof(Enumerate));
@@ -451,8 +451,8 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (isinstance(list, DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple)))) {
-                return Tuple.Make(ret);
+            if (isinstance(list, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple)))) {
+                return PythonTuple.Make(ret);
             } else {
                 return ret;
             }
@@ -775,7 +775,7 @@ namespace IronPython.Runtime {
                         if (mapSite == null) mapSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
                         ret.AddNoLock(mapSite.Invoke(func, args));
                     } else {
-                        ret.AddNoLock(Tuple.MakeTuple(args));
+                        ret.AddNoLock(PythonTuple.MakeTuple(args));
                         args = new object[enums.Length];    // Tuple does not copy the array, allocate new one.
                     }
                 }
@@ -1293,7 +1293,7 @@ namespace IronPython.Runtime {
 
         public static object str = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
 
-        public static object tuple = DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple));
+        public static object tuple = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple));
 
         public static object type = DynamicHelpers.GetDynamicTypeFromType(typeof(DynamicType));
 
@@ -1327,7 +1327,7 @@ namespace IronPython.Runtime {
             IEnumerator i1 = PythonOps.GetEnumerator(s1);
             List ret = new List();
             while (i0.MoveNext() && i1.MoveNext()) {
-                ret.AddNoLock(Tuple.MakeTuple(i0.Current, i1.Current));
+                ret.AddNoLock(PythonTuple.MakeTuple(i0.Current, i1.Current));
             }
             return ret;
         }
@@ -1352,7 +1352,7 @@ namespace IronPython.Runtime {
                     if (!iters[i].MoveNext()) return ret;
                     items[i] = iters[i].Current;
                 }
-                ret.AddNoLock(Tuple.Make(items));
+                ret.AddNoLock(PythonTuple.Make(items));
             }
         }
 

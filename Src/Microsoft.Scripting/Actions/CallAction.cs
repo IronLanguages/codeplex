@@ -21,7 +21,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    public class CallAction : Action, IEquatable<CallAction> {
+    public class CallAction : DynamicAction, IEquatable<CallAction> {
         private static readonly CallAction _simple = new CallAction(null);
         private readonly ArgumentInfo[] _argumentInfos;
 
@@ -75,8 +75,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public override ActionKind Kind {
-            get { return ActionKind.Call; }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.Call; }
         }
 
         public bool Equals(CallAction other) {
@@ -343,7 +343,7 @@ namespace Microsoft.Scripting.Actions {
             return true;
         }
 
-        internal static int GetHashCode(ActionKind kind, ArgumentInfo[] kinds) {
+        internal static int GetHashCode(DynamicActionKind kind, ArgumentInfo[] kinds) {
             int h = 6551;
             if (kinds != null) {
                 foreach (ArgumentInfo k in kinds) {

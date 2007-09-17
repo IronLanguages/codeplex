@@ -165,7 +165,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <c>dictionary</c> can be <c>null</c>
         /// <returns></returns>
         public IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
-            Contract.RequiresNonNullItems(compiledCodes, "compiledCodes");
+            Contract.RequiresNotNullItems(compiledCodes, "compiledCodes");
 
             ScriptCode[] script_codes = new ScriptCode[compiledCodes.Length];
             for (int i = 0; i < compiledCodes.Length; i++) {

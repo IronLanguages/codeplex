@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -191,10 +191,10 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public static Tuple Reduce(PythonDictionary items, DynamicType type) {
+        public static PythonTuple Reduce(PythonDictionary items, DynamicType type) {
             object[] keys = new object[items.Keys.Count];
             items.Keys.CopyTo(keys, 0);
-            return Tuple.MakeTuple(type, Tuple.MakeTuple(new List(keys)), null);
+            return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(new List(keys)), null);
         }
     }
 
@@ -321,7 +321,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__reduce__")]
-        public Tuple Reduce() {
+        public PythonTuple Reduce() {
             return SetHelpers.Reduce(items, DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection)));
         }
 
@@ -850,7 +850,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__reduce__")]
-        public Tuple Reduce() {
+        public PythonTuple Reduce() {
             return SetHelpers.Reduce(items, DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection)));
         }
 

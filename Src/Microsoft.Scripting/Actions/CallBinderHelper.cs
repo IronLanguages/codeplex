@@ -294,7 +294,7 @@ namespace Microsoft.Scripting.Actions {
 
                 if (kwSplat != null) {
                     Variable namesVar = rule.GetTemporary(typeof(string[]), "names");
-                    argsArray = Ast.Comma(1,
+                    argsArray = Ast.Comma(
                         Ast.Assign(namesVar, names),
                         Ast.Call(
                             null,

@@ -739,6 +739,33 @@ def test_xequals_call_for_optimization():
     count = c.Count
     count = c.Count
 
+def test_interface_only_access():
+    pc = InterfaceOnlyTest.PrivateClass
+    
+    # property set
+    pc.Hello = InterfaceOnlyTest.PrivateClass
+    # property get
+    AreEqual(pc.Hello, pc)
+    # method call w/ interface param
+    pc.Foo(pc)
+    # method call w/ interface ret val
+    AreEqual(pc.RetInterface(), pc)
+    
+    # events
+    global fired
+    fired = False
+    def fired(*args):
+        global fired
+        fired = True
+        return args[0]
+    # add event
+    pc.MyEvent += fired
+    # fire event
+    AreEqual(pc.FireEvent(pc.GetEventArgs()), pc)
+    AreEqual(fired, True)
+    # remove event
+    pc.MyEvent -= fired    
+    
 print '>>>> methods in reference type'
 target = CNoOverloads()
 run_test(__name__)

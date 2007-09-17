@@ -22,7 +22,7 @@ def make_arg_list(size, name ='T%(id)d'):
 
 def get_base(size):
     if size: return 'Tuple<' + make_arg_list(size) + '>'
-    return 'NewTuple'
+    return 'Tuple'
 
 def gen_generic_args(i, type='object'):
     return ', '.join([type]*i)
@@ -93,7 +93,7 @@ def gen_get_size(cw):
     ssizes = sorted(tuples)
 
     first = True
-    cw.enter_block("if (size <= %i)" % ssizes[-1])
+    cw.enter_block("if (size <= NewTuple.MaxSize)")
     for i in ssizes[:-1]:
         gen_one_pgf(cw, i, first)
         first = False

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -35,20 +35,6 @@ namespace IronPython.Runtime.Operations {
         [SpecialName, PythonName("__repr__")]
         public static string CodeRepresentation(ReflectedField field) {
             return string.Format("<field# {0} on {1}>", field.info.Name, field.info.DeclaringType.Name);
-        }
-
-        [SpecialName, PythonName("__get__")]
-        public static object GetDescriptor(ReflectedField self, object instance, object typeContext) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.Fields, self);
-            if (instance == null) {
-                if (self.info.IsStatic) {
-                    return self.info.GetValue(null);
-                } else {
-                    return self;
-                }
-            } else {
-                return self.info.GetValue(Converter.Convert(instance, self.info.DeclaringType));
-            }            
         }
 
         [SpecialName, PythonName("__set__")]

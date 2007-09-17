@@ -148,7 +148,7 @@ namespace IronPython.Modules {
                     else if (o is long) WriteLong((long)o);
                     else if (o is List) WriteList(o);
                     else if (o is PythonDictionary) WriteDict(o);
-                    else if (o is Tuple) WriteTuple(o);
+                    else if (o is PythonTuple) WriteTuple(o);
                     else if (o is SetCollection) WriteSet(o);
                     else if (o is FrozenSetCollection) WriteFrozenSet(o);
                     else if (o is BigInteger) WriteInteger((BigInteger)o);
@@ -328,7 +328,7 @@ namespace IronPython.Modules {
             }
 
             void WriteTuple(object o) {
-                Tuple t = o as Tuple;
+                PythonTuple t = o as PythonTuple;
                 bytes.Add((byte)'(');
                 WriteInt32(t.Count);
                 for (int i = 0; i < t.Count; i++) {
@@ -405,7 +405,7 @@ namespace IronPython.Modules {
                         res = ps.StackObj;
 
                         if (ps.StackType == StackType.Tuple) {
-                            res = Tuple.Make(res);
+                            res = PythonTuple.Make(res);
                         } else if (ps.StackType == StackType.FrozenSet) {
                             res = FrozenSetCollection.Make(res);
                         }
@@ -494,7 +494,7 @@ namespace IronPython.Modules {
                         curStack.StackCount--;
                         if (curStack.StackCount == 0) {
                             stack.Pop();
-                            object tuple = Tuple.Make(objs);
+                            object tuple = PythonTuple.Make(objs);
                             if (stack.Count == 0) {
                                 result = tuple;
                             }

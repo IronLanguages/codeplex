@@ -264,7 +264,7 @@
     <Compile Include="Runtime\Symbols.cs" />
     <Compile Include="Runtime\Symbols.Generated.cs" />
     <Compile Include="Runtime\SystemState.cs" />
-    <Compile Include="Runtime\Tuple.cs" />
+    <Compile Include="Runtime\PythonTuple.cs" />
     <Compile Include="Runtime\Types\ComDispatch\ComMethodDesc.cs" />
     <Compile Include="Runtime\Types\ComDispatch\ComParamDesc.cs" />
     <Compile Include="Runtime\Types\ComDispatch\DispCallable.cs" />

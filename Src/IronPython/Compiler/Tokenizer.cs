@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -13,21 +13,6 @@
  *
  * ***************************************************************************/
 //#define DUMP_TOKENS
-
-/* **********************************************************************************
- *
- * Copyright (c) Microsoft Corporation. All rights reserved.
- *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
- *
- * You must not remove this notice, or any other, from this software.
- *
- * **********************************************************************************/
 
 using System;
 using System.IO;
@@ -108,6 +93,7 @@ namespace IronPython.Compiler {
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
         private Severity _indentationInconsistencySeverity;
+        private bool _endContinues;
 
         public object CurrentState {
             get {
@@ -281,6 +267,9 @@ namespace IronPython.Compiler {
                             _buffer.DiscardToken();
 
                             ch = NextChar();
+                            if (ch == -1) {
+                                _endContinues = true;
+                            }
                             break;
 
                         } else {
@@ -700,6 +689,16 @@ namespace IronPython.Compiler {
         public int GroupingLevel {
             get {
                 return _state.ParenLevel + _state.BraceLevel + _state.BracketLevel;
+            }
+        }
+
+        /// <summary>
+        /// True if the last characters in the buffer are a backslash followed by a new line indicating
+        /// that their is an incompletement statement which needs further input to complete.
+        /// </summary>
+        public bool EndContinues {
+            get {
+                return _endContinues;
             }
         }
 

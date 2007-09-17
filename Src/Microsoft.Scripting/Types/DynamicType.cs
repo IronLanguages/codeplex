@@ -530,8 +530,8 @@ namespace Microsoft.Scripting.Types {
             get { return InvariantContext.Instance; }
         }
 
-        public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
-            if (action.Kind == ActionKind.CreateInstance) {
+        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+            if (action.Kind == DynamicActionKind.CreateInstance) {
                 if (IsSystemType) {
                     MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
                     StandardRule<T> rule;

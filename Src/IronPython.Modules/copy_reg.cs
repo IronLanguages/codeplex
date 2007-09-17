@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -143,10 +143,10 @@ namespace IronPython.Modules {
         [Documentation("pickle_complex(complex_number) -> (<type 'complex'>, (real, imag))\n\n"
             + "Reduction function for pickling complex numbers.")]
         [PythonName("pickle_complex")]
-        public static Tuple ReduceComplex(CodeContext context, object complex) {
-            return Tuple.MakeTuple(
+        public static PythonTuple ReduceComplex(CodeContext context, object complex) {
+            return PythonTuple.MakeTuple(
                 DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64)),
-                Tuple.MakeTuple(
+                PythonTuple.MakeTuple(
                     PythonOps.GetBoundAttr(context, complex, Symbols.RealPart),
                     PythonOps.GetBoundAttr(context, complex, Symbols.ImaginaryPart)
                 )
@@ -161,7 +161,7 @@ namespace IronPython.Modules {
         [Documentation("Register an extension code.")]
         [PythonName("add_extension")]
         public static void AddExtension(object moduleName, object objectName, object value) {
-            Tuple key = Tuple.MakeTuple(moduleName, objectName);
+            PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
             bool keyExists = extensionRegistry.ContainsKey(key);
@@ -187,7 +187,7 @@ namespace IronPython.Modules {
         [Documentation("Unregister an extension code. (only for testing)")]
         [PythonName("remove_extension")]
         public static void RemoveExtension(object moduleName, object objectName, object value) {
-            Tuple key = Tuple.MakeTuple(moduleName, objectName);
+            PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
             object existingKey;

@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions {
 
         private SetMemberAction(SymbolId name) : base(name) { }
 
-        public override ActionKind Kind { get { return ActionKind.SetMember; } }
+        public override DynamicActionKind Kind { get { return DynamicActionKind.SetMember; } }
     }
 
 }

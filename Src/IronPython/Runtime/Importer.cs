@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -106,11 +106,6 @@ namespace IronPython.Runtime {
         private object ImportModuleFrom(CodeContext context, object mod, string name) {
             ScriptModule from = mod as ScriptModule;
             if (from != null) {
-                object ret;
-                if (TryGetNestedModule(context, from, name, out ret)) {
-                    return ret;
-                } 
-
                 object path;
                 if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
                     return ImportNestedModule(context, from, name);
@@ -174,7 +169,14 @@ namespace IronPython.Runtime {
 
             // now import the b.c etc.
             object next = newmod;
+            string curName = parts[0];
             for (int i = 1; i < parts.Length; i++) {
+                curName = curName + "." + parts[i];
+                object tmpNext;
+                if (TryGetExistingModule(curName, out tmpNext)) {
+                    next = tmpNext;
+                    continue;
+                }
                 next = ImportModuleFrom(context, next, parts[i]);
             }
 

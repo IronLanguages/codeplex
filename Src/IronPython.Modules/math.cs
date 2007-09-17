@@ -92,7 +92,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("frexp")]
-        public static Tuple GetMantissaAndExp(double v) {
+        public static PythonTuple GetMantissaAndExp(double v) {
             if (Double.IsInfinity(v) || Double.IsNaN(v)) {
                 throw new OverflowException();
             }
@@ -111,14 +111,14 @@ namespace IronPython.Modules {
                 }
             }
 
-            return Tuple.MakeTuple(mantissa, exponent);
+            return PythonTuple.MakeTuple(mantissa, exponent);
         }
 
         [PythonName("modf")]
-        public static Tuple ModF(double v) {
+        public static PythonTuple ModF(double v) {
             double w = v % 1.0;
             v -= w;
-            return Tuple.MakeTuple(w, v);
+            return PythonTuple.MakeTuple(w, v);
         }
 
         [PythonName("ldexp")]

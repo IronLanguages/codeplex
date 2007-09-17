@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -329,7 +329,7 @@ namespace IronPython.Runtime {
 
         internal static object Convert(object value, Type to) {
             if (value == null) {
-                if (to == typeof(bool)) return RuntimeHelpers.False;
+                if (to == BooleanType) return RuntimeHelpers.False;
 
                 if (to.IsValueType &&                    
                     (!to.IsGenericType || to.GetGenericTypeDefinition() != typeof(Nullable<>))) {
@@ -524,7 +524,7 @@ namespace IronPython.Runtime {
             int rank = to.GetArrayRank();
 
             if (rank == 1) {
-                Tuple tupleVal = value as Tuple;
+                PythonTuple tupleVal = value as PythonTuple;
                 if (tupleVal != null) {
                     Type elemType = to.GetElementType();
                     Array ret = Array.CreateInstance(elemType, tupleVal.Count);
@@ -1061,12 +1061,14 @@ namespace IronPython.Runtime {
                 }
             }
 
+            if (toType == DoubleType && fromType == DecimalType) return true;
+            if (toType == SingleType && fromType == DecimalType) return true;
 
             if (allowNarrowing == NarrowingLevel.All) {
                 if (IsNumeric(fromType) && IsNumeric(toType)) return true;
 
                 if (toType.IsArray) {
-                    return typeof(Tuple).IsAssignableFrom(fromType);
+                    return typeof(PythonTuple).IsAssignableFrom(fromType);
                 }
 
                 if (toType == CharType && fromType == StringType) return true;

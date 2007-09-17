@@ -74,9 +74,9 @@ namespace Microsoft.Scripting.Actions {
             return ArgumentInfo.GetHashCode(Kind, ArgumentInfos);
         }
 
-        public override ActionKind Kind {
+        public override DynamicActionKind Kind {
             get {
-                return ActionKind.CreateInstance;
+                return DynamicActionKind.CreateInstance;
             }
         }
     }

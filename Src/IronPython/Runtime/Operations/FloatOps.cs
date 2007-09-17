@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -117,7 +117,7 @@ namespace IronPython.Runtime.Operations {
         internal static object DivMod(double x, double y) {
             object div = FloorDivide(x, y);
             if (div == PythonOps.NotImplemented) return div;
-            return Tuple.MakeTuple(div, Mod(x, y));
+            return PythonTuple.MakeTuple(div, Mod(x, y));
         }
 
         #region Unary operators
@@ -134,7 +134,7 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("__getnewargs__")]
         public static object GetNewArgs(CodeContext context, double self) {
-            return Tuple.MakeTuple(DoubleOps.Make(context, TypeCache.Double, self));
+            return PythonTuple.MakeTuple(DoubleOps.Make(context, TypeCache.Double, self));
         }
         #endregion
 
@@ -297,7 +297,7 @@ namespace IronPython.Runtime.Operations {
                 object res;
                 if (DynamicHelpers.GetDynamicType(other).TryInvokeBinaryOperator(context, Operators.Coerce, other, self, out res)) {
                     if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                        return PythonOps.Compare(context, ((Tuple)res)[1], ((Tuple)res)[0]);
+                        return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
                     }
                 }
 

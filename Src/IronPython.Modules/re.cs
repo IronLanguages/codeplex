@@ -146,7 +146,7 @@ namespace IronPython.Modules {
                             tpl.Add(g.Value);
                         }
                     }
-                    matches[i] = Tuple.Make(tpl);
+                    matches[i] = PythonTuple.Make(tpl);
                 } else if (numgrps == 2) {
                     //  at this point we have exactly one group in the pattern (including the "bonus" one given 
                     //  by the CLR 
@@ -457,7 +457,7 @@ namespace IronPython.Modules {
                     },
                     count);
 
-                return Tuple.MakeTuple(res, totalCount);
+                return PythonTuple.MakeTuple(res, totalCount);
             }
 
             public int Flags {
@@ -582,7 +582,7 @@ namespace IronPython.Modules {
                     int grpIndex = GetGroupIndex(additional[i - 1]);
                     res[i] = _m.Groups[grpIndex].Success ? _m.Groups[grpIndex].Value : null;
                 }
-                return Tuple.MakeTuple(res);
+                return PythonTuple.MakeTuple(res);
             }
 
             [PythonName("group")]
@@ -613,7 +613,7 @@ namespace IronPython.Modules {
                         ret[i - 1] = _m.Groups[i].Value;
                     }
                 }
-                return Tuple.MakeTuple(ret);
+                return PythonTuple.MakeTuple(ret);
             }
 
             [PythonName("expand")]
@@ -676,12 +676,12 @@ namespace IronPython.Modules {
 
             [PythonName("span")]
             public object Span() {
-                return Tuple.MakeTuple(this.Start(), this.End());
+                return PythonTuple.MakeTuple(this.Start(), this.End());
             }
 
             [PythonName("span")]
             public object Span(object group) {
-                return Tuple.MakeTuple(this.Start(group), this.End(group));
+                return PythonTuple.MakeTuple(this.Start(group), this.End(group));
             }
 
             public int Position {
@@ -709,7 +709,7 @@ namespace IronPython.Modules {
                 [PythonName("regs")]
                 get {
                     // what is this?
-                    return Tuple.MakeTuple(Tuple.MakeTuple(0, 1), Tuple.MakeTuple(0, 1));
+                    return PythonTuple.MakeTuple(PythonTuple.MakeTuple(0, 1), PythonTuple.MakeTuple(0, 1));
                 }
             }
             public object Pattern {

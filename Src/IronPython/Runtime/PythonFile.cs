@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -223,23 +223,48 @@ namespace IronPython.Runtime {
         // translate incoming bytes into characters.  This requires us to keep track of our own position.
         private StreamReader _reader;
         private long _position;
+        private char[] _buffer = new char[20];
+        private int _bufPos, _bufLen;
 
         public PythonTextCRLFReader(Stream stream, Encoding encoding)
             : base(stream, encoding) {
             if (stream.CanSeek) _position = stream.Position;
-            _reader = new StreamReader(stream, encoding);
+            _reader = new StreamReader(stream, encoding);            
         }
+
+        private int Read() {
+            if (_bufPos >= _bufLen && ReadBuffer() == 0) {
+                return -1;
+            }
+
+            _position++;
+            return _buffer[_bufPos++];
+        }
+
+        private int Peek() {
+            if (_bufPos >= _bufLen && ReadBuffer() == 0) {
+                return -1;
+            }
+
+            return _buffer[_bufPos];
+        }
+
+        private int ReadBuffer() {
+            _bufLen = _reader.ReadBlock(_buffer, 0, _buffer.Length);
+            _bufPos = 0;
+            return _bufLen;
+        }        
 
         // Read at most size characters and return the result as a string.
         public override String Read(int size) {
             StringBuilder sb = new StringBuilder(size);
             while (size-- > 0) {
-                int c = _reader.Read();
+                int c = Read();
                 if (c == -1)
                     break;
                 _position++;
-                if (c == '\r' && _reader.Peek() == '\n') {
-                    c = _reader.Read();
+                if (c == '\r' && Peek() == '\n') {
+                    c = Read();
                     _position++;
                 }
                 sb.Append((char)c);
@@ -253,12 +278,12 @@ namespace IronPython.Runtime {
         public override String ReadToEnd() {
             StringBuilder sb = new StringBuilder();
             while (true) {
-                int c = _reader.Read();
+                int c = Read();
                 if (c == -1)
                     break;
                 _position++;
-                if (c == '\r' && _reader.Peek() == '\n') {
-                    c = _reader.Read();
+                if (c == '\r' && Peek() == '\n') {
+                    c = Read();
                     _position++;
                 }
                 sb.Append((char)c);
@@ -271,45 +296,74 @@ namespace IronPython.Runtime {
         // Read characters up to and including a '\r\n', converted to '\n' (or until EOF, in which case the
         // string will not be newline terminated).
         public override String ReadLine() {
-            StringBuilder sb = new StringBuilder(80);
-            while (true) {
-                int c = _reader.Read();
-                if (c == -1)
-                    break;
-                _position++;
-                if (c == '\r' && _reader.Peek() == '\n') {
-                    c = _reader.Read();
-                    _position++;
-                }
-                sb.Append((char)c);
-                if (c == '\n')
-                    break;
-            }
-            if (sb.Length == 0)
-                return String.Empty;
-            return sb.ToString();
+            return ReadLine(Int32.MaxValue);
         }
 
         // Read characters up to and including a '\r\n', converted to '\n' (or until EOF or the given size, in
         // which case the string will not be newline terminated).
         public override String ReadLine(int size) {
-            StringBuilder sb = new StringBuilder(80);
-            while (size-- > 0) {
-                int c = _reader.Read();
-                if (c == -1)
-                    break;
-                _position++;
-                if (c == '\r' && _reader.Peek() == '\n') {
-                    c = _reader.Read();
-                    _position++;
+            StringBuilder sb = null;
+            // start off w/ some text
+            if (_bufPos >= _bufLen) ReadBuffer();
+            if (_bufLen == 0) return String.Empty;
+
+            int curIndex = _bufPos;
+            int bytesWritten = 0;
+            int lenAdj = 0;
+            while (true) {
+                if (curIndex >= _bufLen) {
+                    // need more text...
+                    if (sb == null) {
+                        sb = new StringBuilder((curIndex - _bufPos) * 2);
+                    }
+                    sb.Append(_buffer, _bufPos, curIndex - _bufPos);
+                    if (ReadBuffer() == 0) {
+                        return sb.ToString();
+                    }
+                    curIndex = 0;
                 }
-                sb.Append((char)c);
-                if (c == '\n')
+
+                char c = _buffer[curIndex++];
+                if (c == '\r') {
+                    if (curIndex < _bufLen) {
+                        if (_buffer[curIndex] == '\n') {
+                            _position++;
+                            c = _buffer[curIndex++];
+                            lenAdj = 2;
+                        }
+                    } else if (_reader.Peek() == '\n') {
+                        c = (char)_reader.Read();
+                        lenAdj = 1;
+                    }
+                }
+                _position++;
+                if (c == '\n') {
                     break;
+                }
+                if (++bytesWritten >= size) break;
             }
-            if (sb.Length == 0)
-                return String.Empty;
-            return sb.ToString();
+
+            return FinishString(sb, curIndex, lenAdj);
+        }
+
+        private string FinishString(StringBuilder sb, int curIndex, int lenAdj) {
+            int len = curIndex - _bufPos;
+            int pos = _bufPos;
+            _bufPos = curIndex;
+            if (sb != null) {
+                if (lenAdj != 0) {
+                    sb.Append(_buffer, pos, len - lenAdj);
+                    sb.Append('\n');
+                } else {
+                    sb.Append(_buffer, pos, len);
+                }
+
+                return sb.ToString();
+            } else if (lenAdj != 0) {
+                return new String(_buffer, pos, len - lenAdj) + "\n";
+            } else {
+                return new String(_buffer, pos, len);
+            }
         }
 
         public override long Position {
@@ -324,6 +378,7 @@ namespace IronPython.Runtime {
         // Discard any data we may have buffered based on the current stream position. Called after seeking in
         // the stream.
         public override void DiscardBufferedData() {
+            _bufPos = _bufLen = 0;
             _reader.DiscardBufferedData();
         }
     }
@@ -799,6 +854,8 @@ namespace IronPython.Runtime {
 
     [PythonType("file")]
     public class PythonFile : IDisposable, ICodeFormattable {
+        private bool _isConsole;
+
         // Enumeration of each stream mode.
         private enum PythonFileMode {
             Binary,
@@ -1165,6 +1222,8 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError("Can not seek on file " + name);
             }
 
+            // flush before saving our position to ensure it's accurate.
+            Flush();
             SavePositionPreSeek();
 
             SeekOrigin origin;
@@ -1180,7 +1239,6 @@ namespace IronPython.Runtime {
                     origin = SeekOrigin.End;
                     break;
             }
-            Flush();
             long newPos = stream.Seek(offset, origin);
             if (reader != null) {
                 reader.DiscardBufferedData();
@@ -1205,7 +1263,9 @@ namespace IronPython.Runtime {
                 int bytesWritten = writer.Write(s);
                 if (reader != null && stream.CanSeek)
                     reader.Position += bytesWritten;
-                Flush();
+                if (IsConsole) {
+                    Flush();
+                } 
             } else {
                 throw PythonOps.IOError("Can not write to " + this.name);
             }
@@ -1252,7 +1312,7 @@ namespace IronPython.Runtime {
                             styleStrings.Add("\r");
                         if ((styles & PythonUniversalReader.TerminatorStyles.Lf) != 0)
                             styleStrings.Add("\n");
-                        return new Tuple(styleStrings.ToArray());
+                        return new PythonTuple(styleStrings.ToArray());
                 }
             }
         }
@@ -1262,6 +1322,7 @@ namespace IronPython.Runtime {
                 reseekPosition = stream.Position;
             }
         }
+
         private void ResetForWrite() {
             if (reseekPosition != null) {
                 writer.Seek(reseekPosition.Value);
@@ -1269,6 +1330,7 @@ namespace IronPython.Runtime {
                 reseekPosition = null;
             }
         }
+
         [PythonName("next")]
         public object Next() {
             string line = ReadLine();
@@ -1282,6 +1344,20 @@ namespace IronPython.Runtime {
         public object GetIterator() {
             ThrowIfClosed();
             return this;
+        }
+
+        [PythonName("isatty")]
+        public bool IsTty() {
+            return _isConsole;
+        }
+
+        public bool IsConsole {
+            get {
+                return _isConsole;
+            }
+            set {
+                _isConsole = value;
+            }
         }
 
         public override string ToString() {

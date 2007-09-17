@@ -99,4 +99,17 @@ def test_stack_size():
         temp = thread.stack_size(1024*1024)
         Assert(temp>=32768 or temp==0)
 
+def test_new_thread_is_background():
+    """verify new threads created during Python are background threads"""
+    import thread
+    global done
+    done = None
+    def f():
+        global done
+        done = Thread.CurrentThread.IsBackground
+    thread.start_new_thread(f, ())
+    while done == None:
+        Thread.Sleep(1000)
+    Assert(done)
+    
 run_test(__name__)

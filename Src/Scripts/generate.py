@@ -55,6 +55,22 @@ except Exception, e:
         
     listdir = nt.listdir        
 
+class ConditionWriter:
+    def __init__(self, cw):
+        self.cw = cw
+        self.first = True
+
+    def condition(self, text=None, **kw):
+        if self.first:
+            self.first = False
+            self.cw.enter_block(text, **kw)
+        else:
+            self.cw.else_block(text, **kw)
+
+    def close(self):
+        if not self.first:
+            self.cw.exit_block()
+
 class CodeWriter:
     def __init__(self, indent=0):
         self.lines = []
@@ -134,6 +150,8 @@ class CodeWriter:
     def text(self):
         return '\n'.join(self.lines)
 
+    def conditions(self):
+        return ConditionWriter(self)
 
 class CodeGenerator:
     def __init__(self, name, generator):

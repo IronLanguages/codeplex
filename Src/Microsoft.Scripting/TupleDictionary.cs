@@ -33,7 +33,7 @@ namespace Microsoft.Scripting {
     /// smaller than NewTuple.MaxSize.  When nesting more than 2 levels deep then the intermediary nodes have the
     /// same requirements as the leaf nodes (size 128 unless outside the size).
     /// </summary>
-    public class TupleDictionary<TupleType> : CustomSymbolDictionary where TupleType : NewTuple {
+    public class TupleDictionary<TupleType> : CustomSymbolDictionary where TupleType : Tuple {
         private SymbolId[] _extra;       // extra keys
         private TupleType _data;
 
@@ -84,68 +84,68 @@ namespace Microsoft.Scripting {
         }
 
         private object GetValue(int index) {
-            if (_extra.Length <= NewTuple.MaxSize) return _data.GetValue(index);
+            if (_extra.Length <= Tuple.MaxSize) return _data.GetValue(index);
 
             // nested tuples
             int depth = 0;
-            int mask = NewTuple.MaxSize - 1;
+            int mask = Tuple.MaxSize - 1;
             int adjust = 1;
             int count = _extra.Length;
-            while (count > NewTuple.MaxSize) {
+            while (count > Tuple.MaxSize) {
                 depth++;
-                count /= NewTuple.MaxSize;
-                mask *= NewTuple.MaxSize;
-                adjust *= NewTuple.MaxSize;
+                count /= Tuple.MaxSize;
+                mask *= Tuple.MaxSize;
+                adjust *= Tuple.MaxSize;
             }
 
             object next = _data;
             while (depth-- >= 0) {
                 int curIndex = (index & mask) / adjust;
-                next = ((NewTuple)next).GetValue(curIndex);
+                next = ((Tuple)next).GetValue(curIndex);
 
-                mask /= NewTuple.MaxSize;
-                adjust /= NewTuple.MaxSize;
+                mask /= Tuple.MaxSize;
+                adjust /= Tuple.MaxSize;
             }
 
             return next;
         }
 
         private void SetValue(int index, object value) {
-            if (_extra.Length <= NewTuple.MaxSize) { 
+            if (_extra.Length <= Tuple.MaxSize) { 
                 _data.SetValue(index, value); 
                 return; 
             }
 
             // nested tuples
             int depth = 0;
-            int mask = NewTuple.MaxSize - 1;
+            int mask = Tuple.MaxSize - 1;
             int adjust = 1;
             int count = _extra.Length;
-            while (count > NewTuple.MaxSize) {
+            while (count > Tuple.MaxSize) {
                 depth++;
-                count /= NewTuple.MaxSize;
-                mask *= NewTuple.MaxSize;
-                adjust *= NewTuple.MaxSize;
+                count /= Tuple.MaxSize;
+                mask *= Tuple.MaxSize;
+                adjust *= Tuple.MaxSize;
             }
 
-            NewTuple next = _data;
+            Tuple next = _data;
             while (depth-- >= 0) {
                 int curIndex = (index & mask) / adjust;
                 if (depth >= 0) {
-                    next = (NewTuple)next.GetValue(curIndex);
+                    next = (Tuple)next.GetValue(curIndex);
                 } else {
                     next.SetValue(curIndex, value);
                 }
 
-                mask /= NewTuple.MaxSize;
-                adjust /= NewTuple.MaxSize;
+                mask /= Tuple.MaxSize;
+                adjust /= Tuple.MaxSize;
             }
         }
 
         /// <summary>
         /// Gets the Tuple data being used to back the dicionary.
         /// </summary>
-        public TupleType Tuple {
+        public TupleType TupleData {
             get {
                 return _data;
             }

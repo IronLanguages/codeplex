@@ -229,17 +229,17 @@ namespace IronPython.Modules {
         }
 
         [PythonName("popen2")]
-        public static Tuple OpenPipedCommandBoth(CodeContext context, string command) {
+        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command) {
             return OpenPipedCommandBoth(context, command, "t");
         }
 
         [PythonName("popen2")]
-        public static Tuple OpenPipedCommandBoth(CodeContext context, string command, string mode) {
+        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command, string mode) {
             return OpenPipedCommandBoth(context, command, "t", 4096);
         }
 
         [PythonName("popen2")]
-        public static Tuple OpenPipedCommandBoth(CodeContext context, string command, string mode, int bufsize) {
+        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
             if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
@@ -250,7 +250,7 @@ namespace IronPython.Modules {
                 psi.RedirectStandardOutput = true;
                 Process p = Process.Start(psi);
 
-                return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
+                return PythonTuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
                         new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode));
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -258,17 +258,17 @@ namespace IronPython.Modules {
         }
 
         [PythonName("popen3")]
-        public static Tuple OpenPipedCommandAll(CodeContext context, string command) {
+        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command) {
             return OpenPipedCommandAll(context, command, "t");
         }
 
         [PythonName("popen3")]
-        public static Tuple OpenPipedCommandAll(CodeContext context, string command, string mode) {
+        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command, string mode) {
             return OpenPipedCommandAll(context, command, "t", 4096);
         }
 
         [PythonName("popen3")]
-        public static Tuple OpenPipedCommandAll(CodeContext context, string command, string mode, int bufsize) {
+        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
             if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
@@ -280,7 +280,7 @@ namespace IronPython.Modules {
                 psi.RedirectStandardError = true;
                 Process p = Process.Start(psi);
 
-                return Tuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
+                return PythonTuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
                         new POpenFile(context, command, p, p.StandardOutput.BaseStream, "r" + mode),
                         new POpenFile(context, command, p, p.StandardError.BaseStream, "r+" + mode));
             } catch (Exception e) {
@@ -569,15 +569,15 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__reduce__")]
-            public Tuple Reduce() {
+            public PythonTuple Reduce() {
                 PythonDictionary timeDict = new PythonDictionary(3);
                 timeDict["st_atime"] = StatATime;
                 timeDict["st_ctime"] = StatCTime;
                 timeDict["st_mtime"] = StatMTime;
 
-                return Tuple.MakeTuple(
+                return PythonTuple.MakeTuple(
                     DynamicHelpers.GetDynamicTypeFromType(typeof(StatResult)),
-                    Tuple.MakeTuple(MakeTuple(), timeDict)
+                    PythonTuple.MakeTuple(MakeTuple(), timeDict)
                 );
             }
 
@@ -621,8 +621,8 @@ namespace IronPython.Modules {
 
             #endregion
 
-            private Tuple MakeTuple() {
-                return Tuple.MakeTuple(
+            private PythonTuple MakeTuple() {
+                return PythonTuple.MakeTuple(
                     StatMode,
                     StatIno,
                     StatDev,
@@ -706,7 +706,7 @@ namespace IronPython.Modules {
         public static object GetProcessTimeInfo() {
             System.Diagnostics.Process p = System.Diagnostics.Process.GetCurrentProcess();
 
-            return Tuple.MakeTuple(p.UserProcessorTime.TotalSeconds,
+            return PythonTuple.MakeTuple(p.UserProcessorTime.TotalSeconds,
                 p.PrivilegedProcessorTime.TotalSeconds,
                 0,  // child process system time
                 0,  // child process os time
@@ -753,7 +753,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("utime")]
-        public static void SetFileTimes(string path, Tuple times) {
+        public static void SetFileTimes(string path, PythonTuple times) {
             try {
                 FileInfo fi = new FileInfo(path);
                 if (times == null) {
@@ -774,13 +774,13 @@ namespace IronPython.Modules {
         }
 
         [PythonName("waitpid")]
-        public static Tuple WaitForProcess(int pid, object options) {
+        public static PythonTuple WaitForProcess(int pid, object options) {
             System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             if (process == null) {
                 throw PythonOps.OSError("Cannot find process {0}", pid);
             }
             process.WaitForExit();
-            return Tuple.MakeTuple(pid, process.ExitCode);
+            return PythonTuple.MakeTuple(pid, process.ExitCode);
         }
 
         [PythonName("write")]

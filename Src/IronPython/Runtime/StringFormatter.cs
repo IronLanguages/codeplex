@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -165,7 +165,7 @@ namespace IronPython.Runtime {
         private int ReadNumberOrStar(int noValSpecified) {
             int res = noValSpecified;
             if (_curCh == '*') {
-                if (!(_data is Tuple)) { throw PythonOps.TypeError("* requires a tuple for values"); }
+                if (!(_data is PythonTuple)) { throw PythonOps.TypeError("* requires a tuple for values"); }
                 _curCh = _str[_index++];
                 res = Converter.ConvertToInt32(GetData(_dataIndex++));
             } else {
@@ -244,7 +244,7 @@ namespace IronPython.Runtime {
         }
 
         private object GetData(int index) {
-            Tuple dt = _data as Tuple;
+            PythonTuple dt = _data as PythonTuple;
             if (dt != null) {
                 if (index < dt.Count) {
                     return dt[index];
@@ -310,8 +310,8 @@ namespace IronPython.Runtime {
 
         private void CheckDataUsed() {
             if (!(_data is IMapping) && !(_data is IAttributesCollection)) {
-                if ((!(_data is Tuple) && _dataIndex != 1) ||
-                    (_data is Tuple && _dataIndex != ((Tuple)_data).Count)) {
+                if ((!(_data is PythonTuple) && _dataIndex != 1) ||
+                    (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).Count)) {
                     throw PythonOps.TypeError("not all arguments converted during string formatting");
                 }
             }

@@ -27,6 +27,6 @@ namespace Microsoft.Scripting {
         /// </summary>
         LanguageContext LanguageContext { get; }
 
-        StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args);
+        StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args);
     }
 }

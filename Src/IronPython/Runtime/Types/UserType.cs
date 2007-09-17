@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -42,19 +42,19 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     public class UserTypeBuilder : ReflectedTypeBuilder {
         private string _name;
-        private Tuple _bases;
+        private PythonTuple _bases;
         private IAttributesCollection _vars;
         private Type _type;
         private bool _hasDict, _hasWeakRef, _hasSlots, _hasFinalizer;
         private static Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
 
-        private UserTypeBuilder(string name, Tuple bases, IAttributesCollection vars) {
+        private UserTypeBuilder(string name, PythonTuple bases, IAttributesCollection vars) {
             _name = name;
             _bases = bases;
             _vars = vars;
         }
 
-        public static DynamicType Build(CodeContext context, string name, Tuple bases, IAttributesCollection vars) {
+        public static DynamicType Build(CodeContext context, string name, PythonTuple bases, IAttributesCollection vars) {
             UserTypeBuilder utb = new UserTypeBuilder(name, bases, vars);
             Type type = NewTypeMaker.GetNewType(name, bases, vars);
             DynamicTypeBuilder builder = new DynamicTypeBuilder(name, type);
@@ -65,7 +65,7 @@ namespace IronPython.Runtime.Types {
             return utb.DoBuild(context);
         }
 
-        public static void Build(CodeContext context, DynamicType dt, string name, Tuple bases, IAttributesCollection vars) {
+        public static void Build(CodeContext context, DynamicType dt, string name, PythonTuple bases, IAttributesCollection vars) {
             Type type = NewTypeMaker.GetNewType(name, bases, vars);
             DynamicTypeBuilder builder = DynamicTypeBuilder.GetBuilder(dt);
 
@@ -578,7 +578,7 @@ namespace IronPython.Runtime.Types {
         /// <param name="context"></param>
         /// <param name="newBases"></param>
         /// <param name="newDict"></param>
-        private bool InitializeUserType(CodeContext context, Tuple newBases, IAttributesCollection newDict) {
+        private bool InitializeUserType(CodeContext context, PythonTuple newBases, IAttributesCollection newDict) {
             newBases = EnsureBaseType(newBases);
 
             for (int i = 0; i < newBases.Count; i++) {
@@ -758,7 +758,7 @@ namespace IronPython.Runtime.Types {
         /// <summary>
         /// If we have only interfaces, we'll need to insert object's base
         /// </summary>
-        private static Tuple EnsureBaseType(Tuple bases) {
+        private static PythonTuple EnsureBaseType(PythonTuple bases) {
             foreach (object baseClass in bases) {
                 if (baseClass is OldClass) continue;
 
@@ -769,7 +769,7 @@ namespace IronPython.Runtime.Types {
             }
 
             // We found only interfaces. We need do add System.Object to the bases
-            return new Tuple(bases, TypeCache.Object);
+            return new PythonTuple(bases, TypeCache.Object);
         }
 
     }

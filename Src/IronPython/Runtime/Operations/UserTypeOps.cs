@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -84,13 +84,13 @@ namespace IronPython.Runtime.Operations {
             PythonCalls.Call(callable, eventValue);
         }
 
-        public static StandardRule<T> GetRuleHelper<T>(Action action, CodeContext context, object[] args) {
+        public static StandardRule<T> GetRuleHelper<T>(DynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
-                case ActionKind.GetMember: return MakeGetMemberRule<T>(context, (GetMemberAction)action, args);
-                case ActionKind.SetMember: return MakeSetMemberRule<T>(context, (SetMemberAction)action, args);
-                case ActionKind.DeleteMember: return MakeDeleteMemberRule<T>(context, (DeleteMemberAction)action, args);
-                case ActionKind.DoOperation: return MakeOperationRule<T>(context, (DoOperationAction)action, args);
-                case ActionKind.Call: return MakeCallRule<T>(context, (CallAction)action, args);
+                case DynamicActionKind.GetMember: return MakeGetMemberRule<T>(context, (GetMemberAction)action, args);
+                case DynamicActionKind.SetMember: return MakeSetMemberRule<T>(context, (SetMemberAction)action, args);
+                case DynamicActionKind.DeleteMember: return MakeDeleteMemberRule<T>(context, (DeleteMemberAction)action, args);
+                case DynamicActionKind.DoOperation: return MakeOperationRule<T>(context, (DoOperationAction)action, args);
+                case DynamicActionKind.Call: return MakeCallRule<T>(context, (CallAction)action, args);
                     
                 default: return null;
             }
@@ -630,7 +630,7 @@ namespace IronPython.Runtime.Operations {
                     // see if we can do a standard .NET binding...
                     StandardRule<T> baseRule = new SetMemberBinderHelper<T>(context, action, args).MakeNewRule();
                     if (!baseRule.IsError) {
-                        baseRule.AddTest(PythonBinderHelper.MakeTypeTest(baseRule, sdo.DynamicType, 0));
+                        baseRule.AddTest(PythonBinderHelper.MakeTypeTest(baseRule, sdo.DynamicType, baseRule.Parameters[0], false));
                         return baseRule;
                     }
 

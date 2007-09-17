@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -35,7 +35,7 @@ namespace IronPython.Modules {
         public const int DEBUG_SAVEALL = 32;
         public const int DEBUG_LEAK = (DEBUG_COLLECTABLE | DEBUG_UNCOLLECTABLE | DEBUG_INSTANCES | DEBUG_OBJECTS | DEBUG_SAVEALL);
 
-        static Tuple thresholds = Tuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024);
+        static PythonTuple thresholds = PythonTuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024);
 
         [PythonName("enable")]
         public static void Enable() {
@@ -77,11 +77,11 @@ namespace IronPython.Modules {
 
         [PythonName("set_threshold")]
         public static void SetThreshold(params object[] args) {
-            thresholds = Tuple.MakeTuple(args);
+            thresholds = PythonTuple.MakeTuple(args);
         }
 
         [PythonName("get_threshold")]
-        public static Tuple GetThreshold() {
+        public static PythonTuple GetThreshold() {
             return thresholds;
         }
 

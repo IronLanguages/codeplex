@@ -268,6 +268,7 @@ namespace Microsoft.Scripting.Ast {
                     cg.FreeLocalTmp(cr.Slot);
                     cr.Block.Body.Emit(cg);
                     cg.MarkLabel(next);
+                    cg.EmitSequencePointNone();
                 }
             }
 
@@ -318,6 +319,8 @@ namespace Microsoft.Scripting.Ast {
                 // Emit the flow control for finally, if there was any.
                 //
                 EmitFinallyFlowControl(cg, flow, flowControlFlag);
+
+                cg.EmitSequencePointNone();
             }
 
             // Clear the target labels

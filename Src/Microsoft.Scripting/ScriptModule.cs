@@ -19,13 +19,12 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.Remoting;
+using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
-using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting {
     [Flags]
@@ -194,10 +193,7 @@ namespace Microsoft.Scripting {
             object value;
             if (Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out value)) {
                 if (value != Uninitialized.Instance) {
-                    IContextAwareMember icaa = value as IContextAwareMember;
-                    if (icaa == null || icaa.IsVisible(context, null)) { /* TODO: owner type*/
-                        return value;
-                    }
+                    return value;
                 }
             }
             return OperationFailed.Value;
@@ -227,9 +223,8 @@ namespace Microsoft.Scripting {
             List<object> ret;
             if (!context.ModuleContext.ShowCls) {
                 ret = new List<object>();
-                foreach (KeyValuePair<object, object> kvp in Scope.GetAllItems(context.LanguageContext)) {
-                    IContextAwareMember icaa = kvp.Value as IContextAwareMember;
-                    if (icaa == null || icaa.IsVisible(context, null)) {  /* TODO: Owner type */
+                foreach (KeyValuePair<object, object> kvp in Scope.GetAllItems(context.LanguageContext)) {                    
+                    if(kvp.Value != Uninitialized.Instance) {
                         if (kvp.Key is SymbolId) {
                             ret.Add(SymbolTable.IdToString((SymbolId)kvp.Key));
                         } else {

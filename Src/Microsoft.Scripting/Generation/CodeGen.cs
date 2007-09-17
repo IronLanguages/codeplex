@@ -805,7 +805,7 @@ namespace Microsoft.Scripting.Generation {
         [Conditional("DEBUG")]
         public void EmitDebugMarker(string marker) {
             EmitString(marker);
-            Emit(OpCodes.Pop);
+            EmitCall(typeof(Debug), "WriteLine", new Type[] { typeof(string) });
         }
 
         [Conditional("DEBUG")]
@@ -984,11 +984,11 @@ namespace Microsoft.Scripting.Generation {
         private void EmitTuple(Type tupleType, int start, int end, EmitArrayHelper emit) {
             int size = end - start;
 
-            if (size > NewTuple.MaxSize) {
+            if (size > Tuple.MaxSize) {
                 int multiplier = 1;
-                while (size > NewTuple.MaxSize) {
-                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
-                    multiplier *= NewTuple.MaxSize;
+                while (size > Tuple.MaxSize) {
+                    size = (size + Tuple.MaxSize - 1) / Tuple.MaxSize;
+                    multiplier *= Tuple.MaxSize;
                 }
                 for (int i = 0; i < size; i++) {
                     int newStart = start + (i * multiplier);
@@ -1251,7 +1251,7 @@ namespace Microsoft.Scripting.Generation {
 
             // Can generate dynamic site
             bool fast;
-            Action action = DoOperationAction.Make(op);
+            DynamicAction action = DoOperationAction.Make(op);
             Slot site = CreateDynamicSite(
                 action,
                 new Type[] { leftType, rightType, typeof(object) },
@@ -1819,7 +1819,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
-            Contract.RequiresNonNullItems(paramTypes, "paramTypes");
+            Contract.RequiresNotNullItems(paramTypes, "paramTypes");
             //Contract.RequiresNotNull(paramNames, "paramNames");
 
             CodeGen res;
@@ -2326,7 +2326,7 @@ namespace Microsoft.Scripting.Generation {
             return true;
         }
 
-        public Slot CreateDynamicSite(Action action, Type[] siteTypes, out bool fast) {
+        public Slot CreateDynamicSite(DynamicAction action, Type[] siteTypes, out bool fast) {
             object site;
             if (fast = CanUseFastSite()) {
                 // Use fast dynamic site (with cached CodeContext)

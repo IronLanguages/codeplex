@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
                 if (_returnArgs[0] == -1) {
                     return ret;
                 }
-                return Ast.Comma(1, ret, args[_returnArgs[0]].ToReturnExpression(context));
+                return Ast.Comma(ret, args[_returnArgs[0]].ToReturnExpression(context));
             } 
 
             Expression[] retValues = new Expression[_returnArgs.Count];
@@ -57,7 +57,7 @@ namespace Microsoft.Scripting.Generation {
 
             Expression retArray = Ast.NewArray(typeof(object[]), retValues);
             if (!usesRet) {
-                retArray = Ast.Comma(1, ret, retArray);
+                retArray = Ast.Comma(ret, retArray);
             }
 
             return Ast.Call(

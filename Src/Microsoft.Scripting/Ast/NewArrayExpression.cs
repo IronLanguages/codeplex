@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(expressions, "expressions");
             Contract.RequiresNotNull(type, "type");
             Contract.Requires(type.IsArray, "type", "Not an array type");
-            Contract.RequiresNonNullItems(expressions, "expressions");
+            Contract.RequiresNotNullItems(expressions, "expressions");
 
             _type = type;
             _expressions = expressions;

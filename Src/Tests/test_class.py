@@ -2105,5 +2105,63 @@ def test_method():
 
     AssertError(TypeError, tst_oc.root)
     AssertError(TypeError, tst_nc.root)
+
+def test_descriptors_custom_attrs():
+    """verifies the interaction between descriptors and custom attribute access works properly"""
+    class mydesc(object):
+        def __get__(self, instance, ctx): 
+            raise AttributeError
+    
+    class f(object):
+        x = mydesc()
+        def __getattr__(self, name): return 42
+    
+    AreEqual(f().x, 42)
+
+def test_property_always_set_descriptor():
+    """verifies that set descriptors take precedence over dictionary entries and 
+       properties are always treated as set descriptors, even if they have no 
+       setter function"""
+    
+    class C(object):
+        x = property(lambda self: self._x)
+        def __init__(self):
+            self._x = 42
+    
+    
+    c = C()
+    c.__dict__['x'] = 43
+    AreEqual(c.x, 42)
+
+    # now check a user get descriptor
+    class MyDescriptor(object):
+        def __get__(self, *args): return 42
+        
+    class C(object):
+        x = MyDescriptor()
+        
+    c = C()
+    c.__dict__['x'] = 43
+    AreEqual(c.x, 43)
+    
+    # now check a user get/set descriptor
+    class MyDescriptor(object):
+        def __get__(self, *args): return 42
+        def __set__(self, *args): pass
+        
+    class C(object):
+        x = MyDescriptor()
+        
+    c = C()
+    c.__dict__['x'] = 43
+    AreEqual(c.x, 42)
+
+def test_object_as_condition():
+    class C(object):
+        def __mod__(self, other): return 1
+    o = C()
+    flag = 0
+    if o % o: flag = 1   # the bug was causing cast error before
+    AreEqual(flag, 1)
     
 run_test(__name__)

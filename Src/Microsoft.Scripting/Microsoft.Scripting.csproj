@@ -97,8 +97,9 @@
     </Compile>
     <Compile Include="ActionOnCallAttribute.cs" />
     <Compile Include="Actions\AbstractObject.cs" />
-    <Compile Include="Actions\Action.cs" />
+    <Compile Include="Actions\DynamicAction.cs" />
     <Compile Include="Actions\ActionBinder.cs" />
+    <Compile Include="Actions\BoundMemberTracker.cs" />
     <Compile Include="Actions\ConstructorTracker.cs" />
     <Compile Include="Actions\EventTracker.cs" />
     <Compile Include="Actions\ExtensionPropertyTracker.cs" />
@@ -153,6 +154,8 @@
     <Compile Include="Ast\InterpretChecker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
+    <Compile Include="Cast.cs" />
+    <Compile Include="Cast.Generated.cs" />
     <Compile Include="Generation\KeywordArgBuilder.cs" />
     <Compile Include="Generation\KeywordConstructorReturnBuilder.cs" />
     <Compile Include="Generation\MethodBinderContext.cs" />
@@ -168,7 +171,6 @@
     <Compile Include="Ast\CallWithThisExpression.cs" />
     <Compile Include="Ast\ClosureBinder.cs" />
     <Compile Include="Ast\CodeBlock.cs" />
-    <Compile Include="Ast\CodeBlock.Generated.cs" />
     <Compile Include="Ast\CodeBlockExpression.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
     <Compile Include="Ast\FlowChecker.cs" />
@@ -283,17 +285,14 @@
     <Compile Include="Extensible.cs" />
     <Compile Include="Types\ExtensionTypeAttribute.cs" />
     <Compile Include="ExtraKeyEnumerator.cs" />
-    <Compile Include="FunctionEnvironment.cs" />
+    <Compile Include="FunctionEnvironmentDictionary.cs" />
     <Compile Include="Generation\ArgBuilder.cs" />
     <Compile Include="Generation\ContextArgBuilder.cs" />
     <Compile Include="Generation\DefaultArgBuilder.cs" />
     <Compile Include="Generation\FunctionEnvironmentSlot.cs" />
-    <Compile Include="Generation\IndexEnvironmentFactory.cs" />
-    <Compile Include="Generation\IndexEnvironmentReference.cs" />
     <Compile Include="Generation\LocalStorage.cs" />
     <Compile Include="Generation\LocalStorageAllocator.cs" />
     <Compile Include="Generation\ModuleGlobalFactory.cs" />
-    <Compile Include="Generation\ModuleGlobalPropertyEnvironmentReference.cs" />
     <Compile Include="Generation\ModuleGlobalSlot.cs" />
     <Compile Include="Generation\NullArgBuilder.cs" />
     <Compile Include="Generation\ParamsArgBuilder.cs" />

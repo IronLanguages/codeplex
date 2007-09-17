@@ -18,6 +18,7 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace Microsoft.Scripting.Utils {
 
@@ -48,6 +49,16 @@ namespace Microsoft.Scripting.Utils {
         [Conditional("DEBUG")]
         public static void NotNull(object var1, object var2, object var3, object var4) {
             Debug.Assert(var1 != null && var2 != null && var3 != null && var4 != null);
+        }
+
+        [Conditional("DEBUG")]
+        public static void NotEmpty(string str) {
+            Debug.Assert(!String.IsNullOrEmpty(str));
+        }
+
+        [Conditional("DEBUG")]
+        public static void NotEmpty<T>(ICollection<T> array) {
+            Debug.Assert(array != null && array.Count > 0);
         }
 
         [Conditional("DEBUG")]

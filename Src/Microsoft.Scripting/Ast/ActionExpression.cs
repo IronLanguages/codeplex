@@ -25,12 +25,12 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Ast {
     public class ActionExpression : Expression {
         private readonly IList<Expression> _arguments;
-        private readonly Action _action;
+        private readonly DynamicAction _action;
         private readonly Type _result;
 
-        internal ActionExpression(SourceSpan span, Action action, IList<Expression> arguments, Type result)
+        internal ActionExpression(SourceSpan span, DynamicAction action, IList<Expression> arguments, Type result)
             : base(span) {
-            Contract.RequiresNonNullItems(arguments, "arguments");
+            Contract.RequiresNotNullItems(arguments, "arguments");
             Contract.RequiresNotNull(action, "action");
             Contract.RequiresNotNull(arguments, "arguments");
             Contract.RequiresNotNull(result, "result");
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
             _result = result;
         }
 
-        public Action Action {
+        public DynamicAction Action {
             get { return _action; }
         }
 

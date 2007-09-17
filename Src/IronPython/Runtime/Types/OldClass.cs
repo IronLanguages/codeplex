@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -74,10 +74,10 @@ namespace IronPython.Runtime.Types {
         private int _optimizedInstanceNamesVersion;
         private SymbolId[] _optimizedInstanceNames;
 
-        public OldClass(string name, Tuple bases, IAttributesCollection dict) : this(name, bases, dict, "") {
+        public OldClass(string name, PythonTuple bases, IAttributesCollection dict) : this(name, bases, dict, "") {
         }
 
-        internal OldClass(string name, Tuple bases, IAttributesCollection dict, string instanceNames) {            
+        internal OldClass(string name, PythonTuple bases, IAttributesCollection dict, string instanceNames) {            
             _bases = ValidateBases(bases);
 
             Init(name, dict, instanceNames);
@@ -313,7 +313,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public bool TryGetBoundMember(CodeContext context, SymbolId name, object instance, out object value) {
-            if (name == Symbols.Bases) { value = Tuple.Make(_bases); return true; }
+            if (name == Symbols.Bases) { value = PythonTuple.Make(_bases); return true; }
             if (name == Symbols.Name) { value = __name__; return true; }
             if (name == Symbols.Dict) {
                 //!!! user code can modify __del__ property of __dict__ behind our back
@@ -329,7 +329,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private List<OldClass> ValidateBases(object value) {
-            Tuple t = value as Tuple;
+            PythonTuple t = value as PythonTuple;
             if (t == null) throw PythonOps.TypeError("__bases__ must be a tuple object");
 
             List<OldClass> res = new List<OldClass>(t.Count);
@@ -512,16 +512,16 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
+        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind ){
-                case ActionKind.GetMember:
+                case DynamicActionKind.GetMember:
                     return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
-                case ActionKind.SetMember:
+                case DynamicActionKind.SetMember:
                     return MakeSetMemberRule<T>((SetMemberAction)action, context, args);
-                case ActionKind.DeleteMember:
+                case DynamicActionKind.DeleteMember:
                     return MakeDelMemberRule<T>((DeleteMemberAction)action, context, args);
-                case ActionKind.CreateInstance:
-                case ActionKind.Call:
+                case DynamicActionKind.CreateInstance:
+                case DynamicActionKind.Call:
                     return MakeCallRule<T>((CallAction)action, context, args);
                 default: return null;
             }
@@ -652,7 +652,7 @@ namespace IronPython.Runtime.Types {
                     Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("DictionaryIsPublic")));
             } else if (action.Name == Symbols.Bases) {
                 target = Ast.Call(null, 
-                    typeof(Tuple).GetMethod("Make"),
+                    typeof(PythonTuple).GetMethod("Make"),
                     Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("BaseClasses")));                
             } else if (action.Name == Symbols.Name) {
                 target = Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("Name"));                

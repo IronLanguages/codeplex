@@ -22,13 +22,13 @@ namespace Microsoft.Scripting.Actions {
     /// This is a cache of all generated rules (per ActionBinder)
     /// </summary>
     internal class RuleCache {
-        private readonly Dictionary<Action, ActionRuleCache> _rules = new Dictionary<Action,ActionRuleCache>();
+        private readonly Dictionary<DynamicAction, ActionRuleCache> _rules = new Dictionary<DynamicAction,ActionRuleCache>();
 
         internal void Clear() {
             _rules.Clear();
         }
 
-        private ActionRuleCache FindActionRuleCache(CodeContext callerContext, Action action, object[] args) {
+        private ActionRuleCache FindActionRuleCache(CodeContext callerContext, DynamicAction action, object[] args) {
             ActionRuleCache actionRuleCache;
             lock (this) {
                 if (!_rules.TryGetValue(action, out actionRuleCache)) {
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Actions {
             return actionRuleCache;
         }
 
-        internal StandardRule<T> FindRule<T>(CodeContext callerContext, Action action, object[] args) {
+        internal StandardRule<T> FindRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
             ActionRuleCache actionRuleCache = FindActionRuleCache(callerContext, action, args);
             StandardRule<T> rule = actionRuleCache.FindRule<T>(args);
             if (rule == null || !rule.IsValid) {
@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
             return rule;
         }
 
-        internal void AddRule<T>(Action action, object[] args, StandardRule<T> rule) {
+        internal void AddRule<T>(DynamicAction action, object[] args, StandardRule<T> rule) {
             ActionRuleCache actionRuleCache = FindActionRuleCache(null, action, args);
             actionRuleCache.AddRule<T>(args, rule);
         }
