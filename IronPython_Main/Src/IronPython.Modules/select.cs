@@ -56,7 +56,7 @@ namespace IronPython.Modules {
             + "files or other objects."
             )]
         [PythonName("select")]
-        public static Tuple Select(CodeContext context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
+        public static PythonTuple Select(CodeContext context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
             List readerList, writerList, errorList;
             Dictionary<Socket, object> readerOriginals, writerOriginals, errorOriginals;
             ProcessSocketSequence(context, iwtd, out readerList, out readerOriginals);
@@ -89,11 +89,11 @@ namespace IronPython.Modules {
             for (int i = 0; i < writerList.Count; i++) writerList[i] = writerOriginals[(Socket)writerList[i]];
             for (int i = 0; i < errorList.Count; i++) errorList[i] = errorOriginals[(Socket)errorList[i]];
 
-            return Tuple.MakeTuple(readerList, writerList, errorList);
+            return PythonTuple.MakeTuple(readerList, writerList, errorList);
         }
 
-        private static Tuple SocketExceptionToTuple(SocketException e) {
-            return Tuple.MakeTuple(e.ErrorCode, e.Message);
+        private static PythonTuple SocketExceptionToTuple(SocketException e) {
+            return PythonTuple.MakeTuple(e.ErrorCode, e.Message);
         }
 
         private static Exception MakeException(object value) {
@@ -150,7 +150,7 @@ namespace IronPython.Modules {
             socket = PythonSocket.SocketObj.HandleToSocket(handle);
             if (socket == null) {
                 SocketException e = new SocketException((int)SocketError.NotSocket);
-                throw ExceptionConverter.CreateThrowable(error, Tuple.MakeTuple(e.ErrorCode, e.Message));
+                throw ExceptionConverter.CreateThrowable(error, PythonTuple.MakeTuple(e.ErrorCode, e.Message));
             }
             return socket;
         }

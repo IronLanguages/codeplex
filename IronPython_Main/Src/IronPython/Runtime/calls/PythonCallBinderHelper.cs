@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -117,7 +117,7 @@ namespace IronPython.Runtime.Calls {
                 Rule.SetTarget(Rule.MakeReturn(Binder, createExpr));
             } else {
                 body.Add(Ast.Read(allocatedInst));
-                Rule.SetTarget(Rule.MakeReturn(Binder, Ast.Comma(body.Count - 1, body.ToArray())));
+                Rule.SetTarget(Rule.MakeReturn(Binder, Ast.Comma(body.ToArray())));
             }
 
             MakeTests(ai, newAdapter, initAdapter);
@@ -706,10 +706,10 @@ namespace IronPython.Runtime.Calls {
         private class ShareableTemplateKey : IEquatable<ShareableTemplateKey> {
             private Type _type;
             private bool _altVersion;
-            private Action _action;
+            private DynamicAction _action;
             private object[] _args;
 
-            public ShareableTemplateKey(Action action, Type type, bool altVersion, params object[] args) {
+            public ShareableTemplateKey(DynamicAction action, Type type, bool altVersion, params object[] args) {
                 _type = type;
                 _altVersion = altVersion;
                 _args = args;

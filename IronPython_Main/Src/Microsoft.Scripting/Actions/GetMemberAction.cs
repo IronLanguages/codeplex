@@ -55,8 +55,8 @@ namespace Microsoft.Scripting.Actions {
             _flags = bindingFlags;
         }
 
-        public override ActionKind Kind {
-            get { return ActionKind.GetMember; }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.GetMember; }
         }
 
         public override bool Equals(object obj) {

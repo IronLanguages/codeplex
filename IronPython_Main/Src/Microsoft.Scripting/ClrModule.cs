@@ -24,7 +24,6 @@ using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
@@ -55,6 +54,7 @@ namespace Microsoft.Scripting {
 
         public void AddReference(params object[] references) {
             if (references == null) throw new ArgumentTypeException("Expected string or Assembly, got NoneType");
+            if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
 
             foreach (object reference in references) {
                 AddReference(reference);
@@ -63,6 +63,7 @@ namespace Microsoft.Scripting {
 
         public void AddReferenceToFile(CodeContext context, params string[] files) {
             if (files == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (files.Length == 0) throw new ArgumentException("Expected at least one name, got none");
 
             foreach (string file in files) {
                 AddReferenceToFile(context, file);
@@ -71,6 +72,7 @@ namespace Microsoft.Scripting {
 
         public void AddReferenceByName(params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
 
             foreach (string name in names) {
                 AddReferenceByName(name);
@@ -80,6 +82,7 @@ namespace Microsoft.Scripting {
 #if !SILVERLIGHT // files, paths
         public void AddReferenceByPartialName(params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
 
             foreach (string name in names) {
                 AddReferenceByPartialName(name);
@@ -94,9 +97,10 @@ namespace Microsoft.Scripting {
 
         public Assembly LoadAssemblyFromFile(CodeContext context, string file) {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
+            if (file == string.Empty) throw new ArgumentException("assembly name must not be empty string");
 
             if (file.IndexOf(System.IO.Path.DirectorySeparatorChar) != -1) {
-                throw new ArithmeticException("filenames must not contain full paths, first add the path to sys.path");
+                throw new ArgumentException("filenames must not contain full paths, first add the path to sys.path");
             }
 
             return context.LanguageContext.LoadAssemblyFromFile(file);
@@ -117,14 +121,14 @@ namespace Microsoft.Scripting {
 
         public ScriptModule Use(string name) {
             ScriptModule res = ScriptDomainManager.CurrentManager.UseModule(name);
-            if (res == null) throw new ArithmeticException(String.Format("couldn't find module {0} to use", name));
+            if (res == null) throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
 
             return res;
         }
 
         public ScriptModule Use(string path, string language) {
             ScriptModule res = ScriptDomainManager.CurrentManager.UseModule(path, language);
-            if (res == null) throw new ArithmeticException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
+            if (res == null) throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
 
             return res;
         }

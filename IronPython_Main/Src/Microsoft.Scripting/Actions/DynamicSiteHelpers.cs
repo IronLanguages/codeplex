@@ -39,10 +39,10 @@ namespace Microsoft.Scripting.Actions {
             return type.Name.StartsWith("Big");
         }
 
-        private delegate object CreateSite(Action action);
-        private delegate object CreateFastSite(CodeContext context, Action action);
+        private delegate object CreateSite(DynamicAction action);
+        private delegate object CreateFastSite(CodeContext context, DynamicAction action);
 
-        public static DynamicSite MakeSite(Action action, Type siteType) {
+        public static DynamicSite MakeSite(DynamicAction action, Type siteType) {
             CreateSite ctor;
             lock (_siteCtors) {
                 if (!_siteCtors.TryGetValue(siteType, out ctor)) {
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
             return (DynamicSite)ctor(action);
         }
 
-        public static FastDynamicSite MakeFastSite(CodeContext context, Action action, Type siteType) {
+        public static FastDynamicSite MakeFastSite(CodeContext context, DynamicAction action, Type siteType) {
             Debug.Assert(typeof(FastDynamicSite).IsAssignableFrom(siteType.BaseType));
             CreateFastSite ctor;
             lock (_fastSiteCtors) {
@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Actions {
         private static Type MakeBigDynamicSiteType(params Type[] types) {
             if (types.Length < 2) throw new ArgumentException("must have at least 2 types");
 
-            Type tupleType = NewTuple.MakeTupleType(ArrayUtils.RemoveLast(types));
+            Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));
 
             return typeof(BigDynamicSite<,>).MakeGenericType(tupleType, types[types.Length - 1]);            
         }
@@ -108,12 +108,12 @@ namespace Microsoft.Scripting.Actions {
         public static Type MakeBigFastDynamicSiteType(params Type[] types) {
             if (types.Length < 2) throw new ArgumentException("must have at least 2 types");
 
-            Type tupleType = NewTuple.MakeTupleType(ArrayUtils.RemoveLast(types));
+            Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));
 
             return typeof(BigFastDynamicSite<,>).MakeGenericType(tupleType, types[types.Length - 1]);
         }
 
-        private class BigUninitializedTargetHelper<T0, Tret> where T0 : NewTuple {
+        private class BigUninitializedTargetHelper<T0, Tret> where T0 : Tuple {
             public Tret BigInvoke(BigDynamicSite<T0, Tret> site, CodeContext context, T0 arg0) {
                 return site.UpdateBindingAndInvoke(context, arg0);
             }
@@ -156,7 +156,7 @@ namespace Microsoft.Scripting.Actions {
         internal static CodeContext GetEvaluationContext<T>(LanguageContext languageContext, ref object []args) {
             CodeContext context = new CodeContext(new Scope(), languageContext);
             if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
-                args = new object[] { NewTuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
+                args = new object[] { Tuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
             }
             return context;
         }

@@ -140,57 +140,25 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private void MakeFieldBody(Type type, MemberGroup members) {
-            FieldTracker fi = (FieldTracker)members[0];
-
-            if (fi.Field.IsLiteral) {
-                Body = Ast.Block(Body,
-                        Rule.MakeReturn(
-                            Binder,
-                            Ast.Constant(fi.Field.GetValue(null))
-                        )
-                    );
-            } else if (fi.DeclaringType.IsGenericType && fi.DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
-                // work around a CLR bug where we can't access generic fields from dynamic methods.
-                Body = Ast.Block(Body,
-                    Rule.MakeReturn(Binder,
-                        Ast.Call(
-                            null,
-                            typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(fi.DeclaringType.GetGenericArguments()),
-                            Instance
-                        )
-                    )
-                );
-            } else if (fi.IsPublic && fi.DeclaringType.IsPublic) {
-                if (_isStatic && !fi.IsStatic) {
-                    // return the field tracker...
-                    Body = Ast.Block(Body,
-                        Rule.MakeReturn(
-                            Binder,
-                            Binder.ReturnMemberTracker(fi)
-                        )
-                    );
-
-                } else {
-                    Body = Ast.Block(Body,
-                        Rule.MakeReturn(
-                            Binder,
-                            Ast.ReadField(fi.IsStatic ? null : Instance, fi.Field)
-                        )
-                    );
-                }
-            } else {
-                Body = Ast.Block(Body,
-                    Rule.MakeReturn(
-                        Binder,
-                        Ast.Call(
-                            Ast.RuntimeConstant(fi.Field),
-                            typeof(FieldInfo).GetMethod("GetValue"),
-                            fi.IsStatic ? Ast.Constant(null) : Instance
-                        )
-                    )
-                );
+        private void MakeGenericBody(Type type, MemberGroup members) {
+            MemberTracker tracker = members[0];
+            if (!_isStatic) {
+                tracker = tracker.BindToInstance(Instance);
             }
+
+            Expression val =  tracker.GetValue(Binder);
+            Statement newBody;
+            if (val != null) {
+                newBody = Rule.MakeReturn(Binder, val);
+            } else {
+                newBody = Rule.MakeError(Binder, tracker.GetError(Binder));
+            }
+
+            Body = Ast.Block(Body, newBody);
+        }
+
+        private void MakeFieldBody(Type type, MemberGroup members) {
+            MakeGenericBody(type, members);
         }
 
         private void MakeMethodBody(Type type, MemberGroup members) {
@@ -222,11 +190,7 @@ namespace Microsoft.Scripting.Actions {
                 typeTracker = TypeGroup.UpdateTypeEntity(typeTracker, (TypeTracker)members[i]);
             }
 
-            Body = Ast.Block(Body,
-                Rule.MakeReturn(Binder,
-                    Binder.ReturnMemberTracker(typeTracker)
-                )
-            );
+            Body = Ast.Block(Body, Rule.MakeReturn(Binder, typeTracker.GetValue(Binder)));
         }
 
         private void MakePropertyBody(Type type, MemberGroup members) {

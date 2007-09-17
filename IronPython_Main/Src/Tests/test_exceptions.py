@@ -727,5 +727,19 @@ def test_nested_exceptions():
         ei2 = sys.exc_info()
 
         AreEqual(ei, ei2)
+
+
+def test_swallow_from_else():
+    def f():
+        try:
+            pass
+        except:
+            pass
+        else:
+            raise AttributeError
+        finally:
+            return 4
+            
+    AreEqual(f(), 4)
             
 run_test(__name__)

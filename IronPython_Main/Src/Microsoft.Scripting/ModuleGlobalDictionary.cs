@@ -34,7 +34,7 @@ namespace Microsoft.Scripting {
     /// </summary>
     /// <typeparam name="TupleType"></typeparam>
     public class ModuleGlobalDictionary<TupleType> : TupleDictionary<TupleType>, IModuleDictionaryInitialization
-        where TupleType : NewTuple {
+        where TupleType : Tuple {
 
         public ModuleGlobalDictionary(TupleType data, SymbolId[] names)
             : base(data, names) {

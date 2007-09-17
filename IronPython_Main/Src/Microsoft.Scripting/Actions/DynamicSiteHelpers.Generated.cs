@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Actions {
             return genType.MakeGenericType(types);
         }
 
-        public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args) {
+        public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, params object[] args) {
             bool result;
             switch (args.Length) {
                 case 1:
@@ -204,7 +204,7 @@ namespace Microsoft.Scripting.Actions {
                     }
                 default:
                     //TODO: use CompilerHelpers.GetTypes(args) instead?
-                    Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
+                    Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
                     Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
                     Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
                     MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
@@ -218,7 +218,7 @@ namespace Microsoft.Scripting.Actions {
                             BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
 
 
-                        NewTuple t = NewTuple.MakeTuple(tupleType, args);
+                        Tuple t = Tuple.MakeTuple(tupleType, args);
                         object[] tupArg = new object[] {t};
                         using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
                             result = (bool)test.Evaluate(context);

@@ -82,7 +82,9 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="asType">The type to leave on top of the stack.</param>
         internal void EmitAs(CodeGen cg, Type asType) {
             this.Emit(cg);  // emit as ExpressionType
-            cg.EmitConvert(ExpressionType, asType);
+            if (asType.IsValueType || !IsConstant(null)) {
+                cg.EmitConvert(ExpressionType, asType);
+            }
         }
 
         /// <summary>
@@ -126,7 +128,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static object[] Evaluate(IList<Expression> items, CodeContext context) {
-            Contract.RequiresNotNull(items, "items");
+            Contract.RequiresNotNullItems(items, "items");
             Contract.RequiresNotNull(context, "context");
 
             object[] ret = new object[items.Count];
@@ -137,7 +139,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal virtual object EvaluateAssign(CodeContext context, object value) {
-            throw new InvalidOperationException("byref call w/ no address " + GetType());
+            return value;
         }
 
         internal static Type GetNonNullableType(Type type) {

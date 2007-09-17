@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Utils {
 
         public sealed override int Read(byte[] buffer, int offset, int count) {
             if (!CanRead) throw new InvalidOperationException();
-            Contract.RequiresInRange(buffer, offset, count, "buffer", "offset", "count");
+            Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
 
             char[] char_buffer = new char[count];
             int real_count = Reader.Read(char_buffer, 0, count);
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public sealed override void Write(byte[] buffer, int offset, int count) {
-            Contract.RequiresInRange(buffer, offset, count, "buffer", "offset", "count");
+            Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
             char[] char_buffer = Encoding.GetChars(buffer, offset, count);
             Writer.Write(char_buffer, 0, char_buffer.Length);
             if (!_buffered) Writer.Flush();

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,6 +18,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -80,6 +82,33 @@ namespace Microsoft.Scripting.Actions {
                 _trackers[member] = res;
                 return res;
             }
+        }
+
+        /// <summary>
+        /// Returns the error associated with getting the value.  A null return value indicates that the default error message
+        /// should be provided by the caller.
+        /// </summary>
+        public virtual Expression GetError(ActionBinder binder) {
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the expression that creates the value.  Returns null if it's an error to get the value.  The caller can then
+        /// call GetError to get the correct error Expression (or null if they should provide a default).
+        /// </summary>
+        public virtual Expression GetValue(ActionBinder binder) {
+            return binder.ReturnMemberTracker(this);
+        }
+
+        /// <summary>
+        /// Internal helper for getting values that have been bound.  Called from BoundMemberTracker.
+        /// </summary>
+        internal virtual Expression GetBoundValue(ActionBinder binder, Expression instance) {
+            return GetValue(binder);
+        }
+
+        internal virtual MemberTracker BindToInstance(Expression instance) {
+            return this;
         }
     }
 }

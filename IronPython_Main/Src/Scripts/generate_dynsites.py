@@ -32,13 +32,13 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
     private %(prefix)sDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>> _rules;
 
-    internal %(prefix)sDynamicSite(Action action)
+    internal %(prefix)sDynamicSite(DynamicAction action)
         : base(action) {
         this._rules = RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>>.EmptyRules;
         this._target = this._rules.GetOrMakeTarget(null);
     }
     
-    public static %(prefix)sDynamicSite<%(ts)s> Create(Action action) {
+    public static %(prefix)sDynamicSite<%(ts)s> Create(DynamicAction action) {
         return new %(prefix)sDynamicSite<%(ts)s>(action);
     }
 
@@ -98,13 +98,13 @@ public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s
     private %(prefix)sFastDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>> _rules;
 
-    internal %(prefix)sFastDynamicSite(CodeContext context, Action action)
+    internal %(prefix)sFastDynamicSite(CodeContext context, DynamicAction action)
         : base(context, action) {
         this._rules = RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>>.EmptyRules;
         this._target = this._rules.GetOrMakeTarget(null);
     }
 
-    public static %(prefix)sFastDynamicSite<%(ts)s> Create(CodeContext context, Action action) {
+    public static %(prefix)sFastDynamicSite<%(ts)s> Create(CodeContext context, DynamicAction action) {
         return new %(prefix)sFastDynamicSite<%(ts)s>(context, action);
     }
 
@@ -159,7 +159,7 @@ def gen_all(cw):
     for n in range(1, MaxSiteArity + 1):
         gen_one(cw, n, str(n))
         
-    gen_one(cw, 1, 'variable based on Tuple size', getargsarray='NewTuple.GetTupleValues(%s)', prefix='Big', constraints = 'where T0 : NewTuple')
+    gen_one(cw, 1, 'variable based on Tuple size', getargsarray='Tuple.GetTupleValues(%s)', prefix='Big', constraints = 'where T0 : Tuple')
    
 
 CodeGenerator("DynamicSites", gen_all).doit()
@@ -236,7 +236,7 @@ while(true) {
 
 big_executor = '''\
 //TODO: use CompilerHelpers.GetTypes(args) instead?
-Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
+Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
 Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
 Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
 MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
@@ -250,7 +250,7 @@ while(true) {
         BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
 
 
-    NewTuple t = NewTuple.MakeTuple(tupleType, args);
+    Tuple t = Tuple.MakeTuple(tupleType, args);
     object[] tupArg = new object[] {t};
     using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
         result = (bool)test.Evaluate(context);
@@ -272,7 +272,7 @@ while(true) {
 }'''
 
 def gen_execute(cw):
-    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, Action action, params object[] args)")
+    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, params object[] args)")
     cw.write('bool result;')
     cw.enter_block("switch (args.Length)")
     for i in range(MaxSiteArity):

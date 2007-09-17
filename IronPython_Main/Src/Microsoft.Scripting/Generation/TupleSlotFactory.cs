@@ -81,7 +81,7 @@ namespace Microsoft.Scripting.Generation {
 
         internal Slot CreateConcreteSlot(Slot instance, int index) {
             Slot res = instance;
-            foreach (PropertyInfo pi in NewTuple.GetAccessPath(instance.Type, index)) {
+            foreach (PropertyInfo pi in Tuple.GetAccessPath(instance.Type, index)) {
                 res = new PropertySlot(res, pi);
             }
             return res;
@@ -91,13 +91,13 @@ namespace Microsoft.Scripting.Generation {
             get {
                 if (_tupleType != null) return _tupleType;
 
-                _tupleType = NewTuple.MakeTupleType(_slots.ConvertAll<Type>(delegate(Slot inp) { return inp.Type; }).ToArray());
+                _tupleType = Tuple.MakeTupleType(_slots.ConvertAll<Type>(delegate(Slot inp) { return inp.Type; }).ToArray());
                 return _tupleType;
             }
         }
 
         public object CreateTupleInstance() {
-            return NewTuple.MakeTuple(TupleType, CompilerHelpers.MakeRepeatedArray<object>(null, _slots.Count));
+            return Tuple.MakeTuple(TupleType, CompilerHelpers.MakeRepeatedArray<object>(null, _slots.Count));
         }
 
         public Type DictionaryType {

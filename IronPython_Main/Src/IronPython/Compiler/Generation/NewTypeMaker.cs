@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -67,14 +67,14 @@ namespace IronPython.Compiler.Generation {
         protected Slot _typeField, _dictField, _weakrefField, _slotsField;
         protected Type _tupleType;
         protected IEnumerable<Type> _interfaceTypes;
-        protected Tuple _baseClasses;
+        protected PythonTuple _baseClasses;
 
         private bool _hasBaseTypeField;
 
         private Dictionary<string, VTableEntry> _vtable = new Dictionary<string, VTableEntry>();
 
-        public static Type GetNewType(string typeName, Tuple bases, IAttributesCollection dict) {
-            if (bases == null) bases = Tuple.MakeTuple();
+        public static Type GetNewType(string typeName, PythonTuple bases, IAttributesCollection dict) {
+            if (bases == null) bases = PythonTuple.MakeTuple();
             // we're really only interested in the "correct" base type pulled out of bases
             // and any slot information contained in dict
             // other info might be used for future optimizations
@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Generation {
                 });
 
             if (typeInfo.Slots != null) {
-                Type tupleType = NewTuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
+                Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
                 ret = ret.MakeGenericType(tupleType);
 
                 for (int i = 0; i < typeInfo.Slots.Count; i++) {                    
@@ -117,7 +117,7 @@ namespace IronPython.Compiler.Generation {
             return ret;
         }
 
-        private static NewTypeMaker GetTypeMaker(Tuple bases, NewTypeInfo ti) {
+        private static NewTypeMaker GetTypeMaker(PythonTuple bases, NewTypeInfo ti) {
             if (IsInstanceType(ti.BaseType)) {
                 return new NewSubtypeMaker(bases, ti);
             }
@@ -192,7 +192,7 @@ namespace IronPython.Compiler.Generation {
         ///                                 cCLI1,           {iCLI1, iCLI2}
         /// (cCLI1, cCLI2)               => error
         /// </summary>
-        private static NewTypeInfo GetTypeInfo(string typeName, Tuple bases, List<string> slots) {
+        private static NewTypeInfo GetTypeInfo(string typeName, PythonTuple bases, List<string> slots) {
             List<Type> interfaceTypes = new List<Type>();
             Type baseCLIType = typeof(object); // Pure Python object instances inherit from System.Object
             DynamicType basePythonType = null;
@@ -291,7 +291,7 @@ namespace IronPython.Compiler.Generation {
             return curTypeToExtend;
         }
 
-        internal NewTypeMaker(Tuple baseClasses, NewTypeInfo typeInfo) {
+        internal NewTypeMaker(PythonTuple baseClasses, NewTypeInfo typeInfo) {
             this._baseType = typeInfo.BaseType;
             this._baseClasses = baseClasses;
             this._interfaceTypes = typeInfo.InterfaceTypes;

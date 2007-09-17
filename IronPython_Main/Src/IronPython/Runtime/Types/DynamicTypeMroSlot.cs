@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -32,7 +32,7 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        private static Tuple ToPython(IList<DynamicMixin> types) {
+        private static PythonTuple ToPython(IList<DynamicMixin> types) {
             List<object>res = new List<object>(types.Count);
             foreach (DynamicType dt in types) {
                 if (dt.UnderlyingSystemType == typeof(ValueType)) continue; // hide value type
@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
                     res.Add(dt);
                 }
             }
-            return Tuple.Make(res);
+            return PythonTuple.Make(res);
         }
     }
 }

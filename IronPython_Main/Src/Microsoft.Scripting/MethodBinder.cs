@@ -208,7 +208,7 @@ namespace Microsoft.Scripting {
 
                 int newIndex, kwIndex = GetKeywordIndex(pi);
                 if (kwIndex == -1) {
-                    if (pi.DefaultValue != DBNull.Value) {
+                    if (!CompilerHelpers.IsMandatoryParameter(pi)) {
                         defaultBuilders.Add(new DefaultArgBuilder(pi.ParameterType, pi.DefaultValue));
                         hasDefaults = true;
                     } else if (defaultBuilders.Count > 0) {

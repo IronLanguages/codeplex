@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Operations {
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(double)), null);
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64)), null);
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(string)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(Tuple)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple)), null);
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(List)), null);
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDictionary)), null);
                     nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(OldInstance)), null);
@@ -172,7 +172,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 2 (new-style instance, protocol 0 or 1)
         /// </summary>
-        private static Tuple ReduceProtocol0(CodeContext context, object self) {
+        private static PythonTuple ReduceProtocol0(CodeContext context, object self) {
             // CPython implements this in copy_reg._reduce_ex
 
             DynamicType myType = DynamicHelpers.GetDynamicType(self); // PEP 307 calls this "D"
@@ -191,7 +191,7 @@ namespace IronPython.Runtime.Operations {
 
             object func = PythonOps.PythonReconstructor;
 
-            object funcArgs = Tuple.MakeTuple(
+            object funcArgs = PythonTuple.MakeTuple(
                 myType,
                 closestNonPythonBase,
                 TypeCache.Object == closestNonPythonBase ? null : PythonCalls.Call(closestNonPythonBase, self)
@@ -205,7 +205,7 @@ namespace IronPython.Runtime.Operations {
             }
             if (!PythonOps.IsTrue(state)) state = null;
 
-            return Tuple.MakeTuple(func, funcArgs, state);
+            return PythonTuple.MakeTuple(func, funcArgs, state);
         }
 
         private static void ThrowIfNativelyPickable(DynamicType type) {
@@ -229,7 +229,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 3 (new-style instance, protocol 2)
         /// </summary>
-        private static Tuple ReduceProtocol2(CodeContext context, object self) {
+        private static PythonTuple ReduceProtocol2(CodeContext context, object self) {
             DynamicType myType = DynamicHelpers.GetDynamicType(self);
 
             object func, state, listIterator, dictIterator;
@@ -240,7 +240,7 @@ namespace IronPython.Runtime.Operations {
             object getNewArgsCallable;
             if (PythonOps.TryGetBoundAttr(context, myType, Symbols.GetNewArgs, out getNewArgsCallable)) {
                 // TypeError will bubble up if __getnewargs__ isn't callable
-                Tuple newArgs = PythonOps.CallWithContext(context, getNewArgsCallable, self) as Tuple;
+                PythonTuple newArgs = PythonOps.CallWithContext(context, getNewArgsCallable, self) as PythonTuple;
                 if (newArgs == null) {
                     throw PythonOps.TypeError("__getnewargs__ should return a tuple");
                 }
@@ -267,8 +267,8 @@ namespace IronPython.Runtime.Operations {
 
                 if (dict == null && initializedSlotValues == null) state = null;
                 else if (dict != null && initializedSlotValues == null) state = dict;
-                else if (dict != null && initializedSlotValues != null) state = Tuple.MakeTuple(dict, initializedSlotValues);
-                else   /*dict == null && initializedSlotValues != null*/ state = Tuple.MakeTuple(null, initializedSlotValues);
+                else if (dict != null && initializedSlotValues != null) state = PythonTuple.MakeTuple(dict, initializedSlotValues);
+                else   /*dict == null && initializedSlotValues != null*/ state = PythonTuple.MakeTuple(null, initializedSlotValues);
             }
 
             listIterator = null;
@@ -281,7 +281,7 @@ namespace IronPython.Runtime.Operations {
                 dictIterator = PythonOps.InvokeWithContext(context, self, Symbols.IterItems, ArrayUtils.EmptyObjects);
             }
 
-            return Tuple.MakeTuple(func, Tuple.MakeTuple(funcArgs), state, listIterator, dictIterator);
+            return PythonTuple.MakeTuple(func, PythonTuple.MakeTuple(funcArgs), state, listIterator, dictIterator);
         }
 
         #endregion

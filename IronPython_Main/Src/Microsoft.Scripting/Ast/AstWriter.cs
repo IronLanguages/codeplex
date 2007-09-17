@@ -162,7 +162,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // More proper would be to make this a virtual method on Action
-        private string FormatAction(Action action) {
+        private string FormatAction(DynamicAction action) {
             DoOperationAction doa;
             GetMemberAction gma;
             SetMemberAction sma;
@@ -274,7 +274,10 @@ namespace Microsoft.Scripting.Ast {
 
         private void DumpCodeBlockExpression(CodeBlockExpression node) {
             int id = Enqueue(node.Block);
-            Write(String.Format(".block {0} ({1}   #{2}) {3}{4}{5}", node.DelegateType.Name, node.Block.Name, id,
+            Write(String.Format(".block {0} ({1}   #{2}) {3}{4}{5}", 
+                node.DelegateType != null ? node.DelegateType.Name : "no-type", 
+                node.Block.Name, 
+                id,
                 node.ForceWrapperMethod ? " ForceWrapperMethod" : "",
                 node.IsStronglyTyped ? " IsStronglyTyped" : "",
                 node.IsDeclarative ? " IsDeclarative" : ""));

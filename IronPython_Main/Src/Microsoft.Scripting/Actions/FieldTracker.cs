@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,7 +18,12 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
+
 namespace Microsoft.Scripting.Actions {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     public class FieldTracker : MemberTracker {
         private FieldInfo _field;
 
@@ -50,6 +55,12 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        public bool IsLiteral {
+            get {
+                return _field.IsLiteral;
+            }
+        }
+
         public Type FieldType {
             get {
                 return _field.FieldType;
@@ -70,6 +81,53 @@ namespace Microsoft.Scripting.Actions {
 
         public override string ToString() {
             return _field.ToString();
+        }
+
+        public override Expression GetValue(ActionBinder binder) {
+            if (Field.IsLiteral) {
+                return Ast.Constant(Field.GetValue(null));
+            } 
+            
+            if (IsPublic && DeclaringType.IsPublic) {
+                if (!IsStatic) {
+                    // return the field tracker...
+                    return binder.ReturnMemberTracker(Field);
+                }
+                return Ast.ReadField(null, Field);
+            }
+
+            return Ast.Call(
+                Ast.RuntimeConstant(Field),
+                typeof(FieldInfo).GetMethod("GetValue"),
+                Ast.Constant(null)
+            );
+        }
+
+        internal override Expression GetBoundValue(ActionBinder binder, Expression instance) {
+            if (DeclaringType.IsGenericType && DeclaringType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
+                // work around a CLR bug where we can't access generic fields from dynamic methods.
+                return Ast.Call(
+                    null,
+                    typeof(RuntimeHelpers).GetMethod("GetBox").MakeGenericMethod(DeclaringType.GetGenericArguments()),
+                    instance
+                );
+            }
+
+            if (IsPublic && DeclaringType.IsPublic) {
+                return Ast.ReadField(instance, Field);
+            }
+
+            return Ast.Call(
+                Ast.RuntimeConstant(Field),
+                typeof(FieldInfo).GetMethod("GetValue"),
+                instance
+            );
+        }
+
+        internal override MemberTracker BindToInstance(Expression instance) {
+            if (IsStatic) return this;
+
+            return new BoundMemberTracker(this, instance);
         }
     }
 }

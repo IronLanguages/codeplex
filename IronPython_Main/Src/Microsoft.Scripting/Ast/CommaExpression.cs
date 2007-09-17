@@ -30,19 +30,11 @@ namespace Microsoft.Scripting.Ast {
         private IList<Expression> _expressions;
         private int _valueIndex;
 
-        internal CommaExpression(SourceSpan span, IList<Expression> expressions, int valueIndex)
+        internal CommaExpression(SourceSpan span, int valueIndex, IList<Expression> expressions)
             : base(span) {
-            Contract.RequiresNonNullItems(expressions, "expressions");
-
-            // This check also validates that expression.Count > 0
-            if (valueIndex < 0 || valueIndex >= expressions.Count) {
-                throw new ArgumentOutOfRangeException("valueIndex");
-            }
-
             _expressions = expressions;
             _valueIndex = valueIndex;
         }
-
 
         public IList<Expression> Expressions {
             get { return _expressions; }
@@ -159,17 +151,55 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static CommaExpression Comma(int valueIndex, IList<Expression> expressions) {
-            return Comma(SourceSpan.None, valueIndex, expressions);
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the last expression.
+        /// </summary>
+        public static CommaExpression Comma(params Expression[] expressions) {
+            return Comma(SourceSpan.None, -1, expressions);
         }
-        public static CommaExpression Comma(SourceSpan span, int valueIndex, IList<Expression> expressions) {
-            return new CommaExpression(span, expressions, valueIndex);
+
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the last expression.
+        /// </summary>
+        public static CommaExpression Comma(IList<Expression> expressions) {
+            return Comma(SourceSpan.None, -1, expressions);
         }
+
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the <paramref name="valueIndex"/>-th expression.
+        /// A negative <paramref name="valueIndex"/> is equivalent to <paramref name="expressions"/>.Length + <paramref name="valueIndex"/> 
+        /// (hence -1 designates the last expression specified).
+        /// </summary>
         public static CommaExpression Comma(int valueIndex, params Expression[] expressions) {
             return Comma(SourceSpan.None, valueIndex, expressions);
         }
-        public static CommaExpression Comma(SourceSpan span, int valueIndex, params Expression[] expressions) {
-            return new CommaExpression(span, expressions, valueIndex);
+
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the <paramref name="valueIndex"/>-th expression.
+        /// A negative <paramref name="valueIndex"/> is equivalent to <paramref name="expressions"/>.Count + <paramref name="valueIndex"/> 
+        /// (hence -1 designates the last expression specified).
+        /// </summary>
+        public static CommaExpression Comma(int valueIndex, IList<Expression> expressions) {
+            return Comma(SourceSpan.None, valueIndex, expressions);
         }
+
+        public static CommaExpression Comma(SourceSpan span, int valueIndex, params Expression[] expressions) {
+            return Comma(span, valueIndex, (IList<Expression>)expressions);
+        }
+
+        public static CommaExpression Comma(SourceSpan span, int valueIndex, IList<Expression> expressions) {
+            Contract.RequiresNotEmpty(expressions, "expressions");
+            Contract.RequiresNotNullItems(expressions, "expressions");
+
+            if (valueIndex < 0) {
+                valueIndex += expressions.Count;
+            }
+
+            Contract.RequiresArrayIndex(expressions, valueIndex, "valueIndex");
+
+            return new CommaExpression(span, valueIndex, expressions);
+        }
+
+
     }
 }

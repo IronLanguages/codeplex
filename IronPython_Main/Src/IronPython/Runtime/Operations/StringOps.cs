@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -394,7 +394,7 @@ namespace IronPython.Runtime.Operations {
             if (suffix is string)
                 return EndsWith(self, suffix as string);
             else
-                return EndsWith(self, suffix as Tuple);
+                return EndsWith(self, suffix as PythonTuple);
         }
 
         [PythonName("endswith")]
@@ -403,7 +403,7 @@ namespace IronPython.Runtime.Operations {
             if (suffix is string)
                 return EndsWith(self, suffix as string, start);
             else
-                return EndsWith(self, suffix as Tuple, start);
+                return EndsWith(self, suffix as PythonTuple, start);
         }
 
         [PythonName("endswith")]
@@ -412,7 +412,7 @@ namespace IronPython.Runtime.Operations {
             if (suffix is string)
                 return EndsWith(self, suffix as string, start, end);
             else
-                return EndsWith(self, suffix as Tuple, start, end);
+                return EndsWith(self, suffix as PythonTuple, start, end);
         }
 
         [PythonName("expandtabs")]
@@ -670,7 +670,7 @@ namespace IronPython.Runtime.Operations {
 
         [PythonVersion(2, 5)]
         [PythonName("partition")]
-        public static Tuple Partition(string self, string sep) {
+        public static PythonTuple Partition(string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");
             if (sep.Length == 0)
@@ -688,7 +688,7 @@ namespace IronPython.Runtime.Operations {
                     obj[2] = self.Substring(index + sep.Length, self.Length - index - sep.Length);
                 }
             }
-            return new Tuple(obj);
+            return new PythonTuple(obj);
         }
 
         [PythonName("replace")]
@@ -782,7 +782,7 @@ namespace IronPython.Runtime.Operations {
 
         [PythonVersion(2, 5)]
         [PythonName("rpartition")]
-        public static Tuple Rpartition(string self, string sep) {
+        public static PythonTuple Rpartition(string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");
             if (sep.Length == 0)
@@ -799,7 +799,7 @@ namespace IronPython.Runtime.Operations {
                     obj[2] = self.Substring(index + sep.Length, self.Length - index - sep.Length);
                 }
             }
-            return new Tuple(obj);
+            return new PythonTuple(obj);
         }
 
         //  when no maxsplit arg is given then just use split
@@ -906,7 +906,7 @@ namespace IronPython.Runtime.Operations {
             if (prefix is string)
                 return StartsWith(self, prefix as string);
             else
-                return StartsWith(self, prefix as Tuple);
+                return StartsWith(self, prefix as PythonTuple);
 
         }
 
@@ -916,7 +916,7 @@ namespace IronPython.Runtime.Operations {
             if (prefix is string)
                 return StartsWith(self, prefix as string, start);
             else
-                return StartsWith(self, prefix as Tuple, start);
+                return StartsWith(self, prefix as PythonTuple, start);
         }
 
 
@@ -926,7 +926,7 @@ namespace IronPython.Runtime.Operations {
             if (prefix is string)
                 return StartsWith(self, prefix as string, start, end);
             else
-                return StartsWith(self, prefix as Tuple, start, end);
+                return StartsWith(self, prefix as PythonTuple, start, end);
         }
 
 
@@ -1148,7 +1148,7 @@ namespace IronPython.Runtime.Operations {
         public static object GetNewArgs(CodeContext context, string self) {
             if (!Object.ReferenceEquals(self, null)) {
                 // Cast self to object to avoid exception caused by trying to access SystemState on DefaultContext
-                return Tuple.MakeTuple(StringOps.Make(context, TypeCache.String, (object)self));
+                return PythonTuple.MakeTuple(StringOps.Make(context, TypeCache.String, (object)self));
             }
             throw PythonOps.TypeErrorForBadInstance("__getnewargs__ requires a 'str' object but received a '{0}'", self);
         }
@@ -1384,7 +1384,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             // look for user-registered codecs
-            Tuple codecTuple = PythonOps.LookupEncoding(encoding);
+            PythonTuple codecTuple = PythonOps.LookupEncoding(encoding);
             if (codecTuple != null) {
                 return UserDecodeOrEncode(codecTuple[/*Modules.PythonCodecs.DecoderIndex*/1], s);
             }
@@ -1436,7 +1436,7 @@ namespace IronPython.Runtime.Operations {
             }
 
                 // look for user-registered codecs
-            Tuple codecTuple = PythonOps.LookupEncoding(encoding);
+            PythonTuple codecTuple = PythonOps.LookupEncoding(encoding);
             if (codecTuple != null) {
                 return UserDecodeOrEncode(codecTuple[/*Modules.PythonCodecs.EncoderIndex*/0], s);
             }
@@ -1452,7 +1452,7 @@ namespace IronPython.Runtime.Operations {
             if (strRes != null) return strRes;
 
             // tuple is string, bytes used, we just want the string...
-            Tuple t = res as Tuple;
+            PythonTuple t = res as PythonTuple;
             if (t == null) throw PythonOps.TypeErrorForBadInstance("expected tuple, but found {0}", res);
 
             return Converter.ConvertToString(t[0]);
@@ -1539,7 +1539,7 @@ namespace IronPython.Runtime.Operations {
 
         private static void TryStringOrTuple(object prefix) {
             if (prefix == null) throw PythonOps.TypeError("expected string or Tuple, got NoneType");
-            if (!(prefix is string) && !(prefix is Tuple))
+            if (!(prefix is string) && !(prefix is PythonTuple))
                 throw PythonOps.TypeError("expected string or Tuple, got {0} Type", prefix.GetType());
         }
 
@@ -1598,7 +1598,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        private static bool EndsWith(string self, Tuple suffix) {
+        private static bool EndsWith(string self, PythonTuple suffix) {
             foreach (object obj in suffix) {
                 if (self.EndsWith(GetString(obj))) {
                     return true;
@@ -1607,7 +1607,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool EndsWith(string self, Tuple suffix, int start) {
+        private static bool EndsWith(string self, PythonTuple suffix, int start) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indice to its positive counterpart
@@ -1623,7 +1623,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool EndsWith(string self, Tuple suffix, int start, int end) {
+        private static bool EndsWith(string self, PythonTuple suffix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -1677,7 +1677,7 @@ namespace IronPython.Runtime.Operations {
             return self.Substring(start, end - start).StartsWith(prefix);
         }
 
-        private static bool StartsWith(string self, Tuple prefix) {
+        private static bool StartsWith(string self, PythonTuple prefix) {
             foreach (object obj in prefix) {
                 if (self.StartsWith(GetString(obj))) {
                     return true;
@@ -1686,7 +1686,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool StartsWith(string self, Tuple prefix, int start) {
+        private static bool StartsWith(string self, PythonTuple prefix, int start) {
             int len = self.Length;
             if (start > len) return false;
             if (start < 0) {
@@ -1701,7 +1701,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool StartsWith(string self, Tuple prefix, int start, int end) {
+        private static bool StartsWith(string self, PythonTuple prefix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -1926,7 +1926,7 @@ namespace IronPython.Runtime.Operations {
             internal static string CheckReplacementTuple(object res, string encodeOrDecode) {
                 bool ok = true;
                 string replacement = null;
-                Tuple tres = res as Tuple;
+                PythonTuple tres = res as PythonTuple;
 
                 // verify the result is sane...
                 if (tres != null && tres.Count == 2) {

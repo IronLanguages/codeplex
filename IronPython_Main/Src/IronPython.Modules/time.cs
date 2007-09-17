@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -81,8 +81,8 @@ namespace IronPython.Modules {
         [PythonName("asctime")]
         public static string AscTime(object time) {
             DateTime dt;
-            if (time is Tuple) {
-                dt = GetDateTimeFromTuple(time as Tuple);
+            if (time is PythonTuple) {
+                dt = GetDateTimeFromTuple(time as PythonTuple);
             } else if (time == null) {
                 dt = DateTime.Now;
             } else {
@@ -123,12 +123,12 @@ namespace IronPython.Modules {
         }
 
         [PythonName("localtime")]
-        public static Tuple LocalTime() {
+        public static PythonTuple LocalTime() {
             return GetDateTimeTuple(DateTime.Now);
         }
 
         [PythonName("localtime")]
-        public static Tuple LocalTime(object seconds) {
+        public static PythonTuple LocalTime(object seconds) {
             if (seconds == null) return LocalTime();
 
             long intSeconds = GetDateTimeFromObject(seconds);
@@ -137,12 +137,12 @@ namespace IronPython.Modules {
         }
 
         [PythonName("gmtime")]
-        public static Tuple UniversalTime() {
+        public static PythonTuple UniversalTime() {
             return GetDateTimeTuple(DateTime.Now.ToUniversalTime());
         }
 
         [PythonName("gmtime")]
-        public static Tuple UniversalTime(object seconds) {
+        public static PythonTuple UniversalTime(object seconds) {
             if (seconds == null) return UniversalTime();
 
             long intSeconds = GetDateTimeFromObject(seconds);
@@ -151,7 +151,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("mktime")]
-        public static double MakeTime(Tuple localTime) {
+        public static double MakeTime(PythonTuple localTime) {
             return GetDateTimeFromTuple(localTime).Ticks / 1.0e7;
         }
 
@@ -161,7 +161,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("strftime")]
-        public static string FormatTime(string format, Tuple dateTime) {
+        public static string FormatTime(string format, PythonTuple dateTime) {
             return FormatTime(format, GetDateTimeFromTuple(dateTime));
         }
 
@@ -399,10 +399,10 @@ namespace IronPython.Modules {
             else return (int)dt.DayOfWeek;
         }
 
-        internal static Tuple GetDateTimeTuple(DateTime dt) {
+        internal static PythonTuple GetDateTimeTuple(DateTime dt) {
             return GetDateTimeTuple(dt, null);
         }
-        internal static Tuple GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz) {
+        internal static PythonTuple GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz) {
             return GetDateTimeTuple(dt, tz, false);
         }
         internal static StructTime GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz, bool utc) {
@@ -426,7 +426,7 @@ namespace IronPython.Modules {
             return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, last);
         }
 
-        private static DateTime GetDateTimeFromTuple(Tuple t) {
+        private static DateTime GetDateTimeFromTuple(PythonTuple t) {
             if (t == null) return DateTime.Now;
 
             int[] ints = ValidateDateTimeTuple(t);
@@ -434,7 +434,7 @@ namespace IronPython.Modules {
             return new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
         }
 
-        private static int[] ValidateDateTimeTuple(Tuple t) {
+        private static int[] ValidateDateTimeTuple(PythonTuple t) {
             if (t.Count != MaxIndex) throw PythonOps.TypeError("expected tuple of length {0}", MaxIndex);
 
             int[] ints = new int[MaxIndex];
@@ -465,7 +465,7 @@ namespace IronPython.Modules {
 #endif
 
         [PythonType("struct_time")]
-        public class StructTime : Tuple {
+        public class StructTime : PythonTuple {
             private static DynamicType _StructTimeType = DynamicHelpers.GetDynamicTypeFromType(typeof(StructTime));
 
             public object Year {
@@ -522,13 +522,13 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__reduce__")]
-            public Tuple Reduce() {
-                return Tuple.MakeTuple(_StructTimeType, Tuple.MakeTuple(Year, Month, Day, Hour, Minute, Second, DayOfWeek, DayOfYear, IsDaylightSavingTime));
+            public PythonTuple Reduce() {
+                return PythonTuple.MakeTuple(_StructTimeType, PythonTuple.MakeTuple(Year, Month, Day, Hour, Minute, Second, DayOfWeek, DayOfYear, IsDaylightSavingTime));
             }
 
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(CodeContext context, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
-                return Tuple.MakeTuple(StructTime.Make(context, _StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
+                return PythonTuple.MakeTuple(StructTime.Make(context, _StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
             }
 
             public override DynamicType DynamicType {

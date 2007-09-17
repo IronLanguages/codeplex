@@ -166,6 +166,15 @@ def test_operator_module():
     a = c.func
     b = c.func
     AreEqual(a, b)
+    
+    # __setitem__    
+    x = {}
+    operator.__setitem__(x, 'abc', 'def')
+    AreEqual(x, {'abc':'def'})
+    
+    # __not__
+    x = True
+    AreEqual(operator.__not__(x), False)
 
 ########################
 # string multiplication

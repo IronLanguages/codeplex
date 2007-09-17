@@ -152,6 +152,14 @@ def test_incomplate_syntax():
     Assert("IndentationError:" in response)
     ipi.End()
 
+def test_incomplate_syntax_backslash():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecutePartialLine("1 + \\")
+    response = ipi.ExecuteLine("2", True)
+    Assert("3" in response)
+    ipi.End()
+
 ###########################################################
 # if , while, try, for and then EOF.
 def test_missing_test():

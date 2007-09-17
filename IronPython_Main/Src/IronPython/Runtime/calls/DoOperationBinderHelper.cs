@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -120,8 +120,9 @@ namespace IronPython.Runtime.Calls {
             if (IsComparision) {
                 return MakeDynamicMatchRule(types);
             } else {
+                // we get the error message w/ {0}, {1} so that TypeError formats it correctly
                 return PythonBinderHelper.TypeError<T>(
-                       MakeBinaryOpErrorMessage(Action.ToString(), types[0], types[1]),
+                       MakeBinaryOpErrorMessage(Action.ToString(), "{0}", "{1}"),
                        types);
             }
         }
@@ -783,17 +784,17 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            throw PythonOps.TypeError(MakeBinaryOpErrorMessage(op.ToString(), xDType, yDType));
+            throw PythonOps.TypeError(MakeBinaryOpErrorMessage(op.ToString(), xDType.Name, yDType.Name));
         }
 
-        internal static string MakeBinaryOpErrorMessage(string op, DynamicType xType, DynamicType yType) {
+        internal static string MakeBinaryOpErrorMessage(string op, string xType, string yType) {
             return string.Format("unsupported operand type(s) for {2}: '{0}' and '{1}'",
-                                xType.Name, yType.Name, op);
+                                xType, yType, op);
         }
 
-        internal static string MakeUnaryOpErrorMessage(string op, DynamicType xType) {
+        internal static string MakeUnaryOpErrorMessage(string op, string xType) {
             return string.Format("unsupported operand type for {1}: '{0}'",
-                                xType.Name, op);
+                                xType, op);
         }
 
         private static bool FinishCompareOperation(int cmp, Operators op) {
@@ -933,7 +934,8 @@ namespace IronPython.Runtime.Calls {
             }
 
             if (func == null) {
-                return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), types[0]), types);
+                // we get the error message w/ {0} so that PythonBinderHelper.TypeError formats it correctly
+                return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), "{0}"), types);
             }
 
             MethodBinder binder = MethodBinder.MakeBinder(Binder,
@@ -1015,13 +1017,28 @@ namespace IronPython.Runtime.Calls {
             if (dt.TryInvokeUnaryOperator(context, op, x, out ret) && ret != PythonOps.NotImplemented)
                 return ret;
 
-            throw PythonOps.TypeError(MakeUnaryOpErrorMessage(op.ToString(), DynamicHelpers.GetDynamicType(x)));
+            throw PythonOps.TypeError(MakeUnaryOpErrorMessage(op.ToString(), DynamicHelpers.GetDynamicType(x).Name));
         }
 
         #endregion
 
         public override string ToString() {
             return string.Format("BinaryOperatorAction({0})", Action);
-        }        
+        }
+
+        private static BuiltinFunction TryConvertToBuiltinFunction(object o) {
+            BuiltinMethodDescriptor md = o as BuiltinMethodDescriptor;
+
+            if (md != null) {
+                return md.Template;
+            }
+
+            BoundBuiltinFunction bbf = o as BoundBuiltinFunction;
+            if (bbf != null) {
+                return bbf.Target;
+            }
+
+            return o as BuiltinFunction;
+        }
     }
 }

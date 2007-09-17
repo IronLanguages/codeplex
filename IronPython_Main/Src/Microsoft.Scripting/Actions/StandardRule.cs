@@ -45,6 +45,8 @@ namespace Microsoft.Scripting.Actions {
         internal Variable[] _paramVariables;
         internal List<Variable> _temps;
         internal VariableReference[] _references;
+        internal List<object> _templateData;
+
         private bool _error;
 
         internal StandardRule() { }
@@ -91,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression conv = binder.ConvertExpression(read, ReturnType);
                 if (conv == read) return Ast.Return(expr);
 
-                return Ast.Return(Ast.Comma(1, Ast.Assign(variable, expr), conv));
+                return Ast.Return(Ast.Comma(Ast.Assign(variable, expr), conv));
             }
             return Ast.Return(binder.ConvertExpression(expr, ReturnType));
         }
@@ -184,6 +186,46 @@ namespace Microsoft.Scripting.Actions {
                         expr, typeof(object).GetMethod("GetType")),
                         Ast.Constant(t)));
         }
+
+        /// <summary>
+        /// Adds a templated constant that can enable code sharing across rules.
+        /// </summary>
+        public Expression AddTemplatedConstant(Type type, object value) {
+            Contract.RequiresNotNull(type, "type");
+            if (value != null) {
+                if (!type.IsAssignableFrom(value.GetType())) {
+                    throw new ArgumentException("type must be assignable from value");
+                }
+            } else {
+                if (!type.IsValueType) {
+                    throw new ArgumentException("value must not be null for value types");
+                }
+            }
+
+            if (_templateData == null) _templateData = new List<object>(1);
+            Type genType = typeof(TemplatedValue<>).MakeGenericType(type);
+            object template = Activator.CreateInstance(genType, value, _templateData.Count);
+
+            _templateData.Add(value);
+            return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
+        }
+
+        public Expression AddTemplatedWeakConstant(Type type, object value) {
+            if (value != null) {
+                if (!type.IsAssignableFrom(value.GetType())) {
+                    throw new ArgumentException("type must be assignable from value");
+                }
+            } else {
+                if (!type.IsValueType) {
+                    throw new ArgumentException("value must not be null for value types");
+                }
+            }
+
+            Expression expr = AddTemplatedConstant(typeof(WeakReference), new WeakReference(value));
+
+            return Ast.ReadProperty(expr, typeof(WeakReference).GetProperty("Target"));
+        }
+
     }
 
     /// <summary>
@@ -199,7 +241,6 @@ namespace Microsoft.Scripting.Actions {
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
     public class StandardRule<T> : StandardRule {
         private SmallRuleSet<T> _ruleSet;
-        private List<object> _templateData;
 
         public StandardRule() {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
@@ -220,7 +261,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeTupleParameters(int firstParameter, Type tupleType) {
-            int count = NewTuple.GetSize(tupleType);
+            int count = Tuple.GetSize(tupleType);
 
             Variable tupleVar = MakeParameter(firstParameter, "$arg0", tupleType);
             _paramVariables = new Variable[] { tupleVar };
@@ -229,7 +270,7 @@ namespace Microsoft.Scripting.Actions {
             _parameters = new Expression[count];
             for (int i = 0; i < _parameters.Length; i++) {
                 Expression tupleAccess = tuple;
-                foreach (PropertyInfo pi in NewTuple.GetAccessPath(tupleType, i)) {
+                foreach (PropertyInfo pi in Tuple.GetAccessPath(tupleType, i)) {
                     tupleAccess = Ast.ReadProperty(tupleAccess, pi);
                 }
                 _parameters[i] = tupleAccess;
@@ -364,44 +405,6 @@ namespace Microsoft.Scripting.Actions {
         
         #endregion
 
-        /// <summary>
-        /// Adds a templated constant that can enable code sharing across rules.
-        /// </summary>
-        public Expression AddTemplatedConstant(Type type, object value) {
-            Contract.RequiresNotNull(type, "type");
-            if (value != null) {
-                if (!type.IsAssignableFrom(value.GetType())) {
-                    throw new ArgumentException("type must be assignable from value");
-                }
-            } else {
-                if (!type.IsValueType) {
-                    throw new ArgumentException("value must not be null for value types");
-                }
-            }
-
-            if (_templateData == null) _templateData = new List<object>(1);
-            Type genType = typeof(TemplatedValue<>).MakeGenericType(type);
-            object template = Activator.CreateInstance(genType, value, _templateData.Count);
-
-            _templateData.Add(value);
-            return Ast.ReadProperty(Ast.RuntimeConstant(template), genType.GetProperty("Value"));
-        }
-
-        public Expression AddTemplatedWeakConstant(Type type, object value) {
-            if (value != null) {
-                if (!type.IsAssignableFrom(value.GetType())) {
-                    throw new ArgumentException("type must be assignable from value");
-                }
-            } else {
-                if (!type.IsValueType) {
-                    throw new ArgumentException("value must not be null for value types");
-                }
-            }
-
-            Expression expr = AddTemplatedConstant(typeof(WeakReference), new WeakReference(value));
-
-            return Ast.ReadProperty(expr, typeof(WeakReference).GetProperty("Target"));
-        }
 
         /// <summary>
         /// Returns a TemplatedRuleBuilder which can be used to replace data.  See TemplatedRuleBuilder

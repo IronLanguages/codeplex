@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -36,11 +36,11 @@ namespace IronPython.Modules {
         internal const int StreamReaderIndex = 2;
         internal const int StreamWriterIndex = 3;
 
-        private static Tuple DoDecode(Encoding encoding, object input, string errors) {
+        private static PythonTuple DoDecode(Encoding encoding, object input, string errors) {
             return DoDecode(encoding, input, errors, false);
         }
 
-        private static Tuple DoDecode(Encoding encoding, object input, string errors, bool fAlwaysThrow) {
+        private static PythonTuple DoDecode(Encoding encoding, object input, string errors, bool fAlwaysThrow) {
             // input should be character buffer of some form...
             string res;
             if (Converter.TryConvertToString(input, out res)) {
@@ -74,7 +74,7 @@ namespace IronPython.Modules {
                 }
 #endif
 
-                Tuple tuple = Tuple.MakeTuple(decoded, bytes.Length - badByteCount);
+                PythonTuple tuple = PythonTuple.MakeTuple(decoded, bytes.Length - badByteCount);
                 return tuple;
             } else {
                 throw PythonOps.TypeErrorForBadInstance("argument 1 must be string, got {0}", input);
@@ -99,11 +99,11 @@ namespace IronPython.Modules {
             return 0;
         }
 
-        private static Tuple DoEncode(Encoding encoding, object input, string errors) {
+        private static PythonTuple DoEncode(Encoding encoding, object input, string errors) {
             return DoEncode(encoding, input, errors, false);
         }
 
-        private static Tuple DoEncode(Encoding encoding, object input, string errors, bool includePreamble) {
+        private static PythonTuple DoEncode(Encoding encoding, object input, string errors, bool includePreamble) {
             // input should be some Unicode object
             string res;
             if (Converter.TryConvertToString(input, out res)) {
@@ -126,7 +126,7 @@ namespace IronPython.Modules {
                 for (int i = 0; i < bytes.Length; i++) {
                     sb.Append((char)bytes[i]);
                 }
-                return Tuple.MakeTuple(sb.ToString(), res.Length);
+                return PythonTuple.MakeTuple(sb.ToString(), res.Length);
             }
             throw PythonOps.TypeErrorForBadInstance("cannot decode {0}", input);
         }
@@ -184,42 +184,42 @@ namespace IronPython.Modules {
 
         [PythonName("decode")]
         public static object Decode(CodeContext context, object obj) {
-            Tuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
+            PythonTuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
         public static object Decode(CodeContext context, object obj, string encoding) {
-            Tuple t = Lookup(encoding);
+            PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
         public static object Decode(CodeContext context, object obj, string encoding, string errors) {
-            Tuple t = Lookup(encoding);
+            PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj) {
-            Tuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
+            PythonTuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj, string encoding) {
-            Tuple t = Lookup(encoding);
+            PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
         public static object Encode(CodeContext context, object obj, string encoding, string errors) {
-            Tuple t = Lookup(encoding);
+            PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
         }
@@ -256,7 +256,7 @@ namespace IronPython.Modules {
                 }
 
             }
-            return Tuple.MakeTuple(res.ToString(), text.Length);
+            return PythonTuple.MakeTuple(res.ToString(), text.Length);
         }
 
         static int CharToInt(char ch) {
@@ -318,7 +318,7 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("lookup")]
-        public static Tuple Lookup(string encoding) {
+        public static PythonTuple Lookup(string encoding) {
             return PythonOps.LookupEncoding(encoding);
         }
 
@@ -344,16 +344,16 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("raw_unicode_escape_decode")]
-        public static Tuple RawUnicodeEscapeDecode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
-            return Tuple.MakeTuple(
+        public static PythonTuple RawUnicodeEscapeDecode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return PythonTuple.MakeTuple(
                 StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)
             );
         }
 
         [PythonName("raw_unicode_escape_encode")]
-        public static Tuple RawUnicodeEscapeEncode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
-            return Tuple.MakeTuple(
+        public static PythonTuple RawUnicodeEscapeEncode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
+            return PythonTuple.MakeTuple(
                 StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)
             );
@@ -467,7 +467,7 @@ namespace IronPython.Modules {
                 }
             }
             if (match) {
-                return Tuple.MakeTuple(String.Empty, lePre.Length, -1);
+                return PythonTuple.MakeTuple(String.Empty, lePre.Length, -1);
             }
             match = true;
 
@@ -479,11 +479,11 @@ namespace IronPython.Modules {
             }
 
             if (match) {
-                return Tuple.MakeTuple(String.Empty, bePre.Length, 1);
+                return PythonTuple.MakeTuple(String.Empty, bePre.Length, 1);
             }
 
-            Tuple res = Utf16Decode(input, errors) as Tuple;
-            return Tuple.MakeTuple(res[0], res[1], 0);
+            PythonTuple res = Utf16Decode(input, errors) as PythonTuple;
+            return PythonTuple.MakeTuple(res[0], res[1], 0);
         }
 
         #region Utf-16 Le Functions

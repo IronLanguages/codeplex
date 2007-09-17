@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -206,7 +206,7 @@ namespace IronPython.Runtime {
                     throw PythonOps.TypeError("__getitem__() takes exactly one argument (0 given)");
                 }                
 
-                return this[Tuple.MakeTuple(key)];
+                return this[PythonTuple.MakeTuple(key)];
             }
             set {
                 if (key == null) {
@@ -218,7 +218,7 @@ namespace IronPython.Runtime {
                     throw PythonOps.TypeError("__setitem__() takes exactly two argument (1 given)");
                 }
 
-                this[Tuple.MakeTuple(key)] = value;
+                this[PythonTuple.MakeTuple(key)] = value;
             }
         }
 
@@ -287,7 +287,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("popitem")]
-        public Tuple PopItem() {
+        public PythonTuple PopItem() {
             return DictionaryOps.popitem(this);
         }
 

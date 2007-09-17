@@ -23,7 +23,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
-    public abstract class NewTuple {
+    public abstract class Tuple {
         public const int MaxSize = 128;
         private static Dictionary<Type, int> _sizeDict = new Dictionary<Type, int>();
 
@@ -37,7 +37,7 @@ namespace Microsoft.Scripting {
 
             // *** BEGIN GENERATED CODE ***
 
-            if (size <= 128) {
+            if (size <= Tuple.MaxSize) {
                 if (size <= 1) {
                     return typeof(Tuple<>);
                 } else if (size <= 2) {
@@ -90,7 +90,7 @@ namespace Microsoft.Scripting {
             while (types.Count != 0) {
                 Type t = types.Pop();
 
-                if (typeof(NewTuple).IsAssignableFrom(t)) {
+                if (typeof(Tuple).IsAssignableFrom(t)) {
                     foreach (Type subtype in t.GetGenericArguments()) {
                         types.Push(subtype);
                     }
@@ -110,7 +110,7 @@ namespace Microsoft.Scripting {
         /// Creates a new instance of tupleType with the specified args.  If the tuple is a nested
         /// tuple the values are added in their nested forms.
         /// </summary>
-        public static NewTuple MakeTuple(Type tupleType, params object[] args) {
+        public static Tuple MakeTuple(Type tupleType, params object[] args) {
             Contract.RequiresNotNull(tupleType, "tupleType");
             Contract.RequiresNotNull(args, "args");
 
@@ -120,7 +120,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the values from a tuple including unpacking nested values.
         /// </summary>
-        public static object[] GetTupleValues(NewTuple tuple) {
+        public static object[] GetTupleValues(Tuple tuple) {
             Contract.RequiresNotNull(tuple, "tuple");
 
             List<object> res = new List<object>();
@@ -137,8 +137,16 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(tupleType, "tupleType");
 
             int size = GetSize(tupleType);
-            if (index < 0 || index >= size) throw new ArgumentNullException("index");
+            if (index < 0 || index >= size) throw new ArgumentException("index");
+            
+            foreach(int curIndex in GetAccessPath(size, index)) {
+                PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", curIndex));
+                yield return pi;
+                tupleType = pi.PropertyType;
+            }            
+        }
 
+        internal static IEnumerable<int> GetAccessPath(int size, int index) {
             // We get the final index by breaking the index into groups of bits.  The more significant bits
             // represent the indexes into the outermost tuples and the least significant bits index into the
             // inner most tuples.  The mask is initialized to mask the upper bits and adjust is initialized
@@ -147,14 +155,14 @@ namespace Microsoft.Scripting {
             // everything in here is shifting bits (not multiplying or dividing) because NewTuple.MaxSize is a 
             // power of 2.
             int depth = 0;
-            int mask = NewTuple.MaxSize - 1;
+            int mask = Tuple.MaxSize - 1;
             int adjust = 1;
             int count = size;
-            while (count > NewTuple.MaxSize) {
+            while (count > Tuple.MaxSize) {
                 depth++;
-                count /= NewTuple.MaxSize;
-                mask *= NewTuple.MaxSize;
-                adjust *= NewTuple.MaxSize;
+                count /= Tuple.MaxSize;
+                mask *= Tuple.MaxSize;
+                adjust *= Tuple.MaxSize;
             }
 
             while (depth-- >= 0) {
@@ -162,36 +170,33 @@ namespace Microsoft.Scripting {
 
                 int curIndex = (index & mask) / adjust;
 
-                PropertyInfo pi = tupleType.GetProperty("Item" + String.Format("{0:D3}", curIndex));
-                yield return pi;
+                yield return curIndex;
 
-                tupleType = pi.PropertyType;
-
-                mask /= NewTuple.MaxSize;
-                adjust /= NewTuple.MaxSize;
+                mask /= Tuple.MaxSize;
+                adjust /= Tuple.MaxSize;
             }
         }
 
-        private static void GetTupleValues(NewTuple tuple, List<object> args) {
+        private static void GetTupleValues(Tuple tuple, List<object> args) {
             Type[] types = tuple.GetType().GetGenericArguments();
             for (int i = 0; i < types.Length; i++) {
-                if (typeof(NewTuple).IsAssignableFrom(types[i])) {
-                    GetTupleValues((NewTuple)tuple.GetValue(i), args);
+                if (typeof(Tuple).IsAssignableFrom(types[i])) {
+                    GetTupleValues((Tuple)tuple.GetValue(i), args);
                 } else if (types[i] != typeof(None)) {
                     args.Add(tuple.GetValue(i));
                 }
             }
         }
 
-        private static NewTuple MakeTuple(Type tupleType, int start, int end, object[] args) {
+        private static Tuple MakeTuple(Type tupleType, int start, int end, object[] args) {
             int size = end - start;
 
-            NewTuple res = (NewTuple)Activator.CreateInstance(tupleType);
-            if (size > NewTuple.MaxSize) {
+            Tuple res = (Tuple)Activator.CreateInstance(tupleType);
+            if (size > Tuple.MaxSize) {
                 int multiplier = 1;
-                while (size > NewTuple.MaxSize) {
-                    size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
-                    multiplier *= NewTuple.MaxSize;
+                while (size > Tuple.MaxSize) {
+                    size = (size + Tuple.MaxSize - 1) / Tuple.MaxSize;
+                    multiplier *= Tuple.MaxSize;
                 }
                 for (int i = 0; i < size; i++) {
                     int newStart = start + (i * multiplier);
@@ -211,12 +216,12 @@ namespace Microsoft.Scripting {
 
         }
 
-        private static NewTuple CreateTupleInstance(Type tupleType, int start, int end, object[] args) {
-            if (args == null) return (NewTuple)Activator.CreateInstance(tupleType);
+        private static Tuple CreateTupleInstance(Type tupleType, int start, int end, object[] args) {
+            if (args == null) return (Tuple)Activator.CreateInstance(tupleType);
             
             object[] realArgs = new object[tupleType.GetGenericArguments().Length];
             Array.Copy(args, start, realArgs, 0, end - start);
-            return (NewTuple)Activator.CreateInstance(tupleType, realArgs);
+            return (Tuple)Activator.CreateInstance(tupleType, realArgs);
         }
 
         private static Type MakeTupleType(Type[] types, int start, int end) {
@@ -236,12 +241,12 @@ namespace Microsoft.Scripting {
             }
 
             int multiplier = 1;
-            while (size > NewTuple.MaxSize) {
-                size = (size + NewTuple.MaxSize - 1) / NewTuple.MaxSize;
-                multiplier *= NewTuple.MaxSize;
+            while (size > Tuple.MaxSize) {
+                size = (size + Tuple.MaxSize - 1) / Tuple.MaxSize;
+                multiplier *= Tuple.MaxSize;
             }
 
-            type = NewTuple.GetTupleType(size);
+            type = Tuple.GetTupleType(size);
             Debug.Assert(type != null);
             Type[] nestedTypes = new Type[type.GetGenericArguments().Length];
             for (int i = 0; i < size; i++) {
@@ -266,7 +271,7 @@ namespace Microsoft.Scripting {
 
     // *** BEGIN GENERATED CODE ***
 
-    public class Tuple<T0> : NewTuple {
+    public class Tuple<T0> : Tuple {
         public Tuple() { }
 
         public Tuple(T0 item0)

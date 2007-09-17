@@ -44,8 +44,8 @@ namespace Microsoft.Scripting.Actions {
             _argumentInfos = argumentKinds;
         }
 
-        public override ActionKind Kind {
-            get { return ActionKind.InvokeMember; }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.InvokeMember; }
         }
 
         public int IndexOfArgument(ArgumentKind kind) {

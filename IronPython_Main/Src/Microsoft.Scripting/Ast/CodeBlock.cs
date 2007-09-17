@@ -979,6 +979,18 @@ namespace Microsoft.Scripting.Ast {
 
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
+
+        internal static EnvironmentFactory CreateEnvironmentFactory(int size) {
+            size++; // +1 for the FunctionEnvironmentDictionary 
+
+            Type[] argTypes = CompilerHelpers.MakeRepeatedArray(typeof(object), size);
+            argTypes[0] = typeof(IAttributesCollection);
+
+            Type tupleType = Tuple.MakeTupleType(argTypes);
+            Type envType = typeof(FunctionEnvironmentDictionary<>).MakeGenericType(tupleType);
+
+            return new PropertyEnvironmentFactory(tupleType, envType);
+        }       
     }
 
     public static partial class Ast {

@@ -142,7 +142,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("unpack")]
-        public static Tuple Unpack(string fmt, string @string) {
+        public static PythonTuple Unpack(string fmt, string @string) {
             string data = @string;
             int count = 1;
             int curIndex = 0;
@@ -253,8 +253,8 @@ namespace IronPython.Modules {
 
             if (curIndex != data.Length) throw Error("not all data used");
             if (fStandardized)
-                return new Tuple(res);
-            return new Tuple(res);
+                return new PythonTuple(res);
+            return new PythonTuple(res);
         }
 
         [PythonName("calcsize")]

@@ -47,9 +47,7 @@ Assert(g.a == 20)
 
 def foo(): pass
 
-#silverlightBug? Merlin Work Item 186413
-if is_silverlight==False:
-    AreEqual(foo.func_code.co_filename.lower().endswith('test_function.py'), True)
+AreEqual(foo.func_code.co_filename.lower().endswith('test_function.py'), True)
 AreEqual(foo.func_code.co_firstlineno, 48)  # if you added lines to the top of this file you need to update this number.
 
 # Cannot inherit from a function

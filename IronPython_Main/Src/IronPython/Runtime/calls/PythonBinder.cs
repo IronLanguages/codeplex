@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -45,13 +45,13 @@ using IronPython.Runtime.Operations;
             : base(context) {
         }
 
-        private StandardRule<T> MakeRuleWorker<T>(CodeContext context, Action action, object[] args) {
+        private StandardRule<T> MakeRuleWorker<T>(CodeContext context, DynamicAction action, object[] args) {
             switch (action.Kind) {
-                case ActionKind.DoOperation:
+                case DynamicActionKind.DoOperation:
                     return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
-                case ActionKind.GetMember:
+                case DynamicActionKind.GetMember:
                     return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
-                case ActionKind.Call:
+                case DynamicActionKind.Call:
                     // if call fails Python will try and create an instance as it treats these two operations as the same.
                     StandardRule<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
                     if (rule == null) {
@@ -72,7 +72,7 @@ using IronPython.Runtime.Operations;
             }
         }
 
-        protected override StandardRule<T> MakeRule<T>(CodeContext context, Action action, object[] args) {
+        protected override StandardRule<T> MakeRule<T>(CodeContext context, DynamicAction action, object[] args) {
             return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
         }
 
@@ -250,11 +250,11 @@ using IronPython.Runtime.Operations;
         }
 
         public override object GetByRefArray(object[] args) {
-            return Tuple.MakeTuple(args);
+            return PythonTuple.MakeTuple(args);
         }
 
 
-        public override Statement MakeInvalidParametersError(MethodBinder binder, Action action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
+        public override Statement MakeInvalidParametersError(MethodBinder binder, DynamicAction action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
             if (binder.IsBinaryOperator) {
                 CallAction ca = action as CallAction;
                 if (ca != null) {
@@ -283,7 +283,7 @@ using IronPython.Runtime.Operations;
 
         #region .NET member binding
 
-        public override MemberGroup GetMember(Action action, Type type, string name) {
+        public override MemberGroup GetMember(DynamicAction action, Type type, string name) {
             // Python type customization:
             switch (name) {
                 case "__str__":

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -182,7 +182,7 @@ namespace IronPython.Runtime {
 
         private void SetVersionVariables(byte major, byte minor, byte build, string level, string versionString) {
             hexversion = ((int)major << 24) + ((int)minor << 16) + ((int)build << 8);
-            version_info = Tuple.MakeTuple((int)major, (int)minor, (int)build, level, 0);
+            version_info = PythonTuple.MakeTuple((int)major, (int)minor, (int)build, level, 0);
             version = String.Format("{0}.{1}.{2} ({3})", major, minor, build, versionString);
         }
 
@@ -213,7 +213,7 @@ namespace IronPython.Runtime {
         public string byteorder;
 
         [PythonName("builtin_module_names")]
-        public Tuple builtin_module_names;
+        public PythonTuple builtin_module_names;
 
         [PythonName("copyright")]
         public string copyright;
@@ -298,7 +298,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("exc_info")]
-        public Tuple ExceptionInfo() {
+        public PythonTuple ExceptionInfo() {
             return PythonOps.GetExceptionInfo();
         }
 
@@ -425,13 +425,19 @@ namespace IronPython.Runtime {
             bool buffered = ScriptDomainManager.Options.BufferedStandardOutAndError;
 
             s = new ConsoleStream(ConsoleStreamType.Input);
-            __stdin__ = stdin = new PythonFile(s, s.Encoding, "<stdin>", "w");
+            __stdin__ = stdin = MakeConsoleIo(s, s.Encoding, "<stdin>");
             
             s = new ConsoleStream(ConsoleStreamType.Output, buffered);
-             __stdout__ = stdout = new PythonFile(s, s.Encoding, "<stdout>", "w");
+            __stdout__ = stdout = MakeConsoleIo(s, s.Encoding, "<stdout>");
            
             s = new ConsoleStream(ConsoleStreamType.ErrorOutput, buffered);
-            __stderr__ = stderr = new PythonFile(s, s.Encoding, "<stderr>", "w");
+            __stderr__ = stderr = MakeConsoleIo(s, s.Encoding, "<stderr>");
+        }
+
+        private static PythonFile MakeConsoleIo(ConsoleStream stream, Encoding encoding, string name) {
+            PythonFile res = new PythonFile(stream, encoding, name, "w");
+            res.IsConsole = true;
+            return res;
         }
 
         internal void CloseStandardIOStreams() {
@@ -581,7 +587,7 @@ namespace IronPython.Runtime {
                 foreach (object key in _builtinsDict.Keys) {
                     keys[index++] = key;
                 }
-                builtin_module_names = Tuple.MakeTuple(keys);
+                builtin_module_names = PythonTuple.MakeTuple(keys);
             }
         }
 

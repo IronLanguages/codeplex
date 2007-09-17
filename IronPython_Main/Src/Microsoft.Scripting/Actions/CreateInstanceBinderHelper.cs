@@ -15,16 +15,15 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Diagnostics;
-    using System.Reflection;
-    using Microsoft.Scripting.Utils;
 
     public class CreateInstanceBinderHelper<T> : CallBinderHelper<T, CreateInstanceAction> {
         public CreateInstanceBinderHelper(CodeContext context, CreateInstanceAction action, object []args)

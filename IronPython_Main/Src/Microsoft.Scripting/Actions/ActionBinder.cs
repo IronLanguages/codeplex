@@ -17,12 +17,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
+using System.Collections;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Types;
-using System.Text;
-using System.Collections;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -62,7 +61,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="args">The arguments to the rule as provided from the call site at runtime.</param>
         /// <param name="callerContext">The CodeContext that is requesting the rule and that should be used for conversions.</param>
         /// <returns>The new rule.</returns>
-        public StandardRule<T> GetRule<T>(CodeContext callerContext, Action action, object[] args) {
+        public StandardRule<T> GetRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
             Contract.RequiresNotNull(action, "action");
             //Debug.Assert(action.Kind != ActionKind.GetMember || ((GetMemberAction)action).Name != SymbolTable.StringToId("x"));
 
@@ -93,11 +92,11 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets a rule for the provided action and arguments and executes it without compiling.
         /// </summary>
-        public object Execute(CodeContext cc, Action action, object[] args) {
+        public object Execute(CodeContext cc, DynamicAction action, object[] args) {
             return DynamicSiteHelpers.Execute(cc, this, action, args);
         }
 
-        public virtual AbstractValue AbstractExecute(Action action, IList<AbstractValue> args) {
+        public virtual AbstractValue AbstractExecute(DynamicAction action, IList<AbstractValue> args) {
             throw new NotImplementedException();
         }
 
@@ -113,19 +112,19 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="args">The arguments to the action as provided from the call site at runtime.</param>
         /// <param name="callerContext">The CodeContext that is requesting the rule and should be use</param>
         /// <returns></returns>
-        protected virtual StandardRule<T> MakeRule<T>(CodeContext callerContext, Action action, object[] args) {
+        protected virtual StandardRule<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
             switch (action.Kind) {
-                case ActionKind.Call:
+                case DynamicActionKind.Call:
                     return new CallBinderHelper<T, CallAction>(callerContext, (CallAction)action, args).MakeRule();
-                case ActionKind.GetMember:
+                case DynamicActionKind.GetMember:
                     return new GetMemberBinderHelper<T>(callerContext, (GetMemberAction)action, args).MakeNewRule();
-                case ActionKind.SetMember:
+                case DynamicActionKind.SetMember:
                     return new SetMemberBinderHelper<T>(callerContext, (SetMemberAction)action, args).MakeNewRule();
-                case ActionKind.CreateInstance:
+                case DynamicActionKind.CreateInstance:
                     return new CreateInstanceBinderHelper<T>(callerContext, (CreateInstanceAction)action, args).MakeRule();
-                case ActionKind.DoOperation:
+                case DynamicActionKind.DoOperation:
                     return new DoOperationBinderHelper<T>(callerContext, (DoOperationAction)action, args).MakeRule();
-                case ActionKind.DeleteMember:
+                case DynamicActionKind.DeleteMember:
                     return new DeleteMemberBinderHelper<T>(callerContext, (DeleteMemberAction)action, args).MakeRule();
                 default:
                     throw new NotImplementedException(action.ToString());
@@ -189,7 +188,7 @@ namespace Microsoft.Scripting.Actions {
         /// The default implemetnation first searches the type, then the flattened heirachy of the type, and then
         /// registered extension methods.
         /// </summary>
-        public virtual MemberGroup GetMember(Action action, Type type, string name) {            
+        public virtual MemberGroup GetMember(DynamicAction action, Type type, string name) {            
             MemberGroup members = type.GetMember(name);
 
             // check for generic types w/ arity...
@@ -254,7 +253,7 @@ namespace Microsoft.Scripting.Actions {
             return MakeReadOnlyMemberError<T>(rule, type, name);
         }
 
-        public virtual Statement MakeInvalidParametersError(MethodBinder binder, Action action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
+        public virtual Statement MakeInvalidParametersError(MethodBinder binder, DynamicAction action, CallType callType, MethodBase[] targets, StandardRule rule, object []args) {
             int minArgs = Int32.MaxValue;
             int maxArgs = Int32.MinValue;
             int maxDflt = Int32.MinValue;
@@ -303,7 +302,7 @@ namespace Microsoft.Scripting.Actions {
                         hasArgList = true;
                     } else if (CompilerHelpers.IsParamDictionary(pi)) {
                         cnt--;
-                    } else if (pi.DefaultValue != DBNull.Value || pi.IsOptional) {
+                    } else if (!CompilerHelpers.IsMandatoryParameter(pi)) {
                         dflt++;
                         cnt--;
                     }

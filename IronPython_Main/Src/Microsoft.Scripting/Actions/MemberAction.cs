@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Actions {
-    public abstract class MemberAction : Action {
+    public abstract class MemberAction : DynamicAction {
         private SymbolId _name;
 
         internal MemberAction(SymbolId name) {

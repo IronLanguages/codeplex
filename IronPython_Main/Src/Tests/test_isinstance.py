@@ -56,6 +56,7 @@ def test_file_io():
         ms = System.IO.MemoryStream(30)
         f = open(ms)
         f.write("hello")
+        f.flush()
         AreEqual(ms.Length, 5)
         AreEqual(ms.GetBuffer()[0], ord('h'))
         AreEqual(ms.GetBuffer()[4], ord('o'))

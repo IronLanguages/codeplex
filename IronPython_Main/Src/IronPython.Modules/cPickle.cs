@@ -344,7 +344,7 @@ namespace IronPython.Modules {
                 dispatchTable[TypeCache.BigInteger] = SaveLong;
                 dispatchTable[TypeCache.Double] = SaveFloat;
                 dispatchTable[TypeCache.String] = SaveUnicode;
-                dispatchTable[TypeCache.Tuple] = SaveTuple;
+                dispatchTable[TypeCache.PythonTuple] = SaveTuple;
                 dispatchTable[TypeCache.List] = SaveList;
                 dispatchTable[TypeCache.OldClass] = SaveGlobal;
                 dispatchTable[TypeCache.Function] = SaveGlobal;
@@ -496,7 +496,7 @@ namespace IronPython.Modules {
 
                 if (_protocol >= 2) {
                     object code;
-                    if (PythonCopyReg.ExtensionRegistry.TryGetValue(Tuple.MakeTuple(moduleName, name), out code)) {
+                    if (PythonCopyReg.ExtensionRegistry.TryGetValue(PythonTuple.MakeTuple(moduleName, name), out code)) {
                         int intCode = (int)code;
                         if (IsUInt8(code)) {
                             Write(Opcode.Ext1);
@@ -669,8 +669,8 @@ namespace IronPython.Modules {
                     } else {
                         SaveGlobalByName(context, obj, result);
                     }
-                } else if (result is Tuple) {
-                    Tuple rt = (Tuple)result;
+                } else if (result is PythonTuple) {
+                    PythonTuple rt = (PythonTuple)result;
                     switch (rt.Count) {
                         case 2:
                             SaveReduce(context, obj, reduceCallable, rt[0], rt[1], null, null, null);
@@ -700,7 +700,7 @@ namespace IronPython.Modules {
             private void SaveReduce(CodeContext context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
                 if (!PythonOps.IsCallable(func)) {
                     throw CannotPickle(obj, "func from reduce() should be callable");
-                } else if (!(args is Tuple) && args != null) {
+                } else if (!(args is PythonTuple) && args != null) {
                     throw CannotPickle(obj, "args from reduce() should be a tuple");
                 } else if (listItems != null && !(listItems is IEnumerator)) {
                     throw CannotPickle(obj, "listitems from reduce() should be a list iterator");
@@ -720,7 +720,7 @@ namespace IronPython.Modules {
                     if (args == null) {
                         throw CannotPickle(obj, "__newobj__ arglist is None");
                     }
-                    Tuple argsTuple = (Tuple)args;
+                    PythonTuple argsTuple = (PythonTuple)args;
                     if (argsTuple.Count == 0) {
                         throw CannotPickle(obj, "__newobj__ arglist is empty");
                     } else if (!DynamicHelpers.GetDynamicType(obj).Equals(argsTuple[0])) {
@@ -752,9 +752,9 @@ namespace IronPython.Modules {
             }
 
             private void SaveTuple(CodeContext context, object obj) {
-                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.Tuple), "arg must be tuple");
+                Debug.Assert(DynamicHelpers.GetDynamicType(obj).Equals(TypeCache.PythonTuple), "arg must be tuple");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
-                Tuple t = (Tuple)obj;
+                PythonTuple t = (PythonTuple)obj;
                 string opcode;
                 bool needMark = false;
                 if (_protocol > 0 && t.Count == 0) {
@@ -965,10 +965,10 @@ namespace IronPython.Modules {
                 object getInitArgsCallable;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
                     object initArgs = PythonCalls.Call(getInitArgsCallable);
-                    if (!(initArgs is Tuple)) {
+                    if (!(initArgs is PythonTuple)) {
                         throw CannotPickle(obj, "__getinitargs__() must return tuple");
                     }
-                    foreach (object arg in (Tuple)initArgs) {
+                    foreach (object arg in (PythonTuple)initArgs) {
                         Save(context, arg);
                     }
                 }
@@ -1062,10 +1062,10 @@ namespace IronPython.Modules {
             /// but append no more than BatchSize items at a time.
             /// </summary>
             private void BatchSetItems(CodeContext context, IEnumerator enumerator) {
-                Tuple kvTuple;
+                PythonTuple kvTuple;
                 if (_protocol < 1) {
                     while (enumerator.MoveNext()) {
-                        kvTuple = (Tuple)enumerator.Current;
+                        kvTuple = (PythonTuple)enumerator.Current;
                         Save(context, kvTuple[0]);
                         Save(context, kvTuple[1]);
                         Write(Opcode.SetItem);
@@ -1073,7 +1073,7 @@ namespace IronPython.Modules {
                 } else {
                     object nextKey, nextValue;
                     if (enumerator.MoveNext()) {
-                        kvTuple = (Tuple)enumerator.Current;
+                        kvTuple = (PythonTuple)enumerator.Current;
                         nextKey = kvTuple[0];
                         nextValue = kvTuple[1];
                     } else {
@@ -1088,7 +1088,7 @@ namespace IronPython.Modules {
                     while (enumerator.MoveNext()) {
                         curKey = nextKey;
                         curValue = nextValue;
-                        kvTuple = (Tuple)enumerator.Current;
+                        kvTuple = (PythonTuple)enumerator.Current;
                         nextKey = kvTuple[0];
                         nextValue = kvTuple[1];
 
@@ -1139,7 +1139,7 @@ namespace IronPython.Modules {
 
             private void Memoize(object obj) {
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
-                _memo[PythonOps.Id(obj)] = Tuple.MakeTuple(_memo.Count, obj);
+                _memo[PythonOps.Id(obj)] = PythonTuple.MakeTuple(_memo.Count, obj);
             }
 
             /// <summary>
@@ -1518,8 +1518,8 @@ namespace IronPython.Modules {
                 } else if (arg is PythonDictionary) {
                     dict = (PythonDictionary)arg;
                     slots = null;
-                } else if (arg is Tuple) {
-                    Tuple argsTuple = (Tuple)arg;
+                } else if (arg is PythonTuple) {
+                    PythonTuple argsTuple = (PythonTuple)arg;
                     if (argsTuple.Count != 2) {
                         throw PythonOps.ValueError("state for object without __setstate__ must be None, dict, or 2-tuple");
                     }
@@ -1573,21 +1573,21 @@ namespace IronPython.Modules {
             }
 
             private void LoadEmptyTuple(CodeContext context) {
-                _stack.Append(Tuple.MakeTuple());
+                _stack.Append(PythonTuple.MakeTuple());
             }
 
             private void LoadExt1(CodeContext context) {
-                Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt8()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt8()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt2(CodeContext context) {
-                Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt16()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt16()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt4(CodeContext context) {
-                Tuple global = (Tuple)PythonCopyReg.InvertedRegistry[ReadInt32()];
+                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[ReadInt32()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
@@ -1663,7 +1663,7 @@ namespace IronPython.Modules {
             }
 
             private void LoadNewObj(CodeContext context) {
-                Tuple args = _stack.Pop() as Tuple;
+                PythonTuple args = _stack.Pop() as PythonTuple;
                 if (args == null) {
                     throw PythonOps.TypeError("expected tuple as second argument to NEWOBJ, got {0}", DynamicHelpers.GetDynamicType(args));
                 }
@@ -1735,7 +1735,7 @@ namespace IronPython.Modules {
                 object callable = _stack.Pop();
                 if (args == null) {
                     _stack.Append(PythonCalls.Call(PythonOps.GetBoundAttr(context, callable, SymbolTable.StringToId("__basicnew__"))));
-                } else if (!DynamicHelpers.GetDynamicType(args).Equals(TypeCache.Tuple)) {
+                } else if (!DynamicHelpers.GetDynamicType(args).Equals(TypeCache.PythonTuple)) {
                     throw PythonOps.TypeError(
                         "while executing REDUCE, expected tuple at the top of the stack, but got {0}",
                         DynamicHelpers.GetDynamicType(args)
@@ -1792,27 +1792,27 @@ namespace IronPython.Modules {
 
             private void LoadTuple(CodeContext context) {
                 int markIndex = MarkIndex;
-                Tuple tuple = Tuple.MakeTuple(_stack.GetSliceAsArray(markIndex + 1, _stack.Count));
+                PythonTuple tuple = PythonTuple.MakeTuple(_stack.GetSliceAsArray(markIndex + 1, _stack.Count));
                 PopMark(markIndex);
                 _stack.Append(tuple);
             }
 
             private void LoadTuple1(CodeContext context) {
                 object item0 = _stack.Pop();
-                _stack.Append(Tuple.MakeTuple(item0));
+                _stack.Append(PythonTuple.MakeTuple(item0));
             }
 
             private void LoadTuple2(CodeContext context) {
                 object item1 = _stack.Pop();
                 object item0 = _stack.Pop();
-                _stack.Append(Tuple.MakeTuple(item0, item1));
+                _stack.Append(PythonTuple.MakeTuple(item0, item1));
             }
 
             private void LoadTuple3(CodeContext context) {
                 object item2 = _stack.Pop();
                 object item1 = _stack.Pop();
                 object item0 = _stack.Pop();
-                _stack.Append(Tuple.MakeTuple(item0, item1, item2));
+                _stack.Append(PythonTuple.MakeTuple(item0, item1, item2));
             }
 
             private void LoadUnicode(CodeContext context) {

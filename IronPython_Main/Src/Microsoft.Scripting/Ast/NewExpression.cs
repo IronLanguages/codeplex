@@ -23,16 +23,19 @@ using System.Reflection.Emit;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class NewExpression : Expression {
         private readonly ConstructorInfo _constructor;
         private readonly ReadOnlyCollection<Expression> _arguments;
+        private readonly ParameterInfo[] _parameterInfos;
 
-        internal NewExpression(SourceSpan span, ConstructorInfo constructor, IList<Expression> arguments)
+        internal NewExpression(SourceSpan span, ConstructorInfo constructor, IList<Expression> arguments, ParameterInfo[] parameters)
             : base(span) {
             _constructor = constructor;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
+            _parameterInfos = parameters;
         }
 
         public ConstructorInfo Constructor {
@@ -50,10 +53,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            ParameterInfo[] pis = _constructor.GetParameters();
-            Debug.Assert(pis.Length == _arguments.Count);
-            for (int i=0; i < pis.Length; i++) {
-                _arguments[i].EmitAs(cg, pis[i].ParameterType);
+            for (int i=0; i < _parameterInfos.Length; i++) {
+                _arguments[i].EmitAs(cg, _parameterInfos[i].ParameterType);
             }
             cg.EmitNew(_constructor);
         }
@@ -91,7 +92,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static NewExpression New(SourceSpan span, ConstructorInfo constructor, params Expression[] arguments) {
-            return new NewExpression(span, constructor, arguments);
+            Contract.RequiresNotNull(constructor, "constructor");
+            Contract.RequiresNotNullItems(arguments, "arguments");
+
+            ParameterInfo[] pi = constructor.GetParameters();
+            Contract.Requires(CompilerHelpers.FormalParamsMatchActual(pi, arguments.Length), "constructor", "The number of parameters doesn't match the number of actual arguments");
+
+            return new NewExpression(span, constructor, arguments, pi);
         }
     }
 }

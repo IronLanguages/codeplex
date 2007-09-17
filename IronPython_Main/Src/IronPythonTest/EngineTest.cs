@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -18,10 +18,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython;
 using IronPython.Compiler;
@@ -30,7 +32,6 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
 
 namespace IronPythonTest {
 #if !SILVERLIGHT
@@ -919,7 +920,9 @@ global_variable = 300", DefaultModule, locals);
         private static void ExecuteAndVerify(PythonEngine pe, ScriptModule module, IDictionary<string, object> locals, string text, string expectedText) {
             MemoryStream stream = new MemoryStream();
             object old_out = SystemState.Instance.stdout;
-            SystemState.Instance.stdout = new PythonFile(stream, Encoding.Default, "<stdout>", "w");
+            PythonFile pf = new PythonFile(stream, Encoding.Default, "<stdout>", "w");
+            pf.IsConsole = true;
+            SystemState.Instance.stdout = pf;
             try {
                 pe.Execute(text, module, locals);
             } finally {
@@ -1130,7 +1133,7 @@ if r.sum != 110:
             if (expected == null && actual == null) return;
 
             if (!expected.Equals(actual)) {
-                Console.WriteLine("{0} {1}", expected, actual);
+                Console.WriteLine("Expected: {0} Got: {1} from {2}", expected, actual, new StackTrace(true));
                 throw new Exception();
             }
         }

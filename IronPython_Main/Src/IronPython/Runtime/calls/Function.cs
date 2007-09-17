@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -127,10 +127,10 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public Tuple FunctionDefaults {
+        public PythonTuple FunctionDefaults {
             [PythonName("func_defaults")]
             get {
-                return new Tuple(_defaults);
+                return new PythonTuple(_defaults);
             }
         }
 
@@ -597,8 +597,8 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(Action action, CodeContext context, object[] args) {
-            if (action.Kind != ActionKind.Call)
+        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+            if (action.Kind != DynamicActionKind.Call)
                 return null;
 
             return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
@@ -819,7 +819,7 @@ namespace IronPython.Runtime.Calls {
 
                             exprArgs[_func.ExpandListPosition] = Ast.Call(
                                 null,
-                                typeof(Tuple).GetMethod("Make"),
+                                typeof(PythonTuple).GetMethod("Make"),
                                 Ast.ReadDefined(_params));
 
                             if (paramsArgs != null) {
@@ -1376,7 +1376,7 @@ namespace IronPython.Runtime.Calls {
                     for (int i = 0; i < extraArgs.Length; i++) {
                         extraArgs[i] = args[i + NormalArgumentCount];
                     }
-                    argList = Tuple.Make(extraArgs);
+                    argList = PythonTuple.Make(extraArgs);
                 } else {
                     throw BadArgumentError(nargs);
                 }
@@ -1385,7 +1385,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             if (ExpandListPosition >= 0) {
-                if (argList == null) argList = Tuple.MakeTuple();
+                if (argList == null) argList = PythonTuple.MakeTuple();
                 outArgs[ExpandListPosition] = argList;
             }
             if (ExpandDictPosition >= 0) {

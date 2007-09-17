@@ -124,6 +124,8 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (setter != null) {
+                setter = CompilerHelpers.GetCallableMethod(setter);
+
                 if (IsStaticProperty(info, setter)) {
                     // TODO: Too python specific
                     Body = Ast.Block(Body, Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
@@ -171,10 +173,10 @@ namespace Microsoft.Scripting.Actions {
                         )
                     )
                 );
-            } else if (field.DeclaringType.IsValueType) {
-                Body = Ast.Block(Body, Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(ArrayUtils.EmptyTypes))));
-            } else if (field.IsInitOnly || (field.IsStatic && targetType != field.DeclaringType)) {     // TODO: Field static check too python specific
+            } else if (field.IsInitOnly || field.IsLiteral || (field.IsStatic && targetType != field.DeclaringType)) {     // TODO: Field static check too python specific
                 Body = Ast.Block(Body, Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
+            } else if (field.DeclaringType.IsValueType) {
+                Body = Ast.Block(Body, Rule.MakeError(Binder, Ast.New(typeof(ArgumentException).GetConstructor(new Type[] { typeof(string) }), Ast.Constant("cannot assign to value types"))));
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
                 Body = Ast.Block(Body, 
                     Rule.MakeReturn(

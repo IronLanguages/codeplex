@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -192,7 +192,7 @@ namespace IronPython.Runtime.Exceptions {
         /// </summary>
         /// 
         public static object ExceptionInit(params object[] args) {
-            Tuple t = args[0] as Tuple;
+            PythonTuple t = args[0] as PythonTuple;
             if (t != null) {
                 object self = t[0];
                 object[] realArgs = new object[t.Count - 1];
@@ -200,7 +200,7 @@ namespace IronPython.Runtime.Exceptions {
                     realArgs[i - 1] = t[i];
                 }
 
-                PythonOps.SetAttr(DefaultContext.Default, self, Symbols.Arguments, Tuple.Make(realArgs));
+                PythonOps.SetAttr(DefaultContext.Default, self, Symbols.Arguments, PythonTuple.Make(realArgs));
             }
             return null;
         }
@@ -229,7 +229,7 @@ namespace IronPython.Runtime.Exceptions {
             int end = Converter.ConvertToInt32(parameters[4]);
             string reason = Converter.ConvertToString(parameters[5]);
 
-            ExceptionInit(new Tuple(false, new object[] { self, encoding, @object, start, end, reason }));
+            ExceptionInit(new PythonTuple(false, new object[] { self, encoding, @object, start, end, reason }));
 
             PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("encoding"), encoding);
             PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("object"), @object);
@@ -243,7 +243,7 @@ namespace IronPython.Runtime.Exceptions {
         public static object SystemExitExceptionInit(params object[] parameters) {
             if (parameters.Length == 0) throw PythonOps.TypeError("expected at least 1 argument, got 0");
 
-            Tuple tuple = parameters[0] as Tuple;
+            PythonTuple tuple = parameters[0] as PythonTuple;
 
             if (tuple != null) {
                 object self = tuple[0];
@@ -252,7 +252,7 @@ namespace IronPython.Runtime.Exceptions {
                 for (int i = 1; i < tuple.Count; i++) {
                     argv[i - 1] = tuple[i];
                 }
-                object args = Tuple.MakeTuple(argv);
+                object args = PythonTuple.MakeTuple(argv);
                 object code = argv.Length == 0 ? null : argv.Length == 1 ? argv[0] : args;
 
                 PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("code"), code);
@@ -268,7 +268,7 @@ namespace IronPython.Runtime.Exceptions {
         /// </summary>
         public static object ExceptionToString(params object[] args) {
             Debug.Assert(args.Length == 1);
-            Tuple t = args[0] as Tuple;
+            PythonTuple t = args[0] as PythonTuple;
 
             if (t == null || t.GetLength() == 0) throw PythonOps.TypeErrorForUnboundMethodCall("__str__", typeof(Exception), null);
 
@@ -281,7 +281,7 @@ namespace IronPython.Runtime.Exceptions {
 
             // Get Exception.args
             object objArgs = PythonOps.GetBoundAttr(DefaultContext.Default, self, Symbols.Arguments);
-            Tuple tupArgs = objArgs as Tuple;
+            PythonTuple tupArgs = objArgs as PythonTuple;
 
             // If the exception has "args", return it
             if (tupArgs != null) {
@@ -312,7 +312,7 @@ namespace IronPython.Runtime.Exceptions {
         /// </summary>
         public static PythonDictionary ExceptionGetState(params object[] args) {
             Debug.Assert(args.Length == 1);
-            Tuple t = args[0] as Tuple;
+            PythonTuple t = args[0] as PythonTuple;
 
             if (t == null || t.GetLength() == 0) throw PythonOps.TypeErrorForUnboundMethodCall("__getstate__", typeof(Exception), null);
 
@@ -337,10 +337,10 @@ namespace IronPython.Runtime.Exceptions {
         /// Helper ToString function for SyntaxError instances.
         /// </summary>
         public static object SyntaxErrorToString(params object[] args) {
-            Tuple t = args[0] as Tuple;
+            PythonTuple t = args[0] as PythonTuple;
             if (t != null) {
                 object objArgs = PythonOps.GetBoundAttr(DefaultContext.Default, t[0], Symbols.Arguments);
-                Tuple tupArgs = objArgs as Tuple;
+                PythonTuple tupArgs = objArgs as PythonTuple;
 
                 if (tupArgs != null) {
                     switch (tupArgs.Count) {
@@ -375,7 +375,7 @@ namespace IronPython.Runtime.Exceptions {
         /// index from args.
         /// </summary>
         public static object ExceptionGetItem(params object[] args) {
-            Tuple t = args[0] as Tuple;
+            PythonTuple t = args[0] as PythonTuple;
             if (t != null) {
                 return PythonOps.GetIndex(PythonOps.GetBoundAttr(DefaultContext.Default, t[0], Symbols.Arguments), t[1]);
             }
@@ -546,9 +546,9 @@ namespace IronPython.Runtime.Exceptions {
 
             PythonOps.SetAttr(DefaultContext.Default, res, Symbols.ExceptionMessage, clrException.Message);
             if (clrException.Message != null) {
-                PythonOps.SetAttr(DefaultContext.Default, res, Symbols.Arguments, Tuple.MakeTuple(clrException.Message));
+                PythonOps.SetAttr(DefaultContext.Default, res, Symbols.Arguments, PythonTuple.MakeTuple(clrException.Message));
             } else {
-                PythonOps.SetAttr(DefaultContext.Default, res, Symbols.Arguments, Tuple.MakeTuple());
+                PythonOps.SetAttr(DefaultContext.Default, res, Symbols.Arguments, PythonTuple.MakeTuple());
             }
             //'filename', 'lineno','offset', 'print_file_and_line', 'text'
 
@@ -570,7 +570,7 @@ namespace IronPython.Runtime.Exceptions {
             object column = e.Column == 0 ? null : (object)e.Column;
 
             PythonOps.SetAttr(DefaultContext.Default, inst, Symbols.Arguments, 
-                Tuple.MakeTuple(e.Message, Tuple.MakeTuple(fileName, e.Line, column, sourceLine)));
+                PythonTuple.MakeTuple(e.Message, PythonTuple.MakeTuple(fileName, e.Line, column, sourceLine)));
 
             PythonOps.SetAttr(DefaultContext.Default, inst, Symbols.ExceptionFilename, fileName);
             PythonOps.SetAttr(DefaultContext.Default, inst, Symbols.ExceptionLineNumber, e.Line);
@@ -597,7 +597,7 @@ namespace IronPython.Runtime.Exceptions {
 
             if (PythonOps.IsInstance(value, type)) {
                 pyEx = value;
-            } else if (value is Tuple) {
+            } else if (value is PythonTuple) {
                 pyEx = PythonOps.CallWithArgsTuple(type, ArrayUtils.EmptyObjects, value);
             } else {
                 pyEx = PythonCalls.Call(type, value);
@@ -669,7 +669,7 @@ namespace IronPython.Runtime.Exceptions {
             }
             // unknown type...  try walking the type hierarchy and 
             // throwing the closest match.
-            Tuple curType = PythonOps.GetBoundAttr(DefaultContext.Default, type, Symbols.Bases) as Tuple;
+            PythonTuple curType = PythonOps.GetBoundAttr(DefaultContext.Default, type, Symbols.Bases) as PythonTuple;
             if (curType != null) {
                 for (int i = 0; i < curType.Count; i++) {
                     clrType = GetCLRTypeFromPython(curType[i]);
@@ -695,8 +695,8 @@ namespace IronPython.Runtime.Exceptions {
             return oc;
         }
 
-        private static Tuple ObjectToTuple(object obj) {
-            return (obj == null) ? Tuple.MakeTuple() : Tuple.MakeTuple(obj);
+        private static PythonTuple ObjectToTuple(object obj) {
+            return (obj == null) ? PythonTuple.MakeTuple() : PythonTuple.MakeTuple(obj);
         }
 
         private static OldClass SyntaxErrorExceptionCreator(string name, string module, object baseType) {

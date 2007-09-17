@@ -58,7 +58,9 @@ def test_negative_assembly_names():
         clr.AddReferenceByPartialName,
         ]:
         AssertError(TypeError, method, None, None)
-
+    import System
+    AssertError(ValueError, clr.LoadAssemblyFromFile, System.IO.Path.DirectorySeparatorChar)
+    AssertError(ValueError, clr.LoadAssemblyFromFile, '')
 def test_get_type():
     AreEqual(clr.GetClrType(None), None)
     AssertError(TypeError, clr.GetPythonType, None)
@@ -260,5 +262,15 @@ def test_namespaceimport():
     clr.AddReference('testns2')
     # verify that you don't need to import TestNamespace again to see Test2
     AreEqual(dir(TestNamespace), ['Test1', 'Test2'])    
+
+def test_no_names_provided():
+    AssertError(TypeError, clr.AddReference, None)
+    AssertError(TypeError, clr.AddReferenceToFile, None)
+    AssertError(TypeError, clr.AddReferenceByName, None)
+    AssertError(TypeError, clr.AddReferenceByPartialName, None)
+    AssertError(ValueError, clr.AddReference)
+    AssertError(ValueError, clr.AddReferenceToFile)
+    AssertError(ValueError, clr.AddReferenceByName)
+    AssertError(ValueError, clr.AddReferenceByPartialName)
 
 run_test(__name__)

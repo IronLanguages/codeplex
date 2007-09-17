@@ -49,7 +49,6 @@ namespace Microsoft.Scripting.Generation {
             return Ast.Condition(
                 Ast.TypeIs(parameters[Index], BoxType),
                 Ast.Comma(
-                    1,
                     Ast.Assign(
                         _tmp, 
                         Ast.Call(

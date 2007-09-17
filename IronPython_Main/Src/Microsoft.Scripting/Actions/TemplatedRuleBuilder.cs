@@ -76,14 +76,14 @@ namespace Microsoft.Scripting.Actions {
             object[] dataArr = data as object[];
             if (dataArr != null) return CopyArray(newData, dataArr);
 
-            NewTuple nt = data as NewTuple;
+            Tuple nt = data as Tuple;
             if (nt != null) return CopyTuple(newData, nt);
 
             throw new InvalidOperationException("bad data bound to delegate");
         }
 
-        private static NewTuple CopyTuple(object[] newData, NewTuple oldTuple) {
-            NewTuple res = (NewTuple)Activator.CreateInstance(oldTuple.GetType());
+        private static Tuple CopyTuple(object[] newData, Tuple oldTuple) {
+            Tuple res = (Tuple)Activator.CreateInstance(oldTuple.GetType());
             for (int i = 0; i < oldTuple.Capacity; i++) {
                 ITemplatedValue itv = oldTuple.GetValue(i) as ITemplatedValue;
                 if (itv == null) {

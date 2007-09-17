@@ -727,7 +727,7 @@ namespace Microsoft.Scripting {
             params SourceUnit[] sourceUnits) {
 
             Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNonNullItems(sourceUnits, "sourceUnits");
+            Contract.RequiresNotNullItems(sourceUnits, "sourceUnits");
 
             // TODO: Two phases: parse/compile?
             
@@ -776,7 +776,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         public ScriptModule CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
             Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNonNullItems(scriptCodes, "scriptCodes");
+            Contract.RequiresNotNullItems(scriptCodes, "scriptCodes");
 
             OptimizedModuleGenerator generator = null;
 

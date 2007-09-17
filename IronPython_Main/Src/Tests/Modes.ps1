@@ -342,7 +342,6 @@ function exceptiondetail-helper
 	if (! "$stuff".Contains("at Microsoft.Scripting.")) {write-error "Failed: $stuff"; $global:ERRORS++}
 	if (! "$stuff".Contains(":line ")) {write-error "Failed: $stuff"; $global:ERRORS++}
 	
-	#Once Merlin Work Item 264123 gets fixed, this will need to be changed slightly
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{
@@ -436,7 +435,6 @@ function showclrexceptions-helper
 	if(! "$stuff".Contains("CLR Exception:")) {write-error "Failed: $stuff"; $global:ERRORS++}
 	if(! "$stuff".Contains("StringException")) {write-error "Failed: $stuff"; $global:ERRORS++}
 	
-	#Once Merlin Work Item 264123 gets fixed, this will need to be changed slightly
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{

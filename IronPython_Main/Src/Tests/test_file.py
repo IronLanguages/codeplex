@@ -306,11 +306,11 @@ def test_readline():
             while True:
                 data = f.readline()
                 if data == "":
-                    Assert(count == len(strings))
+                    AreEqual(count, len(strings))
                     break
                 count = count + 1
                 Assert(count <= len(strings))
-                Assert(data == strings[count - 1])
+                AreEqual(data, strings[count - 1])
 
             f.close()
 

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -29,8 +29,8 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("tuple")]
-    public class Tuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
-        private static Tuple EMPTY = new Tuple();
+    public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
+        private static PythonTuple EMPTY = new PythonTuple();
 
         #region Python Constructors
 
@@ -39,51 +39,51 @@ namespace IronPython.Runtime {
         // appropriate caching.  
 
         [StaticExtensionMethod("__new__")]
-        public static Tuple PythonNew(CodeContext context, DynamicType cls) {
-            if (cls == TypeCache.Tuple) {
+        public static PythonTuple PythonNew(CodeContext context, DynamicType cls) {
+            if (cls == TypeCache.PythonTuple) {
                 return EMPTY;
             } else {
-                Tuple tupObj = cls.CreateInstance(context) as Tuple;
+                PythonTuple tupObj = cls.CreateInstance(context) as PythonTuple;
                 if (tupObj == null) throw PythonOps.TypeError("{0} is not a subclass of tuple", cls);
                 return tupObj;
             }
         }
 
         [StaticExtensionMethod("__new__")]
-        public static Tuple PythonNew(CodeContext context, DynamicType cls, object sequence) {
+        public static PythonTuple PythonNew(CodeContext context, DynamicType cls, object sequence) {
             if (sequence == null) throw PythonOps.TypeError("iteration over a non-sequence");
 
-            if (cls == TypeCache.Tuple) {
-                if (sequence.GetType() == typeof(Tuple)) return (Tuple)sequence;
-                return new Tuple(MakeItems(sequence));
+            if (cls == TypeCache.PythonTuple) {
+                if (sequence.GetType() == typeof(PythonTuple)) return (PythonTuple)sequence;
+                return new PythonTuple(MakeItems(sequence));
             } else {
-                Tuple tupObj = cls.CreateInstance(context, sequence) as Tuple;
+                PythonTuple tupObj = cls.CreateInstance(context, sequence) as PythonTuple;
                 if (tupObj == null) throw PythonOps.TypeError("{0} is not a subclass of tuple", cls);
                 return tupObj;
             }
         }
         #endregion
 
-        public static Tuple Make(object o) {
-            if (o is Tuple) return (Tuple)o;
-            return new Tuple(MakeItems(o));
+        public static PythonTuple Make(object o) {
+            if (o is PythonTuple) return (PythonTuple)o;
+            return new PythonTuple(MakeItems(o));
         }
 
-        public static Tuple MakeTuple(params object[] items) {
+        public static PythonTuple MakeTuple(params object[] items) {
             if (items.Length == 0) return EMPTY;
-            return new Tuple(items);
+            return new PythonTuple(items);
         }
 
         // TODO: Make internal
-        public static Tuple MakeExpandableTuple(params object[] items) {
+        public static PythonTuple MakeExpandableTuple(params object[] items) {
             if (items.Length == 0) return EMPTY;
-            return new Tuple(true, items);
+            return new PythonTuple(true, items);
         }
 
         private static object[] MakeItems(object o) {
             object[] arr;
-            if (o is Tuple) {
-                return ((Tuple)o).data;
+            if (o is PythonTuple) {
+                return ((PythonTuple)o).data;
             } else if (o is string) {
                 string s = (string)o;
                 object[] res = new object[s.Length];
@@ -113,24 +113,24 @@ namespace IronPython.Runtime {
         internal readonly object[] data;
         private readonly bool expandable;
 
-        public Tuple(object o) {
+        public PythonTuple(object o) {
             this.data = MakeItems(o);
         }
 
-        protected Tuple(object[] items) {
+        protected PythonTuple(object[] items) {
             this.data = items;
         }
 
-        public Tuple() {
+        public PythonTuple() {
             this.data = ArrayUtils.EmptyObjects;
         }
 
-        internal Tuple(bool expandable, object[] items) {
+        internal PythonTuple(bool expandable, object[] items) {
             this.expandable = expandable;
             this.data = items;
         }
 
-        internal Tuple(IParameterSequence other, object o) {
+        internal PythonTuple(IParameterSequence other, object o) {
             this.data = other.Expand(o);
         }
 
@@ -187,30 +187,30 @@ namespace IronPython.Runtime {
         #endregion
 
         #region binary operators
-        public static Tuple operator +(Tuple x, Tuple y) {
+        public static PythonTuple operator +(PythonTuple x, PythonTuple y) {
             return MakeTuple(ArrayOps.Add(x.data, x.data.Length, y.data, y.data.Length));
         }
 
-        private static Tuple MultiplyWorker(Tuple self, int count) {
+        private static PythonTuple MultiplyWorker(PythonTuple self, int count) {
             if (count <= 0) return EMPTY;
             if (count == 1) return self;
             return MakeTuple(ArrayOps.Multiply(self.data, self.data.Length, count));
         }
 
-        public static Tuple operator *(Tuple x, int n) {
+        public static PythonTuple operator *(PythonTuple x, int n) {
             return MultiplyWorker(x, n);
         }
 
-        public static Tuple operator *(int n, Tuple x) {
+        public static PythonTuple operator *(int n, PythonTuple x) {
             return MultiplyWorker(x, n);
         }
 
-        public static object operator *(Tuple self, object count) {
-            return PythonOps.MultiplySequence<Tuple>(MultiplyWorker, self, count, true);
+        public static object operator *(PythonTuple self, object count) {
+            return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, true);
         }
 
-        public static object operator *(object count, Tuple self) {
-            return PythonOps.MultiplySequence<Tuple>(MultiplyWorker, self, count, false);
+        public static object operator *(object count, PythonTuple self) {
+            return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, false);
         }
 
         #endregion
@@ -244,9 +244,9 @@ namespace IronPython.Runtime {
         /// </summary>
         public class TupleEnumerator : IEnumerator, IEnumerator<object> {
             int curIndex;
-            Tuple tuple;
+            PythonTuple tuple;
 
-            public TupleEnumerator(Tuple t) {
+            public TupleEnumerator(PythonTuple t) {
                 tuple = t;
                 curIndex = -1;
             }
@@ -325,7 +325,7 @@ namespace IronPython.Runtime {
         [PythonName("__getnewargs__")]
         public object GetNewArgs() {
             // Call "new Tuple()" to force result to be a Tuple (otherwise, it could possibly be a Tuple subclass)
-            return Tuple.MakeTuple(new Tuple(this));
+            return PythonTuple.MakeTuple(new PythonTuple(this));
         }
 
         #region IEnumerable<object> Members
@@ -340,7 +340,7 @@ namespace IronPython.Runtime {
 
         public virtual DynamicType DynamicType {
             get {
-                return TypeCache.Tuple;
+                return TypeCache.PythonTuple;
             }
         }
 
@@ -410,37 +410,37 @@ namespace IronPython.Runtime {
 
         #region Rich Comparison Members
 
-        private int CompareTo(Tuple other) {
+        private int CompareTo(PythonTuple other) {
             return PythonOps.CompareArrays(data, data.Length, other.data, other.data.Length);
         }
 
         [return: MaybeNotImplemented]
-        public static object operator >(Tuple self, object other) {
-            Tuple t = other as Tuple;
+        public static object operator >(PythonTuple self, object other) {
+            PythonTuple t = other as PythonTuple;
             if (t == null) return PythonOps.NotImplemented;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) > 0);
         }
 
         [return: MaybeNotImplemented]
-        public static object operator <(Tuple self, object other) {
-            Tuple t = other as Tuple;
+        public static object operator <(PythonTuple self, object other) {
+            PythonTuple t = other as PythonTuple;
             if (t == null) return PythonOps.NotImplemented;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) < 0);
         }
 
         [return: MaybeNotImplemented]
-        public static object operator >=(Tuple self, object other) {
-            Tuple t = other as Tuple;
+        public static object operator >=(PythonTuple self, object other) {
+            PythonTuple t = other as PythonTuple;
             if (t == null) return PythonOps.NotImplemented;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) >= 0);
         }
 
         [return: MaybeNotImplemented]
-        public static object operator <=(Tuple self, object other) {
-            Tuple t = other as Tuple;
+        public static object operator <=(PythonTuple self, object other) {
+            PythonTuple t = other as PythonTuple;
             if (t == null) return PythonOps.NotImplemented;
 
             return RuntimeHelpers.BooleanToObject(self.CompareTo(t) <= 0);
@@ -449,7 +449,7 @@ namespace IronPython.Runtime {
         #endregion
 
         public override bool Equals(object obj) {
-            Tuple other = obj as Tuple;
+            PythonTuple other = obj as PythonTuple;
             if (other == null) return false;
             if (other.Count != Count) return false;
 
@@ -487,7 +487,7 @@ namespace IronPython.Runtime {
         bool IValueEquality.ValueEquals(object other) {
             if (Object.ReferenceEquals(other, this)) return true;
 
-            Tuple l = other as Tuple;
+            PythonTuple l = other as PythonTuple;
             if (l == null) return false;
 
             if (data.Length != l.data.Length) return false;

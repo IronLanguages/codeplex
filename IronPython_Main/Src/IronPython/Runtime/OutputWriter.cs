@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -21,6 +21,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
 using IronPython.Hosting;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
     sealed class OutputWriter : TextWriter {
@@ -61,7 +62,9 @@ namespace IronPython.Runtime {
         }
 
         public override void Flush() {
-            PythonOps.Invoke(Sink, SymbolTable.StringToId("flush"));
+            if (PythonOps.HasAttr(DefaultContext.Default, Sink, SymbolTable.StringToId("flush"))) {
+                PythonOps.Invoke(Sink, SymbolTable.StringToId("flush"));
+            }
         }
     }
 }

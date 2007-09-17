@@ -36,6 +36,26 @@ namespace Microsoft.Scripting.Types {
             : this(info, NameType.PythonField) {
         }
 
+        /// <summary>
+        /// Convenience function for users to call directly
+        /// </summary>
+        public object GetValue(CodeContext context, object instance) {
+            object value;
+            if (TryGetValue(context, instance, DynamicHelpers.GetDynamicType(instance), out value)) {
+                return value;
+            }
+            throw new InvalidOperationException("cannot get field");
+        }
+
+        /// <summary>
+        /// Convenience function for users to call directly
+        /// </summary>
+        public void SetValue(CodeContext context, object instance, object value) {
+            if (!TrySetValue(context, instance, DynamicHelpers.GetDynamicType(instance), value)) {
+                throw new InvalidOperationException("cannot set field");
+            }            
+        }
+
         public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance == null) {
@@ -83,7 +103,7 @@ namespace Microsoft.Scripting.Types {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, this);
             if (instance != null && instance.GetType().IsValueType)
                 throw new ArgumentException(String.Format("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", info.Name, info.DeclaringType.Name));
-            if (info.IsInitOnly)
+            if (info.IsInitOnly || info.IsLiteral)
                 throw new MissingFieldException(String.Format("Cannot set field {1} on type {0}", info.DeclaringType.Name, SymbolTable.StringToId(info.Name)));
 
             info.SetValue(instance, context.LanguageContext.Binder.Convert(val, info.FieldType));

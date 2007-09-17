@@ -27,18 +27,17 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class MethodCallExpression : Expression {
-        readonly MethodInfo _method;
-        readonly Expression _instance;
-        readonly ReadOnlyCollection<Expression> _arguments;
-        readonly ParameterInfo[] _pi;
+        private readonly MethodInfo _method;
+        private readonly Expression _instance;
+        private readonly ReadOnlyCollection<Expression> _arguments;
+        private readonly ParameterInfo[] _parameterInfos;
 
-        internal MethodCallExpression(SourceSpan span, MethodInfo method, Expression instance, IList<Expression> arguments)
+        internal MethodCallExpression(SourceSpan span, MethodInfo method, Expression instance, IList<Expression> arguments, ParameterInfo[] parameters)
             : base(span) {
-
             _method = method;
             _instance = instance;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
-            _pi = _method.GetParameters();
+            _parameterInfos = parameters;
         }
 
         public MethodInfo Method {
@@ -59,14 +58,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // Verify that _instance is non-null. Only call this on non-static methods.
-        private void VerifyNonNull() {
-            Debug.Assert(!Method.IsStatic);
-            if (_instance == null) {
-                throw new InvalidOperationException("Cannot emit non-static call without instance");
-            }
-        }
-
         public object EvaluateArgument(CodeContext context, Expression arg, Type asType) {
             if (arg == null) {
                 return null;
@@ -81,17 +72,11 @@ namespace Microsoft.Scripting.Ast {
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
             if (!Method.IsStatic) {
-                VerifyNonNull();
-                instance = _instance.Evaluate(context);
+                instance = EvaluateInstance(context);
             }
 
-            // box "this" if it is a value type (in case _method tries to modify it)
-            // -- this keeps the same semantics as Emit().
-            if (_method.DeclaringType != null && _method.DeclaringType.IsValueType)
-                instance = System.Runtime.CompilerServices.RuntimeHelpers.GetObjectValue(instance);
-
-            object[] parameters = new object[_pi.Length];
-            if (_pi.Length > 0) {
+            object[] parameters = new object[_parameterInfos.Length];
+            if (_parameterInfos.Length > 0) {
                 int last = parameters.Length - 1;
                 for (int i = 0; i < last; i++) {
                     EvaluateOneArgument(context, parameters, i);
@@ -99,9 +84,9 @@ namespace Microsoft.Scripting.Ast {
                 
                 // If the last parameter is a parameter array, throw the extra arguments into an array
                 int extraArgs = _arguments.Count - last;
-                if (CompilerHelpers.IsParamArray(_pi[last])) {
+                if (CompilerHelpers.IsParamArray(_parameterInfos[last])) {
                     if (extraArgs == 1 && _arguments[last] != null
-                        && _arguments[last].ExpressionType == _pi[last].ParameterType) {
+                        && _arguments[last].ExpressionType == _parameterInfos[last].ParameterType) {
                         // If the last argument is an array, copy it over directly
                         parameters[last] = _arguments[last].Evaluate(context);
                     } else {
@@ -118,33 +103,41 @@ namespace Microsoft.Scripting.Ast {
             }
 
             try {
-                try {
+                object res;
+                try {                    
                     if (ExpressionType == typeof(Boolean)) {
                         // Return the singleton True or False object
-                        return RuntimeHelpers.BooleanToObject((bool)_method.Invoke(instance, parameters));
+                        res = RuntimeHelpers.BooleanToObject((bool)_method.Invoke(instance, parameters));
                     } else {
-                        return _method.Invoke(instance, parameters);
+                        res = _method.Invoke(instance, parameters);
                     }
                 } finally {
                     // expose by-ref args
-                    for (int i = 0; i < _pi.Length; i++) {
-                        if (_pi[i].ParameterType.IsByRef) {
+                    for (int i = 0; i < _parameterInfos.Length; i++) {
+                        if (_parameterInfos[i].ParameterType.IsByRef) {
                             _arguments[i].EvaluateAssign(context, parameters[i]);
                         }
                     }
                 }
-            } catch (TargetInvocationException e) {
+
+                // back propagate instance on value types if the instance supports it.
+                if (_method.DeclaringType != null && _method.DeclaringType.IsValueType && !_method.IsStatic) {
+                    _instance.EvaluateAssign(context, instance);
+                }
+
+                return res;
+            } catch (TargetInvocationException e) {                
                 // Unwrap the real (inner) exception and raise it
                 throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
             }
         }
 
         private void EvaluateOneArgument(CodeContext context, object[] parameters, int i) {
-            if (!_pi[i].IsOut || (_pi[i].Attributes & ParameterAttributes.In) != 0) {
-                if (!_pi[i].ParameterType.IsByRef) {
-                    parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType);
+            if (!_parameterInfos[i].IsOut || (_parameterInfos[i].Attributes & ParameterAttributes.In) != 0) {
+                if (!_parameterInfos[i].ParameterType.IsByRef) {
+                    parameters[i] = EvaluateArgument(context, _arguments[i], _parameterInfos[i].ParameterType);
                 } else {
-                    parameters[i] = EvaluateArgument(context, _arguments[i], _pi[i].ParameterType.GetElementType());
+                    parameters[i] = EvaluateArgument(context, _arguments[i], _parameterInfos[i].ParameterType.GetElementType());
                 }
             }
         }
@@ -157,25 +150,25 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // Emit arguments
-            if (_pi.Length > 0) {
+            if (_parameterInfos.Length > 0) {
                 int current = 0;
 
                 // Emit all but the last directly, the last may be param array
-                while (current < _pi.Length - 1) {
-                    EmitArgument(cg, _pi[current], current);
+                while (current < _parameterInfos.Length - 1) {
+                    EmitArgument(cg, _parameterInfos[current], current);
                     current++;
                 }
 
                 // Emit the last argument, possible a param array
-                ParameterInfo last = _pi[_pi.Length - 1];
+                ParameterInfo last = _parameterInfos[_parameterInfos.Length - 1];
                 if (CompilerHelpers.IsParamArray(last)) {
                     Debug.Assert(last.ParameterType.HasElementType);
                     Type elementType = last.ParameterType.GetElementType();
 
                     // There are arguments available for emit
                     int size = 0;
-                    if (_arguments.Count > _pi.Length - 1) {
-                        size = _arguments.Count - _pi.Length + 1;
+                    if (_arguments.Count > _parameterInfos.Length - 1) {
+                        size = _arguments.Count - _parameterInfos.Length + 1;
                     }
 
                     if (size == 1 && _arguments[current].ExpressionType == last.ParameterType) {
@@ -191,7 +184,7 @@ namespace Microsoft.Scripting.Ast {
                         }
                     }
                 } else {
-                    EmitArgument(cg, _pi[_pi.Length - 1], _pi.Length - 1);
+                    EmitArgument(cg, _parameterInfos[_parameterInfos.Length - 1], _parameterInfos.Length - 1);
                 }
             }
 
@@ -204,13 +197,22 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitInstance(CodeGen cg) {
-            VerifyNonNull();
-
             if (!_method.DeclaringType.IsValueType) {
                 _instance.EmitAs(cg, _method.DeclaringType);
             } else {
                 _instance.EmitAddress(cg, _method.DeclaringType);
             }
+        }
+
+        private object EvaluateInstance(CodeContext context) {
+            object res = _instance.Evaluate(context);
+
+            // box "this" if it is a value type (in case _method tries to modify it)
+            // -- this keeps the same semantics as Emit().
+            if (_method.DeclaringType != null && _method.DeclaringType.IsValueType)
+                res = System.Runtime.CompilerServices.RuntimeHelpers.GetObjectValue(res);
+
+            return res;
         }
 
         private void EmitArgument(CodeGen cg, ParameterInfo param, int index) {
@@ -221,12 +223,13 @@ namespace Microsoft.Scripting.Ast {
                     _arguments[index].EmitAs(cg, param.ParameterType);
                 }
             } else {
-                object defaultValue = param.DefaultValue;
-                if (defaultValue != DBNull.Value) {
+                Debug.Assert(!CompilerHelpers.IsMandatoryParameter(param));
+                if (CompilerHelpers.HasDefaultValue(param)) {
+                    object defaultValue = param.DefaultValue;
                     cg.EmitConstant(defaultValue);
                     cg.EmitConvert(defaultValue != null ? defaultValue.GetType() : typeof(object), param.ParameterType);
                 } else {
-                    cg.Context.AddError(String.Format("No value provided for the call to {0}, argument {1}", _method, index), this);
+                    Debug.Assert(param.IsOptional);
                     cg.EmitMissingValue(param.ParameterType);
                 }
             }
@@ -257,9 +260,13 @@ namespace Microsoft.Scripting.Ast {
 
         public static MethodCallExpression Call(SourceSpan span, Expression instance, MethodInfo method, params Expression[] arguments) {
             Contract.RequiresNotNull(method, "method");
-            Contract.RequiresNonNullItems(arguments, "arguments");
+            Contract.RequiresNotNullItems(arguments, "arguments");
+            Contract.Requires(method.IsStatic == (instance == null), "instance", "Cannot call static/instance method with/without an instance.");
 
-            return new MethodCallExpression(span, method, instance, arguments);
+            ParameterInfo[] ps = method.GetParameters();
+            Contract.Requires(CompilerHelpers.FormalParamsMatchActual(ps, arguments.Length), "method", "The number of parameters doesn't match the number of actual arguments");
+
+            return new MethodCallExpression(span, method, instance, arguments, ps);
         }
     }
 }

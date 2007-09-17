@@ -518,8 +518,8 @@ namespace Microsoft.Scripting.Actions {
             get { return InvariantContext.Instance; }
         }
 
-        public StandardRule<T> GetRule<T>(Action action, CodeContext context, object[] args) {
-            if (action.Kind == ActionKind.GetMember) {
+        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+            if (action.Kind == DynamicActionKind.GetMember) {
                 return MakeGetMemberRule<T>((GetMemberAction)action, context);
             }
             return null;

@@ -43,7 +43,7 @@ namespace IronPython.Modules {
         [Documentation("gets the default locale tuple")]
         [PythonName("_getdefaultlocale")]
         public static object GetDefaultLocale() {
-            return Tuple.MakeTuple(new object[] { CultureInfo.CurrentCulture.Name, "" });
+            return PythonTuple.MakeTuple(new object[] { CultureInfo.CurrentCulture.Name, "" });
         }
 
         [Documentation(@"gets the locale's convetions table.  

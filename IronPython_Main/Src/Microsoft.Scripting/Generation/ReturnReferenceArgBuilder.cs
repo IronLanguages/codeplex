@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Generation {
                 _tmp = context.GetTemporary(Type, "outParam");
             }
 
-            return Ast.Comma(1, Ast.Assign(_tmp, base.ToExpression(context, parameters)), Ast.Read(_tmp));
+            return Ast.Comma(Ast.Assign(_tmp, base.ToExpression(context, parameters)), Ast.Read(_tmp));
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

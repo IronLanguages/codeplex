@@ -12,8 +12,8 @@ namespace Microsoft.Scripting.Actions {
             return new DeleteMemberAction(name);
         }
 
-        public override ActionKind Kind {
-            get { return ActionKind.DeleteMember; }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.DeleteMember; }
         }
 
         #region IEquatable<DeleteMemberAction> Members

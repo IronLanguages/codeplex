@@ -66,13 +66,13 @@ namespace Microsoft.Scripting.Actions {
     /// as a parameter into its Invoke method.
     /// </summary>
     public abstract class DynamicSite {
-        private readonly Action _action;
+        private readonly DynamicAction _action;
 
-        protected DynamicSite(Action action) {
+        protected DynamicSite(DynamicAction action) {
             this._action = action;
         }
 
-        public Action Action {
+        public DynamicAction Action {
             get { return _action; }
         }
 
@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Actions {
         protected void Validate(CodeContext context) {
 #if DEBUG
             System.Threading.Interlocked.CompareExchange<LanguageContext>(ref _lc, context.LanguageContext, null);
-            Debug.Assert(_lc.Engine == null || (_lc.Engine.LanguageGuid == context.LanguageContext.Engine.LanguageGuid));
+            Debug.Assert(_lc.Engine == null || (_lc.GetType() == context.LanguageContext.GetType()));
 #endif
         }
     }
@@ -98,15 +98,15 @@ namespace Microsoft.Scripting.Actions {
     /// and therefore doesn't require it being passed into its Invoke method.
     /// </summary>
     public abstract class FastDynamicSite {
-        private readonly Action _action;
+        private readonly DynamicAction _action;
         private CodeContext _context;
 
-        protected FastDynamicSite(CodeContext context, Action action) {
+        protected FastDynamicSite(CodeContext context, DynamicAction action) {
             this._context = context;
             this._action = action;
         }
 
-        public Action Action {
+        public DynamicAction Action {
             get { return _action; }
         }
 

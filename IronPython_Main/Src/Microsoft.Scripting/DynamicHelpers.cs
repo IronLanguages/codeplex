@@ -50,6 +50,10 @@ namespace Microsoft.Scripting {
         }
 
         public static DynamicStackFrame[] GetDynamicStackFrames(Exception e) {
+            return GetDynamicStackFrames(e, true);
+        }
+
+        public static DynamicStackFrame[] GetDynamicStackFrames(Exception e, bool filter) {
             List<DynamicStackFrame> frames = Utils.ExceptionUtils.GetDataDictionary(e)[typeof(DynamicStackFrame)] as List<DynamicStackFrame>;
 
             if (frames == null) {
@@ -63,8 +67,9 @@ namespace Microsoft.Scripting {
                 return new DynamicStackFrame[0];
             }
 
+            if (!filter) return frames.ToArray();
 #if !SILVERLIGHT
-            frames = new List<DynamicStackFrame>(frames);
+            frames = new List<DynamicStackFrame>(frames);            
             List<DynamicStackFrame> res = new List<DynamicStackFrame>();
 
             // the list of _stackFrames we build up in RuntimeHelpers can have

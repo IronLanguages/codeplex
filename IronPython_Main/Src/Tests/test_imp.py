@@ -330,6 +330,65 @@ def test_flags():
     AreEqual(imp.PY_FROZEN,7)
     AreEqual(imp.PY_CODERESOURCE,8)
     
+    
+def test_user_defined_modules():
+    """test the importer using user-defined module types"""
+    class MockModule(object):
+        def __init__(self, name): self.__name__ = name
+        def __repr__(self): return 'MockModule("' + self.__name__ + '")'
+
+    TopModule = MockModule("TopModule")
+    sys.modules["TopModule"] = TopModule
+    
+    SubModule = MockModule("SubModule")
+    theObj = object()
+    SubModule.Object = theObj
+    TopModule.SubModule = SubModule
+    sys.modules["TopModule.SubModule"] = SubModule
+    
+    # clear the existing names from our namespace...
+    x, y = TopModule, SubModule
+    del TopModule, SubModule
+    
+    # verify we can import TopModule w/ TopModule.SubModule name
+    import TopModule.SubModule
+    AreEqual(TopModule, x)
+    Assert('SubModule' not in dir())
+        
+    # verify we can import Object from TopModule.SubModule
+    from TopModule.SubModule import Object
+    AreEqual(Object, theObj)
+    
+    # verify we short-circuit the lookup in TopModule if 
+    # we have a sys.modules entry...
+    SubModule2 = MockModule("SubModule2")    
+    SubModule2.Object2 = theObj    
+    sys.modules["TopModule.SubModule"] = SubModule2
+    from TopModule.SubModule import Object2    
+    AreEqual(Object2, theObj)
+    
+    del sys.modules['TopModule']
+    del sys.modules['TopModule.SubModule']
+    
+def test_constructed_module():    
+    """verify that we don't load arbitrary modules from modules, only truly nested modules"""
+    ModuleType = type(sys)
+
+    TopModule = ModuleType("TopModule")
+    sys.modules["TopModule"] = TopModule
+
+    SubModule = ModuleType("SubModule")
+    SubModule.Object = object()
+    TopModule.SubModule = SubModule
+
+    try:
+        import TopModule.SubModule
+        AssertUnreachable()
+    except ImportError:
+        pass
+
+    del sys.modules['TopModule']
+
 run_test(__name__)
 if is_silverlight==False:
     delete_all_f(__name__)

@@ -138,7 +138,7 @@ namespace IronPython.Modules {
                 + "indefinitely until a connection is ready."
                 )]
             [PythonName("accept")]
-            public Tuple Accept() {
+            public PythonTuple Accept() {
                 SocketObj wrappedRemoteSocket;
                 Socket realRemoteSocket;
                 try {
@@ -147,7 +147,7 @@ namespace IronPython.Modules {
                     throw MakeException(e);
                 }
                 wrappedRemoteSocket = new SocketObj(realRemoteSocket);
-                return Tuple.MakeTuple(wrappedRemoteSocket, wrappedRemoteSocket.GetRemoteAddress());
+                return PythonTuple.MakeTuple(wrappedRemoteSocket, wrappedRemoteSocket.GetRemoteAddress());
             }
 
             [Documentation("bind(address) -> None\n\n"
@@ -161,7 +161,7 @@ namespace IronPython.Modules {
                 + "and 5000."
                 )]
             [PythonName("bind")]
-            public void Bind(Tuple address) {
+            public void Bind(PythonTuple address) {
                 IPEndPoint localEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Bind(localEP);
@@ -203,7 +203,7 @@ namespace IronPython.Modules {
                 + "indefinitely until a connection is made or an error occurs."
                 )]
             [PythonName("connect")]
-            public void Connect(Tuple address) {
+            public void Connect(PythonTuple address) {
                 IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Connect(remoteEP);
@@ -225,7 +225,7 @@ namespace IronPython.Modules {
                 + "block indefinitely until a connection is made or an error occurs."
                 )]
             [PythonName("connect_ex")]
-            public int ConnectEx(Tuple address) {
+            public int ConnectEx(PythonTuple address) {
                 IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
                     socket.Connect(remoteEP);
@@ -252,7 +252,7 @@ namespace IronPython.Modules {
                 + "family-dependent (e.g. a (host, port) tuple for IPv4)."
                 )]
             [PythonName("getpeername")]
-            public Tuple GetRemoteAddress() {
+            public PythonTuple GetRemoteAddress() {
                 try {
                     IPEndPoint remoteEP = socket.RemoteEndPoint as IPEndPoint;
                     if (remoteEP == null) {
@@ -269,7 +269,7 @@ namespace IronPython.Modules {
                 + "family-dependent (e.g. a (host, port) tuple for IPv4)."
                 )]
             [PythonName("getsockname")]
-            public Tuple GetLocalAddress() {
+            public PythonTuple GetLocalAddress() {
                 try {
                     IPEndPoint localEP = socket.LocalEndPoint as IPEndPoint;
                     if (localEP == null) {
@@ -362,7 +362,7 @@ namespace IronPython.Modules {
                 + "the socket from which the data was received."
                 )]
             [PythonName("recvfrom")]
-            public Tuple ReceiveFrom(int maxBytes, [DefaultParameterValue(0)] int flags) {
+            public PythonTuple ReceiveFrom(int maxBytes, [DefaultParameterValue(0)] int flags) {
                 int bytesRead;
                 byte[] buffer = new byte[maxBytes];
                 IPEndPoint remoteIPEP = new IPEndPoint(IPAddress.Any, 0);
@@ -373,8 +373,8 @@ namespace IronPython.Modules {
                     throw MakeException(e);
                 }
                 string data = StringOps.FromByteArray(buffer, bytesRead);
-                Tuple remoteAddress = EndPointToTuple(remoteIPEP);
-                return Tuple.MakeTuple(data, remoteAddress);
+                PythonTuple remoteAddress = EndPointToTuple(remoteIPEP);
+                return PythonTuple.MakeTuple(data, remoteAddress);
             }
 
             [Documentation("send(string[, flags]) -> bytes_sent\n\n"
@@ -454,7 +454,7 @@ namespace IronPython.Modules {
                 + "had room to buffer your data for a network send"
                 )]
             [PythonName("sendto")]
-            public int SendTo(string data, int flags, Tuple address) {
+            public int SendTo(string data, int flags, PythonTuple address) {
                 byte[] buffer = StringOps.ToByteArray(data);
                 EndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
                 try {
@@ -466,7 +466,7 @@ namespace IronPython.Modules {
 
             [Documentation("")]
             [PythonName("sendto")]
-            public int SendTo(string data, Tuple address) {
+            public int SendTo(string data, PythonTuple address) {
                 return SendTo(data, 0, address);
             }
 
@@ -735,13 +735,13 @@ namespace IronPython.Modules {
                 // we just use this to validate; socketType isn't actually used
                 System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
                 if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
-                    throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
+                    throw MakeException(gaierror, PythonTuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
                 }
             }
 
             AddressFamily addressFamily = (AddressFamily)Enum.ToObject(typeof(AddressFamily), family);
             if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
-                throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
+                throw MakeException(gaierror, PythonTuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
             }
 
             // Again, we just validate, but don't actually use protocolType
@@ -752,7 +752,7 @@ namespace IronPython.Modules {
             List results = new List();
 
             foreach (IPAddress ip in ips) {
-                results.Add(Tuple.MakeTuple(
+                results.Add(PythonTuple.MakeTuple(
                     (int)ip.AddressFamily,
                     socktype,
                     proto,
@@ -820,7 +820,7 @@ namespace IronPython.Modules {
             + "getaddrinfo()."
             )]
         [PythonName("gethostbyname_ex")]
-        public static Tuple GetHostByNameEx(string host) {
+        public static PythonTuple GetHostByNameEx(string host) {
             string hostname;
             List aliases;
             List ips = List.Make();
@@ -850,7 +850,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            return Tuple.MakeTuple(hostname, aliases, ips);
+            return PythonTuple.MakeTuple(hostname, aliases, ips);
         }
 
         [Documentation("gethostname() -> hostname\nReturn this machine's hostname")]
@@ -885,7 +885,7 @@ namespace IronPython.Modules {
                 ipStrings.Append(ip.ToString());
             }
 
-            return Tuple.MakeTuple(hostEntry.HostName, List.Make(hostEntry.Aliases), ipStrings);
+            return PythonTuple.MakeTuple(hostEntry.HostName, List.Make(hostEntry.Aliases), ipStrings);
         }
 
         [Documentation("getnameinfo(socketaddr, flags) -> (host, port)\n"
@@ -910,7 +910,7 @@ namespace IronPython.Modules {
             + "   rather than the TCP-based port name.\n"
             )]
         [PythonName("getnameinfo")]
-        public static object GetNameInfo(Tuple socketAddr, int flags) {
+        public static object GetNameInfo(PythonTuple socketAddr, int flags) {
             if (socketAddr.GetLength() < 2 || socketAddr.GetLength() > 4) {
                 throw PythonOps.TypeError("socket address must be a 2-tuple (IPv4 or IPv6) or 4-tuple (IPv6)");
             }
@@ -964,7 +964,7 @@ namespace IronPython.Modules {
             // We don't branch on NI_NUMERICSERV here since we throw above if it's not set
             resultPort = port.ToString();
 
-            return Tuple.MakeTuple(resultHost, resultPort);
+            return PythonTuple.MakeTuple(resultHost, resultPort);
         }
 
         [Documentation("getprotobyname(protoname) -> integer proto\n\n"
@@ -1346,7 +1346,7 @@ namespace IronPython.Modules {
             if (args.Length == 1) {
                 return ExceptionConverter.ToClr(PythonCalls.Call(type, args[0]));
             } else {
-                return ExceptionConverter.ToClr(PythonCalls.Call(type, Tuple.MakeTuple(args)));
+                return ExceptionConverter.ToClr(PythonCalls.Call(type, PythonTuple.MakeTuple(args)));
             }
         }
 
@@ -1495,7 +1495,7 @@ namespace IronPython.Modules {
         ///  - address[0] is not a string
         ///  - address[1] is not an int
         /// </summary>
-        private static IPEndPoint TupleToEndPoint(Tuple address, AddressFamily family) {
+        private static IPEndPoint TupleToEndPoint(PythonTuple address, AddressFamily family) {
             if (address.Count != 2 && address.Count != 4) {
                 throw PythonOps.TypeError("address tuple must have exactly 2 (IPv4) or exactly 4 (IPv6) elements");
             }
@@ -1545,16 +1545,16 @@ namespace IronPython.Modules {
         /// Convert an IPEndPoint to its corresponding (host, port) [IPv4] or (host, port, flowinfo, scopeid) [IPv6] tuple.
         /// Throws SocketException if the address family is other than IPv4 or IPv6.
         /// </summary>
-        private static Tuple EndPointToTuple(IPEndPoint endPoint) {
+        private static PythonTuple EndPointToTuple(IPEndPoint endPoint) {
             string ip = endPoint.Address.ToString();
             int port = endPoint.Port;
             switch (endPoint.Address.AddressFamily) {
                 case AddressFamily.InterNetwork:
-                    return Tuple.MakeTuple(ip, port);
+                    return PythonTuple.MakeTuple(ip, port);
                 case AddressFamily.InterNetworkV6:
                     long flowInfo = 0; // RFC 3493 p. 7 
                     long scopeId = endPoint.Address.ScopeId;
-                    return Tuple.MakeTuple(ip, port, flowInfo, scopeId);
+                    return PythonTuple.MakeTuple(ip, port, flowInfo, scopeId);
                 default:
                     throw new SocketException((int)SocketError.AddressFamilyNotSupported);
             }

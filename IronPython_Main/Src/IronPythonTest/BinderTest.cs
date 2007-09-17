@@ -815,4 +815,54 @@ namespace IronPythonTest.BinderTest {
 
         #endregion
     }
+
+    public class PublicEventArgs : EventArgs { }
+    class PrivateEventArgs : PublicEventArgs { }
+    public delegate IPublicInterface PublicDelegateType(IPublicInterface sender, PublicEventArgs args);
+
+    // Private class
+    class PrivateClass : IPublicInterface {
+        public IPublicInterface Hello {
+            get { return this; }
+            set { }
+        }
+
+        public void Foo(IPublicInterface f) {
+        }
+
+        public IPublicInterface RetInterface() {
+            return this;
+        }
+
+        public event PublicDelegateType MyEvent;
+        public IPublicInterface FireEvent(PublicEventArgs args) {
+            return MyEvent(this, args);
+        }
+
+        public PublicEventArgs GetEventArgs() {
+            return new PrivateEventArgs();
+        }
+    }
+
+    // Public Interface
+    public interface IPublicInterface {
+        IPublicInterface Hello { get; set; }
+        void Foo(IPublicInterface f);
+        IPublicInterface RetInterface();
+        event PublicDelegateType MyEvent;
+        IPublicInterface FireEvent(PublicEventArgs args);
+        PublicEventArgs GetEventArgs();
+    }
+
+    // Access the private class via the public interface
+    public class InterfaceOnlyTest {
+        public static IPublicInterface PrivateClass {
+            get {
+                return new PrivateClass(); 
+            }
+        }
+    }
+
+    public class GenericOnlyConflict<T> { }
+    public class GenericOnlyConflict<T1, T2> { }
 }

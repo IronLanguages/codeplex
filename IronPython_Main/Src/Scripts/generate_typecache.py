@@ -59,7 +59,7 @@ data = [
 	TypeData('DynamicType'),
 	TypeData('String', 'str'),
 	TypeData('SystemState'),
-	TypeData('Tuple'),
+	TypeData('PythonTuple'),
 	TypeData('WeakReference'),
 	TypeData('List'),
 	TypeData('PythonFile'),

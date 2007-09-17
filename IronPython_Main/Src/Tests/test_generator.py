@@ -14,6 +14,7 @@
 #####################################################################################
 
 from lib.assert_util import *
+import sys
 
 def ifilter(iterable):
     def predicate(x):
@@ -89,7 +90,6 @@ for a,b in outergen():
 
 
 def f():
-    import sys
     yield "Import inside generator"
 
 AreEqual(f().next(), "Import inside generator")
@@ -364,9 +364,12 @@ lstate(16)
 lstate(32)
 lstate(64)
 lstate(122)
-#lstate(123) #Bug 260847
-#lstate(124)
-#lstate(125)
-#lstate(128)
-#lstate(256)
-#lstate(512)
+lstate(123) 
+lstate(124)
+#lstate(125) # CLR bug, can't handle 127 arguments in DynamicMethod
+lstate(128)
+if sys.platform != "win32":
+    # CPython doesn't support more than 255 arguments
+    lstate(256)
+    #
+    lstate(512)

@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -128,7 +128,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         internal static object DivMod(Complex64 x, Complex64 y) {
-            return Tuple.MakeTuple(x / y, Mod(x, y));
+            return PythonTuple.MakeTuple(x / y, Mod(x, y));
         }
 
 
@@ -152,7 +152,7 @@ namespace IronPython.Runtime.Operations {
         [PythonName("__getnewargs__")]
         public static object GetNewArgs(CodeContext context, Complex64 self) {
             if (!Object.ReferenceEquals(self, null)) {
-                return Tuple.MakeTuple(
+                return PythonTuple.MakeTuple(
                     ComplexOps.Make(context,
                         TypeCache.Complex64,
                         PythonOps.GetBoundAttr(context, self, Symbols.RealPart),
@@ -169,7 +169,7 @@ namespace IronPython.Runtime.Operations {
         public static object Coerce(object x, object y) {
             if (!(x is Complex64)) throw PythonOps.TypeError("__coerce__ requires a complex object, but got {0}", PythonOps.StringRepr(DynamicHelpers.GetDynamicType(x)));
             Complex64 right;
-            if (Converter.TryConvertToComplex64(y, out right)) return Tuple.MakeTuple(x, right);
+            if (Converter.TryConvertToComplex64(y, out right)) return PythonTuple.MakeTuple(x, right);
 
             if (y is BigInteger || y is Extensible<BigInteger>) throw PythonOps.OverflowError("long too large to convert");
 
@@ -214,7 +214,7 @@ namespace IronPython.Runtime.Operations {
 
                     if (DynamicHelpers.GetDynamicType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
                         if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                            return PythonOps.Compare(((Tuple)res)[1], ((Tuple)res)[0]);
+                            return PythonOps.Compare(((PythonTuple)res)[1], ((PythonTuple)res)[0]);
                         }
                     }
                 }

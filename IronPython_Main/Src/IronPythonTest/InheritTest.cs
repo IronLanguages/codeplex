@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -22,9 +22,9 @@ using System.Diagnostics;
 namespace IronPythonTest {
 
     public interface IOverrideTestInterface {
-        object x { get;}
+        object x { get;set;}
         string Method();
-        string y { get;}
+        string y { get;set;}
         string MethodOverridden();
 
         object this[int index] {
@@ -34,9 +34,11 @@ namespace IronPythonTest {
     }
 
     public class OverrideTestDerivedClass : IOverrideTestInterface {
-        object IOverrideTestInterface.x { get { return "IOverrideTestInterface.x invoked"; } }
+        public static string Value;
+
+        object IOverrideTestInterface.x { get { return "IOverrideTestInterface.x invoked"; } set { Value = value.ToString() + "x";  } }
         string IOverrideTestInterface.Method() { return "IOverrideTestInterface.method() invoked"; }
-        string IOverrideTestInterface.y { get { return "IOverrideTestInterface.y invoked"; } }
+        string IOverrideTestInterface.y { get { return "IOverrideTestInterface.y invoked"; } set { Value = value.ToString() + "y";  } }
         public string y { get { return "OverrideTestDerivedClass.y invoked"; } }
         string IOverrideTestInterface.MethodOverridden() { return "IOverrideTestInterface.MethodOverridden() invoked"; }
         public string MethodOverridden() { return "OverrideTestDerivedClass.MethodOverridden() invoked"; }
@@ -49,9 +51,16 @@ namespace IronPythonTest {
                 throw new NotImplementedException();
             }
         }
+
+        public object z;
+    }
+
+    public class ClassWithLiteral {
+        public const int Literal = 5;
     }
 
     public struct MySize {
+        public const int MaxSize = Int32.MaxValue;
         public int width;
         public int height;
 

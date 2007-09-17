@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -69,8 +69,7 @@ namespace IronPython.Runtime.Operations {
         public static BuiltinFunction PythonReconstructor;
 
         private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
-        private static DynamicSite<object, string, Tuple, IAttributesCollection, object> MetaclassSite;
-        private static FastDynamicSite<object, object> _flushSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, CallAction.Simple);
+        private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
         private static FastDynamicSite<object, string, object> _writeSite = FastDynamicSite<object, string, object>.Create(DefaultContext.Default, CallAction.Simple);
 
 
@@ -146,10 +145,10 @@ namespace IronPython.Runtime.Operations {
 
 #endif
         
-        internal static Tuple LookupEncoding(string encoding) {
+        internal static PythonTuple LookupEncoding(string encoding) {
             for (int i = 0; i < searchFunctions.Count; i++) {
                 object res = PythonCalls.Call(searchFunctions[i], encoding);
-                if (res != null) return (Tuple)res;
+                if (res != null) return (PythonTuple)res;
             }
 
             throw PythonOps.LookupError("unknown encoding: {0}", encoding);
@@ -242,23 +241,31 @@ namespace IronPython.Runtime.Operations {
                 "...";
         }
 
+        private static Dictionary<Type, FastDynamicSite<object, string>> _toStrSites = new Dictionary<Type, FastDynamicSite<object, string>>();
         public static string ToString(object o) {
             string x = o as string;
             Array ax;
+            DynamicType dt;
+            OldClass oc;
             if (x != null) return x;
             if (o == null) return "None";
             if (o is double) return DoubleOps.ToString((double)o);
             if (o is float) return DoubleOps.ToString((float)o);
             if ((ax = o as Array) != null) return StringRepr(ax);
+            if ((dt = o as DynamicType) != null) return DynamicTypeOps.Repr(DefaultContext.Default, dt);
+            if ((oc = o as OldClass) != null) return oc.ToString();
 
-            object res;
-            if (!DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default,
-                Operators.ConvertToString,
-                o,
-                out res))
-                throw PythonOps.TypeError("cannot invoke __str__");
-
-            return (string)res;
+            object tostr;
+            if (TryGetBoundAttr(o, Symbols.String, out tostr)) {
+                FastDynamicSite<object, string> callSite;
+                lock (_toStrSites) {
+                    if (!_toStrSites.TryGetValue(o.GetType(), out callSite)) {
+                        _toStrSites[o.GetType()] = callSite = FastDynamicSite<object, string>.Create(DefaultContext.Default, CallAction.Simple);
+                    }
+                }
+                return callSite.Invoke(tostr);
+            }
+            return o.ToString();            
         }
 
 
@@ -345,7 +352,7 @@ namespace IronPython.Runtime.Operations {
             if (c == null) throw PythonOps.TypeError("issubclass: arg 1 must be a class");
             if (typeinfo == null) throw PythonOps.TypeError("issubclass: arg 2 must be a class");
 
-            Tuple pt = typeinfo as Tuple;
+            PythonTuple pt = typeinfo as PythonTuple;
             if (pt != null) {
                 // Recursively inspect nested tuple(s)
                 foreach (object o in pt) {
@@ -396,7 +403,7 @@ namespace IronPython.Runtime.Operations {
         public static bool IsInstance(object o, object typeinfo) {
             if (typeinfo == null) throw PythonOps.TypeError("isinstance: arg 2 must be a class, type, or tuple of classes and types");
 
-            Tuple tt = typeinfo as Tuple;
+            PythonTuple tt = typeinfo as PythonTuple;
             if (tt != null) {
                 foreach (object type in tt) {
                     if (IsInstance(o, type)) return true;
@@ -440,7 +447,7 @@ namespace IronPython.Runtime.Operations {
             if (!PythonOps.TryGetBoundAttr(cls, Symbols.Bases, out bases)) {
                 return false;   // no bases, cannot be subclass
             }
-            Tuple tbases = bases as Tuple;
+            PythonTuple tbases = bases as PythonTuple;
             if (tbases == null) {
                 return false;   // not a tuple, cannot be subclass
             }
@@ -1015,7 +1022,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CallWithArgsTupleAndContext(CodeContext context, object func, object[] args, object argsTuple) {
-            Tuple tp = argsTuple as Tuple;
+            PythonTuple tp = argsTuple as PythonTuple;
             if (tp != null) {
                 object[] nargs = new object[args.Length + tp.Count];
                 for (int i = 0; i < args.Length; i++) nargs[i] = args[i];
@@ -1046,15 +1053,15 @@ namespace IronPython.Runtime.Operations {
                 List<object> largs;
 
                 if (argsTuple != null && args.Length == names.Length) {
-                    Tuple tuple = argsTuple as Tuple;
-                    if (tuple == null) tuple = new Tuple(argsTuple);
+                    PythonTuple tuple = argsTuple as PythonTuple;
+                    if (tuple == null) tuple = new PythonTuple(argsTuple);
 
                     largs = new List<object>(tuple);
                     largs.AddRange(args);
                 } else {
                     largs = new List<object>(args);
                     if (argsTuple != null) {
-                        largs.InsertRange(args.Length - names.Length, Tuple.Make(argsTuple));
+                        largs.InsertRange(args.Length - names.Length, PythonTuple.Make(argsTuple));
                     }
                 }
 
@@ -1096,7 +1103,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CallWithArgsTuple(object func, object[] args, object argsTuple) {
-            Tuple tp = argsTuple as Tuple;
+            PythonTuple tp = argsTuple as PythonTuple;
             if (tp != null) {
                 object[] nargs = new object[args.Length + tp.Count];
                 for (int i = 0; i < args.Length; i++) nargs[i] = args[i];
@@ -1172,11 +1179,11 @@ namespace IronPython.Runtime.Operations {
 
                     return DynamicHelpers.GetDynamicTypeFromType(types[0].MakeArrayType());
                 } else {
-                    Tuple tindex = index as Tuple;
+                    PythonTuple tindex = index as PythonTuple;
                     if (tindex == null) {
                         DynamicType dti = index as DynamicType;
                         if (dti != null) {
-                            tindex = Tuple.MakeTuple(dti);
+                            tindex = PythonTuple.MakeTuple(dti);
                         } else {
                             throw PythonOps.TypeError("__getitem__ expected tuple, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(index)));
                         }
@@ -1313,12 +1320,42 @@ namespace IronPython.Runtime.Operations {
             return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
         }
 
-        private static Dictionary<SymbolId, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<SymbolId, DynamicSite<object, object>>();
+        private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+        
+        class AttrKey : IEquatable<AttrKey> {
+            private Type _type;
+            private SymbolId _name;
+
+            public AttrKey(Type type, SymbolId name) {
+                _type = type;
+                _name = name;
+            }
+
+            #region IEquatable<AttrKey> Members
+
+            public bool Equals(AttrKey other) {
+                if (other == null) return false;
+
+                return _type == other._type && _name == other._name;
+            }
+
+            #endregion
+
+            public override bool Equals(object obj) {
+                return Equals(obj as AttrKey);
+            }
+
+            public override int GetHashCode() {
+                return _type.GetHashCode() ^ _name.GetHashCode();
+            }
+        }
+        
         public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
             DynamicSite<object, object> site;
             lock (_tryGetMemSites) {
-                if (!_tryGetMemSites.TryGetValue(name, out site)) {
-                    _tryGetMemSites[name] = site = DynamicSite<object, object>.Create(GetMemberAction.Make(name, GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow));
+                AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
+                if (!_tryGetMemSites.TryGetValue(key, out site)) {
+                    _tryGetMemSites[key] = site = DynamicSite<object, object>.Create(GetMemberAction.Make(name, GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow));
                 }
             }
             
@@ -1677,7 +1714,7 @@ namespace IronPython.Runtime.Operations {
             PythonOps.SetAttr(DefaultContext.Default,
                 ExceptionConverter.ToPython(res),
                 Symbols.Arguments,
-                Tuple.MakeTuple(key));
+                PythonTuple.MakeTuple(key));
 
             return res;
         }
@@ -1909,7 +1946,7 @@ namespace IronPython.Runtime.Operations {
             iwr.SetFinalizer(new WeakRefTracker(nif, nif));
         }
 
-        private static object FindMetaclass(CodeContext context, Tuple bases, IAttributesCollection dict) {
+        private static object FindMetaclass(CodeContext context, PythonTuple bases, IAttributesCollection dict) {
             // If dict['__metaclass__'] exists, it is used. 
             object ret;
             if (dict.TryGetValue(Symbols.MetaClass, out ret) && ret != null) return ret;
@@ -1961,7 +1998,7 @@ namespace IronPython.Runtime.Operations {
                     break;
                 }
             }
-            Tuple tupleBases = Tuple.MakeTuple(bases);
+            PythonTuple tupleBases = PythonTuple.MakeTuple(bases);
 
             object metaclass = FindMetaclass(context, tupleBases, vars);
             if (metaclass == TypeCache.OldInstance)
@@ -1981,9 +2018,9 @@ namespace IronPython.Runtime.Operations {
 
         private static void EnsureMetaclassSite() {
             if (MetaclassSite == null) {
-                Interlocked.CompareExchange<DynamicSite<object, string, Tuple, IAttributesCollection, object>>(
+                Interlocked.CompareExchange<DynamicSite<object, string, PythonTuple, IAttributesCollection, object>>(
                     ref MetaclassSite,
-                    DynamicSite<object, string, Tuple, IAttributesCollection, object>.Create(CallAction.Simple),
+                    DynamicSite<object, string, PythonTuple, IAttributesCollection, object>.Create(CallAction.Simple),
                     null
                 );
             }
@@ -2025,8 +2062,8 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="items"></param>
         /// <returns></returns>
-        public static Tuple MakeTuple(params object[] items) {
-            return Tuple.MakeTuple(items);
+        public static PythonTuple MakeTuple(params object[] items) {
+            return PythonTuple.MakeTuple(items);
         }
 
         /// <summary>
@@ -2037,8 +2074,8 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="items"></param>
         /// <returns></returns>
-        public static Tuple MakeExpandableTuple(params object[] items) {
-            return Tuple.MakeExpandableTuple(items);
+        public static PythonTuple MakeExpandableTuple(params object[] items) {
+            return PythonTuple.MakeExpandableTuple(items);
         }
 
         /// <summary>
@@ -2093,10 +2130,6 @@ namespace IronPython.Runtime.Operations {
             if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_out");
 
             _writeSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
-            object flush;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, f, SymbolTable.StringToId("flush"), out flush)) {
-                _flushSite.Invoke(flush);
-            }
         }
 
         private static object ReadLine(object f) {
@@ -2309,7 +2342,7 @@ namespace IronPython.Runtime.Operations {
             IAttributesCollection globals = null;
 
             // if the user passes us a tuple we'll extract the 3 values out of it            
-            Tuple codeTuple = code as Tuple;
+            PythonTuple codeTuple = code as PythonTuple;
             if (codeTuple != null && codeTuple.Count > 0 && codeTuple.Count <= 3) {
                 code = codeTuple[0];
 
@@ -2438,9 +2471,9 @@ namespace IronPython.Runtime.Operations {
             Debug.Assert(exception != null);
 
             StringException strex;
-            if (test is Tuple) {
+            if (test is PythonTuple) {
                 // we handle multiple exceptions, we'll check them one at a time.
-                Tuple tt = test as Tuple;
+                PythonTuple tt = test as PythonTuple;
                 for (int i = 0; i < tt.Count; i++) {
                     object res = CheckException(exception, tt[i]);
                     if (res != null) return res;
@@ -2476,7 +2509,7 @@ namespace IronPython.Runtime.Operations {
                 return (TraceBack)result;
             }
 
-            DynamicStackFrame[] frames = DynamicHelpers.GetDynamicStackFrames(e);
+            DynamicStackFrame[] frames = DynamicHelpers.GetDynamicStackFrames(e, false);
             TraceBack tb = null;
             for (int i = frames.Length - 1; i >= 0; i--) {
                 DynamicStackFrame frame = frames[i];
@@ -2500,9 +2533,9 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Support for exception handling (called directly by with statement)
         /// </summary>
-        public static Tuple GetExceptionInfo() {
+        public static PythonTuple GetExceptionInfo() {
             if (RawException == null) {
-                return Tuple.MakeTuple(null, null, null);
+                return PythonTuple.MakeTuple(null, null, null);
             }
 
             object pyExcep = ExceptionConverter.ToPython(RawException);
@@ -2516,7 +2549,7 @@ namespace IronPython.Runtime.Operations {
                 SystemState.Instance.ExceptionType = excType;
                 SystemState.Instance.ExceptionValue = pyExcep;
 
-                return Tuple.MakeTuple(
+                return PythonTuple.MakeTuple(
                     excType,
                     pyExcep,
                     tb);
@@ -2528,7 +2561,7 @@ namespace IronPython.Runtime.Operations {
             SystemState.Instance.ExceptionType = pyExcep;
             SystemState.Instance.ExceptionValue = se.Value;
 
-            return Tuple.MakeTuple(
+            return PythonTuple.MakeTuple(
                 pyExcep,
                 se.Value,
                 tb);
@@ -2548,7 +2581,7 @@ namespace IronPython.Runtime.Operations {
 
             if (type == null && value == null && traceback == null) {
                 // rethrow
-                Tuple t = GetExceptionInfo();
+                PythonTuple t = GetExceptionInfo();
                 type = t[0];
                 value = t[1];
                 traceback = t[2];
@@ -2628,12 +2661,12 @@ namespace IronPython.Runtime.Operations {
             return new List(list);
         }
 
-        public static Tuple GetOrCopyParamsTuple(object input) {
-            if (input.GetType() == typeof(Tuple)) {
-                return (Tuple)input;
+        public static PythonTuple GetOrCopyParamsTuple(object input) {
+            if (input.GetType() == typeof(PythonTuple)) {
+                return (PythonTuple)input;
             }
 
-            return Tuple.Make(input);
+            return PythonTuple.Make(input);
         }
 
         public static object ExtractParamsArgument(PythonFunction function, int argCnt, List list) {
@@ -2741,8 +2774,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object InitializeUserTypeSlots(Type type) {
-            return NewTuple.MakeTuple(type, 
-                CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, NewTuple.GetSize(type)));
+            return Tuple.MakeTuple(type, 
+                CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, Tuple.GetSize(type)));
         }
 
         public static bool IsClsVisible(CodeContext context) {

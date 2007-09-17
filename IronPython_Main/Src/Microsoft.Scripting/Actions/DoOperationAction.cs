@@ -18,7 +18,7 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
 
-    public class DoOperationAction : Action {
+    public class DoOperationAction : DynamicAction {
         private Operators _operation;
 
         public static DoOperationAction Make(Operators operation) {
@@ -33,8 +33,8 @@ namespace Microsoft.Scripting.Actions {
             get { return _operation; }
         }
 
-        public override ActionKind Kind {
-            get { return ActionKind.DoOperation; }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.DoOperation; }
         }
 
         public override bool Equals(object obj) {

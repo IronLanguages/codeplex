@@ -17,7 +17,7 @@ using System;
 
 namespace Microsoft.Scripting.Actions {
 
-    public class ConvertToAction : Action, IEquatable<ConvertToAction> {
+    public class ConvertToAction : DynamicAction, IEquatable<ConvertToAction> {
         private Type _type;
 
         public static ConvertToAction Make(Type type) {
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Actions {
         private ConvertToAction(Type type) { this._type = type; }
 
         public Type ToType { get { return _type; } }
-        public override ActionKind Kind { get { return ActionKind.ConvertTo; } }
+        public override DynamicActionKind Kind { get { return DynamicActionKind.ConvertTo; } }
 
         public override bool Equals(object obj) {
             return Equals(obj as ConvertToAction);

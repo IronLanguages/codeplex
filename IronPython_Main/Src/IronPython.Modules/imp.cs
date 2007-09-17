@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -51,16 +51,16 @@ namespace IronPython.Modules {
 
         [PythonName("get_suffixes")]
         public static List GetSuffixes() {
-            return List.MakeList(Tuple.MakeTuple(".py", "U", PythonSource));
+            return List.MakeList(PythonTuple.MakeTuple(".py", "U", PythonSource));
         }
 
         [PythonName("find_module")]
-        public static Tuple FindModule(CodeContext context, string name) {
+        public static PythonTuple FindModule(CodeContext context, string name) {
             return FindBuiltinOrSysPath(context, name);
         }
 
         [PythonName("find_module")]
-        public static Tuple FindModule(CodeContext context, string name, List path) {
+        public static PythonTuple FindModule(CodeContext context, string name, List path) {
             if (path == null) {
                 return FindBuiltinOrSysPath(context, name);
             } else {
@@ -69,7 +69,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("load_module")]
-        public static object LoadModule(CodeContext context, string name, PythonFile file, string filename, Tuple description) {
+        public static object LoadModule(CodeContext context, string name, PythonFile file, string filename, PythonTuple description) {
             if (description == null) {
                 throw PythonOps.TypeError("load_module() argument 4 must be 3-item sequence, not None");
             }
@@ -205,7 +205,7 @@ namespace IronPython.Modules {
 
         #region Implementation
 
-        private static Tuple FindBuiltinOrSysPath(CodeContext context, string name) {
+        private static PythonTuple FindBuiltinOrSysPath(CodeContext context, string name) {
             List sysPath = SystemState.Instance.path;
             if (sysPath == null) {
                 throw PythonOps.ImportError("sys.path must be a list of directory names");
@@ -213,7 +213,7 @@ namespace IronPython.Modules {
             return FindModuleBuiltinOrPath(context, name, sysPath);
         }
 
-        private static Tuple FindModulePath(CodeContext context, string name, List path) {
+        private static PythonTuple FindModulePath(CodeContext context, string name, List path) {
             Debug.Assert(path != null);
 
             if (name == null) {
@@ -228,7 +228,7 @@ namespace IronPython.Modules {
                 string pathName = Path.Combine(dir, name);
                 if (Directory.Exists(pathName)) {
                     if (File.Exists(Path.Combine(pathName, "__init__.py"))) {
-                        return Tuple.MakeTuple(null, pathName, Tuple.MakeTuple("", "", PackageDirectory));
+                        return PythonTuple.MakeTuple(null, pathName, PythonTuple.MakeTuple("", "", PackageDirectory));
                     }
                 }
 
@@ -236,14 +236,14 @@ namespace IronPython.Modules {
                 if (File.Exists(fileName)) {
                     FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     PythonFile pf = new PythonFile(fs, SystemState.Instance.DefaultEncoding, fileName, "U");
-                    return Tuple.MakeTuple(pf, fileName, Tuple.MakeTuple(".py", "U", PythonSource));
+                    return PythonTuple.MakeTuple(pf, fileName, PythonTuple.MakeTuple(".py", "U", PythonSource));
                 }
             }
 #endif
             throw PythonOps.ImportError("No module named {0}", name);
         }
 
-        private static Tuple FindModuleBuiltinOrPath(CodeContext context, string name, List path) {
+        private static PythonTuple FindModuleBuiltinOrPath(CodeContext context, string name, List path) {
             if (name.Equals("sys")) return BuiltinModuleTuple(name);
             if (name.Equals("clr")) {
                 context.ModuleContext.ShowCls = true;
@@ -257,8 +257,8 @@ namespace IronPython.Modules {
             return FindModulePath(context, name, path);
         }
 
-        private static Tuple BuiltinModuleTuple(string name) {
-            return Tuple.MakeTuple(null, name, Tuple.MakeTuple("", "", CBuiltin));
+        private static PythonTuple BuiltinModuleTuple(string name) {
+            return PythonTuple.MakeTuple(null, name, PythonTuple.MakeTuple("", "", CBuiltin));
         }
 
         private static ScriptModule LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {

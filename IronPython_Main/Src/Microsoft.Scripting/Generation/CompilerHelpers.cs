@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 using System.IO;
@@ -58,6 +57,7 @@ namespace Microsoft.Scripting.Generation {
         public static bool IsParamsMethod(MethodBase method) {
             return IsParamsMethod(method.GetParameters());
         }
+
         public static bool IsParamsMethod(ParameterInfo[] pis) {
             foreach (ParameterInfo pi in pis) {
                 if (IsParamArray(pi) || IsParamDictionary(pi)) return true;
@@ -78,6 +78,20 @@ namespace Microsoft.Scripting.Generation {
             return (pi.Attributes & (ParameterAttributes.Out | ParameterAttributes.In)) == ParameterAttributes.Out;
         }
 
+        internal static bool FormalParamsMatchActual(ParameterInfo[] parameters, int actualCount) {
+            Assert.NotNull(parameters);
+
+            return actualCount >= GetMandatoryParameterCount(parameters) && 
+                (actualCount <= parameters.Length || parameters.Length > 0 && IsParamArray(parameters[parameters.Length - 1]));
+        }
+
+        private static int GetMandatoryParameterCount(ParameterInfo[] parameters) {
+            Assert.NotNull(parameters);
+            int lastMandatory = parameters.Length - 1;
+            while (lastMandatory >= 0 && !IsMandatoryParameter(parameters[lastMandatory])) lastMandatory--;
+            return (lastMandatory >= 0 && IsParamArray(parameters[lastMandatory])) ? lastMandatory : lastMandatory + 1;
+        }
+
         public static int GetOutAndByRefParameterCount(MethodBase method) {
             int res = 0;
             ParameterInfo[] pis = method.GetParameters();
@@ -85,6 +99,17 @@ namespace Microsoft.Scripting.Generation {
                 if (IsByRefParameter(pis[i])) res++;
             }
             return res;
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the specified parameter is mandatory, i.e. is not optional and doesn't have a default value.
+        /// </summary>
+        public static bool IsMandatoryParameter(ParameterInfo pi) {
+            return (pi.Attributes & (ParameterAttributes.Optional | ParameterAttributes.HasDefault)) == 0;
+        }
+
+        public static bool HasDefaultValue(ParameterInfo pi) {
+            return (pi.Attributes & ParameterAttributes.HasDefault) != 0;
         }
 
         public static bool IsByRefParameter(ParameterInfo pi) {
@@ -392,28 +417,28 @@ namespace Microsoft.Scripting.Generation {
         /// return a MethodInfo which will dispatch to the original MethodInfo but is declared
         /// on a public type.
         /// </summary>
-        public static MethodInfo GetCallableMethod(MethodInfo getter) {
-            if (getter.DeclaringType.IsVisible) return getter;
+        public static MethodInfo GetCallableMethod(MethodInfo method) {
+            if (method.DeclaringType.IsVisible) return method;
             // first try and get it from the base type we're overriding...
-            getter = getter.GetBaseDefinition();
+            method = method.GetBaseDefinition();
 
-            if (getter.DeclaringType.IsVisible) return getter;
+            if (method.DeclaringType.IsVisible) return method;
             // maybe we can get it from an interface...
-            Type[] interfaces = getter.DeclaringType.GetInterfaces();
+            Type[] interfaces = method.DeclaringType.GetInterfaces();
             foreach (Type iface in interfaces) {
-                InterfaceMapping mapping = getter.DeclaringType.GetInterfaceMap(iface);
+                InterfaceMapping mapping = method.DeclaringType.GetInterfaceMap(iface);
                 for (int i = 0; i < mapping.TargetMethods.Length; i++) {
-                    if (mapping.TargetMethods[i] == getter) {
+                    if (mapping.TargetMethods[i] == method) {
                         return mapping.InterfaceMethods[i];
                     }
                 }
             }
 
             if (!ScriptDomainManager.Options.PrivateBinding) {
-                throw new InvalidOperationException(String.Format("{0}.{1} has no publiclly visible method", getter.DeclaringType, getter.Name));
+                throw new InvalidOperationException(String.Format("{0}.{1} has no publiclly visible method", method.DeclaringType, method.Name));
             }
 
-            return getter;
+            return method;
         }
 
         public static bool CanOptimizeField(FieldInfo fi) {

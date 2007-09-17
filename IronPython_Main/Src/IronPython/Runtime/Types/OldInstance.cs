@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -124,15 +124,15 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(Action action, CodeContext context, object[] args)  {
+        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args)  {
             switch (action.Kind) {
-                case ActionKind.GetMember:
-                case ActionKind.SetMember:
-                case ActionKind.DeleteMember:
+                case DynamicActionKind.GetMember:
+                case DynamicActionKind.SetMember:
+                case DynamicActionKind.DeleteMember:
                     return MakeMemberRule<T>((MemberAction)action, context, args);
-                case ActionKind.DoOperation:
+                case DynamicActionKind.DoOperation:
                     return MakeOperationRule<T>((DoOperationAction)action, context, args);
-                case ActionKind.Call:
+                case DynamicActionKind.Call:
                     return MakeCallRule<T>((CallAction)action, context, args);
                 default:
                     return null;
@@ -214,21 +214,21 @@ namespace IronPython.Runtime.Types {
             Expression target;
 
             switch (action.Kind) {
-                case ActionKind.GetMember:
+                case DynamicActionKind.GetMember:
                     target = Ast.Call(
                                 Ast.ReadDefined(tmp),
                                 typeof(CustomOldClassDictionary).GetMethod("GetValueHelper"),
                                 Ast.Constant(key),
                                 rule.Parameters[0]);
                     break;
-                case ActionKind.SetMember:
+                case DynamicActionKind.SetMember:
                     target = Ast.Call(
                                 Ast.ReadDefined(tmp),
                                 typeof(CustomOldClassDictionary).GetMethod("SetExtraValue"),
                                 Ast.Constant(key),
                                 rule.Parameters[1]);
                     break;
-                case ActionKind.DeleteMember:
+                case DynamicActionKind.DeleteMember:
                     target = Ast.Call(
                                 rule.Parameters[0],
                                 typeof(OldInstance).GetMethod("DeleteCustomMember"),
@@ -251,7 +251,7 @@ namespace IronPython.Runtime.Types {
 
             Expression target;
              switch (action.Kind) {
-                case ActionKind.GetMember:
+                case DynamicActionKind.GetMember:
                     if (((GetMemberAction)action).IsNoThrow) {
                         Variable tmp = rule.GetTemporary(typeof(object), "tmp");
 
@@ -273,14 +273,14 @@ namespace IronPython.Runtime.Types {
                                 Ast.Constant(action.Name));
                     }
                     break;
-                case ActionKind.SetMember:
+                case DynamicActionKind.SetMember:
                     target = Ast.Call(instance,
                         typeof(OldInstance).GetMethod("SetCustomMember"),
                             Ast.CodeContext(),
                             Ast.Constant(action.Name),
                             rule.Parameters[1]);
                     break;
-                 case ActionKind.DeleteMember:
+                 case DynamicActionKind.DeleteMember:
                     target = Ast.Call(instance,
                         typeof(OldInstance).GetMethod("DeleteCustomMember"),
                             Ast.CodeContext(),
@@ -949,7 +949,7 @@ namespace IronPython.Runtime.Types {
             if (TypeCache.OldInstance.TryInvokeBinaryOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
                 coerce != PythonOps.NotImplemented &&
                 !(coerce is OldInstance)) {
-                return PythonOps.Equal(((Tuple)coerce)[0], ((Tuple)coerce)[1]);
+                return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
             }
 
             return PythonOps.NotImplemented;

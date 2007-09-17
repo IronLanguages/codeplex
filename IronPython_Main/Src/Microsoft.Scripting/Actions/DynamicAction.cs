@@ -14,22 +14,27 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Diagnostics;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
+namespace Microsoft.Scripting.Actions {
+    public enum DynamicActionKind {
+        DoOperation,
+        ConvertTo,
 
-namespace Microsoft.Scripting {    
-    class ModuleGlobalPropertyEnvironmentReference : PropertyEnvironmentReference {
-        private static PropertyInfo _prop = typeof(ModuleGlobalWrapper).GetProperty("CurrentValue");
+        GetMember,
+        SetMember,
+        DeleteMember,
+        InvokeMember,
 
-        public ModuleGlobalPropertyEnvironmentReference(PropertyInfo property, Type type)
-            : base(property, type) {
-        }
+        Call,
+        CreateInstance
+    }
 
-        public override Slot CreateSlot(Slot instance) {
-            return new PropertySlot(base.CreateSlot(instance), _prop);
+    public abstract class DynamicAction {
+        public abstract DynamicActionKind Kind { get; }
+        
+        public override string ToString() {
+            return Kind.ToString();
         }
     }
 }
