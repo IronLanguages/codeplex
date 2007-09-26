@@ -675,5 +675,55 @@ def test_unpickler(module=cPickle, verbose=True):
                 pickle_num += 1
 
         if verbose: print 'ok'
+        
+
+def test_persistent_load():
+    class MyData(object):
+        def __init__(self, value):
+            self.value = value
+
+    def persistent_id(obj):
+        if hasattr(obj, 'value'):
+            return 'MyData: %s' % obj.value
+        return None
+
+    def persistent_load(id):
+        return MyData(id[8:])
+
+
+    for binary in [True, False]:
+        src = StringIO()
+        p = cPickle.Pickler(src)
+        p.persistent_id = persistent_id 
+        p.binary = binary
+        
+        value = MyData('abc')
+        p.dump(value)
+        
+        up = cPickle.Unpickler(StringIO(src.getvalue()))
+        up.persistent_load = persistent_load
+        res = up.load()
+        
+        AreEqual(res.value, value.value)
+
+        # errors
+        src = StringIO()
+        p = cPickle.Pickler(src)
+        p.persistent_id = persistent_id 
+        p.binary = binary
+        
+        value = MyData('abc')
+        p.dump(value)
+
+        up = cPickle.Unpickler(StringIO(src.getvalue()))
+        
+        # exceptions vary between cPickle & Pickle
+        try:
+            up.load()
+            AssertUnreachable()
+        except Exception, e:
+            pass
+    
+
 
 run_test(__name__)

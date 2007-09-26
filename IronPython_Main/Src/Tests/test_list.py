@@ -263,4 +263,9 @@ def test_pass_pythonlist_to_clr():
       
     do_something(IronPythonTest.UsePythonDictAsDictionary, pl, cl, check_content)
 
+def test_inplace_addition():
+    x = [2,3,4]
+    x += x
+    AreEqual(x, [2,3,4,2,3,4])
+
 run_test(__name__)

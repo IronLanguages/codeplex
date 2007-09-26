@@ -77,7 +77,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             // then get the statement for calling __init__
-            Variable allocatedInst = Rule.GetTemporary(createExpr.ExpressionType, "newInst");
+            Variable allocatedInst = Rule.GetTemporary(createExpr.Type, "newInst");
             Expression tmpRead = Ast.Read(allocatedInst);
             Expression initCall = initAdapter.MakeInitCall(Binder, Rule, tmpRead);
             if (initCall == null) {
@@ -96,7 +96,7 @@ namespace IronPython.Runtime.Calls {
             if (initCall != tmpRead) {
                 if (body.Count == 0) body.Add(Ast.Assign(allocatedInst, createExpr));
 
-                if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.ExpressionType)) {
+                if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.Type)) {
                     // return type of object, we need to check the return type before calling __init__.
                     body.Add(
                         Ast.Condition(
@@ -263,9 +263,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             protected CallAction GetDynamicNewAction() {
-                if (Action.IsSimple) return CallAction.Simple;
-
-                return CallAction.Make(ArrayUtils.Insert(ArgumentInfo.Simple, Action.ArgumentInfos));
+                return CallAction.Make(Action.Signature.InsertArgument(ArgumentInfo.Simple));
             }
 
             public override object TemplateKey {
@@ -594,9 +592,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal static CreateInstanceAction MakeCreateInstanceAction(CallAction action) {
-            if(action == CallAction.Simple) return CreateInstanceAction.Simple;
-
-            return CreateInstanceAction.Make(action.ArgumentInfos);
+            return CreateInstanceAction.Make(new CallSignature(action.Signature));
         }
 
 

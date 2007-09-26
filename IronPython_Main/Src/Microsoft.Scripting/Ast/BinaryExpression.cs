@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _left; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 switch (_op) {
                     case BinaryOperators.Equal:
@@ -88,7 +88,7 @@ namespace Microsoft.Scripting.Ast {
                     case BinaryOperators.ExclusiveOr:
                     case BinaryOperators.LeftShift:
                     case BinaryOperators.RightShift:
-                        return _left.ExpressionType;
+                        return _left.Type;
                     
                     default:
                         throw new NotImplementedException();
@@ -182,7 +182,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private Type GetEmitType() {
-            return _left.ExpressionType == _right.ExpressionType ? _left.ExpressionType : typeof(object);
+            return _left.Type == _right.Type ? _left.Type : typeof(object);
         }
 
         public override void EmitBranchFalse(CodeGen cg, Label label) {
@@ -620,7 +620,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(right, "right");
 
-            Variable tmp = currentBlock.CreateTemporaryVariable(SymbolTable.StringToId("tmp_left"), left.ExpressionType);
+            Variable tmp = currentBlock.CreateTemporaryVariable(SymbolTable.StringToId("tmp_left"), left.Type);
 
             Expression c;
             if (isTrueOperator != null) {
@@ -742,8 +742,8 @@ namespace Microsoft.Scripting.Ast {
         private static BinaryExpression MakeBinaryArithmeticExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(left, "right");
-            if (left.ExpressionType != right.ExpressionType || !Expression.IsArithmetic(left.ExpressionType)) {
-                throw new NotSupportedException(String.Format("{0} only supports identical arithmetic types, got {1} {2}", op, left.ExpressionType.Name, right.ExpressionType.Name));
+            if (left.Type != right.Type || !Expression.IsArithmetic(left.Type)) {
+                throw new NotSupportedException(String.Format("{0} only supports identical arithmetic types, got {1} {2}", op, left.Type.Name, right.Type.Name));
             }
 
             return Binary(span, op, left, right);
@@ -756,8 +756,8 @@ namespace Microsoft.Scripting.Ast {
         private static BinaryExpression MakeBinaryComparisonExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(left, "right");
-            if (left.ExpressionType != right.ExpressionType || !Expression.IsNumeric(left.ExpressionType)) {
-                throw new NotSupportedException(String.Format("{0} only supports identical numeric types, got {1} {2}", op, left.ExpressionType.Name, right.ExpressionType.Name));
+            if (left.Type != right.Type || !Expression.IsNumeric(left.Type)) {
+                throw new NotSupportedException(String.Format("{0} only supports identical numeric types, got {1} {2}", op, left.Type.Name, right.Type.Name));
             }
 
             return Binary(span, op, left, right);

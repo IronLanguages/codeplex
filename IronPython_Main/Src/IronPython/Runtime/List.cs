@@ -222,12 +222,11 @@ namespace IronPython.Runtime {
 
         #region IPythonContainer Members
 
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+        [PythonName("__len__")]
+        public virtual int GetLength() {
             return _size;
         }
 
-        [SpecialName, PythonName("__contains__")]
         public bool ContainsValueWrapper(object value) {
             return ContainsValue(value);
         }
@@ -260,9 +259,13 @@ namespace IronPython.Runtime {
 
         [SpecialName, PythonName("__iadd__")]
         public virtual object InPlaceAdd(object other) {
-            IEnumerator e = PythonOps.GetEnumerator(other);
-            while (e.MoveNext()) {
-                Append(e.Current);
+            if (!Object.ReferenceEquals(this, other)) {
+                IEnumerator e = PythonOps.GetEnumerator(other);
+                while (e.MoveNext()) {
+                    Append(e.Current);
+                }
+            } else {
+                InPlaceMultiply(2);                
             }
 
             return this;
@@ -700,7 +703,10 @@ namespace IronPython.Runtime {
         private class FunctionComparer : IComparer {
             //??? optimized version when we know we have a Function
             private object cmpfunc;
-            private FastDynamicSite<object, object, object, int> FuncSite = FastDynamicSite<object, object, object, int>.Create(DefaultContext.Default, CallAction.Simple);
+
+            private FastDynamicSite<object, object, object, int> FuncSite = 
+                RuntimeHelpers.CreateSimpleCallSite<object, object, object, int>(DefaultContext.Default);
+
             public FunctionComparer(object cmpfunc) { this.cmpfunc = cmpfunc; }
 
             public int Compare(object o1, object o2) {
@@ -945,7 +951,8 @@ namespace IronPython.Runtime {
             lock (this) RawDelete(index);
         }
 
-        public bool Contains(object value) {
+        [PythonName("__contains__")]
+        public virtual bool Contains(object value) {
             return ContainsValue(value);
         }
 

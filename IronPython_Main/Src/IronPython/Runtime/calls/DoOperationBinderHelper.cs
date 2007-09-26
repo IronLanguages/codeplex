@@ -158,12 +158,13 @@ namespace IronPython.Runtime.Calls {
                 return MakeComparisonRule(types, op);
             }
 
-            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
+            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem ||
+                Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice) {
                 // Indexers need to see if the index argument is an expandable tuple.  This will
                 // be captured in the AbstractValue in the future but today is captured in the
                 // real value.
                 return MakeIndexerRule(types);
-            } else if (Action.Operation == Operators.DeleteItem) {
+            } else if (Action.Operation == Operators.DeleteItem || Action.Operation == Operators.DeleteSlice) {
                 return MakeDynamicIndexRule(Action, Context, types);
             }
 
@@ -382,11 +383,11 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakeIndexerRule(DynamicType[] types) {
-            Debug.Assert(types.Length >= 2);
+            Debug.Assert(types.Length >= 1);
 
             DynamicType indexedType = types[0];
-            SymbolId getOrSet = Action.Operation == Operators.GetItem ? Symbols.GetItem : Symbols.SetItem;
-            SymbolId altAction = Action.Operation == Operators.GetItem ? Symbols.GetSlice : Symbols.SetSlice;
+            SymbolId getOrSet = (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) ? Symbols.GetItem : Symbols.SetItem;
+            SymbolId altAction = (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) ? Symbols.GetSlice : Symbols.SetSlice;
             BuiltinFunction bf;
             for (int i = 0; i < types.Length; i++) {
                 if (!types[i].UnderlyingSystemType.IsPublic && !types[i].UnderlyingSystemType.IsNestedPublic) {
@@ -406,23 +407,25 @@ namespace IronPython.Runtime.Calls {
                 StandardRule<T> ret = new StandardRule<T>();
                 PythonBinderHelper.MakeTest(ret, types);
 
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, DynamicTypeOps.ConvertToTypes(types));
+                Type[] callTypes = GetIndexerCallTypes(types);
+
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes);
                 if (cand != null) {
                     Expression call;
 
-                    if (Action.Operation == Operators.GetItem) {
+                    if (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) {
                         call = cand.Target.MakeExpression(Binder,
                             ret,
-                            ret.Parameters,
-                            DynamicTypeOps.ConvertToTypes(types));
+                            GetIndexArguments(ret),
+                            callTypes);
                     } else {
                         call = Ast.Comma(0,
                             ret.Parameters[ret.Parameters.Length - 1],
                             cand.Target.MakeExpression(
                                 Binder,
                                 ret,
-                                ret.Parameters,
-                                DynamicTypeOps.ConvertToTypes(types))
+                                GetIndexArguments(ret),
+                                callTypes)
                         );
                     }
                     ret.SetTarget(ret.MakeReturn(Binder, call));
@@ -431,6 +434,71 @@ namespace IronPython.Runtime.Calls {
             }
 
             return MakeDynamicIndexRule(Action, Context, types);
+        }
+
+        private Type[] GetIndexerCallTypes(DynamicType[] types) {
+            Type[] callTypes;
+            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
+                callTypes = DynamicTypeOps.ConvertToTypes(types);
+            } else if (Action.Operation == Operators.GetSlice) {
+                callTypes = new Type[] { types[0].UnderlyingSystemType, typeof(Slice) };
+            } else {
+                Debug.Assert(Action.Operation == Operators.SetSlice);
+                callTypes = new Type[] { 
+                        types[0].UnderlyingSystemType, 
+                        typeof(Slice),
+                        types[types.Length-1].UnderlyingSystemType
+                    };
+            }
+            return callTypes;
+        }
+
+        private Expression[] GetIndexArguments(StandardRule<T> ret) {
+            Expression[] args = ret.Parameters;
+            if (Action.Operation == Operators.GetSlice) {
+                Expression slice = GetGetOrDeleteSlice(ret);
+
+                args = new Expression[] { ret.Parameters[0], slice };
+            } else if (Action.Operation == Operators.SetSlice) {
+                // construct a slice object from the arguments
+                Expression slice = GetSetSlice(ret);
+
+                args = new Expression[] { ret.Parameters[0], slice, ret.Parameters[ret.Parameters.Length - 1] };
+            }
+            return args;
+        }
+
+        private static Expression GetSetSlice(StandardRule<T> ret) {
+            return Ast.Call(null,
+                typeof(PythonOps).GetMethod("MakeSlice"),
+                GetSetParameter(ret, 1),
+                GetSetParameter(ret, 2),
+                GetSetParameter(ret, 3)
+            );
+        }
+
+        private static Expression GetGetOrDeleteSlice(StandardRule<T> ret) {
+            return Ast.Call(null,
+                typeof(PythonOps).GetMethod("MakeSlice"),
+                GetGetOrDeleteParameter(ret, 1),
+                GetGetOrDeleteParameter(ret, 2),
+                GetGetOrDeleteParameter(ret, 3)
+            );
+        }
+
+        private static Expression GetGetOrDeleteParameter(StandardRule<T> ret, int index) {
+            if (ret.Parameters.Length > index) {
+                return OldInstance.CheckMissing(ret.Parameters[index]);
+            }
+            return Ast.Null();
+        }
+
+        private static Expression GetSetParameter(StandardRule<T> ret, int index) {
+            if (ret.Parameters.Length > (index + 1)) {
+                return OldInstance.CheckMissing(ret.Parameters[index]);
+            }
+
+            return Ast.Null(); 
         }
 
         /// <summary>
@@ -450,19 +518,26 @@ namespace IronPython.Runtime.Calls {
             StandardRule<T> ret = new StandardRule<T>();
             PythonBinderHelper.MakeTest(ret, types);
             Expression retExpr;
-            if (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) {
+            if (action.Operation == Operators.GetItem || 
+                action.Operation == Operators.DeleteItem ||
+                action.Operation == Operators.GetSlice ||
+                action.Operation == Operators.DeleteSlice) {
                 Expression arg;
-                if (types.Length == 2) {
+                if (action.Operation == Operators.GetSlice || action.Operation == Operators.DeleteSlice) {
+                    arg = GetGetOrDeleteSlice(ret);
+                } else if (types.Length == 2) {
                     arg = ret.Parameters[1];
                 } else {
                     arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret));
                 }
                 
-                string call = action.Operation == Operators.GetItem ? "GetIndex" : "DelIndex";
+                string call = (action.Operation == Operators.GetItem || action.Operation == Operators.GetSlice) ? "GetIndex" : "DelIndex";
                 retExpr = Ast.Call(null, typeof(PythonOps).GetMethod(call), ret.Parameters[0], arg);
             } else {
                 Expression arg;
-                if (types.Length == 3) {
+                if (action.Operation == Operators.SetSlice) {
+                    arg = GetSetSlice(ret);
+                } else if (types.Length == 3) {
                     arg = ret.Parameters[1];
                 } else {
                     arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetSetIndexParameters(ret));
@@ -543,8 +618,8 @@ namespace IronPython.Runtime.Calls {
                     return false;
                 }
 
-                Debug.Assert(call.ExpressionType == typeof(bool));
-                Variable var = rule.GetTemporary(call.ExpressionType, "tmp");
+                Debug.Assert(call.Type == typeof(bool));
+                Variable var = rule.GetTemporary(call.Type, "tmp");
                 stmts.Add(Ast.Statement(Ast.Assign(var, call)));
                 stmts.Add(MakeValueCheck(rule, val, var));
             }
@@ -982,14 +1057,14 @@ namespace IronPython.Runtime.Calls {
 
                 if (nonzero != null) {
                     // call non-zero and negate it
-                    if (notExpr.ExpressionType == typeof(bool)) {
+                    if (notExpr.Type == typeof(bool)) {
                         notExpr = Ast.Equal(notExpr, Ast.False());
                     } else {
                         notExpr = Ast.Call(null, typeof(PythonOps).GetMethod("Not"), notExpr);
                     }
                 } else {
                     // call len, compare w/ zero
-                    if (notExpr.ExpressionType == typeof(int)) {
+                    if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
                         notExpr = Ast.Action.Operator(Operators.Compare, typeof(int), notExpr, Ast.Zero());

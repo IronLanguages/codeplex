@@ -89,7 +89,7 @@ namespace Microsoft.Scripting.Ast {
             walker.PostWalk(this);
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(Delegate);
             }

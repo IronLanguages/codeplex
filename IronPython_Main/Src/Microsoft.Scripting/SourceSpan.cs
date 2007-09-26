@@ -34,10 +34,20 @@ namespace Microsoft.Scripting {
         /// <param name="start">The beginning of the span.</param>
         /// <param name="end">The end of the span.</param>
         public SourceSpan(SourceLocation start, SourceLocation end) {
-            Debug.Assert(start.IsValid == end.IsValid && !start.IsValid || 
-                (start.Index <= end.Index && start.Line <= end.Line && (start.Line != end.Line || start.Column <= end.Column)));
+            ValidateLocations(start, end);
             this._start = start;
             this._end = end;
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateLocations(SourceLocation start, SourceLocation end) {
+            if (start.IsValid && end.IsValid) {
+                // both spans are valid, they should be well ordered
+                Debug.Assert(start.Index <= end.Index && start.Line <= end.Line && (start.Line != end.Line || start.Column <= end.Column));
+            } else {
+                // both should be invalid
+                Debug.Assert(!start.IsValid && !end.IsValid);
+            }
         }
 
         /// <summary>

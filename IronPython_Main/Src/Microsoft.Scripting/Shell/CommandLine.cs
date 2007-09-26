@@ -72,12 +72,9 @@ namespace Microsoft.Scripting.Shell {
                 if (options.Command != null) {
                     result = RunCommand(options.Command);
                 }
-                
-#if !SILVERLIGHT
                 else if (options.FileName != null) {
                     result = RunFile(options.FileName);
                 }
-#endif
                 else {
                     return RunInteractive();
                 }
@@ -131,7 +128,6 @@ namespace Microsoft.Scripting.Shell {
         
         #endregion
 
-#if !SILVERLIGHT
         /// <summary>
         /// Runs the specified filename
         ///
@@ -152,8 +148,7 @@ namespace Microsoft.Scripting.Shell {
             }
 
             return result;
-        }        
-#endif
+        }
 
         /// <summary>
         /// Runs a single line of text as the only input to the language.  The console exits afterwards.
@@ -213,7 +208,7 @@ namespace Microsoft.Scripting.Shell {
                     try {
                         res = TryInteractiveAction();
 #if SILVERLIGHT 
-                    } catch (EnvironmentUtils.ExitProcessException e) {
+                    } catch (ExitProcessException e) {
                         res = e.ExitCode;
 #endif
                     } catch (Exception e) {

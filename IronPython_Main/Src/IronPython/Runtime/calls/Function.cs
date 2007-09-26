@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using System.Text;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
@@ -113,7 +114,33 @@ namespace IronPython.Runtime.Calls {
             ret.FunctionCode.SetFlags(attributes);
             return ret;
         }
-        
+
+        internal string GetSignatureString() {
+            StringBuilder sb = new StringBuilder(Name);
+            sb.Append('(');
+            for (int i = 0; i < _argNames.Length; i++) {
+                if (i != 0) sb.Append(", ");
+
+                if (i == ExpandDictPosition) {
+                    sb.Append("**");
+                } else if (i == ExpandListPosition) {
+                    sb.Append("*");
+                }
+
+                sb.Append(ArgNames[i]);
+
+                if (i < NormalArgumentCount) {
+                    int noDefaults = NormalArgumentCount - Defaults.Length; // number of args w/o defaults
+                    if (i - noDefaults >= 0) {
+                        sb.Append('=');
+                        sb.Append(PythonOps.Repr(Defaults[i - noDefaults]));
+                    }
+                }
+            }
+            sb.Append(')');
+            return sb.ToString();
+        }
+
         #region Public APIs
 
         public string[] ArgNames {
@@ -130,7 +157,32 @@ namespace IronPython.Runtime.Calls {
         public PythonTuple FunctionDefaults {
             [PythonName("func_defaults")]
             get {
+                if (_defaults.Length == 0) return null;
+
                 return new PythonTuple(_defaults);
+            }
+        }
+
+        public PythonTuple FunctionClosure {
+            [PythonName("func_closure")]
+            get {
+                Scope curScope = Context.Scope;
+                List<ClosureCell> cells = new List<ClosureCell>();
+                while (curScope != null) {
+                    IFunctionEnvironment funcEnv = curScope.Dict as IFunctionEnvironment;
+                    if (funcEnv != null) {
+                        foreach (SymbolId si in funcEnv.Names) {
+                            cells.Add(new ClosureCell(curScope.Dict[si]));
+                        }
+                    }
+
+                    curScope = curScope.Parent;
+                }
+
+                if (cells.Count != 0) {
+                    return PythonTuple.MakeTuple(cells.ToArray()); 
+                }
+                return null;
             }
         }
 
@@ -657,7 +709,7 @@ namespace IronPython.Runtime.Calls {
             /// Makes the test for our rule.
             /// </summary>
             private Expression MakeTest() {
-                if (!Action.HasNamedArgument() && !Action.HasDictionaryArgument()) {
+                if (!Action.Signature.HasKeywordArgument()) {
                     return MakeSimpleTest();
                 } 
 
@@ -718,12 +770,12 @@ namespace IronPython.Runtime.Calls {
 
                 // walk all the provided args and find out where they go...
                 for (int i = 0; i < args.Length; i++) {
-                    switch (Action.GetArgumentKind(i)) {
+                    switch (Action.Signature.GetArgumentKind(i)) {
                         case ArgumentKind.Dictionary:
                             MakeDictionaryCopy(_rule.Parameters[i + 1]); 
                             continue;
 
-                        case ArgumentKind.List:    
+                        case ArgumentKind.List:
                             _userProvidedParams = _rule.Parameters[i + 1];
                             continue;
 
@@ -731,7 +783,7 @@ namespace IronPython.Runtime.Calls {
                             _extractedKeyword = true;
                             bool foundName = false;
                             for (int j = 0; j < _func.NormalArgumentCount; j++) {
-                                if (_func.ArgNames[j] == SymbolTable.IdToString(Action.ArgumentInfos[i].Name)) {
+                                if (_func.ArgNames[j] == SymbolTable.IdToString(Action.Signature.GetArgumentName(i))) {
                                     if (exprArgs[j] != null) {
                                         // kw-argument provided for already provided normal argument.
                                         return null;
@@ -745,7 +797,7 @@ namespace IronPython.Runtime.Calls {
 
                             if (!foundName) {
                                 if (namedArgs == null) namedArgs = new Dictionary<SymbolId, Expression>();
-                                namedArgs[Action.GetArgumentName(i)] = _rule.Parameters[i + 1];
+                                namedArgs[Action.Signature.GetArgumentName(i)] = _rule.Parameters[i + 1];
                             }
                             continue;
                     }
@@ -969,10 +1021,10 @@ namespace IronPython.Runtime.Calls {
 
                 return Ast.Call(null,
                     typeof(PythonOps).GetMethod("ExtractDictionaryArgument"),
-                    GetFunctionParam(),                         // function
-                    Ast.Constant(name),                         // name
-                    Ast.Constant(Action.ArgumentCount),         // arg count
-                    Ast.ReadDefined(_dict)                      // dictionary
+                    GetFunctionParam(),                          // function
+                    Ast.Constant(name),                          // name
+                    Ast.Constant(Action.Signature.ArgumentCount),// arg count
+                    Ast.ReadDefined(_dict)                       // dictionary
                 );
             }
 
@@ -1045,8 +1097,8 @@ namespace IronPython.Runtime.Calls {
                 return Ast.Call(null,
                     typeof(PythonOps).GetMethod("ExtractParamsArgument"),
                     GetFunctionParam(),                             // function
-                    Ast.Constant(Action.ArgumentCount),      // arg count
-                    Ast.ReadDefined(_params)                            // list
+                    Ast.Constant(Action.Signature.ArgumentCount),   // arg count
+                    Ast.ReadDefined(_params)                        // list
                 );
             }
 
@@ -1142,7 +1194,7 @@ namespace IronPython.Runtime.Calls {
                         Ast.Assign(_paramsLen,
                             Ast.Add(
                                 Ast.ReadProperty(Ast.ReadDefined(_params), typeof(List).GetProperty("Count")),
-                                Ast.Constant(Action.GetProvidedPositionalArgumentCount(_rule.Parameters.Length))
+                                Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                             )
                         )
                     )
@@ -1278,8 +1330,8 @@ namespace IronPython.Runtime.Calls {
                 return _rule.MakeError(Context.LanguageContext.Binder,
                     Ast.Call(
                         GetFunctionParam(),
-                        typeof(PythonFunction).GetMethod(Action.HasKeywordArgument() ? "BadKeywordArgumentError" : "BadArgumentError"),
-                        Ast.Constant(Action.GetProvidedPositionalArgumentCount(_rule.Parameters.Length))
+                        typeof(PythonFunction).GetMethod(Action.Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "BadArgumentError"),
+                        Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                     )
                 );
             }
@@ -1433,6 +1485,58 @@ namespace IronPython.Runtime.Calls {
             } else {
                 throw BadArgumentError(args.Length);
             }
+        }
+    }
+
+    [PythonType("cell")]
+    public class ClosureCell : ICodeFormattable, IValueEquality {
+        private object _value;
+
+        internal ClosureCell(object value) {
+            _value = value;
+        }
+
+        public object Contents {
+            [PythonName("cell_contents")]
+            get {
+                return _value;
+            }
+        }
+
+        #region ICodeFormattable Members
+
+        public string ToCodeString(CodeContext context) {
+            return String.Format("<cell at {0}: {1} object at {2}>",
+                IdDispenser.GetId(this),
+                DynamicTypeOps.GetName(_value),
+                IdDispenser.GetId(_value));
+        }
+
+        #endregion
+
+        #region IValueEquality Members
+
+        [SpecialNameAttribute]
+        public int GetValueHashCode() {
+            throw PythonOps.TypeError("unhashable type: cell");
+        }
+
+        public bool ValueEquals(object other) {
+            return CompareTo(other) == 0;
+        }
+
+        public bool ValueNotEquals(object other) {
+            return CompareTo(other) != 0;
+        }
+
+        #endregion
+
+        [SpecialNameAttribute]
+        public int CompareTo(object other) {
+            ClosureCell cc = other as ClosureCell;
+            if (cc == null) throw PythonOps.TypeError("cell.__cmp__(x,y) expected cell, got {0}", DynamicTypeOps.GetName(other));
+
+            return PythonOps.Compare(_value, cc._value);
         }
     }
 }

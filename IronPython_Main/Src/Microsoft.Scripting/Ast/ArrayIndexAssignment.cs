@@ -26,18 +26,10 @@ namespace Microsoft.Scripting.Ast {
 
         internal ArrayIndexAssignment(SourceSpan span, Expression array, Expression index, Expression value)
             : base(span) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresNotNull(index, "index");
-            Contract.RequiresNotNull(value, "value");
-            Type arrayType = array.ExpressionType;
-            if (!arrayType.IsArray) {
-                throw new NotSupportedException("Expression type of the array must be array (Type.IsArray)!");
-            }
-
             _array = array;
             _index = index;
             _value = value;
-            _elementType = arrayType.GetElementType();
+            _elementType = array.Type.GetElementType();
         }
 
         public Expression Array {
@@ -52,7 +44,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _value; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _elementType;
             }
@@ -61,13 +53,13 @@ namespace Microsoft.Scripting.Ast {
         protected override object DoEvaluate(CodeContext context) {
             object value = _value.Evaluate(context); // evaluate the value first
             object[] array = (object[])_array.Evaluate(context);
-            int index = (int)context.LanguageContext.Binder.Convert(_index.Evaluate(context), typeof(int));
+            int index = (int)_index.Evaluate(context);
             array[index] = value;
-            return null; //??? does Emit leave behind a value on the stack? should we return value instead?
+            return value;
         }
 
         public override void Emit(CodeGen cg) {
-            _value.EmitAs(cg, _elementType);
+            _value.Emit(cg);
 
             // Save the expression value - order of evaluation is different than that of the Stelem* instruction
             Slot temp = cg.GetLocalTmp(_elementType);
@@ -76,7 +68,7 @@ namespace Microsoft.Scripting.Ast {
             // Emit the array reference
             _array.Emit(cg);
             // Emit the index (as integer)
-            _index.EmitAs(cg, typeof(int));
+            _index.Emit(cg);
             // Emit the value
             temp.EmitGet(cg);
             // Store it in the array
@@ -96,7 +88,21 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static ArrayIndexAssignment AssignItem(SourceSpan span, Expression array, Expression index, Expression value) {
+        public static ArrayIndexAssignment AssignArrayIndex(Expression array, Expression index, Expression value) {
+            return AssignArrayIndex(SourceSpan.None, array, index, value);
+        }
+
+        public static ArrayIndexAssignment AssignArrayIndex(SourceSpan span, Expression array, Expression index, Expression value) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(index, "index");
+            Contract.RequiresNotNull(value, "value");
+            Contract.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
+
+            Type arrayType = array.Type;
+            Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+            Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
+            Contract.Requires(value.Type == arrayType.GetElementType(), "value", "Value type must match the array element type.");
+
             return new ArrayIndexAssignment(span, array, index, value);
         }
     }

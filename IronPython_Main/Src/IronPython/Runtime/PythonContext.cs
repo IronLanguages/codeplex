@@ -160,11 +160,11 @@ namespace IronPython.Runtime {
             // we choose ASCII by default, if the file has a Unicode pheader though
             // we'll automatically get it as unicode.
             Encoding default_encoding = encoding;
-            encoding = StringUtils.AsciiEncoding;
+            encoding = PythonAsciiEncoding.Instance;
 
             long start_position = stream.Position;
 
-            StreamReader sr = new StreamReader(stream, StringUtils.AsciiEncoding);
+            StreamReader sr = new StreamReader(stream, PythonAsciiEncoding.Instance);
             string line = sr.ReadLine();
             bool gotEncoding = false;
 
@@ -177,7 +177,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (gotEncoding && sr.CurrentEncoding != StringUtils.AsciiEncoding && encoding != sr.CurrentEncoding) {
+            if (gotEncoding && sr.CurrentEncoding != PythonAsciiEncoding.Instance && encoding != sr.CurrentEncoding) {
                 // we have both a BOM & an encoding type, throw an error
                 throw new IOException("file has both Unicode marker and PEP-263 file encoding");
             }

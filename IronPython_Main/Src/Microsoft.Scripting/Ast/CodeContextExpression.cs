@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
             : base(span) {
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(CodeContext);
             }

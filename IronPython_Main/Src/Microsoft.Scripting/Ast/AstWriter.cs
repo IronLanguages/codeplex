@@ -222,18 +222,18 @@ namespace Microsoft.Scripting.Ast {
 
         // StaticUnaryExpression
         public override bool Walk(UnaryExpression node) {
-            return DefaultWalk(node, "<staticunaryexpr> Type:" + node.ExpressionType.ToString());
+            return DefaultWalk(node, "<staticunaryexpr> Type:" + node.Type.ToString());
         }
         public override void PostWalk(UnaryExpression node) {
             Pop();
         }
 
-        // ConversionExpression
-        public override bool Walk(ConversionExpression node) {
-            Push("(" + node.ExpressionType.ToString() + ")");
+        // DynamicConversionExpression
+        public override bool Walk(DynamicConversionExpression node) {
+            Push("(" + node.Type.ToString() + ")");
             return true;
         }
-        public override void PostWalk(ConversionExpression node) {
+        public override void PostWalk(DynamicConversionExpression node) {
             Pop();
         }
 
@@ -388,7 +388,7 @@ namespace Microsoft.Scripting.Ast {
 
         // NewArrayExpression
         public override bool Walk(NewArrayExpression node) {
-            Push(".new (" + node.ExpressionType.FullName + ") = {");
+            Push(".new (" + node.Type.FullName + ") = {");
             return true;
         }
         public override void PostWalk(NewArrayExpression node) {

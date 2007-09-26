@@ -52,7 +52,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> _importSite = MakeImportSite();
+        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> _importSite = MakeImportSite();
 
         internal Importer(PythonEngine engine) {
             Debug.Assert(engine != null);
@@ -65,13 +65,13 @@ namespace IronPython.Runtime {
         /// Gateway into importing ... called from Ops.  Performs the initial import of
         /// a module and returns the module.
         /// </summary>
-        public object Import(CodeContext context, string fullName, List from) {
+        public object Import(CodeContext context, string fullName, PythonTuple from) {
             return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.locals(context), from);
         }
 
-        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object> MakeImportSite() {
+        private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> MakeImportSite() {
             // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return DynamicSite<object, string, IAttributesCollection, IAttributesCollection, List, object>.Create(CallAction.Simple);
+            return RuntimeHelpers.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>();
         }
 
         /// <summary>
@@ -303,6 +303,12 @@ namespace IronPython.Runtime {
         private object ImportTopAbsolute(CodeContext context, string name) {
             object ret;
             if (TryGetExistingModule(name, out ret)) {
+                if (IsReflected(ret)) {
+                    // Even though we found something in sys.modules, we need to check if a
+                    // clr.AddReference has invalidated it. So try ImportReflected again.
+                    ret = ImportReflected(context, name) ?? ret;
+                }
+
                 NamespaceTracker rp = ret as NamespaceTracker;
                 if (rp != null) {
                     context.ModuleContext.ShowCls = true;
@@ -421,6 +427,15 @@ namespace IronPython.Runtime {
             return res;
         }
 
+        private static bool IsReflected(object module) {
+            // corresponds to the list of types that can be returned by ImportReflected
+            return module is MemberTracker
+                || module is DynamicType
+                || module is ReflectedEvent
+                || module is ReflectedField
+                || module is BuiltinFunction;
+        }
+
         /// <summary>
         /// Initializes the specified module and returns the user-exposable PythonModule.
         /// </summary>
@@ -475,8 +490,8 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        private object ImportFromPath(CodeContext context, string name, string fullName, List path) {
-            object ret = null;
+        private ScriptModule ImportFromPath(CodeContext context, string name, string fullName, List path) {
+            ScriptModule ret = null;
             foreach (object dirname in path) {
                 string str;
                 if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
@@ -505,7 +520,7 @@ namespace IronPython.Runtime {
             return LoadFromSourceUnit(sourceUnit, name, path);
         }
 
-        private object LoadPackageFromSource(CodeContext context, string name, string path) {
+        private ScriptModule LoadPackageFromSource(CodeContext context, string name, string path) {
             return LoadModuleFromSource(context, name, Path.Combine(path, "__init__.py"));
         }
 

@@ -192,13 +192,32 @@ def test_string_mult():
 
 
 ###############################
-# equals overloading semantics
-def test_eq_overload():
+# (not)equals overloading semantics
+def test_eq_ne_overloads():
     class CustomEqual:
         def __eq__(self, other):
             return 7
     
     AreEqual((CustomEqual() == 1), 7)
+
+    for base_type in [
+                        dict, list, tuple, 
+                        float, long, int, complex,
+                        str, unicode,
+                        object, 
+                      ]:
+
+        class F(base_type):
+            def __eq__(self, other):
+                return other == 'abc'
+            def __ne__(self, other):
+                return other == 'def'
+        
+        AreEqual(F() == 'abc', True)
+        AreEqual(F() != 'def', True)
+        AreEqual(F() == 'qwe', False)
+        AreEqual(F() != 'qwe', False)
+
 
 
 # Test binary operators for all numeric types and types inherited from them

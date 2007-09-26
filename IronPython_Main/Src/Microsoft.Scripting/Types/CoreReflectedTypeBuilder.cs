@@ -273,7 +273,7 @@ namespace Microsoft.Scripting.Types {
                     Type t = context.LanguageContext.GetType();
                     DynamicSite<object, object> res;
                     if (!_sites.TryGetValue(t, out res)) {
-                        _sites[t] = res = new DynamicSite<object, object>(CallAction.Simple);
+                        _sites[t] = res = RuntimeHelpers.CreateSimpleCallSite<object, object>();
                     }
                     return res;
                 }
@@ -288,14 +288,7 @@ namespace Microsoft.Scripting.Types {
             }
 
             protected override DynamicSite<object, object> GetSite(CodeContext context) {
-                if (_site == null) {
-                    Interlocked.CompareExchange<DynamicSite<object, object>>(
-                        ref _site,
-                        new DynamicSite<object, object>(CallAction.Simple),
-                        null);
-                }
-
-                return _site;
+                return RuntimeHelpers.CreateSimpleCallSite<object, object>(ref _site);
             }
         }
 
@@ -352,7 +345,7 @@ namespace Microsoft.Scripting.Types {
                     Type t = context.LanguageContext.GetType();
                     DynamicSite<object, object, object> res;
                     if (!_sites.TryGetValue(t, out res)) {
-                        _sites[t] = res = new DynamicSite<object, object, object>(CallAction.Simple);
+                        _sites[t] = res = RuntimeHelpers.CreateSimpleCallSite<object, object, object>();
                     }
                     return res;
                 }
@@ -367,14 +360,7 @@ namespace Microsoft.Scripting.Types {
             }
 
             protected override DynamicSite<object, object, object> GetSite(CodeContext context) {
-                if (_site == null) {
-                    Interlocked.CompareExchange<DynamicSite<object, object, object>>(
-                        ref _site,
-                        new DynamicSite<object, object, object>(CallAction.Simple),
-                        null);
-                }
-
-                return _site;
+                return RuntimeHelpers.CreateSimpleCallSite(ref _site);
             }
         }
 
@@ -431,7 +417,7 @@ namespace Microsoft.Scripting.Types {
                     Type t = context.LanguageContext.GetType();
                     DynamicSite<object, object, object, object> res;
                     if (!_sites.TryGetValue(t, out res)) {
-                        _sites[t] = res = new DynamicSite<object, object, object, object>(CallAction.Simple);
+                        _sites[t] = res = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object>();
                     }
                     return res;
                 }
@@ -446,14 +432,7 @@ namespace Microsoft.Scripting.Types {
             }
 
             protected override DynamicSite<object, object, object, object> GetSite(CodeContext context) {
-                if (_site == null) {
-                    Interlocked.CompareExchange<DynamicSite<object, object, object, object>>(
-                        ref _site,
-                        new DynamicSite<object, object, object, object>(CallAction.Simple),
-                        null);
-                }
-
-                return _site;
+                return RuntimeHelpers.CreateSimpleCallSite(ref _site);
             }
         }
         #endregion

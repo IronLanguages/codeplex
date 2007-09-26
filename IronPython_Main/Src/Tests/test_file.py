@@ -108,6 +108,19 @@ def test_read_write_fidelity():
 
     # Check nothing changed.
     Assert(data == orig_data)
+    
+    # writing non-unicode characters > 127 should be preserved
+    x = open(temp_file, 'w')
+    x.write('\xa33')
+    x.close()
+    
+    x = open(temp_file)
+    data = x.read()
+    x.close()
+    
+    AreEqual(ord(data[0]), 163)
+    AreEqual(ord(data[1]), 51)
+    
 
 # Helper used to format newline characters into a visible format.
 def format_newlines(string):
@@ -438,17 +451,15 @@ def test_encoding():
     #verify we start w/ ASCII
     import sys
 
-    if not is_cli: return
-    
     f = file(temp_file, 'w')
-    f.write(u'\u6211')
-    f.close()
-
-    f = file(temp_file, 'r')
-    txt = f.read()
-    f.close()
-    Assert(txt != u'\u6211')
-
+    # we throw on flush, CPython throws on write, so both write & close need to catch
+    try:
+        f.write(u'\u6211')
+        f.close()
+        AssertUnreachable()
+    except UnicodeEncodeError:
+        pass
+    
     if hasattr(sys, "setdefaultencoding"):
         #and verify UTF8 round trips correctly
         setenc = sys.setdefaultencoding

@@ -27,17 +27,9 @@ namespace Microsoft.Scripting.Ast {
 
         internal ArrayIndexExpression(SourceSpan span, Expression array, Expression index)
             : base(span) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresNotNull(index, "index");
-
-            Type arrayType = array.ExpressionType;
-            if (!arrayType.IsArray) {
-                throw new NotSupportedException("Expression type of the array must be array (Type.IsArray)!");
-            }
-
             _array = array;
             _index = index;
-            _elementType = arrayType.GetElementType();
+            _elementType = array.Type.GetElementType();
         }
 
         public Expression Array {
@@ -48,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _index; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _elementType;
             }
@@ -56,15 +48,15 @@ namespace Microsoft.Scripting.Ast {
 
         protected override object DoEvaluate(CodeContext context) {
             object[] array = (object[])_array.Evaluate(context);
-            int index = (int)context.LanguageContext.Binder.Convert(_index.Evaluate(context), typeof(int));
+            int index = (int)_index.Evaluate(context);
             return array[index];
         }
 
         public override void Emit(CodeGen cg) {
             // Emit the array reference
             _array.Emit(cg);
-            // Emit the index (as integer)
-            _index.EmitAs(cg, typeof(int));
+            // Emit the index
+            _index.Emit(cg);
             // Load the array element
             cg.EmitLoadElement(_elementType);
         }
@@ -79,10 +71,18 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static ArrayIndexExpression ReadItem(Expression array, Expression index) {
-            return ReadItem(SourceSpan.None, array, index);
+        public static ArrayIndexExpression ArrayIndex(Expression array, Expression index) {
+            return ArrayIndex(SourceSpan.None, array, index);
         }
-        public static ArrayIndexExpression ReadItem(SourceSpan span, Expression array, Expression index) {
+        public static ArrayIndexExpression ArrayIndex(SourceSpan span, Expression array, Expression index) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(index, "index");
+            Contract.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
+
+            Type arrayType = array.Type;
+            Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+            Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
+
             return new ArrayIndexExpression(span, array, index);
         }
     }

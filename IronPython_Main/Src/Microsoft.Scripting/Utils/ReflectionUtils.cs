@@ -237,7 +237,7 @@ namespace Microsoft.Scripting.Utils {
 
             if (returnType == typeof(void)) {
                 switch (arguments.Length) {
-                    case 0: return typeof(Function);
+                    case 0: return typeof(Action);
                     case 1: result = typeof(Action<>); break;
                     case 2: result = typeof(Action<,>); break;
                     case 3: result = typeof(Action<,,>); break;

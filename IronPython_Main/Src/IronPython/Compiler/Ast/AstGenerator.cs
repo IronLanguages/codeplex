@@ -138,7 +138,7 @@ namespace IronPython.Compiler.Ast {
         internal static MSAst.Expression ConvertIfNeeded(MSAst.Expression expression, Type type) {
             Debug.Assert(expression != null);
 
-            Type from = expression.ExpressionType;
+            Type from = expression.Type;
 
             // No conversion necessary
             if (type.IsAssignableFrom(from) && (type.IsValueType == from.IsValueType)) {
@@ -146,7 +146,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             // Add conversion step to the AST
-            return Ast.Convert(expression.Span, expression, type);
+            return Ast.DynamicConvert(expression.Span, expression, type);
         }
 
         #region Utility methods

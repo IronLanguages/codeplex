@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _operand; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get { return _expressionType; }
         }
 
@@ -129,7 +129,7 @@ namespace Microsoft.Scripting.Ast {
         public static UnaryExpression Negate(SourceSpan span, Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
 
-            return new UnaryExpression(span, expression, UnaryOperators.Negate, expression.ExpressionType);
+            return new UnaryExpression(span, expression, UnaryOperators.Negate, expression.Type);
         }
 
         public static UnaryExpression Not(Expression expression) {

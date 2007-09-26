@@ -157,7 +157,7 @@ namespace IronPython.Runtime {
 
             _dict[Symbols.SetDefaultEncoding] = descr.UncheckedGetAttribute(this);
 
-            _defaultEncoding = StringUtils.AsciiEncoding;
+            _defaultEncoding = PythonAsciiEncoding.Instance;
             byteorder = BitConverter.IsLittleEndian ? "little" : "big";
             copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
             maxint = Int32.MaxValue;

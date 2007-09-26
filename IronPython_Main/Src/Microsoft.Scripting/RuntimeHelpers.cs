@@ -25,6 +25,7 @@ using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -247,10 +248,6 @@ namespace Microsoft.Scripting {
             return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context.ModuleContext);
         }
 
-        public static void AddFunctionEnvironmentToArray(FunctionEnvironmentNDictionary funcEnv) {
-            funcEnv.EnvironmentValues[0] = funcEnv;
-        }       
-
         /// <summary>
         /// Helper method to create an instance.  Work around for Silverlight where Activator.CreateInstance
         /// is SecuritySafeCritical.
@@ -266,6 +263,120 @@ namespace Microsoft.Scripting {
         public static T CreateDelegate<T>(object callable) {
             return (T)(object)DynamicHelpers.GetDelegate(callable, typeof(T), null);
         }
+
+        #region Dynamic Sites Construction Helpers // TODO: generate this
+
+        public static DynamicSite<T0, R> CreateSimpleCallSite<T0, R>() {
+            return new DynamicSite<T0, R>(CallAction.Make(0));
+        }
+
+        public static DynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>() {
+            return new DynamicSite<T0, T1, R>(CallAction.Make(1));
+        }
+
+        public static DynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>() {
+            return new DynamicSite<T0, T1, T2, R>(CallAction.Make(2));
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>() {
+            return new DynamicSite<T0, T1, T2, T3, R>(CallAction.Make(3));
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>() {
+            return new DynamicSite<T0, T1, T2, T3, T4, R>(CallAction.Make(4));
+        }
+
+        public static FastDynamicSite<T0, R> CreateSimpleCallSite<T0, R>(CodeContext context) {
+            return new FastDynamicSite<T0, R>(context, CallAction.Make(0));
+        }
+
+        public static FastDynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(CodeContext context) {
+            return new FastDynamicSite<T0, T1, R>(context, CallAction.Make(1));
+        }
+
+        public static FastDynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(CodeContext context) {
+            return new FastDynamicSite<T0, T1, T2, R>(context, CallAction.Make(2));
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(CodeContext context) {
+            return new FastDynamicSite<T0, T1, T2, T3, R>(context, CallAction.Make(3));
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(CodeContext context) {
+            return new FastDynamicSite<T0, T1, T2, T3, T4, R>(context, CallAction.Make(4));
+        }
+
+        public static DynamicSite<T0, R> CreateSimpleCallSite<T0, R>(ref DynamicSite<T0, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<DynamicSite<T0, R>>(ref site, CreateSimpleCallSite<T0, R>(), null);
+            }
+            return site;
+        }
+
+        public static DynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(ref DynamicSite<T0, T1, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<DynamicSite<T0, T1, R>>(ref site, CreateSimpleCallSite<T0, T1, R>(), null);
+            }
+            return site;
+        }
+
+        public static DynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(ref DynamicSite<T0, T1, T2, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<DynamicSite<T0, T1, T2, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, R>(), null);
+            }
+            return site;
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(ref DynamicSite<T0, T1, T2, T3, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<DynamicSite<T0, T1, T2, T3, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, R>(), null);
+            }
+            return site;
+        }
+
+        public static DynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(ref DynamicSite<T0, T1, T2, T3, T4, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<DynamicSite<T0, T1, T2, T3, T4, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(), null);
+            }
+            return site;
+        }
+
+        public static FastDynamicSite<T0, R> CreateSimpleCallSite<T0, R>(CodeContext context, ref FastDynamicSite<T0, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<FastDynamicSite<T0, R>>(ref site, CreateSimpleCallSite<T0, R>(context), null);
+            }
+            return site;
+        }
+
+        public static FastDynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(CodeContext context, ref FastDynamicSite<T0, T1, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<FastDynamicSite<T0, T1, R>>(ref site, CreateSimpleCallSite<T0, T1, R>(context), null);
+            }
+            return site;
+        }
+
+        public static FastDynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, R>(context), null);
+            }
+            return site;
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, T3, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, T3, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, R>(context), null);
+            }
+            return site;
+        }
+
+        public static FastDynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, T3, T4, R> site) {
+            if (site == null) {
+                Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, T3, T4, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(context), null);
+            }
+            return site;
+        }
+
+        #endregion
 
         public static IAttributesCollection GetLocalDictionary(CodeContext context) {
             return context.Scope.Dict;

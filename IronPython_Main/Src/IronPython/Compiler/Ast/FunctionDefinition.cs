@@ -284,7 +284,6 @@ namespace IronPython.Compiler.Ast {
                 for (int i = _decorators.Count - 1; i >= 0; i--) {
                     Expression decorator = _decorators[i];
                     ret = Ast.Action.Call(
-                        CallAction.Simple,
                         typeof(object),
                         ag.Transform(decorator),
                         ret);

@@ -82,7 +82,7 @@ namespace IronPython.Runtime {
         [Documentation("__import__(name, globals, locals, fromlist) -> module\n\nImport a module.")]
         public static object __import__(CodeContext context, string name, object globals, object locals, object fromList) {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
-            List from = fromList as List;
+            ISequence from = fromList as ISequence;
 
             object ret = PythonEngine.CurrentEngine.Importer.ImportModule(context, name, from != null && from.GetLength() > 0);
             if (ret == null) {
@@ -93,7 +93,9 @@ namespace IronPython.Runtime {
             if (mod != null && from != null) {
                 string strAttrName;
                 object attrValue;
-                foreach (object attrName in from) {
+                for (int i = 0; i < from.GetLength(); i++) {
+                    object attrName = from[i];
+
                     if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null && strAttrName != "*") {
                         try {
                             attrValue = PythonEngine.CurrentEngine.Importer.ImportFrom(context, mod, strAttrName);
@@ -242,7 +244,9 @@ namespace IronPython.Runtime {
             ScriptCode compiledCode = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, lc);
             compiledCode.EnsureCompiled();
 
-            return new FunctionCode(compiledCode, cflags);
+            FunctionCode res = new FunctionCode(compiledCode, cflags);
+            res.SetFilename(filename);
+            return res;
         }
 
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
@@ -368,9 +372,6 @@ namespace IronPython.Runtime {
             return PythonModuleOps.CompileFlowTrueDivision(expr_code, context.LanguageContext).Run(scope, context.ModuleContext, true);
         }
 
-
-#if !SILVERLIGHT // files
-
         public static void execfile(CodeContext context, object filename) {
             execfile(context, filename, null, null);
         }
@@ -414,7 +415,6 @@ namespace IronPython.Runtime {
         }
 
         public static object file = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
-#endif
 
         public static object filter(object function, object list) {
             string str = list as string;
@@ -515,6 +515,7 @@ namespace IronPython.Runtime {
             BuiltinFunction bf;
             PythonFunction pf;
             BuiltinMethodDescriptor methodDesc;
+            Method m;
             string strVal;
             ScriptModule sm;
             OldClass oc;
@@ -608,10 +609,24 @@ namespace IronPython.Runtime {
 
                 AppendMultiLine(doc, PythonBuiltinFunctionOps.GetDocumentation(bf), indent + 1);
             } else if ((pf = o as PythonFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}\n\n", pf.Name, pf.Module);
+                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", pf.Name, pf.Module);
 
                 AppendIndent(doc, indent);
-                doc.AppendFormat("{0}({1})\n", pf.Name, String.Join(", ", pf.ArgNames));
+                doc.Append(pf.GetSignatureString());
+                string pfDoc = Converter.ConvertToString(pf.Documentation);
+                if (!String.IsNullOrEmpty(pfDoc)) {
+                    AppendMultiLine(doc, pfDoc, indent);
+                }
+            } else if ((m = o as Method) != null && ((pf = m.Function as PythonFunction) != null)) {
+                if (indent == 0) doc.AppendFormat("Help on method {0} in module {1}:\n\n", pf.Name, pf.Module);
+
+                AppendIndent(doc, indent);
+                doc.Append(pf.GetSignatureString());
+                if (m.Self == null) {
+                    doc.AppendFormat(" unbound {0} method\n", PythonOps.ToString(m.DeclaringClass));
+                } else {
+                    doc.AppendFormat(" method of {0} instance\n", PythonOps.ToString(m.DeclaringClass));
+                }
                 string pfDoc = Converter.ConvertToString(pf.Documentation);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
@@ -741,7 +756,7 @@ namespace IronPython.Runtime {
             
             if (param.Length == 2) {
                 FastDynamicSite<object, object, object> mapSite = null;
-                if(func != null) mapSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, CallAction.Simple);
+                if (func != null) mapSite = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
                 
                 IEnumerator i = PythonOps.GetEnumerator(param[1]);
                 while (i.MoveNext()) {
@@ -772,7 +787,9 @@ namespace IronPython.Runtime {
                     }
                     if (func != null) {
                         // splat call w/ args, can't use site here yet...
-                        if (mapSite == null) mapSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
+                        if (mapSite == null) mapSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, 
+                            CallAction.Make(new CallSignature(ArgumentKind.List)));
+
                         ret.AddNoLock(mapSite.Invoke(func, args));
                     } else {
                         ret.AddNoLock(PythonTuple.MakeTuple(args));
@@ -1212,26 +1229,11 @@ namespace IronPython.Runtime {
         }
 
         public static double round(double x) {
-#if !SILVERLIGHT
-            return Math.Round(x, MidpointRounding.AwayFromZero);
-#else
-            return Math.Round(x); // TODO: ToEven semantics
-#endif
+            return MathUtils.RoundAwayFromZero(x);
         }
 
         public static double round(double x, int n) {
-            // values are rounded to 10 ^ n.  For negative values
-            // we need to handle this ourselves.
-            if (n < 0) {
-                double factor = Math.Pow(10.0, -n);
-#if !SILVERLIGHT
-                return factor * Math.Round(x / factor, MidpointRounding.AwayFromZero);
-#else
-                return factor * Math.Round(x / factor);// TODO: ToEven semantics
-#endif
-
-            }
-            return Math.Round(x, n);
+            return MathUtils.RoundAwayFromZero(x, n);
         }
 
         public static void setattr(CodeContext context, object o, string name, object val) {

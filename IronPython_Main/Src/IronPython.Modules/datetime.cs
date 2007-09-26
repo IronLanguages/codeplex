@@ -918,10 +918,10 @@ namespace IronPython.Modules {
             [PythonName("utctimetuple")]
             public object GetUtcTimeTuple() {
                 if (_tz == null)
-                    return PythonTime.GetDateTimeTuple(InternalDateTime, null, true);
+                    return PythonTime.GetDateTimeTuple(InternalDateTime, false);
                 else {
                     PythonDateTimeCombo dtc = this - GetUtcOffset();
-                    return PythonTime.GetDateTimeTuple(dtc.InternalDateTime, null, true);
+                    return PythonTime.GetDateTimeTuple(dtc.InternalDateTime, false);
                 }
             }
 

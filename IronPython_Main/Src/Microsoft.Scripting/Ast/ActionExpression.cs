@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _arguments; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _result;
             }
@@ -70,14 +70,14 @@ namespace Microsoft.Scripting.Ast {
         private Type[] GetSiteTypes() {
             Type[] ret = new Type[_arguments.Count + 1];
             for (int i = 0; i < _arguments.Count; i++) {
-                ret[i] = _arguments[i].ExpressionType;
+                ret[i] = _arguments[i].Type;
             }
             ret[_arguments.Count] = _result;
             return ret;
         }
 
         // Action expression is different in that it mutates its
-        // ExpressionType based on the need of the outer codegen.
+        // Type based on the need of the outer codegen.
         // Therefore, unless asked explicitly, it will emit itself as object.
         public override void Emit(CodeGen cg) {
             bool fast;
@@ -110,7 +110,7 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 // Emit the arguments
                 for (int arg = 0; arg < _arguments.Count; arg++) {
-                    Debug.Assert(parameters[arg + first].ParameterType == _arguments[arg].ExpressionType);
+                    Debug.Assert(parameters[arg + first].ParameterType == _arguments[arg].Type);
                     _arguments[arg].Emit(cg);
                 }
             }
@@ -231,17 +231,17 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // TODO:
-            public static ActionExpression InvokeMember(SymbolId name, Type result, InvokeMemberActionFlags flags, ArgumentInfo[] argumentInfos, 
+            public static ActionExpression InvokeMember(SymbolId name, Type result, InvokeMemberActionFlags flags, CallSignature signature, 
                 params Expression[] arguments) {
 
-                return InvokeMember(SourceSpan.None, name, result, flags, argumentInfos, arguments);
+                return InvokeMember(SourceSpan.None, name, result, flags, signature, arguments);
             }
 
             // TODO:
             public static ActionExpression InvokeMember(SourceSpan span, SymbolId name, Type result, InvokeMemberActionFlags flags,
-                ArgumentInfo[] argumentInfos, params Expression[] arguments) {
+                CallSignature signature, params Expression[] arguments) {
 
-                return new ActionExpression(span, new InvokeMemberAction(name, flags, argumentInfos), arguments, result);
+                return new ActionExpression(span, InvokeMemberAction.Make(name, flags, signature), arguments, result);
             }
        
             /// <summary>
@@ -253,6 +253,14 @@ namespace Microsoft.Scripting.Ast {
             /// <returns>New instance of the ActionExpression</returns>
             public static ActionExpression Call(CallAction action, Type result, params Expression[] arguments) {
                 return Call(SourceSpan.None, action, result, arguments);
+            }
+
+            public static ActionExpression Call(Type result, params Expression[] arguments) {
+                return Call(SourceSpan.None, CallAction.Make(arguments.Length - 1), result, arguments);
+            }
+
+            public static ActionExpression Call(SourceSpan span, Type result, params Expression[] arguments) {
+                return Call(span, CallAction.Make(arguments.Length - 1), result, arguments);
             }
 
             /// <summary>
@@ -288,6 +296,14 @@ namespace Microsoft.Scripting.Ast {
             /// <returns>New instance of the ActionExpression</returns>
             public static ActionExpression Create(SourceSpan span, CreateInstanceAction action, Type result, params Expression[] arguments) {
                 return new ActionExpression(span, action, arguments, result);
+            }
+
+            public static ActionExpression Create(Type result, params Expression[] arguments) {
+                return Create(SourceSpan.None, result, arguments);
+            }
+            
+            public static ActionExpression Create(SourceSpan span, Type result, params Expression[] arguments) {
+                return new ActionExpression(span, CreateInstanceAction.Make(arguments.Length - 1), arguments, result);
             }
         }
     }

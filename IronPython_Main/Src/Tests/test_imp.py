@@ -259,7 +259,6 @@ def test_init_frozen():
             Fail("return object should be None!")
     
 # is_builtin
-@skip('silverlightbug?')
 def test_is_builtin():
    
     AreEqual(imp.is_builtin("xxx"),0)
@@ -274,12 +273,16 @@ def test_is_builtin():
     
     AreEqual(imp.is_builtin("cPickle"),1)
     AreEqual(imp.is_builtin("_random"),1)
-    AreEqual(imp.is_builtin("nt"),1)
+        
+    # nt module disabled in Silverlight
+    if not is_silverlight:
+        AreEqual(imp.is_builtin("nt"),1)
+        
     AreEqual(imp.is_builtin("thread"),1)
     
     
     # there are a several differences between ironpython and cpython
-    if is_cli:
+    if is_cli or is_silverlight:
         AreEqual(imp.is_builtin("copy_reg"),1)
         AreEqual(imp.is_builtin("sys"),0)
         AreEqual(imp.is_builtin("__builtin__"),1)
@@ -389,6 +392,24 @@ def test_constructed_module():
 
     del sys.modules['TopModule']
 
+def test_import_from_custom():
+    import __builtin__
+    try:
+        class foo(object):
+            b = 'abc'
+        def __import__(name, globals, locals, fromlist):
+            global received
+            received = name, fromlist
+            return foo()
+    
+        saved = __builtin__.__import__ 
+        __builtin__.__import__ = __import__
+    
+        from a import b
+        AreEqual(received, ('a', ('b', )))
+    finally:
+        __builtin__.__import__ = saved
+        
 run_test(__name__)
 if is_silverlight==False:
     delete_all_f(__name__)

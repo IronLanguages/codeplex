@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
             internal set { _defined = value; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get { return _variable.Type; }
         }
 
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal override void EmitAddress(CodeGen cg, Type asType) {
-            if (asType == ExpressionType) {
+            if (asType == Type) {
                 _vr.Slot.EmitGetAddr(cg);
             } else {
                 base.EmitAddress(cg, asType);

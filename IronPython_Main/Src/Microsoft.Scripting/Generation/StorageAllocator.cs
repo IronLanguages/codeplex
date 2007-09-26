@@ -14,20 +14,18 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Diagnostics;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    /// <summary>
-    /// Represents a namespace. Slots can be created, look up by name, or relocated into
-    /// this namespace.
-    /// </summary>
-    public abstract class StorageAllocator {
+    internal abstract class StorageAllocator {
         public virtual void PrepareForEmit(CodeGen cg) {
         }
 
         // TODO: change the parameter to take Variable !!!
         public abstract Storage AllocateStorage(SymbolId name, Type type);
+
+        public virtual Slot GetAccessSlot(CodeGen cg, CodeBlock block) {
+            return null;
+        }
     }
 }

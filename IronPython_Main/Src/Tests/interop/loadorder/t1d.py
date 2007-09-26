@@ -36,5 +36,5 @@ AreEqual(NamespaceOrType[int].Flag, "NamespaceOrType`1")
 
 import NamespaceOrType
 
-AssertError(AttributeError, lambda: NamespaceOrType[int])
+AssertError(ValueError, lambda: NamespaceOrType[int])
 AreEqual(NamespaceOrType.C.Flag, "NamespaceOrType.C")

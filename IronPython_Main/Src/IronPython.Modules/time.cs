@@ -47,7 +47,7 @@ namespace IronPython.Modules {
         public static int altzone;
         public static int daylight;
         public static int timezone;
-        public static string tzname;
+        public static PythonTuple tzname;
         public static bool accept2dyear = true;
 
 #if !SILVERLIGHT    // System.Diagnostics.Stopwatch
@@ -55,19 +55,23 @@ namespace IronPython.Modules {
 #endif
 
         static PythonTime() {
-            daylight = DateTime.Now.IsDaylightSavingTime() ? 1 : 0;
-
+            
             // altzone, timezone are offsets from UTC in seconds, so they always fit in the
             // -13*3600 to 13*3600 range and are safe to cast to ints
 #if !SILVERLIGHT
-            tzname = TimeZone.CurrentTimeZone.StandardName;
+            DaylightTime dayTime = TimeZone.CurrentTimeZone.GetDaylightChanges(DateTime.Now.Year);
+            daylight = (dayTime.Start == dayTime.End && dayTime.Start == DateTime.MinValue && dayTime.Delta.Ticks == 0) ? 0 : 1;
+
+            tzname = PythonTuple.MakeTuple(TimeZone.CurrentTimeZone.StandardName, TimeZone.CurrentTimeZone.DaylightName);
             altzone = (int)-TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).TotalSeconds;
             timezone = altzone;
             if (daylight != 0) {
-                timezone += (int)TimeZone.CurrentTimeZone.GetDaylightChanges(DateTime.Now.Year).Delta.TotalSeconds;
+                timezone += (int)dayTime.Delta.TotalSeconds;
             }
+            
 #else
-            tzname = TimeZoneInfo.Local.StandardName;
+            daylight = TimeZoneInfo.Local.SupportsDaylightSavingTime ? 1 : 0;
+            tzname = PythonTuple.MakeTuple(TimeZoneInfo.Local.StandardName, TimeZoneInfo.Local.DaylightName);
             timezone = (int)-TimeZoneInfo.Local.BaseUtcOffset.TotalSeconds;
             altzone = (int)-TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalSeconds;
 #endif
@@ -124,7 +128,7 @@ namespace IronPython.Modules {
 
         [PythonName("localtime")]
         public static PythonTuple LocalTime() {
-            return GetDateTimeTuple(DateTime.Now);
+            return GetDateTimeTuple(DateTime.Now, DateTime.Now.IsDaylightSavingTime());
         }
 
         [PythonName("localtime")]
@@ -133,12 +137,13 @@ namespace IronPython.Modules {
 
             long intSeconds = GetDateTimeFromObject(seconds);
 
-            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond, DateTimeKind.Local));
+            DateTime dt = new DateTime(intSeconds * TimeSpan.TicksPerSecond, DateTimeKind.Local);
+            return GetDateTimeTuple(dt, dt.IsDaylightSavingTime());
         }
 
         [PythonName("gmtime")]
         public static PythonTuple UniversalTime() {
-            return GetDateTimeTuple(DateTime.Now.ToUniversalTime());
+            return GetDateTimeTuple(DateTime.Now.ToUniversalTime(), false);
         }
 
         [PythonName("gmtime")]
@@ -147,7 +152,7 @@ namespace IronPython.Modules {
 
             long intSeconds = GetDateTimeFromObject(seconds);
 
-            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond).ToUniversalTime());
+            return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond).ToUniversalTime(), false);
         }
 
         [PythonName("mktime")]
@@ -402,36 +407,44 @@ namespace IronPython.Modules {
         internal static PythonTuple GetDateTimeTuple(DateTime dt) {
             return GetDateTimeTuple(dt, null);
         }
+
         internal static PythonTuple GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz) {
-            return GetDateTimeTuple(dt, tz, false);
-        }
-        internal static StructTime GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz, bool utc) {
-            int last;
-            if (utc) {
-                last = 0;
+            int last = -1;
+
+            if (tz == null) {
+                last = -1;
             } else {
-                if (tz == null) {
+                PythonDateTime.PythonTimeDelta delta = tz.DaylightSavingTime(dt);
+                PythonDateTime.ThrowIfInvalid(delta, "dst");
+                if (delta == null) {
                     last = -1;
                 } else {
-                    PythonDateTime.PythonTimeDelta delta = tz.DaylightSavingTime(dt);
-                    PythonDateTime.ThrowIfInvalid(delta, "dst");
-                    if (delta == null) {
-                        last = -1;
-                    } else {
-                        last = delta.NonZero() ? 1 : 0;
-                    }
+                    last = delta.NonZero() ? 1 : 0;
                 }
             }
 
             return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, last);
         }
 
+        internal static StructTime GetDateTimeTuple(DateTime dt, bool dstMode) {
+            return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, dstMode ? 1 : 0);
+        }
+
         private static DateTime GetDateTimeFromTuple(PythonTuple t) {
             if (t == null) return DateTime.Now;
 
             int[] ints = ValidateDateTimeTuple(t);
+            DateTime res = new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
 
-            return new DateTime(ints[YearIndex], ints[MonthIndex], ints[DayIndex], ints[HourIndex], ints[MinuteIndex], ints[SecondIndex]);
+            if (ints[IsDaylightSavingsIndex] == 0) {
+#if !SILVERLIGHT
+                DaylightTime dayTime = TimeZone.CurrentTimeZone.GetDaylightChanges(ints[YearIndex]);
+                res = res + dayTime.Delta;
+#else
+                res = res + (TimeZoneInfo.Local.GetUtcOffset(res) - TimeZoneInfo.Local.BaseUtcOffset);
+#endif
+            }
+            return res;
         }
 
         private static int[] ValidateDateTimeTuple(PythonTuple t) {

@@ -27,6 +27,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Types;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -87,32 +88,72 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static PropertyDescriptorCollection GetProperties(object self) {
-            List<PropertyDescriptor> props = new List<PropertyDescriptor>(GetPropertiesImpl(self));
-            return new PropertyDescriptorCollection(props.ToArray());
+            return new PropertyDescriptorCollection(GetPropertiesImpl(self, new Attribute[0]));
         }
 
         public static PropertyDescriptorCollection GetProperties(object self, Attribute[] attributes) {
-            if (attributes == null || attributes.Length == 0) return GetProperties(self);
-            //!!! update when we support attributes on python types
-
-            // you want things w/ attributes?  we don't have attributes!
-            return PropertyDescriptorCollection.Empty;
+            return new PropertyDescriptorCollection(GetPropertiesImpl(self, attributes));
         }
 
-        static IEnumerable<PropertyDescriptor> GetPropertiesImpl(object self) {
+        static PropertyDescriptor[] GetPropertiesImpl(object self, Attribute[] attributes) {
             IList<object> attrNames = PythonOps.GetAttrNames(DefaultContext.DefaultCLS, self);
+            List<PropertyDescriptor> descrs = new List<PropertyDescriptor>();
             if (attrNames != null) {
                 foreach (object o in attrNames) {
                     string s = o as string;
                     if (s == null) continue;
-                    object attrVal = PythonOps.GetBoundAttr(DefaultContext.DefaultCLS, self, SymbolTable.StringToId(s));
+
+                    DynamicTypeSlot attrSlot;
+                    object attrVal;
+
+                    if (self is OldInstance) {
+                        if (!((OldInstance)self).__class__.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
+                            continue;
+                        }
+                        attrSlot = attrVal as DynamicTypeSlot;
+                    } else {
+                        DynamicType dt = DynamicHelpers.GetDynamicType(self);
+                        if (!dt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(s), out attrSlot)) {
+                            continue;
+                        }
+                    }
+
+                    if(attrSlot == null || !attrSlot.TryGetBoundValue(DefaultContext.DefaultCLS, self, DynamicHelpers.GetDynamicType(self), out attrVal)) continue;
+
                     Type attrType = (attrVal == null) ? typeof(NoneTypeOps) : attrVal.GetType();
-                    yield return new SuperDynamicObjectPropertyDescriptor(
-                        s,
-                        attrType,
-                        self.GetType());
+
+                    if (ShouldIncludeProperty(attrSlot, attributes)) {
+                        descrs.Add(new SuperDynamicObjectPropertyDescriptor(s, attrType, self.GetType()));
+                    }
                 }
             }
+
+            return descrs.ToArray();
+        }
+
+        private static bool ShouldIncludeProperty(DynamicTypeSlot attrSlot, Attribute[] attributes) {
+            bool include = true;
+            foreach (Attribute attr in attributes) {
+                ReflectedProperty rp;
+
+                if ((rp = attrSlot as ReflectedProperty) != null && rp.Info != null) {
+                    include &= rp.Info.IsDefined(attr.GetType(), true);
+                } else if (attr.GetType() == typeof(BrowsableAttribute)) {
+                    DynamicTypeUserDescriptorSlot userSlot = attrSlot as DynamicTypeUserDescriptorSlot;
+                    if (userSlot == null) {
+                        if (!(attrSlot is PythonProperty)) {
+                            include = false;
+                        }
+                    } else if (!(userSlot.Value is ISuperDynamicObject)) {
+                        include = false;
+                    }
+                } else {
+                    // unknown attribute, Python doesn't support attributes, so we
+                    // say this doesn't have that attribute.
+                    include = false;
+                }
+            }
+            return include;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "pd")]

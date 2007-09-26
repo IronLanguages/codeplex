@@ -306,21 +306,33 @@ namespace Microsoft.Scripting.Hosting {
 
             IConsole console = _options.LanguageProvider.GetConsole(command_line, engine, console_options);
 
-            try {
-                if (console_options.HandleExceptions) {
-                    try {
-                        return command_line.Run(engine, console, console_options);
-                    } catch (Exception e) {
-                        UnhandledException(engine, e);
-                        return 1;
-                    }
-                } else {
-                    return command_line.Run(engine, console, console_options);
+            int result;
+            if (console_options.HandleExceptions) {
+                try {
+                    result = command_line.Run(engine, console, console_options);
+                } catch (Exception e) {
+                    UnhandledException(engine, e);
+                    result = 1;
                 }
-            } finally {
+
                 ScriptEngine se = engine as ScriptEngine;
                 if (se != null) {
-                    se.DumpDebugInfo();
+                    try {
+                        se.DumpDebugInfo();
+                    } catch {
+                        result = 1;
+                    }
+                }
+
+                return result;
+            } else {
+                try {
+                    return command_line.Run(engine, console, console_options);
+                } finally {
+                    ScriptEngine se = engine as ScriptEngine;
+                    if (se != null) {
+                        se.DumpDebugInfo();
+                    }
                 }
             }
         }

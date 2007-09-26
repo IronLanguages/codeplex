@@ -970,6 +970,11 @@ namespace IronPythonTest {
         }
     }
 
+    public class RudeObjectOverride {
+        public override string ToString() {
+            return null;
+        }
+    }
 }
 
 

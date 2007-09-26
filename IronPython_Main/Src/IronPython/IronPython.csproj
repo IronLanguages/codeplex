@@ -176,6 +176,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Runtime\PythonAsciiEncoding.cs" />
     <Compile Include="Runtime\Attributes.cs" />
     <Compile Include="Runtime\Builtin.cs" />
     <Compile Include="Runtime\Builtin.Generated.cs" />

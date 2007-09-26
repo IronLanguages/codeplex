@@ -41,15 +41,20 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Note that for module-level code, globals and locals are the same.
     /// </summary>
-    public class ScopeAllocator {
-        private ScopeAllocator _parent;
-        private StorageAllocator _allocator;
+    class ScopeAllocator {
+        private readonly ScopeAllocator _parent;
+        private readonly StorageAllocator _allocator;
 
         private CodeBlock _block;
 
         // Slots to access outer scopes. For now this is dictionary, even though list would be better.
         // as soon as ScopeId goes away, make this list or something better.
-        private Dictionary<CodeBlock, Slot> _scopeAccess = new Dictionary<CodeBlock, Slot>();
+        private Dictionary<CodeBlock, Slot> _closureAccess;
+
+        // Slots to access scopes, including local. The closure access slots are closure specific,
+        // and some variables in local scope may need access slot which is different than that
+        // for closures
+        private Dictionary<CodeBlock, Slot> _scopeAccess;
 
         private List<Slot> _generatorTemps;
         private int _generatorTempIndex;
@@ -61,7 +66,6 @@ namespace Microsoft.Scripting.Generation {
 
         public StorageAllocator LocalAllocator {
             get { return _allocator; }
-            set { _allocator = value; }
         }
 
         public StorageAllocator GlobalAllocator {
@@ -74,22 +78,29 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public CodeBlock ActiveScope {
-            get {
-                Debug.Assert(_block != null);
-                return _block;
-            }
+        public CodeBlock Block {
+            get { return _block; }
             set { _block = value; }
         }
 
-        public Slot GetScopeAccessSlot(CodeBlock id) {
-            Debug.Assert(_scopeAccess.ContainsKey(id));
-            return _scopeAccess[id];
+        public ScopeAllocator Parent {
+            get { return _parent; }
         }
 
-        public void AddScopeAccessSlot(CodeBlock id, Slot slot) {
-            Debug.Assert(!_scopeAccess.ContainsKey(id));
-            _scopeAccess.Add(id, slot);
+        public Slot GetClosureAccessSlot(CodeBlock block) {
+            return GetAccessSlot(block, _closureAccess);
+        }
+
+        public void AddClosureAccessSlot(CodeBlock block, Slot slot) {
+            AddAccessSlot(block, ref _closureAccess, slot);
+        }
+
+        public Slot GetScopeAccessSlot(CodeBlock block) {
+            return GetAccessSlot(block, _scopeAccess);
+        }
+
+        public void AddScopeAccessSlot(CodeBlock block, Slot slot) {
+            AddAccessSlot(block, ref _scopeAccess, slot);
         }
 
         public void AddGeneratorTemp(Slot slot) {
@@ -102,6 +113,20 @@ namespace Microsoft.Scripting.Generation {
         public Slot GetGeneratorTemp() {
             Debug.Assert(_generatorTempIndex < _generatorTemps.Count);
             return _generatorTemps[_generatorTempIndex ++];
+        }
+
+        private Slot GetAccessSlot(CodeBlock block, Dictionary<CodeBlock, Slot> slots) {
+            Debug.Assert(slots != null);
+            Debug.Assert(slots.ContainsKey(block));
+            return slots[block];
+        }
+
+        private void AddAccessSlot(CodeBlock block, ref Dictionary<CodeBlock, Slot> slots, Slot slot) {
+            if (slots == null) {
+                slots = new Dictionary<CodeBlock, Slot>();
+            }
+            Debug.Assert(!slots.ContainsKey(block) || slots[block] == slot);
+            slots[block] = slot;
         }
     }
 }

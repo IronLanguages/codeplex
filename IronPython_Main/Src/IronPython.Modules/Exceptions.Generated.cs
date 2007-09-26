@@ -37,6 +37,7 @@ namespace IronPython.Modules {
         public static object LookupError = ExceptionConverter.GetPythonException("LookupError");
         public static object OSError = ExceptionConverter.GetPythonException("OSError");
         public static object DeprecationWarning = ExceptionConverter.GetPythonException("DeprecationWarning");
+        public static object ImportWarning = ExceptionConverter.GetPythonException("ImportWarning");
         public static object UnicodeError = ExceptionConverter.GetPythonException("UnicodeError");
         #if !SILVERLIGHT
         public static object UnicodeEncodeError = ExceptionConverter.GetPythonException("UnicodeEncodeError");

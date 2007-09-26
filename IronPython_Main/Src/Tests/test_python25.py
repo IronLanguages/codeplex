@@ -1271,11 +1271,12 @@ with J():
     except SyntaxError,e: pass
 
 
-    
-@disabled("CodePlex Work Item 5602")
 def test_importwarning():
-    import exceptions
     exc_list = []
+    exc_list.append(ImportWarning())
+    exc_list.append(ImportWarning("some message"))
+
+    import exceptions
     exc_list.append(exceptions.ImportWarning())
     exc_list.append(exceptions.ImportWarning("some message"))
     

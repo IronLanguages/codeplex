@@ -47,9 +47,9 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// The expression type is the type of the expression being selected.
         /// </summary>
-        public override Type ExpressionType {
+        public override Type Type {
             get {
-                return _expressions[_valueIndex].ExpressionType;
+                return _expressions[_valueIndex].Type;
             }
         }
 
@@ -84,7 +84,7 @@ namespace Microsoft.Scripting.Ast {
 
                 // If we don't want the expression just emitted as the result,
                 // pop it off of the stack, unless it is a void expression.
-                if (index != _valueIndex && current.ExpressionType != typeof(void)) {
+                if (index != _valueIndex && current.Type != typeof(void)) {
                     cg.Emit(OpCodes.Pop);
                 }
             }
@@ -133,7 +133,7 @@ namespace Microsoft.Scripting.Ast {
                     current.Emit(cg);
                     // If we don't want the expression just emitted as the result,
                     // pop it off of the stack, unless it is a void expression.
-                    if (current.ExpressionType != typeof(void)) {
+                    if (current.Type != typeof(void)) {
                         cg.Emit(OpCodes.Pop);
                     }
                 }

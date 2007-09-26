@@ -77,7 +77,7 @@ using IronPython.Runtime.Operations;
         }
 
         public override Expression ConvertExpression(Expression expr, Type toType) {
-            Type exprType = expr.ExpressionType;
+            Type exprType = expr.Type;
 
             if (toType == typeof(object)) {
                 if (exprType.IsValueType) {
@@ -259,7 +259,7 @@ using IronPython.Runtime.Operations;
                 CallAction ca = action as CallAction;
                 if (ca != null) {
                     int argsReceived = args.Length - 1 + GetParamsArgumentCountAdjust(ca, args);
-                    if (ca.HasDictionaryArgument()) {
+                    if (ca.Signature.HasDictionaryArgument()) {
                         argsReceived--;
                     }
 

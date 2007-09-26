@@ -155,9 +155,17 @@ def test_incomplate_syntax():
 def test_incomplate_syntax_backslash():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
     AreEqual(ipi.Start(), True)
-    ipi.ExecutePartialLine("1 + \\")
-    response = ipi.ExecuteLine("2", True)
-    Assert("3" in response)
+       
+    for i in xrange(4):
+        print "CodePlex Work Item 12851"    
+        for j in xrange(i): 
+            ipi.ExecutePartialLine("\\")
+        ipi.ExecutePartialLine("1 + \\")
+        for j in xrange(i): 
+            ipi.ExecutePartialLine("\\")
+        response = ipi.ExecuteLine("2", True)
+        Assert("3" in response)
+    
     ipi.End()
 
 ###########################################################
@@ -196,7 +204,6 @@ def test_partial_lists():
     
 ##########################################################
 # Support partial dicts
-@disabled("CodePlex Work Item 5904")
 def test_partial_dicts():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
     AreEqual(ipi.Start(), True)
@@ -357,5 +364,46 @@ time.sleep(2)
     Assert("AssertionError: hello" in output)
     Assert("IronPython." not in output)     # '.' is necessary here
     ipi.End()
+
+def test_aform_feeds():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("\fprint 'hello'")
+    AreEqual(response, "hello")
+    response = ipi.ExecuteLine("      \fprint 'hello'")
+    AreEqual(response, "hello")
+    
+    ipi.ExecutePartialLine("def f():")
+    ipi.ExecutePartialLine("\f    print 'hello'")
+    ipi.ExecuteLine('')
+    response = ipi.ExecuteLine('f()')
+    AreEqual(response, "hello")
+    
+    # \f resets indent to 0
+    ipi.ExecutePartialLine("def f():")
+    ipi.ExecutePartialLine("    \f    x = 'hello'")
+    ipi.ExecutePartialLine("\f    print x")
+    
+    ipi.ExecuteLine('')
+    response = ipi.ExecuteLine('f()')
+    AreEqual(response, "hello")
+
+    # \f resets indent to 0
+    ipi.ExecutePartialLine("def f():")
+    ipi.ExecutePartialLine("    \f    x = 'hello'")
+    ipi.ExecutePartialLine("    print x")
+    
+    ipi.ExecuteLine('')
+    response = ipi.ExecuteLine('f()')
+    AreEqual(response, "hello")
+
+def test_ipy_dash_S():
+    """ipy -S should still install Lib into sys.path"""
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -S")
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("import sys")
+    response = ipi.ExecuteLine("print sys.path")
+    Assert(response.find('Lib') != -1)
+
 
 run_test(__name__)

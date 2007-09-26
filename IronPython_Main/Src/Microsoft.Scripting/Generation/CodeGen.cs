@@ -757,7 +757,7 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
-        public ScopeAllocator Allocator {
+        internal ScopeAllocator Allocator {
             get {
                 Debug.Assert(_allocator != null);
                 return _allocator;
@@ -873,7 +873,7 @@ namespace Microsoft.Scripting.Generation {
             if (!EmitLineInfo || !HasContext) return;
 
             line = _context.SourceUnit.MapLine(line);
-            if (line != _currentLine) {
+            if (line != _currentLine && line != SourceLocation.None.Line) {
                 if (_currentLineSlot == null) {
                     _currentLineSlot = GetNamedLocal(typeof(int), "$line");
                 }

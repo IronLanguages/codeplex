@@ -474,6 +474,37 @@ def test_syntax_error_exception_eval():
         AreEqual(se.filename, "Error")
         AreEqual(se.text, "if 2==2: x=")
 
+def test_user_syntax_error_exception():
+    x = SyntaxError()
+    AreEqual(x.lineno, None)
+    AreEqual(x.filename, None)
+    # None on 2.4, '' on 2.5
+    Assert(x.msg == None or x.msg == '')
+    AreEqual(x.offset, None)
+    AreEqual(x.print_file_and_line, None)
+    AreEqual(x.text, None)    
+
+    x = SyntaxError('hello')
+    AreEqual(x.lineno, None)
+    AreEqual(x.filename, None)
+    AreEqual(x.msg, 'hello')
+    AreEqual(x.offset, None)
+    AreEqual(x.print_file_and_line, None)
+    AreEqual(x.text, None)    
+    
+    x = SyntaxError('hello', (1,2,3,4))
+    AreEqual(x.lineno, 2)
+    AreEqual(x.filename, 1)
+    AreEqual(x.msg, 'hello')
+    AreEqual(x.offset, 3)
+    AreEqual(x.print_file_and_line, None)
+    AreEqual(x.text, 4) 
+    
+    AssertError(IndexError, SyntaxError, 'abc', ())
+    AssertError(IndexError, SyntaxError, 'abc', (1,))
+    AssertError(IndexError, SyntaxError, 'abc', (1,2))
+    AssertError(IndexError, SyntaxError, 'abc', (1,2,3))
+    
 def test_return():    
     def test_func():
         try: pass

@@ -527,7 +527,7 @@ namespace IronPython.Modules {
             private PythonCallableWeakRefProxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 _target = new WeakHandle(target, false);
-                _site = FastDynamicSite<object, object[], object>.Create(context, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
+                _site = FastDynamicSite<object, object[], object>.Create(context, CallAction.Make(new CallSignature(ArgumentKind.List)));
             }
             #endregion
 

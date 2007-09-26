@@ -73,11 +73,11 @@ namespace IronPython.Hosting {
         protected override void Initialize() {
             // TODO: must precede path initialization! (??? - test test_importpkg.py)
             
-#if !SILVERLIGHT
             if (Options.Command == null && Options.FileName != null) {
                 if (Options.FileName == "-") {
                     Options.FileName = "<stdin>";
                 } else {
+#if !SILVERLIGHT
                     if (!File.Exists(Options.FileName)) {
                         Console.WriteLine(
                             String.Format(
@@ -87,10 +87,11 @@ namespace IronPython.Hosting {
                             Style.Error);
                         Environment.Exit(1);
                     }
-                    Engine.AddToPath(Path.GetDirectoryName(Path.GetFullPath(Options.FileName)));
+#endif
+                    string fullPath = ScriptDomainManager.CurrentManager.PAL.GetFullPath(Options.FileName);
+                    Engine.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
-#endif
             InitializePath();
             InitializeModules();
             ImportSite();
@@ -107,9 +108,9 @@ namespace IronPython.Hosting {
 
         
         private void InitializePath() {
-#if !SILVERLIGHT // paths, environment vars
-            Engine.AddToPath(Environment.CurrentDirectory);
+            Engine.AddToPath(ScriptDomainManager.CurrentManager.PAL.GetCurrentDirectory());
 
+#if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
                 string path = Environment.GetEnvironmentVariable("IRONPYTHONPATH");
                 if (path != null && path.Length > 0) {
@@ -139,14 +140,14 @@ namespace IronPython.Hosting {
         }
 
         private void ImportSite() {
-            if (!Options.ImportSite)
-                return;
-
 #if !SILVERLIGHT // paths
             string site = Assembly.GetEntryAssembly().Location;
             site = Path.Combine(Path.GetDirectoryName(site), "Lib");
             Engine.AddToPath(site);
-            
+
+            if (!Options.ImportSite)
+                return;
+
             try {
                 // TODO: do better
                 Engine.Execute("import site", Module);
@@ -257,7 +258,6 @@ namespace IronPython.Hosting {
 
         #region File
 
-#if !SILVERLIGHT
         protected override int RunFile(string filename) {
 
             // TODO: must precede path initialization! (??? - test test_importpkg.py)
@@ -307,7 +307,6 @@ namespace IronPython.Hosting {
             }
         }
 
-#endif
         #endregion
     }
 }

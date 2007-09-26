@@ -206,14 +206,14 @@ namespace Microsoft.Scripting.Ast {
             _declarativeReferenceExists = true;
         }
 
-        public Variable CreateParameter(SymbolId name, Expression defaultValue) {
-            Variable variable = Variable.Parameter(this, name, typeof(object), defaultValue);
+        public Variable CreateParameter(SymbolId name, Type type, Expression defaultValue) {
+            Variable variable = Variable.Parameter(this, name, type, defaultValue);
             _parameters.Add(variable);
             return variable;
         }
 
-        public Variable CreateParameter(SymbolId name, Expression defaultValue, bool inParameterArray) {
-            Variable variable = Variable.Parameter(this, name, typeof(object), defaultValue, inParameterArray);
+        public Variable CreateParameter(SymbolId name, Type type, Expression defaultValue, bool inParameterArray) {
+            Variable variable = Variable.Parameter(this, name, type, defaultValue, inParameterArray);
             _parameters.Add(variable);
             return variable;
         }
@@ -374,9 +374,9 @@ namespace Microsoft.Scripting.Ast {
                 cg.EnvironmentSlot = EmitEnvironmentAllocation(cg);
                 cg.ContextSlot = CreateEnvironmentContext(cg);
             }
-            cg.Allocator.ActiveScope = this;
+            cg.Allocator.Block = this;
             
-            CreateOuterScopeAccessSlots(cg);
+            CreateAccessSlots(cg);
 
             foreach (Variable prm in _parameters) {
                 prm.Allocate(cg);
@@ -393,12 +393,17 @@ namespace Microsoft.Scripting.Ast {
             cg.Allocator.GlobalAllocator.PrepareForEmit(cg);
         }
 
-        public void CreateOuterScopeAccessSlots(CodeGen cg) {
+        public void CreateAccessSlots(CodeGen cg) {
+            CreateClosureAccessSlots(cg);
+            CreateScopeAccessSlots(cg);
+        }
+
+        private void CreateClosureAccessSlots(CodeGen cg) {
             ScopeAllocator allocator = cg.Allocator;
 
             // Current context is accessed via environment slot, if any
             if (HasEnvironment) {
-                allocator.AddScopeAccessSlot(this, cg.EnvironmentSlot);
+                allocator.AddClosureAccessSlot(this, cg.EnvironmentSlot);
             }
 
             if (IsClosure) {
@@ -420,7 +425,7 @@ namespace Microsoft.Scripting.Ast {
 
                         Slot storage = new LocalSlot(cg.DeclareLocal(parent._environmentFactory.StorageType), cg);
                         storage.EmitSet(cg);
-                        allocator.AddScopeAccessSlot(parent, storage);
+                        allocator.AddClosureAccessSlot(parent, storage);
                     }
 
                     scope.EmitGet(cg);
@@ -428,12 +433,39 @@ namespace Microsoft.Scripting.Ast {
                     scope.EmitSet(cg);
 
                     current = parent;
-                } while(current != null && current.IsClosure);
+                } while (current != null && current.IsClosure);
 
                 cg.FreeLocalTmp(scope);
             }
+        }
 
-            // TODO: Create access slot for globals
+        private void CreateScopeAccessSlots(CodeGen cg) {
+            ScopeAllocator allocator = cg.Allocator;
+            for (; ; ) {
+                if (allocator == null) {
+                    // TODO: interpreted mode anomaly
+                    break;
+                }
+                if (allocator.Block != null && !allocator.Block.IsClosure) {
+                    break;
+                }
+                allocator = allocator.Parent;
+            }
+
+            while (allocator != null) {
+                if (allocator.Block != null) {
+                    foreach (VariableReference reference in _references) {
+                        if (!reference.Variable.Lift && reference.Variable.Block == allocator.Block) {
+                            Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Block);
+                            if (accessSlot != null) {
+                                cg.Allocator.AddScopeAccessSlot(allocator.Block, accessSlot);
+                            }
+                            break;
+                        }
+                    }
+                }
+                allocator = allocator.Parent;
+            }
         }
 
         public void AddGeneratorTemps(int count) {

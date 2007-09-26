@@ -250,11 +250,10 @@ AssertError(IndentationError, compile, "class C:\nx=2\n", "Error", "exec")
 AssertError(IndentationError, compile, "class C:\n\n", "Error", "single")
 
 #allow \f
-#CodePlex Work Item 7982
-#compile('\f\f\f\f\fclass C:\f\f\f pass', 'ok', 'exec')
-#compile('\f\f\f\f\fclass C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
-#compile('class C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
-#compile('class \f\f\f\fC:\n\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+compile('\f\f\f\f\fclass C:\f\f\f pass', 'ok', 'exec')
+compile('\f\f\f\f\fclass C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+compile('class C:\n\f\f\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
+compile('class \f\f\f\fC:\n\f    print "hello"\n\f\f\f\f\f\f\f\f\f\f    print "goodbye"', 'ok', 'exec')
 
 # multiline expression passed to exec (positive test)
 s = """
@@ -466,13 +465,12 @@ except:
 for code in try_syntax_error_tests:
     AssertError(SyntaxError, compile, code, "code", "exec")
 
-#CodePlex Work Item 7982
 #Just make sure these don't throw
-#print "^L"
-#temp = 7
-#print temp        
-#
-#print "No ^L's..."
+print "^L"
+temp = 7
+print temp        
+
+print "No ^L's..."
 
 # keep this at the end of the file, do not insert anything below this line
 

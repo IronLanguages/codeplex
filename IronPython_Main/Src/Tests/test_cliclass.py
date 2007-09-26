@@ -316,16 +316,16 @@ def test_type_descs():
     x = test.GetProperties(b)
     Assert(x.Count > 0)
     
-    Assert(test.TestProperties(b, ['__doc__'], []))
-    b.foobar = 'hello'
-    Assert(test.TestProperties(b, ['__doc__','foobar'], []))
-    b.baz = 'goodbye'
-    Assert(test.TestProperties(b, ['__doc__','foobar', 'baz'], []))
-    delattr(b, 'baz')
-    Assert(test.TestProperties(b, ['__doc__','foobar'], ['baz']))
+    Assert(test.TestProperties(b, [], []))
+    bar.foobar = property(lambda x: 42)
+    Assert(test.TestProperties(b, ['foobar'], []))
+    bar.baz = property(lambda x:42)
+    Assert(test.TestProperties(b, ['foobar', 'baz'], []))
+    delattr(bar, 'baz')
+    Assert(test.TestProperties(b, ['foobar'], ['baz']))
     # Check that adding a non-string entry in the dictionary does not cause any grief.
     b.__dict__[1] = 1;
-    Assert(test.TestProperties(b, ['__doc__','foobar'], ['baz']))
+    Assert(test.TestProperties(b, ['foobar'], ['baz']))
     
     #Assert(test.TestProperties(test, ['GetConverter', 'GetEditor', 'GetEvents', 'GetHashCode'] , []))
     
@@ -336,7 +336,7 @@ def test_type_descs():
     
     a = foo()
     
-    Assert(test.TestProperties(a, ['__doc__', '__module__'], []))
+    Assert(test.TestProperties(a, [], []))
     
     
     res = test.GetClassName(a)
@@ -362,23 +362,23 @@ def test_type_descs():
     Assert(x.Count == 0)
     
     x = test.GetProperties(a)
-    Assert(x.Count > 0)
+    Assert(x.Count == 0)
     
-    a.bar = 'hello'
+    foo.bar = property(lambda x:'hello')
     
-    Assert(test.TestProperties(a, ['__doc__', '__module__', 'bar'], []))
-    delattr(a, 'bar')
-    Assert(test.TestProperties(a, ['__doc__', '__module__'], ['bar']))
+    Assert(test.TestProperties(a, ['bar'], []))
+    delattr(foo, 'bar')
+    Assert(test.TestProperties(a, [], ['bar']))
     
     a = a.__class__
     
-    Assert(test.TestProperties(a, ['__doc__', '__module__'], []))
+    Assert(test.TestProperties(a, [], []))
     
-    a.bar = 'hello'
+    foo.bar = property(lambda x:'hello')
     
-    Assert(test.TestProperties(a, ['__doc__', '__module__','bar'], []))
+    Assert(test.TestProperties(a, [], []))
     delattr(a, 'bar')
-    Assert(test.TestProperties(a, ['__doc__', '__module__'], ['bar']))
+    Assert(test.TestProperties(a, [], ['bar']))
     
     x = test.GetClassName(a)
     Assert(x == 'IronPython.Runtime.Types.OldClass')
@@ -800,6 +800,34 @@ def test_generic_only_collision():
     except System.TypeLoadException, e:
         Assert(str(e).find('requires a non-generic type') != -1)
         Assert(str(e).find('GenericOnlyConflict') != -1)
-        
+
+@skip("silverlight") # no winforms
+def test_override_createparams():        
+    """verify we can override the CreateParams property and get the expected value from the base class"""
+
+    clr.AddReference("System.Windows.Forms")
+    from System.Windows.Forms import Label, Control
+    
+    for val in [20, 0xffff]:
+        class TransLabel(Label):
+            def get_CreateParams(self):
+                global style
+                cp = Label().CreateParams
+                cp.ExStyle = cp.ExStyle | val
+                style = cp.ExStyle
+                return cp
+            CreateParams = property(fget=get_CreateParams)
+    
+        AreEqual(Control.CreateParams.GetValue(TransLabel() ).ExStyle, style)
+
+def test_null_str():
+    """if a .NET type has a bad ToString() implementation that returns null always return String.Empty in Python"""
+    AreEqual(str(RudeObjectOverride()), '')
+    AreEqual(RudeObjectOverride().__str__(), '')
+    AreEqual(RudeObjectOverride().ToString(), None)
+    print "CodePlex Work Item 6141"
+    #AreEqual(repr(RudeObjectOverride()), '')
+
+
 run_test(__name__)
 

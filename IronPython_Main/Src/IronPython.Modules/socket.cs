@@ -716,25 +716,31 @@ namespace IronPython.Modules {
             [DefaultParameterValue((int)SocketFlags.None)] int flags
         ) {
             int numericPort;
-            /* Disabled because GetServiceByName is not implemented
-            string serviceName;
+            
             if (port == null) {
                 numericPort = 0;
-            } else if (Converter.TryConvertToInt32(port, out numericPort)) {
-                // nop
-            } else if (Converter.TryConvertToString(port, out serviceName)) {
-                numericPort = GetServiceByName(serviceName, null);
-            }
-            */
-
-            if (!Converter.TryConvertToInt32(port, out numericPort)) {
-                numericPort = 0;
+            } else if (port is int) {
+                numericPort = (int)port;
+            } else if (port is ExtensibleInt) {
+                numericPort = ((ExtensibleInt)port).Value;
+            } else if (port is string) {
+                if (!Int32.TryParse((string)port, out numericPort)) {
+                    // TODO: also should consult GetServiceByName                    
+                    throw MakeException(gaierror, "getaddrinfo failed");
+                }
+            } else if (port is ExtensibleString) {
+                if (!Int32.TryParse(((ExtensibleString)port).Value, out numericPort)) {
+                    // TODO: also should consult GetServiceByName                    
+                    throw MakeException(gaierror, "getaddrinfo failed");
+                }
+            } else {
+                throw MakeException(gaierror, "getaddrinfo failed");
             }
 
             if (socktype != 0) {
                 // we just use this to validate; socketType isn't actually used
                 System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
-                if (!Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
+                if (socketType == System.Net.Sockets.SocketType.Unknown || !Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
                     throw MakeException(gaierror, PythonTuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
                 }
             }
@@ -1447,12 +1453,23 @@ namespace IronPython.Modules {
             try {
                 IPAddress addr;
 
-                if (IPAddress.TryParse(host, out addr)) {
-                    if (family == AddressFamily.Unspecified || family == addr.AddressFamily) {
-                        return new IPAddress[] { addr };
+                bool numeric = true;
+                int dotCount = 0;
+                foreach (char c in host) {
+                    if (!Char.IsNumber(c) && c != '.') {
+                        numeric = false;
+                    } else if (c == '.') {
+                        dotCount++;
+                    }
+                }
+                if (numeric) {
+                    if (dotCount == 3 && IPAddress.TryParse(host, out addr)) {
+                        if (family == AddressFamily.Unspecified || family == addr.AddressFamily) {
+                            return new IPAddress[] { addr };
+                        }
                     }
                     // Incorrect family will raise exception below
-                } else {
+                } else {                    
                     IPHostEntry hostEntry = Dns.GetHostEntry(host);
                     List<IPAddress> addrs = new List<IPAddress>();
                     foreach (IPAddress ip in hostEntry.AddressList) {

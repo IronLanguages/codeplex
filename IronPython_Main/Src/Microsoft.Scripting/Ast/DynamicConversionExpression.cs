@@ -18,17 +18,18 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ConversionExpression : Expression {
+    // TODO: Remove! Use ActionExpression instead.
+    public class DynamicConversionExpression : Expression {
         private readonly Expression _expression;
         private readonly Type _conversion;
 
-        internal ConversionExpression(SourceSpan span, Expression expression, Type conversion)
+        internal DynamicConversionExpression(SourceSpan span, Expression expression, Type conversion)
             : base(span) {
             _expression = expression;
             _conversion = conversion;
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _conversion;
             }
@@ -36,7 +37,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override void Emit(CodeGen cg) {
             _expression.Emit(cg);
-            cg.EmitConvert(_expression.ExpressionType, _conversion);
+            cg.EmitConvert(_expression.Type, _conversion);
         }
 
         protected override object DoEvaluate(CodeContext context) {
@@ -52,15 +53,15 @@ namespace Microsoft.Scripting.Ast {
         }
     }
     public static partial class Ast {
-        public static ConversionExpression Convert(Expression expression, Type conversion) {
-            return Convert(SourceSpan.None, expression, conversion);
+        public static DynamicConversionExpression DynamicConvert(Expression expression, Type conversion) {
+            return DynamicConvert(SourceSpan.None, expression, conversion);
         }
 
-        public static ConversionExpression Convert(SourceSpan span, Expression expression, Type conversion) {
+        public static DynamicConversionExpression DynamicConvert(SourceSpan span, Expression expression, Type conversion) {
             Contract.RequiresNotNull(expression, "expression");
             Contract.RequiresNotNull(conversion, "conversion");
 
-            return new ConversionExpression(span, expression, conversion);
+            return new DynamicConversionExpression(span, expression, conversion);
         }
     }
 }

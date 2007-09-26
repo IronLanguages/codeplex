@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(void);
             }

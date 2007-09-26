@@ -215,7 +215,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 #if !SILVERLIGHT // EncodingInfo
-        private static Dictionary<string, EncodingInfo> codecs;
+        private static Dictionary<string, EncodingInfoWrapper> codecs;
 #endif
 
         #region Python Constructors
@@ -1188,19 +1188,20 @@ namespace IronPython.Runtime.Operations {
 #if SILVERLIGHT // EncodingInfo
             switch (NormalizeEncodingName(name)) {
                 case "us_ascii":
-                case "ascii": encoding = StringUtils.AsciiEncoding; return true;
-                case "utf_8": encoding = Encoding.UTF8; return true;
-                case "utf_16_le": encoding = Encoding.Unicode; return true;
-                case "utf_16_be": encoding = Encoding.BigEndianUnicode; return true;
+                case "ascii": encoding = PythonAsciiEncoding.Instance; return true;
+                case "utf_8": encoding = (Encoding)new EncodingWrapper(Encoding.UTF8, new byte[0]).Clone(); return true;
+                case "utf_16_le": encoding = (Encoding)new EncodingWrapper(Encoding.Unicode, new byte[0]).Clone(); return true;
+                case "utf_16_be": encoding = (Encoding)new EncodingWrapper(Encoding.BigEndianUnicode, new byte[0]).Clone(); return true;
+                case "utf_8_sig": encoding = Encoding.UTF8; return true;
             }
 #else
             if (codecs == null) MakeCodecsDict();
 
             name = NormalizeEncodingName(name);
 
-            EncodingInfo encInfo;
+            EncodingInfoWrapper encInfo;
             if (codecs.TryGetValue(name, out encInfo)) {
-                encoding = encInfo.GetEncoding();
+                encoding = (Encoding)encInfo.GetEncoding().Clone();
                 return true;
             }
 #endif
@@ -1219,6 +1220,18 @@ namespace IronPython.Runtime.Operations {
 
         internal static string FromByteArray(byte[] bytes) {
             return FromByteArray(bytes, bytes.Length);
+        }
+
+
+        internal static string FromByteArray(byte[]preamble, byte[] bytes) {
+            char[] chars = new char[preamble.Length + bytes.Length];
+            for (int i = 0; i < preamble.Length; i++) {
+                chars[i] = (char)preamble[i];
+            }
+            for (int i = 0; i < bytes.Length; i++) {
+                chars[i + preamble.Length] = (char)bytes[i];
+            }
+            return new String(chars);
         }
 
         internal static string FromByteArray(byte[] bytes, int maxBytes) {
@@ -1247,6 +1260,7 @@ namespace IronPython.Runtime.Operations {
             if (b == null) return s;
             return b.ToString();
         }
+
 
         #endregion
 
@@ -1356,6 +1370,8 @@ namespace IronPython.Runtime.Operations {
                 string normalizedName = NormalizeEncodingName(encoding);
                 if ("raw_unicode_escape" == normalizedName) {
                     return LiteralParser.ParseString(s, true, true);
+                } else if ("unicode_escape" == normalizedName) {
+                    return LiteralParser.ParseString(s, false, true);
                 } else if ("string_escape" == normalizedName) {
                     return LiteralParser.ParseString(s, false, false);
                 }
@@ -1409,7 +1425,7 @@ namespace IronPython.Runtime.Operations {
                 string normalizedName = NormalizeEncodingName(encoding);
                 if ("raw_unicode_escape" == normalizedName) {
                     return RawUnicodeEscapeEncode(s);
-                } else if ("string_escape" == normalizedName) {
+                } else if ("unicode_escape" == normalizedName || "string_escape" == normalizedName) {
                     bool dummy = false;
                     return ReprEncode(s, '\'', ref dummy);
                 }
@@ -1431,8 +1447,9 @@ namespace IronPython.Runtime.Operations {
                             PythonOps.LookupEncodingError(errors));
                         break;
                 }
-#endif
-                return FromByteArray(e.GetBytes(s));
+
+#endif                
+                return FromByteArray(e.GetPreamble(), e.GetBytes(s));
             }
 
                 // look for user-registered codecs
@@ -1460,7 +1477,7 @@ namespace IronPython.Runtime.Operations {
 
 #if !SILVERLIGHT
         private static void MakeCodecsDict() {
-            Dictionary<string, EncodingInfo> d = new Dictionary<string, EncodingInfo>();
+            Dictionary<string, EncodingInfoWrapper> d = new Dictionary<string, EncodingInfoWrapper>();
             EncodingInfo[] encs = Encoding.GetEncodings();
             for (int i = 0; i < encs.Length; i++) {
                 string normalizedName = NormalizeEncodingName(encs[i].Name);
@@ -1469,26 +1486,27 @@ namespace IronPython.Runtime.Operations {
                 // else we'll store as lower case w/ _                
                 switch (normalizedName) {
                     case "us_ascii":
-                        d["ascii"] = encs[i];
-                        d["646"] = encs[i];
-                        d["us"] = encs[i];
-                        break;
+                        d["cp" + encs[i].CodePage.ToString()] = d[normalizedName] = d["us"] = d["ascii"] = d["646"] = new AsciiEncodingInfoWrapper();
+                        continue;
                     case "iso_8859_1":
                         d["latin_1"] = encs[i];
                         d["latin1"] = encs[i];
                         break;
+                    case "utf_7":
+                        d["U7"] = d["unicode-1-1-utf-7"] = encs[i];
+                        break;
                     case "utf_8":
-                        d["utf8"] = encs[i];
-                        break;
-                    case "utf_16":
-                        d["utf_16_le"] = encs[i];
-                        // utf-16 in CPython already writes the BOM, so we don't 
-                        // want to replace it w/ ours that doesn't.
+                        d["utf_8_sig"] = encs[i];
+                        d["utf_8"] = d["utf8"] = d["U8"] = new EncodingInfoWrapper(encs[i], new byte[0]);
                         continue;
-                    case "unicodeFFFE": // big endian unicode                    
-                        d["utf_16_be"] = encs[i];
+                    case "utf_16":
+                        d["utf_16_le"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                        break;                        
+                    case "unicodefffe": // big endian unicode                    
+                        // strip off the pre-amble, CPython doesn't include it.
+                        d["utf_16_be"] = d["utf-16-be"] = d["UTF-16BE"] = new EncodingInfoWrapper(encs[i], new byte[0]);
                         break;
-                }
+                }                
 
                 d[normalizedName] = encs[i];
 
@@ -1498,7 +1516,94 @@ namespace IronPython.Runtime.Operations {
 
             codecs = d;
         }
+
+        class EncodingInfoWrapper {
+            private EncodingInfo _info;
+            private byte[] _preamble;
+
+            public EncodingInfoWrapper(EncodingInfo info) {
+                _info = info;
+            }
+
+            public EncodingInfoWrapper(EncodingInfo info, byte[] preamble) {
+                _info = info;
+                _preamble = preamble;
+            }
+
+            public virtual Encoding GetEncoding() {
+                if (_preamble == null) {
+                    return _info.GetEncoding();
+                }
+
+                return new EncodingWrapper(_info.GetEncoding(), _preamble);
+            }
+
+            public static implicit operator EncodingInfoWrapper(EncodingInfo info) {
+                return new EncodingInfoWrapper(info);
+            }
+        }
+
+        class AsciiEncodingInfoWrapper : EncodingInfoWrapper {
+            public AsciiEncodingInfoWrapper()
+                : base(null) {
+            }
+
+            public override Encoding GetEncoding() {
+                return PythonAsciiEncoding.Instance;
+            }
+        }
 #endif
+
+        class EncodingWrapper : Encoding {
+            private byte[] _preamble;
+            private Encoding _encoding;
+
+            public EncodingWrapper(Encoding encoding, byte[] preamable) {
+                _preamble = preamable;
+                _encoding = encoding;
+            }
+
+            public override int GetByteCount(char[] chars, int index, int count) {
+                _encoding.EncoderFallback = EncoderFallback;
+                return _encoding.GetByteCount(chars, index, count);
+            }
+
+            public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
+                _encoding.EncoderFallback = EncoderFallback;
+                return _encoding.GetBytes(chars, charIndex, charCount, bytes, byteIndex);
+            }
+
+            public override int GetCharCount(byte[] bytes, int index, int count) {
+                _encoding.DecoderFallback = DecoderFallback;
+                return _encoding.GetCharCount(bytes, index, count);
+            }
+
+            public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) {
+                _encoding.DecoderFallback = DecoderFallback;
+                return _encoding.GetChars(bytes, byteIndex, byteCount, chars, charIndex);
+            }
+
+            public override int GetMaxByteCount(int charCount) {
+                _encoding.EncoderFallback = EncoderFallback;
+                return _encoding.GetMaxByteCount(charCount);
+            }
+
+            public override int GetMaxCharCount(int byteCount) {
+                _encoding.DecoderFallback = DecoderFallback;
+                return _encoding.GetMaxCharCount(byteCount);
+            }
+
+            public override byte[] GetPreamble() {
+                return _preamble;
+            }
+
+            public override object Clone() {
+                // need to call base.Clone to be marked as read/write
+                EncodingWrapper res = (EncodingWrapper)base.Clone();
+                res._encoding = (Encoding)_encoding.Clone();
+                return res;
+            }            
+        }
 
         private static List SplitEmptyString(bool separators) {
             List ret = List.MakeEmptyList(1);

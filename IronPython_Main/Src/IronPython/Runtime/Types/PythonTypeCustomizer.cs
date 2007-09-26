@@ -449,6 +449,8 @@ namespace IronPython.Runtime.Types {
                 return ((DocumentationAttribute)docAttr[0]).Documentation;
             }
 
+            if (type == TypeCache.None) return null;
+
             // Auto Doc (XML or otherwise)
             string autoDoc = DocBuilder.CreateAutoDoc(type.UnderlyingSystemType);
             if (autoDoc == null) {

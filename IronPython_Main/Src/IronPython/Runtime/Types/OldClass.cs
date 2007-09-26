@@ -528,7 +528,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            if (action != CallAction.Simple) return null;
+            if (!action.Signature.IsSimple) return null;
 
             StandardRule<T> rule = new StandardRule<T>();
 
@@ -553,7 +553,6 @@ namespace IronPython.Runtime.Types {
                                 Ast.Read(tmp)
                             ),
                             Ast.Action.Call(
-                                CallAction.Simple,
                                 typeof(object),
                                 ArrayUtils.Insert((Expression)Ast.Read(tmp), ArrayUtils.RemoveFirst(rule.Parameters))
                             ),

@@ -54,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Generates code for this expression in a value position.
         /// This method will leave the value of the expression
-        /// on the top of the stack typed as ExpressionType.
+        /// on the top of the stack typed as Type.
         /// </summary>
         /// <param name="cg">Where to generate the code.</param>
         public abstract void Emit(CodeGen cg);
@@ -65,13 +65,13 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <param name="cg">Where to emit the code.</param>
         public void EmitAsObject(CodeGen cg) {
-            this.Emit(cg);  // emit as ExpressionType
-            cg.EmitBoxing(ExpressionType);
+            this.Emit(cg);  // emit as Type
+            cg.EmitBoxing(Type);
         }
 
         internal void EmitCast(CodeGen cg, Type asType) {
-            this.Emit(cg);  // emit as ExpressionType
-            cg.EmitCast(ExpressionType, asType);
+            this.Emit(cg);  // emit as Type
+            cg.EmitCast(Type, asType);
         }
 
         /// <summary>
@@ -81,9 +81,9 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="cg">Where to generate the code.</param>
         /// <param name="asType">The type to leave on top of the stack.</param>
         internal void EmitAs(CodeGen cg, Type asType) {
-            this.Emit(cg);  // emit as ExpressionType
+            this.Emit(cg);  // emit as Type
             if (asType.IsValueType || !IsConstant(null)) {
-                cg.EmitConvert(ExpressionType, asType);
+                cg.EmitConvert(Type, asType);
             }
         }
 
@@ -123,7 +123,7 @@ namespace Microsoft.Scripting.Ast {
             tmp.EmitGetAddr(cg);
         }
 
-        public virtual Type ExpressionType {
+        public virtual Type Type {
             get { return typeof(object); }
         }
 

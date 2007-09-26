@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
             this._expression = expression;
 
             //if (expression != null) {
-            //    Debug.Assert(expression.ExpressionType == type);
+            //    Debug.Assert(expression.Type == type);
             //}
         }
 
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Ast {
 
         public static AbstractValue FromExpression(Expression expression) {
             //??? special handling of constant expressions???
-            return LimitType(expression.ExpressionType, expression);
+            return LimitType(expression.Type, expression);
         }
     }
 }

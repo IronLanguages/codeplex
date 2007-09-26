@@ -68,9 +68,8 @@ print_bad()
 if __name__!="__main__":
     logError("__name__")
 
-logInfo("CodePlex Work Item 12283")
-#if sys.argv.count("some_param")!= 1 or sys.argv[1]!="some_param":
-#    logError("some_param")
+if sys.argv.count("some_param")!= 1 or sys.argv[1]!="some_param":
+    logError("some_param")
 
 #spawn a thread to run print_bad...
 start_new_thread(print_bad, ())

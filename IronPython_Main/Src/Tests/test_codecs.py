@@ -92,24 +92,22 @@ def test_register_error():
         codecs.register_error("garbage2", garbage_error2)
         codecs.register_error("garbage1dup", garbage_error1)
 
+@skip('silverlight') # different result on Silverlight
 def test_utf_16_ex_decode():
     '''
     '''
-    #BUG - should work with one arg, but requires two
     #sanity
-    #new_str, size, zero = codecs.utf_16_ex_decode("abc")
-    #AreEqual(new_str, u'\u6261')
-    #AreEqual(size, 2)
-    #AreEqual(zero, 0)
+    new_str, size, zero = codecs.utf_16_ex_decode("abc")
+    AreEqual(new_str, u'\u6261')
+    AreEqual(size, 2)
+    AreEqual(zero, 0)
     
 def test_charmap_decode():
     '''
     '''
-    #sanity
-    #BUG - takes one parameter, but requiring 3
-    #new_str, size = codecs.charmap_decode("abc")
-    #AreEqual(new_str, u'abc')
-    #AreEqual(size, 3)
+    new_str, size = codecs.charmap_decode("abc")
+    AreEqual(new_str, u'abc')
+    AreEqual(size, 3)
     
 def test_decode():
     '''
@@ -231,9 +229,9 @@ def test_register():
 def test_unicode_internal_encode():
     '''
     '''
-    #BUG - requires one parameters, not two
-    #if is_cli:
-    #    AssertError(NotImplementedError, codecs.unicode_internal_encode, "abc")
+    # takes one or two parameters, not zero or three
+    AssertError(TypeError, codecs.unicode_internal_encode)
+    AssertError(TypeError, codecs.unicode_internal_encode, 'abc', 'def', 'qrt')
 
 @skip('silverlightbug?')
 def test_utf_16_be_decode():
@@ -335,5 +333,13 @@ def test_unicode_escape_encode():
     #BUG - function takes one parameter, not 0
     #if is_cli:
     #    AssertError(NotImplementedError, codecs.unicode_escape_encode, "abc")
+
+def test_misc_encodings():
+    if not is_silverlight:
+        # codec not available on silverlight
+        AreEqual('abc'.encode('utf-16'), '\xff\xfea\x00b\x00c\x00')
+        AreEqual('abc'.encode('utf-16-be'), '\x00a\x00b\x00c')
+    AreEqual('abc'.encode('unicode-escape'), 'abc')
+    AreEqual('abc\u1234'.encode('unicode-escape'), 'abc\\\\u1234')
 
 run_test(__name__)

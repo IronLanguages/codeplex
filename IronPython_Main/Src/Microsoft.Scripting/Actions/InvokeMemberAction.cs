@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -30,31 +31,24 @@ namespace Microsoft.Scripting.Actions {
 
     public class InvokeMemberAction : MemberAction, IEquatable<InvokeMemberAction> {
         private readonly InvokeMemberActionFlags _flags;
-        private readonly ArgumentInfo[] _argumentInfos;
+        private readonly CallSignature _signature;
 
         public bool ReturnNonCallable { get { return (_flags & InvokeMemberActionFlags.ReturnNonCallable) != 0; } }
         public bool HasExplicitTarget { get { return (_flags & InvokeMemberActionFlags.IsCallWithThis) != 0; } }
-        public ArgumentInfo[] ArgumentInfos { get { return _argumentInfos; } }
+        public CallSignature Signature { get { return _signature; } }
 
-        public InvokeMemberAction(SymbolId memberName, InvokeMemberActionFlags flags, ArgumentInfo[] argumentKinds)
+        protected InvokeMemberAction(SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature)
             : base(memberName) {
-            Assert.NotNull(argumentKinds);
-
             _flags = flags;
-            _argumentInfos = argumentKinds;
+            _signature = signature;
+        }
+
+        public static InvokeMemberAction Make(SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature) {
+            return new InvokeMemberAction(memberName, flags, signature);
         }
 
         public override DynamicActionKind Kind {
             get { return DynamicActionKind.InvokeMember; }
-        }
-
-        public int IndexOfArgument(ArgumentKind kind) {
-            for (int i = 0; i < _argumentInfos.Length; i++) {
-                if (_argumentInfos[i].Kind == kind) {
-                    return i;
-                }
-            }
-            return -1;
         }
 
         public override bool Equals(object obj) {
@@ -62,11 +56,11 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public override int GetHashCode() {
-            return ArgumentInfo.GetHashCode(Kind, _argumentInfos);
+            return _signature.GetHashCode() ^ (int)_flags;
         }
 
         public override string ToString() {
-            return base.ToString() + " " + _flags.ToString() + " " + ArgumentInfo.GetString(_argumentInfos);
+            return String.Format("{0}{1} {2}", base.ToString(), _signature, _flags);
         }
 
 
@@ -74,10 +68,7 @@ namespace Microsoft.Scripting.Actions {
 
         public bool Equals(InvokeMemberAction other) {
             if (other == null) return false;
-
-            return Name == other.Name &&
-                _flags == other._flags &&
-                ArgumentInfo.ArrayEquals(_argumentInfos, other._argumentInfos);
+            return Name == other.Name && _flags == other._flags && _signature.Equals(other._signature);
         }
 
         #endregion

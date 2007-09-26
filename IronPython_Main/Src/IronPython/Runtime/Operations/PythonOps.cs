@@ -70,7 +70,7 @@ namespace IronPython.Runtime.Operations {
 
         private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
         private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
-        private static FastDynamicSite<object, string, object> _writeSite = FastDynamicSite<object, string, object>.Create(DefaultContext.Default, CallAction.Simple);
+        private static FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
 
 
         #endregion
@@ -260,10 +260,15 @@ namespace IronPython.Runtime.Operations {
                 FastDynamicSite<object, string> callSite;
                 lock (_toStrSites) {
                     if (!_toStrSites.TryGetValue(o.GetType(), out callSite)) {
-                        _toStrSites[o.GetType()] = callSite = FastDynamicSite<object, string>.Create(DefaultContext.Default, CallAction.Simple);
+                        _toStrSites[o.GetType()] = callSite = 
+                            RuntimeHelpers.CreateSimpleCallSite<object, string>(DefaultContext.Default);
                     }
                 }
-                return callSite.Invoke(tostr);
+                string ret = callSite.Invoke(tostr);
+                if (ret == null) {
+                    throw PythonOps.TypeError("expected str, got NoneType from __str__");
+                }
+                return ret;
             }
             return o.ToString();            
         }
@@ -288,7 +293,7 @@ namespace IronPython.Runtime.Operations {
             if (fo != null) {
                 if ((fo.Flags & (FunctionAttributes.ArgumentList | FunctionAttributes.KeywordDictionary)) == 0) {
                     maxArgCnt = fo.NormalArgumentCount;
-                    minArgCnt = fo.NormalArgumentCount - fo.FunctionDefaults.Count;
+                    minArgCnt = fo.NormalArgumentCount - fo.Defaults.Length;
 
                     // take into account unbound methods / bound methods
                     if (m != null) {
@@ -953,7 +958,7 @@ namespace IronPython.Runtime.Operations {
             string s = o as String;
             if (s != null) return s.Length;
 
-            ISequence seq = o as ISequence;
+            IPythonContainer seq = o as IPythonContainer;
             if (seq != null) return seq.GetLength();
 
             ICollection ic = o as ICollection;
@@ -2020,7 +2025,7 @@ namespace IronPython.Runtime.Operations {
             if (MetaclassSite == null) {
                 Interlocked.CompareExchange<DynamicSite<object, string, PythonTuple, IAttributesCollection, object>>(
                     ref MetaclassSite,
-                    DynamicSite<object, string, PythonTuple, IAttributesCollection, object>.Create(CallAction.Simple),
+                    RuntimeHelpers.CreateSimpleCallSite<object, string, PythonTuple, IAttributesCollection, object>(),
                     null
                 );
             }
@@ -2273,7 +2278,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import eggs1, eggs2 
         /// </summary>
         public static object ImportWithNames(CodeContext context, string fullName, string[] names) {
-            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, List.Make(names));
+            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, PythonTuple.MakeTuple(names));
         }
 
 
@@ -2294,7 +2299,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import *
         /// </summary>
         public static void ImportStar(CodeContext context, string fullName) {
-            object newmod = PythonEngine.CurrentEngine.Importer.Import(context, fullName, List.MakeList("*"));
+            object newmod = PythonEngine.CurrentEngine.Importer.Import(context, fullName, PythonTuple.MakeTuple("*"));
 
             ScriptModule pnew = newmod as ScriptModule;
             if (pnew != null) {
@@ -2839,5 +2844,127 @@ namespace IronPython.Runtime.Operations {
                 DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
             }
         }
+
+        #region OldInstance slicing
+
+        /// <summary>
+        /// Helper to return a Slice object for OldInstance slicing when only a start & stop are provided.
+        /// </summary>
+        public static Slice MakeOldStyleSlice(OldInstance self, object start, object stop) {
+            Nullable<int> length = null;
+
+            if (start == Type.Missing && stop == Type.Missing) {
+                return new Slice(0, Int32.MaxValue);
+            }
+
+            object newStart = FixSliceIndex(self, start, ref length);
+            if (newStart == Type.Missing) {
+                if (IsNumericObject(stop)) {
+                    newStart = 0;
+                } else {
+                    newStart = null;
+                }
+            }
+
+            object newStop = FixSliceIndex(self, stop, ref length);
+            if (newStop == Type.Missing) {
+                if (IsNumericObject(start)) {
+                    newStop = Int32.MaxValue;
+                } else {
+                    newStop = null;
+                }
+            }
+
+            return new Slice(newStart, newStop);
+        }
+
+        /// <summary>
+        /// Helper to determine if the value is a simple numeric type (int or big int or bool) - used for OldInstance
+        /// deprecated form of slicing.
+        /// </summary>
+        public static bool IsNumericObject(object value) {
+            return value is int || value is ExtensibleInt || value is BigInteger || value is Extensible<BigInteger> || value is bool;
+        }
+
+        /// <summary>
+        /// Helper to determine if the type is a simple numeric type (int or big int or bool) - used for OldInstance
+        /// deprecated form of slicing.
+        /// </summary>
+        internal static bool IsNumericType(Type t) {
+            return t == typeof(int) ||
+                t == typeof(bool) ||
+                t == typeof(BigInteger) ||
+                t.IsSubclassOf(typeof(ExtensibleInt)) ||
+                t.IsSubclassOf(typeof(Extensible<BigInteger>));
+        }
+
+        /// <summary>
+        /// Fixes a single value to be used for slicing.
+        /// </summary>
+        private static object FixSliceIndex(OldInstance self, object index, ref Nullable<int> length) {
+            if (index != null) {
+                BigInteger bi;
+                ExtensibleInt ei;
+                Extensible<BigInteger> el;
+
+                if (index is int) {
+                    index = NormalizeInt(self, (int)index, ref length);
+                } else if (!Object.ReferenceEquals((bi = index as BigInteger), null)) {
+                    index = NormalizeBigInteger(self, bi, ref length);
+                } else if ((ei = index as ExtensibleInt) != null) {
+                    index = NormalizeInt(self, ei.Value, ref length);
+                } else if ((el = index as Extensible<BigInteger>) != null) {
+                    index = NormalizeBigInteger(self, el.Value, ref length);
+                } else if (index is bool) {
+                    return ((bool)index) ? 1 : 0;
+                }
+            }
+            return index;
+        }
+
+        /// <summary>
+        /// For OldInstance slicing.  Fixes up a BigInteger and returns an integer w/ the length of the
+        /// OldInstance added if the value is negative.
+        /// </summary>
+        private static object NormalizeBigInteger(OldInstance self, BigInteger bi, ref Nullable<int> length) {
+            int val;
+            if (bi < BigInteger.Zero) {
+                GetLength(self, ref length);
+
+                if (bi.AsInt32(out val)) {
+                    return val + length;
+                } else {
+                    return Int32.MaxValue;
+                }
+            } else if (bi.AsInt32(out val)) {
+                return val;
+            }
+
+            return Int32.MaxValue;
+        }
+
+        /// <summary>
+        /// For OldInstance slicing.  Returns a normalized integer w/ the length of the
+        /// OldInstance added if the value is negative.
+        /// </summary>
+        private static object NormalizeInt(OldInstance self, int index, ref Nullable<int> length) {
+            if (index < 0) {
+                GetLength(self, ref length);
+                return index + length;
+            }
+            return index;
+        }
+
+        /// <summary>
+        /// For OldInstance slicing.  Gets the length of the OldInstance, only gets the length
+        /// once.
+        /// </summary>
+        private static void GetLength(OldInstance self, ref Nullable<int> length) {
+            if (length != null) return;
+
+            length = PythonOps.Length(self);
+        }
+
+        #endregion
     }
 }

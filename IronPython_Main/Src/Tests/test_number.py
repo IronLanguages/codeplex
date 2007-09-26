@@ -2161,4 +2161,18 @@ def test_ipt_integertest():
             
         AreEqual(repr(mylong(3L)), '3L')
 
+
+def test_override_eq():
+    for base_type in [float, long, int]:
+        class F(base_type):
+            def __eq__(self, other):
+                return other == 'abc'
+            def __ne__(self, other):
+                return other == 'def'
+        
+        AreEqual(F() == 'abc', True)
+        AreEqual(F() != 'def', True)
+        AreEqual(F() == 'qwe', False)
+        AreEqual(F() != 'qwe', False)
+
 run_test(__name__)
