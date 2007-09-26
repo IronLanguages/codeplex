@@ -17,46 +17,30 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class CreateInstanceAction : CallAction, IEquatable<CreateInstanceAction> {
-        private static CreateInstanceAction _simple = new CreateInstanceAction(null);
-
-        private CreateInstanceAction(ArgumentInfo[] args)
-            : base(args) {
+        private static readonly CreateInstanceAction[] _cached = new CreateInstanceAction[] { 
+            new CreateInstanceAction(new CallSignature(0)),
+            new CreateInstanceAction(new CallSignature(1)),
+            new CreateInstanceAction(new CallSignature(2)),
+            new CreateInstanceAction(new CallSignature(3)),
+            new CreateInstanceAction(new CallSignature(4))
+        };
+        
+        protected CreateInstanceAction(CallSignature callSignature)
+            : base(callSignature) {
         }
 
-        public static new CreateInstanceAction Make(params ArgumentInfo[] args) {
-            if (args == null) return Simple;
-
-            for (int i = 0; i < args.Length; i++) {
-                if (args[i].Kind != ArgumentKind.Simple) {
-                    return new CreateInstanceAction(args);
-                }
-            }
-
-            return CreateInstanceAction.Simple;
+        public static new CreateInstanceAction Make(CallSignature signature) {
+            return new CreateInstanceAction(signature);
         }
 
-        public static new CreateInstanceAction Make(params Arg[] args) {
-            ArgumentInfo[] argkind = new ArgumentInfo[args.Length];
-            bool nonSimple = false;
-            for (int i = 0; i < args.Length; i++) {
-                argkind[i] = args[i].Info;
-                if (args[i].Kind != ArgumentKind.Simple) nonSimple = true;
-            }
-
-            if (nonSimple) {
-                return new CreateInstanceAction(argkind);
-            }
-
-            return CreateInstanceAction.Simple;
-        }
-
-        public static new CreateInstanceAction Simple {
-            get {
-                return _simple;
-            }
+        public static new CreateInstanceAction Make(int argumentCount) {
+            Contract.Requires(argumentCount >= 0, "argumentCount");
+            if (argumentCount < _cached.Length) return _cached[argumentCount];
+            return new CreateInstanceAction(new CallSignature(argumentCount));
         }
 
         public override bool Equals(object obj) {
@@ -64,14 +48,11 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public bool Equals(CreateInstanceAction other) {
-            if (other != null) {
-                return ArgumentInfo.ArrayEquals(ArgumentInfos, other.ArgumentInfos);
-            }
-            return false;
+            return base.Equals(other);
         }
 
         public override int GetHashCode() {
-            return ArgumentInfo.GetHashCode(Kind, ArgumentInfos);
+            return base.GetHashCode();
         }
 
         public override DynamicActionKind Kind {

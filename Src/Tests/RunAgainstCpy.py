@@ -44,7 +44,7 @@ from os  import environ
 #--GLOBALS
 
 #tests we do not wish to run. These should be in the "Tests" directory
-EXCLUDE_LIST = []
+EXCLUDE_LIST = ['test_winforms.py']
 
 #For some reason test_math is taking extraordinary amounts of time to run
 #under CPython 2.5.  For now, this is just disabled.

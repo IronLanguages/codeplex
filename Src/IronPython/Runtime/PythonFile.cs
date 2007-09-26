@@ -262,10 +262,8 @@ namespace IronPython.Runtime {
                 int c = Read();
                 if (c == -1)
                     break;
-                _position++;
                 if (c == '\r' && Peek() == '\n') {
                     c = Read();
-                    _position++;
                 }
                 sb.Append((char)c);
             }
@@ -281,10 +279,8 @@ namespace IronPython.Runtime {
                 int c = Read();
                 if (c == -1)
                     break;
-                _position++;
                 if (c == '\r' && Peek() == '\n') {
                     c = Read();
-                    _position++;
                 }
                 sb.Append((char)c);
             }
@@ -999,10 +995,10 @@ namespace IronPython.Runtime {
 
         private readonly PythonStreamReader reader;
         private readonly PythonStreamWriter writer;
-        private bool isclosed = false;
+        private bool isclosed;
         private Nullable<long> reseekPosition;
 
-        public bool softspace = false;
+        public bool softspace;
 
         public Encoding Encoding {
             get {

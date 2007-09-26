@@ -766,8 +766,6 @@ def test_key_error():
         except KeyError, e:
             AreEqual(e.args[0], key)
 
-#CodePlex Work Item 7426
-@disabled("CodePlex Work Item #7426")
 def test_contains():
     class ContainsDict(dict):
         was_called = False
@@ -820,19 +818,19 @@ def test_stdtypes_dict():
                 print "Failed on", temp_type, "type using", temp_key, "as the key:", e
                 raise e
     
-    
-#CodePlex Work Item 5712
-@disabled("CodePlex Work Item 5712")
+
+@skip("silverlight")
 def test_main_dict():
-    import __main__
-    #just make sure this doesn't throw...
-    t_list = []
-    for w in __main__.__dict__: t_list.append(w)
-    
-    t_list.sort()
-    g_list = globals().keys()
-    g_list.sort()
-    AreEqual(t_list, g_list)
+    if not is_interpreted():  #this actually works under Interpreted mode - just not using the special setup from test_ipye.py
+        import __main__
+        #just make sure this doesn't throw...
+        t_list = []
+        for w in __main__.__dict__: t_list.append(w)
+        
+        t_list.sort()
+        g_list = globals().keys()
+        g_list.sort()
+        AreEqual(t_list, g_list)
     
 
 def test_update():

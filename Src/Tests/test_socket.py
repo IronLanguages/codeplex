@@ -308,14 +308,12 @@ def test_getaddrinfo():
     
     #negative cases
     AssertError(socket.gaierror, socket.getaddrinfo, "should never work.dfkdfjkkjdfkkdfjkdjf", 0)    
-    #CodePlex Work Item 5445
-    #AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)    
+
+    AssertError(socket.gaierror, socket.getaddrinfo, "1", 0)    
     AssertError(socket.gaierror, socket.getaddrinfo, ".", 0)    
-    #CodePlex Work Item 5445
-    #AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)       
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 3.14, 0, 0, 0, 0)       
     AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, -1, 0, 0, 0)    
-    #CodePlex Work Item 5445
-    #AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0) 
+    AssertError(socket.error, socket.getaddrinfo, "127.0.0.1", 0, 0, -1, 0, 0) 
 
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, 1000000, 0)
     socket.getaddrinfo("127.0.0.1", 0, 0, 0, -1000000, 0)

@@ -32,12 +32,12 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Hosting;
+using Microsoft.Scripting.Actions;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
     [Documentation("Fast object serialization/unserialization.\n\n"
         + "Differences from CPython:\n"
-        + " - no persistent id support\n"
         + " - does not implement the undocumented fast mode\n"
         )]
     public static class PythonPickle {
@@ -277,6 +277,8 @@ namespace IronPython.Modules {
             private IFileOutput _file;
             private int _protocol;
             private IDictionary _memo;
+            private object _persist_id;
+            private DynamicSite<object, object, string> _persist_site;
 
             #region Public API
 
@@ -295,8 +297,18 @@ namespace IronPython.Modules {
                 set { _batchSize = value; }
             }
 
+            public object persistent_id {
+                get {
+                    return _persist_id;
+                }
+                set {
+                    _persist_id = value;
+                }
+            }
+
             public int binary {
                 get { return _protocol == 0 ? 1 : 0; }
+                set { _protocol = value; }
             }
 
             public int fast {
@@ -411,9 +423,20 @@ namespace IronPython.Modules {
             #region Save functions
 
             private void Save(CodeContext context, object obj) {
+                if (_persist_id != null) {
+                    if (_persist_site == null) {
+                        _persist_site = RuntimeHelpers.CreateSimpleCallSite<object, object, string>();
+                    }
+                    string res = _persist_site.Invoke(context, _persist_id, obj);
+                    if (res != null) {
+                        SavePersId(context, res);
+                        return;
+                    }
+                }
+
                 if (_memo.Contains(PythonOps.Id(obj))) {
                     WriteGet(obj);
-                } else {
+                } else {                    
                     PickleFunction pickleFunction;
                     DynamicType objType = DynamicHelpers.GetDynamicType(obj);
                     if (!dispatchTable.TryGetValue(objType.CanonicalDynamicType, out pickleFunction)) {
@@ -425,6 +448,17 @@ namespace IronPython.Modules {
                         }
                     }
                     pickleFunction(context, obj);
+                }
+            }
+
+            private void SavePersId(CodeContext context, string res) {
+                if (this.binary != 0) {
+                    Save(context, res);
+                    Write(Opcode.BinPersid);
+                } else {
+                    Write(Opcode.PersId);
+                    Write(res);
+                    Write("\n");
                 }
             }
 
@@ -1221,6 +1255,8 @@ namespace IronPython.Modules {
             private IFileInput _file;
             private List _stack;
             private IDictionary<object, object> _memo;
+            private object _pers_loader;
+            private DynamicSite<object, object, object> _pers_site;
 
             public Unpickler(object file)
                 : this(new PythonFileInput(file)) { }
@@ -1326,6 +1362,15 @@ namespace IronPython.Modules {
             public IDictionary<object, object> memo {
                 get { return _memo; }
                 set { _memo = value; }
+            }
+
+            public object persistent_load {
+                get {
+                    return _pers_loader;
+                }
+                set {
+                    _pers_loader = value;
+                }
             }
 
             private object MemoGet(long key) {
@@ -1482,7 +1527,12 @@ namespace IronPython.Modules {
             }
 
             private void LoadBinPersid(CodeContext context) {
-                throw PythonOps.NotImplementedError("noload() is not implemented");
+                if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
+
+                if (_pers_site == null) {
+                    _pers_site = RuntimeHelpers.CreateSimpleCallSite<object, object, object>();
+                }
+                _stack.Append(_pers_site.Invoke(context, _pers_loader, _stack.Pop()));
             }
 
             private void LoadBinPut(CodeContext context) {
@@ -1709,7 +1759,13 @@ namespace IronPython.Modules {
             }
 
             private void LoadPersId(CodeContext context) {
-                throw PythonOps.NotImplementedError("persistent id support is not implemented");
+                if (_pers_loader == null) {
+                    throw CannotUnpickle("A load persistent ID instruction is present but no persistent_load function is available");
+                }
+
+                if (_pers_site == null) _pers_site = RuntimeHelpers.CreateSimpleCallSite<object, object, object>();
+
+                _stack.Append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));
             }
 
             private void LoadPop(CodeContext context) {

@@ -14,12 +14,14 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
 
     public class IndexExpression : Expression {
         private readonly Expression _target;
@@ -41,7 +43,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Action.Operator(
                 Span,
-                Operators.GetItem,
+                GetOperator,
                 type,
                 GetActionArgumentsForGetOrDelete(ag)
             );
@@ -54,22 +56,37 @@ namespace IronPython.Compiler.Ast {
                 return ArrayUtils.Insert(ag.Transform(_target), ag.Transform(te.Items));
             }
 
+            SliceExpression se = _index as SliceExpression;
+            if (se != null) {
+                if (se.StepProvided) {
+                    return new MSAst.Expression[] { 
+                        ag.Transform(_target),
+                        GetSliceValue(ag, se.SliceStart),
+                        GetSliceValue(ag, se.SliceStop),
+                        GetSliceValue(ag, se.SliceStep) 
+                    };
+                }
+
+                return new MSAst.Expression[] { 
+                    ag.Transform(_target),
+                    GetSliceValue(ag, se.SliceStart),
+                    GetSliceValue(ag, se.SliceStop)
+                };
+            }
+
             return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index) };
         }
 
-        private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {
-            TupleExpression te = _index as TupleExpression;
-            if (te != null && te.IsExpandable) {
-                MSAst.Expression[] res = new MSAst.Expression[te.Items.Length + 2];
-                res[0] = ag.Transform(_target);
-                for (int i = 0; i < te.Items.Length; i++) {
-                    res[i + 1] = ag.Transform(te.Items[i]);
-                }
-                res[res.Length - 1] = right;
-                return res;
-            }
+        private static MSAst.Expression GetSliceValue(AstGenerator ag, Expression expr) {
+            if (expr != null) {
+                return ag.Transform(expr);
+            } 
 
-            return new MSAst.Expression[] { ag.Transform(_target), ag.Transform(_index), right };
+            return Ast.ReadField(null, typeof(System.Reflection.Missing).GetField("Value"));            
+        }
+
+        private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {
+            return ArrayUtils.Append(GetActionArgumentsForGetOrDelete(ag), right);
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
@@ -77,7 +94,7 @@ namespace IronPython.Compiler.Ast {
                 right = Ast.Action.Operator(op,
                             typeof(object),
                             Ast.Action.Operator(
-                                Operators.GetItem,
+                                GetOperator,
                                 typeof(object),
                                 GetActionArgumentsForGetOrDelete(ag)
                             ),
@@ -88,18 +105,18 @@ namespace IronPython.Compiler.Ast {
             return Ast.Statement(
                 Ast.Action.Operator(
                     Span,
-                    Operators.SetItem,
+                    SetOperator,
                     typeof(object),
                     GetActionArgumentsForSet(ag, right)
                 )
             );
         }
-
+        
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {
             return Ast.Statement(
                 Ast.Action.Operator(
                     Span,
-                    Operators.DeleteItem,
+                    DeleteOperator,
                     typeof(object),
                     GetActionArgumentsForGetOrDelete(ag)
                 )
@@ -116,6 +133,36 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        private Operators GetOperator {
+            get {
+                if (_index is SliceExpression) {
+                    return Operators.GetSlice;
+                }
+
+                return Operators.GetItem;
+            }
+        }
+
+        private Operators SetOperator {
+            get {
+                if (_index is SliceExpression) {
+                    return Operators.SetSlice;
+                }
+
+                return Operators.SetItem;
+            }
+        }
+
+        private Operators DeleteOperator {
+            get {
+                if (_index is SliceExpression) {
+                    return Operators.DeleteSlice;
+                }
+
+                return Operators.DeleteItem;
+            }
         }
     }
 }

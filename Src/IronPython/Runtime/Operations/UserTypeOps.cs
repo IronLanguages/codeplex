@@ -460,7 +460,6 @@ namespace IronPython.Runtime.Operations {
         private static Statement MakeGetAttrCall<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Variable tmp) {
             Statement ret = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Action.Call(
-                    CallAction.Simple,
                     typeof(object),
                     Ast.ReadDefined(tmp),
                     Ast.Constant(SymbolTable.IdToString(action.Name))
@@ -508,8 +507,8 @@ namespace IronPython.Runtime.Operations {
                     return
                         rule.MakeReturn(
                             context.LanguageContext.Binder,
-                            Ast.Comma(1,
-                                new BinderHelper<T, CallAction>(context, CallAction.Simple).MakeCallExpression(setter, args),
+                            Ast.Comma(
+                                new BinderHelper<T, CallAction>(context, CallAction.Make(args.Length)).MakeCallExpression(setter, args),
                                 rule.Parameters[1]
                             )
                         );
@@ -791,7 +790,6 @@ namespace IronPython.Runtime.Operations {
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
                         Ast.Action.Call(
-                            CallAction.Simple,
                             typeof(object),
                             Ast.Read(tmp),
                             rule.AddTemplatedConstant(typeof(string), SymbolTable.IdToString(action.Name)),
@@ -819,7 +817,6 @@ namespace IronPython.Runtime.Operations {
                     rule.MakeReturn(
                         context.LanguageContext.Binder,
                         Ast.Action.Call(
-                            CallAction.Simple,
                             typeof(object),
                             Ast.Read(tmp),
                             Ast.Constant(SymbolTable.IdToString(action.Name))
@@ -917,7 +914,6 @@ namespace IronPython.Runtime.Operations {
                                         rule.MakeReturn(
                                             context.LanguageContext.Binder,
                                             Ast.Action.Call(
-                                                CallAction.Simple,
                                                 typeof(object),
                                                 exprargs
                                             )

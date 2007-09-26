@@ -18,9 +18,9 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting.Utils {
-    // Orcas: to be replaced by Action<>
+    // TODO: Orcas: to be replaced by Action<>
 
-    public delegate void Function(); // TODO: should be Action(), conflicts with DLR actions
+    public delegate void Action();
     public delegate void Action<T1, T2>(T1 arg1, T2 arg2);
     public delegate void Action<T1, T2, T3>(T1 arg1, T2 arg2, T3 arg3);
     public delegate void Action<T1, T2, T3, T4>(T1 arg1, T2 arg2, T3 arg3, T4 arg4);

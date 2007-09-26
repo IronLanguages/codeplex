@@ -18,7 +18,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -170,7 +169,7 @@ namespace IronPython.Modules {
 
         [PythonType("dropwhile")]
         public class DropWhile : IterBase {
-            private FastDynamicSite<object, object, bool> _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+            private FastDynamicSite<object, object, bool> _callSite = RuntimeHelpers.CreateSimpleCallSite<object, object, bool>(DefaultContext.Default);
 
             public DropWhile(object predicate, object iterable) {
                 InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
@@ -206,7 +205,7 @@ namespace IronPython.Modules {
                 InnerEnumerator = Yielder(PythonOps.GetEnumerator(iterable));
                 if (key != null) {
                     _key = key;
-                    _callSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, CallAction.Simple);
+                    _callSite = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
                 }
             }
 
@@ -243,7 +242,7 @@ namespace IronPython.Modules {
             public IteratorFilter(object predicate, object iterable) {
                 InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
                 if (predicate != null) {
-                    _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+                    _callSite = RuntimeHelpers.CreateSimpleCallSite<object, object, bool>(DefaultContext.Default);
                 }
             }
 
@@ -269,7 +268,7 @@ namespace IronPython.Modules {
             public IteratorFilterFalse(object predicate, object iterable) {
                 InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));
                 if (predicate != null) {
-                    _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+                    _callSite = RuntimeHelpers.CreateSimpleCallSite<object, object, bool>(DefaultContext.Default);
                 }
             }
 
@@ -298,7 +297,7 @@ namespace IronPython.Modules {
 
                 this._function = function;
                 if (function != null) {
-                    _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));                
+                    _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new CallSignature(ArgumentKind.List)));
                 }
 
                 this._iterables = new IEnumerator[iterables.Length];
@@ -458,7 +457,7 @@ namespace IronPython.Modules {
             }
             #endregion
 
-            [SpecialName, PythonName("__len__")]
+            [System.Runtime.CompilerServices.SpecialName, PythonName("__len__")]
             public int GetLength() {
                 if (fInfinite) throw PythonOps.TypeError("len of unsized object");
                 return Math.Max(remaining, 0);
@@ -467,7 +466,9 @@ namespace IronPython.Modules {
 
         [PythonType("starmap")]
         public class StarMap : IterBase {
-            private FastDynamicSite<object, object[], object> _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, CallAction.Make(new ArgumentInfo(ArgumentKind.List)));
+            private FastDynamicSite<object, object[], object> _callSite = FastDynamicSite<object, object[], object>.Create(DefaultContext.Default, 
+                CallAction.Make(new CallSignature(ArgumentKind.List)));
+
             public StarMap(CodeContext context, object function, object iterable) {
                 InnerEnumerator = Yielder(context, function, PythonOps.GetEnumerator(iterable));
             }
@@ -488,7 +489,8 @@ namespace IronPython.Modules {
 
         [PythonType("takewhile")]
         public class TakeWhile : IterBase {
-            private FastDynamicSite<object, object, bool> _callSite = FastDynamicSite<object, object, bool>.Create(DefaultContext.Default, CallAction.Simple);
+            private FastDynamicSite<object, object, bool> _callSite = 
+                RuntimeHelpers.CreateSimpleCallSite<object, object, bool>(DefaultContext.Default);
 
             public TakeWhile(object predicate, object iterable) {
                 InnerEnumerator = Yielder(predicate, PythonOps.GetEnumerator(iterable));

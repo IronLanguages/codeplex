@@ -40,7 +40,7 @@ pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDe
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
               'OverflowWarning', 'FutureWarning',
               'AssertionError', 'RuntimeWarning',
-              'UserWarning', 'SyntaxWarning', 'Warning']
+              'ImportWarning', 'UserWarning', 'SyntaxWarning', 'Warning']
 
 silverlight_unsupported = ["WindowsError", "UnicodeEncodeError", "UnicodeDecodeError"]
         

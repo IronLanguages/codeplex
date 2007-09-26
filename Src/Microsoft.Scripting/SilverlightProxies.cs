@@ -21,6 +21,7 @@ using System.Globalization;
 using System.IO;
 using System.Collections;
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 #if SILVERLIGHT // Proxies
 
@@ -29,12 +30,21 @@ namespace System {
     namespace Diagnostics {
 
         namespace CodeAnalysis {
-            [AttributeUsageAttribute(AttributeTargets.All, AllowMultiple = true)]
+            // This class is stubbed out because it's easier to do this than to put #if !SILVERLIGHT
+            // every place we use it.
+            [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true), Conditional("CODE_ANALYSIS")]
             public class SuppressMessageAttribute : Attribute {
-                public SuppressMessageAttribute(string category, string checkId) { }
-                public string Scope { get { return null; } set { } }
-                public string Target { get { return null; } set { } }
-                public string MessageId { get { return null; } set { } }
+                private string _category, _checkId, _justification, _messageId, _scope, _target;
+                public SuppressMessageAttribute(string category, string checkId) {
+                    _category = category;
+                    _checkId = checkId;
+                }
+                public string Category { get { return _category; } set { _category = value; } }
+                public string CheckId { get { return _checkId; } set { _checkId = value; } }
+                public string Justification { get { return _justification; } set { _justification = value; } }
+                public string MessageId { get { return _messageId; } set { _messageId = value;  } }
+                public string Scope { get { return _scope; } set { _scope = value; } }
+                public string Target { get { return _target; } set { _target = value; } }
             }
         }
     }
@@ -49,7 +59,6 @@ namespace System {
     // We don't actually use them because the code is #if !SILVERLIGHT
     // Rather than fix the usings all over the place, just define these here
     namespace Runtime.Remoting { class Dummy {} }
-    namespace Runtime.Serialization { class Dummy {} }
     namespace Security.Policy { class Dummy {} }
     namespace Xml.XPath { class Dummy {} }
 
@@ -90,7 +99,9 @@ namespace System {
     public class NonSerializedAttribute : Attribute {
     }
 
-    public interface ISerializable {
+    namespace Runtime.Serialization {
+        public interface ISerializable {
+        }
     }
 
     [Flags]
@@ -235,11 +246,21 @@ namespace System {
 
 #region LinkedList<T>, LinkedListNode<T>
         public class LinkedListNode<T> {
+            internal LinkedList<T> _list;
             internal LinkedListNode<T> _previous, _next;
             internal T _value;
 
-            internal LinkedListNode(T value) {
-                this._value = value;
+            internal LinkedListNode(LinkedList<T> list, T value) {
+                _list = list;
+                _value = value;
+            }
+
+            public LinkedListNode(T value) {
+                _value = value;
+            }
+
+            public LinkedList<T> List {
+                get { return _list; }
             }
 
             public LinkedListNode<T> Previous {
@@ -275,9 +296,16 @@ namespace System {
             }
 
             public void AddFirst(LinkedListNode<T> node) {
-                if (node._next != null || node._previous != null) {
-                    throw new ArgumentException("Node is already a member of another list");
+                CheckInvariants();
+
+                if (node == null) {
+                    throw new ArgumentNullException("node");
                 }
+                if (node._list != null) {
+                    throw new InvalidOperationException("node is already a member of another list");
+                }
+
+                node._list = this;
                 node._next = _first;
                 if (_first != null) {
                     _first._previous = node;
@@ -286,6 +314,8 @@ namespace System {
                 if (_last == null) {
                     _last = node;
                 }
+
+                CheckInvariants();
             }
 
             public void AddLast(T value) {
@@ -293,9 +323,16 @@ namespace System {
             }
 
             public void AddLast(LinkedListNode<T> node) {
-                if (node._next != null || node._previous != null) {
-                    throw new ArgumentException("Node is already a member of another list");
+                CheckInvariants();
+
+                if (node == null) {
+                    throw new ArgumentNullException("node");
                 }
+                if (node._list != null) {
+                    throw new InvalidOperationException("node is already a member of another list");
+                }
+
+                node._list = this;
                 node._previous = _last;
                 if (_last != null) {
                     _last._next = node;
@@ -304,26 +341,57 @@ namespace System {
                 if (_first == null) {
                     _first = node;
                 }
+
+                CheckInvariants();
             }
 
             public void Remove(LinkedListNode<T> node) {
-                if (node==null) {
-                    throw new ArgumentNullException();
-                }
+                CheckInvariants();
 
+                if (node == null) {
+                    throw new ArgumentNullException("node");
+                }
+                if (node._list != this) {
+                    throw new InvalidOperationException("node is not a member of this list");
+                }
 
                 if (node._previous == null) {
                     _first = node._next;
                 } else {
                     node._previous._next = node._next;
-                    node._previous = null;
                 }
 
                 if (node._next == null) {
                     _last = node._previous;
                 } else {
                     node._next._previous = node._previous;
-                    node._next = null;
+                }
+
+                node._list = null;
+                node._previous = null;
+                node._next = null;
+
+                CheckInvariants();
+            }
+
+            [Conditional("DEBUG")]
+            private void CheckInvariants() {
+                if (_first == null || _last == null) {
+                    // empty list
+                    Debug.Assert(_first == null && _last == null);
+                } else if (_first == _last) {
+                    // one element
+                    Debug.Assert(_first._next == null && _first._previous == null && _first._list == this);
+                } else {
+                    Debug.Assert(_first._previous == null && _first._list == this);
+                    Debug.Assert(_last._next == null && _last._list == this);
+                    if (_first._next == _last || _last._previous == _first) {
+                        // two elements
+                        Debug.Assert(_first._next == _last && _last._previous == _first);
+                    } else if (_first._next == _last._previous) {
+                        // three elements
+                        Debug.Assert(_first._next._next == _last && _last._previous._previous == _first);
+                    }
                 }
             }
         }

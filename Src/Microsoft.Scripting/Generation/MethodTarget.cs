@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Generation {
                 args = new Expression[parameters.Length];
                 for (int i = 0; i < args.Length; i++) {
                     args[i] = parameters[i];
-                    if (knownTypes[i] != null && !knownTypes[i].IsAssignableFrom(parameters[i].ExpressionType)) {
+                    if (knownTypes[i] != null && !knownTypes[i].IsAssignableFrom(parameters[i].Type)) {
                         args[i] = Ast.Cast(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));
                     }
                 }

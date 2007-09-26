@@ -23,11 +23,17 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
+    public interface IFunctionEnvironment {
+        SymbolId[] Names {
+            get;
+        }
+    }
+
     /// <summary>
     /// Base class for FunctionEnvironment's which use a Tuple for the underlying storage.
     /// </summary>
     /// <typeparam name="TupleType"></typeparam>
-    public sealed class FunctionEnvironmentDictionary<TupleType> : TupleDictionary<TupleType> where TupleType : Tuple {
+    public sealed class FunctionEnvironmentDictionary<TupleType> : TupleDictionary<TupleType>, IFunctionEnvironment where TupleType : Tuple{
         private Dictionary<SymbolId, int> _slotDict;
         private int _size;
 
@@ -91,58 +97,11 @@ namespace Microsoft.Scripting {
             }
             _slotDict = slotDict;            
         }
-    }
-    
-    /// <summary>
-    /// The environment for closures. The environment provides access to the variables
-    /// defined in the enclosing lexical scopes.
-    /// </summary>
-    public sealed class FunctionEnvironmentNDictionary : CustomSymbolDictionary {
-        // Array of the variables in the environment
-        private object[] _environmentValues;
-        private SymbolId[] _names;
 
-        public FunctionEnvironmentNDictionary() {
-        }
-
-        public FunctionEnvironmentNDictionary(object [] envValues, SymbolId[] names) {
-            Contract.RequiresNotNull(envValues, "envValues");
-
-            PerfTrack.NoteEvent(PerfTrack.Categories.Temporary, "FuncEnv " + envValues.Length);
-            Debug.Assert(names.Length <= envValues.Length);
-
-            _names = names;
-            _environmentValues = envValues;            
-        }
-
-        public object[] EnvironmentValues {
-            get { return _environmentValues; }
-        }
-
-        protected internal override bool TrySetExtraValue(SymbolId key, object value) {
-            for (int i = 0; i < _names.Length; i++) {
-                if (_names[i] == key) {
-                    _environmentValues[i] = value;
-                    return true;
-                }
+        SymbolId[] IFunctionEnvironment.Names {
+            get {
+                return Extra;
             }
-            return false;
-        }
-
-        protected internal override bool TryGetExtraValue(SymbolId key, out object value) {
-            for (int index = 0; index < _names.Length; index++) {
-                if (_names[index] == key) {
-                    value = _environmentValues[index];
-                    return true;
-                }
-            }
-
-            value = null;
-            return false;
-        }
-
-        public override SymbolId[] GetExtraKeys() {
-            return _names;
         }
     }
 }

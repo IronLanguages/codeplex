@@ -299,5 +299,34 @@ def test_vars():
 
     AreEqual(vars(foo()), 'abc')
 
+def test_compile():
+    for x in ['exec', 'eval', 'single']:
+        c = compile('2', 'foo', x)
+        AreEqual(c.co_filename, 'foo')
+        
+    class mystdout(object):
+        def __init__(self):
+            self.data = []
+        def write(self, data):
+            self.data.append(data)
+
+    import sys
+    out = mystdout()
+    sys.stdout = out
+    try:
+        c = compile('2', 'test', 'single')
+        exec c      
+        AreEqual(out.data, ['2', '\n'])  
+    finally:
+        sys.stdout = sys.__stdout__
+
+def test_str_none():
+    class foo(object):
+        def __str__(self):
+                return None
+    
+    AreEqual(foo().__str__(), None)
+    AssertError(TypeError, str, foo())
+
 run_test(__name__)
 

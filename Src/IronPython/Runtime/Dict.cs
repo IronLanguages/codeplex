@@ -100,7 +100,7 @@ namespace IronPython.Runtime {
             lock (this) data.Add(BaseSymbolDictionary.NullToObj(key), value);
         }
 
-        public bool ContainsKey(object key) {
+        public virtual bool ContainsKey(object key) {
             lock (this) return data.ContainsKey(BaseSymbolDictionary.NullToObj(key));
         }
 
@@ -257,12 +257,11 @@ namespace IronPython.Runtime {
 
         #region IPythonContainer Members
 
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+        [PythonName("__len__")]
+        public virtual int GetLength() {
             return DictionaryOps.__len__(this);
         }
 
-        [SpecialName, PythonName("__contains__")]
         public bool ContainsValue(object value) {
             return DictionaryOps.__contains__(this, value);
         }
@@ -382,7 +381,9 @@ namespace IronPython.Runtime {
         public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {            
             XRange xr = seq as XRange;
             if (xr != null) {
-                if (_fromkeysSite == null) _fromkeysSite = FastDynamicSite<DynamicType, object>.Create(DefaultContext.Default, CallAction.Simple);
+                if (_fromkeysSite == null) {
+                    _fromkeysSite = RuntimeHelpers.CreateSimpleCallSite<DynamicType, object>(DefaultContext.Default);
+                }
 
                 int n = xr.GetLength();
                 object ret = _fromkeysSite.Invoke(cls);
@@ -484,7 +485,8 @@ namespace IronPython.Runtime {
             DictionaryOps.clear(this);
         }
 
-        bool IDictionary.Contains(object key) {
+        [PythonName("__contains__")]
+        public virtual bool Contains(object key) {
             return ContainsKey(key);
         }
 

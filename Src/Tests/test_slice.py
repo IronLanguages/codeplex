@@ -2576,4 +2576,485 @@ def test_getslice_setslice3():
     del(a[-1:-5])
     AreEqual(a.calls, ['len', 'delete'])
 
+
+def test_slice_getslice_forbidden():
+    """providing no value for step forbids calling __getslice__"""
+    class foo:
+        def __getslice__(self, i, j):
+            return 42
+        def __getitem__(self, index):
+            return 23
+    
+    AreEqual(foo()[::], 23)
+    AreEqual(foo()[::None], 23)
+
+def test_slice_setslice_forbidden():
+    """providing no value for step forbids calling __setslice__"""
+    global setVal
+    class foo:
+        def __setslice__(self, i, j, value):
+            global setVal
+            setVal = i, j, value
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value
+    
+    foo()[::] = 23
+    AreEqual(setVal, (slice(None, None, None), 23))
+    foo()[::None] =  23
+    AreEqual(setVal, (slice(None, None, None), 23))
+
+def test_slice_delslice_forbidden():
+    """providing no value for step forbids calling __delslice__"""
+    global setVal
+    class foo:
+        def __delslice__(self, i, j, value):
+            global setVal
+            setVal = i, j, value
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+    
+    del foo()[::]
+    AreEqual(setVal, slice(None, None, None))
+    del foo()[::None]
+    AreEqual(setVal, slice(None, None, None))
+    
+def test_getslice_missing_values():
+    # missing values are different from passing None explicitly
+    class myint(int): pass
+    class mylong(long): pass
+    
+    class foo:
+        def __getslice__(self, i, j):
+            return (i, j)
+        def __getitem__(self, index):
+            return (index)
+        def __len__(self): return 42
+    
+    def validate_slice_result(result, value):
+        AreEqual(result, value)
+        AreEqual(result[0].__class__, int)
+        
+    # only numeric types are passed to __getslice__    
+    validate_slice_result(foo()[:], (0, 2147483647))
+    validate_slice_result(foo()[2L:], (2L, 2147483647))
+    validate_slice_result(foo()[2L<<64:], (2147483647, 2147483647))
+    validate_slice_result(foo()[:2L], (0, 2L))
+    validate_slice_result(foo()[:2L<<64], (0, 2147483647))
+    validate_slice_result(foo()[2L:3L], (2L, 3L))
+    validate_slice_result(foo()[2L<<64:3L<<64], (2147483647, 2147483647))
+    validate_slice_result(foo()[myint(2):], (2, 2147483647))
+    validate_slice_result(foo()[:myint(2)], (0, 2))
+    validate_slice_result(foo()[myint(2):myint(3)], (2, 3))
+    validate_slice_result(foo()[mylong(2):], (2, 2147483647))
+    validate_slice_result(foo()[:mylong(2)], (0, 2))
+    validate_slice_result(foo()[mylong(2):mylong(3)], (2, 3))
+    validate_slice_result(foo()[True:], (1, 2147483647))
+    validate_slice_result(foo()[:True], (0, 1))
+    validate_slice_result(foo()[False:True], (0, 1))
+    
+    def test_slice(foo):
+        AreEqual(foo()[None:], slice(None, None))
+        AreEqual(foo()[:None], slice(None, None))
+        AreEqual(foo()[None:None], slice(None, None))
+        AreEqual(foo()['abc':], slice('abc', None))
+        AreEqual(foo()[:'abc'], slice(None, 'abc'))
+        AreEqual(foo()['abc':'def'], slice('abc', 'def'))
+        AreEqual(foo()[2.0:], slice(2.0, None))
+        AreEqual(foo()[:2.0], slice(None, 2.0))
+        AreEqual(foo()[2.0:3.0], slice(2.0, 3.0))
+        AreEqual(foo()[1j:], slice(1j, None))
+        AreEqual(foo()[:1j], slice(None, 1j))
+        AreEqual(foo()[2j:3j], slice(2j, 3j))
+    
+    test_slice(foo)
+    
+    class foo:
+        def __getitem__(self, index):
+            return (index)
+        def __len__(self): return 42
+
+    AreEqual(foo()[:], slice(0, 2147483647))
+    test_slice(foo)
+
+def test_setslice_missing_values():
+    # missing values are different from passing None explicitly
+    class myint(int): pass
+    class mylong(long): pass
+    
+    global setVal
+    class foo:
+        def __setslice__(self, i, j, value):
+            global setVal
+            setVal = (i, j, value)
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = (index, value)
+        def __len__(self): return 42
+    
+    # only numeric types are passed to __getslice__    
+    foo()[:] = 123
+    AreEqual(setVal, (0, 2147483647, 123))
+    foo()[2L:] = 123
+    AreEqual(setVal, (2L, 2147483647, 123))
+    foo()[2L<<64:] = 123
+    AreEqual(setVal, (2147483647, 2147483647, 123))
+    foo()[:2L] = 123
+    AreEqual(setVal, (0, 2L, 123))
+    foo()[:2L<<64] = 123
+    AreEqual(setVal, (0, 2147483647, 123))
+    foo()[2L:3L] = 123 
+    AreEqual(setVal, (2L, 3L, 123))
+    foo()[2L<<64:3L<<64] = 123
+    AreEqual(setVal, (2147483647, 2147483647, 123))
+    foo()[myint(2):] = 123
+    AreEqual(setVal,  (2, 2147483647, 123))
+    foo()[:myint(2)] = 123
+    AreEqual(setVal, (0, 2, 123))
+    foo()[myint(2):myint(3)] = 123
+    AreEqual(setVal,  (2, 3, 123))
+    foo()[mylong(2):] = 123
+    AreEqual(setVal, (2, 2147483647, 123))
+    foo()[:mylong(2)] = 123
+    AreEqual(setVal, (0, 2, 123))
+    foo()[mylong(2):mylong(3)] = 123
+    AreEqual(setVal, (2, 3, 123))
+    foo()[True:] = 123
+    AreEqual(setVal, (1, 2147483647, 123))
+    foo()[:True] = 123
+    AreEqual(setVal, (0, 1, 123))
+    foo()[False:True] = 123
+    AreEqual(setVal, (0, 1, 123))
+
+    def test_slice(foo):
+        foo()[None:] = 123
+        AreEqual(setVal, (slice(None, None), 123))
+        foo()[:None] = 123
+        AreEqual(setVal, (slice(None, None), 123))
+        foo()[None:None] = 123
+        AreEqual(setVal, (slice(None, None), 123))
+        foo()['abc':] = 123
+        AreEqual(setVal, (slice('abc', None), 123))
+        foo()[:'abc'] = 123
+        AreEqual(setVal, (slice(None, 'abc'), 123))
+        foo()['abc':'def'] = 123
+        AreEqual(setVal, (slice('abc', 'def'), 123))
+        foo()[2.0:] = 123
+        AreEqual(setVal, (slice(2.0, None), 123))
+        foo()[:2.0] = 123
+        AreEqual(setVal, (slice(None, 2.0), 123))
+        foo()[2.0:3.0] = 123
+        AreEqual(setVal, (slice(2.0, 3.0), 123))
+        foo()[1j:] = 123
+        AreEqual(setVal, (slice(1j, None), 123))
+        foo()[:1j] = 123
+        AreEqual(setVal, (slice(None, 1j), 123))
+        foo()[2j:3j] = 123
+        AreEqual(setVal, (slice(2j, 3j), 123))
+    
+    test_slice(foo)
+    
+    class foo:
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value            
+        def __len__(self): return 42
+
+    foo()[:] = 123
+    AreEqual(setVal, (slice(0, 2147483647), 123))
+    test_slice(foo)
+
+
+def test_delslice_missing_values():
+    # missing values are different from passing None explicitly
+    class myint(int): pass
+    class mylong(long): pass
+    
+    global setVal
+    class foo:
+        def __delslice__(self, i, j):
+            global setVal
+            setVal = (i, j)
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+        def __len__(self): return 42
+    
+    # only numeric types are passed to __getslice__    
+    del foo()[:]
+    AreEqual(setVal, (0, 2147483647))
+    del foo()[2L:] 
+    AreEqual(setVal, (2L, 2147483647))
+    del foo()[2L<<64:] 
+    AreEqual(setVal, (2147483647, 2147483647))
+    del foo()[:2L] 
+    AreEqual(setVal, (0, 2L))
+    del foo()[:2L<<64] 
+    AreEqual(setVal, (0, 2147483647))
+    del foo()[2L:3L] 
+    AreEqual(setVal, (2L, 3L))
+    del foo()[2L<<64:3L<<64] 
+    AreEqual(setVal, (2147483647, 2147483647))
+    del foo()[myint(2):] 
+    AreEqual(setVal,  (2, 2147483647))
+    del foo()[:myint(2)] 
+    AreEqual(setVal, (0, 2))
+    del foo()[myint(2):myint(3)] 
+    AreEqual(setVal,  (2, 3))
+    del foo()[mylong(2):] 
+    AreEqual(setVal, (2, 2147483647))
+    del foo()[:mylong(2)] 
+    AreEqual(setVal, (0, 2))
+    del foo()[mylong(2):mylong(3)] 
+    AreEqual(setVal, (2, 3))
+    del foo()[:True]
+    AreEqual(setVal, (0, 1))
+    del foo()[True:]
+    AreEqual(setVal, (1, 2147483647))
+    del foo()[False:True]
+    AreEqual(setVal, (0, 1))
+
+    def test_slice(foo):
+        del foo()[None:] 
+        AreEqual(setVal, slice(None, None))
+        del foo()[:None] 
+        AreEqual(setVal, slice(None, None))
+        del foo()[None:None] 
+        AreEqual(setVal, slice(None, None))
+        del foo()['abc':] 
+        AreEqual(setVal, slice('abc', None))
+        del foo()[:'abc'] 
+        AreEqual(setVal, slice(None, 'abc'))
+        del foo()['abc':'def'] 
+        AreEqual(setVal, slice('abc', 'def'))
+        del foo()[2.0:] 
+        AreEqual(setVal, slice(2.0, None))
+        del foo()[:2.0] 
+        AreEqual(setVal, slice(None, 2.0))
+        del foo()[2.0:3.0] 
+        AreEqual(setVal, slice(2.0, 3.0))
+        del foo()[1j:] 
+        AreEqual(setVal, slice(1j, None))
+        del foo()[:1j] 
+        AreEqual(setVal, slice(None, 1j))
+        del foo()[2j:3j] 
+        AreEqual(setVal, slice(2j, 3j))
+    
+    test_slice(foo)
+    
+    class foo:
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+        def __len__(self): return 42
+
+    del foo()[:]
+    AreEqual(setVal, slice(0, 2147483647))
+    test_slice(foo)
+
+def test_oldclass_and_direct():
+    """tests slicing OldInstance's and directly passing a slice object"""
+    class OldStyle:
+        def __getitem__(self, index):
+            return index
+        
+    class OldStyleWithLen:
+        def __getitem__(self, index):
+            return index
+        def __len__(self):
+            return 10
+        
+    class NewStyle(object):
+        def __getitem__(self, index):
+            return index
+    
+    class OldStyleWithLenAndGetSlice:
+        def __getitem__(self, index):
+            return index
+        def __len__(self):
+            return 10
+        def __getslice__(self, start, stop):
+            return start, stop
+
+    # slice object should pass through unmodified if constructed explicitly.
+    AreEqual(NewStyle()[slice(None, -1, None)], slice(None, -1, None))
+    AreEqual(OldStyleWithLen()[slice(None, -1, None)], slice(None, -1, None))
+    AreEqual(OldStyle()[slice(None, -1, None)], slice(None, -1, None))
+    AreEqual(OldStyleWithLenAndGetSlice()[slice(None, -1, None)], slice(None, -1, None))
+    
+    # using the slice syntax 
+    AreEqual(NewStyle()[:-1], slice(None, -1, None))
+    AreEqual(OldStyleWithLen()[:-1], slice(0, 9, None))
+    AreEqual(OldStyleWithLenAndGetSlice()[:-1], (0, 9))
+    AreEqual(OldStyle()[:-1:1], slice(None, -1, 1))
+    
+    # need __len__ to be defined for negative indexing
+    try:
+        OldStyle()[:-1], 
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    try:
+        OldStyle()[-1:], 
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    
+    # but if we provide a step no length is needed because we'll never use __getslice__
+    AreEqual(OldStyle()[:-1:None], slice(None, -1, None))
+    AreEqual(OldStyle()[-1::None], slice(-1, None, None))
+    AreEqual(OldStyle()[:-1:], slice(None, -1, None))
+    AreEqual(OldStyle()[-1::], slice(-1, None, None))
+
+def test_oldclass_and_direct_set():
+    """tests slicing OldInstance's and directly passing a slice object"""
+    global setVal
+    class OldStyle:
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value
+        
+    class OldStyleWithLen:
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value
+        def __len__(self):
+            return 10
+        
+    class NewStyle(object):
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value
+    
+    class OldStyleWithLenAndGetSlice:
+        def __setitem__(self, index, value):
+            global setVal
+            setVal = index, value
+        def __len__(self):
+            return 10
+        def __setslice__(self, start, stop, value):
+            global setVal
+            setVal = start, stop, value
+
+    # slice object should pass through unmodified if constructed explicitly.
+    NewStyle()[slice(None, -1, None)] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyleWithLen()[slice(None, -1, None)] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyle()[slice(None, -1, None)] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyleWithLenAndGetSlice()[slice(None, -1, None)] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    
+    # using the slice syntax 
+    NewStyle()[:-1] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyleWithLen()[:-1] = 123
+    AreEqual(setVal, (slice(0, 9, None), 123))
+    OldStyleWithLenAndGetSlice()[:-1] = 123
+    AreEqual(setVal, (0, 9, 123))
+    OldStyle()[:-1:1] = 123
+    AreEqual(setVal, (slice(None, -1, 1), 123))
+    
+    # need __len__ to be defined for negative indexing
+    try:
+        OldStyle()[:-1] = 123
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    try:
+        OldStyle()[-1:] = 123
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    
+    # but if we provide a step no length is needed because we'll never use __getslice__
+    OldStyle()[:-1:None] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyle()[-1::None] = 123
+    AreEqual(setVal, (slice(-1, None, None), 123))
+    OldStyle()[:-1:] = 123
+    AreEqual(setVal, (slice(None, -1, None), 123))
+    OldStyle()[-1::] = 123
+    AreEqual(setVal, (slice(-1, None, None), 123))
+
+def test_oldclass_and_direct_delete():
+    """tests slicing OldInstance's and directly passing a slice object"""
+    global setVal
+    class OldStyle:
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+        
+    class OldStyleWithLen:
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+        def __len__(self):
+            return 10
+        
+    class NewStyle(object):
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+    
+    class OldStyleWithLenAndGetSlice:
+        def __delitem__(self, index):
+            global setVal
+            setVal = index
+        def __len__(self):
+            return 10
+        def __delslice__(self, start, stop):
+            global setVal
+            setVal = start, stop
+
+    # slice object should pass through unmodified if constructed explicitly.
+    del NewStyle()[slice(None, -1, None)] 
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyleWithLen()[slice(None, -1, None)]
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyle()[slice(None, -1, None)]
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyleWithLenAndGetSlice()[slice(None, -1, None)] 
+    AreEqual(setVal, (slice(None, -1, None)))
+    
+    # using the slice syntax 
+    del NewStyle()[:-1] 
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyleWithLen()[:-1] 
+    AreEqual(setVal, (slice(0, 9, None)))
+    del OldStyleWithLenAndGetSlice()[:-1] 
+    AreEqual(setVal, (0, 9))
+    del OldStyle()[:-1:1] 
+    AreEqual(setVal, (slice(None, -1, 1)))
+    
+    # need __len__ to be defined for negative indexing
+    try:
+        OldStyle()[:-1] = 123
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    try:
+        OldStyle()[-1:] = 123
+        AssertUnreachable()
+    except AttributeError:
+        pass
+    
+    
+    # but if we provide a step no length is needed because we'll never use __getslice__
+    del OldStyle()[:-1:None] 
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyle()[-1::None] 
+    AreEqual(setVal, (slice(-1, None, None)))
+    del OldStyle()[:-1:] 
+    AreEqual(setVal, (slice(None, -1, None)))
+    del OldStyle()[-1::] 
+    AreEqual(setVal, (slice(-1, None, None)))
+
 run_test(__name__)

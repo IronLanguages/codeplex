@@ -150,12 +150,11 @@ namespace IronPython.Runtime {
         }
 
         #region ISequence Members
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+        [PythonName("__len__")]
+        public virtual int GetLength() {
             return data.Length;
         }
 
-        [SpecialName, PythonName("__contains__")]
         public bool ContainsValueWrapper(object item) {
             return ContainsValue(item);
         }
@@ -384,7 +383,8 @@ namespace IronPython.Runtime {
             throw new InvalidOperationException("Tuple is readonly");
         }
 
-        bool ICollection<object>.Contains(object item) {
+        [PythonName("__contains__")]
+        public virtual bool Contains(object item) {
             return this.ContainsValue(item);
         }
 

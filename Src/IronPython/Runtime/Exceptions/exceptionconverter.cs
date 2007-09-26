@@ -50,6 +50,7 @@ namespace IronPython.Runtime.Exceptions {
         static PythonFunction exceptionGetStateMethod;
         static PythonFunction syntaxErrorStrMethod;
         static PythonFunction unicodeErrorInit;
+        static PythonFunction syntaxErrorInit;
         static PythonFunction systemExitInitMethod;
 
         const string pythonExceptionKey = "PythonExceptionInfo";
@@ -127,6 +128,7 @@ namespace IronPython.Runtime.Exceptions {
                     new ExceptionMapping("OverflowWarning",typeof(PythonOverflowWarningException)),
                     new ExceptionMapping("RuntimeWarning",typeof(PythonRuntimeWarningException)),
                     new ExceptionMapping("FutureWarning",typeof(PythonFutureWarningException)),
+                    new ExceptionMapping("ImportWarning",typeof(PythonImportWarningException)),
                 }),
             })            
         };
@@ -143,6 +145,7 @@ namespace IronPython.Runtime.Exceptions {
                 "__init__",
                 new CallTargetWithContextN(ExceptionConverter.UnicodeErrorInit),
                 new string[] { "self", "encoding", "object", "start", "end", "reason" }, ArrayUtils.EmptyObjects, FunctionAttributes.None);
+            syntaxErrorInit = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.SyntaxErrorInit), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
             systemExitInitMethod = new FunctionX(DefaultContext.Default, "__init__", new CallTargetWithContextN(ExceptionConverter.SystemExitExceptionInit), new string[] { "args" }, ArrayUtils.EmptyObjects, FunctionAttributes.ArgumentList);
 
             for (int i = 0; i < exceptionMappings.Length; i++) {
@@ -201,6 +204,28 @@ namespace IronPython.Runtime.Exceptions {
                 }
 
                 PythonOps.SetAttr(DefaultContext.Default, self, Symbols.Arguments, PythonTuple.Make(realArgs));
+            }
+            return null;
+        }
+
+        public static object SyntaxErrorInit(CodeContext context, params object[] args) {
+            ExceptionInit(args);
+
+            PythonTuple t = args[0] as PythonTuple;
+            if (t != null) {
+                object self = t[0];
+                object []realArgs = ArrayUtils.RemoveFirst(t.data);
+
+                if (realArgs.Length > 0) {
+                    PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("msg"), realArgs[0]);
+
+                    if (realArgs.Length > 1) {
+                        PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("filename"), PythonOps.GetIndex(realArgs[1], 0));
+                        PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("lineno"), PythonOps.GetIndex(realArgs[1], 1));
+                        PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("offset"), PythonOps.GetIndex(realArgs[1], 2));
+                        PythonOps.SetAttr(DefaultContext.Default, self, SymbolTable.StringToId("text"), PythonOps.GetIndex(realArgs[1], 3));
+                    }
+                }
             }
             return null;
         }
@@ -703,6 +728,14 @@ namespace IronPython.Runtime.Exceptions {
             OldClass syntaxError = DefaultExceptionCreator(name, module, baseType);
 
             syntaxError.SetCustomMember(DefaultContext.Default, Symbols.String, syntaxErrorStrMethod);
+            syntaxError.SetCustomMember(DefaultContext.Default, Symbols.Init, syntaxErrorInit);
+            // default attributes defined on class
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("lineno"), null);
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("filename"), null);
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("msg"), String.Empty);
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("offset"), null);
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("print_file_and_line"), null);
+            syntaxError.SetCustomMember(DefaultContext.Default, SymbolTable.StringToId("text"), null);
             return syntaxError;
         }
 

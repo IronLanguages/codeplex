@@ -168,4 +168,13 @@ def test_clr_doc():
     Assert(System.Double.TryParse.__doc__.index('(bool, float)') >= 0)
     Assert(System.Double.TryParse.__doc__.index('(str s)') >= 0)
 
+def test_none():
+    AreEqual(None.__doc__, None)
+    
+@disabled("CodePlex Work Item 10823")
+def test_builtin_nones():
+    for x in [Ellipsis, None, NotImplemented, exit, quit, ]:
+        Assert(x.__doc__==None, str(x) + ".__doc__ != None")    
+
+
 run_test(__name__)

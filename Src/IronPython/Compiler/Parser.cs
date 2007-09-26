@@ -76,7 +76,7 @@ namespace IronPython.Compiler {
         private Stack<FunctionDefinition> _functions;
         private bool _fromFutureAllowed;
         private string _privatePrefix;
-        private bool _parsingStarted;
+        private bool _parsingStarted, _allowIncomplete;
         private SourceUnitReader _sourceReader;
         private int _errorCode;
 
@@ -195,25 +195,16 @@ namespace IronPython.Compiler {
 
         private SourceLocation GetEnd() {
             Debug.Assert(_token.Token != null, "No token fetched");
-            if (_token.Token.Kind == TokenKind.EndOfFile) {
-                return SourceSpan.None.End;
-            }
             return _token.Span.End;
         }
 
         private SourceLocation GetStart() {
             Debug.Assert(_token.Token != null, "No token fetched");
-            if (_token.Token.Kind == TokenKind.EndOfFile) {
-                return SourceSpan.None.End;
-            }
             return _token.Span.Start;
         }
 
         private SourceSpan GetSpan() {
             Debug.Assert(_token.Token != null, "No token fetched");
-            if (_token.Token.Kind == TokenKind.EndOfFile) {
-                return SourceSpan.None;
-            }
             return _token.Span;
         }
 
@@ -512,7 +503,12 @@ namespace IronPython.Compiler {
                 case TokenKind.NewLine:
                     EatOptionalNewlines();
                     Eat(TokenKind.EndOfFile);
-                    isEmptyStmt = true;
+                    if (_tokenizer.EndContinues) {
+                        parsingMultiLineCmpdStmt = true;
+                        _errorCode = ErrorCodes.IncompleteStatement;
+                    } else {
+                        isEmptyStmt = true;
+                    }
                     return null;
 
                 case TokenKind.KeywordIf:
@@ -551,7 +547,7 @@ namespace IronPython.Compiler {
             EatOptionalNewlines();
             Statement statement = ParseStmt();
             EatEndOfInput();
-            return new PythonAst(statement, false, TrueDivision, false);
+            return new PythonAst(statement, false, TrueDivision, true);
         }
 
         public PythonAst ParseExpression() {
@@ -1771,7 +1767,7 @@ namespace IronPython.Compiler {
                     ret.SetLoc(start, GetEnd());
                     return ret;
                 default:
-                    ReportSyntaxError(_token.Token, _token.Span, ErrorCodes.SyntaxError, _tokenizer.EndContinues);
+                    ReportSyntaxError(_token.Token, _token.Span, ErrorCodes.SyntaxError, _allowIncomplete || _tokenizer.EndContinues);
 
                     // error node
                     ret = new ErrorExpression();
@@ -1886,23 +1882,28 @@ namespace IronPython.Compiler {
         private Expression FinishSlice(Expression e0, SourceLocation start) {
             Expression e1 = null;
             Expression e2 = null;
+            bool stepProvided = false;
 
             switch (PeekToken().Kind) {
                 case TokenKind.Comma:
                 case TokenKind.RightBracket:
                     break;
                 case TokenKind.Colon:
+                    // x[?::?]
+                    stepProvided = true;
                     NextToken();
                     e2 = ParseSliceEnd();
                     break;
                 default:
+                    // x[?:val:?]
                     e1 = ParseTest();
                     if (MaybeEat(TokenKind.Colon)) {
+                        stepProvided = true;
                         e2 = ParseSliceEnd();
                     }
                     break;
             }
-            SliceExpression ret = new SliceExpression(e0, e1, e2);
+            SliceExpression ret = new SliceExpression(e0, e1, e2, stepProvided);
             ret.SetLoc(start, GetEnd());
             return ret;
         }
@@ -2260,22 +2261,29 @@ namespace IronPython.Compiler {
             SourceLocation oEnd = GetEnd();
 
             List<SliceExpression> l = new List<SliceExpression>();
-            while (true) {
-                if (MaybeEat(TokenKind.RightBrace)) {
-                    break;
-                }
-                Expression e1 = ParseTest();
-                Eat(TokenKind.Colon);
-                Expression e2 = ParseTest();
-                SliceExpression se = new SliceExpression(e1, e2, null);
-                se.SetLoc(e1.Start, e2.End);
-                l.Add(se);
+            bool prevAllow = _allowIncomplete;
+            try {
+                _allowIncomplete = true;
+                while (true) {
+                    if (MaybeEat(TokenKind.RightBrace)) {
+                        break;
+                    }
+                    Expression e1 = ParseTest();
+                    Eat(TokenKind.Colon);
+                    Expression e2 = ParseTest();
+                    SliceExpression se = new SliceExpression(e1, e2, null, false);
+                    se.SetLoc(e1.Start, e2.End);
+                    l.Add(se);
 
-                if (!MaybeEat(TokenKind.Comma)) {
-                    Eat(TokenKind.RightBrace);
-                    break;
+                    if (!MaybeEat(TokenKind.Comma)) {
+                        Eat(TokenKind.RightBrace);
+                        break;
+                    }
                 }
+            } finally {
+                _allowIncomplete = prevAllow;
             }
+
             SourceLocation cStart = GetStart();
             SourceLocation cEnd = GetEnd();
 

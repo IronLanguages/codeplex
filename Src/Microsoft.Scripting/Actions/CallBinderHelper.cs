@@ -151,12 +151,13 @@ namespace Microsoft.Scripting.Actions {
         protected Expression[] MakeArgumentExpressions() {
             List<Expression> exprargs = new List<Expression>();
             if (_instance != null) exprargs.Add(_instance);
-            for (int i = 0; i < ArgumentCount(Action, _rule); i++) {
-                switch (Action.GetArgumentKind(i)) {
+            for (int i = 0; i < Action.Signature.ArgumentCount; i++) { // ArgumentCount(Action, _rule)
+                switch (Action.Signature.GetArgumentKind(i)) {
                     case ArgumentKind.Simple:
                     case ArgumentKind.Named:
                         exprargs.Add(_rule.Parameters[i + 1]);
                         break;
+
                     case ArgumentKind.List:
                         IList<object> list = (IList<object>)_args[i + 1];
                         for (int j = 0; j < list.Count; j++) {
@@ -171,6 +172,7 @@ namespace Microsoft.Scripting.Actions {
                             );
                         }
                         break;
+
                     case ArgumentKind.Dictionary:
                         IDictionary dict = (IDictionary)_args[i + 1];
 
@@ -217,8 +219,8 @@ namespace Microsoft.Scripting.Actions {
 
         private void MakeICallableRule(Type t) {
             Expression call = null;
-            if (!Action.HasKeywordArgument()) {
-                if (Action.HasInstance() && typeof(ICallableWithThis).IsAssignableFrom(t)) {
+            if (!Action.Signature.HasKeywordArgument()) {
+                if (Action.Signature.HasInstanceArgument() && typeof(ICallableWithThis).IsAssignableFrom(t)) {
                     call = Ast.Call(_rule.Parameters[0], typeof(ICallableWithThis).GetMethod("Call"), GetICallableParameters(t, _rule));
                 } else {
                     call = Ast.Call(_rule.Parameters[0], typeof(ICallableWithCodeContext).GetMethod("Call"), GetICallableParameters(t, _rule));
@@ -247,11 +249,11 @@ namespace Microsoft.Scripting.Actions {
             Expression instance = null;
 
             for (int i = 1; i < rule.Parameters.Length; i++) {
-                switch (Action.GetArgumentKind(i - 1)) {
+                switch (Action.Signature.GetArgumentKind(i - 1)) {
                     case ArgumentKind.Simple: plainArgs.Add(rule.Parameters[i]); break;
                     case ArgumentKind.List: splat = rule.Parameters[i]; break;
                     case ArgumentKind.Dictionary: kwSplat = rule.Parameters[i]; break;
-                    case ArgumentKind.Named: named.Add(new KeyValuePair<SymbolId, Expression>(Action.GetArgumentName(i - 1), rule.Parameters[i])); break;
+                    case ArgumentKind.Named: named.Add(new KeyValuePair<SymbolId, Expression>(Action.Signature.GetArgumentName(i - 1), rule.Parameters[i])); break;
                     case ArgumentKind.Instance: instance = rule.Parameters[i]; break;
                     case ArgumentKind.Block: 
                     default:
@@ -443,17 +445,19 @@ namespace Microsoft.Scripting.Actions {
         /// Makes test for param arrays and param dictionary parameters.
         /// </summary>
         protected void MakeSplatTests() {
-            if (Action.HasParamsArgument()) {
+            if (Action.Signature.HasListArgument()) {
                 MakeParamsArrayTest();
             }
 
-            if (Action.HasDictionaryArgument()) {
+            if (Action.Signature.HasDictionaryArgument()) {
                 MakeParamsDictionaryTest();
             }
         }
 
         private void MakeParamsArrayTest() {
-            _test = Ast.AndAlso(_test, MakeParamsTest(_rule, _args[Action.ParamsIndex + 1], _rule.Parameters[Action.ParamsIndex + 1]));
+            int listIndex = Action.Signature.IndexOf(ArgumentKind.List);
+            Debug.Assert(listIndex != -1);
+            _test = Ast.AndAlso(_test, MakeParamsTest(_rule, _args[listIndex + 1], _rule.Parameters[listIndex + 1]));
         }
 
         private void MakeParamsDictionaryTest() {
@@ -535,16 +539,16 @@ namespace Microsoft.Scripting.Actions {
         /// and named arguments line up w/ argTypes.
         /// </summary>
         protected void GetArgumentNamesAndTypes(out SymbolId[] argNames, out Type[] argTypes) {
-            argNames = Action.GetArgumentNames();
+            argNames = Action.Signature.GetArgumentNames();
             argTypes = GetArgumentTypes(Action, _args);
-            if (Action.HasDictionaryArgument()) {
+            if (Action.Signature.HasDictionaryArgument()) {
                 // need to get names from dictionary argument...
                 GetDictionaryNamesAndTypes(ref argNames, ref argTypes);
             }
         }
 
         private void GetDictionaryNamesAndTypes(ref SymbolId[] argNames, ref Type[] argTypes) {
-            Debug.Assert(Action.ArgumentInfos[Action.ArgumentCount - 1].Kind == ArgumentKind.Dictionary);
+            Debug.Assert(Action.Signature.GetArgumentKind(Action.Signature.ArgumentCount - 1) == ArgumentKind.Dictionary);
 
             List<SymbolId> names = new List<SymbolId>(argNames);
             List<Type> types = new List<Type>(argTypes);

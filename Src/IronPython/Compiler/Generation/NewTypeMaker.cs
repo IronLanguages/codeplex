@@ -298,18 +298,14 @@ namespace IronPython.Compiler.Generation {
             this._slots = typeInfo.Slots;
         }
 
-        private static string GetBaseName(MethodInfo mi, Dictionary<string, bool> specialNames) {
+        private static IEnumerable<string> GetBaseName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
             Debug.Assert(mi.Name.StartsWith("#base#"));
 
             string newName = mi.Name.Substring(6);
 
             Debug.Assert(specialNames.ContainsKey(newName));
 
-            if (specialNames[newName] == true) {
-                if (newName == "get_Item") return "__getitem__";
-                else if (newName == "set_Item") return "__setitem__";
-            }
-            return newName;
+            return specialNames[newName];
         }
 
         // Coverts a well-known CLI name to its Python equivalent
@@ -363,7 +359,7 @@ namespace IronPython.Compiler.Generation {
 
             ImplementConstructors();
 
-            Dictionary<string, bool> specialNames = new Dictionary<string, bool>();
+            Dictionary<string, List<string>> specialNames = new Dictionary<string, List<string>>();
 
             OverrideVirtualMethods(_baseType, specialNames);
 
@@ -448,7 +444,7 @@ namespace IronPython.Compiler.Generation {
             return true;
         }
 
-        private void AddBaseMethods(Type finishedType, Dictionary<string, bool> specialNames) {
+        private void AddBaseMethods(Type finishedType, Dictionary<string, List<string>> specialNames) {
             // "Adds" base methods to super type (should really add to the derived type)
             // this makes super(...).xyz to work - otherwise we'd return a function that
             // did a virtual call resulting in a stack overflow.
@@ -459,20 +455,21 @@ namespace IronPython.Compiler.Generation {
 
                 string methodName = mi.Name;
                 if (methodName.StartsWith("#base#")) {
-                    string newName = GetBaseName(mi, specialNames);
-                    DynamicMixinBuilder dtb = DynamicMixinBuilder.GetBuilder(rt);
-                    DynamicTypeSlot dts;
-                    if(rt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(newName), out dts)) {
-                        BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
-                        if (bmd != null) {
-                            bmd.Template.AddMethod(mi);
+                    foreach (string newName in GetBaseName(mi, specialNames)) {
+                        DynamicMixinBuilder dtb = DynamicMixinBuilder.GetBuilder(rt);
+                        DynamicTypeSlot dts;
+                        if (rt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(newName), out dts)) {
+                            BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
+                            if (bmd != null) {
+                                bmd.Template.AddMethod(mi);
+                            }
                         }
                     }
                 }
             }
         }
 
-        private void DoInterfaceType(Type interfaceType, Dictionary<Type, bool> doneTypes, Dictionary<string, bool> specialNames) {
+        private void DoInterfaceType(Type interfaceType, Dictionary<Type, bool> doneTypes, Dictionary<string, List<string>> specialNames) {
             if (doneTypes.ContainsKey(interfaceType)) return;
             doneTypes.Add(interfaceType, true);
             OverrideVirtualMethods(interfaceType, specialNames);
@@ -857,7 +854,7 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        private void OverrideVirtualMethods(Type type, Dictionary<string, bool> specialNames) {
+        private void OverrideVirtualMethods(Type type, Dictionary<string, List<string>> specialNames) {
             // if we have conflicting virtual's do to new slots only override the methods on the
             // most derived class.
             Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo> added = new Dictionary<KeyValuePair<string,MethodSignatureInfo>, MethodInfo>();
@@ -893,31 +890,37 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        private void OverrideSpecialName(MethodInfo mi, Dictionary<string, bool> specialNames) {
+        private void OverrideSpecialName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
             if (mi == null || !mi.IsVirtual || mi.IsFinal) return;
 
             string name;
             PropertyInfo[] pis = mi.DeclaringType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
-            specialNames[mi.Name] = true;
+            List<string> names = new List<string>();
+            names.Add(mi.Name);
+            specialNames[mi.Name] = names;
             foreach (PropertyInfo pi in pis) {                
                 if (pi.GetIndexParameters().Length > 0) {
                     if (mi == pi.GetGetMethod(true)) {
+                        names.Add("__getitem__");
                         CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__getitem__"));
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                         return;
                     } else if (mi == pi.GetSetMethod(true)) {
+                        names.Add("__setitem__");
                         CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__setitem__"));
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                         return;
                     }
                 } else if (mi == pi.GetGetMethod(true)) {
                     if (mi.Name != "get_DynamicType") {
+                        names.Add("__getitem__");
                         if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                         CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
                     }
                     return;
                 } else if (mi == pi.GetSetMethod(true)) {
+                    names.Add("__setitem__");
                     if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
                     return;
@@ -958,7 +961,7 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        private void OverrideBaseMethod(MethodInfo mi, Dictionary<string, bool> specialNames) {
+        private void OverrideBaseMethod(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
             if ((!mi.IsVirtual || mi.IsFinal) && !mi.IsFamily) {
                 return;
             }
@@ -978,7 +981,10 @@ namespace IronPython.Compiler.Generation {
 
             if (mi.DeclaringType == typeof(object) && mi.Name == "Finalize") return;
 
-            specialNames[mi.Name] = false;
+            List<string> names = new List<string>();
+            names.Add(mi.Name);
+            if (name != mi.Name) names.Add(name);
+            specialNames[mi.Name] = names;
             
             CreateVTableMethodOverride(mi, GetOrMakeVTableEntry(name));
             if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);

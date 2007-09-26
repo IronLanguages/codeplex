@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Ast {
             _op = op;
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(object);
             }
@@ -74,7 +74,7 @@ namespace Microsoft.Scripting.Ast {
                         _cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
                         _cg.EmitConvert(typeof(object), _as);
                     },
-                    _value.ExpressionType,
+                    _value.Type,
                     _value.EmitAs
                 );
             }

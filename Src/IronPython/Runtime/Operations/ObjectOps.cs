@@ -347,7 +347,7 @@ namespace IronPython.Runtime.Operations {
                     PythonBinderHelper.MakeTestForTypes(res, DynamicTypeOps.ObjectTypes(args), 0),
                     Ast.Call(
                         Ast.Constant(strAttr),
-                        typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].ExpressionType }),
+                        typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].Type }),
                         res.Parameters[res.ParameterCount - 1]
                     )
                 );

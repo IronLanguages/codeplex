@@ -76,15 +76,15 @@ function test-nooutput
 
     #cleanup
     #Kill off ipyw processess
-    stop-process -name ipyw 2> $null
-    sleep 3
-
+    echo "CodePlex Work Item 12900 - must forcefully kill ipyw.exe processes"
+	taskkill /F /IM ipyw.exe /T 2> $null
+	sleep 5
     $proc_list = @(get-process | where-object { $_.ProcessName -match "^ipyw" })
     if ($proc_list.Length -ne 0) 
     {
     	write-error "Failed: could not stop ipyw processes started by this script - $proc_list"
     	exit 1
-    }
+    }    
 }
 #------------------------------------------------------------------------------
 #-- Run a real test case

@@ -246,9 +246,20 @@ namespace Microsoft.Scripting.Actions {
             if (_types[0].IsArray) {
                 if (Binder.CanConvertFrom(_types[1], typeof(int), NarrowingLevel.All)) {
                     if(oper == Operators.GetItem) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.ReadItem(Param0, Param1)));
+                        _rule.SetTarget(_rule.MakeReturn(Binder,
+                            Ast.ArrayIndex(
+                                Param0,
+                                ConvertIfNeeded(Param1, typeof(int))
+                            )
+                        ));
                     } else {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.AssignItem(SourceSpan.None, Param0, Param1, Param2)));
+                        _rule.SetTarget(_rule.MakeReturn(Binder,
+                            Ast.AssignArrayIndex(
+                                Param0,
+                                ConvertIfNeeded(Param1, typeof(int)),
+                                ConvertIfNeeded(Param2, _types[0].GetElementType())
+                            )
+                        ));
                     }
                     return true;
                 }
@@ -337,7 +348,7 @@ namespace Microsoft.Scripting.Actions {
 
         private Expression GetParamater(int index) {
             Expression expr = _rule.Parameters[index];
-            if (_types[index].IsAssignableFrom(expr.ExpressionType)) return expr;
+            if (_types[index].IsAssignableFrom(expr.Type)) return expr;
             return Ast.Cast(expr, _types[index]);
         }
 
@@ -373,6 +384,13 @@ namespace Microsoft.Scripting.Actions {
                 case Operators.NotEquals: return Operators.Equals;
                 default: throw new InvalidOperationException();
             }
+        }
+
+        private static Expression ConvertIfNeeded(Expression expression, Type type) {
+            if (expression.Type != type) {
+                return Ast.DynamicConvert(expression.Span, expression, type);
+            }
+            return expression;
         }
 
         private void SetErrorTarget(OperatorInfo info) {

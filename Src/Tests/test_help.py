@@ -70,7 +70,6 @@ def test_userfunction():
     
     Assert(x.find('my help is useful') != -1)
     
-@disabled("CodePlex Work Item #6735")
 def test_splat():
     def foo(*args): pass
     sys.stdout = stdout_reader()
@@ -78,8 +77,7 @@ def test_splat():
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
     Assert(x.find('foo(*args)') != -1)
-    #CodePlex Work Item 6735
-    #Assert(x.find('Help on function foo in module __main__:') != -1)
+    Assert(x.find('Help on function foo in module __main__:') != -1)
     
     def foo(**kwargs): pass
     sys.stdout = stdout_reader()
@@ -114,23 +112,20 @@ def test_splat():
     help(foo)
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
-    #CodePlex Work Item 6735
-    #Assert(x.find('foo(a=7') != -1)
+    Assert(x.find('foo(a=7') != -1)
     
     def foo(a=[3]): a.append(7)
     sys.stdout = stdout_reader()
     help(foo)
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
-    #CodePlex Work Item 6735
-    #Assert(x.find('foo(a=[3]') != -1)
+    Assert(x.find('foo(a=[3]') != -1)
     foo()
     sys.stdout = stdout_reader()
     help(foo)
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
-    #CodePlex Work Item 6735
-    #Assert(x.find('foo(a=[3, 7]') != -1)
+    Assert(x.find('foo(a=[3, 7]') != -1)
     
 def test_builtinfunction():
     sys.stdout = stdout_reader()
@@ -254,4 +249,149 @@ def test_str():
     
     Assert(x.find('Return the absolute value of the argument.') != -1)
     
+def run_help(o):
+    sys.stdout = stdout_reader()
+    help(o)
+    x = sys.stdout.text
+    sys.stdout = sys.__stdout__
+    return x
+
+def test_user_function():
+    def f(): pass
+    out = run_help(f)
+    
+    Assert(out.find('f()') != -1)
+    if is_silverlight==False:
+        Assert(out.find('in module __main__:') != -1)
+    
+    # list
+    def f(*args): pass
+    out = run_help(f)
+    Assert(out.find('f(*args)') != -1)
+    
+    # kw dict
+    def f(**kw): pass
+    out = run_help(f)
+    Assert(out.find('f(**kw)') != -1)
+    
+    # list & kw dict
+    def f(*args, **kwargs): pass
+    out = run_help(f)
+    Assert(out.find('f(*args, **kwargs)') != -1)
+    
+    # default 
+    def f(abc = 3): pass
+    out = run_help(f)
+    Assert(out.find('f(abc=3)') != -1)
+    
+    # mutating default value
+    def f(a = [42]): 
+        a.append(23)
+    out = run_help(f)
+    Assert(out.find('f(a=[42])') != -1)
+    f()
+    out = run_help(f)
+    Assert(out.find('f(a=[42, 23])') != -1)
+    
+    # str vs repr
+    class foo(object):
+        def __repr__(self): return 'abc'
+        def __str__(self): return 'def'
+
+    def f(a = foo()): pass
+    out = run_help(f)
+    Assert(out.find('f(a=abc)') != -1)    
+
+def test_user_method():
+    class x:
+        def f(): pass
+    out = run_help(x.f)
+    
+    Assert(out.find('f()') != -1)
+    if is_silverlight==False:
+        Assert(out.find('in module __main__:') != -1)
+    
+    # list
+    class x:
+        def f(*args): pass
+    out = run_help(x.f)
+    Assert(out.find('f(*args)') != -1)
+    
+    # kw dict
+    class x:
+        def f(**kw): pass
+    out = run_help(x.f)
+    Assert(out.find('f(**kw)') != -1)
+    
+    # list & kw dict
+    class x:
+        def f(*args, **kwargs): pass
+    out = run_help(x.f)
+    Assert(out.find('f(*args, **kwargs)') != -1)
+    
+    # default 
+    class x:
+        def f(abc = 3): pass
+    out = run_help(x.f)
+    Assert(out.find('f(abc=3)') != -1)
+    
+    # str vs repr
+    class foo(object):
+        def __repr__(self): return 'abc'
+        def __str__(self): return 'def'
+
+    class x:
+        def f(a = foo()): pass
+    out = run_help(x.f)
+    Assert(out.find('f(a=abc)') != -1)    
+    
+    if is_silverlight==False:
+        Assert(out.find('unbound __main__.x method') != -1)
+    
+def test_bound_user_method():
+    class x:
+        def f(): pass
+    out = run_help(x().f)
+    
+    Assert(out.find('f()') != -1)
+    if is_silverlight==False:
+        Assert(out.find('in module __main__:') != -1)
+    
+    # list
+    class x:
+        def f(*args): pass
+    out = run_help(x().f)
+    Assert(out.find('f(*args)') != -1)
+    
+    # kw dict
+    class x:
+        def f(**kw): pass
+    out = run_help(x().f)
+    Assert(out.find('f(**kw)') != -1)
+    
+    # list & kw dict
+    class x:
+        def f(*args, **kwargs): pass
+    out = run_help(x().f)
+    Assert(out.find('f(*args, **kwargs)') != -1)
+    
+    # default 
+    class x:
+        def f(abc = 3): pass
+    out = run_help(x().f)
+    Assert(out.find('f(abc=3)') != -1)
+    
+    # str vs repr
+    class foo(object):
+        def __repr__(self): return 'abc'
+        def __str__(self): return 'def'
+
+    class x:
+        def f(a = foo()): pass
+    out = run_help(x().f)
+    Assert(out.find('f(a=abc)') != -1) 
+
+    if is_silverlight==False:
+        Assert(out.find('method of __main__.x instance') != -1)
+
 run_test(__name__)

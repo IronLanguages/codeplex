@@ -43,22 +43,24 @@ namespace Microsoft.Scripting.Generation {
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
             IList<Slot> args = cg.ArgumentSlots;
             int nargs = args.Count - firstArg;
-            CallAction action = CallAction.Simple;
+            
+            CallAction action;
             if ((functionAttributes & CallType.ArgumentList) != 0) {
-                ArgumentInfo[] ais = new ArgumentInfo[nargs];
-                for (int i = 0; i < nargs - 1; i++) {
-                    ais[i] = ArgumentInfo.Simple;
-                }
-                ais[nargs - 1] = new ArgumentInfo(ArgumentKind.List);
-                action = CallAction.Make(ais);
+                ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, nargs);
+                infos[nargs - 1] = new ArgumentInfo(ArgumentKind.List);
+
+                action = CallAction.Make(new CallSignature(infos));
+            } else {
+                action = CallAction.Make(nargs);
             }
+
             bool fast;
             Slot site = cg.CreateDynamicSite(action, 
                 CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2), 
                 out fast);
 
             site.EmitGet(cg);
-            if(!fast) cg.EmitCodeContext();
+            if (!fast) cg.EmitCodeContext();
 
             if (DynamicSiteHelpers.IsBigTarget(site.Type)) {
                 cg.EmitTuple(site.Type.GetGenericArguments()[0], args.Count + 1, delegate(int index) {

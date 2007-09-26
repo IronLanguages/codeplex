@@ -19,73 +19,7 @@ using System.Text;
 using System.Globalization;
 
 namespace Microsoft.Scripting.Utils {
-    public static class StringUtils {
-
-        #region ASCII Encoding
-
-        // Silverlight doesn't support ASCIIEncoding, so we have our own class
-        // We still use System.Text.Encoding.ASCII for the non-Silverlight case
-        public static Encoding AsciiEncoding {
-            get {
-#if !SILVERLIGHT
-                return Encoding.ASCII;
-#else
-                return new AsciiEncodingImpl();
-#endif
-            }
-        }
-
-#if SILVERLIGHT
-        // Simple implementation of ASCII encoding/decoding, meant to be
-        // compatible with System.Text.ASCIIEncoding
-        private sealed class AsciiEncodingImpl : Encoding {
-
-            internal AsciiEncodingImpl() : base(0x4e9f) { }
-
-            public override int GetByteCount(char[] chars, int index, int count) {
-                return count;
-            }
-
-            public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
-                int charEnd = charIndex + charCount;
-                while (charIndex < charEnd) {
-                    byte b = (byte)chars[charIndex++];
-                    bytes[byteIndex++] = (b <= 0x7f) ? b : (byte)'?';
-                }
-                return charCount;
-            }
-
-            public override int GetCharCount(byte[] bytes, int index, int count) {
-                return count;
-            }
-
-            public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) {
-                int byteEnd = byteIndex + byteCount;
-                while (byteIndex < byteEnd) {
-                    byte b = bytes[byteIndex++];
-                    chars[charIndex++] = (b <= 0x7f) ? (char)b : '?';
-                }
-                return byteCount;
-            }
-
-            public override int GetMaxByteCount(int charCount) {
-                return charCount;
-            }
-
-            public override int GetMaxCharCount(int byteCount) {
-                return byteCount;
-            }
-
-            public override string WebName {
-                get {
-                    return "us-ascii";
-                }
-            }
-        }
-#endif
-
-        #endregion
-
+    public static class StringUtils {       
         public static string GetSuffix(string str, char separator, bool includeSeparator) {
             Contract.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);

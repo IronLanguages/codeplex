@@ -67,7 +67,7 @@ namespace Microsoft.Scripting.Ast {
             set { _defined = value; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _variable.Type;
             }
@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Ast {
                         _cg.EmitGet(_vr.Slot, _variable.Name, !_defined);
                         _cg.EmitConvert(_variable.Type, _as);
                     },
-                    _value.ExpressionType,
+                    _value.Type,
                     _value.EmitAs
                 );
                 cg.EmitConvert(typeof(object), _vr.Slot.Type);

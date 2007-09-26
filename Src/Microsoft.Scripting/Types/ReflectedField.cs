@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Types {
             
             // statics must be assigned through their type, not a derived type.  Non-statics can
             // be assigned through their instances.
-            return (dt != null && info.DeclaringType == dt.UnderlyingSystemType) || !info.IsStatic;
+            return (dt != null && info.DeclaringType == dt.UnderlyingSystemType) || !info.IsStatic || info.IsLiteral;
         }
 
         public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {

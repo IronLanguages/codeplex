@@ -41,25 +41,19 @@ namespace Microsoft.Scripting.Generation {
 
         public override void EmitGet(CodeGen cg) {
             Contract.RequiresNotNull(cg, "cg");
-
-            //TODO: Enable this after NameBinding fix (Bug #221245)
-            //Debug.Assert(cg == this._codeGen);
+            Debug.Assert(cg == this._codeGen);
             cg.EmitTrueArgGet(_index);
         }
 
         public override void EmitGetAddr(CodeGen cg) {
             Contract.RequiresNotNull(cg, "cg");
-
-            //TODO: Enable this after NameBinding fix (Bug #221245)
-            //Debug.Assert(cg == this._codeGen);
+            Debug.Assert(cg == this._codeGen);
             cg.EmitArgAddr(_index);
         }
 
         public override void EmitSet(CodeGen cg) {
             Contract.RequiresNotNull(cg, "cg");
-
-            //TODO: Enable this after NameBinding fix (Bug #221245)
-            //Debug.Assert(cg == this._codeGen);
+            Debug.Assert(cg == this._codeGen);
             cg.Emit(OpCodes.Starg, _index);
         }
 

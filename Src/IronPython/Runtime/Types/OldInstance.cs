@@ -295,24 +295,194 @@ namespace IronPython.Runtime.Types {
         }
 
         private static StandardRule<T> MakeOperationRule<T>(DoOperationAction action, CodeContext context, object[] args) {
-            if (action.Operation == Operators.GetItem || action.Operation == Operators.SetItem) {
-                StandardRule<T> rule = new StandardRule<T>();
-                rule.MakeTest(typeof(OldInstance));
+            switch (action.Operation) {
+                case Operators.GetItem:
+                case Operators.SetItem:
+                case Operators.DeleteItem:
+                    return MakeIndexRule<T>(context, action, args);
+                case Operators.GetSlice:
+                case Operators.SetSlice:
+                case Operators.DeleteSlice:
+                    return MakeSliceRule<T>(context, action);
+                default:
+                    return null;
+            }
+        }
 
-                string method = action.Operation == Operators.GetItem ? "GetItem" : "SetItem";
-                rule.SetTarget(
-                    rule.MakeReturn(context.LanguageContext.Binder,
-                        Ast.Call(
-                            rule.Parameters[0],
-                            typeof(OldInstance).GetMethod(method),
-                            PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule)
-                        )
-                    )
+        private static StandardRule<T> MakeSliceRule<T>(CodeContext context, DoOperationAction action) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+
+            Statement normalSlice = GetNormalSliceStatement<T>(context, action, rule);
+
+            if (TryCallSliceMethod<T>(action, rule)) {
+                // we need to check for the presence of __getslice__, __setslice__, or __delslice__
+                // if(PythonOps.TryGetBoundAttr(this, Symbols.GetSlice, out res))
+                //      res(adjustedSlice.Start, adjustedSlice.Stope)
+                Variable var = rule.GetTemporary(typeof(object), "sliceFunc");
+                Variable adjSlice = rule.GetTemporary(typeof(Slice), "adjustedSlice");
+                                
+                Expression []sliceArgs = (Expression[])rule.Parameters.Clone();
+                sliceArgs[0] = Ast.Comma(
+                    Ast.Assign(adjSlice, GetSliceObject<T>(action, rule)),
+                    Ast.Read(var)
                 );
 
-                return rule;
+                Expression sliceTest = Ast.Call(
+                    null,
+                    typeof(PythonOps).GetMethod("TryGetBoundAttr", new Type[] { 
+                        typeof(CodeContext), 
+                        typeof(object), 
+                        typeof(SymbolId), 
+                        typeof(object).MakeByRefType() 
+                    }),
+                    Ast.CodeContext(),
+                    rule.Parameters[0],
+                    Ast.Constant(GetDeprecatedSliceMethod(action)),
+                    Ast.Read(var)
+                );
+                sliceTest = AddNumericTest<T>(rule, sliceTest, rule.Parameters[1]);
+                sliceTest = AddNumericTest<T>(rule, sliceTest, rule.Parameters[2]);
+
+                sliceArgs[1] = Ast.ReadProperty(Ast.Read(adjSlice), typeof(Slice).GetProperty("Start"));
+                sliceArgs[2] = Ast.ReadProperty(Ast.Read(adjSlice), typeof(Slice).GetProperty("Stop"));
+                
+                rule.SetTarget(
+                    Ast.IfThenElse(
+                        sliceTest,
+                        rule.MakeReturn(
+                            context.LanguageContext.Binder,
+                            Ast.Action.Call(
+                                typeof(object),
+                                sliceArgs
+                            )
+                        ),
+                        normalSlice
+                    )
+                );
+            } else {
+                rule.SetTarget(normalSlice);
             }
-            return null;
+            return rule;
+        }
+
+        private static Statement GetNormalSliceStatement<T>(CodeContext context, DoOperationAction action, StandardRule<T> rule) {
+            Expression[] normalSliceArgs = new Expression[2 + (action.Operation == Operators.SetSlice ? 1 : 0)];
+            normalSliceArgs[0] = Ast.CodeContext();
+            normalSliceArgs[1] = GetSliceObject<T>(action, rule);
+            if (normalSliceArgs.Length == 3) {
+                normalSliceArgs[2] = rule.Parameters[rule.Parameters.Length - 1];
+            }
+            Statement normalSlice = rule.MakeReturn(
+                context.LanguageContext.Binder,
+                Ast.Call(
+                    rule.Parameters[0],
+                    typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
+                    normalSliceArgs
+                )
+            );
+            return normalSlice;
+        }
+
+        private static Expression AddNumericTest<T>(StandardRule<T> rule, Expression sliceTest, Expression parameter) {
+            if (!PythonOps.IsNumericType(parameter.Type) && parameter.Type != typeof(System.Reflection.Missing)) {
+                sliceTest = Ast.AndAlso(sliceTest,
+                    Ast.Call(null, typeof(PythonOps).GetMethod("IsNumericObject"),
+                    parameter)
+                );
+            }
+            return sliceTest;
+        }
+
+        private static bool TryCallSliceMethod<T>(DoOperationAction action, StandardRule<T> rule) {
+            int sliceArgCount = GetSliceArgumentCount<T>(action, rule);
+            if (sliceArgCount == 2) {
+                for (int i = 1; i < sliceArgCount + 1; i++) {
+                    if (!PythonOps.IsNumericType(rule.Parameters[i].Type) &&
+                        rule.Parameters[i].Type != typeof(System.Reflection.Missing) &&
+                        rule.Parameters[i].Type != typeof(object)) {
+                        // strongly typed parameter which isn't an integer, we won't call __*slice__
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private static SymbolId GetDeprecatedSliceMethod(DoOperationAction action) {
+            SymbolId sliceMethod;
+            switch (action.Operation) {
+                case Operators.GetSlice: sliceMethod = Symbols.GetSlice; break;
+                case Operators.SetSlice: sliceMethod = Symbols.SetSlice; break;
+                case Operators.DeleteSlice: sliceMethod = Symbols.DeleteSlice; break;
+                default: throw new InvalidOperationException();
+            }
+            return sliceMethod;
+        }
+
+        private static Expression GetSliceObject<T>(DoOperationAction action, StandardRule<T> rule) {
+            Expression slice;
+            int sliceArgCount = GetSliceArgumentCount<T>(action, rule);
+            if (sliceArgCount <= 2) {
+                // no step is provided, we need a __len__ if either of the arguments are negative                
+                slice = Ast.Call(null,
+                     typeof(PythonOps).GetMethod("MakeOldStyleSlice"),
+                     rule.Parameters[0],
+                     sliceArgCount >= 1 ? rule.Parameters[1] : Ast.Null(),
+                     sliceArgCount >= 2 ? rule.Parameters[2] : Ast.Null()
+                 );
+            } else {
+                slice = Ast.Call(null,
+                    typeof(PythonOps).GetMethod("MakeSlice"),
+                    CheckMissing(rule.Parameters[1]),
+                    CheckMissing(rule.Parameters[2]),
+                    CheckMissing(rule.Parameters[3]));
+            }
+            return slice;
+        }
+
+        internal static Expression CheckMissing(Expression toCheck) {
+            if (toCheck.Type == typeof(System.Reflection.Missing)) return Ast.Null();
+            if (toCheck.Type != typeof(object)) return toCheck;
+
+            return Ast.Condition(Ast.TypeIs(toCheck, typeof(System.Reflection.Missing)), Ast.Null(), toCheck);
+        }
+
+        private static int GetSliceArgumentCount<T>(DoOperationAction action, StandardRule<T> rule) {
+            int sliceArgCount = action.Operation == Operators.SetSlice ? rule.Parameters.Length - 2 : rule.Parameters.Length - 1;
+            return sliceArgCount;
+        }
+
+        private static StandardRule<T> MakeIndexRule<T>(CodeContext context, DoOperationAction action, object[] args) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+
+            rule.SetTarget(
+                rule.MakeReturn(context.LanguageContext.Binder,
+                    Ast.Call(
+                        rule.Parameters[0],
+                        typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
+                        PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule)
+                    )
+                )
+            );
+
+            return rule;
+        }
+        private static string GetIndexOrSliceMethod(DoOperationAction action) {
+            string method;
+            switch (action.Operation) {
+                case Operators.GetItem:
+                case Operators.GetSlice: method = "GetItem"; break;
+                case Operators.SetItem:
+                case Operators.SetSlice: method = "SetItem"; break;
+                case Operators.DeleteItem:
+                case Operators.DeleteSlice: method = "DeleteItem"; break;
+                default: throw new InvalidOperationException();
+            }
+
+            return method;
         }
 
         #endregion
@@ -414,32 +584,11 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName, PythonName("__getitem__")]
         public object GetItem(CodeContext context, object item) {
-            Slice slice = item as Slice;
-            if (slice != null && slice.Step == null) {
-                object getSlice;
-                if (PythonOps.TryGetBoundAttr(context, this, Symbols.GetSlice, out getSlice)) {
-                    int start, stop;
-                    slice.DeprecatedFixed(this, out start, out stop);
-                    return PythonOps.CallWithContext(context, getSlice, start, stop);
-                }
-            }
-
             return PythonOps.InvokeWithContext(context, this, Symbols.GetItem, item);
         }
 
         [SpecialName, PythonName("__setitem__")]
         public void SetItem(CodeContext context, object item, object value) {
-            Slice slice = item as Slice;
-            if (slice != null && slice.Step == null) {
-                object setSlice;
-                if (PythonOps.TryGetBoundAttr(context, this, Symbols.SetSlice, out setSlice)) {
-                    int start, stop;
-                    slice.DeprecatedFixed(this, out start, out stop);
-                    PythonOps.CallWithContext(context, setSlice, start, stop, value);
-                    return;
-                }
-            }
-
             PythonOps.InvokeWithContext(context, this, Symbols.SetItem, item, value);
         }
 

@@ -117,8 +117,42 @@ def test_nonamespaceloadtest():
     AreEqual(a.HelloWorld(), 'Hello World')
 
 
+def test_addreferencetofileandpath_conflict():
+    """verify AddReferenceToFileAndPath picks up the path specified, not some arbitrary assembly somewhere in your path already"""
+    code1 = """
+using System;
 
+public class CollisionTest {
+    public static string Result(){
+        return "Test1";
+    }    
+}
+"""
+    
+    code2 = """
+using System;
 
+public class CollisionTest {
+    public static string Result(){
+        return "Test2";
+    }
+}
+"""
+
+    tmp = testpath.temporary_dir
+
+    test1_cs, test1_dll = path_combine(tmp, 'test1.cs'), path_combine(tmp, 'CollisionTest.dll')
+    test2_cs, test2_dll = path_combine(tmp, 'test2.cs'), path_combine(sys.prefix, 'CollisionTest.dll')
+
+    write_to_file(test1_cs, code1)
+    write_to_file(test2_cs, code2)
+
+    AreEqual(run_csc("/nologo /target:library /out:" + test2_dll + ' ' + test2_cs), 0)
+    AreEqual(run_csc("/nologo /target:library /out:" + test1_dll + ' ' + test1_cs), 0)
+    
+    clr.AddReferenceToFileAndPath(test1_dll)
+    import CollisionTest
+    AreEqual(CollisionTest.Result(), "Test1")
 
 #####################
 # VERIFY clr.AddReferenceToFile behavior...

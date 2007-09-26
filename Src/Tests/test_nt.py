@@ -32,6 +32,10 @@ def test_mkdir():
     nt.rmdir('dir_create_test')
     AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
     
+    nt.mkdir('dir_create_test')
+    AssertError(OSError, nt.mkdir, 'dir_create_test')
+    nt.rmdir('dir_create_test')
+    
 @disabled("CodePlex Work Item 1216")
 def test_mkdir_negative():    
     nt.mkdir("dir_create_test")

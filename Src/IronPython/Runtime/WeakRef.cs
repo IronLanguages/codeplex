@@ -145,7 +145,7 @@ namespace IronPython.Runtime {
     /// </summary>
     internal sealed class InstanceFinalizer : ICallableWithCodeContext {
         private object _instance;
-        private DynamicSite<object, object> _site = DynamicSite<object, object>.Create(CallAction.Simple);
+        private DynamicSite<object, object> _site = RuntimeHelpers.CreateSimpleCallSite<object, object>();
 
         public InstanceFinalizer(object inst) {
             Debug.Assert(inst != null);

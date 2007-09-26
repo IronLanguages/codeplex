@@ -72,13 +72,13 @@ namespace Microsoft.Scripting.Ast {
         public virtual bool Walk(ConstantExpression node) { return true; }
         public virtual void PostWalk(ConstantExpression node) { }
 
-        // ConversionExpression
-        public virtual bool Walk(ConversionExpression node) { return true; }
-        public virtual void PostWalk(ConversionExpression node) { }
-
         // DeleteUnboundExpression
         public virtual bool Walk(DeleteUnboundExpression node) { return true; }
         public virtual void PostWalk(DeleteUnboundExpression node) { }
+
+        // DynamicConversionExpression
+        public virtual bool Walk(DynamicConversionExpression node) { return true; }
+        public virtual void PostWalk(DynamicConversionExpression node) { }
 
         // EnvironmentExpression
         public virtual bool Walk(EnvironmentExpression node) { return true; }

@@ -84,4 +84,13 @@ def test_sleep():
         Assert(y-x < sleep_time*(1+safe_deviation))  # make sure we're close...
 
 
+def test_dst():
+    AreEqual(time.altzone, time.timezone+[3600,-3600][time.daylight])
+    t = time.time()
+    AreEqual(time.mktime(time.gmtime(t))-time.mktime(time.localtime(t)), time.timezone)
+
+def test_tzname():
+    AreEqual(type(time.tzname), tuple)
+    AreEqual(len(time.tzname), 2)
+
 run_test(__name__)

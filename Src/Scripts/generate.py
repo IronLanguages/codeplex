@@ -268,6 +268,8 @@ class FileGenerator:
                 print "different!"
                 sys.exit(1)
             else:
-                open(self.filename, 'w').write(new_text)
+                f = open(self.filename, 'w')
+                f.write(new_text)
+                f.close()
             
 

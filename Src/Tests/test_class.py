@@ -1671,16 +1671,20 @@ def test_slots_multiple():
         __slots__=()
     C().x = "hello"
     
-@disabled("Merlin Work Item 273421")    
-def test_override_container_methods():
+def test_override_container_contains():
+    for x in (dict, list, tuple):
+        class C(x):
+            def __contains__(self, other): 
+                return other == "abc"
+                
+        AreEqual('abc' in C(), True)
+
+def test_override_container_len():
     for x in (dict, list, tuple):
         class C(x):
             def __len__(self): return 42
-            def __contains__(self, other): 
-                return other == "abc"
             
         AreEqual(len(C()), 42)
-        AreEqual('abc' in C(), True)
         
 def test_dictproxy_access():
     def f():

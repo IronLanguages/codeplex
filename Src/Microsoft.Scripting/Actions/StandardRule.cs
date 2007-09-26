@@ -87,8 +87,8 @@ namespace Microsoft.Scripting.Actions {
 
         public Statement MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
-            if (expr.ExpressionType != typeof(void)) {
-                Variable variable = GetTemporary(expr.ExpressionType, "$retVal");
+            if (expr.Type != typeof(void)) {
+                Variable variable = GetTemporary(expr.Type, "$retVal");
                 Expression read = Ast.ReadDefined(variable);
                 Expression conv = binder.ConvertExpression(read, ReturnType);
                 if (conv == read) return Ast.Return(expr);
@@ -170,7 +170,7 @@ namespace Microsoft.Scripting.Actions {
             // doing fast-path behavior on a subtype which overrides behavior that wasn't
             // present for the base type.
             //TODO there's a question about nulls here
-            if (CompilerHelpers.IsSealed(t) && t == expr.ExpressionType) {
+            if (CompilerHelpers.IsSealed(t) && t == expr.Type) {
                 if (t.IsValueType) {
                     return Ast.True();
                 }
@@ -296,7 +296,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Variable MakeParameter(int index, string name, Type type) {
-            Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type);
+            Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type, null);
 
             ret.ParameterIndex = index;
             return ret;

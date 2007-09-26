@@ -81,7 +81,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal virtual MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Variable parameter = inner.Block.CreateParameter(Name, outer.Transform(_defaultValue));
+            MSAst.Variable parameter = inner.Block.CreateParameter(Name, typeof(object), outer.Transform(_defaultValue));
             _variable.SetParameter(parameter);
             return parameter;
         }
@@ -113,7 +113,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Variable parameter = inner.Block.CreateParameter(Name, outer.Transform(_defaultValue));
+            MSAst.Variable parameter = inner.Block.CreateParameter(Name, typeof(object), outer.Transform(_defaultValue));
             Variable.SetParameter(parameter);
             return parameter;
         }

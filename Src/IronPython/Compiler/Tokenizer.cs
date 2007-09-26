@@ -249,8 +249,12 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case EOF:
                         return ReadEof();
-
-                    case ' ': case '\t': case '\f':
+                    case '\f':
+                        // Ignore form feeds
+                        _buffer.DiscardToken();
+                        ch = NextChar();
+                        break;
+                    case ' ': case '\t':
                         ch = SkipWhiteSpace(at_beginning);
                         break;
 
@@ -329,11 +333,11 @@ namespace IronPython.Compiler {
 
         private int SkipWhiteSpace(bool atBeginning) {
             int ch;
-            do { ch = NextChar(); } while (ch == ' ' || ch == '\t' || ch == '\f');
+            do { ch = NextChar(); } while (ch == ' ' || ch == '\t');
 
             _buffer.Back();
 
-            if (atBeginning && ch != '#' && ch != EOF && !_buffer.IsEoln(ch)) {
+            if (atBeginning && ch != '#' && ch != '\f' && ch != EOF && !_buffer.IsEoln(ch)) {
                 _buffer.MarkSingleLineTokenEnd();
                 ReportSyntaxError(_buffer.TokenSpan, Resources.InvalidSyntax, ErrorCodes.SyntaxError);
             }
@@ -718,7 +722,7 @@ namespace IronPython.Compiler {
                 switch (ch) {
                     case ' ': spaces += 1; break;
                     case '\t': spaces += 8 - (spaces % 8); break;
-                    case '\f': spaces += 1; break;
+                    case '\f': spaces = 0; break;
                     
                     case '#':
                         if (_verbatim) {

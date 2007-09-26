@@ -102,9 +102,8 @@ namespace Microsoft.Scripting {
         public static void UpdateStackTrace(CodeContext context, MethodBase method, string funcName, string filename, int line) {
             if (_stackFrames == null) _stackFrames = new List<DynamicStackFrame>();
 
-            if (line == SourceLocation.None.Line) {
-                line = 0;
-            }
+            Debug.Assert(line != SourceLocation.None.Line);
+
             _stackFrames.Add(new DynamicStackFrame(context, method, funcName, filename, line));
         }
 

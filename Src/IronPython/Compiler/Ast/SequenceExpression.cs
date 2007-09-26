@@ -109,7 +109,7 @@ namespace IronPython.Compiler.Ast {
                 }
 
                 // 6. array_temp[i]
-                MSAst.ArrayIndexExpression element = Ast.ReadItem(
+                MSAst.ArrayIndexExpression element = Ast.ArrayIndex(
                     emitIndividualSets ?                    // span
                         target.Span : 
                         Microsoft.Scripting.SourceSpan.None,

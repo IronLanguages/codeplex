@@ -13,22 +13,22 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Actions {
-    public abstract class MemberAction : DynamicAction {
-        private SymbolId _name;
+using System;
 
-        internal MemberAction(SymbolId name) {
-            this._name = name;
-        }
+namespace Microsoft.Scripting.Actions {
+    public abstract class MemberAction : DynamicAction, IEquatable<MemberAction> {
+        private SymbolId _name;
 
         public SymbolId Name {
             get { return _name; }
         }
 
-        public override bool Equals(object obj) {
-            MemberAction other = obj as MemberAction;
-            if (other == null || other.GetType() != GetType()) return false;
-            return _name == other._name && Kind == other.Kind;
+        protected MemberAction(SymbolId name) {
+            _name = name;
+        }
+
+        public override bool Equals(object other) {
+            return Equals(other as MemberAction);
         }
 
         public override int GetHashCode() {
@@ -38,5 +38,14 @@ namespace Microsoft.Scripting.Actions {
         public override string ToString() {
             return base.ToString() + " " + SymbolTable.IdToString(_name);
         }
+
+        #region IEquatable<MemberAction> Members
+
+        public bool Equals(MemberAction other) {
+            if (other == null) return false;
+            return _name == other._name && Kind == other.Kind;
+        }
+
+        #endregion
     }
 }

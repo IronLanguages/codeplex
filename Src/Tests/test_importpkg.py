@@ -328,8 +328,7 @@ def test_c2cs():
     AreEqual(x.Test(), 'Foo<T>')
     
     
-if not is_silverlight:
-    Assert(sys.modules.has_key("__main__"))
+Assert(sys.modules.has_key("__main__"))
 
 #########################################################################################
 if not is_silverlight:
@@ -635,6 +634,40 @@ def test_import_inside_exec():
     exec 'from another import *'
     AssertInOrNot(dir(), ['a1', 'a2', 'a3'], ['_a4'])
 
+@skip("silverlight")
+def test___import___and_packages():
+    try:
+        mod_backup = dict(sys.modules)
+        _f_module = path_combine(testpath.public_testdir, 'the_test.py')
+        _f_dir    = path_combine(testpath.public_testdir, 'the_dir')
+        _f_init   = path_combine(_f_dir, '__init__.py')
+        _f_pkg_y  = path_combine(_f_dir, 'y.py')
+        _f_y      = path_combine(testpath.public_testdir, 'y.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+        write_to_file(_f_module, 'import the_dir.y\n')
+        write_to_file(_f_init, '')
+        write_to_file(_f_pkg_y, 'a=1\ny = __import__("y")\nimport sys\n')
+        write_to_file(_f_y, 'a=2\n')
+        
+        import y
+        AreEqual(y.a, 2)
+        
+        sys.modules = mod_backup
+        mod_backup = dict(sys.modules)
+        
+        y = __import__('y', globals(), locals())
+        AreEqual(y.a, 2)
+        
+    finally:
+        sys.modules = mod_backup
+        import nt
+        nt.unlink(_f_module)
+        nt.unlink(_f_init)
+        nt.unlink(_f_pkg_y)
+        nt.unlink(_f_y)
+        
 run_test(__name__)
 
 # remove all test files

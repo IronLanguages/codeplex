@@ -104,6 +104,7 @@ namespace Microsoft.Scripting {
             return ArrayUtils.FindAll(allTypes, isPublicTypeDelegate);
         }
 
+#if !SILVERLIGHT
         static IEnumerable<TypeName> GetTypeNames(string [] namespaces, string [][] types, TypeName [] orcasTypes) {
             Debug.Assert(namespaces.Length == types.Length);
 
@@ -114,16 +115,20 @@ namespace Microsoft.Scripting {
                 }
             }
 
-#if !SILVERLIGHT
-            if (EnvironmentUtils.IsOrcas) {
+            if (IsOrcas) {
                 foreach(TypeName orcasType in orcasTypes) {
                     yield return orcasType;
                 }
             }
-#endif
         }
 
-#if !SILVERLIGHT
+        static bool IsOrcas {
+            get {
+                Type t = typeof(object).Assembly.GetType("System.DateTimeOffset", false);
+                return t != null;
+            }
+        }
+
         #region Generated Well-known assembly type names
 
         // *** BEGIN GENERATED CODE ***

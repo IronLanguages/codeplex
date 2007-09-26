@@ -140,7 +140,7 @@ namespace IronPythonTest {
             if (!condition) throw new Exception("Assertion failed");
         }
 
-        private static T AssertExceptionThrown<T>(Function f) where T : Exception {
+        private static T AssertExceptionThrown<T>(Action f) where T : Exception {
             try {
                 f();
             } catch (T ex) {

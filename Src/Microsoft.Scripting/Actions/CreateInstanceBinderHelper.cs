@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Actions {
             Type t = CompilerHelpers.GetType(Arguments[0]);
             if (typeof(IConstructorWithCodeContext).IsAssignableFrom(t)) {
                 // TODO: This should go away when IConstructorWCC goes away.
-                Debug.Assert(!Action.HasKeywordArgument());
+                Debug.Assert(!Action.Signature.HasKeywordArgument());
 
                 Expression call = Ast.Call(Rule.Parameters[0], typeof(IConstructorWithCodeContext).GetMethod("Construct"), GetICallableParameters(t, Rule));
 

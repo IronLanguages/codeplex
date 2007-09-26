@@ -98,7 +98,6 @@ namespace IronPython.Compiler.Ast {
             statements[2] = AstGenerator.MakeAssignment(
                 value.Variable,
                 Ast.Action.Call(
-                    CallAction.Simple,
                     typeof(object),
                     Ast.Action.GetMember(
                         SymbolTable.StringToId("__enter__"),
@@ -202,7 +201,6 @@ namespace IronPython.Compiler.Ast {
                         Ast.Statement(
                             Ast.Action.Call(
                                 _contextManager.Span,
-                                CallAction.Simple,
                                 typeof(object),
                                 exit,
                                 Ast.Null(),
@@ -219,7 +217,7 @@ namespace IronPython.Compiler.Ast {
         private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {
             // exit(*sys.exc_info())
             return Ast.Action.Call(
-                CallAction.Make(new ArgumentInfo(MSAst.ArgumentKind.List)),
+                CallAction.Make(new CallSignature(MSAst.ArgumentKind.List)),
                 typeof(bool),
                 exit,
                 Ast.Call(

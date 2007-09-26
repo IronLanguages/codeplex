@@ -103,33 +103,17 @@ namespace IronPython.Runtime.Types {
             public object Call(CodeContext context, object[] args) {
                 // most common uses of this are object.__new__ and int.__new__, make those go fast.
                 switch(args.Length) {
-                    case 0: 
-                        if(_state.Site == null) {
-                            Interlocked.CompareExchange(ref _state.Site,
-                                FastDynamicSite<BuiltinFunction, DynamicType, object>.Create(DefaultContext.Default, CallAction.Simple),
-                                null);
-                        }
+                    case 0:
+                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site);
                         return _state.Site.Invoke(_state.Ctor, _type);
                     case 1: 
-                        if(_state.Site1 == null) {
-                            Interlocked.CompareExchange(ref _state.Site1,
-                                FastDynamicSite<BuiltinFunction, DynamicType, object, object>.Create(DefaultContext.Default, CallAction.Simple),
-                                null);
-                        }
+                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site1);
                         return _state.Site1.Invoke(_state.Ctor, _type, args[0]);
-                    case 2: 
-                        if(_state.Site2 == null) {
-                            Interlocked.CompareExchange(ref _state.Site2,
-                                FastDynamicSite<BuiltinFunction, DynamicType, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
-                                null);
-                        }
+                    case 2:
+                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site2);
                         return _state.Site2.Invoke(_state.Ctor, _type, args[0], args[1]);
                     case 3:
-                        if (_state.Site3 == null) {
-                            Interlocked.CompareExchange(ref _state.Site3,
-                                FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object>.Create(DefaultContext.Default, CallAction.Simple),
-                                null);
-                        }
+                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site3);
                         return _state.Site3.Invoke(_state.Ctor, _type, args[0], args[1], args[2]);
                 }
 
@@ -721,11 +705,7 @@ namespace IronPython.Runtime.Types {
             }
 
             internal bool HookedGetAttribute(CodeContext context, object instance, SymbolId name, out object value) {
-                if (_getAttrSite == null) {
-                    Interlocked.CompareExchange<DynamicSite<object,object,string,object>>(ref _getAttrSite, 
-                        DynamicSite<object, object, string, object>.Create(CallAction.Simple), 
-                        null);
-                }
+                RuntimeHelpers.CreateSimpleCallSite(ref _getAttrSite);
 
                 try {
                     value = _getAttrSite.Invoke(context, _func, instance, SymbolTable.IdToString(name));
@@ -737,20 +717,12 @@ namespace IronPython.Runtime.Types {
             }
 
             internal void HookedSetAttribute(CodeContext context, object instance, SymbolId name, object value) {
-                if (_setAttrSite == null) {
-                    Interlocked.CompareExchange<DynamicSite<object, object, string, object, object>>(ref _setAttrSite, 
-                        DynamicSite<object, object, string, object, object>.Create(CallAction.Simple), 
-                        null);
-                }
+                RuntimeHelpers.CreateSimpleCallSite(ref _setAttrSite);
                 _setAttrSite.Invoke(context, _func, instance, SymbolTable.IdToString(name), value);
             }
 
             internal void HookedDeleteAttribute(CodeContext context, object instance, SymbolId name) {
-                if (_delAttrSite == null) {
-                    Interlocked.CompareExchange<DynamicSite<object, object, string, object>>(ref _delAttrSite, 
-                        DynamicSite<object, object, string, object>.Create(CallAction.Simple), 
-                        null);
-                }
+                RuntimeHelpers.CreateSimpleCallSite(ref _delAttrSite);
                 _delAttrSite.Invoke(context, _func, instance, SymbolTable.IdToString(name));
             }
         }

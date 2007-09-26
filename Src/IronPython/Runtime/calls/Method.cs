@@ -346,11 +346,11 @@ namespace IronPython.Runtime.Calls {
             );
             Expression self;
 
-            if (action == CallAction.Simple || 
-                action.ArgumentInfos[0].IsSimple || 
-                action.ArgumentInfos[0].Kind == ArgumentKind.Instance) {
+            ArgumentKind firstArgKind = action.Signature.GetArgumentKind(0);
+
+            if (firstArgKind == ArgumentKind.Simple || firstArgKind == ArgumentKind.Instance) {
                 self = rule.Parameters[1];
-            } else if (action.ArgumentInfos[0].Kind != ArgumentKind.List) {
+            } else if (firstArgKind != ArgumentKind.List) {
                 self = Ast.Constant(null);
             } else {                
                 // list, check arg[0] and then return original list.  If not a list,
@@ -411,9 +411,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static CallAction GetNotNullCallAction(CallAction action) {
-            if (action == CallAction.Simple) return action;
-
-            return CallAction.Make(ArrayUtils.Insert(new ArgumentInfo(ArgumentKind.Simple), action.ArgumentInfos));
+            return CallAction.Make(action.Signature.InsertArgument(new ArgumentInfo(ArgumentKind.Simple)));
         }
 
         #endregion

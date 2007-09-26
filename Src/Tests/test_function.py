@@ -825,7 +825,6 @@ def test_argcount():
     AreEqual(foo8.func_code.co_argcount, 6)
     AreEqual(foo9.func_code.co_argcount, 2)
 
-@disabled("CodePlex Work Item #7632")
 def test_defaults():
     defaults = [None, object, int, [], 3.14, [3.14], (None,), "a string"]
     for default in defaults:
@@ -875,4 +874,107 @@ def test_method_attr_access():
     
     AreEqual(method(foo, 'abc').abc, 3)
 
+@skip("interpreted")  # we don't have FuncEnv's in interpret modes so this always returns None
+def test_function_closure():
+    def f(): pass
+    
+    AreEqual(f.func_closure, None)
+    
+    def f():    
+        def g(): pass
+        return g
+        
+    AreEqual(f().func_closure, None)
+
+    def f():
+        x = 4
+        def g(): return x
+        return g
+        
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4])
+    
+    def f():
+        x = 4
+        def g():
+            y = 5
+            def h(): return x,y
+            return h
+        return g()
+
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5])
+
+    # don't use z
+    def f():
+        x = 4
+        def g():
+            y = 5
+            z = 7
+            def h(): return x,y
+            return h
+        return g()
+    
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5])
+    
+    def f():
+        x = 4
+        def g():
+            y = 5
+            z = 7
+            def h(): return x,y,z
+            return h
+        return g()
+
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5, 7])
+
+    def f():
+        x = 4
+        a = 9
+        def g():
+            y = 5
+            z = 7
+            def h(): return x,y
+            return h
+        return g()
+
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5])
+
+    def f():
+        x = 4
+        a = 9
+        def g():
+            y = 5
+            z = 7
+            def h(): return x,y,a,z
+            return h
+        return g()
+
+    AreEqual(sorted([x.cell_contents for x in f().func_closure]), [4, 5, 7, 9])
+
+    AssertError(TypeError, hash, f().func_closure[0])
+    
+    def f():
+        x = 5
+        def g():
+            return x
+        return g
+        
+    def h():
+        x = 5
+        def g():
+            return x
+        return g
+
+    def j():
+        x = 6
+        def g():
+            return x
+        return g
+
+    AreEqual(f().func_closure[0], h().func_closure[0])
+    Assert(f().func_closure[0] != j().func_closure[0])
+
+    # <cell at 45: int object at 44>
+    Assert(repr(f().func_closure[0]).startswith('<cell at '))
+    Assert(repr(f().func_closure[0]).find(': int object at ') != -1)
+    
 run_test(__name__)

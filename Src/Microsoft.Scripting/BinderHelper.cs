@@ -67,15 +67,6 @@ namespace Microsoft.Scripting.Actions {
             return t.IsGenericType && t.GetGenericTypeDefinition() == typeof(StrongBox<>);
         }
 
-        public static int ArgumentCount(CallAction action, StandardRule<T> rule) {
-            if (action.ArgumentInfos != null) {
-                // non-simple call...
-                return action.ArgumentInfos.Length;
-            }
-
-            return rule.ParameterCount - 1;
-        }
-
         public static UnaryExpression GetParamsList(StandardRule<T> rule) {
             return Ast.Cast(
                 rule.Parameters[rule.ParameterCount - 1],
@@ -99,7 +90,7 @@ namespace Microsoft.Scripting.Actions {
         public static Type[] GetArgumentTypes(CallAction action, object[] args) {
             List<Type> res = new List<Type>();
             for (int i = 1; i < args.Length; i++) {
-                switch (action.GetArgumentKind(i - 1)) {
+                switch (action.Signature.GetArgumentKind(i - 1)) {
                     case ArgumentKind.Simple:
                     case ArgumentKind.Instance:
                     case ArgumentKind.Named:
@@ -114,9 +105,11 @@ namespace Microsoft.Scripting.Actions {
                             res.Add(CompilerHelpers.GetType(list[j]));
                         }
                         break;
+
                     case ArgumentKind.Dictionary: 
                         // caller needs to process these...
                         break;
+
                     default:
                         throw new NotImplementedException();
                 }

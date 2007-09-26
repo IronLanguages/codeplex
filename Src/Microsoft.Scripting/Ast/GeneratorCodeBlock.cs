@@ -82,7 +82,7 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(cg.InterpretedMode);
                 cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);
             }
-            cg.Allocator.ActiveScope = this;
+            cg.Allocator.Block = this;
             CreateEnvironmentFactory(true);
             EmitGeneratorBody(cg);
             cg.EmitReturn();
@@ -116,7 +116,7 @@ namespace Microsoft.Scripting.Ast {
 
             // Namespace without er factory - all locals must exist ahead of time
             ncg.Allocator = new ScopeAllocator(_impl.Allocator, null);
-            ncg.Allocator.ActiveScope = null;       // No scope is active at this point
+            ncg.Allocator.Block = null;       // No scope is active at this point
 
             // We are emitting generator, mark the CodeGen
             ncg.IsGenerator = true;
@@ -170,7 +170,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void CreateReferenceSlots(CodeGen cg) {
-            CreateOuterScopeAccessSlots(cg);
+            CreateAccessSlots(cg);
             foreach (VariableReference r in References) {
                 r.CreateSlot(cg);
                 Debug.Assert(r.Slot != null);
@@ -186,7 +186,7 @@ namespace Microsoft.Scripting.Ast {
         // The slots for generators are created in 2 steps. In the outer function,
         // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
         private void InitializeGeneratorEnvironment(CodeGen cg) {
-            cg.Allocator.AddScopeAccessSlot(this, cg.EnvironmentSlot);
+            cg.Allocator.AddClosureAccessSlot(this, cg.EnvironmentSlot);
             foreach (Variable p in Parameters) {
                 p.Allocate(cg);
             }

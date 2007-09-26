@@ -54,8 +54,9 @@ namespace IronPython.Runtime.Operations {
 
             list.Add(path);
 
-            // then fall through to the normal loading process
-            module.AddReferenceToFile(DefaultContext.Default, System.IO.Path.GetFileName(file));
+            Assembly asm = DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(file);
+            if (asm == null) throw PythonOps.IOError("file does not exist: {0}", file);
+            module.AddReference(asm);
         }
 
 #endif

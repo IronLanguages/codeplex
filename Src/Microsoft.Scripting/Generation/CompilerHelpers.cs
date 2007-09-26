@@ -26,7 +26,7 @@ using System.IO;
 namespace Microsoft.Scripting.Generation {
     public static class CompilerHelpers {
         public static MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
-       
+
         public static string[] GetArgumentNames(ParameterInfo[] parameterInfos) {
             string[] ret = new string[parameterInfos.Length];
             for (int i = 0; i < parameterInfos.Length; i++) ret[i] = parameterInfos[i].Name;
@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
 
         public static Type[] GetTypesWithThis(MethodBase mi) {
             Type[] types = ReflectionUtils.GetParameterTypes(mi.GetParameters());
-            if(IsStatic(mi)) {
+            if (IsStatic(mi)) {
                 return types;
             }
 
@@ -81,7 +81,7 @@ namespace Microsoft.Scripting.Generation {
         internal static bool FormalParamsMatchActual(ParameterInfo[] parameters, int actualCount) {
             Assert.NotNull(parameters);
 
-            return actualCount >= GetMandatoryParameterCount(parameters) && 
+            return actualCount >= GetMandatoryParameterCount(parameters) &&
                 (actualCount <= parameters.Length || parameters.Length > 0 && IsParamArray(parameters[parameters.Length - 1]));
         }
 
@@ -186,7 +186,7 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="outer">Codegen of the lexically enclosing block.</param>
         /// <param name="codeGen">CodeGen object to use to allocate the locals on the CLR stack.</param>
         /// <returns>New ScopeAllocator</returns>
-        public static ScopeAllocator CreateLocalStorageAllocator(CodeGen outer, CodeGen codeGen) {
+        internal static ScopeAllocator CreateLocalStorageAllocator(CodeGen outer, CodeGen codeGen) {
             LocalStorageAllocator allocator = new LocalStorageAllocator(new LocalSlotFactory(codeGen));
             return new ScopeAllocator((outer != null && outer.HasAllocator) ? outer.Allocator : null, allocator);
         }
@@ -196,7 +196,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="frame"></param>
         /// <returns></returns>
-        public static ScopeAllocator CreateFrameAllocator(Slot frame) {
+        internal static ScopeAllocator CreateFrameAllocator(Slot frame) {
             // Globals
             ScopeAllocator global = new ScopeAllocator(
                 null,
@@ -206,11 +206,11 @@ namespace Microsoft.Scripting.Generation {
             // Locals
             ScopeAllocator ns = new ScopeAllocator(
                 global,
-                new LocalStorageAllocator(new LocalFrameSlotFactory(frame))
+                new FrameStorageAllocator()
             );
             return ns;
         }
-        
+
         public static Type[] MakeParamTypeArray(IList<Type> baseParamTypes, ConstantPool constantPool) {
             if (constantPool == null) return new List<Type>(baseParamTypes).ToArray();
 
@@ -343,8 +343,8 @@ namespace Microsoft.Scripting.Generation {
                 default:
                     if (op >= Operators.Add && op <= Operators.Xor) {
                         return (Operators)((int)op + (int)Operators.ReverseAdd - (int)Operators.Add);
-                    } 
-                    return Operators.None;                    
+                    }
+                    return Operators.None;
             }
         }
 
@@ -380,7 +380,7 @@ namespace Microsoft.Scripting.Generation {
             }
             return false;
         }
-        
+
         /// <summary>
         /// Returns the System.Type for any object, including null.  The type of null
         /// is represented by None.Type and all other objects just return the 
@@ -525,14 +525,14 @@ namespace Microsoft.Scripting.Generation {
 
             Type curType = CompilerHelpers.GetType(value);
             do {
-                if(CompilerHelpers.TryImplicitConvert(value, to, curType.GetMember("op_Implicit"), out result)) {
+                if (CompilerHelpers.TryImplicitConvert(value, to, curType.GetMember("op_Implicit"), out result)) {
                     return true;
                 }
                 curType = curType.BaseType;
             } while (curType != null);
 
             return false;
-        }        
+        }
 
         private static bool TryImplicitConvert(Object value, Type to, MemberInfo[] implicitConv, out object result) {
             foreach (MethodInfo mi in implicitConv) {
@@ -559,6 +559,5 @@ namespace Microsoft.Scripting.Generation {
 
             return false;
         }
-
     }
 }

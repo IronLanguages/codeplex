@@ -35,6 +35,17 @@ namespace Microsoft.Scripting {
         private SymbolId[] _kwArgs;
         internal ActionBinder _binder;
 
+        /// <summary>
+        /// TODO: remove. If true checks for signature even though there is no other overload.
+        /// This is right behavior. We need to fix all langauges that doesn't use it.
+        /// </summary>
+        private bool _strictParameterCheck;
+
+        public bool StrictParameterCheck {
+            get { return _strictParameterCheck; }
+            set { _strictParameterCheck = value; }
+        }
+
         private static bool IsUnsupported(MethodBase method) {
             return (method.CallingConvention & CallingConventions.VarArgs) != 0 || method.ContainsGenericParameters;
         }
@@ -541,7 +552,10 @@ namespace Microsoft.Scripting {
         }
 
         private List<MethodCandidate> SelectTargets(CallType callType, Type[] types, SymbolId[] names) {
-            if (_targets.Count == 1 && !_binder.IsBinaryOperator && names.Length == 0) return _targets;
+            // obsolete: this should be removed entirely:
+            if (!_binder.StrictParameterCheck) {
+                if (_targets.Count == 1 && !_binder.IsBinaryOperator && names.Length == 0) return _targets;
+            }
 
             List<MethodCandidate> applicableTargets = new List<MethodCandidate>();
             foreach (MethodCandidate target in _targets) {

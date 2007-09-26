@@ -33,16 +33,16 @@ namespace Microsoft.Scripting.Ast {
             _true = trueExpression;
             _false = falseExpression;
 
-            if (_true.ExpressionType.IsAssignableFrom(_false.ExpressionType)) {
-                _expressionType = _true.ExpressionType;
-            } else if (_false.ExpressionType.IsAssignableFrom(_true.ExpressionType)) {
-                _expressionType = _false.ExpressionType;
+            if (_true.Type.IsAssignableFrom(_false.Type)) {
+                _expressionType = _true.Type;
+            } else if (_false.Type.IsAssignableFrom(_true.Type)) {
+                _expressionType = _false.Type;
             } else if (allowUpcast) {
                 _expressionType = typeof(object);
                 _true = Ast.Cast(_true, _expressionType);
                 _false = Ast.Cast(_false, _expressionType);
             } else {
-                throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", _true.ExpressionType, _false.ExpressionType));
+                throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", _true.Type, _false.Type));
             }            
         }
 
@@ -58,7 +58,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _true; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _expressionType;
             }

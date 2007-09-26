@@ -26,6 +26,18 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
+#if SILVERLIGHT
+    public class ExitProcessException : Exception {
+
+        public int ExitCode { get { return exitCode; } }
+        int exitCode;
+
+        public ExitProcessException(int exitCode) {
+            this.exitCode = exitCode;
+        }
+    }
+#endif
+
     public class PlatformAdaptationLayer {
 
 #if SILVERLIGHT
@@ -93,7 +105,7 @@ namespace Microsoft.Scripting.Hosting {
 #if !SILVERLIGHT
             System.Environment.Exit(exitCode);
 #else
-            EnvironmentUtils.ExitProcess(exitCode);
+            throw new ExitProcessException(exitCode);
 #endif
         }
 
@@ -156,6 +168,14 @@ namespace Microsoft.Scripting.Hosting {
         public virtual string GetFullPath(string path) {
 #if !SILVERLIGHT
             return Path.GetFullPath(path);
+#else
+            throw new NotImplementedException();
+#endif
+        }
+
+        public virtual string GetCurrentDirectory() {
+#if !SILVERLIGHT
+            return Environment.CurrentDirectory;
 #else
             throw new NotImplementedException();
 #endif

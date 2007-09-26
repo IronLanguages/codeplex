@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _name; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(object);
             }

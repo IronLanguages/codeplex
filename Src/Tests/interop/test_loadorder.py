@@ -37,7 +37,7 @@ try:
             continue
         
         # skip list
-        if x in [ 't1a.py', 't1b.py', 't1c.py', 't1d.py', 't6.py' ]:
+        if x in [ 't6.py' ]:
             continue
         
         # running ipy with parent's switches

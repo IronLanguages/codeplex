@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _arguments; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _method.ReturnType;
             }
@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Ast {
                 int extraArgs = _arguments.Count - last;
                 if (CompilerHelpers.IsParamArray(_parameterInfos[last])) {
                     if (extraArgs == 1 && _arguments[last] != null
-                        && _arguments[last].ExpressionType == _parameterInfos[last].ParameterType) {
+                        && _arguments[last].Type == _parameterInfos[last].ParameterType) {
                         // If the last argument is an array, copy it over directly
                         parameters[last] = _arguments[last].Evaluate(context);
                     } else {
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Ast {
             try {
                 object res;
                 try {                    
-                    if (ExpressionType == typeof(Boolean)) {
+                    if (Type == typeof(Boolean)) {
                         // Return the singleton True or False object
                         res = RuntimeHelpers.BooleanToObject((bool)_method.Invoke(instance, parameters));
                     } else {
@@ -171,7 +171,7 @@ namespace Microsoft.Scripting.Ast {
                         size = _arguments.Count - _parameterInfos.Length + 1;
                     }
 
-                    if (size == 1 && _arguments[current].ExpressionType == last.ParameterType) {
+                    if (size == 1 && _arguments[current].Type == last.ParameterType) {
                         _arguments[current].Emit(cg);
                     } else {
                         cg.EmitInt(size);

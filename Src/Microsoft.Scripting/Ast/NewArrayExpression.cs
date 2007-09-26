@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _expressions; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _type;
             }

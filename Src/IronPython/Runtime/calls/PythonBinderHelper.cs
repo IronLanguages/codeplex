@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Calls {
         private static Dictionary<TypeErrorKey, object> _typeErrorTemplates = new Dictionary<TypeErrorKey, object>();
 
         public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, StandardRule<T> rule) {
-            int simpleArgCount = action.Operation == Operators.GetItem ? 2 : 3;
+            int simpleArgCount = (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) ? 2 : 3;
 
             Expression[] exprargs = new Expression[simpleArgCount];
             exprargs[0] = Ast.CodeContext();

@@ -390,29 +390,33 @@ def run_test(mod_name, noOutputPlease=False):
     stdout = sys.stdout
     stderr = sys.stderr
     failures = []
+
+    includedTests = [arg[4:] for arg in sys.argv if arg.startswith('run:test_') and not arg.endswith('.py')]
     for name in dir(module): 
         obj = getattr(module, name)
         if isinstance(obj, type(_do_nothing)) or isinstance(obj, type(_func)) :
             if name.endswith("_clionly") and not is_cli: continue
             if name.startswith("test_"): 
-                if not noOutputPlease and (mod_name == '__main__'): 
-                    print ">>> testing %-40s" % name,
-                #obj()
-                #catches the error and exit at the end of each test
-                try:
+                if not includedTests or name in includedTests:
+                    if not noOutputPlease and (mod_name == '__main__'): 
+                        print ">>> testing %-40s" % name,
+                    #obj()
+                    #catches the error and exit at the end of each test
                     try:
-                        obj()
-                    finally:
-                        # restore std-in / std-err incase the test corrupted it                
-                        sys.stdout = stdout
-                        sys.stderr = stderr
-                    if not is_silverlight:
-                        print
-                        
-                except:
-                    failures.append( (name, sys.exc_info()) )
-                    print "FAIL (%s)" % str(sys.exc_info()[0])
-        
+                        try:
+                            obj()
+                        finally:
+                            # restore std-in / std-err incase the test corrupted it                
+                            sys.stdout = stdout
+                            sys.stderr = stderr
+                        if not is_silverlight:
+                            print
+                            
+                    except:
+                        failures.append( (name, sys.exc_info()) )
+                        print "FAIL (%s)" % str(sys.exc_info()[0])
+                elif not noOutputPlease:
+                    print ">>> skipping %-40s" % name
     if failures:
         print_failures(failures)
         

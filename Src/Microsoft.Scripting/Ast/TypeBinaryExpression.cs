@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _typeOperand; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return typeof(bool);
             }
@@ -49,13 +49,13 @@ namespace Microsoft.Scripting.Ast {
         public override bool IsConstant(object value) {
             // allow constant TypeIs expressions to be optimized away
             if (value is bool && ((bool)value) == true) {
-                return _typeOperand.IsAssignableFrom(_expression.ExpressionType);
+                return _typeOperand.IsAssignableFrom(_expression.Type);
             }
             return false;
         }
 
         public override void Emit(CodeGen cg) {
-            if (_typeOperand.IsAssignableFrom(_expression.ExpressionType)) {
+            if (_typeOperand.IsAssignableFrom(_expression.Type)) {
                 // if its always true just emit the bool
                 cg.EmitConstant(true);
                 return;

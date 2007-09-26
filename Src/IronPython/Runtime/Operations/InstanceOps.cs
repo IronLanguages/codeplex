@@ -239,8 +239,10 @@ namespace IronPython.Runtime.Operations {
             return ((ICodeFormattable)self).ToCodeString(context);
         }
 
-        public static object ToStringMethod(object self) {
-            return self.ToString();
+        public static string ToStringMethod(object self) {
+            string res = self.ToString();
+            if (res == null) return String.Empty;
+            return res;
         }
 
         // Value equality helpers:  These are the default implementation for classes that implement

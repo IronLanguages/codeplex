@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _left; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 return _resultOp.ReturnType;
             }

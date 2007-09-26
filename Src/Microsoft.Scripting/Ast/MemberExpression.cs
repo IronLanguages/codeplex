@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _expression; }
         }
 
-        public override Type ExpressionType {
+        public override Type Type {
             get {
                 switch (_member.MemberType) {
                     case MemberTypes.Field:
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
         internal override void EmitAddress(CodeGen cg, Type asType) {
             EmitInstance(cg);
 
-            if (asType != ExpressionType || _member.MemberType != MemberTypes.Field) {
+            if (asType != Type || _member.MemberType != MemberTypes.Field) {
                 base.EmitAddress(cg, asType);
             } else {
                 cg.EmitFieldAddress((FieldInfo)_member);

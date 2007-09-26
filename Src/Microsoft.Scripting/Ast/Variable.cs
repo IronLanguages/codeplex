@@ -66,7 +66,15 @@ namespace Microsoft.Scripting.Ast {
             _name = name;
             _kind = kind;
             _block = block;
-            _type = type;
+
+            // enables case: 
+            //
+            // temp = CreateVariable(..., expression.Type, ...)
+            // Ast.Assign(temp, expression)
+            //
+            // where Type is void.
+            _type = (type != typeof(void)) ? type : typeof(object); 
+
             _defaultValue = defaultValue;
             _parameterArray = parameterArray;
         }
@@ -138,7 +146,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public void Allocate(CodeGen cg) {
-            Debug.Assert(cg.Allocator.ActiveScope == Block);
+            Debug.Assert(cg.Allocator.Block == Block);
 
             switch (_kind) {
                 case VariableKind.Local:
@@ -160,7 +168,7 @@ namespace Microsoft.Scripting.Ast {
                             // Allocate the storage
                             _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
                             // No access slot for local variables, pass null.
-                            slot = _storage.CreateSlot(null);
+                            slot = _storage.CreateSlot(_storage.RequireAccessSlot ? cg.Allocator.GetScopeAccessSlot(_block) : null);
                             MarkLocal(slot);
                         }
                         if (_uninitialized || _defaultValue != null) {
@@ -183,7 +191,7 @@ namespace Microsoft.Scripting.Ast {
                         // Copy the value from the parameter (src) into the environment (slot)
                         slot.EmitSet(cg, src);
                     } else {
-                        Debug.Assert(cg.Allocator.ActiveScope == Block);
+                        Debug.Assert(cg.Allocator.Block == Block);
                         // Nothing to do here
                     }
                     break;
@@ -208,7 +216,7 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(_storage == null);
             Debug.Assert(_block.EnvironmentFactory != null, "Allocating in environment without environment factory.\nIs HasEnvironment set?");
             _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
-            return _storage.CreateSlot(cg.Allocator.GetScopeAccessSlot(_block));
+            return _storage.CreateSlot(cg.Allocator.GetClosureAccessSlot(_block));
         }
 
         private static Slot MarkLocal(Slot slot) {
@@ -295,7 +303,9 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(_storage != null);
             Slot access = null;
             if (_storage.RequireAccessSlot) {
-                access = cg.Allocator.GetScopeAccessSlot(_block);
+                access = _lift || _kind == VariableKind.GeneratorTemporary ?
+                    cg.Allocator.GetClosureAccessSlot(_block) :
+                    cg.Allocator.GetScopeAccessSlot(_block);
             }
             Slot slot = _storage.CreateSlot(access);
             return MarkLocal(slot);

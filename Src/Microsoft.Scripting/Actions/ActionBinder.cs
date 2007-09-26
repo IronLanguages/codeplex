@@ -263,19 +263,21 @@ namespace Microsoft.Scripting.Actions {
 
             CallAction ca = action as CallAction;
             if (ca != null) {
-                hasNamedArgument = ca.HasNamedArgument();
+                hasNamedArgument = ca.Signature.HasNamedArgument();
+                int dictArgIndex = ca.Signature.IndexOf(ArgumentKind.Dictionary);
 
-                if (ca.HasDictionaryArgument()) {
+                if (dictArgIndex > -1) {
                     argsProvided--;
-                    IAttributesCollection iac = args[ca.DictionaryIndex + 1] as IAttributesCollection;
+                    IAttributesCollection iac = args[dictArgIndex + 1] as IAttributesCollection;
                     if (iac != null) {
                         foreach (KeyValuePair<object, object> kvp in iac) {
                             namedArgs[(string)kvp.Key] = false;
                         }
                     }
                 }
+
                 argsProvided += GetParamsArgumentCountAdjust(ca, args);
-                foreach (SymbolId si in ca.GetArgumentNames()) {
+                foreach (SymbolId si in ca.Signature.GetArgumentNames()) {
                     namedArgs[SymbolTable.IdToString(si)] = false;
                 }
             } else {
@@ -333,13 +335,13 @@ namespace Microsoft.Scripting.Actions {
                     Ast.Ast.Call(
                         null,
                         typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] { typeof(string), typeof(int), typeof(int), typeof(int), typeof(int), typeof(bool), typeof(bool) }),
-                        Ast.Ast.Constant(binder._name),  // name
+                        Ast.Ast.Constant(binder._name),     // name
                         Ast.Ast.Constant(minArgs),          // min formal normal arg cnt
                         Ast.Ast.Constant(maxArgs),          // max formal normal arg cnt
                         Ast.Ast.Constant(maxDflt),          // default cnt
-                        Ast.Ast.Constant(argsProvided),      // args provided
+                        Ast.Ast.Constant(argsProvided),     // args provided
                         Ast.Ast.Constant(hasArgList),       // hasArgList
-                        Ast.Ast.Constant(hasNamedArgument)             // kwargs provided
+                        Ast.Ast.Constant(hasNamedArgument)  // kwargs provided
                     )
                 );
         }
@@ -350,9 +352,11 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         protected static int GetParamsArgumentCountAdjust(CallAction action, object[] args) {
             int paramsCount = 0;
-            if (action.HasParamsArgument()) {
+            int listArgIndex = action.Signature.IndexOf(ArgumentKind.List);
+
+            if (listArgIndex > -1) {
                 paramsCount--;
-                IList<object> paramArgs = args[action.ParamsIndex + 1] as IList<object>;
+                IList<object> paramArgs = args[listArgIndex + 1] as IList<object>;
                 if (paramArgs != null) {
                     paramsCount += paramArgs.Count;
                 }

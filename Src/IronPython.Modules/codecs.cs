@@ -139,7 +139,7 @@ namespace IronPython.Modules {
 
         [PythonName("ascii_decode")]
         public static object AsciiDecode(object input, string errors) {
-            return DoDecode(StringUtils.AsciiEncoding, input, errors, true);
+            return DoDecode(PythonAsciiEncoding.Instance, input, errors, true);
         }
 
         [PythonName("ascii_encode")]
@@ -149,7 +149,7 @@ namespace IronPython.Modules {
 
         [PythonName("ascii_encode")]
         public static object AsciiEncode(object input, string errors) {
-            return DoEncode(StringUtils.AsciiEncoding, input, errors);
+            return DoEncode(PythonAsciiEncoding.Instance, input, errors);
         }
 
         #endregion
@@ -160,13 +160,18 @@ namespace IronPython.Modules {
         }
 
         [PythonName("charmap_decode")]
-        public static object CharMapDecode(string input, string errors, IDictionary<object, object> map) {
+        public static object CharMapDecode(string input, [Optional]string errors, [Optional]IDictionary<object, object> map) {
             if (input.Length == 0) return String.Empty;
 
             StringBuilder res = new StringBuilder();
             for (int i = 0; i < input.Length; i++) {
                 object val;
 
+                if (map == null) {
+                    res.Append(input[i]);
+                    continue;
+                } 
+                
                 if (!map.TryGetValue((int)input[i], out val)) {
                     if (errors == "strict") throw PythonOps.LookupError("failed to find key in mapping");
                     continue;
@@ -174,7 +179,7 @@ namespace IronPython.Modules {
 
                 res.Append((char)(int)val);
             }
-            return res.ToString();
+            return PythonTuple.MakeTuple(res.ToString(), res.Length);
         }
 
         [PythonName("charmap_encode")]
@@ -449,8 +454,8 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("utf_16_ex_decode")]
-        public static object Utf16ExtDecode(object input, string errors) {
-            return Utf16Decode(input, errors);
+        public static object Utf16ExtDecode(object input, [Optional]string errors) {
+            return Utf16ExtDecode(input, errors, null, null);
         }
 
         [PythonName("utf_16_ex_decode")]

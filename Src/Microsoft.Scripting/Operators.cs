@@ -175,23 +175,61 @@ namespace Microsoft.Scripting {
         /// </summary>
         Contains,                   
         /// <summary>
-        /// Binary operator.
+        /// n-ary operator.
         /// 
         /// Gets the value at the specified index from the instance.
+        /// 
+        /// One or more indexes can be provided as individual arguments.
         /// </summary>
         GetItem,                    
         /// <summary>
-        /// Ternary operator.
+        /// n-ary operator.
         /// 
         /// Sets the value at the specified index in the instance.
+        /// 
+        /// One or more indexes can be provided as individual arguments.  The last value provided is the value to be set.
         /// </summary>
         SetItem,                    
         /// <summary>
-        /// Binary operator.
+        /// n-ary operator.
         /// 
         /// Removes the item from the specified index in the instance.
+        /// 
+        /// One or more indexes can be provided as individual arguments.
         /// </summary>
-        DeleteItem,                 
+        DeleteItem,
+        /// <summary>
+        /// Binary or Ternary operator.
+        /// 
+        /// Gets the specified range of elements (slice) from the instance.
+        /// 
+        /// The slice parameters may include the start index, the end index, and the step value.  The step value is optional.
+        /// 
+        /// A value of Type.Missing may be provided if no parameter was explicitly provided for a start, stop or step parameter.
+        /// </summary>
+        GetSlice,
+        /// <summary>
+        /// n-ary operator.
+        /// 
+        /// Sets the specified range of elements in the instance.
+        /// 
+        /// The slice parameters may include the start index, the end index, and the step value.  The step
+        /// value is optional.  The last parameter is the value to be assigned.
+        /// 
+        /// A value of Type.Missing may be provided if no parameter was explicitly provided for a start, stop or step parameter.
+        /// </summary>
+        SetSlice,
+        /// <summary>
+        /// n-ary operator.
+        /// 
+        /// Removes the specified range of elements from the instance.
+        /// 
+        /// The slice parameters may include the start index, the end index, and the step value.  The step value is
+        /// optional.
+        /// 
+        /// A value of Type.Missing may be provided if no parameter was explicitly provided for a start, stop or step parameter.
+        /// </summary>
+        DeleteSlice,
         /// <summary>
         /// Unary operator.
         /// 
