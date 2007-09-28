@@ -31,8 +31,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ParameterInfo[] _parameterInfos;
 
-        internal NewExpression(SourceSpan span, ConstructorInfo constructor, IList<Expression> arguments, ParameterInfo[] parameters)
-            : base(span) {
+        internal NewExpression(ConstructorInfo constructor, IList<Expression> arguments, ParameterInfo[] parameters) {
             _constructor = constructor;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
             _parameterInfos = parameters;
@@ -53,7 +52,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            for (int i=0; i < _parameterInfos.Length; i++) {
+            for (int i = 0; i < _parameterInfos.Length; i++) {
                 _arguments[i].EmitAs(cg, _parameterInfos[i].ParameterType);
             }
             cg.EmitNew(_constructor);
@@ -88,17 +87,13 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static NewExpression New(ConstructorInfo constructor, params Expression[] arguments) {
-            return New(SourceSpan.None, constructor, arguments);
-        }
-
-        public static NewExpression New(SourceSpan span, ConstructorInfo constructor, params Expression[] arguments) {
             Contract.RequiresNotNull(constructor, "constructor");
             Contract.RequiresNotNullItems(arguments, "arguments");
 
             ParameterInfo[] pi = constructor.GetParameters();
             Contract.Requires(CompilerHelpers.FormalParamsMatchActual(pi, arguments.Length), "constructor", "The number of parameters doesn't match the number of actual arguments");
 
-            return new NewExpression(span, constructor, arguments, pi);
+            return new NewExpression(constructor, arguments, pi);
         }
     }
 }

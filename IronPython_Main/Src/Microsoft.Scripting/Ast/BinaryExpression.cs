@@ -47,8 +47,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _left, _right;
         private readonly BinaryOperators _op;
 
-        internal BinaryExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right)
-            : base(span) {
+        internal BinaryExpression(BinaryOperators op, Expression left, Expression right) {
             Debug.Assert(left != null);
             Debug.Assert(right != null);
 
@@ -89,7 +88,7 @@ namespace Microsoft.Scripting.Ast {
                     case BinaryOperators.LeftShift:
                     case BinaryOperators.RightShift:
                         return _left.Type;
-                    
+
                     default:
                         throw new NotImplementedException();
                 }
@@ -99,7 +98,7 @@ namespace Microsoft.Scripting.Ast {
         public override bool IsConstant(object value) {
             if (value == null) return false;
 
-            switch(_op) {
+            switch (_op) {
                 case BinaryOperators.AndAlso:
                     if (value.Equals(true)) {
                         return _left.IsConstant(true) && _right.IsConstant(true);
@@ -158,7 +157,7 @@ namespace Microsoft.Scripting.Ast {
 
                 case BinaryOperators.AndAlso:
                     // if (left AND right) branch label
-                    
+
                     // if (left) then 
                     //   if (right) branch label
                     // endif
@@ -210,7 +209,7 @@ namespace Microsoft.Scripting.Ast {
                         } else if (!_right.IsConstant(true)) {
                             _right.EmitBranchFalse(cg, label);
                         }
-                    } 
+                    }
                     break;
 
                 case BinaryOperators.OrElse:
@@ -225,7 +224,7 @@ namespace Microsoft.Scripting.Ast {
                             // if (NOT left) then 
                             //   if (NOT right) branch label
                             // endif
-                            
+
                             Label endif = cg.DefineLabel();
                             _left.EmitBranchTrue(cg, endif);
                             _right.EmitBranchFalse(cg, label);
@@ -267,21 +266,21 @@ namespace Microsoft.Scripting.Ast {
                     cg.EmitInt(0);
                     cg.Emit(OpCodes.Ceq);
                     break;
-                
+
                 case BinaryOperators.GreaterThan:
                     cg.Emit(OpCodes.Cgt);
                     break;
-                
+
                 case BinaryOperators.LessThan:
                     cg.Emit(OpCodes.Clt);
                     break;
-                
+
                 case BinaryOperators.GreaterThanEquals:
                     cg.Emit(OpCodes.Clt);
                     cg.EmitInt(0);
                     cg.Emit(OpCodes.Ceq);
                     break;
-                
+
                 case BinaryOperators.LessThanEquals:
                     cg.Emit(OpCodes.Cgt);
                     cg.EmitInt(0);
@@ -384,7 +383,7 @@ namespace Microsoft.Scripting.Ast {
                 case BinaryOperators.Modulo: return EvalMod(l, r);
                 case BinaryOperators.BitwiseAnd: return EvalAnd(l, r);
                 case BinaryOperators.BitwiseOr: return EvalOr(l, r);
-                case BinaryOperators.ExclusiveOr: return EvalXor(l, r);                
+                case BinaryOperators.ExclusiveOr: return EvalXor(l, r);
                 default:
                     throw new NotImplementedException(_op.ToString());
             }
@@ -479,7 +478,7 @@ namespace Microsoft.Scripting.Ast {
             if (l is ulong) return (ulong)l ^ (ulong)r;
             throw new InvalidOperationException("xor: {0} " + CompilerHelpers.GetType(l).Name);
         }
-        
+
         private bool TestEquals(object l, object r) {
             // We don't need to go through the same type checks as the emit case,
             // since we know we're always dealing with boxed objects.
@@ -498,25 +497,17 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static BinaryExpression Equal(Expression left, Expression right) {
-            return Equal(SourceSpan.None, left, right);
-        }
-
-        public static BinaryExpression Equal(SourceSpan span, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(right, "right");
 
-            return new BinaryExpression(span, BinaryOperators.Equal, left, right);
+            return new BinaryExpression(BinaryOperators.Equal, left, right);
         }
 
         public static BinaryExpression NotEqual(Expression left, Expression right) {
-            return NotEqual(SourceSpan.None, left, right);
-        }
-
-        public static BinaryExpression NotEqual(SourceSpan span, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(right, "right");
 
-            return new BinaryExpression(span, BinaryOperators.NotEqual, left, right);
+            return new BinaryExpression(BinaryOperators.NotEqual, left, right);
         }
 
         public static BinaryExpression GreaterThan(Expression left, Expression right) {
@@ -537,20 +528,22 @@ namespace Microsoft.Scripting.Ast {
 
         #region Boolean Expressions
 
-        public static Expression AndAlso(Expression left, Expression right) {
-            return Binary(SourceSpan.None, BinaryOperators.AndAlso, left, right);
+        public static BinaryExpression AndAlso(Expression left, Expression right) {
+            return LogicalBinary(BinaryOperators.AndAlso, left, right);
         }
 
-        public static Expression AndAlso(SourceSpan span, Expression left, Expression right) {
-            return Binary(span, BinaryOperators.AndAlso, left, right);
+        public static BinaryExpression OrElse(Expression left, Expression right) {
+            return LogicalBinary(BinaryOperators.OrElse, left, right);
         }
 
-        public static Expression OrElse(Expression left, Expression right) {
-            return Binary(SourceSpan.None, BinaryOperators.OrElse, left, right);
-        }
+        private static BinaryExpression LogicalBinary(BinaryOperators op, Expression left, Expression right) {
+            Contract.RequiresNotNull(left, "left");
+            Contract.RequiresNotNull(right, "right");
+            Contract.Requires(TypeUtils.IsBool(left.Type), "left");
+            Contract.Requires(TypeUtils.IsBool(right.Type), "right");
+            Contract.Requires(left.Type == right.Type);
 
-        public static Expression OrElse(SourceSpan span, Expression left, Expression right) {
-            return Binary(span, BinaryOperators.OrElse, left, right);
+            return new BinaryExpression(op, left, right);
         }
 
         #endregion
@@ -594,7 +587,7 @@ namespace Microsoft.Scripting.Ast {
             RequiresPredicate(isTrue);
             return CoalesceInternal(span, currentBlock, left, right, isTrue, false);
         }
-        
+
         /// <summary>
         /// False coalescing expression.
         /// {result} ::= IsTrue(tmp = {left}) ? tmp : {right}
@@ -639,7 +632,7 @@ namespace Microsoft.Scripting.Ast {
                 f = Read(tmp);
             }
 
-            return Condition(span, c, t, f, true);
+            return Condition(c, t, f, true);
         }
 
         private static void RequiresPredicate(MethodInfo method) {
@@ -678,19 +671,11 @@ namespace Microsoft.Scripting.Ast {
             return MakeBinaryArithmeticExpression(BinaryOperators.Modulo, left, right);
         }
 
-
         /// <summary>
         /// Multiples two arithmetic values of the same type.
         /// </summary>
         public static BinaryExpression Multiply(Expression left, Expression right) {
             return MakeBinaryArithmeticExpression(BinaryOperators.Multiply, left, right);
-        }
-
-        /// <summary>
-        /// Multiples two arithmetic values of the same type.
-        /// </summary>
-        public static BinaryExpression Multiply(SourceSpan span, Expression left, Expression right) {
-            return MakeBinaryArithmeticExpression(span, BinaryOperators.Multiply, left, right);
         }
 
         /// <summary>
@@ -728,40 +713,24 @@ namespace Microsoft.Scripting.Ast {
             return MakeBinaryArithmeticExpression(BinaryOperators.ExclusiveOr, left, right);
         }
 
-        public static BinaryExpression Binary(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
-
-            return new BinaryExpression(span, op, left, right);
-        }
-
         private static BinaryExpression MakeBinaryArithmeticExpression(BinaryOperators op, Expression left, Expression right) {
-            return MakeBinaryArithmeticExpression(SourceSpan.None, op, left, right);
-        }
-
-        private static BinaryExpression MakeBinaryArithmeticExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(left, "right");
-            if (left.Type != right.Type || !Expression.IsArithmetic(left.Type)) {
+            if (left.Type != right.Type || !TypeUtils.IsArithmetic(left.Type)) {
                 throw new NotSupportedException(String.Format("{0} only supports identical arithmetic types, got {1} {2}", op, left.Type.Name, right.Type.Name));
             }
 
-            return Binary(span, op, left, right);
+            return new BinaryExpression(op, left, right);
         }
 
         private static BinaryExpression MakeBinaryComparisonExpression(BinaryOperators op, Expression left, Expression right) {
-            return MakeBinaryComparisonExpression(SourceSpan.None, op, left, right);
-        }
-
-        private static BinaryExpression MakeBinaryComparisonExpression(SourceSpan span, BinaryOperators op, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(left, "right");
-            if (left.Type != right.Type || !Expression.IsNumeric(left.Type)) {
+            if (left.Type != right.Type || !TypeUtils.IsNumeric(left.Type)) {
                 throw new NotSupportedException(String.Format("{0} only supports identical numeric types, got {1} {2}", op, left.Type.Name, right.Type.Name));
             }
 
-            return Binary(span, op, left, right);
+            return new BinaryExpression(op, left, right);
         }
-
     }
 }

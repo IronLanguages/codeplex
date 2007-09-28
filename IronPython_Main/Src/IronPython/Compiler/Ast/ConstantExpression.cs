@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Operators;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
@@ -41,10 +41,10 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Constant(Span, _value);
+            return Ast.Constant(_value);
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
+        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             ag.AddError(_value == null ? "assignment to None" : "can't assign to literal", Span);
             return null;
         }

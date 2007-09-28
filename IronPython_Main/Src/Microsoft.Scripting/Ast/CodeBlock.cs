@@ -43,6 +43,9 @@ namespace Microsoft.Scripting.Ast {
     public partial class CodeBlock : Node {
         private static int _Counter = 0;
 
+        private SourceLocation _start;
+        private SourceLocation _end;
+
         private readonly Type _returnType;
         private string _name;
         private CodeBlock _parent;
@@ -79,16 +82,32 @@ namespace Microsoft.Scripting.Ast {
 
         private Expression _explicitCodeContextExpression;
 
-        internal CodeBlock(SourceSpan span, string name, Type returnType)
-            : base(span) {
+        internal CodeBlock(SourceSpan span, string name, Type returnType) {
             Assert.NotNull(returnType);
 
             _name = name;
             _returnType = returnType;
+            _start = span.Start;
+            _end = span.End;
         }
 
         internal CodeBlock(SourceSpan span, string name)
             : this(span, name, typeof(object)) {
+        }
+
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
+
+        public SourceSpan Span {
+            get {
+                return new SourceSpan(_start, _end);
+            }
         }
 
         public Type ReturnType {
@@ -193,7 +212,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public EnvironmentFactory EnvironmentFactory {
+        internal EnvironmentFactory EnvironmentFactory {
             get { return _environmentFactory; }
         }
 
@@ -223,9 +242,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type, Expression defaultValue) {
-            if (kind == Variable.VariableKind.Parameter) {
-                throw new ArgumentException("kind");
-            }
+            Contract.Requires(kind != Variable.VariableKind.Parameter, "kind");
+
             Variable variable = Variable.Create(name, kind, this, type, defaultValue);
             _variables.Add(variable);
             return variable;
@@ -364,7 +382,7 @@ namespace Microsoft.Scripting.Ast {
             return ctxSlot;
         }
 
-        public void CreateSlots(CodeGen cg) {
+        internal void CreateSlots(CodeGen cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             if (HasEnvironment) {
@@ -393,7 +411,7 @@ namespace Microsoft.Scripting.Ast {
             cg.Allocator.GlobalAllocator.PrepareForEmit(cg);
         }
 
-        public void CreateAccessSlots(CodeGen cg) {
+        internal void CreateAccessSlots(CodeGen cg) {
             CreateClosureAccessSlots(cg);
             CreateScopeAccessSlots(cg);
         }
@@ -468,7 +486,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void AddGeneratorTemps(int count) {
+        internal void AddGeneratorTemps(int count) {
             _generatorTemps += count;
         }
 
@@ -563,7 +581,7 @@ namespace Microsoft.Scripting.Ast {
             return _callCount++ > _maxInterpretedCalls;
         }
 
-        public object ExecuteWithChildContext(CodeContext parent, params object[] args) {
+        private object ExecuteWithChildContext(CodeContext parent, params object[] args) {
             // Fast path for if we have emitted this code block as a delegate
             if (_delegate != null) {
                 return ReflectionUtils.InvokeDelegate(_delegate, args);
@@ -588,7 +606,7 @@ namespace Microsoft.Scripting.Ast {
             return Execute(child);
         }
 
-        public object ExecuteWithChildContextAndThis(CodeContext parent, object @this, params object[] args) {
+        private object ExecuteWithChildContextAndThis(CodeContext parent, object @this, params object[] args) {
             if (_delegate != null) {
                 return RuntimeHelpers.CallWithThis(parent, _delegate, @this, args);
             }
@@ -613,7 +631,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // Return a delegate to execute this block in interpreted mode.
-        public virtual Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
+        internal protected virtual Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
             FlowChecker.Check(this);
 
             bool delayedEmit = context.LanguageContext.Engine.Options.ProfileDrivenCompilation;
@@ -665,7 +683,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitDelegateConstruction(CodeGen cg, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
+        internal void EmitDelegateConstruction(CodeGen cg, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
             FlowChecker.Check(this);
 
             // TODO: explicit delegate type may be wrapped...
@@ -922,7 +940,7 @@ namespace Microsoft.Scripting.Ast {
             return wrapper;
         }
 
-        public void EmitFunctionImplementation(CodeGen impl) {
+        internal void EmitFunctionImplementation(CodeGen impl) {
             CompilerHelpers.EmitStackTraceTryBlockStart(impl);
 
             // emit the actual body
@@ -939,7 +957,7 @@ namespace Microsoft.Scripting.Ast {
             CompilerHelpers.EmitStackTraceFaultBlock(impl, _name, displayName);
         }
 
-        public virtual void EmitBody(CodeGen cg) {
+        internal protected virtual void EmitBody(CodeGen cg) {
             CreateEnvironmentFactory(false);
             CreateSlots(cg);
             if (cg.InterpretedMode) {
@@ -994,7 +1012,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // This is used for compiling the toplevel CodeBlock object.
-        public T CreateDelegate<T>(CompilerContext context) 
+        internal T CreateDelegate<T>(CompilerContext context) 
             where T : class {
             CodeGen cg = CompilerHelpers.CreateDynamicCodeGenerator(context);
             cg.Allocator = CompilerHelpers.CreateFrameAllocator(cg.ContextSlot);

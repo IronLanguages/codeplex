@@ -49,13 +49,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression expression = ag.Transform(_expression);
 
             if (_name == SymbolId.Empty) {
-                return MSAst.Arg.Simple(expression, Span);
+                return MSAst.Arg.Simple(expression);
             } else if (_name == Symbols.Star) {
-                return MSAst.Arg.List(expression, Span);
+                return MSAst.Arg.List(expression);
             } else if (_name == Symbols.StarStar) {
-                return MSAst.Arg.Dictionary(expression, Span);
+                return MSAst.Arg.Dictionary(expression);
             } else {
-                return MSAst.Arg.Named(_name, expression, Span);
+                return MSAst.Arg.Named(_name, expression);
             }
         }
 

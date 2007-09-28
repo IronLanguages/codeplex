@@ -86,13 +86,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression rleft = ag.Transform(bright.Left);
 
             // Store it in the temp
-            MSAst.BoundExpression temp = ag.MakeTempExpression("chained_comparison", rleft.Span);
+            MSAst.BoundExpression temp = ag.MakeTempExpression("chained_comparison");
 
             // Create binary operation: left <_op> (temp = rleft)
             MSAst.Expression comparison = MakeBinaryOperation(
                 _op,
                 left,
-                Ast.Assign(temp.Variable, rleft),
+                Ast.Assign(temp.Variable, Ast.Convert(rleft, temp.Variable.Type)),
                 typeof(object),
                 Span
             );
@@ -132,15 +132,14 @@ namespace IronPython.Compiler.Ast {
             Operators action = PythonOperatorToAction(op);
             if (action != Operators.None) {
                 // Create action expression
-                return Ast.Action.Operator(span, action, type, left, right);
+                return Ast.Action.Operator(action, type, left, right);
             } else {
                 // Call helper method
                 return Ast.Call(
-                    span,
                     null,
                     AstGenerator.GetHelperMethod(GetHelperName(op)),
-                    AstGenerator.ConvertIfNeeded(left, typeof(object)),
-                    AstGenerator.ConvertIfNeeded(right, typeof(object))
+                    AstGenerator.DynamicConvertIfNeeded(left, typeof(object)),
+                    AstGenerator.DynamicConvertIfNeeded(right, typeof(object))
                 );
             }
         }

@@ -49,8 +49,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal MemberAssignment(SourceSpan span, MemberInfo member, Expression expression, Expression value)
-            : base(span) {
+        internal MemberAssignment(MemberInfo member, Expression expression, Expression value) {
             _member = member;
             _expression = expression;
             _value = value;
@@ -82,20 +81,18 @@ namespace Microsoft.Scripting.Ast {
                 if (_member.DeclaringType.IsValueType) {
                     _expression.EmitAddress(cg, _member.DeclaringType);
                 } else {
-                    _expression.EmitAs(cg, _member.DeclaringType);
+                    _expression.Emit(cg);
                 }
             }
 
             switch (_member.MemberType) {
                 case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)_member;
-                    _value.EmitAs(cg, field.FieldType);
-                    cg.EmitFieldSet(field);
+                    _value.Emit(cg);
+                    cg.EmitFieldSet((FieldInfo)_member);
                     break;
                 case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)_member;
-                    _value.EmitAs(cg, property.PropertyType);
-                    cg.EmitPropertySet(property);
+                    _value.Emit(cg);
+                    cg.EmitPropertySet((PropertyInfo)_member);
                     break;
                 default:
                     Debug.Assert(false, "Invalid member type");
@@ -119,10 +116,6 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static MemberAssignment AssignField(Expression expression, Type type, string field, Expression value) {
-            return AssignField(SourceSpan.None, expression, type, field, value);
-        }
-
-        public static MemberAssignment AssignField(SourceSpan span, Expression expression, Type type, string field, Expression value) {
             Contract.RequiresNotNull(type, "type");
             Contract.RequiresNotNull(field, "field");
             Contract.RequiresNotNull(value, "value");
@@ -131,41 +124,35 @@ namespace Microsoft.Scripting.Ast {
             if (fi == null) {
                 throw new ArgumentException(String.Format("Type {0} doesn't have field {1}", type, field));
             }
-            if (expression == null ^ fi.IsStatic) {
-                throw new ArgumentNullException("Static field requires null expression, non-static field requires non-null expression.");
-            }
-            return new MemberAssignment(span, fi, expression, value);
+            return AssignField(expression, fi, value);
         }
 
-        public static MemberAssignment AssignField(Expression expression, FieldInfo field, Expression value) {
-            return AssignField(SourceSpan.None, expression, field, value);
-        }
         /// <summary>
         /// Creates MemberExpression representing field access, instance or static.
         /// For static field, expression must be null and FieldInfo.IsStatic == true
         /// For instance field, expression must be non-null and FieldInfo.IsStatic == false.
         /// </summary>
-        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for the field access.</param>
         /// <param name="field">Field represented by this Member expression.</param>
         /// <param name="value">Value to set this field to.</param>
         /// <returns>New instance of Member expression</returns>
-        public static MemberAssignment AssignField(SourceSpan span, Expression expression, FieldInfo field, Expression value) {
+        public static MemberAssignment AssignField(Expression expression, FieldInfo field, Expression value) {
             Contract.RequiresNotNull(field, "field");
             Contract.RequiresNotNull(value, "value");
 
-            if (expression == null ^ field.IsStatic) {
-                throw new ArgumentException("field");
+            if (field.IsStatic) {
+                Contract.Requires(expression == null, "expression", "Expression must be null for static fields");
+            } else {
+                Contract.RequiresNotNull(expression, "expression");
+                Contract.Requires(TypeUtils.CanAssign(field.DeclaringType, expression.Type));
             }
 
-            return new MemberAssignment(span, field, expression, value);
+            Contract.Requires(TypeUtils.CanAssign(field.FieldType, value.Type));
+
+            return new MemberAssignment(field, expression, value);
         }
 
         public static MemberAssignment AssignProperty(Expression expression, Type type, string property, Expression value) {
-            return AssignProperty(SourceSpan.None, expression, type, property, value);
-        }
-
-        public static MemberAssignment AssignProperty(SourceSpan span, Expression expression, Type type, string property, Expression value) {
             Contract.RequiresNotNull(type, "type");
             Contract.RequiresNotNull(property, "property");
             Contract.RequiresNotNull(value, "value");
@@ -177,14 +164,7 @@ namespace Microsoft.Scripting.Ast {
             if (!pi.CanWrite) {
                 throw new ArgumentException(String.Format("Cannot assign property {0}.{1}", pi.DeclaringType, pi.Name));
             }
-            if (expression == null ^ pi.GetSetMethod().IsStatic) {
-                throw new ArgumentNullException("Static property requires null target, non-static property requires non-null target.");
-            }
-            return new MemberAssignment(span, pi, expression, value);
-        }
-
-        public static MemberAssignment AssignProperty(Expression expression, PropertyInfo property, Expression value) {
-            return AssignProperty(SourceSpan.None, expression, property, value);
+            return AssignProperty(expression, pi, value);
         }
 
         /// <summary>
@@ -192,30 +172,26 @@ namespace Microsoft.Scripting.Ast {
         /// For static properties, expression must be null and property.IsStatic == true.
         /// For instance properties, expression must be non-null and property.IsStatic == false.
         /// </summary>
-        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for instance property access.</param>
         /// <param name="property">PropertyInfo of the property to access</param>
         /// <param name="value">Value to set this property to.</param>
         /// <returns>New instance of the MemberExpression.</returns>
-        public static MemberAssignment AssignProperty(SourceSpan span, Expression expression, PropertyInfo property, Expression value) {
-            if (property == null) {
-                throw new ArgumentNullException("property");
-            }
-
-            if (value == null) {
-                throw new ArgumentNullException("value");
-            }
-
+        public static MemberAssignment AssignProperty(Expression expression, PropertyInfo property, Expression value) {
+            Contract.RequiresNotNull(property, "property");
+            Contract.RequiresNotNull(value, "value");
             MethodInfo setter = property.GetSetMethod();
-            if (setter == null) {
-                throw new ArgumentNullException("property");
+            Contract.Requires(setter != null, "property", "Property is read only");
+
+            if (setter.IsStatic) {
+                Contract.Requires(expression == null, "expression", "Expression must be null for static properties");
+            } else {
+                Contract.RequiresNotNull(expression, "expression");
+                Contract.Requires(property.DeclaringType.IsAssignableFrom(expression.Type), "expression", "Incorrect instance type for the property");
             }
 
-            if (expression == null ^ setter.IsStatic) {
-                throw new ArgumentException("property");
-            }
-
-            return new MemberAssignment(SourceSpan.None, property, expression, value);
+            Contract.Requires(property.PropertyType.IsAssignableFrom(value.Type), "value", "Incorrect value type for the property");
+            
+            return new MemberAssignment(property, expression, value);
         }
     }
 }

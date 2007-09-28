@@ -29,8 +29,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expr;
         private readonly ArgumentInfo _info;
 
-        private Arg(SymbolId name, Expression expression, ArgumentKind kind, SourceSpan span)
-            : base(span) {
+        private Arg(SymbolId name, Expression expression, ArgumentKind kind) {
             _expr = expression;
             _info = new ArgumentInfo(kind, name);
         }
@@ -65,43 +64,23 @@ namespace Microsoft.Scripting.Ast {
         #region Factory methods
 
         public static Arg List(Expression expression) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.List, SourceSpan.None);
-        }
-
-        public static Arg List(Expression expression, SourceSpan span) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.List, span);
+            return new Arg(SymbolId.Empty, expression, ArgumentKind.List);
         }
 
         public static Arg Dictionary(Expression expression) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Dictionary, SourceSpan.None);
-        }
-
-        public static Arg Dictionary(Expression expression, SourceSpan span) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Dictionary, SourceSpan.None);
+            return new Arg(SymbolId.Empty, expression, ArgumentKind.Dictionary);
         }
 
         public static Arg Named(SymbolId name, Expression expression) {
-            return new Arg(name, expression, ArgumentKind.Named, SourceSpan.None);
-        }
-
-        public static Arg Named(SymbolId name, Expression expression, SourceSpan span) {
-            return new Arg(name, expression, ArgumentKind.Named, span);
+            return new Arg(name, expression, ArgumentKind.Named);
         }
 
         public static Arg Simple(Expression expression) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Simple, SourceSpan.None);
-        }
-
-        public static Arg Simple(Expression expression, SourceSpan span) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Simple, span);
+            return new Arg(SymbolId.Empty, expression, ArgumentKind.Simple);
         }
 
         public static Arg Instance(Expression expression) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Instance, SourceSpan.None);
-        }
-
-        public static Arg Instance(Expression expression, SourceSpan span) {
-            return new Arg(SymbolId.Empty, expression, ArgumentKind.Instance, span);
+            return new Arg(SymbolId.Empty, expression, ArgumentKind.Instance);
         }
 
         #endregion

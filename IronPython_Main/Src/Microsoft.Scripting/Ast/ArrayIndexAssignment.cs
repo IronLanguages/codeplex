@@ -18,14 +18,13 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ArrayIndexAssignment : Expression{
+    public class ArrayIndexAssignment : Expression {
         private readonly Expression _array;
         private readonly Expression _index;
         private readonly Expression _value;
         private readonly Type _elementType;
 
-        internal ArrayIndexAssignment(SourceSpan span, Expression array, Expression index, Expression value)
-            : base(span) {
+        internal ArrayIndexAssignment(Expression array, Expression index, Expression value) {
             _array = array;
             _index = index;
             _value = value;
@@ -89,10 +88,6 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ArrayIndexAssignment AssignArrayIndex(Expression array, Expression index, Expression value) {
-            return AssignArrayIndex(SourceSpan.None, array, index, value);
-        }
-
-        public static ArrayIndexAssignment AssignArrayIndex(SourceSpan span, Expression array, Expression index, Expression value) {
             Contract.RequiresNotNull(array, "array");
             Contract.RequiresNotNull(index, "index");
             Contract.RequiresNotNull(value, "value");
@@ -103,7 +98,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
             Contract.Requires(value.Type == arrayType.GetElementType(), "value", "Value type must match the array element type.");
 
-            return new ArrayIndexAssignment(span, array, index, value);
+            return new ArrayIndexAssignment(array, index, value);
         }
     }
 }

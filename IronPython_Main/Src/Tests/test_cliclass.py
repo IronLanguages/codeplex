@@ -187,8 +187,8 @@ def test_symbol_dict():
     CheckDictionary(OldClass)
     CheckDictionary(NewClass)
 
-def test_generic_type_collision():
-    # TypeCollision is used to expose "System.IComparable" and "System.IComparable`1" as "System.IComparable"
+def test_generic_TypeGroup():
+    # TypeGroup is used to expose "System.IComparable" and "System.IComparable`1" as "System.IComparable"
     
     # repr
     AreEqual(repr(System.IComparable), "<types 'IComparable', 'IComparable[T]'>")
@@ -253,6 +253,21 @@ def test_generic_type_collision():
         class MyDerivedClass(genericTypes): pass
     except TypeError: pass
     else: AssertUnreachable()
+    
+    # Use a TypeGroup to index a TypeGroup
+    t = genericTypes[System.IComparable]
+    t = genericTypes[System.IComparable, int]
+    try:
+        System.IComparable[genericTypes]
+    except TypeError: pass
+    else: AssertUnreachable()
+
+def test_generic_only_TypeGroup():
+    try:
+        BinderTest.GenericOnlyConflict()
+    except System.TypeLoadException, e:
+        Assert(str(e).find('requires a non-generic type') != -1)
+        Assert(str(e).find('GenericOnlyConflict') != -1)
 
 def test_autodoc():
     from System.Threading import Thread, ThreadStart
@@ -793,13 +808,6 @@ def test_class_property():
     """__class__ should work on standard .NET types and should return the type object associated with that class"""
     import System
     AreEqual(System.Environment.Version.__class__, System.Version)
-
-def test_generic_only_collision():
-    try:
-        BinderTest.GenericOnlyConflict()
-    except System.TypeLoadException, e:
-        Assert(str(e).find('requires a non-generic type') != -1)
-        Assert(str(e).find('GenericOnlyConflict') != -1)
 
 @skip("silverlight") # no winforms
 def test_override_createparams():        

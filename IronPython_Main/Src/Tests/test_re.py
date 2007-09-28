@@ -14,7 +14,7 @@
 #####################################################################################
 
 from lib.assert_util import *
-skiptest("silverlight")
+
 import re
 
 def test_none():
@@ -659,7 +659,21 @@ def test_lastindex():
         AreEqual(re.match(pat, 'aab').lastindex, index)
 
 def test_empty_split():
-    import re
-    AreEqual(re.split(':*', 'a:b::c') , ['a', 'b', 'c'])
+    cases =[
+            ('', ['']),
+            ('*', ['*']),
+            (':', ['', '']),
+            ('::', ['', '']),
+            ('a::', ['a', '']),
+            ('::b', ['', 'b']),
+            (':c:', ['', 'c', '']),
+            (':\t: ', ['', '\t', ' ']),
+            ('a:b::c', ['a', 'b', 'c']),
+            (':a:b::c', ['', 'a', 'b', 'c']),
+            ('::a:b::c:', ['', 'a', 'b', 'c', '']),
+            ]
+    for expr, result in cases:
+        AreEqual(re.split(":*", expr), result)
+
 
 run_test(__name__)

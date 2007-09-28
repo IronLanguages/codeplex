@@ -222,15 +222,29 @@ namespace Microsoft.Scripting.Ast {
 
         // StaticUnaryExpression
         public override bool Walk(UnaryExpression node) {
-            return DefaultWalk(node, "<staticunaryexpr> Type:" + node.Type.ToString());
+            switch (node.Operator) {
+                case UnaryOperators.Convert:
+                    Push("(" + node.Type.ToString() + ") (");
+                    break;
+                case UnaryOperators.Negate:
+                    Push("- (");
+                    break;
+                case UnaryOperators.Not:
+                    Push(node.Type == typeof(bool) ? "! (" : "~ (");
+                    break;
+                case UnaryOperators.OnesComplement:
+                    Push("~ (");
+                    break;
+            }
+            return true;
         }
         public override void PostWalk(UnaryExpression node) {
-            Pop();
+            Pop(")");
         }
 
         // DynamicConversionExpression
         public override bool Walk(DynamicConversionExpression node) {
-            Push("(" + node.Type.ToString() + ")");
+            Push(".dynamic (" + node.Type.ToString() + ")");
             return true;
         }
         public override void PostWalk(DynamicConversionExpression node) {
@@ -239,7 +253,7 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundAssignment
         public override bool Walk(BoundAssignment node) {
-            Push(String.Format(".bound {0} {1} ...", SymbolTable.IdToString(node.Variable.Name), AssignmentOp(node.Operator)));
+            Push(String.Format(".bound {0} = ...", SymbolTable.IdToString(node.Variable.Name)));
             return true;
         }
         public override void PostWalk(BoundAssignment node) {
@@ -254,7 +268,7 @@ namespace Microsoft.Scripting.Ast {
 
         // UnboundAssignment
         public override bool Walk(UnboundAssignment node) {
-            Push(String.Format(".unbound {0} {1} ...", SymbolTable.IdToString(node.Name), AssignmentOp(node.Operator)));
+            Push(String.Format(".unbound {0} = ...", SymbolTable.IdToString(node.Name)));
             return true;
         }
         public override void PostWalk(UnboundAssignment node) {
@@ -432,10 +446,11 @@ namespace Microsoft.Scripting.Ast {
 
         // VoidExpression
         public override bool Walk(VoidExpression node) {
-            return DefaultWalk(node, "<void>");
+            Push(".void (");
+            return true;
         }
         public override void PostWalk(VoidExpression node) {
-            Pop();
+            Pop(")");
         }
 
         // BlockStatement
@@ -455,7 +470,7 @@ namespace Microsoft.Scripting.Ast {
 
         // ContinueStatement
         public override bool Walk(ContinueStatement node) {
-            return DefaultWalk(node, "<continue>");
+            return DefaultWalk(node, ".continue;");
         }
         public override void PostWalk(ContinueStatement node) {
             Pop();
@@ -491,10 +506,11 @@ namespace Microsoft.Scripting.Ast {
 
         // LoopStatement
         public override bool Walk(LoopStatement node) {
-            return DefaultWalk(node, "<loop>");
+            Push(".loop {");
+            return true;
         }
         public override void PostWalk(LoopStatement node) {
-            Pop();
+            Pop("}");
         }
 
         // EmptyStatement
@@ -540,21 +556,24 @@ namespace Microsoft.Scripting.Ast {
 
         // SwitchStatement
         public override bool Walk(SwitchStatement node) {
-            Push("<switch>");
+            Push(". switch (");
             Child(node.TestValue);
-            Pop();
+            Pop(")");
+            Push("}");
             foreach (SwitchCase sc in node.Cases) {
                 DumpCase(sc);
             }
-            Pop();
+            Pop("}");
             return false;
         }
 
         private void DumpCase(SwitchCase sc) {
-            Push("<case>");
+            Push(".case (");
             Child(sc.Value);
+            Pop(")");
+            Push("{");
             Child(sc.Body);
-            Pop();
+            Pop("}");
         }
 
         // ThrowStatement
@@ -599,10 +618,11 @@ namespace Microsoft.Scripting.Ast {
 
         // CatchBlock
         public override bool Walk(CatchBlock node) {
-            return DefaultWalk(node, "<catchblock>");
+            Push(". catch (");
+            return true;
         }
         public override void PostWalk(CatchBlock node) {
-            Pop();
+            Pop(")");
         }
 
         // YieldStatement
@@ -616,7 +636,7 @@ namespace Microsoft.Scripting.Ast {
 
         // Arg
         public override bool Walk(Arg node) {
-            Push("<arg>");
+            Push(".arg");
             if (node.Name != SymbolId.Empty) {
                 Push(SymbolTable.IdToString(node.Name));
                 Pop();
@@ -722,102 +742,6 @@ namespace Microsoft.Scripting.Ast {
         }
         public override void PostWalk(ScopeStatement node) {
             Pop();
-        }
-
-        private string AssignmentOp(Operators op) {
-            return op == Operators.None ? "=" : Op(op);
-        }
-
-        private string Op(Operators op) {
-            switch (op) {
-                case Operators.Call: return "()";
-                case Operators.CodeRepresentation: return "repr";
-                case Operators.ConvertToString: return "str";
-                case Operators.GetDescriptor: return "get";
-                case Operators.SetDescriptor: return "set";
-                case Operators.DeleteDescriptor: return "del";
-                case Operators.Add: return "+";
-                case Operators.Subtract: return "-";
-                case Operators.Power: return "**";
-                case Operators.Multiply: return "*";
-                case Operators.FloorDivide: return "//";
-                case Operators.Divide: return "/";
-                case Operators.TrueDivide: return "/t";
-                case Operators.Mod: return "%";
-                case Operators.LeftShift: return "<<";
-                case Operators.RightShift: return ">>";
-                case Operators.BitwiseAnd: return "&";
-                case Operators.BitwiseOr: return "|";
-                case Operators.Xor: return "^";
-                case Operators.LessThan: return "<";
-                case Operators.GreaterThan: return ">";
-                case Operators.LessThanOrEqual: return "<=";
-                case Operators.GreaterThanOrEqual: return ">=";
-                case Operators.Equals: return "=";
-                case Operators.NotEquals: return "!=";
-                case Operators.LessThanGreaterThan: return "<>";
-                case Operators.InPlaceAdd: return "+=";
-                case Operators.InPlaceSubtract: return "-=";
-                case Operators.InPlacePower: return "**=";
-                case Operators.InPlaceMultiply: return "*=";
-                case Operators.InPlaceFloorDivide: return "//=";
-                case Operators.InPlaceDivide: return "/=";
-                case Operators.InPlaceTrueDivide: return "/t=";
-                case Operators.InPlaceMod: return "%=";
-                case Operators.InPlaceLeftShift: return "<<=";
-                case Operators.InPlaceRightShift: return ">>=";
-                case Operators.InPlaceBitwiseAnd: return "&=";
-                case Operators.InPlaceBitwiseOr: return "|=";
-                case Operators.InPlaceXor: return "^=";
-                case Operators.ReverseAdd: return "r+";
-                case Operators.ReverseSubtract: return "r-";
-                case Operators.ReversePower: return "r**";
-                case Operators.ReverseMultiply: return "r*";
-                case Operators.ReverseFloorDivide: return "r//";
-                case Operators.ReverseDivide: return "r/";
-                case Operators.ReverseTrueDivide: return "rt/";
-                case Operators.ReverseMod: return "r%";
-                case Operators.ReverseLeftShift: return "r<<";
-                case Operators.ReverseRightShift: return "r>>";
-                case Operators.ReverseBitwiseAnd: return "r&";
-                case Operators.ReverseBitwiseOr: return "r|";
-                case Operators.ReverseXor: return "r^";
-                case Operators.Contains: return "in";
-                case Operators.GetItem: return "get[]";
-                case Operators.SetItem: return "set[]";
-                case Operators.DeleteItem: return "del[]";
-                case Operators.Compare: return "cmp";
-                case Operators.Positive: return "+";
-                case Operators.Negate: return "-";
-                case Operators.OnesComplement: return "~";
-                case Operators.Length: return "len";
-                case Operators.DivMod: return "/%";
-                case Operators.ReverseDivMod: return "r/%";
-                case Operators.MoveNext: return "next";
-                case Operators.Coerce: return "coerce";
-                case Operators.GetMember: return "getmember";
-                case Operators.GetBoundMember: return "getbmember";
-                case Operators.SetMember: return "setmember";
-                case Operators.Unassign: return "unassign";
-                case Operators.Missing: return "missing";
-                case Operators.AbsoluteValue: return "abs";
-                case Operators.ConvertToBigInteger: return "cvtbigint";
-                case Operators.ConvertToComplex: return "cvtcomplex";
-                case Operators.ConvertToDouble: return "cvtdouble";
-                case Operators.ConvertToInt32: return "cvtint32";
-                case Operators.ConvertToHex: return "cvthex";
-                case Operators.ConvertToOctal: return "cvtoct";
-                case Operators.ConvertToBoolean: return "cvtobool";
-                case Operators.GetState: return "getstate";
-                case Operators.ValueHash: return "#";
-                case Operators.RightShiftUnsigned: return ">>>";
-                case Operators.InPlaceRightShiftUnsigned: return ">>>=";
-                case Operators.ReverseRightShiftUnsigned: return "r>>>=";
-
-                default:
-                    //Debug.Fail("unexpected op " + op.ToString());
-                    return "unknown op " + op.ToString();
-            }
         }
 
         private bool NotImplemented(Node node) {

@@ -59,7 +59,7 @@ namespace IronPython.Compiler.Ast {
                 return Ast.While(
                     Span,
                     _header,
-                    ag.TransformAndConvert(_test, typeof(bool)),
+                    ag.TransformAndDynamicConvert(_test, typeof(bool)),
                     ag.Transform(_body),
                     ag.Transform(_else)
                 );

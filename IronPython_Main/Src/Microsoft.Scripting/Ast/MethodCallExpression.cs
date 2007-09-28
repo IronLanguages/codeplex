@@ -32,8 +32,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ParameterInfo[] _parameterInfos;
 
-        internal MethodCallExpression(SourceSpan span, MethodInfo method, Expression instance, IList<Expression> arguments, ParameterInfo[] parameters)
-            : base(span) {
+        internal MethodCallExpression(MethodInfo method, Expression instance, IList<Expression> arguments, ParameterInfo[] parameters) {
             _method = method;
             _instance = instance;
             _arguments = new ReadOnlyCollection<Expression>(arguments);
@@ -255,10 +254,6 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static MethodCallExpression Call(Expression instance, MethodInfo method, params Expression[] arguments) {
-            return Call(SourceSpan.None, instance, method, arguments);
-        }
-
-        public static MethodCallExpression Call(SourceSpan span, Expression instance, MethodInfo method, params Expression[] arguments) {
             Contract.RequiresNotNull(method, "method");
             Contract.RequiresNotNullItems(arguments, "arguments");
             Contract.Requires(method.IsStatic == (instance == null), "instance", "Cannot call static/instance method with/without an instance.");
@@ -266,7 +261,7 @@ namespace Microsoft.Scripting.Ast {
             ParameterInfo[] ps = method.GetParameters();
             Contract.Requires(CompilerHelpers.FormalParamsMatchActual(ps, arguments.Length), "method", "The number of parameters doesn't match the number of actual arguments");
 
-            return new MethodCallExpression(span, method, instance, arguments, ps);
+            return new MethodCallExpression(method, instance, arguments, ps);
         }
     }
 }

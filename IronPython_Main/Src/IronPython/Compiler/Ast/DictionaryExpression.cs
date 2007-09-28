@@ -35,7 +35,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             // 1. Create temp for the result
             MSAst.BoundExpression dictionary = null;
-            dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary), Span);
+            dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary));
 
             // 2. Array for the comma expression parts:
             //    - dictionary creation
@@ -45,10 +45,8 @@ namespace IronPython.Compiler.Ast {
 
             // 3. Create the dictionary by calling MakeDict(_items.Length)
             parts[0] = Ast.Assign(
-                Span,
                 dictionary.Variable,
                 Ast.Call(
-                    Span,
                     null,
                     AstGenerator.GetHelperMethod("MakeDict"),
                     Ast.Constant(_items.Length)
@@ -63,7 +61,6 @@ namespace IronPython.Compiler.Ast {
             for (index = 0; index < _items.Length; index++) {
                 SliceExpression slice = _items[index];
                 parts[index + 1] = Ast.Call(
-                    Span,
                     dictionary,
                     setter,
                     ag.TransformOrConstantNull(slice.SliceStart, typeof(object)),
@@ -80,7 +77,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(dictionary);
 
             // 6. Return the comma expression, return value is the dictionary creation (at index 0)
-            return Ast.Comma(Span, parts.Length - 1, parts);
+            return Ast.Comma(parts.Length - 1, parts);
         }
 
         public override void Walk(PythonWalker walker) {

@@ -14,14 +14,14 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundExpression : Expression {
         private readonly SymbolId _name;
 
-        internal UnboundExpression(SourceSpan span, SymbolId name)
-            : base(span) {
+        internal UnboundExpression(SymbolId name) {
             _name = name;
         }
 
@@ -58,15 +58,8 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static UnboundExpression Read(SymbolId name) {
-            return Read(SourceSpan.None, name);
-        }
-
-        public static UnboundExpression Read(SourceSpan span, SymbolId name) {
-            if (name.IsInvalid || name.IsEmpty) {
-                throw new ArgumentException("Invalid or empty name is not allowed");
-            }
-
-            return new UnboundExpression(span, name);
+            Contract.Requires(!name.IsInvalid && !name.IsEmpty, "name", "Invalid or empty name is not allowed");
+            return new UnboundExpression(name);
         }
     }
 }

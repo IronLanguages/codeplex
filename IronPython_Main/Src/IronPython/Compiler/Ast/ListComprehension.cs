@@ -44,15 +44,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.BoundExpression list = ag.MakeTempExpression("list_comprehension_list", typeof(List), _item.Span);
+            MSAst.BoundExpression list = ag.MakeTempExpression("list_comprehension_list", typeof(List));
 
             // 1. Initialization code - create list and store it in the temp variable
             MSAst.BoundAssignment initialize =
                 Ast.Assign(
-                    _item.Span,
                     list.Variable,
                     Ast.Call(
-                        _item.Span,
                         null,                                                                  // instance
                         AstGenerator.GetHelperMethod("MakeList", ArrayUtils.EmptyTypes), // method
                         new MSAst.Expression[0]                                                // arguments
@@ -77,7 +75,6 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Comma(
-                Span,
                 2,                          // index of list (result)
                 initialize,
                 Ast.Void(body),

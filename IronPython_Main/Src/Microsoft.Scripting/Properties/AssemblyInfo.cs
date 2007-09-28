@@ -57,7 +57,7 @@ using System.Security;
 
 #if !SILVERLIGHT
 [assembly: AssemblyVersion("1.0.0.400")]
-[assembly: AssemblyFileVersion("2.0.10926.00")]
+[assembly: AssemblyFileVersion("2.0.10928.00")]
 [assembly: AssemblyInformationalVersion("1.0")]
 [assembly: AllowPartiallyTrustedCallers]
 #endif

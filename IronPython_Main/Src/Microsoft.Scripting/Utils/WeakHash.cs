@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
@@ -21,6 +22,20 @@ using System.Runtime.CompilerServices;
 
 
 namespace Microsoft.Scripting.Utils {
+    /// <summary>
+    /// Similar to Dictionary[TKey,TValue], but it also ensures that the keys will not be kept alive
+    /// if the only reference is from this collection. The value will be kept alive as long as the key
+    /// is alive.
+    /// 
+    /// This currently has a limitation that the caller is responsible for ensuring that an object used as 
+    /// a key is not also used as a value in *any* instance of a WeakHash. Otherwise, it will result in the
+    /// object being kept alive forever. This effectively means that the owner of the WeakHash should be the
+    /// only one who has access to the object used as a value.
+    /// 
+    /// Currently, there is also no guarantee of how long the values will be kept alive even after the keys
+    /// get collected. This could be fixed by triggerring CheckCleanup() to be called on every garbage-collection
+    /// by having a dummy watch-dog object with a finalizer which calls CheckCleanup().
+    /// </summary>
     public class WeakHash<TKey, TValue> : IDictionary<TKey, TValue> {
         // The one and only comparer instance.
         static readonly IEqualityComparer<object> comparer = new WeakComparer<object>();
@@ -41,10 +56,17 @@ namespace Microsoft.Scripting.Utils {
 
         public void Add(TKey key, TValue value) {
             CheckCleanup();
+
+            // If the WeakHash already holds this value as a key, it will lead to a circular-reference and result
+            // in the objects being kept alive forever. The caller needs to ensure that this cannot happen.
+            Debug.Assert(!dict.ContainsKey(value));
+
             dict.Add(new WeakObject<TKey>(key), value);
         }
 
         public bool ContainsKey(TKey key) {
+            // We dont have to worry about creating "new WeakObject<TKey>(key)" since the comparer
+            // can compare raw objects with WeakObject<T>.
             return dict.ContainsKey(key);
         }
 
@@ -69,15 +91,25 @@ namespace Microsoft.Scripting.Utils {
                 return dict[key];
             }
             set {
+                // If the WeakHash already holds this value as a key, it will lead to a circular-reference and result
+                // in the objects being kept alive forever. The caller needs to ensure that this cannot happen.
+                Debug.Assert(!dict.ContainsKey(value));
+
                 dict[new WeakObject<TKey>(key)] = value;
             }
         }
 
+        /// <summary>
+        /// Check if any of the keys have gotten collected
+        /// 
+        /// Currently, there is also no guarantee of how long the values will be kept alive even after the keys
+        /// get collected. This could be fixed by triggerring CheckCleanup() to be called on every garbage-collection
+        /// by having a dummy watch-dog object with a finalizer which calls CheckCleanup().
+        /// </summary>
         void CheckCleanup() {
             version++;
 
             long change = version - cleanupVersion;
-
 
             // Cleanup the table if it is a while since we have done it last time.
             // Take the size of the table into account.

@@ -81,7 +81,7 @@ using IronPython.Runtime.Operations;
 
             if (toType == typeof(object)) {
                 if (exprType.IsValueType) {
-                    return Ast.Cast(expr, toType);
+                    return Ast.Convert(expr, toType);
                 } else {
                     return expr;
                 }
@@ -98,7 +98,7 @@ using IronPython.Runtime.Operations;
 
             // We used to have a special case for int -> double...
             if (exprType != typeof(object) && exprType.IsValueType) {
-                expr = Ast.Cast(expr, typeof(object));
+                expr = Ast.Convert(expr, typeof(object));
             }
 
             MethodInfo fastConvertMethod = GetFastConvertMethod(toType);
@@ -107,7 +107,7 @@ using IronPython.Runtime.Operations;
             }
 
             if (typeof(Delegate).IsAssignableFrom(toType)) {
-                return Ast.Cast(
+                return Ast.Convert(
                     Ast.Call(
                         null,
                         typeof(Converter).GetMethod("ConvertToDelegate"),
@@ -128,10 +128,10 @@ using IronPython.Runtime.Operations;
 
             return Ast.Condition(
                 typeIs,
-                Ast.Cast(
+                Ast.Convert(
                     expr,
                     visType),
-                Ast.Cast(
+                Ast.Convert(
                     Ast.Call(
                         null, GetGenericConvertMethod(visType),
                         expr, Ast.Constant(visType.TypeHandle)

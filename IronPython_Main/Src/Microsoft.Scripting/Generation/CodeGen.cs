@@ -1225,48 +1225,6 @@ namespace Microsoft.Scripting.Generation {
             EmitCall(type.GetMethod(name, paramTypes));
         }
 
-        public delegate void EmitAsHelper(CodeGen cg, Type asType);
-
-        public void EmitInPlaceOperator(Operators op, Type leftType, EmitAsHelper leftEmit,
-                                        Type rightType, EmitAsHelper rightEmit) {
-            switch (op) {
-                case Operators.InPlaceAdd:
-                case Operators.InPlaceSubtract:
-                case Operators.InPlaceMultiply:
-                case Operators.InPlaceDivide:
-                case Operators.InPlaceTrueDivide:
-                case Operators.InPlaceMod:
-                case Operators.InPlaceBitwiseAnd:
-                case Operators.InPlaceBitwiseOr:
-                case Operators.InPlaceXor:
-                case Operators.InPlaceLeftShift:
-                case Operators.InPlaceRightShift:
-                case Operators.InPlacePower:
-                case Operators.InPlaceFloorDivide:
-                case Operators.InPlaceRightShiftUnsigned:
-                    break;
-                default:
-                    throw new ArgumentException("op");
-            }
-
-            // Can generate dynamic site
-            bool fast;
-            DynamicAction action = DoOperationAction.Make(op);
-            Slot site = CreateDynamicSite(
-                action,
-                new Type[] { leftType, rightType, typeof(object) },
-                out fast
-            );
-
-            site.EmitGet(this);
-            if (!fast) {
-                EmitCodeContext();
-            }
-            leftEmit(this, leftType);
-            rightEmit(this, rightType);
-            EmitCall(site.Type, "Invoke");
-        }
-
         public void EmitName(SymbolId name) {
             if (name == SymbolId.Empty) throw new ArgumentException(Resources.EmptySymbolId, "name");
 

@@ -52,10 +52,9 @@ namespace IronPython.Compiler.Ast {
             // }
             return Ast.Unless(                                  // if
                 Span,                                   
-                ag.TransformAndConvert(_test, typeof(bool)),    // _test
+                ag.TransformAndDynamicConvert(_test, typeof(bool)),    // _test
                 Ast.Statement(
                     Ast.Call(                                   // else branch
-                        Span,
                         null,
                         AstGenerator.GetHelperMethod("RaiseAssertionError"),
                         _message != null ?

@@ -31,14 +31,12 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             if (_expandable) {
                 return Ast.NewArray(
-                    Span,
                     typeof(object[]),
                     ag.Transform(Items)
                 );
             }
 
             return Ast.Call(
-                Span,
                 null,
                 AstGenerator.GetHelperMethod("MakeTuple"),
                 ag.Transform(Items)

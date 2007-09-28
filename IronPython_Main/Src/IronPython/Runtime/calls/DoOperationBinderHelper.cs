@@ -597,7 +597,7 @@ namespace IronPython.Runtime.Calls {
                     body = reverse ?                        
                         rule.MakeReturn(Binder, 
                             Ast.Multiply(
-                                Ast.Cast(
+                                Ast.Convert(
                                     Ast.ReadDefined(tmp), 
                                     typeof(int)), 
                                 Ast.Constant(-1))) :

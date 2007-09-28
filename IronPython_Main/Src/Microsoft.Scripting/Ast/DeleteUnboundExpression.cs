@@ -21,8 +21,7 @@ namespace Microsoft.Scripting.Ast {
     public class DeleteUnboundExpression : Expression {
         private SymbolId _name;
 
-        internal DeleteUnboundExpression(SourceSpan span, SymbolId name)
-            : base(span) {
+        internal DeleteUnboundExpression(SymbolId name) {
             _name = name;
         }
 
@@ -46,11 +45,7 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static DeleteUnboundExpression Delete(SymbolId name) {
-            return Delete(SourceSpan.None, name);
-        }
-        public static DeleteUnboundExpression Delete(SourceSpan span, SymbolId name) {
-            return new DeleteUnboundExpression(span, name);
+            return new DeleteUnboundExpression(name);
         }
     }
-
 }

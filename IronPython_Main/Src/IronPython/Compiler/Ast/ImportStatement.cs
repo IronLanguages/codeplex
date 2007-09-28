@@ -53,10 +53,8 @@ namespace IronPython.Compiler.Ast {
                     Ast.Statement(
                         _names[i].Span,
                         Ast.Assign(
-                            _names[i].Span,
                             _variables[i].Variable,
                             Ast.Call(
-                                _names[i].Span,                                         // span
                                 null,                                                   // instance
                                 AstGenerator.GetHelperMethod(                           // helper
                                     _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"

@@ -555,7 +555,7 @@ namespace Microsoft.Scripting.Types {
                     // a minimal level of interop until then.
                     StandardRule<T> rule = new StandardRule<T>();
                     Expression call = Ast.Call(
-                        Ast.Cast(rule.Parameters[0], typeof(IConstructorWithCodeContext)), 
+                        Ast.Convert(rule.Parameters[0], typeof(IConstructorWithCodeContext)), 
                         typeof(IConstructorWithCodeContext).GetMethod("Construct"), 
                         ArrayUtils.Insert((Expression)Ast.CodeContext(), ArrayUtils.RemoveFirst(rule.Parameters)));
 

@@ -2632,7 +2632,7 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        public static IAttributesCollection CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
+        public static PythonDictionary CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
             foreach (object o in dict.Keys) {
                 if (!(o is string)) {
                     throw TypeError("{0}() keywords most be strings", function.Name);

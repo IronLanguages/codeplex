@@ -27,8 +27,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _false;
         private readonly Type _expressionType;
 
-        internal ConditionalExpression(SourceSpan span, Expression testExpression, Expression trueExpression, Expression falseExpression, bool allowUpcast)
-            : base(span) {
+        internal ConditionalExpression(Expression testExpression, Expression trueExpression, Expression falseExpression, bool allowUpcast) {
             _test = testExpression;
             _true = trueExpression;
             _false = falseExpression;
@@ -39,11 +38,11 @@ namespace Microsoft.Scripting.Ast {
                 _expressionType = _false.Type;
             } else if (allowUpcast) {
                 _expressionType = typeof(object);
-                _true = Ast.Cast(_true, _expressionType);
-                _false = Ast.Cast(_false, _expressionType);
+                _true = Ast.Convert(_true, _expressionType);
+                _false = Ast.Convert(_false, _expressionType);
             } else {
                 throw new ArgumentException(String.Format("Cannot determine the type of the conditional expression: {0}, {1}.", _true.Type, _false.Type));
-            }            
+            }
         }
 
         public Expression FalseExpression {
@@ -118,26 +117,18 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue) {
-            return Condition(SourceSpan.None, test, trueValue, falseValue, false);
-        }
-
-        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue, bool allowUpcast) {
-            return Condition(SourceSpan.None, test, trueValue, falseValue, allowUpcast);
-        }
-
-        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression trueValue, Expression falseValue) {
-            return Condition(span, test, trueValue, falseValue, false);
+            return Condition(test, trueValue, falseValue, false);
         }
 
         /// <summary>
         /// AllowUpcast: casts both expressions to Object if neither is a subtype of the other.
         /// </summary>
-        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression trueValue, Expression falseValue, bool allowUpcast) {
+        public static ConditionalExpression Condition(Expression test, Expression trueValue, Expression falseValue, bool allowUpcast) {
             Contract.RequiresNotNull(test, "test");
             Contract.RequiresNotNull(trueValue, "trueValue");
             Contract.RequiresNotNull(falseValue, "falseValue");
-            
-            return new ConditionalExpression(span, test, trueValue, falseValue, allowUpcast);
+
+            return new ConditionalExpression(test, trueValue, falseValue, allowUpcast);
         }
     }
 }

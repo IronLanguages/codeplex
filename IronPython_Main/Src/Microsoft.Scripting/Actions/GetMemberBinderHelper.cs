@@ -276,7 +276,7 @@ namespace Microsoft.Scripting.Actions {
             Body = Ast.Block(Body,
                         Ast.If(
                             Ast.Call(
-                                Ast.Cast(Instance, typeof(ICustomMembers)),
+                                Ast.Convert(Instance, typeof(ICustomMembers)),
                                 GetCustomGetMembersMethod(),
                                 Ast.CodeContext(),
                                 Ast.Constant(Action.Name),

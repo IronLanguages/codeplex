@@ -20,8 +20,7 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Ast {
     public class CodeContextExpression : Expression {
 
-        internal CodeContextExpression(SourceSpan span)
-            : base(span) {
+        internal CodeContextExpression() {
         }
 
         public override Type Type {
@@ -47,10 +46,7 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static CodeContextExpression CodeContext() {
-            return CodeContext(SourceSpan.None);
-        }
-        public static CodeContextExpression CodeContext(SourceSpan span) {
-            return new CodeContextExpression(span);
+            return new CodeContextExpression();
         }
     }
 }

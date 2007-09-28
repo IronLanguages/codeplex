@@ -32,7 +32,6 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Call(
-                Span,                                   // span
                 null,                                   // instance
                 AstGenerator.GetHelperMethod("Repr"),   // method
                 ag.TransformAsObject(_expression)       // args

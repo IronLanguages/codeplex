@@ -113,7 +113,13 @@ namespace Microsoft.Scripting.Generation {
 
             if (_argumentType.IsByRef) {
                 Variable tmp = context.GetTemporary(_argumentType.GetElementType(), "optRef");
-                return Ast.Comma(Ast.Assign(tmp, Ast.Constant(val)), Ast.Read(tmp));
+                return Ast.Comma(
+                    Ast.Assign(
+                        tmp,
+                        Ast.Convert(Ast.Constant(val), tmp.Type)
+                    ),
+                    Ast.Read(tmp)
+                );
             }
 
             return context.ConvertExpression(Ast.Constant(val), _argumentType);            

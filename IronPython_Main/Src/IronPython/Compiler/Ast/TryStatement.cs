@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
             if (@else != null) {
                 Debug.Assert(@catch != null);
 
-                MSAst.BoundExpression runElse = ag.MakeGeneratorTempExpression("run_else", typeof(bool), SourceSpan.None);
+                MSAst.BoundExpression runElse = ag.MakeGeneratorTempExpression("run_else", typeof(bool));
 
                 //  run_else = true;
                 //  try {
@@ -132,8 +132,8 @@ namespace IronPython.Compiler.Ast {
                 return null;
             }
 
-            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception), SourceSpan.None);
-            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", typeof(object), SourceSpan.None);
+            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
+            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", typeof(object));
 
             // The variable where the runtime will store the exception.
             variable = exception.Variable;
@@ -173,7 +173,7 @@ namespace IronPython.Compiler.Ast {
                         //      }
 
                         if (converted == null) {
-                            converted = ag.MakeTempExpression("converted", SourceSpan.None);
+                            converted = ag.MakeTempExpression("converted");
                         }
 
                         ist = Ast.IfCondition(
@@ -184,7 +184,7 @@ namespace IronPython.Compiler.Ast {
                             ),
                             Ast.Block(
                                 ClearDynamicStackFramesAst(SourceSpan.None),
-                                tsh.Target.TransformSet(ag, converted, Operators.None),
+                                tsh.Target.TransformSet(ag, SourceSpan.None, converted, Operators.None),
                                 ag.Transform(tsh.Body)
                             )
                         );

@@ -165,7 +165,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal string NormalizedName {
+        public string NormalizedName {
             get {
                 return GetNormalizedTypeName(SampleType);
             }
@@ -194,14 +194,26 @@ namespace Microsoft.Scripting {
             }
         }
 
+        /// <summary>
+        /// This will return the result only for the non-generic type if one exists, and will throw 
+        /// an exception if all types in the TypeGroup are generic
+        /// </summary>
         public override Type DeclaringType {
             get { return NonGenericType.DeclaringType; }
         }
 
+        /// <summary>
+        /// This will return the result only for the non-generic type if one exists, and will throw 
+        /// an exception if all types in the TypeGroup are generic
+        /// </summary>
         public override string Name {
             get { return NonGenericType.Name; }
         }
 
+        /// <summary>
+        /// This will return the result only for the non-generic type if one exists, and will throw 
+        /// an exception if all types in the TypeGroup are generic
+        /// </summary>
         public override Type Type {
             get { return NonGenericType; }
         }
@@ -210,6 +222,10 @@ namespace Microsoft.Scripting {
             get { return _typesByArity.Count > 0; }
         }
 
+        /// <summary>
+        /// This will return the result only for the non-generic type if one exists, and will throw 
+        /// an exception if all types in the TypeGroup are generic
+        /// </summary>
         public override bool IsPublic {
             get { return NonGenericType.IsPublic; }
         }

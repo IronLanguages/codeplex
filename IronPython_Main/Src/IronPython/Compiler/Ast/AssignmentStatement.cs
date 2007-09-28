@@ -50,16 +50,16 @@ namespace IronPython.Compiler.Ast {
 
             if (_left.Length == 1) {
                 // Do not need temps for simple assignment
-                return _left[0].TransformSet(ag, right, Operators.None);
+                return _left[0].TransformSet(ag, Span, right, Operators.None);
             } else {
                 List<MSAst.Statement> statements = new List<MSAst.Statement>();
 
                 // 1. Create temp variable for the right value
-                MSAst.BoundExpression right_temp = ag.MakeTempExpression("assignment", right.Span);
+                MSAst.BoundExpression right_temp = ag.MakeTempExpression("assignment");
 
                 // 2. right_temp = right
                 statements.Add(
-                    AstGenerator.MakeAssignment(right_temp.Variable, right, right.Span)
+                    AstGenerator.MakeAssignment(right_temp.Variable, right)
                     );
 
                 for (int index = _left.Length - 1; index >= 0; index--) {
@@ -69,7 +69,7 @@ namespace IronPython.Compiler.Ast {
                     }
 
                     // 3. e = right_temp
-                    MSAst.Statement transformed = e.TransformSet(ag, right_temp, Operators.None);
+                    MSAst.Statement transformed = e.TransformSet(ag, Span, right_temp, Operators.None);
                     if (transformed != null) {
                         statements.Add(transformed);
                     }

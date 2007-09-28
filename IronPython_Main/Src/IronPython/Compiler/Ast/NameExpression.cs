@@ -45,24 +45,33 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Variable variable;
             if ((variable = _reference.Variable) != null) {
-                return Ast.Read(Span, variable);
+                return Ast.Read(variable);
             } else {
-                return Ast.Read(Span, _name);
+                return Ast.Read(_name);
             }
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
-            MSAst.Variable variable;
+        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+            MSAst.Variable variable = _reference.Variable;
             MSAst.Expression assignment;
 
-            if ((variable = _reference.Variable) != null) {
-                assignment = Ast.Assign(variable, right, op);
+            if (op != Operators.None) {
+                right = Ast.Action.Operator(
+                    op,
+                    variable != null ? variable.Type : typeof(object),
+                    variable != null ? (MSAst.Expression)Ast.Read(variable) : (MSAst.Expression)Ast.Read(_name),
+                    right
+                );
+            }
+
+            if (variable != null) {
+                assignment = Ast.Assign(variable, AstGenerator.ConvertIfNeeded(right, variable.Type));
             } else {
-                assignment = Ast.Assign(_name, right, op);
+                assignment = Ast.Assign(_name, right);
             }
 
             return Ast.Statement(
-                right.Span.IsValid ? new SourceSpan(Span.Start, right.End) : SourceSpan.None,
+                span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None,
                 assignment
             );
         }

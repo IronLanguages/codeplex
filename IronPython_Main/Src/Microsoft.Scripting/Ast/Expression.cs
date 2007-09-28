@@ -32,13 +32,10 @@ namespace Microsoft.Scripting.Ast {
     /// Summary description for Expr.
     /// </summary>
     public abstract class Expression : Node {
-
-        protected Expression(SourceSpan span)
-            : base(span) {
+        protected Expression() {
         }
 
         public object Evaluate(CodeContext context) {
-            context.Scope.SourceLocation = Start;
             return DoEvaluate(context);
         }
 
@@ -69,6 +66,7 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitBoxing(Type);
         }
 
+        // TODO: Remove
         internal void EmitCast(CodeGen cg, Type asType) {
             this.Emit(cg);  // emit as Type
             cg.EmitCast(Type, asType);
@@ -140,70 +138,6 @@ namespace Microsoft.Scripting.Ast {
 
         internal virtual object EvaluateAssign(CodeContext context, object value) {
             return value;
-        }
-
-        internal static Type GetNonNullableType(Type type) {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                return type.GetGenericArguments()[0];
-            }
-            return type;
-        }
-
-        internal static bool IsNumeric(Type type) {
-            type = GetNonNullableType(type);
-            if (!type.IsEnum) {
-                switch (Type.GetTypeCode(type)) {
-                    case TypeCode.Char:
-                    case TypeCode.SByte:
-                    case TypeCode.Byte:
-                    case TypeCode.Int16:
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Double:
-                    case TypeCode.Single:
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        internal static bool IsArithmetic(Type type) {
-            type = GetNonNullableType(type);
-            if (!type.IsEnum) {
-                switch (Type.GetTypeCode(type)) {
-                    case TypeCode.Int16:
-                    case TypeCode.Int32:
-                    case TypeCode.Int64:
-                    case TypeCode.Double:
-                    case TypeCode.Single:
-                    case TypeCode.UInt16:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt64:
-                        return true;
-                }
-            }
-            return false;
-        }
-
-        internal static bool IsIntegerOrBool(Type type) {
-            if (!type.IsEnum) {
-                switch (Type.GetTypeCode(type)) {
-                    case TypeCode.Int64:
-                    case TypeCode.Int32:
-                    case TypeCode.Int16:
-                    case TypeCode.UInt64:
-                    case TypeCode.UInt32:
-                    case TypeCode.UInt16:
-                    case TypeCode.Boolean:
-                    case TypeCode.SByte:
-                    case TypeCode.Byte:
-                        return true;
-                }
-            } 
-            return false;
         }
     }
 }

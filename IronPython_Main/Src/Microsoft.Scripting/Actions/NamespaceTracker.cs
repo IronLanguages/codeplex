@@ -535,7 +535,7 @@ namespace Microsoft.Scripting.Actions {
                 rule.AddTest(
                     Ast.Ast.Equal(
                         Ast.Ast.ReadProperty(
-                            Ast.Ast.Cast(rule.Parameters[0], typeof(NamespaceTracker)),
+                            Ast.Ast.Convert(rule.Parameters[0], typeof(NamespaceTracker)),
                             typeof(NamespaceTracker).GetProperty("Id")
                         ),
                         Ast.Ast.Constant(Id)

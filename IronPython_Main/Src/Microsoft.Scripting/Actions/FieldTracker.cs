@@ -114,7 +114,10 @@ namespace Microsoft.Scripting.Actions {
             }
 
             if (IsPublic && DeclaringType.IsPublic) {
-                return Ast.ReadField(instance, Field);
+                return Ast.ReadField(
+                    Ast.Convert(instance, Field.DeclaringType),
+                    Field
+                );
             }
 
             return Ast.Call(

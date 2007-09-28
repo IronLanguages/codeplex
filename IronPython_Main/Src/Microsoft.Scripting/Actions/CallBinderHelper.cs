@@ -163,7 +163,7 @@ namespace Microsoft.Scripting.Actions {
                         for (int j = 0; j < list.Count; j++) {
                             exprargs.Add(
                                 Ast.Call(
-                                    Ast.Cast(
+                                    Ast.Convert(
                                         _rule.Parameters[i + 1],
                                         typeof(IList<object>)),
                                     typeof(IList<object>).GetMethod("get_Item"),
@@ -274,7 +274,7 @@ namespace Microsoft.Scripting.Actions {
             if (kwSplat != null || named.Count > 0) {
                 // IFancyCallable.Call(context, args, names)
                 Debug.Assert(instance == null); // not supported, no IFancyCallableWithInstance
-                Expression names = Ast.Constant(null);
+                Expression names;
 
                 if (named.Count > 0) {
                     List<Expression> constNames = new List<Expression>();
@@ -292,6 +292,8 @@ namespace Microsoft.Scripting.Actions {
                     );
 
                     names = Ast.NewArray(typeof(string[]), constNames.ToArray());
+                } else {
+                    names = Ast.Null(typeof(string[]));
                 }
 
                 if (kwSplat != null) {
@@ -368,7 +370,7 @@ namespace Microsoft.Scripting.Actions {
         private MethodBase[] GetBuiltinMethodDescTargets(BuiltinMethodDescriptor bmd) {
             _test = Ast.AndAlso(_test, MakeFunctionTest(bmd.Template,
                 Ast.ReadProperty(
-                    Ast.Cast(_rule.Parameters[0], typeof(BuiltinMethodDescriptor)),
+                    Ast.Convert(_rule.Parameters[0], typeof(BuiltinMethodDescriptor)),
                     typeof(BuiltinMethodDescriptor).GetProperty("Template")
                 )));
             _reversedOperator = bmd.Template.IsReversedOperator;
@@ -378,12 +380,12 @@ namespace Microsoft.Scripting.Actions {
 
         private MethodBase[] GetBoundBuiltinFunctionTargets(BoundBuiltinFunction bbf) {
             _instanceType = CompilerHelpers.GetType(bbf.Self);
-            _instance = Ast.ReadProperty(Ast.Cast(_rule.Parameters[0], typeof(BoundBuiltinFunction)), typeof(BoundBuiltinFunction).GetProperty("Self"));
+            _instance = Ast.ReadProperty(Ast.Convert(_rule.Parameters[0], typeof(BoundBuiltinFunction)), typeof(BoundBuiltinFunction).GetProperty("Self"));
 
             _test = Ast.AndAlso(_test,
                     MakeFunctionTest(bbf.Target,
                         Ast.ReadProperty(
-                            Ast.Cast(_rule.Parameters[0], typeof(BoundBuiltinFunction)),
+                            Ast.Convert(_rule.Parameters[0], typeof(BoundBuiltinFunction)),
                             typeof(BoundBuiltinFunction).GetProperty("Target")
                         )
                     )
@@ -391,12 +393,15 @@ namespace Microsoft.Scripting.Actions {
             _test = Ast.AndAlso(_test, _rule.MakeTypeTest(_instanceType, _instance));
 
             if (IsStrongBox(bbf.Self)) {
-                _instance = Ast.ReadField(_instance, bbf.Self.GetType().GetField("Value"));
+                _instance = Ast.ReadField(
+                    Ast.Convert(_instance, bbf.Self.GetType()),
+                    bbf.Self.GetType().GetField("Value")
+                );
                 _instanceType = _instanceType.GetGenericArguments()[0];
             } else if(!_instanceType.IsEnum) {
                 // we don't want to cast the enum, it will unbox it and turn it into an int.  We
                 // presumably want to call a method on the Enum class though.
-                _instance = Ast.Cast(_instance, CompilerHelpers.GetVisibleType(_instanceType));
+                _instance = Ast.Convert(_instance, CompilerHelpers.GetVisibleType(_instanceType));
             }
 
             _reversedOperator = bbf.Target.IsReversedOperator;
@@ -478,7 +483,7 @@ namespace Microsoft.Scripting.Actions {
                     Ast.TypeIs(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
                     Ast.Call(null,
                         typeof(RuntimeHelpers).GetMethod("CheckDictionaryMembers"),
-                        Ast.Cast(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
+                        Ast.Convert(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
                         _rule.AddTemplatedConstant(typeof(string[]), names)
                     )
                 )
@@ -488,7 +493,7 @@ namespace Microsoft.Scripting.Actions {
         private static BinaryExpression MakeFunctionTest(BuiltinFunction bf, Expression functionTarget) {
             return Ast.Equal(
                 Ast.ReadProperty(
-                    Ast.Cast(functionTarget, typeof(BuiltinFunction)),
+                    Ast.Convert(functionTarget, typeof(BuiltinFunction)),
                     typeof(BuiltinFunction).GetProperty("Id")
                 ),
                 Ast.Constant(bf.Id)

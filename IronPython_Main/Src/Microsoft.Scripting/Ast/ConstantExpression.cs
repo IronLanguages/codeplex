@@ -14,15 +14,17 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class ConstantExpression : Expression {
         private readonly object _value;
+        private readonly Type _type;
 
-        internal ConstantExpression(SourceSpan span, object value)
-            : base(span) {
+        internal ConstantExpression(object value, Type type) {
             _value = value;
+            _type = type;
         }
 
         public object Value {
@@ -31,14 +33,7 @@ namespace Microsoft.Scripting.Ast {
 
         public override Type Type {
             get {
-                if (_value == null) {
-                    return typeof(object);
-                }
-                CompilerConstant cc = _value as CompilerConstant;
-                if (cc != null) {
-                    return cc.Type;
-                }
-                return _value.GetType();
+                return _type;
             }
         }
 
@@ -75,31 +70,42 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ConstantExpression True() {
-            return new ConstantExpression(SourceSpan.None, true);
+            return new ConstantExpression(true, typeof(bool));
         }
 
         public static ConstantExpression False() {
-            return new ConstantExpression(SourceSpan.None, false);
+            return new ConstantExpression(false, typeof(bool));
         }
 
         public static ConstantExpression Zero() {
-            return new ConstantExpression(SourceSpan.None, 0);
+            return new ConstantExpression(0, typeof(int));
         }
 
         public static ConstantExpression Null() {
-            return new ConstantExpression(SourceSpan.None, null);
+            return new ConstantExpression(null, typeof(object));
+        }
+
+        public static ConstantExpression Null(Type type) {
+            Contract.Requires(!type.IsValueType, "type");
+            return new ConstantExpression(null, type);
         }
 
         public static ConstantExpression Constant(object value) {
-            return Constant(SourceSpan.None, value);
+            return new ConstantExpression(value, value == null ? typeof(object) : value.GetType());
         }
 
-        public static ConstantExpression Constant(SourceSpan span, object value) {
-            return new ConstantExpression(span, value);
+        public static ConstantExpression Constant(object value, Type type) {
+            Contract.RequiresNotNull(type, "type");
+            if (value == null) {
+                Contract.Requires(!type.IsValueType, "type");
+            } else {
+                Contract.Requires(TypeUtils.CanAssign(type, value.GetType()), "type");
+            }
+            return new ConstantExpression(value, type);
         }
 
         public static ConstantExpression RuntimeConstant(object value) {
-            return new ConstantExpression(SourceSpan.None, new RuntimeConstant(value));
+            return new ConstantExpression(new RuntimeConstant(value), value == null ? typeof(object) : value.GetType());
         }
 
         /// <summary>

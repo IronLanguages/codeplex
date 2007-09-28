@@ -71,7 +71,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 1. mgr = (EXPR)
             //******************************************************************
-            MSAst.BoundExpression manager = ag.MakeTempExpression("with_manager", SourceSpan.None);
+            MSAst.BoundExpression manager = ag.MakeTempExpression("with_manager");
             statements[0] = AstGenerator.MakeAssignment(
                 manager.Variable,
                 ag.Transform(_contextManager),
@@ -81,7 +81,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
-            MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit", SourceSpan.None);
+            MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
                 exit.Variable,
                 Ast.Action.GetMember(
@@ -94,7 +94,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 3. value = mgr.__enter__()
             //******************************************************************
-            MSAst.BoundExpression value = ag.MakeTempExpression("with_value", SourceSpan.None);
+            MSAst.BoundExpression value = ag.MakeTempExpression("with_value");
             statements[2] = AstGenerator.MakeAssignment(
                 value.Variable,
                 Ast.Action.Call(
@@ -110,7 +110,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 4. exc = True
             //******************************************************************
-            MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", typeof(bool), SourceSpan.None);
+            MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", typeof(bool));
             statements[3] = AstGenerator.MakeAssignment(
                 exc.Variable,
                 Ast.True()
@@ -134,7 +134,7 @@ namespace IronPython.Compiler.Ast {
             //          exit(None, None, None)
             //******************************************************************
 
-            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception), SourceSpan.None);
+            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
 
             statements[4] =
                 // try:
@@ -147,7 +147,7 @@ namespace IronPython.Compiler.Ast {
                         Ast.Block(
                             _body.Span,
                             // VAR = value
-                            _var.TransformSet(ag, value, Operators.None),
+                            _var.TransformSet(ag, SourceSpan.None, value, Operators.None),
                             // BLOCK
                             ag.Transform(_body)
                         ) :
@@ -199,8 +199,8 @@ namespace IronPython.Compiler.Ast {
                     Ast.IfThen(
                         exc,
                         Ast.Statement(
+                            _contextManager.Span,
                             Ast.Action.Call(
-                                _contextManager.Span,
                                 typeof(object),
                                 exit,
                                 Ast.Null(),

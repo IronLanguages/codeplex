@@ -22,7 +22,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public enum UnaryOperators {
-        Cast,
+        Convert,
         Not,
         Negate,
         OnesComplement
@@ -31,14 +31,13 @@ namespace Microsoft.Scripting.Ast {
     public class UnaryExpression : Expression {
         private readonly Expression _operand;
         private readonly UnaryOperators _op;
-        private readonly Type _expressionType;
+        private readonly Type _type;
 
-        internal UnaryExpression(SourceSpan span, Expression expression, UnaryOperators op, Type type)
-            : base(span) {
+        internal UnaryExpression(Expression expression, UnaryOperators op, Type type) {
 
             _operand = expression;
             _op = op;
-            _expressionType = type;
+            _type = type;
         }
 
         public Expression Operand {
@@ -46,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override Type Type {
-            get { return _expressionType; }
+            get { return _type; }
         }
 
         public UnaryOperators Operator {
@@ -55,14 +54,19 @@ namespace Microsoft.Scripting.Ast {
 
         public override void Emit(CodeGen cg) {
             switch (_op) {
-                case UnaryOperators.Cast:
-                    _operand.EmitCast(cg, _expressionType);
+                case UnaryOperators.Convert:
+                    _operand.Emit(cg);
+                    cg.EmitCast(_operand.Type, _type);
                     break;
 
                 case UnaryOperators.Not:
-                    _operand.EmitAs(cg, typeof(bool));
-                    cg.Emit(OpCodes.Ldc_I4_0);
-                    cg.Emit(OpCodes.Ceq);
+                    _operand.Emit(cg);
+                    if (_operand.Type == typeof(bool)) {
+                        cg.Emit(OpCodes.Ldc_I4_0);
+                        cg.Emit(OpCodes.Ceq);
+                    } else {
+                        cg.Emit(OpCodes.Not);
+                    }
                     break;
                 case UnaryOperators.Negate:
                     _operand.Emit(cg);
@@ -80,11 +84,20 @@ namespace Microsoft.Scripting.Ast {
         protected override object DoEvaluate(CodeContext context) {
             object x = _operand.Evaluate(context);
             switch (_op) {
-                case UnaryOperators.Cast:
-                    return Cast.Explicit(x, _expressionType);
+                case UnaryOperators.Convert:
+                    return Cast.Explicit(x, _type);
 
                 case UnaryOperators.Not:
-                    return ((bool)context.LanguageContext.Binder.Convert(x, typeof(bool))) ? RuntimeHelpers.False : RuntimeHelpers.True;
+                    if (x is bool) return (bool)x ? RuntimeHelpers.False : RuntimeHelpers.True;
+                    if (x is int) return (int)~(int)x;
+                    if (x is long) return (long)~(long)x;
+                    if (x is short) return (short)~(short)x;
+                    if (x is uint) return (uint)~(uint)x;
+                    if (x is ulong) return (ulong)~(ulong)x;
+                    if (x is ushort) return (ushort)~(ushort)x;
+                    if (x is byte) return (byte)~(byte)x;
+                    if (x is sbyte) return (sbyte)~(sbyte)x;
+                    throw new InvalidOperationException("can't perform unary not on type " + CompilerHelpers.GetType(x).Name);
 
                 case UnaryOperators.Negate:
                     if (x is int) return (int)(-(int)x);
@@ -110,36 +123,25 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public static partial class Ast {
-        public static UnaryExpression Cast(Expression expression, Type type) {
-            return Cast(SourceSpan.None, expression, type);
-        }
-
-        public static UnaryExpression Cast(SourceSpan span, Expression expression, Type type) {
+        public static UnaryExpression Convert(Expression expression, Type type) {
             Contract.RequiresNotNull(expression, "expression");
             Contract.RequiresNotNull(type, "type");
             if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
 
-            return new UnaryExpression(span, expression, UnaryOperators.Cast, type);
+            return new UnaryExpression(expression, UnaryOperators.Convert, type);
         }
 
         public static UnaryExpression Negate(Expression expression) {
-            return Negate(SourceSpan.None, expression);
-        }
-
-        public static UnaryExpression Negate(SourceSpan span, Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
 
-            return new UnaryExpression(span, expression, UnaryOperators.Negate, expression.Type);
+            return new UnaryExpression(expression, UnaryOperators.Negate, expression.Type);
         }
 
         public static UnaryExpression Not(Expression expression) {
-            return Not(SourceSpan.None, expression);
-        }
-
-        public static UnaryExpression Not(SourceSpan span, Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
+            Contract.Requires(TypeUtils.IsIntegerOrBool(expression.Type), "expression", "Expression type must be integer or boolean.");
 
-            return new UnaryExpression(span, expression, UnaryOperators.Not, typeof(bool));
+            return new UnaryExpression(expression, UnaryOperators.Not, expression.Type);
         }
     }
 }

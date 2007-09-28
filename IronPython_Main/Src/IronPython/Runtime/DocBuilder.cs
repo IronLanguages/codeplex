@@ -341,8 +341,10 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT // XML doc
 
+        private static object _CachedDocLockObject = new object();
         private static XPathDocument _CachedDoc;
         private static string _CachedDocName;
+        private static List<Assembly> _AssembliesWithoutXmlDoc = new List<Assembly>();
 
         private static string GetXmlName(Type type) {
             StringBuilder res = new StringBuilder();
@@ -448,10 +450,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        static List<Assembly> _assembliesWithoutXmlDoc = new List<Assembly>();
-
         static string GetXmlDocLocation(Assembly assem) {
-            if (_assembliesWithoutXmlDoc.Contains(assem)) {
+            if (_AssembliesWithoutXmlDoc.Contains(assem)) {
                 return null;
             }
 
@@ -465,7 +465,7 @@ namespace IronPython.Runtime {
                 // Dynamic assemblies do not support Assembly.Location
             }
 
-            if (location == null) _assembliesWithoutXmlDoc.Add(assem);
+            if (location == null) _AssembliesWithoutXmlDoc.Add(assem);
 
             return location;
         }
@@ -493,7 +493,7 @@ namespace IronPython.Runtime {
                 if (!System.IO.File.Exists(xml)) {
                     xml = Path.Combine(baseDir, baseFile);
                     if (!System.IO.File.Exists(xml)) {
-                        _assembliesWithoutXmlDoc.Add(asm);
+                        _AssembliesWithoutXmlDoc.Add(asm);
                         return null;
                     }
                 }
@@ -501,11 +501,17 @@ namespace IronPython.Runtime {
 
             XPathDocument xpd;
 
-            if (_CachedDocName == xml) xpd = _CachedDoc;
-            else xpd = new XPathDocument(xml);
+            lock (_CachedDocLockObject) {
+                if (_CachedDocName == xml) {
+                    xpd = _CachedDoc;
+                } else {
+                    xpd = new XPathDocument(xml);
+                }
 
-            _CachedDoc = xpd;
-            _CachedDocName = xml;
+                _CachedDoc = xpd;
+                _CachedDocName = xml;
+            }
+
             return xpd;
         }
 

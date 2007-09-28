@@ -19,11 +19,14 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class ParenthesizedExpression : Expression {
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
         private readonly Expression _expression;
 
-        internal ParenthesizedExpression(SourceSpan span, Expression expression)
-            : base(span) {
+        internal ParenthesizedExpression(SourceSpan span, Expression expression) {
             Debug.Assert(expression != null);
+            _start = span.Start;
+            _end = span.End;
             _expression = expression;
         }
 

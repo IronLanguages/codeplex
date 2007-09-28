@@ -16,7 +16,6 @@
 using System.Collections.Generic;
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -32,7 +31,7 @@ namespace IronPython.Compiler.Ast {
             get { return _items; }
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
+        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op != Operators.None) {
                 ag.AddError("augmented assign to sequence prohibited", Span);
                 return null;
@@ -46,11 +45,11 @@ namespace IronPython.Compiler.Ast {
             // if we just have a simple named multi-assignment  (e.g. a, b = 1,2)
             // then go ahead and step over the entire statement at once.  If we have a 
             // more complex statement (e.g. a.b, c.d = 1, 2) then we'll step over the
-            // sets individually as they couuld be property sets the user wants to step
+            // sets individually as they could be property sets the user wants to step
             // into.  TODO: Enable stepping of the right hand side?
             bool emitIndividualSets = false;
-            for (int i = 0; i < _items.Length; i++) {
-                if (IsComplexAssignment(i)) {
+            foreach (Expression e in _items) {
+                if (IsComplexAssignment(e)) {
                     emitIndividualSets = true;
                     break;
                 }
@@ -58,23 +57,23 @@ namespace IronPython.Compiler.Ast {
 
             SourceSpan rightSpan = SourceSpan.None;
             SourceSpan leftSpan =
-                (Span.Start.IsValid && right.Span.IsValid) ?
-                    new SourceSpan(Span.Start, right.Span.End) :
+                (Span.Start.IsValid && span.IsValid) ?
+                    new SourceSpan(Span.Start, span.End) :
                     SourceSpan.None;
 
             SourceSpan totalSpan = SourceSpan.None;
             if (emitIndividualSets) {
-                rightSpan = right.Span;
+                rightSpan = span;
                 leftSpan = Microsoft.Scripting.SourceSpan.None;
-                totalSpan = (Span.Start.IsValid && right.Span.IsValid) ?
-                    new SourceSpan(Span.Start, right.Span.End) :
+                totalSpan = (Span.Start.IsValid && span.IsValid) ?
+                    new SourceSpan(Span.Start, span.End) :
                     SourceSpan.None;
             }
 
             List<MSAst.Statement> statements = new List<MSAst.Statement>();
 
             // 1. Evaluate the expression and assign the value to the temp.
-            MSAst.BoundExpression right_temp = ag.MakeTempExpression("unpacking", Microsoft.Scripting.SourceSpan.None);
+            MSAst.BoundExpression right_temp = ag.MakeTempExpression("unpacking");
 
             // 2. Add the assignment "right_temp = right" into the suite/block
             statements.Add(
@@ -91,7 +90,7 @@ namespace IronPython.Compiler.Ast {
             );
 
             // 4. Create temporary variable for the array
-            MSAst.BoundExpression array_temp = ag.MakeTempExpression("array", typeof(object[]), Microsoft.Scripting.SourceSpan.None);
+            MSAst.BoundExpression array_temp = ag.MakeTempExpression("array", typeof(object[]));
 
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
@@ -110,15 +109,21 @@ namespace IronPython.Compiler.Ast {
 
                 // 6. array_temp[i]
                 MSAst.ArrayIndexExpression element = Ast.ArrayIndex(
-                    emitIndividualSets ?                    // span
-                        target.Span : 
-                        Microsoft.Scripting.SourceSpan.None,
                     array_temp,                             // array expression
                     Ast.Constant(i)                         // index
                 );
 
                 // 7. target = array_temp[i], and add the transformed assignment into the list of sets
-                sets.Add(target.TransformSet(ag, element, Operators.None));
+                sets.Add(
+                    target.TransformSet(
+                        ag,
+                        emitIndividualSets ?                    // span
+                            target.Span :
+                            SourceSpan.None,
+                        element,
+                        Operators.None
+                    )
+                );
             }
             // 9. add the sets as their own block so they cna be marked as a single span, if necessary.
             statements.Add(Ast.Block(leftSpan, sets.ToArray()));
@@ -131,8 +136,8 @@ namespace IronPython.Compiler.Ast {
             return Ast.Block(totalSpan, statements.ToArray());
         }
 
-        private bool IsComplexAssignment(int i) {
-            return !(_items[i] is NameExpression);
+        private static bool IsComplexAssignment(Expression expr) {
+            return !(expr is NameExpression);
         }
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {

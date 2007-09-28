@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class CallWithThisExpression : Expression {
@@ -21,8 +22,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _instance;
         private readonly Arg[] _args;
 
-        internal CallWithThisExpression(SourceSpan span, Expression target, Expression instance, Arg[] args)
-            : base(span) {
+        internal CallWithThisExpression(Expression target, Expression instance, Arg[] args) {
             _target = target;
             _instance = instance;
             _args = args;
@@ -76,10 +76,8 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static CallWithThisExpression CallWithThis(Expression target, Expression instance, Arg[] args) {
-            return CallWithThis(SourceSpan.None, target, instance, args);
-        }
-        public static CallWithThisExpression CallWithThis(SourceSpan span, Expression target, Expression instance, Arg[] args) {
-            return new CallWithThisExpression(span, target, instance, args);
+            Contract.RequiresNotNull(target, "target");
+            return new CallWithThisExpression(target, instance, args);
         }
     }
 }

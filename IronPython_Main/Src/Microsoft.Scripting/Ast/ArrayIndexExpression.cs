@@ -25,8 +25,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _index;
         private readonly Type _elementType;
 
-        internal ArrayIndexExpression(SourceSpan span, Expression array, Expression index)
-            : base(span) {
+        internal ArrayIndexExpression(Expression array, Expression index) {
             _array = array;
             _index = index;
             _elementType = array.Type.GetElementType();
@@ -72,9 +71,6 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ArrayIndexExpression ArrayIndex(Expression array, Expression index) {
-            return ArrayIndex(SourceSpan.None, array, index);
-        }
-        public static ArrayIndexExpression ArrayIndex(SourceSpan span, Expression array, Expression index) {
             Contract.RequiresNotNull(array, "array");
             Contract.RequiresNotNull(index, "index");
             Contract.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
@@ -83,7 +79,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
             Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
 
-            return new ArrayIndexExpression(span, array, index);
+            return new ArrayIndexExpression(array, index);
         }
     }
 }

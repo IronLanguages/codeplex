@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static UnaryExpression GetParamsList(StandardRule<T> rule) {
-            return Ast.Cast(
+            return Ast.Convert(
                 rule.Parameters[rule.ParameterCount - 1],
                 typeof(IList<object>)
             );
@@ -79,7 +79,7 @@ namespace Microsoft.Scripting.Actions {
                 Ast.TypeIs(listArg, typeof(ICollection<object>)),
                 Ast.Equal(
                     Ast.ReadProperty(
-                        Ast.Cast(listArg, typeof(ICollection<object>)),
+                        Ast.Convert(listArg, typeof(ICollection<object>)),
                         typeof(ICollection<object>).GetProperty("Count")
                     ),
                     rule.AddTemplatedConstant(typeof(int), ((IList<object>)paramArg).Count)
