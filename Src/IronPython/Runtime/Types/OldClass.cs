@@ -56,10 +56,10 @@ namespace IronPython.Runtime.Types {
         IConstructorWithCodeContext,
         IFancyCallable,
 #if !SILVERLIGHT // ICustomTypeDescriptor
-        ICustomTypeDescriptor,
+ ICustomTypeDescriptor,
 #endif
-        ICodeFormattable,
-        ICustomMembers, 
+ ICodeFormattable,
+        ICustomMembers,
         IDynamicObject {
 
         [NonSerialized]
@@ -74,15 +74,16 @@ namespace IronPython.Runtime.Types {
         private int _optimizedInstanceNamesVersion;
         private SymbolId[] _optimizedInstanceNames;
 
-        public OldClass(string name, PythonTuple bases, IAttributesCollection dict) : this(name, bases, dict, "") {
+        public OldClass(string name, PythonTuple bases, IAttributesCollection dict)
+            : this(name, bases, dict, "") {
         }
 
-        internal OldClass(string name, PythonTuple bases, IAttributesCollection dict, string instanceNames) {            
+        internal OldClass(string name, PythonTuple bases, IAttributesCollection dict, string instanceNames) {
             _bases = ValidateBases(bases);
 
             Init(name, dict, instanceNames);
         }
-        
+
         internal OldClass(string name, List<OldClass> bases, IAttributesCollection dict, string instanceNames) {
             Assert.NotNullItems(bases);
             _bases = bases;
@@ -513,7 +514,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            switch(action.Kind ){
+            switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
                 case DynamicActionKind.SetMember:
@@ -536,7 +537,7 @@ namespace IronPython.Runtime.Types {
             for (int i = 0; i < args.Length - 1; i++) {
                 exprArgs[i] = rule.Parameters[i + 1];
             }
-            
+
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
             Variable tmp = rule.GetTemporary(typeof(object), "init");
             Variable instTmp = rule.GetTemporary(typeof(object), "inst");
@@ -571,7 +572,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public bool TryLookupInit(object inst, out object ret) {
-            if(TryLookupSlot(Symbols.Init, out ret)) {
+            if (TryLookupSlot(Symbols.Init, out ret)) {
                 ret = GetOldStyleDescriptor(DefaultContext.Default, ret, inst, this);
                 return true;
             }
@@ -588,16 +589,16 @@ namespace IronPython.Runtime.Types {
             rule.MakeTest(typeof(OldClass));
             Expression call;
 
-            if(action.Name == Symbols.Bases) {            
+            if (action.Name == Symbols.Bases) {
                 call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetBases"), rule.Parameters[1]);
             } else if (action.Name == Symbols.Name) {
                 call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetName"), rule.Parameters[1]);
             } else if (action.Name == Symbols.Dict) {
-                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetDictionary"), rule.Parameters[1]);                
+                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetDictionary"), rule.Parameters[1]);
             } else {
                 call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetNameHelper"), Ast.Constant(action.Name), rule.Parameters[1]);
             }
-            
+
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, call));
             return rule;
         }
@@ -647,21 +648,34 @@ namespace IronPython.Runtime.Types {
 
             if (action.Name == Symbols.Dict) {
                 target = Ast.Comma(0,
-                    Ast.ReadField(rule.Parameters[0], typeof(OldClass).GetField("__dict__")),
-                    Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("DictionaryIsPublic")));
+                    Ast.ReadField(
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                        typeof(OldClass).GetField("__dict__")
+                    ),
+                    Ast.Call(
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                        typeof(OldClass).GetMethod("DictionaryIsPublic")
+                    )
+                );
             } else if (action.Name == Symbols.Bases) {
-                target = Ast.Call(null, 
+                target = Ast.Call(null,
                     typeof(PythonTuple).GetMethod("Make"),
-                    Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("BaseClasses")));                
+                    Ast.ReadProperty(
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                        typeof(OldClass).GetProperty("BaseClasses"))
+                    );
             } else if (action.Name == Symbols.Name) {
-                target = Ast.ReadProperty(rule.Parameters[0], typeof(OldClass).GetProperty("Name"));                
+                target = Ast.ReadProperty(
+                    Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetProperty("Name")
+                );
             } else {
                 if (action.IsNoThrow) {
                     Variable tmp = rule.GetTemporary(typeof(object), "lookupVal");
-                    target = 
-                        Ast.Condition(                            
+                    target =
+                        Ast.Condition(
                             Ast.Call(
-                                rule.Parameters[0], 
+                                Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                                 typeof(OldClass).GetMethod("TryLookupValue"),
                                 Ast.CodeContext(),
                                 Ast.Constant(action.Name),
@@ -671,9 +685,12 @@ namespace IronPython.Runtime.Types {
                             Ast.ReadField(null, typeof(OperationFailed).GetField("Value"))
                         );
                 } else {
-                    target = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("LookupValue"),
+                    target = Ast.Call(
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                        typeof(OldClass).GetMethod("LookupValue"),
                         Ast.CodeContext(),
-                        Ast.Constant(action.Name));
+                        Ast.Constant(action.Name)
+                    );
                 }
             }
 

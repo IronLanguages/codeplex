@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
-using Operators = Microsoft.Scripting.Operators;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -35,8 +35,8 @@ namespace IronPython.Compiler.Ast {
             return Ast.Parenthesize(Span, ag.Transform(_expression, type));
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, MSAst.Expression right, Operators op) {
-            return _expression.TransformSet(ag, right, op);
+        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+            return _expression.TransformSet(ag, span, right, op);
         }
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {

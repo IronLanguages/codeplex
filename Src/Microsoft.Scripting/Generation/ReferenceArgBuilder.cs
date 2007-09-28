@@ -78,7 +78,7 @@ namespace Microsoft.Scripting.Generation {
             return Ast.Call(
                 null,
                 typeof(RuntimeHelpers).GetMethod("UpdateBox").MakeGenericMethod(_elementType),
-                Ast.Cast(parameters[Index], BoxType),
+                Ast.Convert(parameters[Index], BoxType),
                 Ast.Read(_tmp)
             );
         }

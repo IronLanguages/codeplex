@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using System.Reflection.Emit;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -23,8 +24,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expression;
         private readonly Type _typeOperand;
 
-        internal TypeBinaryExpression(SourceSpan span, Expression expression, Type typeOperand)
-            : base(span) {
+        internal TypeBinaryExpression(Expression expression, Type typeOperand) {
             Debug.Assert(expression != null);
             Debug.Assert(typeOperand != null);
 
@@ -85,21 +85,15 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
-            if (!type.IsVisible) throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
-            if (type.IsByRef) throw new ArgumentException("type must not be ByRef");
+            Contract.RequiresNotNull(expression, "expression");
+            Contract.RequiresNotNull(type, "type");
+            Contract.Requires(!type.IsByRef, "type", "type must not be ByRef");
 
-            return TypeIs(SourceSpan.None, expression, type);
-        }
-
-        public static TypeBinaryExpression TypeIs(SourceSpan span, Expression expression, Type type) {
-            if (expression == null) {
-                throw new ArgumentNullException("expression");
+            if (!type.IsVisible) {
+                throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
             }
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
-            return new TypeBinaryExpression(span, expression, type);
-        }
 
+            return new TypeBinaryExpression(expression, type);
+        }
     }
 }

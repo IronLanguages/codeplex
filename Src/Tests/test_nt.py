@@ -31,20 +31,16 @@ def test_mkdir():
     
     nt.rmdir('dir_create_test')
     AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
-    
-    nt.mkdir('dir_create_test')
-    AssertError(OSError, nt.mkdir, 'dir_create_test')
-    nt.rmdir('dir_create_test')
-    
-@disabled("CodePlex Work Item 1216")
+
+@disabled("CodePlex Work Item 1216")    
 def test_mkdir_negative():    
     nt.mkdir("dir_create_test")
-    AssertError(IOError, nt.mkdir, "dir_create_test")
+    AssertError(WindowsError, nt.mkdir, "dir_create_test")
     #if it fails once...it should fail again
-    AssertError(IOError, nt.mkdir, "dir_create_test")
+    AssertError(WindowsError, nt.mkdir, "dir_create_test")
     nt.rmdir('dir_create_test')
     nt.mkdir("dir_create_test")
-    AssertError(IOError, nt.mkdir, "dir_create_test")
+    AssertError(WindowsError, nt.mkdir, "dir_create_test")
     nt.rmdir('dir_create_test')
     
 # stat,lstat
@@ -702,5 +698,15 @@ def test_flags():
     AreEqual(nt.O_BINARY,32768) 
     AreEqual(nt.O_TEXT,16384) 
               
-run_test(__name__)
+try:
+    run_test(__name__)
 
+finally:
+    #test cleanup - the test functions create the following directories and if any of them
+    #fail, the directories may not necessarily be removed.  for this reason we try to remove
+    #them again
+    for temp_dir in ['dir_create_test', 'tsd', 'tmp2', 'newnamefile.txt']:
+        try:
+            nt.rmdir(temp_dir)
+        except:
+            pass

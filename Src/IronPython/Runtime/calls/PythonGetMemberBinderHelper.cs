@@ -114,7 +114,7 @@ namespace IronPython.Runtime.Calls {
                             clsOnly, 
                             Ast.IfThenElse(
                                 Ast.Call(
-                                    Ast.Cast(
+                                    Ast.Convert(
                                         Ast.WeakConstant(slot),
                                         typeof(DynamicTypeSlot)
                                     ),

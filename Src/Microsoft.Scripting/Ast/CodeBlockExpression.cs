@@ -62,8 +62,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _isDeclarative; }
         }
 
-        internal CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType)
-            : base(span) {
+        internal CodeBlockExpression(CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType) {
             Assert.NotNull(block);
 
             if (isDeclarative) {
@@ -110,27 +109,19 @@ namespace Microsoft.Scripting.Ast {
         // TODO: rename to CodeBlockDeclaration?
 
         public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper) {
-            return new CodeBlockExpression(SourceSpan.None, block, forceWrapper, false, true, null);
-        }
-
-        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapper) {
-            return new CodeBlockExpression(span, block, forceWrapper, false, true, null);
+            return new CodeBlockExpression(block, forceWrapper, false, true, null);
         }
 
         public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper, bool stronglyTyped) {
-            return new CodeBlockExpression(SourceSpan.None, block, forceWrapper, stronglyTyped, true, null);
+            return new CodeBlockExpression(block, forceWrapper, stronglyTyped, true, null);
         }
 
-        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool forceWrapper, bool stronglyTyped) {
-            return new CodeBlockExpression(span, block, forceWrapper, stronglyTyped, true, null);
+        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool stronglyTyped, Type delegateType) {
+            return new CodeBlockExpression(block, false, stronglyTyped, true, delegateType);
         }
 
-        public static CodeBlockExpression CodeBlockExpression(SourceSpan span, CodeBlock block, bool stronglyTyped, Type delegateType) {
-            return new CodeBlockExpression(span, block, false, stronglyTyped, true, delegateType);
-        }
-
-        public static CodeBlockExpression CodeBlockReference(SourceSpan span, CodeBlock block, Type delegateType) {
-            return new CodeBlockExpression(span, block, false, true, false, delegateType);
+        public static CodeBlockExpression CodeBlockReference(CodeBlock block, Type delegateType) {
+            return new CodeBlockExpression(block, false, true, false, delegateType);
         }
     }
 }

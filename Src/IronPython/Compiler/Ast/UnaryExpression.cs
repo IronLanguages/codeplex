@@ -42,7 +42,6 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Action.Operator(
-                Span,
                 PythonOperatorToAction(_op),
                 type,
                 ag.Transform(_expression)

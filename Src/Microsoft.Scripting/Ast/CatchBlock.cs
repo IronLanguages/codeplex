@@ -20,7 +20,9 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public class CatchBlock : Node {
+        private SourceLocation _start;
         private readonly SourceLocation _header;
+        private SourceLocation _end;
         private readonly Type _test;
         private readonly Variable _var;
         private readonly Statement _body;
@@ -29,18 +31,33 @@ namespace Microsoft.Scripting.Ast {
 
         private bool _yield;        // The catch block contains a yield
 
-        internal CatchBlock(SourceSpan span, SourceLocation header, Type test, Variable target, Statement body)
-            : base(span) {
+        internal CatchBlock(SourceSpan span, SourceLocation header, Type test, Variable target, Statement body) {
             Contract.RequiresNotNull(body, "body");
 
             _test = test;
             _var = target;
             _body = body;
+            _start = span.Start;
             _header = header;
+            _end = span.End;
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
         }
 
         public SourceLocation Header {
             get { return _header; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
+
+        public SourceSpan Span {
+            get {
+                return new SourceSpan(_start, _end);
+            }
         }
 
         public Variable Variable {

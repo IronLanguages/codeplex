@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -105,7 +106,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public int ParameterIndex {
+        internal int ParameterIndex {
             get { return _parameter; }
             set { _parameter = value; }
         }
@@ -118,23 +119,23 @@ namespace Microsoft.Scripting.Ast {
             get { return _lift; }
         }
 
-        public bool Unassigned {
+        internal bool Unassigned {
             get { return _unassigned; }
         }
 
-        public void UnassignedUse() {
+        internal void UnassignedUse() {
             _unassigned = true;
         }
 
-        public bool Uninitialized {
+        internal bool Uninitialized {
             get { return _uninitialized; }
         }
 
-        public void UninitializedUse() {
+        internal void UninitializedUse() {
             _uninitialized = true;
         }
 
-        public void LiftToClosure() {
+        internal void LiftToClosure() {
             switch(_kind) {
                 case VariableKind.Local:
                 case VariableKind.Parameter:
@@ -145,7 +146,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void Allocate(CodeGen cg) {
+        internal void Allocate(CodeGen cg) {
             Debug.Assert(cg.Allocator.Block == Block);
 
             switch (_kind) {
@@ -155,7 +156,7 @@ namespace Microsoft.Scripting.Ast {
                         _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
                         if (_defaultValue != null) {
                             Slot slot = CreateSlotForVariable(cg);
-                            _defaultValue.EmitAs(cg, slot.Type);
+                            _defaultValue.Emit(cg);
                             slot.EmitSet(cg);
                         } 
                     } else {
@@ -174,7 +175,7 @@ namespace Microsoft.Scripting.Ast {
                         if (_uninitialized || _defaultValue != null) {
                             // Emit initialization (environments will be initialized all at once)
                             if (_defaultValue != null) {                                
-                                _defaultValue.EmitAs(cg, slot.Type);
+                                _defaultValue.Emit(cg);
                                 slot.EmitSet(cg);
                             } else if (_type == typeof(object)) {
                                 // Only set variables of type object to "Uninitialized"
@@ -313,15 +314,16 @@ namespace Microsoft.Scripting.Ast {
 
         #region Factory methods
 
+        // TODO: Make internal, currently used by Ruby.
         public static Variable Parameter(CodeBlock block, SymbolId name, Type type) {
             return new Variable(name, VariableKind.Parameter, block, type, null);
         }
 
-        public static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue) {
+        internal static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue) {
             return new Variable(name, VariableKind.Parameter, block, type, defaultValue);
         }
 
-        public static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue, bool parameterArray) {
+        internal static Variable Parameter(CodeBlock block, SymbolId name, Type type, Expression defaultValue, bool parameterArray) {
             return new Variable(name, VariableKind.Parameter, block, type, defaultValue, parameterArray);
         }
 
@@ -342,10 +344,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
-            // Cannot create parameters this way
-            if (kind == VariableKind.Parameter) {
-                throw new ArgumentException("kind");
-            }
+            Contract.Requires(defaultValue == null || TypeUtils.CanAssign(type, defaultValue.Type));
             return new Variable(name, kind, block, type, defaultValue);
         }
 

@@ -139,29 +139,6 @@ namespace IronPython.Runtime.Types {
         }
 
         protected override void AddOps() {
-            foreach (Type ty in ComObject.comObjectType.GetInterfaces()) {
-                InterfaceMapping mapping = ComObject.comObjectType.GetInterfaceMap(ty);
-                for (int i = 0; i < mapping.TargetMethods.Length; i++) {
-                    MethodInfo mi = mapping.TargetMethods[i];
-
-                    if (mi == null) {
-                        // COM objects can have interfaces that they don't appear
-                        // to implement.  When that happens our target method is 
-                        // null, but the interface method actually exists (we just need
-                        // to QI for it).  For those we store the interfaces method
-                        // directly into our dynamic type so the user can still call
-                        // the appropriate method directly from the type.
-                        Debug.Assert(ComObject.comObjectType.IsCOMObject);
-                        
-                        StoreReflectedMethod(mapping.InterfaceMethods[i].Name,
-                            ContextId.Empty,
-                            mapping.InterfaceMethods[i],
-                            FunctionType.AlwaysVisible);
-                        continue;
-                    }
-                }
-            }
-
             Dictionary<SymbolId, OperatorMapping> ops = PythonExtensionTypeAttribute._pythonOperatorTable;
 
             DynamicType dt = Builder.UnfinishedType;
@@ -237,8 +214,9 @@ namespace IronPython.Runtime.Types {
     /// for every generic RCW instance.
     /// </summary>
     internal abstract class ComObject {
-        readonly object _comObject; // the runtime-callable wrapper
-        private static WeakHash<object, ComObject> ComObjectHash = new WeakHash<object, ComObject>();
+        private readonly object _comObject; // the runtime-callable wrapper
+
+        private static readonly object _ComObjectInfoKey = (object)1; // use an int as the key since hashing an Int32.GetHashCode is cheap
         internal const string comObjectTypeName = "System.__ComObject";
         internal readonly static Type comObjectType = Type.GetType(comObjectTypeName);
 
@@ -260,23 +238,26 @@ namespace IronPython.Runtime.Types {
         internal static ComObject ObjectToComObject(object rcw) {
             Debug.Assert(Is__ComObject(rcw.GetType()));
 
-            ComObject res;
-            if (ComObjectHash.TryGetValue(rcw, out res)) {
-                Debug.Assert(rcw == res.Obj);
-                return res;
+            // Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
+            // a full demand. We could avoid this by making this method SecurityCritical
+            object data = Marshal.GetComObjectData(rcw, _ComObjectInfoKey);
+            if (data != null) {
+                return (ComObject)data;
             }
 
-            lock (ComObjectHash) {
-                if (ComObjectHash.TryGetValue(rcw, out res)) {
-                    Debug.Assert(rcw == res.Obj);
-                    return res;
+            lock (_ComObjectInfoKey) {
+                data = Marshal.GetComObjectData(rcw, _ComObjectInfoKey);
+                if (data != null) {
+                    return (ComObject)data;
                 }
 
-                res = CreateComObject(rcw);
+                ComObject comObjectInfo = CreateComObject(rcw);
+                if (!Marshal.SetComObjectData(rcw, _ComObjectInfoKey, comObjectInfo)) {
+                    throw new COMException("Marshal.SetComObjectData failed");
+                }
 
-                ComObjectHash[rcw] = res;
+                return comObjectInfo;
             }
-            return res;
         }
 
         static ComObject CreateComObject(object rcw) {

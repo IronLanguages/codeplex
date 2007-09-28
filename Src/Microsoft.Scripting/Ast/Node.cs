@@ -19,34 +19,10 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public abstract class Node {
-        private SourceLocation _start;
-        private SourceLocation _end;
-
-        protected Node(SourceSpan span) {
-            _start = span.Start;
-            _end = span.End;
-        }
-
-        public void SetLoc(SourceSpan span) {
-            _start = span.Start;
-            _end = span.End;
+        protected Node() {
         }
 
         public abstract void Walk(Walker walker);
-
-        public SourceLocation Start {
-            get { return _start; }
-        }
-
-        public SourceLocation End {
-            get { return _end; }
-        }
-
-        public SourceSpan Span {
-            get {
-                return new SourceSpan(_start, _end);
-            }
-        }
 
 #if DEBUG
         public string Dump {

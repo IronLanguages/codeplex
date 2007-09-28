@@ -45,10 +45,9 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Condition(
-                Span,
-                ag.TransformAndConvert(_testExpr, typeof(bool)),
-                ag.TransformAndConvert(_trueExpr, type),
-                ag.TransformAndConvert(_falseExpr, type)
+                ag.TransformAndDynamicConvert(_testExpr, typeof(bool)),
+                ag.TransformAndDynamicConvert(_trueExpr, type),
+                ag.TransformAndDynamicConvert(_falseExpr, type)
             );
         }
 

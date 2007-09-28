@@ -34,15 +34,14 @@ namespace IronPython.Compiler.Ast {
 
             if (ag.PrintExpressions) {
                 expression = Ast.Call(
-                    Span,
                     null,
                     AstGenerator.GetHelperMethod("PrintExpressionValue"),
                     Ast.CodeContext(),
-                    AstGenerator.ConvertIfNeeded(expression, typeof(object))
+                    AstGenerator.DynamicConvertIfNeeded(expression, typeof(object))
                 );
             }
 
-            return Ast.Statement(expression.Span, expression);
+            return Ast.Statement(_expression.Span, expression);
         }
 
         public override void Walk(PythonWalker walker) {

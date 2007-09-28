@@ -52,8 +52,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal MemberExpression(SourceSpan span, MemberInfo member, Expression expression)
-            : base(span) {
+        internal MemberExpression(MemberInfo member, Expression expression) {
             _member = member;
             _expression = expression;
         }
@@ -92,7 +91,7 @@ namespace Microsoft.Scripting.Ast {
                 if (_member.DeclaringType.IsValueType) {
                     _expression.EmitAddress(cg, _member.DeclaringType);
                 } else {
-                    _expression.EmitAs(cg, _member.DeclaringType);
+                    _expression.Emit(cg);
                 }
             }
         }
@@ -148,29 +147,13 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static MemberExpression ReadField(Expression expression, Type type, string field) {
-            return ReadField(SourceSpan.None, expression, type, field);
-        }
-
-        public static MemberExpression ReadField(SourceSpan span, Expression expression, Type type, string field) {
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
-            if (field == null) {
-                throw new ArgumentNullException("field");
-            }
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(field, "field");
             FieldInfo fi = type.GetField(field);
             if (fi == null) {
                 throw new ArgumentException(String.Format("Type {0} doesn't have field {1}", type, field));
             }
-            if (expression == null ^ fi.IsStatic) {
-                throw new ArgumentNullException("Static field requires null expression, non-static field requires non-null expression.");
-            }
-
-            return new MemberExpression(span, fi, expression);
-        }
-
-        public static MemberExpression ReadField(Expression expression, FieldInfo field) {
-            return ReadField(SourceSpan.None, expression, field);
+            return ReadField(expression, fi);
         }
 
         /// <summary>
@@ -178,32 +161,24 @@ namespace Microsoft.Scripting.Ast {
         /// For static field, expression must be null and FieldInfo.IsStatic == true
         /// For instance field, expression must be non-null and FieldInfo.IsStatic == false.
         /// </summary>
-        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for the field access.</param>
         /// <param name="field">Field represented by this Member expression.</param>
         /// <returns>New instance of Member expression</returns>
-        public static MemberExpression ReadField(SourceSpan span, Expression expression, FieldInfo field) {
-            if (field == null) {
-                throw new ArgumentNullException("field");
-            }
-            if (expression == null ^ field.IsStatic) {
-                throw new ArgumentException("field");
+        public static MemberExpression ReadField(Expression expression, FieldInfo field) {
+            Contract.RequiresNotNull(field, "field");
+            if (field.IsStatic) {
+                Contract.Requires(expression == null, "expression", "Expression must be null for static field");
+            } else {
+                Contract.RequiresNotNull(expression, "expression");
+                Contract.Requires(field.DeclaringType.IsAssignableFrom(expression.Type));
             }
 
-            return new MemberExpression(span, field, expression);
+            return new MemberExpression(field, expression);
         }
 
         public static MemberExpression ReadProperty(Expression expression, Type type, string property) {
-            return ReadProperty(SourceSpan.None, expression, type, property);
-        }
-
-        public static MemberExpression ReadProperty(SourceSpan span, Expression expression, Type type, string property) {
-            if (type == null) {
-                throw new ArgumentNullException("type");
-            }
-            if (property == null) {
-                throw new ArgumentNullException("property");
-            }
+            Contract.RequiresNotNull(type, "type");
+            Contract.RequiresNotNull(property, "property");
             PropertyInfo pi = type.GetProperty(property);
             if (pi == null) {
                 throw new ArgumentException(String.Format("Type {0} doesn't have property {1}", type, property));
@@ -211,14 +186,8 @@ namespace Microsoft.Scripting.Ast {
             if (!pi.CanRead) {
                 throw new ArgumentException(String.Format("Cannot read property {0}.{1}", pi.DeclaringType, pi.Name));
             }
-            if (expression == null ^ pi.GetGetMethod().IsStatic) {
-                throw new ArgumentNullException("Static property requires null expression, non-static property requires non-null expression.");
-            }
-            return new MemberExpression(span, pi, expression);
-        }
 
-        public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
-            return ReadProperty(SourceSpan.None, expression, property);
+            return ReadProperty(expression, pi);
         }
 
         /// <summary>
@@ -226,25 +195,21 @@ namespace Microsoft.Scripting.Ast {
         /// For static properties, expression must be null and property.IsStatic == true.
         /// For instance properties, expression must be non-null and property.IsStatic == false.
         /// </summary>
-        /// <param name="span">The source code span of the expression.</param>
         /// <param name="expression">Expression that evaluates to the instance for instance property access.</param>
         /// <param name="property">PropertyInfo of the property to access</param>
         /// <returns>New instance of the MemberExpression.</returns>
-        public static MemberExpression ReadProperty(SourceSpan span, Expression expression, PropertyInfo property) {
-            if (property == null) {
-                throw new ArgumentNullException("property");
-            }
-
+        public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
+            Contract.RequiresNotNull(property, "property");
             MethodInfo getter = property.GetGetMethod();
-            if (getter == null) {
-                throw new ArgumentNullException("property");
+            Contract.RequiresNotNull(getter, "property");
+            if (getter.IsStatic) {
+                Contract.Requires(expression == null, "expression", "Instance must be null for static properties");
+            } else {
+                Contract.RequiresNotNull(expression, "expression");
+                Contract.Requires(property.DeclaringType.IsAssignableFrom(expression.Type), "expression", "Incorrect instance type for the property.");
             }
 
-            if (expression == null ^ getter.IsStatic) {
-                throw new ArgumentException("property");
-            }
-
-            return new MemberExpression(span, property, expression);
+            return new MemberExpression(property, expression);
         }
     }
 }

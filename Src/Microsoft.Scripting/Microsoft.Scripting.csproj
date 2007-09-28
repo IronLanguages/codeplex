@@ -156,6 +156,7 @@
     <Compile Include="Ast\InterpretChecker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
+    <Compile Include="Ast\TypeUtils.cs" />
     <Compile Include="Cast.cs" />
     <Compile Include="Cast.Generated.cs" />
     <Compile Include="Generation\FrameStorageAllocator.cs" />

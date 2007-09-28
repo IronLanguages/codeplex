@@ -185,7 +185,7 @@ namespace Microsoft.Scripting.Actions {
                             Ast.AssignField(
                                 field.IsStatic ?
                                     null :
-                                    Ast.Cast(Rule.Parameters[0], field.DeclaringType),
+                                    Ast.Convert(Rule.Parameters[0], field.DeclaringType),
                                 field.Field,
                                 Binder.ConvertExpression(Rule.Parameters[1], field.FieldType)
                             )
@@ -215,7 +215,7 @@ namespace Microsoft.Scripting.Actions {
                 Rule.MakeReturn(Binder,
                     MakeReturnValue(
                         Ast.Call(
-                            Ast.Cast(Rule.Parameters[0], typeof(ICustomMembers)),
+                            Ast.Convert(Rule.Parameters[0], typeof(ICustomMembers)),
                             typeof(ICustomMembers).GetMethod("SetCustomMember"),
                             Ast.CodeContext(),
                             Ast.Constant(Action.Name),

@@ -26,8 +26,7 @@ namespace Microsoft.Scripting.Ast {
         private Type _type;
         private System.Reflection.ConstructorInfo _constructor;
 
-        internal NewArrayExpression(SourceSpan span, Type type, IList<Expression> expressions)
-            : base(span) {
+        internal NewArrayExpression(Type type, IList<Expression> expressions) {
             Contract.RequiresNotNull(expressions, "expressions");
             Contract.RequiresNotNull(type, "type");
             Contract.Requires(type.IsArray, "type", "Not an array type");
@@ -58,7 +57,7 @@ namespace Microsoft.Scripting.Ast {
                 object contents = (object)_constructor.Invoke(new object[] { _expressions.Count });
                 System.Reflection.MethodInfo setter = _type.GetMethod("Set");
                 for (int i = 0; i < _expressions.Count; i++) {
-                    setter.Invoke(contents, new object[] {i, _expressions[i].Evaluate(context)});
+                    setter.Invoke(contents, new object[] { i, _expressions[i].Evaluate(context) });
                 }
                 return contents;
             } else {
@@ -90,7 +89,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArray(Type type, IEnumerable<Expression> initializers) {
-            return new NewArrayExpression(SourceSpan.None, type, new List<Expression>(initializers));
+            return new NewArrayExpression(type, new List<Expression>(initializers));
         }
 
         /// <summary>
@@ -99,17 +98,7 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="type">The type of the array (e.g. object[]).</param>
         /// <param name="initializers">The expressions used to create the array elements.</param>
         public static NewArrayExpression NewArray(Type type, params Expression[] initializers) {
-            return new NewArrayExpression(SourceSpan.None, type, new List<Expression>(initializers));
-        }
-
-        /// <summary>
-        /// Creates a new array expression of the specified type from the provided initializers.
-        /// </summary>
-        /// <param name="span">The SourceSpan that corresponds with the location in code.</param>
-        /// <param name="type">The type of the array (e.g. object[]).</param>
-        /// <param name="initializers">The expressions used to create the array elements.</param>
-        public static NewArrayExpression NewArray(SourceSpan span, Type type, params Expression[] initializers) {
-            return new NewArrayExpression(span, type, new List<Expression>(initializers));
+            return new NewArrayExpression(type, new List<Expression>(initializers));
         }
     }
 }

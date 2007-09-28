@@ -67,10 +67,10 @@ namespace IronPython.Compiler.Ast {
 
                 // Store destination in a temp, if we have one
                 if (destination != null) {
-                    MSAst.BoundExpression temp = ag.MakeTempExpression("destination", destination.Span);
+                    MSAst.BoundExpression temp = ag.MakeTempExpression("destination");
 
                     statements.Add(
-                        AstGenerator.MakeAssignment(temp.Variable, destination, destination.Span)
+                        AstGenerator.MakeAssignment(temp.Variable, destination)
                     );
 
                     destination = temp;

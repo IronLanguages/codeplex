@@ -25,19 +25,16 @@ namespace Microsoft.Scripting.Ast {
     public class BoundAssignment : Expression {
         private readonly Variable _variable;
         private readonly Expression _value;
-        private readonly Operators _op;
         private bool _defined;
 
         // implementation detail.
         private VariableReference _vr;
 
-        internal BoundAssignment(SourceSpan span, Variable variable, Expression value, Operators op)
-            : base(span) {
+        internal BoundAssignment(Variable variable, Expression value) {
             Contract.RequiresNotNull(variable, "variable");
             Contract.RequiresNotNull(value, "value");
             _variable = variable;
             _value = value;
-            _op = op;
         }
 
         public Variable Variable {
@@ -58,11 +55,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _value; }
         }
 
-        public Operators Operator {
-            get { return _op; }
-        }
-
-        public bool IsDefined {
+        internal bool IsDefined {
             get { return _defined; }
             set { _defined = value; }
         }
@@ -74,49 +67,20 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal override void EmitAddress(CodeGen cg, Type asType) {
-            EmitValue(cg);
-
+            _value.Emit(cg);
             _vr.Slot.EmitSet(cg);
-
             _vr.Slot.EmitGetAddr(cg);
         }
 
         public override void Emit(CodeGen cg) {
-            EmitValue(cg);
-
+            _value.Emit(cg);
             cg.Emit(OpCodes.Dup);
             _vr.Slot.EmitSet(cg);
         }
 
-        private void EmitValue(CodeGen cg) {
-            if (_op == Operators.None) {
-                _value.EmitAs(cg, _vr.Slot.Type);
-            } else {
-                cg.EmitInPlaceOperator(
-                    _op,
-                    _variable.Type,
-                    delegate(CodeGen _cg, Type _as) {
-                        _cg.EmitGet(_vr.Slot, _variable.Name, !_defined);
-                        _cg.EmitConvert(_variable.Type, _as);
-                    },
-                    _value.Type,
-                    _value.EmitAs
-                );
-                cg.EmitConvert(typeof(object), _vr.Slot.Type);
-            }
-        }
-
         protected override object DoEvaluate(CodeContext context) {
-            object value;
-            if (_op == Operators.None) { // Just an assignment
-                value = _value.Evaluate(context);
-            } else {
-                //TODO: cache this action?
-                ActionExpression action = Ast.Action.Operator(
-                    _op, _variable.Type,
-                    Ast.ReadDefined(_variable), _value);
-                value = action.Evaluate(context);
-            }
+            object value = _value.Evaluate(context);
+
             // Do an explicit conversion to mirror the emit case
             value = context.LanguageContext.Binder.Convert(value, _variable.Type);
 
@@ -153,46 +117,56 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static Statement Write(Variable lhsVariable, Variable rhsVariable) {
-            return Statement(Assign(lhsVariable, Ast.Read(rhsVariable)));
+        /// <summary>
+        /// Performs an assignment variable = value
+        /// </summary>
+        public static Statement Write(Variable variable, Variable value) {
+            return Statement(Assign(variable, Ast.Read(value)));
         }
 
-        public static Statement Write(Variable lhsVariable, Expression rhsValue) {
-            return Statement(Assign(lhsVariable, rhsValue));
+        /// <summary>
+        /// Performs an assignment variable = value
+        /// </summary>
+        public static Statement Write(Variable variable, Expression value) {
+            return Statement(Assign(variable, value));
         }
 
-        // TODO: rename rhs <-> lhs
-
-        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Expression lhsValue) {
-            return Statement(AssignField(Read(rhsVariable), rhsField, lhsValue));
+        /// <summary>
+        /// Performs an assignment variable.field = value
+        /// </summary>
+        public static Statement Write(Variable variable, FieldInfo field, Expression value) {
+            return Statement(AssignField(Read(variable), field, value));
         }
 
-        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Variable lhsVariable) {
-            return Statement(AssignField(Read(rhsVariable), rhsField, Read(lhsVariable)));
+        /// <summary>
+        /// Performs an assignment variable.field = value
+        /// </summary>
+        public static Statement Write(Variable variable, FieldInfo field, Variable value) {
+            return Statement(AssignField(Read(variable), field, Read(value)));
         }
 
-        public static Statement Write(Variable rhsVariable, Variable lhsVariable, FieldInfo lhsField) {
-            return Statement(Assign(rhsVariable, ReadField(Read(lhsVariable), lhsField)));
+        /// <summary>
+        /// Performs an assignment variable = right.field
+        /// </summary>
+        public static Statement Write(Variable variable, Variable right, FieldInfo field) {
+            return Statement(Assign(variable, ReadField(Read(right), field)));
         }
 
-        public static Statement Write(Variable rhsVariable, FieldInfo rhsField, Variable lhsVariable, FieldInfo lhsField) {
-            return Statement(AssignField(Read(rhsVariable), rhsField, ReadField(Read(lhsVariable), lhsField)));
+        /// <summary>
+        /// Performs an assignment variable.leftField = right.rightField
+        /// </summary>
+        public static Statement Write(Variable variable, FieldInfo leftField, Variable right, FieldInfo rightField) {
+            return Statement(AssignField(Read(variable), leftField, ReadField(Read(right), rightField)));
         }
 
+        /// <summary>
+        /// Performs an assignment variable = value
+        /// </summary>
         public static BoundAssignment Assign(Variable variable, Expression value) {
-            return Assign(SourceSpan.None, variable, value, Operators.None);
-        }
-
-        public static BoundAssignment Assign(Variable variable, Expression value, Operators op) {
-            return Assign(SourceSpan.None, variable, value, op);
-        }
-
-        public static BoundAssignment Assign(SourceSpan span, Variable variable, Expression value) {
-            return Assign(span, variable, value, Operators.None);
-        }
-
-        public static BoundAssignment Assign(SourceSpan span, Variable variable, Expression value, Operators op) {
-            return new BoundAssignment(span, variable, value, op);
+            Contract.RequiresNotNull(variable, "variable");
+            Contract.RequiresNotNull(value, "value");
+            Contract.Requires(TypeUtils.CanAssign(variable.Type, value.Type));
+            return new BoundAssignment(variable, value);
         }
     }
 }

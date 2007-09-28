@@ -118,12 +118,12 @@ namespace IronPython.Runtime.Operations {
                 body = Ast.Block(
                     Ast.If(
                         Ast.Call(
-                            Ast.Cast(Ast.WeakConstant(callSlot), typeof(DynamicTypeSlot)),
+                            Ast.Convert(Ast.WeakConstant(callSlot), typeof(DynamicTypeSlot)),
                             typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
                             Ast.CodeContext(),
                             rule.Parameters[0],
                             Ast.ReadProperty(
-                                Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                                 typeof(ISuperDynamicObject).GetProperty("DynamicType")
                             ),
                             Ast.ReadDefined(tmp)
@@ -273,7 +273,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.TypeIs(rule.Parameters[0], typeof(ISuperDynamicObject)),
                         Ast.ReadProperty(
                             Ast.ReadProperty(
-                                Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                                 typeof(ISuperDynamicObject).GetProperty("DynamicType")
                             ),
                             typeof(DynamicType).GetProperty("HasGetAttribute")
@@ -285,7 +285,7 @@ namespace IronPython.Runtime.Operations {
                 Statement body = Ast.If(
                             Ast.Call(
                                 Ast.ReadProperty(
-                                    Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                    Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                                     typeof(ISuperDynamicObject).GetProperty("DynamicType")
                                 ),
                                 typeof(DynamicType).GetMethod("TryResolveSlot"),
@@ -304,7 +304,7 @@ namespace IronPython.Runtime.Operations {
 
             return Ast.IfThenElse(
                         Ast.Call(
-                            Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                            Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
                             typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
                             Ast.CodeContext(),
                             Ast.Constant(action.Name),
@@ -322,7 +322,7 @@ namespace IronPython.Runtime.Operations {
                 Ast.Comma(
                     1,
                     Ast.Call(
-                        Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                        Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
                         typeof(ICustomMembers).GetMethod("SetCustomMember"),
                         Ast.CodeContext(),
                         Ast.Constant(action.Name),
@@ -338,7 +338,7 @@ namespace IronPython.Runtime.Operations {
 
             return rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
-                    Ast.Cast(rule.Parameters[0], typeof(ICustomMembers)),
+                    Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
                     typeof(ICustomMembers).GetMethod("DeleteCustomMember"),
                     Ast.CodeContext(),
                     Ast.Constant(action.Name)
@@ -444,7 +444,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.CodeContext(),
                         rule.Parameters[0],
                         Ast.ReadProperty(
-                            Ast.Cast(
+                            Ast.Convert(
                                 rule.Parameters[0],
                                 typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("DynamicType")
@@ -523,7 +523,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.CodeContext(),
                         rule.Parameters[0],
                         Ast.ReadProperty(
-                            Ast.Cast(
+                            Ast.Convert(
                                 rule.Parameters[0],
                                 typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("DynamicType")
@@ -543,7 +543,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.CodeContext(),
                         rule.Parameters[0],
                         Ast.ReadProperty(
-                            Ast.Cast(
+                            Ast.Convert(
                                 rule.Parameters[0],
                                 typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("DynamicType")
@@ -562,7 +562,7 @@ namespace IronPython.Runtime.Operations {
                         Ast.CodeContext(),
                         rule.Parameters[0],
                         Ast.ReadProperty(
-                            Ast.Cast(
+                            Ast.Convert(
                                 rule.Parameters[0],
                                 typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("DynamicType")
@@ -579,14 +579,14 @@ namespace IronPython.Runtime.Operations {
                 Ast.AndAlso(
                     Ast.NotEqual(
                         Ast.ReadProperty(
-                            Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                            Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("Dict")
                         ),
                         Ast.Constant(null)
                     ),
                     Ast.Call(
                         Ast.ReadProperty(
-                            Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                            Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                             typeof(ISuperDynamicObject).GetProperty("Dict")
                         ),
                         typeof(IAttributesCollection).GetMethod("TryGetValue"),
@@ -739,7 +739,10 @@ namespace IronPython.Runtime.Operations {
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Assign(tmp,
-                        Ast.Call(null, rsp.SetterMethod, rule.Parameters[0], value)
+                        Ast.Convert(
+                            Ast.Call(null, rsp.SetterMethod, rule.Parameters[0], value),
+                            tmp.Type
+                        )
                     )
                 )
             );
@@ -752,7 +755,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         null,
                         typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
-                        Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                        Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                         Ast.Constant(action.Name)
                     )
                 );
@@ -766,7 +769,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Call(
                         null,
                         typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
-                        Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                        Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                         rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
                         rule.Parameters[1]
                     )
@@ -843,7 +846,7 @@ namespace IronPython.Runtime.Operations {
                     Ast.Equal(
                         Ast.ReadProperty(
                             Ast.ReadProperty(
-                                    Ast.Cast(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                    Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                                     typeof(ISuperDynamicObject).GetProperty("DynamicType")
                             ),
                             typeof(DynamicType).GetProperty(vername)
@@ -970,7 +973,7 @@ namespace IronPython.Runtime.Operations {
                 null,
                 typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(object), typeof(SymbolId) }),
                 Ast.ReadProperty(
-                    Ast.Cast(
+                    Ast.Convert(
                         rule.Parameters[0],
                         typeof(ISuperDynamicObject)
                     ),
@@ -987,7 +990,7 @@ namespace IronPython.Runtime.Operations {
                 Ast.CodeContext(),
                 rule.Parameters[0],
                 Ast.ReadProperty(
-                    Ast.Cast(
+                    Ast.Convert(
                         rule.Parameters[0],
                         typeof(ISuperDynamicObject)),
                     typeof(ISuperDynamicObject).GetProperty("DynamicType")

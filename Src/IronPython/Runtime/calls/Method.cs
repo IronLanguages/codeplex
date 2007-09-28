@@ -312,7 +312,7 @@ namespace IronPython.Runtime.Calls {
             } else {
                 // no instance, CheckSelf on null throws.                
                 nullSelf = Ast.Call(
-                    Ast.Cast(rule.Parameters[0], typeof(Method)),
+                    Ast.Convert(rule.Parameters[0], typeof(Method)),
                     typeof(Method).GetMethod("CheckSelf"),
                     Ast.Constant(null)
                 );
@@ -323,7 +323,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.Condition(
                         Ast.NotEqual(
                             Ast.ReadProperty(
-                                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                                Ast.Convert(rule.Parameters[0], typeof(Method)),
                                 typeof(Method).GetProperty("Self")
                             ),
                             Ast.Constant(null)
@@ -341,7 +341,7 @@ namespace IronPython.Runtime.Calls {
 
             Expression[] args = (Expression[])rule.Parameters.Clone();
             args[0] = Ast.ReadProperty(
-                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                Ast.Convert(rule.Parameters[0], typeof(Method)),
                 typeof(Method).GetProperty("Function")
             );
             Expression self;
@@ -364,14 +364,14 @@ namespace IronPython.Runtime.Calls {
                                     Ast.TypeIs(rule.Parameters[1], typeof(IList<object>)),
                                     Ast.NotEqual(
                                         Ast.ReadProperty(
-                                            Ast.Cast(rule.Parameters[1], typeof(ICollection)),
+                                            Ast.Convert(rule.Parameters[1], typeof(ICollection)),
                                             typeof(ICollection).GetProperty("Count")
                                         ),
                                         Ast.Constant(0)
                                     )
                                 ),
                                 Ast.Call(
-                                    Ast.Cast(rule.Parameters[1], typeof(IList<object>)),
+                                    Ast.Convert(rule.Parameters[1], typeof(IList<object>)),
                                     typeof(IList<object>).GetMethod("get_Item"),
                                     Ast.Constant(0)
                                 ),
@@ -389,7 +389,7 @@ namespace IronPython.Runtime.Calls {
 
         private static Expression CheckSelf<T>(StandardRule<T> rule, Expression self) {
             return Ast.Call(
-                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                Ast.Convert(rule.Parameters[0], typeof(Method)),
                 typeof(Method).GetMethod("CheckSelf"),
                 self
             );
@@ -398,13 +398,13 @@ namespace IronPython.Runtime.Calls {
         private static Expression[] GetNotNullInstanceArguments<T>(StandardRule<T> rule) {
             Expression[] args = ArrayUtils.Insert(
                 (Expression)Ast.ReadProperty(
-                    Ast.Cast(rule.Parameters[0], typeof(Method)),
+                    Ast.Convert(rule.Parameters[0], typeof(Method)),
                     typeof(Method).GetProperty("Function")
                 ),
                 rule.Parameters);
 
             args[1] = Ast.ReadProperty(
-                Ast.Cast(rule.Parameters[0], typeof(Method)),
+                Ast.Convert(rule.Parameters[0], typeof(Method)),
                 typeof(Method).GetProperty("Self")
             );
             return args;

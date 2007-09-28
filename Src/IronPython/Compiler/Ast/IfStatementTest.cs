@@ -46,7 +46,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.IfCondition(
                 Span,
                 _header,
-                ag.TransformAndConvert(_test, typeof(bool)),
+                ag.TransformAndDynamicConvert(_test, typeof(bool)),
                 ag.Transform(_body)
             );
         }

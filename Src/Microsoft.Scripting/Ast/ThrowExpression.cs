@@ -22,8 +22,7 @@ namespace Microsoft.Scripting.Ast {
     public class ThrowExpression : Expression {
         private readonly Expression _val;
 
-        internal ThrowExpression(SourceSpan span, Expression value)
-            : base(span) {
+        internal ThrowExpression(Expression value) {
             _val = value;
         }
 
@@ -48,7 +47,6 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
             if (_val == null) {
                 cg.Emit(OpCodes.Rethrow);
             } else {
@@ -73,15 +71,11 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static ThrowExpression Rethrow() {
-            return Throw(SourceSpan.None, null);
+            return Throw(null);
         }
 
         public static ThrowExpression Throw(Expression value) {
-            return Throw(SourceSpan.None, value);
-        }
-
-        public static ThrowExpression Throw(SourceSpan span, Expression value) {
-            return new ThrowExpression(span, value);
+            return new ThrowExpression(value);
         }
     }
 }

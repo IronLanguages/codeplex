@@ -120,16 +120,13 @@ def test_split():
 
 
 def test_codecs():
-    #all the encodings that should be supported
-    #encodings = [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']
-    #what actually is supported
-    
     if is_silverlight:
         encodings = [ 'ascii', 'utf-8', 'utf-16-le', 'raw-unicode-escape']
     else:
-        encodings = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'raw-unicode-escape']
+        print "CodePlex Work Item 12990"
+        encodings = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape'] #'utf-16']
 	    
-    for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc')
+    for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc', encoding + " failed!")
     
 def test_count():
     Assert("adadad".count("d") == 3)

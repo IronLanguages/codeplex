@@ -251,12 +251,6 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundAssignment
         public override bool Walk(BoundAssignment node) {
-            if (node.Operator != Operators.None) {
-                bool defined;
-                if (TryCheckVariable(node.Variable, out defined)) {
-                    node.IsDefined = defined;
-                }
-            }
             node.Value.Walk(this);
             Define(node.Variable);
             return false;

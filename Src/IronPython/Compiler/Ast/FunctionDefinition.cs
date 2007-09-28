@@ -265,7 +265,6 @@ namespace IronPython.Compiler.Ast {
             }
 
             MSAst.Expression ret = Ast.Call(
-                new SourceSpan(Start, Header),
                 null,                                                           // instance
                 typeof(PythonFunction).GetMethod("MakeFunction"),               // method
                 Ast.CodeContext(),                                              // 1. Emit CodeContext

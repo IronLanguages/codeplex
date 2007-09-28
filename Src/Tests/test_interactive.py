@@ -157,7 +157,6 @@ def test_incomplate_syntax_backslash():
     AreEqual(ipi.Start(), True)
        
     for i in xrange(4):
-        print "CodePlex Work Item 12851"    
         for j in xrange(i): 
             ipi.ExecutePartialLine("\\")
         ipi.ExecutePartialLine("1 + \\")

@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Ast {
             _next = next;
         }
 
-        public override Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
+        internal protected override Delegate GetDelegateForInterpreter(CodeContext context, bool forceWrapperMethod) {
             // For now, always return a compiled delegate (since yield is not implemented)
             lock (this) {
                 if (_delegate == null) {
@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override void EmitBody(CodeGen cg) {
+        internal protected override void EmitBody(CodeGen cg) {
             if (!cg.HasAllocator) {
                 // In the interpreted case, we do not have an allocator yet
                 Debug.Assert(cg.InterpretedMode);

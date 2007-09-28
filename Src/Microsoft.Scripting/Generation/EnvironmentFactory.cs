@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Creation of the environment factory consists of first creating the storage and then creating the collection object.
     /// </summary>
-    public abstract class EnvironmentFactory {
+    internal abstract class EnvironmentFactory {
         /// <summary>
         /// Creates a reference within the environment with the specified name typed to object.
         /// </summary>

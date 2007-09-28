@@ -247,7 +247,7 @@ namespace IronPython.Runtime.Calls {
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
                                 typeof(DynamicMixin).GetMethod("GetMember"),
                                 Ast.CodeContext(),
                                 Ast.Null(),
@@ -401,7 +401,7 @@ namespace IronPython.Runtime.Calls {
                                 null,
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
                                 Ast.Constant(null),
                                 Ast.Constant(Symbols.NewInst)
                             ),
@@ -430,7 +430,7 @@ namespace IronPython.Runtime.Calls {
                                 null,
                                 typeof(PythonOps).GetMethod("GetInitMember"),
                                 Ast.CodeContext(),
-                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
                                 createExpr
                             ),
                             ArrayUtils.RemoveFirst(rule.Parameters)
@@ -536,7 +536,7 @@ namespace IronPython.Runtime.Calls {
                                 null,
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Cast(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
                                 createExpr,
                                 Ast.Constant(Symbols.Init)
                             ),
@@ -693,7 +693,7 @@ namespace IronPython.Runtime.Calls {
 
             return Ast.Equal(
                 Ast.ReadProperty(
-                    Ast.Cast(rule.Parameters[0], typeof(DynamicType)),
+                    Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
                     typeof(DynamicType).GetProperty(vername)),
                 versionExpr
             );

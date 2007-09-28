@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Types {
             rule.SetTarget(
                 Ast.IfThenElse(
                     Ast.Call(
-                        Ast.Cast(rule.Parameters[0], typeof(OldInstance)),
+                        Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                         typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
                         Ast.CodeContext(),
                         Ast.Constant(Symbols.Call),
@@ -192,7 +192,7 @@ namespace IronPython.Runtime.Types {
 
             Variable tmp = rule.GetTemporary(typeof(CustomOldClassDictionary), "dict");
             Expression tryGetValue = Ast.Call(
-                Ast.Cast(rule.Parameters[0], typeof(OldInstance)),
+                Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                 typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
                 Ast.Constant(dict.KeyVersion));
             tryGetValue = Ast.Assign(tmp, tryGetValue);
@@ -246,7 +246,7 @@ namespace IronPython.Runtime.Types {
         private StandardRule<T> MakeDynamicOldInstanceRule<T>(MemberAction action, CodeContext context) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldInstance));
-            Expression instance = Ast.Cast(
+            Expression instance = Ast.Convert(
                     rule.Parameters[0], typeof(OldInstance));
 
             Expression target;

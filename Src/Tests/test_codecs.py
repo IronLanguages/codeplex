@@ -342,4 +342,37 @@ def test_misc_encodings():
     AreEqual('abc'.encode('unicode-escape'), 'abc')
     AreEqual('abc\u1234'.encode('unicode-escape'), 'abc\\\\u1234')
 
+@disabled("CodePlex Work Item 3094")
+def test_file_encodings():
+    '''
+    Once this gets fixed, we should use *.py files in the correct encoding instead
+    of dynamically generating ASCII files.  Also, need variations on the encoding 
+    names.
+    '''
+    import sys
+    import nt
+    sys.path.append(nt.getcwd() + "\\tmp_encodings")
+    try:
+        nt.mkdir(nt.getcwd() + "\\tmp_encodings")
+    except:
+        pass
+    
+    #positive cases
+    for coding in [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']:
+        temp_mod_name = "test_encoding_" + coding.replace("-", "_")
+        f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py", 
+                 "w")
+        f.write("# coding: %s" % (coding))
+        f.close()
+        __import__(temp_mod_name)
+               
+    #negative case               
+    f = open(nt.getcwd() + "\\tmp_encodings\\" + "bad_encoding.py", "w")
+    f.write("# coding: bad")
+    f.close() 
+    AssertError(SyntaxError, __import__, "bad_encoding")
+    
+    #cleanup
+    sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
+    
 run_test(__name__)

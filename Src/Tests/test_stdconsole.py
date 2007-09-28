@@ -144,6 +144,9 @@ Environment.SetEnvironmentVariable("IRONPYTHONPATH", tmpdir)
 # Verify that the file gets loaded by default.
 TestCommandLine(("-c", "import sys; print sys.foo"), "123\n")
 
+# Verify that Lib remains in sys.path.
+TestCommandLine(("-S", "-c", "import sys; print str(sys.exec_prefix + '\\lib').lower() in [x.lower() for x in sys.path]"), "True\n")
+
 # Now check that we can suppress this with -S.
 TestCommandLine(("-S", "-c", "import sys; print sys.foo"), ("lastline", "AttributeError: 'module' object has no attribute 'foo'\n"), 1)
 

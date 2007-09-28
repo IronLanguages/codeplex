@@ -26,13 +26,36 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public abstract class Statement : Node {
+        private SourceLocation _start;
+        private SourceLocation _end;
+
         // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary boxing
         internal static readonly object NextStatement = ControlFlow.NextStatement;
         internal static readonly object Break = ControlFlow.Break;
         internal static readonly object Continue = ControlFlow.Continue;
 
-        protected Statement(SourceSpan span)
-            : base(span) {
+        protected Statement(SourceSpan span) {
+            _start = span.Start;
+            _end = span.End;
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
+
+        public SourceSpan Span {
+            get {
+                return new SourceSpan(_start, _end);
+            }
+        }
+
+        public void SetLoc(SourceSpan span) {
+            _start = span.Start;
+            _end = span.End;
         }
 
         public object Execute(CodeContext context) {

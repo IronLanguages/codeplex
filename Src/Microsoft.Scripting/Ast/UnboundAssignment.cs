@@ -15,20 +15,18 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class UnboundAssignment : Expression {
         private readonly SymbolId _name;
         private readonly Expression _value;
-        private readonly Operators _op;
 
-        internal UnboundAssignment(SourceSpan span, SymbolId name, Expression value, Operators op)
-            : base(span) {
+        internal UnboundAssignment(SymbolId name, Expression value) {
             Debug.Assert(value != null);
             _name = name;
             _value = value;
-            _op = op;
         }
 
         public override Type Type {
@@ -41,44 +39,14 @@ namespace Microsoft.Scripting.Ast {
             get { return _name; }
         }
 
-        public Operators Operator {
-            get { return _op; }
-        }
-
         protected override object DoEvaluate(CodeContext context) {
-            object value;
-            if (_op == Operators.None) { // Just an assignment
-                value = _value.Evaluate(context);
-            } else {
-                //TODO: cache this action?
-                ActionExpression action = Ast.Action.Operator(
-                    _op, typeof(object),
-                    Ast.Read(_name), _value);
-                value = action.Evaluate(context);
-            }
-
+            object value = _value.Evaluate(context);
             RuntimeHelpers.SetName(context, _name, value);
             return value;
         }
 
         public override void Emit(CodeGen cg) {
-            if (_op == Operators.None) {
-                _value.EmitAsObject(cg);
-            } else {
-                cg.EmitInPlaceOperator(
-                    _op,
-                    typeof(object),
-                    delegate(CodeGen _cg, Type _as) {
-                        _cg.EmitCodeContext();
-                        _cg.EmitSymbolId(_name);
-                        _cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
-                        _cg.EmitConvert(typeof(object), _as);
-                    },
-                    _value.Type,
-                    _value.EmitAs
-                );
-            }
-
+            _value.EmitAsObject(cg);
             cg.EmitCodeContext();
             cg.EmitSymbolId(_name);
             cg.EmitCall(typeof(RuntimeHelpers), "SetNameReorder");
@@ -97,23 +65,9 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static UnboundAssignment Assign(SymbolId name, Expression value) {
-            return Assign(SourceSpan.None, name, value, Operators.None);
-        }
-        public static UnboundAssignment Assign(SymbolId name, Expression value, Operators op) {
-            return Assign(SourceSpan.None, name, value, op);
-        }
-        public static UnboundAssignment Assign(SourceSpan span, SymbolId name, Expression value) {
-            return Assign(span, name, value, Operators.None);
-        }
-
-        public static UnboundAssignment Assign(SourceSpan span, SymbolId name, Expression value, Operators op) {
-            if (name.IsEmpty || name.IsInvalid) {
-                throw new ArgumentException("Invalid or empty name is not allowed");
-            }
-            if (value == null) {
-                throw new ArgumentNullException("value");
-            }
-            return new UnboundAssignment(span, name, value, op);
+            Contract.Requires(!name.IsEmpty && !name.IsInvalid, "name", "Invalid or empty name is not allowed");
+            Contract.RequiresNotNull(value, "value");
+            return new UnboundAssignment(name, value);
         }
     }
 }

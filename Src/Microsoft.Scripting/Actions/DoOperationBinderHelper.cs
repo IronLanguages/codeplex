@@ -117,7 +117,7 @@ namespace Microsoft.Scripting.Actions {
                 MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
                 MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
                 if (mc != null) {
-                    Expression call = Ast.Cast(mc.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types), typeof(int));
+                    Expression call = Ast.Convert(mc.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types), typeof(int));
                     switch (info.Operator) {
                         case Operators.GreaterThan: call = Ast.GreaterThan(call, Ast.Constant(0)); break;
                         case Operators.LessThan: call = Ast.LessThan(call, Ast.Constant(0)); break;
@@ -136,8 +136,8 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private bool TryPrimitiveCompare() {
-            if (Expression.GetNonNullableType(_types[0]) == Expression.GetNonNullableType(_types[1]) && 
-                Expression.IsNumeric(_types[0])) {
+            if (TypeUtils.GetNonNullableType(_types[0]) == TypeUtils.GetNonNullableType(_types[1]) &&
+                TypeUtils.IsNumeric(_types[0])) {
                 // TODO: Nullable<PrimitveType> Support
                 Expression expr;
                 switch (Action.Operation) {
@@ -204,9 +204,9 @@ namespace Microsoft.Scripting.Actions {
                 return MakeOperatorRule(GetOperatorInfo(op));
             }
 
-            if (_types.Length == 2 && 
-                Expression.GetNonNullableType(_types[0]) == Expression.GetNonNullableType(_types[1]) && 
-                Expression.IsArithmetic(_types[0])) {
+            if (_types.Length == 2 &&
+                TypeUtils.GetNonNullableType(_types[0]) == TypeUtils.GetNonNullableType(_types[1]) &&
+                TypeUtils.IsArithmetic(_types[0])) {
                 // TODO: Nullable<PrimitveType> Support
                 Expression expr;
                 switch (info.Operator) {
@@ -225,10 +225,10 @@ namespace Microsoft.Scripting.Actions {
                 _rule.SetTarget(_rule.MakeReturn(Binder, expr));
                 return _rule;
             } else if(_types.Length == 1) {
-                if (info.Operator == Operators.Negate && Expression.IsArithmetic(_types[0])) {
+                if (info.Operator == Operators.Negate && TypeUtils.IsArithmetic(_types[0])) {
                     _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Negate(Param0)));
                     return _rule;
-                } else if (info.Operator == Operators.Not && Expression.IsIntegerOrBool(_types[0])) {
+                } else if (info.Operator == Operators.Not && TypeUtils.IsIntegerOrBool(_types[0])) {
                     _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(Param0)));
                     return _rule;
                 }
@@ -349,7 +349,7 @@ namespace Microsoft.Scripting.Actions {
         private Expression GetParamater(int index) {
             Expression expr = _rule.Parameters[index];
             if (_types[index].IsAssignableFrom(expr.Type)) return expr;
-            return Ast.Cast(expr, _types[index]);
+            return Ast.Convert(expr, _types[index]);
         }
 
         private bool TryMakeBindingTarget(MethodInfo[] targets) {
@@ -388,7 +388,7 @@ namespace Microsoft.Scripting.Actions {
 
         private static Expression ConvertIfNeeded(Expression expression, Type type) {
             if (expression.Type != type) {
-                return Ast.DynamicConvert(expression.Span, expression, type);
+                return Ast.DynamicConvert(expression, type);
             }
             return expression;
         }

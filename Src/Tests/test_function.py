@@ -765,12 +765,10 @@ def test_big_calls():
         exec 'a = f(*(' + ', '.join([str(x) for x in xrange(size)]) + '))'
         AreEqual(a, tuple(xrange(size)))
     
-@disabled("CodePlex Work Item 5641")
 def test_compile():
     x = compile("print 2/3", "<string>", "exec", 8192)
     Assert((x.co_flags & 8192) == 8192)
     
-    #CodePlex Work Item 5641 - test co_filename
     names = [   "", ".", "1", "\n", " ", "@", "%^",
                 "a", "A", "Abc", "aBC", "filename.py",
                 "longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong",
@@ -784,7 +782,6 @@ def test_compile():
         AreEqual(compile("print 2/3", name, "exec", 8192).co_filename,
                  name)
 
-@disabled("CodePlex Work Item #5641")
 def test_filename():
     c = compile("x = 2", "test", "exec")
     AreEqual(c.co_filename, 'test')

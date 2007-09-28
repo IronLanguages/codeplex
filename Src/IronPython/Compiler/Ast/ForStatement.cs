@@ -97,7 +97,6 @@ namespace IronPython.Compiler.Ast {
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
             MSAst.BoundAssignment init = Ast.Assign(
-                list.Span,
                 enumerator,
                 Ast.Call(
                     null,
@@ -122,6 +121,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.Block(
                     left.TransformSet(
                         ag,
+                        SourceSpan.None,
                         Ast.Call(
                             Ast.Read(enumerator),
                             typeof(IEnumerator).GetProperty("Current").GetGetMethod()
@@ -134,7 +134,7 @@ namespace IronPython.Compiler.Ast {
             );
 
             return Ast.Block(
-                Ast.Statement(init.Span, init),
+                Ast.Statement(list.Span, init),
                 ls
             );
         }

@@ -121,7 +121,8 @@ namespace IronPython.Compiler.Ast {
         internal override void Init(AstGenerator inner, List<MSAst.Statement> init) {
             MSAst.Statement stmt = _tuple.TransformSet(
                 inner,
-                Ast.Read(Span, Variable.Variable),
+                Span,
+                Ast.Read(Variable.Variable),
                 Operators.None
             );
 

@@ -26,8 +26,7 @@ namespace Microsoft.Scripting.Ast {
         // Implementation detail
         private VariableReference _vr;
 
-        internal BoundExpression(SourceSpan span, Variable variable)
-            : base(span) {
+        internal BoundExpression(Variable variable) {
             _variable = variable;
         }
 
@@ -125,18 +124,12 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static BoundExpression Read(Variable variable) {
-            return Read(SourceSpan.None, variable);
-        }
-        public static BoundExpression Read(SourceSpan span, Variable variable) {
             Contract.RequiresNotNull(variable, "variable");
-            return new BoundExpression(span, variable);
+            return new BoundExpression(variable);
         }
 
         public static BoundExpression ReadDefined(Variable variable) {
-            return ReadDefined(SourceSpan.None, variable);
-        }
-        public static BoundExpression ReadDefined(SourceSpan span, Variable variable) {
-            BoundExpression ret = Read(span, variable);
+            BoundExpression ret = Read(variable);
             ret.IsDefined = true;
             return ret;
         }

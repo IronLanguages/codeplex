@@ -23,8 +23,7 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _expression;
         private readonly Type _conversion;
 
-        internal DynamicConversionExpression(SourceSpan span, Expression expression, Type conversion)
-            : base(span) {
+        internal DynamicConversionExpression(Expression expression, Type conversion) {
             _expression = expression;
             _conversion = conversion;
         }
@@ -54,14 +53,10 @@ namespace Microsoft.Scripting.Ast {
     }
     public static partial class Ast {
         public static DynamicConversionExpression DynamicConvert(Expression expression, Type conversion) {
-            return DynamicConvert(SourceSpan.None, expression, conversion);
-        }
-
-        public static DynamicConversionExpression DynamicConvert(SourceSpan span, Expression expression, Type conversion) {
             Contract.RequiresNotNull(expression, "expression");
             Contract.RequiresNotNull(conversion, "conversion");
 
-            return new DynamicConversionExpression(span, expression, conversion);
+            return new DynamicConversionExpression(expression, conversion);
         }
     }
 }

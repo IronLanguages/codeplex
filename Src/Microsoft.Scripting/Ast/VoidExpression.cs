@@ -15,14 +15,14 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     public class VoidExpression : Expression {
         private Statement _statement;
 
-        internal VoidExpression(SourceSpan span, Statement statement)
-            : base(span) {
+        internal VoidExpression(Statement statement) {
             if (statement == null) {
                 throw new ArgumentNullException("statement");
             }
@@ -63,11 +63,8 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static VoidExpression Void(Statement statement) {
-            return Void(SourceSpan.None, statement);
-        }
-
-        public static VoidExpression Void(SourceSpan span, Statement statement) {
-            return new VoidExpression(span, statement);
+            Contract.RequiresNotNull(statement, "statement");
+            return new VoidExpression(statement);
         }
     }
 }

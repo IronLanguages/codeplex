@@ -30,8 +30,7 @@ namespace Microsoft.Scripting.Ast {
         private IList<Expression> _expressions;
         private int _valueIndex;
 
-        internal CommaExpression(SourceSpan span, int valueIndex, IList<Expression> expressions)
-            : base(span) {
+        internal CommaExpression(int valueIndex, IList<Expression> expressions) {
             _expressions = expressions;
             _valueIndex = valueIndex;
         }
@@ -155,14 +154,14 @@ namespace Microsoft.Scripting.Ast {
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
         public static CommaExpression Comma(params Expression[] expressions) {
-            return Comma(SourceSpan.None, -1, expressions);
+            return Comma(-1, expressions);
         }
 
         /// <summary>
         /// Creates a list of expressions whose value is the value of the last expression.
         /// </summary>
         public static CommaExpression Comma(IList<Expression> expressions) {
-            return Comma(SourceSpan.None, -1, expressions);
+            return Comma(-1, expressions);
         }
 
         /// <summary>
@@ -171,7 +170,7 @@ namespace Microsoft.Scripting.Ast {
         /// (hence -1 designates the last expression specified).
         /// </summary>
         public static CommaExpression Comma(int valueIndex, params Expression[] expressions) {
-            return Comma(SourceSpan.None, valueIndex, expressions);
+            return Comma(valueIndex, (IList<Expression>)expressions);
         }
 
         /// <summary>
@@ -180,14 +179,6 @@ namespace Microsoft.Scripting.Ast {
         /// (hence -1 designates the last expression specified).
         /// </summary>
         public static CommaExpression Comma(int valueIndex, IList<Expression> expressions) {
-            return Comma(SourceSpan.None, valueIndex, expressions);
-        }
-
-        public static CommaExpression Comma(SourceSpan span, int valueIndex, params Expression[] expressions) {
-            return Comma(span, valueIndex, (IList<Expression>)expressions);
-        }
-
-        public static CommaExpression Comma(SourceSpan span, int valueIndex, IList<Expression> expressions) {
             Contract.RequiresNotEmpty(expressions, "expressions");
             Contract.RequiresNotNullItems(expressions, "expressions");
 
@@ -197,9 +188,8 @@ namespace Microsoft.Scripting.Ast {
 
             Contract.RequiresArrayIndex(expressions, valueIndex, "valueIndex");
 
-            return new CommaExpression(span, valueIndex, expressions);
+            return new CommaExpression(valueIndex, expressions);
         }
-
-
     }
 }
+

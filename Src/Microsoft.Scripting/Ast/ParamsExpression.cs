@@ -20,8 +20,7 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Ast {
     public class ParamsExpression : Expression {
 
-        internal ParamsExpression(SourceSpan span)
-            : base(span) {
+        internal ParamsExpression() {
         }
 
         public override Type Type {
@@ -46,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static ParamsExpression Params() {
-            return new ParamsExpression(SourceSpan.None);
+            return new ParamsExpression();
         }
     }
 }

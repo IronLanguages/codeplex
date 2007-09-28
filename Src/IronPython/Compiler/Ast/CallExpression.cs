@@ -75,7 +75,6 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Action.Call(
-                Span,
                 CallAction.Make(new CallSignature(args)),
                 type,
                 argVals

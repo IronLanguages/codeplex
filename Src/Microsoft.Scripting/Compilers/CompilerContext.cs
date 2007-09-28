@@ -108,20 +108,6 @@ namespace Microsoft.Scripting {
             _errors.Add(SourceUnit, message, new SourceSpan(start, end), errorCode, severity);
         }
 
-        public void AddError(string message, Node node) {
-            AddError(message, node, DefaultSeverity, DefaultErrorCode);
-        }
-
-        public void AddError(string message, Node node, Severity severity) {
-            AddError(message, node, severity, DefaultErrorCode);
-        }
-
-        public void AddError(string message, Node node, Severity severity, int errorCode) {
-            Contract.RequiresNotNull(node, "node");
-
-            _errors.Add(SourceUnit, message, node.Span, errorCode, severity);
-        }
-
         #endregion
     }
 }

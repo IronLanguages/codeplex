@@ -16,6 +16,7 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
@@ -24,63 +25,11 @@ namespace Microsoft.Scripting.Ast {
         private readonly MethodInfo _resultOp;
         private readonly Expression _left, _right;
 
-        internal ShortCircuitExpression(SourceSpan span, MethodInfo testOp, MethodInfo resultOp, Expression left, Expression right)
-            : base(span) {
-            if (testOp == null) {
-                throw new ArgumentNullException("testOp");
-            }
-            if (resultOp == null) {
-                throw new ArgumentNullException("resultOp");
-            }
-            if (left == null) {
-                throw new ArgumentNullException("left");
-            }
-            if (right == null) {
-                throw new ArgumentNullException("right");
-            }
-
-            ParameterInfo[] parameters;
-            // The testOp must be public static
-            if ((testOp.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
-                (MethodAttributes.Public | MethodAttributes.Static)) {
-                throw new ArgumentException("testOp must be public and static");
-            }
-            // And take exactly one parameter
-            parameters = testOp.GetParameters();
-            if (parameters.Length != 1) {
-                throw new ArgumentException("testOp must have exactly one parameter");
-            }
-            Type testType = parameters[0].ParameterType;
-
-            // The resultOp must be public static also
-            if ((resultOp.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
-                (MethodAttributes.Public | MethodAttributes.Static)) {
-                throw new ArgumentException("resultOp must be public static");
-            }
-
-            // And take exactly two parameters
-            parameters = resultOp.GetParameters();
-            if (parameters.Length != 2) {
-                throw new ArgumentException("resultOp must have exactly two parameters");
-            }
-
-            // The first resultOp parameter must be of the same type as testOp parameter
-            // This is perhaps too restrictive, but certainly correct.
-            if (parameters[0].ParameterType != testType) {
-                throw new ArgumentException("testOp and resultOp must have the same type of the first parameter");
-            }
-
-            // Finally, the testOp parameter type must be the same as the
-            // result type of the _resultOp. This ensures that the expression
-            // behaves consistently.
-            if (testType != resultOp.ReturnType) {
-                throw new ArgumentException("testOp parameter type must be the same as the resultOp return type");
-            }
-
-            this._testOp = testOp;
-            this._resultOp = resultOp;
-            this._left = left;
-            this._right = right;
+        internal ShortCircuitExpression(MethodInfo testOp, MethodInfo resultOp, Expression left, Expression right) {
+            _testOp = testOp;
+            _resultOp = resultOp;
+            _left = left;
+            _right = right;
         }
 
         public MethodInfo Test {
@@ -157,10 +106,50 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     public static partial class Ast {
         public static ShortCircuitExpression ShortCircuit(MethodInfo test, MethodInfo result, Expression left, Expression right) {
-            return ShortCircuit(SourceSpan.None, test, result, left, right);
-        }
-        public static ShortCircuitExpression ShortCircuit(SourceSpan span, MethodInfo test, MethodInfo result, Expression left, Expression right) {
-            return new ShortCircuitExpression(span, test, result, left, right);
+            Contract.RequiresNotNull(test, "test");
+            Contract.RequiresNotNull(result, "result");
+            Contract.RequiresNotNull(left, "left");
+            Contract.RequiresNotNull(right, "right");
+
+            ParameterInfo[] parameters;
+            // The test must be public static
+            if ((test.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
+                (MethodAttributes.Public | MethodAttributes.Static)) {
+                throw new ArgumentException("test must be public and static");
+            }
+            // And take exactly one parameter
+            parameters = test.GetParameters();
+            if (parameters.Length != 1) {
+                throw new ArgumentException("test must have exactly one parameter");
+            }
+            Type testType = parameters[0].ParameterType;
+
+            // The result must be public static also
+            if ((result.Attributes & (MethodAttributes.Public | MethodAttributes.Static)) !=
+                (MethodAttributes.Public | MethodAttributes.Static)) {
+                throw new ArgumentException("result must be public static");
+            }
+
+            // And take exactly two parameters
+            parameters = result.GetParameters();
+            if (parameters.Length != 2) {
+                throw new ArgumentException("result must have exactly two parameters");
+            }
+
+            // The first result parameter must be of the same type as test parameter
+            // This is perhaps too restrictive, but certainly correct.
+            if (parameters[0].ParameterType != testType) {
+                throw new ArgumentException("test and result must have the same type of the first parameter");
+            }
+
+            // Finally, the test parameter type must be the same as the
+            // result type of the _resultOp. This ensures that the expression
+            // behaves consistently.
+            if (testType != result.ReturnType) {
+                throw new ArgumentException("test parameter type must be the same as the result return type");
+            }
+
+            return new ShortCircuitExpression(test, result, left, right);
         }
     }
 }

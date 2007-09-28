@@ -1133,7 +1133,7 @@ namespace IronPython.Runtime.Calls {
             /// Helper function to get the function argument strongly typed.
             /// </summary>
             private UnaryExpression GetFunctionParam() {
-                return Ast.Cast(_rule.Parameters[0], _func.GetType());
+                return Ast.Convert(_rule.Parameters[0], _func.GetType());
             }
 
             /// <summary>
@@ -1256,7 +1256,7 @@ namespace IronPython.Runtime.Calls {
             private Statement MakeFunctionInvoke(Expression[] invokeArgs) {
                 return _rule.MakeReturn(Context.LanguageContext.Binder,
                     Ast.Call(
-                        Ast.Cast(
+                        Ast.Convert(
                             Ast.ReadProperty(
                                 GetFunctionParam(),
                                 _func.GetType().GetProperty("Target")),

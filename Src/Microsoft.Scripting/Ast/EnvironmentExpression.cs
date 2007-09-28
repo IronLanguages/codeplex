@@ -20,8 +20,7 @@ namespace Microsoft.Scripting.Ast {
     public class EnvironmentExpression : Expression {
         private Type _expressionType;
 
-        internal EnvironmentExpression(SourceSpan span, Type expressionType)
-            : base(span) {
+        internal EnvironmentExpression(Type expressionType) {
             _expressionType = expressionType;
         }
 
@@ -45,10 +44,7 @@ namespace Microsoft.Scripting.Ast {
 
     public static partial class Ast {
         public static EnvironmentExpression Environment(Type type) {
-            return Environment(SourceSpan.None, type);
-        }
-        public static EnvironmentExpression Environment(SourceSpan span, Type type) {
-            return new EnvironmentExpression(span, type);
+            return new EnvironmentExpression(type);
         }
     }
 }

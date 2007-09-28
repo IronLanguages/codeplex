@@ -17,22 +17,40 @@ using System;
 using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Ast {
     public class IfStatementTest : Node {
+        private readonly SourceLocation _start;
         private readonly SourceLocation _header;
+        private readonly SourceLocation _end;
+
         private readonly Expression _test;
         private readonly Statement _body;
 
-        internal IfStatementTest(SourceSpan span, SourceLocation header, Expression test, Statement body)
-            : base(span) {
+        internal IfStatementTest(SourceSpan span, SourceLocation header, Expression test, Statement body) {
             Contract.RequiresNotNull(test, "test");
             Contract.RequiresNotNull(body, "body");
 
             _test = test;
             _body = body;
             _header = header;
+            _start = span.Start;
+            _end = span.End;
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
         }
 
         public SourceLocation Header {
             get { return _header; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
+
+        public SourceSpan Span {
+            get {
+                return new SourceSpan(_start, _end);
+            }
         }
 
         public Expression Test {

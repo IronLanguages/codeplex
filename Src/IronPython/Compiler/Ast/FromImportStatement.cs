@@ -67,7 +67,6 @@ namespace IronPython.Compiler.Ast {
                 return Ast.Statement(
                     Span,
                     Ast.Call(
-                        Span,
                         null,
                         AstGenerator.GetHelperMethod("ImportStar"),
                         Ast.CodeContext(),
@@ -78,7 +77,7 @@ namespace IronPython.Compiler.Ast {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
                 List<MSAst.Statement> statements = new List<MSAst.Statement>();
-                MSAst.BoundExpression module = ag.MakeTempExpression("module", _root.Span);
+                MSAst.BoundExpression module = ag.MakeTempExpression("module");
 
                 // Create initializer of the array of names being passed to ImportWithNames
                 MSAst.ConstantExpression[] names = new MSAst.ConstantExpression[_names.Length];
@@ -93,7 +92,6 @@ namespace IronPython.Compiler.Ast {
                         Ast.Assign(
                             module.Variable,
                             Ast.Call(
-                                _root.Span,
                                 null,
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
                                 Ast.CodeContext(),
@@ -112,7 +110,6 @@ namespace IronPython.Compiler.Ast {
                             Ast.Assign(
                                 _variables[i].Variable,
                                 Ast.Call(
-                                    Span,
                                     null,
                                     AstGenerator.GetHelperMethod("ImportFrom"),
                                     Ast.CodeContext(),
