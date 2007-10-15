@@ -160,7 +160,6 @@ namespace IronPython.Compiler.Ast {
                         // Python specific exception handling code
                         Ast.Statement(
                             Ast.Call(
-                                null,
                                 AstGenerator.GetHelperMethod("PushExceptionHandler"),
                                 exception
                             )
@@ -168,7 +167,6 @@ namespace IronPython.Compiler.Ast {
                         // Python specific exception handling code
                         Ast.Statement(
                             Ast.Call(
-                                null,
                                 AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
                             )
                         ),
@@ -181,13 +179,12 @@ namespace IronPython.Compiler.Ast {
                         //      raise
                         Ast.IfThen(
                             Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
-                            Ast.Statement(Ast.Rethrow())
+                            Ast.Rethrow()
                         )
                     ).Finally(
                         // Python specific exception handling code
                         Ast.Statement(
                             Ast.Call(
-                                null,
                                 AstGenerator.GetHelperMethod("PopExceptionHandler")
                             )
                         )
@@ -221,7 +218,6 @@ namespace IronPython.Compiler.Ast {
                 typeof(bool),
                 exit,
                 Ast.Call(
-                    null,
                     AstGenerator.GetHelperMethod("GetExceptionInfo")
                 )
             );

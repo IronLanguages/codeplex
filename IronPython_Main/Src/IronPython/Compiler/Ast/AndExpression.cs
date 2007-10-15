@@ -45,9 +45,9 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.CoalesceTrue(Span, ag.Block,
-                ag.Transform(_left),
-                ag.Transform(_right),
+            return Ast.CoalesceTrue(ag.Block,
+                Ast.ConvertHelper(ag.Transform(_left), typeof(object)),
+                Ast.ConvertHelper(ag.Transform(_right), typeof(object)),
                 AstGenerator.GetHelperMethod("IsTrue")
             );
         }

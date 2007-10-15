@@ -342,7 +342,7 @@ namespace IronPython.Runtime {
                 if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
 
                 int start, stop, step;
-                slice.Indicies(_size, out start, out stop, out step);
+                slice.Indices(_size, out start, out stop, out step);
 
                 if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) return new List();
 
@@ -374,7 +374,7 @@ namespace IronPython.Runtime {
                     slice.DoSliceAssign(this.SliceAssign, _size, value);
                 } else {
                     int start, stop, step;
-                    slice.Indicies(_size, out start, out stop, out step);
+                    slice.Indices(_size, out start, out stop, out step);
                     if (start > stop) return;
 
                     SliceNoStep(start, stop, value);
@@ -430,7 +430,7 @@ namespace IronPython.Runtime {
             lock (this) {
                 int start, stop, step;
                 // slice is sealed, indicies can't be user code...
-                slice.Indicies(_size, out start, out stop, out step);
+                slice.Indices(_size, out start, out stop, out step);
 
                 if (step > 0 && (start >= stop)) return;
                 if (step < 0 && (start <= stop)) return;

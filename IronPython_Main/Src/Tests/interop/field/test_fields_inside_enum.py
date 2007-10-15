@@ -18,13 +18,18 @@ import sys, nt
 def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
 
 merlin_root = environ_var("MERLIN_ROOT")
-sys.path.extend([merlin_root + r"\Languages\IronPython\Tests", merlin_root + r"\Test\ClrAssembly\bin"])
+sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
+sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
 
 from lib.assert_util import *
 skiptest("silverlight")
 
 import clr
 clr.AddReference("fieldtests", "typesamples")
+
+from lib.file_util import *
+peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll", merlin_root + r"\Test\ClrAssembly\bin\fieldtests.dll"]
+copy_dlls_for_peverify(peverify_dependency)
 
 from Merlin.Testing.TypeSample import *
 
@@ -46,12 +51,14 @@ def test_get_set():
     AssertErrorWithMatch(AttributeError, "Cannot set field B on type EnumInt32", f)
     
     def f(): desc.__set__(o, 12)
-    AssertErrorWithMatch(AttributeError, "cannot set", f)
+    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
 
     def f(): desc.__set__(EnumInt32, 12)
-    AssertErrorWithMatch(AttributeError, "cannot set", f)
+    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
 
-    def f(): desc.__set__(None, EnumInt32.B)
+    def f(): desc.__set__(None, EnumInt32.B) # bug 305557
     #AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
     
 run_test(__name__)
+
+delete_dlls_for_peverify(peverify_dependency)

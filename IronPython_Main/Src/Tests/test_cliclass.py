@@ -520,6 +520,18 @@ def test_field_const_write():
         Assert(str(e).find('ClassWithLiteral') != -1)
 
     try:
+        ClassWithLiteral.__dict__['Literal'].__set__(None, 23)
+    except AttributeError, e:
+        Assert(str(e).find('Literal') != -1)
+        Assert(str(e).find('ClassWithLiteral') != -1)
+
+    try:
+        ClassWithLiteral.__dict__['Literal'].__set__(ClassWithLiteral(), 23)
+    except AttributeError, e:
+        Assert(str(e).find('Literal') != -1)
+        Assert(str(e).find('ClassWithLiteral') != -1)
+
+    try:
         MySize().MaxSize = 23
     except AttributeError, e:
         Assert(str(e).find('MaxSize') != -1)
@@ -833,9 +845,90 @@ def test_null_str():
     AreEqual(str(RudeObjectOverride()), '')
     AreEqual(RudeObjectOverride().__str__(), '')
     AreEqual(RudeObjectOverride().ToString(), None)
-    print "CodePlex Work Item 6141"
-    #AreEqual(repr(RudeObjectOverride()), '')
+    Assert(repr(RudeObjectOverride()).startswith('<IronPythonTest.RudeObjectOverride object at '))
 
+def test_keyword_construction_readonly():
+    import System
+    # Build is read-only property
+    AssertError(AttributeError, System.Version, 1, 0, Build=100)  
+    AssertError(AttributeError, ClassWithLiteral, Literal=3)
 
+@skip("silverlight") # no FileSystemWatcher in Silverlight
+def test_kw_construction_types():
+    import System
+    for val in [True, False]:
+        x = System.IO.FileSystemWatcher('.', EnableRaisingEvents = val)
+        AreEqual(x.EnableRaisingEvents, val)
+
+def test_as_bool():
+    """verify using expressions in if statements works correctly.  This generates an
+    site whose return type is bool so it's important this works for various ways we can
+    generate the body of the site, and use the site both w/ the initial & generated targets"""
+    import System
+    
+    # instance property
+    x = System.Uri('http://foo')
+    for i in xrange(2):
+        if x.AbsolutePath: pass
+        else: AssertUnreachable()
+    
+    # instance property on type
+    for i in xrange(2):
+        if System.Uri.AbsolutePath: pass
+        else: AssertUnreachable()
+    
+    # static property
+    for i in xrange(2):
+        if System.Threading.Thread.CurrentThread: pass
+        else: AssertUnreachable()
+    
+    # static field
+    for i in xrange(2):
+        if System.String.Empty: AssertUnreachable()
+    
+    # instance field
+    x = NestedClass()
+    for i in xrange(2):
+        if x.Field: AssertUnreachable()        
+    
+    # instance field on type
+    for i in xrange(2):
+        if NestedClass.Field: pass
+        else: AssertUnreachable()
+    
+    # math
+    for i in xrange(2):
+        if System.Int64(1) + System.Int64(1): pass
+        else: AssertUnreachable()
+
+    for i in xrange(2):
+        if System.Int64(1) + System.Int64(1): pass
+        else: AssertUnreachable()
+    
+    # GetItem
+    x = System.Collections.Generic.List[str]()
+    x.Add('abc')
+    for i in xrange(2):
+        if x[0]: pass
+        else: AssertUnreachable()
+        
+    
+    
+@skip("silverlight") # no Stack on Silverlight
+def test_generic_getitem():
+    # calling __getitem__ is the same as indexing
+    import System
+    AreEqual(System.Collections.Generic.Stack.__getitem__(int), System.Collections.Generic.Stack[int])
+    
+    # but __getitem__ on a type takes precedence
+    AssertError(TypeError, System.Collections.Generic.List.__getitem__, int)
+    x = System.Collections.Generic.List[int]()
+    x.Add(0)
+    AreEqual(System.Collections.Generic.List[int].__getitem__(x, 0), 0)
+    
+    # but we can call type.__getitem__ with the instance    
+    AreEqual(type.__getitem__(System.Collections.Generic.List, int), System.Collections.Generic.List[int])
+    
+    
 run_test(__name__)
 

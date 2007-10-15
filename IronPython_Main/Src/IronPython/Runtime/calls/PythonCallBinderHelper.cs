@@ -57,7 +57,6 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakePythonTypeCallRule(DynamicType creating) {
-            List<Expression> body = new List<Expression>();
             ArgumentValues ai = MakeArgumentInfo();
             NewAdapter newAdapter;
             InitAdapter initAdapter;
@@ -80,34 +79,50 @@ namespace IronPython.Runtime.Calls {
             Variable allocatedInst = Rule.GetTemporary(createExpr.Type, "newInst");
             Expression tmpRead = Ast.Read(allocatedInst);
             Expression initCall = initAdapter.MakeInitCall(Binder, Rule, tmpRead);
-            if (initCall == null) {
-                // init can fail but if __new__ returns a different type
-                // no exception is raised.
-                initCall = Ast.Void(initAdapter.GetError(Binder, Rule));
-            }
+
+            List<Statement> body = new List<Statement>();
 
             // then get the call to __del__ if we need one
             if (HasFinalizer(creating)) {
-                body.Add(Ast.Assign(allocatedInst, createExpr));
-                body.Add(GetFinalizerInitialization(allocatedInst));
+                body.Add(
+                    Ast.Statement(
+                        Ast.Assign(allocatedInst, createExpr)
+                    )
+                );
+                body.Add(
+                    Ast.Statement(
+                        GetFinalizerInitialization(allocatedInst)
+                    )
+                );
             }
 
             // add the call to init if we need to
             if (initCall != tmpRead) {
-                if (body.Count == 0) body.Add(Ast.Assign(allocatedInst, createExpr));
+                // init can fail but if __new__ returns a different type
+                // no exception is raised.
+                Statement initStmt = initCall != null ?
+                    Ast.Statement(initCall) :
+                    initAdapter.GetError(Binder, Rule);
+
+                if (body.Count == 0) {
+                    body.Add(
+                        Ast.Statement(
+                            Ast.Assign(allocatedInst, createExpr)
+                        )
+                    );
+                }
 
                 if (!creating.UnderlyingSystemType.IsAssignableFrom(createExpr.Type)) {
                     // return type of object, we need to check the return type before calling __init__.
                     body.Add(
-                        Ast.Condition(
+                        Ast.IfThen(
                             Ast.TypeIs(Ast.ReadDefined(allocatedInst), creating.UnderlyingSystemType),
-                            initCall,
-                            Ast.Null()
+                            initStmt
                         )
                     );
                 } else {
                     // just call the __init__ method, no type check necessary (TODO: need null check?)
-                    body.Add(initCall);
+                    body.Add(initStmt);
                 }
             }
 
@@ -116,8 +131,13 @@ namespace IronPython.Runtime.Calls {
                 // no init or del
                 Rule.SetTarget(Rule.MakeReturn(Binder, createExpr));
             } else {
-                body.Add(Ast.Read(allocatedInst));
-                Rule.SetTarget(Rule.MakeReturn(Binder, Ast.Comma(body.ToArray())));
+                body.Add(
+                    Rule.MakeReturn(Binder, Ast.Read(allocatedInst))
+                );
+
+                Rule.SetTarget(
+                    Ast.Block(body.ToArray())
+                );
             }
 
             MakeTests(ai, newAdapter, initAdapter);
@@ -398,10 +418,9 @@ namespace IronPython.Runtime.Calls {
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
                                 Ast.Constant(null),
                                 Ast.Constant(Symbols.NewInst)
                             ),
@@ -427,11 +446,10 @@ namespace IronPython.Runtime.Calls {
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("GetInitMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
-                                createExpr
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
+                                Ast.ConvertHelper(createExpr, typeof(object))
                             ),
                             ArrayUtils.RemoveFirst(rule.Parameters)
                         )
@@ -533,11 +551,10 @@ namespace IronPython.Runtime.Calls {
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
-                                createExpr,
+                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
+                                Ast.ConvertHelper(createExpr, typeof(object)),
                                 Ast.Constant(Symbols.Init)
                             ),
                             ArrayUtils.RemoveFirst(rule.Parameters)
@@ -553,7 +570,6 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeIncorrectArgumentsRule(ArgumentValues ai) {
             Rule.SetTarget(
                 Rule.MakeError(
-                    Binder,
                     Ast.New(
                         typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                         Ast.Constant("default __new__ does not take parameters")
@@ -606,9 +622,8 @@ namespace IronPython.Runtime.Calls {
 
         private Expression GetFinalizerInitialization(Variable variable) {
             return Ast.Call(
-                null,
                 typeof(PythonOps).GetMethod("InitializeForFinalization"),
-                Ast.ReadDefined(variable)
+                Ast.ConvertHelper(Ast.ReadDefined(variable), typeof(object))
             );
         }
 

@@ -51,9 +51,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.Assign(
                     list.Variable,
                     Ast.Call(
-                        null,                                                                  // instance
-                        AstGenerator.GetHelperMethod("MakeList", ArrayUtils.EmptyTypes), // method
-                        new MSAst.Expression[0]                                                // arguments
+                        AstGenerator.GetHelperMethod("MakeList", ArrayUtils.EmptyTypes) // method
                     )                    
                 );
 
@@ -63,7 +61,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.Call(
                     list,
                     typeof(List).GetMethod("Append"),                    
-                    ag.Transform(_item)
+                    ag.TransformAsObject(_item)
                 )
             );
 

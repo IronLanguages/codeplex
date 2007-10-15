@@ -49,7 +49,7 @@ namespace IronPython.Runtime {
         private bool InitBufferObject(object o, int offset, int size) {
             //  we currently support only buffers, strings and arrays
             //  of primitives and strings
-            if (o == null || (!(_isbuffer = o is PythonBuffer) && !(_isstring = o is string) && !(_isarray = o is Array))) {
+            if (o == null || (!(_isbuffer = o is PythonBuffer) && !(_isstring = o is string) && !(_isarray = o is Array)) && !(_isarray = o is IPythonArray)) {
                 return false;
             }
             if (offset < 0) {
@@ -77,15 +77,20 @@ namespace IronPython.Runtime {
                     this._size = size;
                 }
             } else if (_isarray) { // has to be an array at this point
-                Array arr = (Array)o;
-                Type t = arr.GetType().GetElementType();
-                if (!t.IsPrimitive && t != typeof(string)) {
-                    return false;
-                }
-                if (size >= arr.Length || size == -1) {
-                    this._size = arr.Length;
+                Array arr = o as Array;
+                if (arr != null) {
+                    Type t = arr.GetType().GetElementType();
+                    if (!t.IsPrimitive && t != typeof(string)) {
+                        return false;
+                    }
+                    if (size >= arr.Length || size == -1) {
+                        this._size = arr.Length;
+                    } else {
+                        this._size = size;
+                    }
                 } else {
-                    this._size = size;
+                    IPythonArray pa = (IPythonArray)o;
+                    _size = pa.GetLength();
                 }
             }
             this._object = o;
@@ -109,6 +114,12 @@ namespace IronPython.Runtime {
         public object this[object s] {
             [SpecialName]
             get {
+                if (_isarray) {
+                    IPythonArray arr = _object as IPythonArray;
+                    if (arr != null) {
+                        return PythonOps.GetIndex(arr.ConvertToString(), s);
+                    }
+                }
                 return PythonOps.GetIndex(PythonOps.GetIndex(_object, GetSlice()), s);
             }
             [SpecialName]
@@ -173,5 +184,12 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// A marker interface so we can recognize and access sequence members on our array objects.
+    /// </summary>
+    internal interface IPythonArray : ISequence, IPythonContainer {
+        string ConvertToString();
     }
 }

@@ -52,7 +52,7 @@ def test_bigint():
     AreEqual(BigInteger(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L).OnesComplement() , -(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L + 1L ))
     Assert(BigInteger.Xor(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L,BigInteger(-1234567812345678123456781234567812345678123456781234567812345678123456781234567812345678L).OnesComplement()) , -1L)
     AreEqual(BigInteger.BitwiseAnd(0xff00ff00,BigInteger.BitwiseOr(0x00ff00ff,0xaabbaabb)) , BigInteger(0xaa00aa00))
-    AreEqual(BigInteger.Modulus(BigInteger(-9999999999999999999999999999999999999999),1000000000000000000) , -BigInteger.Modulus(9999999999999999999999999999999999999999,BigInteger(-1000000000000000000)))
+    AreEqual(BigInteger.Mod(BigInteger(-9999999999999999999999999999999999999999),1000000000000000000) , -BigInteger.Mod(9999999999999999999999999999999999999999,BigInteger(-1000000000000000000)))
 
 
     AreEqual(BigInteger.ToInt64(0x7fffffffffffffff) , 9223372036854775807L)
@@ -141,8 +141,8 @@ def test_big_2():
 def test_complex():
     AreEqual(Complex64.Add(Complex64(BigInteger(9999L),-1234),Complex64(9999,-1234).Conjugate()),Complex64.Multiply(Complex64(BigInteger(9999L)),2))
     AreEqual(Complex64.Add(Complex64(99999.99e-200,12345.88e+100),Complex64.Negate(Complex64(99999.99e-200,12345.88e+100))),Complex64.Subtract(Complex64(99999.99e-200,12345.88e+100),Complex64(99999.99e-200,12345.88e+100)))
-    AssertError(NotImplementedError,Complex64.Modulus,1e100 + 10j,100e1 - 300e20j)
-    AssertError(ZeroDivisionError,Complex64.Modulus,1e100 + 10j,0)
+    AssertError(NotImplementedError,Complex64.Mod,1e100 + 10j,100e1 - 300e20j)
+    AssertError(ZeroDivisionError,Complex64.Mod,1e100 + 10j,0)
     AreEqual (Complex64.Divide(4+2j,2) , (2 + 1j) )
 
 

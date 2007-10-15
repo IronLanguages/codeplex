@@ -478,8 +478,10 @@ def test_user_syntax_error_exception():
     x = SyntaxError()
     AreEqual(x.lineno, None)
     AreEqual(x.filename, None)
-    # None on 2.4, '' on 2.5
-    Assert(x.msg == None or x.msg == '')
+    print "CodePlex Work Item 11283 - SyntaxError.msg should be None under 2.5"
+    #AreEqual(x.msg, None)
+    print "CodePlex Work Item 11283"
+    #AreEqual(x.message, '')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, None)    
@@ -488,6 +490,8 @@ def test_user_syntax_error_exception():
     AreEqual(x.lineno, None)
     AreEqual(x.filename, None)
     AreEqual(x.msg, 'hello')
+    print "CodePlex Work Item 11283"
+    #AreEqual(x.message, 'hello')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, None)    
@@ -496,6 +500,8 @@ def test_user_syntax_error_exception():
     AreEqual(x.lineno, 2)
     AreEqual(x.filename, 1)
     AreEqual(x.msg, 'hello')
+    print "CodePlex Work Item 11283"
+    #AreEqual(x.message, '')
     AreEqual(x.offset, 3)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, 4) 

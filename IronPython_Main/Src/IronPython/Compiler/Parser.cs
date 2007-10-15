@@ -133,6 +133,10 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
+            return CreateParser(context, options, false, true);
+        }
+
+        public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim, bool implyDedent) {
             Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(options, "options");
 
@@ -154,7 +158,7 @@ namespace IronPython.Compiler {
                 throw;
             }
 
-            Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim);
+            Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim, implyDedent);
             tokenizer.Initialize(null, reader, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
@@ -484,7 +488,11 @@ namespace IronPython.Compiler {
                     }
 
                     if ((_errorCode & ErrorCodes.IncompleteStatement) != 0) {
-                        properties = SourceCodeProperties.IsIncompleteStatement;
+                        if (parsingMultiLineCmpdStmt) {
+                            properties = SourceCodeProperties.IsIncompleteStatement;
+                        } else {
+                            properties = SourceCodeProperties.IsIncompleteToken;
+                        }
                         return null;
                     }
                 }

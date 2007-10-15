@@ -36,15 +36,18 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Expression func = _function.TransformToFunctionExpression(ag);
-            
+
             Debug.Assert(func.Type == typeof(PythonFunction));
             // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
 
             return Ast.Call(
-                func, 
-                typeof(PythonFunction).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }), 
+                func,
+                typeof(PythonFunction).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }),
                 Ast.CodeContext(),
-                ag.Transform(_iterable)
+                Ast.NewArray(
+                    typeof(object[]),
+                    ag.TransformAsObject(_iterable)
+                )
             );
         }
 

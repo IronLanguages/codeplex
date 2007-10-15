@@ -311,11 +311,7 @@ namespace IronPython.Runtime.Calls {
                 nullSelf = Ast.Action.Call(action, typeof(object), nullArgs);
             } else {
                 // no instance, CheckSelf on null throws.                
-                nullSelf = Ast.Call(
-                    Ast.Convert(rule.Parameters[0], typeof(Method)),
-                    typeof(Method).GetMethod("CheckSelf"),
-                    Ast.Constant(null)
-                );
+                nullSelf = CheckSelf(rule, Ast.Null());
             }
 
             rule.SetTarget(
@@ -326,7 +322,7 @@ namespace IronPython.Runtime.Calls {
                                 Ast.Convert(rule.Parameters[0], typeof(Method)),
                                 typeof(Method).GetProperty("Self")
                             ),
-                            Ast.Constant(null)
+                            Ast.Null()
                         ),
                         Ast.Action.Call(GetNotNullCallAction(action), typeof(object), notNullArgs),
                         nullSelf
@@ -375,7 +371,7 @@ namespace IronPython.Runtime.Calls {
                                     typeof(IList<object>).GetMethod("get_Item"),
                                     Ast.Constant(0)
                                 ),
-                                Ast.Constant(null)
+                                Ast.Null()
                             )
                         ),
                         rule.Parameters[1]
@@ -391,7 +387,7 @@ namespace IronPython.Runtime.Calls {
             return Ast.Call(
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
                 typeof(Method).GetMethod("CheckSelf"),
-                self
+                Ast.ConvertHelper(self, typeof(object))
             );
         }
 

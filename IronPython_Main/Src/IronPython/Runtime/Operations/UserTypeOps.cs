@@ -15,23 +15,24 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
+using IronPython.Compiler.Generation;
 using IronPython.Hosting;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Generation;
-    using Microsoft.Scripting.Utils;
 
     public static class UserTypeOps {
         public static string ToStringReturnHelper(object o) {
@@ -104,10 +105,11 @@ namespace IronPython.Runtime.Operations {
             PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
 
             DynamicTypeSlot callSlot;
-            Statement body = rule.MakeError(context.LanguageContext.Binder,
-                Ast.Call(null,
-                typeof(PythonOps).GetMethod("UncallableError"),
-                rule.Parameters[0])
+            Statement body = rule.MakeError(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("UncallableError"),
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(object))
+                )
             );
 
             if (sdo.DynamicType.TryResolveSlot(context, Symbols.Call, out callSlot)) {
@@ -121,10 +123,13 @@ namespace IronPython.Runtime.Operations {
                             Ast.Convert(Ast.WeakConstant(callSlot), typeof(DynamicTypeSlot)),
                             typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
                             Ast.CodeContext(),
-                            rule.Parameters[0],
-                            Ast.ReadProperty(
-                                Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
-                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                            Ast.Convert(
+                                Ast.ReadProperty(
+                                    Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                    typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                                ),
+                                typeof(DynamicMixin)
                             ),
                             Ast.ReadDefined(tmp)
                         ),
@@ -157,17 +162,23 @@ namespace IronPython.Runtime.Operations {
                 //rule.SetTarget(MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), tmp, dts));
                 MakeGetAttributeRule<T>(context, action, rule, tmp);
             } else if (!(args[0] is ICustomMembers)) {
-                // fast path for accessing properties from a derived type.
+                // fast path for accessing public properties from a derived type.
                 PythonBinderHelper.MakeTest(rule, sdo.DynamicType);
 
-                Type t = args[0].GetType();
-                PropertyInfo pi = t.GetProperty(SymbolTable.IdToString(action.Name));
+                Type userType = args[0].GetType();
+                PropertyInfo pi = userType.GetProperty(SymbolTable.IdToString(action.Name));
                 if (pi != null) {
                     MethodInfo getter = pi.GetGetMethod();
                     if (getter != null && getter.IsPublic) {
-                        rule.SetTarget(rule.MakeReturn(
-                            context.LanguageContext.Binder, 
-                            Ast.Call(rule.Parameters[0], pi.GetGetMethod())));
+                        rule.SetTarget(
+                            rule.MakeReturn(
+                                context.LanguageContext.Binder, 
+                                Ast.Call(
+                                    Ast.ConvertHelper(rule.Parameters[0], getter.DeclaringType),
+                                    getter
+                                )
+                            )
+                        );
                         return rule;
                     }
                 }
@@ -201,12 +212,17 @@ namespace IronPython.Runtime.Operations {
                         rule.MakeReturn(
                             context.LanguageContext.Binder,
                             Ast.Comma(0,
-                                Ast.Assign(tmp,
-                                    Ast.Call(null, rsp.GetterMethod, rule.Parameters[0])
+                                Ast.Assign(
+                                    tmp,
+                                    Ast.SimpleCallHelper(
+                                        rsp.GetterMethod,
+                                        rule.Parameters[0]
+                                    )
                                 ),
-                                Ast.Call(null, typeof(PythonOps).GetMethod("CheckInitializedAttribute"),
+                                Ast.Call(
+                                    typeof(PythonOps).GetMethod("CheckInitializedAttribute"),
                                     Ast.Read(tmp),
-                                    rule.Parameters[0],
+                                    Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                                     Ast.Constant(SymbolTable.IdToString(action.Name))
                                 )
                             )
@@ -231,7 +247,7 @@ namespace IronPython.Runtime.Operations {
                     }
 
                     if (dts != null) {
-                        body = MakeSlotAccess<T>(context, rule, dts, body, tmp);
+                        body = MakeSlotAccess<T>(context, rule, dts, body, tmp, userType);
                     }
                 } else {
                     body = MakeOldStyleAccess(context, rule, action.Name, sdo, body, tmp);
@@ -284,11 +300,14 @@ namespace IronPython.Runtime.Operations {
                 Variable slotTmp = rule.GetTemporary(typeof(DynamicTypeSlot), "slotTmp");
                 Statement body = Ast.If(
                             Ast.Call(
-                                Ast.ReadProperty(
-                                    Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
-                                    typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                                Ast.Convert(
+                                    Ast.ReadProperty(
+                                        Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
+                                        typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                                    ),
+                                    typeof(DynamicMixin)
                                 ),
-                                typeof(DynamicType).GetMethod("TryResolveSlot"),
+                                typeof(DynamicMixin).GetMethod("TryResolveSlot"),
                                 Ast.CodeContext(),
                                 Ast.Constant(Symbols.GetAttribute),
                                 Ast.Read(slotTmp)
@@ -303,16 +322,16 @@ namespace IronPython.Runtime.Operations {
             Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
 
             return Ast.IfThenElse(
-                        Ast.Call(
-                            Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
-                            typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
-                            Ast.CodeContext(),
-                            Ast.Constant(action.Name),
-                            Ast.Read(tmp)
-                        ),
-                        rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp)),
-                        MakeMissingAttributeError<T>(context, action, typeName, rule)
-                    );
+                Ast.Call(
+                    Ast.Convert(rule.Parameters[0], typeof(ICustomMembers)),
+                    typeof(ICustomMembers).GetMethod("TryGetBoundCustomMember"),
+                    Ast.CodeContext(),
+                    Ast.Constant(action.Name),
+                    Ast.Read(tmp)
+                ),
+                rule.MakeReturn(context.LanguageContext.Binder, Ast.Read(tmp)),
+                MakeMissingAttributeError<T>(context, action, typeName, rule)
+            );
         }
 
         internal static Statement MakeCustomMembersSetBody<T>(CodeContext context, SetMemberAction action, string typeName, StandardRule<T> rule) {
@@ -326,7 +345,7 @@ namespace IronPython.Runtime.Operations {
                         typeof(ICustomMembers).GetMethod("SetCustomMember"),
                         Ast.CodeContext(),
                         Ast.Constant(action.Name),
-                        rule.Parameters[1]
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     ),
                     rule.Parameters[1]
                 )
@@ -355,10 +374,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static Statement MakeThrowingAttributeError<T>(CodeContext context, MemberAction action, string typeName, StandardRule<T> rule) {
-            return rule.MakeError(context.LanguageContext.Binder,
-                Ast.Call(null,
+            return rule.MakeError(
+                Ast.Call(
                     typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                    Ast.Constant(typeName),
+                    Ast.Constant(typeName, typeof(string)),
                     Ast.Constant(action.Name)
                 )
             );
@@ -417,10 +436,9 @@ namespace IronPython.Runtime.Operations {
                 body,
                 Ast.If(
                     Ast.Call(
-                        null,
                         typeof(UserTypeOps).GetMethod("TryGetMixedNewStyleOldStyleSlot"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                         Ast.Constant(name),
                         Ast.ReadDefined(tmp)
                     ),
@@ -439,15 +457,18 @@ namespace IronPython.Runtime.Operations {
                 body,
                 Ast.If(
                     Ast.Call(
-                        getattr,
+                        Ast.ConvertHelper(getattr, typeof(DynamicTypeSlot)),
                         typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        Ast.ReadProperty(
-                            Ast.Convert(
-                                rule.Parameters[0],
-                                typeof(ISuperDynamicObject)),
-                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        Ast.Convert(
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    rule.Parameters[0],
+                                    typeof(ISuperDynamicObject)),
+                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            ),
+                            typeof(DynamicMixin)
                         ),
                         Ast.ReadDefined(tmp)
                     ),
@@ -481,11 +502,9 @@ namespace IronPython.Runtime.Operations {
             return Ast.Block(
                 body,
                 rule.MakeError(
-                    context.LanguageContext.Binder,
                     Ast.Call(
-                        null,
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                        Ast.Constant(DynamicTypeOps.GetName(type)),
+                        Ast.Constant(DynamicTypeOps.GetName(type), typeof(string)),
                         Ast.Constant(action.Name)
                     )
                 )
@@ -493,42 +512,64 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        private static Statement MakeSlotSet<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts) {
+        private static Statement MakeSlotSet<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts, Type userType) {
             ReflectedProperty rp = dts as ReflectedProperty;
             if (rp != null) {
                 // direct dispatch to the property...                
                 MethodInfo setter = rp.Setter;
-                if (setter.IsPublic && setter.DeclaringType.IsVisible) {
-                    Expression[] args = rule.Parameters;
-                    if (setter.IsStatic && !(rp is ReflectedExtensionProperty)) {
-                        args = new Expression[] { rule.Parameters[1] };
-                    }
-
-                    return
-                        rule.MakeReturn(
-                            context.LanguageContext.Binder,
-                            Ast.Comma(
-                                new BinderHelper<T, CallAction>(context, CallAction.Make(args.Length)).MakeCallExpression(setter, args),
-                                rule.Parameters[1]
-                            )
-                        );
+                if (!setter.IsPublic || !setter.DeclaringType.IsVisible) {
+                    // find the public wrapper method corresponding to this setter
+                    // TODO: the ReflectedProperty should hold on to this method, instead of hardcoding the lookup
+                    setter = userType.GetMethod(NewTypeMaker.BaseMethodPrefix + setter.Name, ReflectionUtils.GetParameterTypes(setter.GetParameters()));
+                    Debug.Assert(setter != null);
                 }
+
+                Expression[] args = rule.Parameters;
+                if (setter.IsStatic && !(rp is ReflectedExtensionProperty)) {
+                    args = new Expression[] { rule.Parameters[1] };
+                }
+
+                return
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.Comma(
+                            new BinderHelper<T, CallAction>(context, CallAction.Make(args.Length)).MakeCallExpression(setter, args),
+                            rule.Parameters[1]
+                        )
+                    );
+            }
+
+            ReflectedField rf = dts as ReflectedField;
+            if (rf != null && rf.info.IsFamily && !rf.info.IsStatic) {
+                MethodInfo setter = userType.GetMethod(NewTypeMaker.FieldSetterPrefix + rf.info.Name);
+                Debug.Assert(setter != null);
+
+                return rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Comma(
+                        Ast.SimpleCallHelper(rule.Parameters[0], setter, rule.Parameters[1]),
+                        rule.Parameters[1]
+                    )
+                );
             }
 
             return 
                 Ast.If(
                     Ast.Call(
-                        Ast.WeakConstant(dts),
+                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(DynamicTypeSlot)),
                         typeof(DynamicTypeSlot).GetMethod("TrySetValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        Ast.ReadProperty(
-                            Ast.Convert(
-                                rule.Parameters[0],
-                                typeof(ISuperDynamicObject)),
-                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        Ast.Convert(
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    rule.Parameters[0],
+                                    typeof(ISuperDynamicObject)),
+                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            ),
+                            typeof(DynamicMixin)
                         ),
-                        rule.Parameters[1]
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     ),
                     rule.MakeReturn(context.LanguageContext.Binder, rule.Parameters[1])                
                 );
@@ -538,34 +579,79 @@ namespace IronPython.Runtime.Operations {
             return
                 Ast.If(
                     Ast.Call(
-                        Ast.WeakConstant(dts),
+                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(DynamicTypeSlot)),
                         typeof(DynamicTypeSlot).GetMethod("TryDeleteValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        Ast.ReadProperty(
-                            Ast.Convert(
-                                rule.Parameters[0],
-                                typeof(ISuperDynamicObject)),
-                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        Ast.Convert(
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    rule.Parameters[0],
+                                    typeof(ISuperDynamicObject)),
+                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            ),
+                            typeof(DynamicMixin)
                         )
                     ),
                     rule.MakeReturn(context.LanguageContext.Binder, Ast.Null())
                 );
         }
-        private static BlockStatement MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts, Statement body, Variable tmp) {
+        private static BlockStatement MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, DynamicTypeSlot dts, Statement body, Variable tmp, Type userType) {
+            ReflectedProperty rp = dts as ReflectedProperty;
+            if (rp != null) {
+                // direct dispatch to the property...                
+                MethodInfo getter = rp.Getter;
+                if (!getter.IsPublic || !getter.DeclaringType.IsVisible) {
+                    // find the public wrapper method corresponding to this getter
+                    // TODO: the ReflectedProperty should hold on to this method, instead of hardcoding the lookup
+                    getter = userType.GetMethod(NewTypeMaker.BaseMethodPrefix + getter.Name, ReflectionUtils.GetParameterTypes(getter.GetParameters()));
+                    Debug.Assert(getter != null);
+                }
+
+                Expression[] args = rule.Parameters;
+                if (getter.IsStatic && !(rp is ReflectedExtensionProperty)) {
+                    args = new Expression[0];
+                }
+
+                return Ast.Block(
+                    body,
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        new BinderHelper<T, CallAction>(context, CallAction.Make(args.Length)).MakeCallExpression(getter, args)
+                    )
+                );
+            }
+
+            ReflectedField rf = dts as ReflectedField;
+            if (rf != null && rf.info.IsFamily && !rf.info.IsStatic) {
+                MethodInfo getter = userType.GetMethod(NewTypeMaker.FieldGetterPrefix + rf.info.Name);
+                Debug.Assert(getter != null);
+
+                return Ast.Block(
+                    body,
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.SimpleCallHelper(rule.Parameters[0], getter)
+                    )
+                );
+            }
+
             return Ast.Block(
                 body,
                 Ast.If(
                     Ast.Call(
-                        Ast.WeakConstant(dts),
+                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(DynamicTypeSlot)),
                         typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        Ast.ReadProperty(
-                            Ast.Convert(
-                                rule.Parameters[0],
-                                typeof(ISuperDynamicObject)),
-                            typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        Ast.Convert(
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    rule.Parameters[0],
+                                    typeof(ISuperDynamicObject)),
+                                typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                            ),
+                            typeof(DynamicMixin)
                         ),
                         Ast.ReadDefined(tmp)
                     ),
@@ -622,7 +708,7 @@ namespace IronPython.Runtime.Operations {
                     }
 
                     if (dts != null && dts.IsSetDescriptor(context, sdo.DynamicType)) {
-                        rule.SetTarget(MakeSlotSet<T>(context, rule, dts));
+                        rule.SetTarget(MakeSlotSet<T>(context, rule, dts, args[0].GetType()));
                         return rule;
                     }
 
@@ -670,7 +756,7 @@ namespace IronPython.Runtime.Operations {
             if (!(args[0] is ICustomMembers)) {
                 if (action.Name == Symbols.Class) {
                     rule.SetTarget(
-                        rule.MakeError(context.LanguageContext.Binder,
+                        rule.MakeError(
                             Ast.New(
                                 typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                                 Ast.Constant("can't delete __class__ attribute")
@@ -740,7 +826,7 @@ namespace IronPython.Runtime.Operations {
                     context.LanguageContext.Binder,
                     Ast.Assign(tmp,
                         Ast.Convert(
-                            Ast.Call(null, rsp.SetterMethod, rule.Parameters[0], value),
+                            Ast.SimpleCallHelper(rsp.SetterMethod, rule.Parameters[0], value),
                             tmp.Type
                         )
                     )
@@ -753,7 +839,6 @@ namespace IronPython.Runtime.Operations {
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Call(
-                        null,
                         typeof(UserTypeOps).GetMethod("RemoveDictionaryValue"),
                         Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                         Ast.Constant(action.Name)
@@ -767,11 +852,10 @@ namespace IronPython.Runtime.Operations {
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Call(
-                        null,
                         typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
                         Ast.Convert(rule.Parameters[0], typeof(ISuperDynamicObject)),
                         rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
-                        rule.Parameters[1]
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                     )
                 )
             );
@@ -786,8 +870,8 @@ namespace IronPython.Runtime.Operations {
                         rule.AddTemplatedWeakConstant(typeof(DynamicTypeSlot), dts),
                         typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        rule.AddTemplatedWeakConstant(typeof(DynamicType), sdo.DynamicType),
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        rule.AddTemplatedWeakConstant(typeof(DynamicMixin), sdo.DynamicType),
                         Ast.Read(tmp)
                     ),
                     rule.MakeReturn(
@@ -813,8 +897,8 @@ namespace IronPython.Runtime.Operations {
                         Ast.WeakConstant(dts),
                         typeof(DynamicTypeSlot).GetMethod("TryGetValue"),
                         Ast.CodeContext(),
-                        rule.Parameters[0],
-                        Ast.WeakConstant(sdo.DynamicType),
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        Ast.Convert(Ast.WeakConstant(sdo.DynamicType), typeof(DynamicMixin)),
                         Ast.Read(tmp)
                     ),
                     rule.MakeReturn(
@@ -922,7 +1006,7 @@ namespace IronPython.Runtime.Operations {
                                             )
                                         )
                                     ),
-                                    rule.MakeError(context.LanguageContext.Binder, MakeIndexerError<T>(rule, item))
+                                    rule.MakeError(MakeIndexerError<T>(rule, item))
                                 )
                             );
                         } else {
@@ -939,7 +1023,7 @@ namespace IronPython.Runtime.Operations {
                             }
                         }
                     } else {
-                        rule.SetTarget(rule.MakeError(context.LanguageContext.Binder, MakeIndexerError<T>(rule, item)));
+                        rule.SetTarget(rule.MakeError(MakeIndexerError<T>(rule, item)));
                     }
 
                     return rule;
@@ -970,14 +1054,16 @@ namespace IronPython.Runtime.Operations {
 
         private static MethodCallExpression MakeIndexerError<T>(StandardRule<T> rule, SymbolId item) {
             return Ast.Call(
-                null,
                 typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(object), typeof(SymbolId) }),
-                Ast.ReadProperty(
-                    Ast.Convert(
-                        rule.Parameters[0],
-                        typeof(ISuperDynamicObject)
+                Ast.Convert(
+                    Ast.ReadProperty(
+                        Ast.Convert(
+                            rule.Parameters[0],
+                            typeof(ISuperDynamicObject)
+                        ),
+                        typeof(ISuperDynamicObject).GetProperty("DynamicType")
                     ),
-                    typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                    typeof(object)
                 ),
                 Ast.Constant(item)
             );
@@ -985,15 +1071,18 @@ namespace IronPython.Runtime.Operations {
 
         private static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, DynamicTypeSlot dts, Variable tmp) {
             return Ast.Call(
-                Ast.WeakConstant(dts),
+                Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(DynamicTypeSlot)),
                 typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                 Ast.CodeContext(),
-                rule.Parameters[0],
-                Ast.ReadProperty(
-                    Ast.Convert(
-                        rule.Parameters[0],
-                        typeof(ISuperDynamicObject)),
-                    typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                Ast.Convert(
+                    Ast.ReadProperty(
+                        Ast.Convert(
+                            rule.Parameters[0],
+                            typeof(ISuperDynamicObject)),
+                        typeof(ISuperDynamicObject).GetProperty("DynamicType")
+                    ),
+                    typeof(DynamicMixin)
                 ),
                 Ast.ReadDefined(tmp)
             );

@@ -61,7 +61,7 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
         // This is much slower than building the ruleset, since we have to look up the rule every time;
         // we do it in debug mode to make sure we can still get through this code path
         // without generating IL.
-        if (context.LanguageContext.Engine.Options.InterpretedMode) {
+        if (context.LanguageContext.Engine != null && context.LanguageContext.Engine.Options.InterpretedMode) {
             object[] args = new object[] { %(targs)s };
             using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                 bool result = (bool)rule.Test.Evaluate(context);
@@ -123,7 +123,7 @@ public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s
         rule = Context.LanguageContext.Binder.GetRule<%(prefix)sFastDynamicSiteTarget<%(ts)s>>(Context, Action, %(getargsarray)s);
 
 #if DEBUG
-        if (Context.LanguageContext.Engine.Options.InterpretedMode) {
+        if (Context.LanguageContext.Engine != null && Context.LanguageContext.Engine.Options.InterpretedMode) {
             object[] args = new object[] { %(targs)s };
             using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
                 bool result = (bool)rule.Test.Evaluate(Context);

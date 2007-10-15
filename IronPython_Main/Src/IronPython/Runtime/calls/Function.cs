@@ -64,7 +64,7 @@ namespace IronPython.Runtime.Calls {
         internal static int _MaximumDepth = 1001;          // maximum recursion depth allowed before we throw 
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
         private static int _CurrentId = 1;
-                
+
         protected PythonFunction(CodeContext context, string name, string[] argNames, object[] defaults)
             : this(context, name, argNames, defaults, FunctionAttributes.None) {
         }
@@ -180,7 +180,7 @@ namespace IronPython.Runtime.Calls {
                 }
 
                 if (cells.Count != 0) {
-                    return PythonTuple.MakeTuple(cells.ToArray()); 
+                    return PythonTuple.MakeTuple(cells.ToArray());
                 }
                 return null;
             }
@@ -277,7 +277,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         [SpecialName]
-        public override object Call(CodeContext context, params object[] args) {            
+        public override object Call(CodeContext context, params object[] args) {
             throw new NotImplementedException();
         }
 
@@ -382,7 +382,7 @@ namespace IronPython.Runtime.Calls {
                         return 2;
                     }
                     return 1;
-                
+
                 } else if ((_flags & FunctionAttributes.KeywordDictionary) != 0) {
                     return 1;
                 }
@@ -403,7 +403,7 @@ namespace IronPython.Runtime.Calls {
             if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
                 if (Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
             }
-            
+
             if (++Depth > _MaximumDepth)
                 throw PythonOps.RuntimeError("maximum recursion depth exceeded");
         }
@@ -483,7 +483,7 @@ namespace IronPython.Runtime.Calls {
             return Call(context, args);
         }
 
-        #endregion        
+        #endregion
 
         #region ICustomMembers Members
 
@@ -514,6 +514,8 @@ namespace IronPython.Runtime.Calls {
                     throw PythonOps.TypeError("__dict__ must be set to dictionary");
                 }
                 _dict = d;
+            } else if (SymbolTable.IdToString(name) == "func_closure") {
+                throw PythonOps.TypeError("func_closure on function objects is a read-only attribute");
             } else {
                 EnsureDict()[name] = value;
             }
@@ -680,12 +682,18 @@ namespace IronPython.Runtime.Calls {
             private bool _extractedKeyword;                         // true if we needed to extract a parameter from the kw list.
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
 
-            public FunctionBinderHelper(CodeContext context, CallAction action, PythonFunction function) 
+            public FunctionBinderHelper(CodeContext context, CallAction action, PythonFunction function)
                 : base(context, action) {
                 _func = function;
             }
 
             public StandardRule<T> MakeRule(object[] args) {
+                //Remove the passed in instance argument if present
+                int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
+                if (instanceIndex > -1) {
+                    args = ArrayUtils.RemoveAt(args, instanceIndex);
+                }
+
                 _rule.SetTarget(MakeTarget(args));
                 _rule.SetTest(MakeTest());
 
@@ -704,16 +712,16 @@ namespace IronPython.Runtime.Calls {
 
                 return MakeBadArgumentRule();
             }
-            
+
             /// <summary>
             /// Makes the test for our rule.
             /// </summary>
             private Expression MakeTest() {
                 if (!Action.Signature.HasKeywordArgument()) {
                     return MakeSimpleTest();
-                } 
+                }
 
-                return MakeComplexTest();                
+                return MakeComplexTest();
             }
 
             /// <summary>
@@ -767,16 +775,19 @@ namespace IronPython.Runtime.Calls {
                 Expression[] exprArgs = new Expression[_func.NormalArgumentCount + _func.ExtraArguments];
                 List<Expression> extraArgs = null;
                 Dictionary<SymbolId, Expression> namedArgs = null;
+                int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
 
                 // walk all the provided args and find out where they go...
                 for (int i = 0; i < args.Length; i++) {
+                    int parameterIndex = (instanceIndex == -1 || i < instanceIndex) ? i + 1 : i + 2;
+
                     switch (Action.Signature.GetArgumentKind(i)) {
                         case ArgumentKind.Dictionary:
-                            MakeDictionaryCopy(_rule.Parameters[i + 1]); 
+                            MakeDictionaryCopy(_rule.Parameters[parameterIndex]);
                             continue;
 
                         case ArgumentKind.List:
-                            _userProvidedParams = _rule.Parameters[i + 1];
+                            _userProvidedParams = _rule.Parameters[parameterIndex];
                             continue;
 
                         case ArgumentKind.Named:
@@ -789,7 +800,7 @@ namespace IronPython.Runtime.Calls {
                                         return null;
                                     }
 
-                                    exprArgs[j] = _rule.Parameters[i + 1];
+                                    exprArgs[j] = _rule.Parameters[parameterIndex];
                                     foundName = true;
                                     break;
                                 }
@@ -797,16 +808,16 @@ namespace IronPython.Runtime.Calls {
 
                             if (!foundName) {
                                 if (namedArgs == null) namedArgs = new Dictionary<SymbolId, Expression>();
-                                namedArgs[Action.Signature.GetArgumentName(i)] = _rule.Parameters[i + 1];
+                                namedArgs[Action.Signature.GetArgumentName(i)] = _rule.Parameters[parameterIndex];
                             }
                             continue;
                     }
 
                     if (i < _func.NormalArgumentCount) {
-                        exprArgs[i] = _rule.Parameters[i + 1];
+                        exprArgs[i] = _rule.Parameters[parameterIndex];
                     } else {
                         if (extraArgs == null) extraArgs = new List<Expression>();
-                        extraArgs.Add(_rule.Parameters[i + 1]);
+                        extraArgs.Add(_rule.Parameters[parameterIndex]);
                     }
                 }
 
@@ -814,7 +825,7 @@ namespace IronPython.Runtime.Calls {
                     if (namedArgs != null && _func.ExpandDictPosition == -1) {
                         MakeUnexpectedKeywordError(namedArgs);
                     }
-                    
+
                     return null;
                 }
 
@@ -842,12 +853,12 @@ namespace IronPython.Runtime.Calls {
                 }
 
                 if (!TryFinishList(exprArgs, paramsArgs) ||
-                    !TryFinishDictionary(exprArgs, namedArgs)) 
+                    !TryFinishDictionary(exprArgs, namedArgs))
                     return false;
 
                 // add check for extra parameters.
                 AddCheckForNoExtraParameters(exprArgs);
-               
+
                 return true;
             }
 
@@ -861,18 +872,18 @@ namespace IronPython.Runtime.Calls {
                             // we didn't extract any params, we can re-use a Tuple or
                             // make a single copy.
                             exprArgs[_func.ExpandListPosition] = Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("GetOrCopyParamsTuple"),
-                                _userProvidedParams);
+                                Ast.ConvertHelper(_userProvidedParams, typeof(object))
+                            );
                         } else {
                             // user provided a sequence to be expanded, and we may have used it,
                             // or we have extra args.
                             EnsureParams();
 
                             exprArgs[_func.ExpandListPosition] = Ast.Call(
-                                null,
                                 typeof(PythonTuple).GetMethod("Make"),
-                                Ast.ReadDefined(_params));
+                                Ast.ConvertHelper(Ast.ReadDefined(_params), typeof(object))
+                            );
 
                             if (paramsArgs != null) {
                                 MakeParamsAddition(paramsArgs);
@@ -902,8 +913,7 @@ namespace IronPython.Runtime.Calls {
 
                 _init.Add(
                     Ast.Statement(
-                        Ast.Call(
-                            null,
+                        Ast.ComplexCallHelper(
                             typeof(PythonOps).GetMethod("AddParamsArguments"),
                             args.ToArray()
                         )
@@ -939,14 +949,17 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             /// <param name="kvp"></param>
             private void MakeDictionaryAddition(KeyValuePair<SymbolId, Expression> kvp) {
-                _init.Add(Ast.Statement(
-                    Ast.Call(
-                        null,
-                        typeof(PythonOps).GetMethod("AddDictionaryArgument"),
-                        GetFunctionParam(),
-                        Ast.Constant(SymbolTable.IdToString(kvp.Key)),
-                        kvp.Value,
-                        Ast.ReadDefined(_dict))));
+                _init.Add(
+                    Ast.Statement(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("AddDictionaryArgument"),
+                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                            Ast.Constant(SymbolTable.IdToString(kvp.Key)),
+                            Ast.ConvertHelper(kvp.Value, typeof(object)),
+                            Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IAttributesCollection))
+                        )
+                    )
+                );
             }
 
             /// <summary>
@@ -963,25 +976,34 @@ namespace IronPython.Runtime.Calls {
                     if (_func.ExpandListPosition == -1) {
                         if (_params != null) {
                             // we used some params, they should have gone down to zero...
-                            tests.Add(Ast.Call(null,
-                                typeof(PythonOps).GetMethod("CheckParamsZero"),
-                                GetFunctionParam(),
-                                Ast.ReadDefined(_params)));
-                        } else if(_userProvidedParams != null) {
+                            tests.Add(
+                                Ast.Call(
+                                    typeof(PythonOps).GetMethod("CheckParamsZero"),
+                                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                    Ast.ReadDefined(_params)
+                                )
+                            );
+                        } else if (_userProvidedParams != null) {
                             // the user provided params, we didn't need any, and they should be zero
-                            tests.Add(Ast.Call(null,
-                                typeof(PythonOps).GetMethod("CheckUserParamsZero"),
-                                GetFunctionParam(),
-                                _userProvidedParams));
+                            tests.Add(
+                                Ast.Call(
+                                    typeof(PythonOps).GetMethod("CheckUserParamsZero"),
+                                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                    Ast.ConvertHelper(_userProvidedParams, typeof(object))
+                                )
+                            );
                         }
-                    } 
+                    }
 
                     // test that we've used all the extra named arguments
                     if (_func.ExpandDictPosition == -1 && _dict != null) {
-                        tests.Add(Ast.Call(null,
-                            typeof(PythonOps).GetMethod("CheckDictionaryZero"),
-                            GetFunctionParam(),
-                            Ast.ReadDefined(_dict)));
+                        tests.Add(
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("CheckDictionaryZero"),
+                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IDictionary))
+                            )
+                        );
                     }
 
                     // if we needed any tests have them run after the last argument.
@@ -1007,7 +1029,7 @@ namespace IronPython.Runtime.Calls {
                 } else if (_dict != null) {
                     // expanded dict
                     return ExtractDictionaryArgument(name);
-                } 
+                }
 
                 // missing argument, no default, no expanded params or dict.
                 return null;
@@ -1019,12 +1041,12 @@ namespace IronPython.Runtime.Calls {
             private Expression ExtractDictionaryArgument(string name) {
                 _extractedKeyword = true;
 
-                return Ast.Call(null,
+                return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractDictionaryArgument"),
-                    GetFunctionParam(),                          // function
-                    Ast.Constant(name),                          // name
-                    Ast.Constant(Action.Signature.ArgumentCount),// arg count
-                    Ast.ReadDefined(_dict)                       // dictionary
+                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),              // function
+                    Ast.Constant(name, typeof(string)),                                         // name
+                    Ast.Constant(Action.Signature.ArgumentCount),                               // arg count
+                    Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IAttributesCollection))    // dictionary
                 );
             }
 
@@ -1036,9 +1058,10 @@ namespace IronPython.Runtime.Calls {
                 if (_dict == null && _userProvidedParams == null) {
                     // we can pull the default directly
                     return Ast.Call(
-                      GetFunctionParam(),
+                      Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
                       typeof(PythonFunction).GetMethod("GetDefaultValue"),
-                      Ast.Constant(dfltIndex));
+                      Ast.Constant(dfltIndex)
+                  );
                 } else {
                     // we might have a conflict, check the default last.
                     if (_userProvidedParams != null) {
@@ -1046,15 +1069,14 @@ namespace IronPython.Runtime.Calls {
                     }
                     _extractedKeyword = true;
                     return Ast.Call(
-                        null,
                         typeof(PythonOps).GetMethod("GetFunctionParameterValue"),
-                        GetFunctionParam(),
+                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
                         Ast.Constant(dfltIndex),
-                        Ast.Constant(_func.ArgNames[index]),
-                        VariableOrNull(_params),
-                        VariableOrNull(_dict)
+                        Ast.Constant(_func.ArgNames[index], typeof(string)),
+                        VariableOrNull(_params, typeof(List)),
+                        VariableOrNull(_dict, typeof(IAttributesCollection))
                     );
-                }                
+                }
             }
 
             /// <summary>
@@ -1066,13 +1088,13 @@ namespace IronPython.Runtime.Calls {
 
                 _extractedKeyword = true;
 
-                return Ast.Call(null,
+                return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractAnyArgument"),
-                    GetFunctionParam(),         // function
-                    Ast.Constant(name),         // name
-                    Ast.ReadDefined(_paramsLen),    // arg count
-                    Ast.ReadDefined(_params),       // params list
-                    Ast.ReadDefined(_dict)          // dictionary
+                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),  // function
+                    Ast.Constant(name, typeof(string)),                             // name
+                    Ast.ReadDefined(_paramsLen),                                    // arg count
+                    Ast.ReadDefined(_params),                                       // params list
+                    Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IDictionary))  // dictionary
                 );
             }
 
@@ -1094,19 +1116,22 @@ namespace IronPython.Runtime.Calls {
                     _extractedParams = true;
                 }
 
-                return Ast.Call(null,
+                return Ast.Call(
                     typeof(PythonOps).GetMethod("ExtractParamsArgument"),
-                    GetFunctionParam(),                             // function
-                    Ast.Constant(Action.Signature.ArgumentCount),   // arg count
-                    Ast.ReadDefined(_params)                        // list
+                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),  // function
+                    Ast.Constant(Action.Signature.ArgumentCount),                   // arg count
+                    Ast.ReadDefined(_params)                                        // list
                 );
             }
 
-            private Expression VariableOrNull(Variable var) {                
+            private Expression VariableOrNull(Variable var, Type type) {
                 if (var != null) {
-                    return Ast.ReadDefined(var);
+                    return Ast.ConvertHelper(
+                        Ast.ReadDefined(var),
+                        type
+                    );
                 }
-                return Ast.Null();
+                return Ast.Null(type);
             }
 
             /// <summary>
@@ -1142,7 +1167,7 @@ namespace IronPython.Runtime.Calls {
             private Expression GetContextExpression() {
                 return Ast.ReadProperty(GetFunctionParam(), _func.GetType().GetProperty("Context"));
             }
-            
+
             /// <summary>
             /// Called when the user is expanding a dictionary - we copy the user
             /// dictionary and verify that it contains only valid string names.
@@ -1157,10 +1182,9 @@ namespace IronPython.Runtime.Calls {
                         Ast.Assign(
                             _dict,
                             Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("CopyAndVerifyDictionary"),
-                                GetFunctionParam(),
-                                userDict
+                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                Ast.ConvertHelper(userDict, typeof(IDictionary))
                             )
                         )
                     )
@@ -1178,13 +1202,14 @@ namespace IronPython.Runtime.Calls {
 
                 EnsureInit();
 
-                _init.Add(Ast.Statement(
-                        Ast.Assign(_params,
+                _init.Add(
+                    Ast.Statement(
+                        Ast.Assign(
+                            _params,
                             Ast.Call(
-                                null,
                                 typeof(PythonOps).GetMethod("CopyAndVerifyParamsList"),
-                                GetFunctionParam(),
-                                userList
+                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                Ast.ConvertHelper(userList, typeof(object))
                             )
                         )
                     )
@@ -1217,23 +1242,25 @@ namespace IronPython.Runtime.Calls {
                 Expression[] dictCreator = new Expression[argCount];
                 BoundExpression dictRef = Ast.ReadDefined(_dict);
 
-                dictCreator[0] = Ast.Assign(_dict,
-                    Ast.Call(null,
+                dictCreator[0] = Ast.Assign(
+                    _dict,
+                    Ast.Call(
                         typeof(PythonOps).GetMethod("MakeDict"),
                         Ast.Zero()
                     )
                 );
-                
+
                 dictCreator[1] = dictRef;
-                
+
                 if (namedArgs != null) {
                     int index = 2;
                     foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
                         dictCreator[index++] = Ast.Call(
                             dictRef,
                             typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
-                            Ast.Constant(SymbolTable.IdToString(kvp.Key)),
-                            kvp.Value);
+                            Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object)),
+                            Ast.ConvertHelper(kvp.Value, typeof(object))
+                        );
                     }
                 }
 
@@ -1245,9 +1272,15 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             private Expression MakeParamsTuple(List<Expression> extraArgs) {
                 if (extraArgs != null) {
-                    return Ast.Call(null, typeof(PythonOps).GetMethod("MakeTuple"), extraArgs.ToArray());
-                } 
-                return Ast.Call(null, typeof(PythonOps).GetMethod("MakeTuple"));                
+                    return Ast.ComplexCallHelper(
+                        typeof(PythonOps).GetMethod("MakeTuple"),
+                        extraArgs.ToArray()
+                    );
+                }
+                return Ast.Call(
+                    typeof(PythonOps).GetMethod("MakeTuple"),
+                    Ast.NewArray(typeof(object[]))
+                );
             }
 
             /// <summary>
@@ -1255,7 +1288,7 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             private Statement MakeFunctionInvoke(Expression[] invokeArgs) {
                 return _rule.MakeReturn(Context.LanguageContext.Binder,
-                    Ast.Call(
+                    Ast.SimpleCallHelper(
                         Ast.Convert(
                             Ast.ReadProperty(
                                 GetFunctionParam(),
@@ -1298,13 +1331,18 @@ namespace IronPython.Runtime.Calls {
             /// Adds a try/finally which enforces recursion limits around the target method.
             /// </summary>
             private Statement AddRecursionCheck(Statement stmt) {
-                if (EnforceRecursion) {                    
+                if (EnforceRecursion) {
                     stmt = Ast.Block(
-                        Ast.Statement(Ast.Call(null, typeof(PythonFunction).GetMethod("PushFrame"))),
+                        Ast.Statement(
+                            Ast.Call(typeof(PythonFunction).GetMethod("PushFrame"))
+                        ),
                         Ast.TryFinally(
                             stmt,
                             Ast.Statement(
-                                Ast.Call(null, typeof(PythonFunction).GetMethod("PopFrame")))));
+                                Ast.Call(typeof(PythonFunction).GetMethod("PopFrame"))
+                            )
+                        )
+                    );
                 }
                 return stmt;
             }
@@ -1316,20 +1354,21 @@ namespace IronPython.Runtime.Calls {
                     break;
                 }
 
-                _error = Ast.Call(null,
+                _error = Ast.Call(
                     typeof(PythonOps).GetMethod("UnexpectedKeywordArgumentError"),
-                    GetFunctionParam(),
-                    Ast.Constant(name));
+                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                    Ast.Constant(name, typeof(string))
+                );
             }
 
             private Statement MakeBadArgumentRule() {
                 if (_error != null) {
-                    return _rule.MakeError(Context.LanguageContext.Binder, _error);
+                    return _rule.MakeError(_error);
                 }
 
-                return _rule.MakeError(Context.LanguageContext.Binder,
+                return _rule.MakeError(
                     Ast.Call(
-                        GetFunctionParam(),
+                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
                         typeof(PythonFunction).GetMethod(Action.Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "BadArgumentError"),
                         Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                     )
@@ -1357,7 +1396,7 @@ namespace IronPython.Runtime.Calls {
 
         public FunctionN(CodeContext context, string name, CallTargetWithContextN target, string[] argNames, object[] defaults, FunctionAttributes flags)
             : base(context, name, argNames, defaults, flags) {
-            this.target = target;            
+            this.target = target;
         }
 
         [SpecialName]

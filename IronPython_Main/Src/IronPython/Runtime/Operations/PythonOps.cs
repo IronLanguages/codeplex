@@ -2230,10 +2230,10 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="context"></param>
         /// <param name="value"></param>
-        public static void PrintExpressionValue(CodeContext context, object value) {
+        public static void PrintExpressionValue(object value) {
             if (value != null) {
                 Print(PythonOps.StringRepr(value));
-                SystemState.Instance.BuiltinModuleInstance.SetMemberAfter(context, "_", value);
+                SystemState.Instance.BuiltinModuleInstance.SetMemberAfter("_", value);
             }
         }
 
@@ -2853,12 +2853,12 @@ namespace IronPython.Runtime.Operations {
         public static Slice MakeOldStyleSlice(OldInstance self, object start, object stop) {
             Nullable<int> length = null;
 
-            if (start == Type.Missing && stop == Type.Missing) {
+            if (start == MissingParameter.Value && stop == MissingParameter.Value) {
                 return new Slice(0, Int32.MaxValue);
             }
 
             object newStart = FixSliceIndex(self, start, ref length);
-            if (newStart == Type.Missing) {
+            if (newStart == MissingParameter.Value) {
                 if (IsNumericObject(stop)) {
                     newStart = 0;
                 } else {
@@ -2867,7 +2867,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             object newStop = FixSliceIndex(self, stop, ref length);
-            if (newStop == Type.Missing) {
+            if (newStop == MissingParameter.Value) {
                 if (IsNumericObject(start)) {
                     newStop = Int32.MaxValue;
                 } else {

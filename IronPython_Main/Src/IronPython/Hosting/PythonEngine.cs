@@ -68,7 +68,7 @@ namespace IronPython.Hosting {
 
         public override string VersionString {
             get {
-                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A4", GetFileVersion(), Environment.Version);
+                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A5", GetFileVersion(), Environment.Version);
             }
         }
         

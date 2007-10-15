@@ -15,14 +15,17 @@
 
 using System;
 using System.Reflection.Emit;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ThrowExpression : Expression {
+    public class ThrowStatement : Statement {
         private readonly Expression _val;
 
-        internal ThrowExpression(Expression value) {
+        internal ThrowStatement(SourceSpan span, Expression value) :
+            base(span) {
             _val = value;
         }
 
@@ -32,25 +35,20 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public override Type Type {
-            get {
-                return typeof(void);
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
+        protected override object DoExecute(CodeContext context) {
             if (_val == null) {
-                throw ExceptionHelpers.LastException;
+                throw TryStatement.LastEvalException;
             } else {
-                throw (Exception)context.LanguageContext.Binder.Convert(_val.Evaluate(context), typeof(Exception));
+                throw (Exception)_val.Evaluate(context);
             }
         }
 
         public override void Emit(CodeGen cg) {
+            cg.EmitPosition(Start, End);
             if (_val == null) {
                 cg.Emit(OpCodes.Rethrow);
             } else {
-                _val.EmitAs(cg, typeof(Exception));
+                _val.Emit(cg);
                 cg.Emit(OpCodes.Throw);
             }
         }
@@ -70,12 +68,23 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static ThrowExpression Rethrow() {
-            return Throw(null);
+        public static ThrowStatement Rethrow() {
+            return Throw(SourceSpan.None, null);
         }
 
-        public static ThrowExpression Throw(Expression value) {
-            return new ThrowExpression(value);
+        public static ThrowStatement Rethrow(SourceSpan span) {
+            return Throw(span, null);
+        }
+
+        public static ThrowStatement Throw(Expression value) {
+            return Throw(SourceSpan.None, value);
+        }
+
+        public static ThrowStatement Throw(SourceSpan span, Expression value) {
+            if (value != null) {
+                Contract.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
+            }
+            return new ThrowStatement(span, value);
         }
     }
 }

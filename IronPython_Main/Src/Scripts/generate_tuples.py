@@ -28,6 +28,7 @@ def gen_generic_args(i, type='object'):
     return ', '.join([type]*i)
 
 def gen_tuple(cw, size, prevSize):
+	cw.write('[GeneratedCode("DLR", "2.0")]')
 	cw.enter_block('public class Tuple<%s> : %s' % (make_arg_list(size), get_base(prevSize)))
 	
 	cw.write('public Tuple() { }')
@@ -54,7 +55,7 @@ def gen_tuple(cw, size, prevSize):
 	cw.enter_block('switch(index)')
 	for i in range(0, size):
 		cw.write('case %d: return Item%03d;' % (i, i))
-	cw.write('default: throw new ArgumentException("index");')
+	cw.write('default: throw new ArgumentOutOfRangeException("index");')
 	cw.exit_block()
 	cw.exit_block()
 
@@ -63,7 +64,7 @@ def gen_tuple(cw, size, prevSize):
 	cw.enter_block('switch(index)')
 	for i in range(0, size):
 		cw.write('case %d: Item%03d = (T%d)value; break;' % (i, i, i))
-	cw.write('default: throw new ArgumentException("index");')
+	cw.write('default: throw new ArgumentOutOfRangeException("index");')
 	cw.exit_block()
 	cw.exit_block()
 
@@ -93,7 +94,7 @@ def gen_get_size(cw):
     ssizes = sorted(tuples)
 
     first = True
-    cw.enter_block("if (size <= NewTuple.MaxSize)")
+    cw.enter_block("if (size <= Tuple.MaxSize)")
     for i in ssizes[:-1]:
         gen_one_pgf(cw, i, first)
         first = False

@@ -196,6 +196,7 @@ namespace IronPython.Runtime.Operations {
             // only do FancyRepr for reflected types.
             if (pt.IsSystemType) {
                 string toStr = self.ToString();
+                if (toStr == null) toStr = String.Empty;
 
                 // get the type name to display (CLI name or Python name)
                 Type type = pt.UnderlyingSystemType;

@@ -111,8 +111,8 @@ else:
 
         math_testdir        = path_combine(external_dir, r'Math')
         parrot_testdir      = path_combine(external_dir, r'parrotbench')
-        lib_testdir         = path_combine(external_dir, r'24\Lib')
-        private_testdir     = path_combine(external_dir, r'24\Lib\test')
+        lib_testdir         = path_combine(external_dir, r'25\Lib')
+        private_testdir     = path_combine(external_dir, r'25\Lib\test')
 
         temporary_dir   = path_combine(get_temp_dir(), "IronPython")
         ensure_directory_present(temporary_dir)
@@ -121,7 +121,7 @@ else:
 
         if is_cli: 
             ipython_executable  = sys.executable
-            cpython_executable  = path_combine(external_dir, r'24\python.exe')
+            cpython_executable  = path_combine(external_dir, r'25\python.exe')
         else: 
             ipython_executable  = path_combine(sys.prefix, r'ipy.exe')
             cpython_executable  = sys.executable
@@ -153,12 +153,13 @@ def perserve_syspath():
 def restore_syspath():  
     sys.path = _saved_syspath[:]
 
+if is_cli or is_silverlight:
+    import clr
+    clr.AddReference("IronPython")
 
 # This has to be a function since the InterpretedMode option can change at runtime
 def is_interpreted():
     if is_cli or is_silverlight:
-        import clr
-        clr.AddReference("IronPython")
         import IronPython
         return IronPython.Hosting.PythonEngine.CurrentEngine.Options.InterpretedMode
     else:
@@ -380,9 +381,9 @@ def print_failures(failures):
     
         if is_cli:
             if '-X:ExceptionDetail' in System.Environment.GetCommandLineArgs():
+                from IronPython.Hosting import PythonEngine
                 print 'CLR Exception: ',
-                ex = ex.clsException
-                print ex
+                print PythonEngine.CurrentEngine.FormatException(ex.clsException)
         
 def run_test(mod_name, noOutputPlease=False):
     import sys
@@ -409,8 +410,7 @@ def run_test(mod_name, noOutputPlease=False):
                             # restore std-in / std-err incase the test corrupted it                
                             sys.stdout = stdout
                             sys.stderr = stderr
-                        if not is_silverlight:
-                            print
+                        print
                             
                     except:
                         failures.append( (name, sys.exc_info()) )

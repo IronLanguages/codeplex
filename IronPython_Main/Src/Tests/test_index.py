@@ -29,31 +29,35 @@ def test_string():
     x[1]="Python"
     Assert(x[0] == "Hello")
     Assert(x[1] == "Python")
-    
-@skip('win32', 'silverlight')
+
+@skip('win32')
 def test_hashtable():
-    x = System.Collections.Hashtable()
-    x["Hi"] = "Hello"
-    x[1] = "Python"
-    x[10,] = "Tuple Int"
-    x["String",] = "Tuple String"
-    x[2.4,] = "Tuple Double"
+    hashtables = [System.Collections.Generic.Dictionary[object, object]()]
+    if not is_silverlight: # Hashtable isn't available in Silverlight
+        hashtables.append(System.Collections.Hashtable())
     
-    Assert(x["Hi"] == "Hello")
-    Assert(x[1] == "Python")
-    Assert(x[(10,)] == "Tuple Int")
-    Assert(x[("String",)] == "Tuple String")
-    Assert(x[(2.4,)] == "Tuple Double")
-    
-    success=False
-    try:
-        x[1,2] = 10
-    except TypeError, e:
-        success=True
-    Assert(success)
-    
-    x[(1,2)] = "Tuple key in hashtable"
-    Assert(x[1,2,] == "Tuple key in hashtable")
+    for x in hashtables:
+        x["Hi"] = "Hello"
+        x[1] = "Python"
+        x[10,] = "Tuple Int"
+        x["String",] = "Tuple String"
+        x[2.4,] = "Tuple Double"
+        
+        Assert(x["Hi"] == "Hello")
+        Assert(x[1] == "Python")
+        Assert(x[(10,)] == "Tuple Int")
+        Assert(x[("String",)] == "Tuple String")
+        Assert(x[(2.4,)] == "Tuple Double")
+        
+        success=False
+        try:
+            x[1,2] = 10
+        except TypeError, e:
+            success=True
+        Assert(success)
+        
+        x[(1,2)] = "Tuple key in hashtable"
+        Assert(x[1,2,] == "Tuple key in hashtable")
 
 @skip('win32')
 def test_multidim_array():
@@ -120,7 +124,7 @@ def test_property_access():
                 x[i, j, k] = i + j + k
                 Assert(x[i, j, k] == i + j + k)
 
-@skip('win32 silverlightbug?')
+@skip('win32')
 def test_multiple_indexes():
     x = MultipleIndexes()
     

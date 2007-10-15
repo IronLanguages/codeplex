@@ -327,13 +327,13 @@ namespace IronPython.Runtime.Operations {
                 StandardRule<T> res = new StandardRule<T>();
                 res.SetTest(MakeTest<T>(args, strAttr, res));
                 res.SetTarget(
-                    res.MakeReturn(context.LanguageContext.Binder,
+                    res.MakeReturn(
+                        context.LanguageContext.Binder,
                         Ast.Call(
-                            null,
                             typeof(ObjectOps).GetMethod("__getattribute__"),
                             Ast.CodeContext(),
-                            GetTargetObject<T>(res, args),
-                            Ast.Constant(strAttr)
+                            Ast.ConvertHelper(GetTargetObject<T>(res, args), typeof(object)),
+                            Ast.Constant(strAttr, typeof(string))
                         )
                     )
                 );
@@ -346,7 +346,7 @@ namespace IronPython.Runtime.Operations {
                 return Ast.AndAlso(
                     PythonBinderHelper.MakeTestForTypes(res, DynamicTypeOps.ObjectTypes(args), 0),
                     Ast.Call(
-                        Ast.Constant(strAttr),
+                        Ast.Constant(strAttr, typeof(string)),
                         typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].Type }),
                         res.Parameters[res.ParameterCount - 1]
                     )
@@ -356,7 +356,7 @@ namespace IronPython.Runtime.Operations {
             private Expression GetTargetObject<T>(StandardRule<T> rule, object[] args) {
                 if (args.Length == 2) {
                     return Ast.Call(
-                        rule.Parameters[0],
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(BoundBuiltinFunction)),
                         typeof(BoundBuiltinFunction).GetMethod("get_Self")
                     );
                 } else {

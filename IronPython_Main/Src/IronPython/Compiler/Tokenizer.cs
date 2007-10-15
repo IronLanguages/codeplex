@@ -88,12 +88,12 @@ namespace IronPython.Compiler {
         private State _state;
 
         // tokenizer properties:
-        private readonly bool _verbatim;
+        private readonly bool _verbatim, _implyDedent;
         private SourceUnit _sourceUnit;
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
         private Severity _indentationInconsistencySeverity;
-        private bool _endContinues;
+        private bool _endContinues;        
 
         public object CurrentState {
             get {
@@ -154,7 +154,11 @@ namespace IronPython.Compiler {
             : this(errorSink, false) {
         }
 
-        public Tokenizer(ErrorSink errorSink, bool verbatim) {
+        public Tokenizer(ErrorSink errorSink, bool verbatim)
+            : this(errorSink, verbatim, true) {
+        }
+
+        public Tokenizer(ErrorSink errorSink, bool verbatim, bool implyDedent) {
             Contract.RequiresNotNull(errorSink, "errorSink");
 
             _errors = errorSink;
@@ -162,6 +166,7 @@ namespace IronPython.Compiler {
             _state = new State(null);
             _sourceUnit = null;
             _buffer = null;
+            _implyDedent = implyDedent;
         }
 
         public void Initialize(SourceUnit sourceUnit) {
@@ -736,7 +741,9 @@ namespace IronPython.Compiler {
 
                     case EOF:
                         _buffer.MarkMultiLineTokenEnd();
-                        SetIndent(0, null);
+                        if (_implyDedent) {
+                            SetIndent(0, null);
+                        }
                         return true;
 
                     default:

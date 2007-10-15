@@ -17,7 +17,6 @@
 
 from lib.assert_util import *
 
-@skip('silverlightbug?')
 def test_sanity():
     ## module
     global __doc__
@@ -159,10 +158,11 @@ def test_func_meth_class():
                 dd.m_1, dd.m_2, dd.m_3, dd.m_4):
         x()
 
-@runonly('cli')
+@skip('win32')
 def test_clr_doc():
     import System
-    Assert(System.Collections.ArrayList.__doc__.find("ArrayList()") != -1)
+    Assert(System.Collections.Generic.List.__doc__.find("List`1()") != -1)
+    Assert(System.Collections.Generic.List.__doc__.find("IEnumerable[T] collection") != -1)
 
     # static (bool, float) TryParse(str s)
     Assert(System.Double.TryParse.__doc__.index('(bool, float)') >= 0)
@@ -171,6 +171,11 @@ def test_clr_doc():
 def test_none():
     AreEqual(None.__doc__, None)
     
+    
+def test_types():
+    AreEqual(Ellipsis.__doc__, None)
+    AreEqual(NotImplemented.__doc__, None)
+
 @disabled("CodePlex Work Item 10823")
 def test_builtin_nones():
     for x in [Ellipsis, None, NotImplemented, exit, quit, ]:

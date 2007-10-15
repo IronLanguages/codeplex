@@ -21,6 +21,8 @@
 TODO - essentially all the tests currently here are barebones sanity checks
 to ensure a minimal level of functionality exists. In other words, there are 
 many special cases that are not being covered *yet*.
+
+Disabled Silverlight tests are due to Rowan #304084
 '''
 
 from lib.assert_util import *
@@ -233,7 +235,7 @@ def test_unicode_internal_encode():
     AssertError(TypeError, codecs.unicode_internal_encode)
     AssertError(TypeError, codecs.unicode_internal_encode, 'abc', 'def', 'qrt')
 
-@skip('silverlightbug?')
+@skip('silverlight')
 def test_utf_16_be_decode():
     '''
     '''
@@ -250,7 +252,7 @@ def test_utf_16_be_encode():
     AreEqual(new_str, '\x00a\x00b\x00c')
     AreEqual(size, 3)
     
-@skip('silverlightbug?')
+@skip('silverlight')
 def test_utf_16_decode():
     '''
     '''
@@ -259,7 +261,7 @@ def test_utf_16_decode():
     AreEqual(new_str, u'\u6261')
     AreEqual(size, 2)
 
-@skip('silverlightbug?')
+@skip('silverlight')
 def test_utf_16_le_decode():
     '''
     '''

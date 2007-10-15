@@ -232,12 +232,11 @@ def test_partial_dicts():
     response = ipi.ExecuteLine("}")
     Assert("{'joe': 42, 3: 45}" in response)
     
-    #CodePlex Work Item 5904
-    #ipi.ExecutePartialLine("{")
-    #ipi.ExecutePartialLine("")
-    #ipi.ExecutePartialLine("")
-    #response = ipi.ExecuteLine("}")
-    #Assert("{}" in response)
+    ipi.ExecutePartialLine("{")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine("")
+    response = ipi.ExecuteLine("}")
+    Assert("{}" in response)
 
     ipi.End()
 
@@ -404,5 +403,61 @@ def test_ipy_dash_S():
     response = ipi.ExecuteLine("print sys.path")
     Assert(response.find('Lib') != -1)
 
+def test_startup_dir():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    response = ipi.ExecuteLine("print dir()")
+    AreEqual(sorted(eval(response)), sorted(['__builtins__', '__doc__', '__name__']))
 
+def test_ipy_dash_m():
+    import sys
+    for path in sys.path:
+        if path.find('Lib') != -1:
+            filename = System.IO.Path.Combine(path, 'somemodule.py')
+            break
+
+    try:
+        f = file(filename, 'w')
+        f.write('print "hello"\n')
+        f.write('import sys\n')
+        f.write('print sys.argv')
+        f.close()
+        
+        # simple case works
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule")
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(res, True) # run should have worked
+        AreEqual(exit, 0)   # should have returned 0
+        output = output.replace('\r\n', '\n')
+        lines = output.split('\n')
+        AreEqual(lines[0], 'hello') 
+        AreEqual(eval(lines[1]), [filename])
+        
+        # we receive any arguments in sys.argv
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule foo bar")
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(res, True) # run should have worked
+        AreEqual(exit, 0)   # should have returned 0
+        output = output.replace('\r\n', '\n')
+        lines = output.split('\n')
+        AreEqual(lines[0], 'hello') 
+        AreEqual(eval(lines[1]), [filename, 'foo', 'bar'])
+
+        f = file(filename, 'w')
+        f.write('print "hello"\n')
+        f.write('import sys\n')
+        f.write('sys.exit(1)')
+        f.close()
+        
+        # sys.exit works
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m somemodule")
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(res, True) # run should have worked
+        AreEqual(exit, 1)   # should have returned 0
+        output = output.replace('\r\n', '\n')
+        lines = output.split('\n')
+        AreEqual(lines[0], 'hello')               
+    finally:
+        nt.unlink(filename)
+    
 run_test(__name__)

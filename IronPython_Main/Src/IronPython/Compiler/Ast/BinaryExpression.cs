@@ -115,7 +115,12 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(temp);
 
             // return (left (op) (temp = rleft)) and (rright)
-            return Ast.CoalesceTrue(Span, ag.Block, comparison, rright, AstGenerator.GetHelperMethod("IsTrue"));
+            return Ast.CoalesceTrue(
+                ag.Block,
+                comparison,
+                rright,
+                AstGenerator.GetHelperMethod("IsTrue")
+            );
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
@@ -136,10 +141,9 @@ namespace IronPython.Compiler.Ast {
             } else {
                 // Call helper method
                 return Ast.Call(
-                    null,
                     AstGenerator.GetHelperMethod(GetHelperName(op)),
-                    AstGenerator.DynamicConvertIfNeeded(left, typeof(object)),
-                    AstGenerator.DynamicConvertIfNeeded(right, typeof(object))
+                    AstGenerator.ConvertIfNeeded(left, typeof(object)),
+                    AstGenerator.ConvertIfNeeded(right, typeof(object))
                 );
             }
         }

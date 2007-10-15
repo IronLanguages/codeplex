@@ -47,7 +47,6 @@ namespace IronPython.Compiler.Ast {
             parts[0] = Ast.Assign(
                 dictionary.Variable,
                 Ast.Call(
-                    null,
                     AstGenerator.GetHelperMethod("MakeDict"),
                     Ast.Constant(_items.Length)
                 )

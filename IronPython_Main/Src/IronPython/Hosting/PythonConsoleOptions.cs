@@ -20,17 +20,23 @@ namespace IronPython.Hosting {
     [CLSCompliant(true)]
     public /* TODO: sealed */ class PythonConsoleOptions : ConsoleOptions {
 
-        private bool _ignoreEnvironmentVariables = false;
-        private bool _importSite = true;
+        private bool _ignoreEnvironmentVariables;
+        private bool _skipImportSite;
+        private string _runAsModule;
 
         public bool IgnoreEnvironmentVariables {
             get { return _ignoreEnvironmentVariables; }
             set { _ignoreEnvironmentVariables = value; }
         }
 
-        public bool ImportSite {
-            get { return _importSite; }
-            set { _importSite = value; }
+        public bool SkipImportSite {
+            get { return _skipImportSite; }
+            set { _skipImportSite = value; }
+        }
+
+        public string ModuleToRun {
+            get { return _runAsModule; }
+            set { _runAsModule = value; }
         }
     }
 }

@@ -247,7 +247,7 @@ namespace IronPython.Compiler.Ast {
                     statements.Insert(0, Ast.Empty(new SourceSpan(Body.Start, Body.Start)));
                 }
 
-                if (statements[statements.Count-1].End != Body.End) {
+                if (statements[statements.Count - 1].End != Body.End) {
                     statements.Add(Ast.Empty(new SourceSpan(Body.End, Body.End)));
                 }
             }
@@ -265,17 +265,16 @@ namespace IronPython.Compiler.Ast {
             }
 
             MSAst.Expression ret = Ast.Call(
-                null,                                                           // instance
-                typeof(PythonFunction).GetMethod("MakeFunction"),               // method
-                Ast.CodeContext(),                                              // 1. Emit CodeContext
-                Ast.Constant(SymbolTable.IdToString(_name)),                    // 2. FunctionName
-                Ast.CodeBlockExpression(code, flags != FunctionAttributes.None),          // 3. delegate
-                Ast.NewArray(typeof(string[]), names),                          // 4. parameter names
-                Ast.NewArray(typeof(object[]), defaults),                       // 5. default values
-                Ast.Constant(flags),                                            // 6. flags
-                Ast.Constant(_body.Documentation),                              // 7. doc string or null
-                Ast.Constant(this.Start.Line),                                  // 8. line number
-                Ast.Constant(_sourceUnit.GetSymbolDocument(this.Start.Line))    // 9. filename
+                typeof(PythonFunction).GetMethod("MakeFunction"),                               // method
+                Ast.CodeContext(),                                                              // 1. Emit CodeContext
+                Ast.Constant(SymbolTable.IdToString(_name)),                                    // 2. FunctionName
+                Ast.CodeBlockExpression(code, flags != FunctionAttributes.None),                // 3. delegate
+                Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
+                Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
+                Ast.Constant(flags),                                                            // 6. flags
+                Ast.Constant(_body.Documentation, typeof(string)),                              // 7. doc string or null
+                Ast.Constant(this.Start.Line),                                                  // 8. line number
+                Ast.Constant(_sourceUnit.GetSymbolDocument(this.Start.Line), typeof(string))    // 9. filename
             );
 
             // add decorators

@@ -35,56 +35,62 @@ Assert('<stdin>' in str(sys.stdin))
 #Assert('<stderr>' in str(sys.stderr))
 
 
-# setting an instance property on a built-in type should
-# throw that you can't set on built-in types
-for ArrayList in array_list_options:
-    def setCount():
-        ArrayList.Count = 23
-
-    AssertError(AttributeError, setCount)
-    
-    # System.String.Empty is a read-only static field
-    AssertError(AttributeError, setattr, System.String, "Empty", "foo")
-    
 # getting a property from a class should return the property,
 # getting it from an instance should do the descriptor check
+def test_sanity():
+    class foo(object):
+        def myset(self, value): pass
+        def myget(self): return "hello"
+        prop = property(fget=myget,fset=myset)
 
-class foo(object):
-    def myset(self, value): pass
-    def myget(self): return "hello"
-    prop = property(fget=myget,fset=myset)
+    AreEqual(type(foo.prop), property)
 
-AreEqual(type(foo.prop), property)
+    a = foo()
+    AreEqual(a.prop, 'hello')
 
-a = foo()
 
-AreEqual(a.prop, 'hello')
+@skip("win32")
+def test_builtinclrtype_set():
+    # setting an instance property on a built-in type should
+    # throw that you can't set on built-in types
+    for ArrayList in array_list_options:
+        def setCount():
+            ArrayList.Count = 23
+
+        AssertError(AttributeError, setCount)
+    
+        # System.String.Empty is a read-only static field
+        AssertError(AttributeError, setattr, System.String, "Empty", "foo")
+
 
 # a class w/ a metaclass that has a property
 # defined should hit the descriptor when getting
 # it on the class.
+def test_metaclass():
+    class MyType(type):
+        def myget(self): return 'hello'
+        aaa = property(fget=myget)
 
-class MyType(type):
-    def myget(self): return 'hello'
-    aaa = property(fget=myget)
+    class foo(object):
+        __metaclass__ = MyType
 
-class foo(object):
-    __metaclass__ = MyType
+    AreEqual(foo.aaa, 'hello')
 
-AreEqual(foo.aaa, 'hello')
 
-# ReflectedProperty tests
-for ArrayList in array_list_options:
-    alist = ArrayList()
-    AreEqual(ArrayList.Count.__set__(None, 5), None)
-    AssertError(TypeError, ArrayList.Count, alist, 5)
-    AreEqual(alist.Count, 0)
-    AreEqual(str(ArrayList.__dict__['Count']), '<property# Count on %s>' % ArrayList.__name__)
+def test_reflected_property():
+    # ReflectedProperty tests
+    for ArrayList in array_list_options:
+        alist = ArrayList()
+        AreEqual(ArrayList.Count.__set__(None, 5), None)
+        AssertError(TypeError, ArrayList.Count, alist, 5)
+        AreEqual(alist.Count, 0)
+        AreEqual(str(ArrayList.__dict__['Count']), '<property# Count on %s>' % ArrayList.__name__)
     
-    def tryDelReflectedProp():
-	    del ArrayList.Count
+        def tryDelReflectedProp():
+    	    del ArrayList.Count
 
-    AssertError(AttributeError, tryDelReflectedProp)
+        AssertError(AttributeError, tryDelReflectedProp)
+
     
 @skip("win32")    
 def test_reflected_extension_property_ops():
@@ -101,14 +107,60 @@ def test_reflected_extension_property_ops():
         AreEqual(stuff.__doc__(), "Get: str Name(builtin_function_or_method self)" + newline)
                 
         
+def test_prop_doc_only():
+    # define a property w/ only the doc
 
-# define a property w/ only the doc
-
-x = property(None, None, doc = 'Holliday')
-AreEqual(x.fget, None)
-AreEqual(x.fset, None)
-AreEqual(x.fdel, None)
-AreEqual(x.__doc__, 'Holliday')
+    x = property(None, None, doc = 'Holliday')
+    AreEqual(x.fget, None)
+    AreEqual(x.fset, None)
+    AreEqual(x.fdel, None)
+    AreEqual(x.__doc__, 'Holliday')
  
+def test_member_lookup_oldclass():
+    class OldC:
+        xprop = property(lambda self: self._xprop)
+        def __init__(self):
+            self._xprop = 42
+            self.xmember = 42
+            
+    c = OldC()
+    c.__dict__['xprop'] = 43
+    c.__dict__['xmember'] = 43
+    AreEqual(c.xprop, 43)
+    AreEqual(c.xmember, 43)
+    
+    c.xprop   = 41
+    c.xmember = 41
+    AreEqual(c.xprop, 41)
+    AreEqual(c.xmember, 41)
+    AreEqual(c.__dict__['xprop'], 41)
+    AreEqual(c.__dict__['xmember'], 41)
+
+
+def test_member_lookup_newclass():
+    class NewC(object):
+        def xprop_setter(self, xprop):
+            self._xprop = xprop
+    
+        xprop = property(lambda self: self._xprop,
+                         xprop_setter)
+        
+        def __init__(self):
+            self._xprop = 42
+            self.xmember = 42
+
+    c = NewC()
+    c.__dict__['xprop'] = 43
+    c.__dict__['xmember'] = 43
+    AreEqual(c.xprop, 42)
+    AreEqual(c.xmember, 43)
+    
+    c.xprop = 41
+    c.xmember = 41
+    AreEqual(c.xprop, 41)
+    AreEqual(c.xmember, 41)
+    AreEqual(c.__dict__['xprop'], 43)
+    AreEqual(c.__dict__['xmember'], 41)
+
 
 run_test(__name__)

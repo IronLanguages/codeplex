@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Operations {
             } else if (!self.info.IsStatic) {
                 DoSet(self, instance, value);
             } else {
-                throw PythonOps.AttributeError("cannot set", self.info.Name);
+                throw PythonOps.AttributeErrorForReadonlyAttribute(self.info.DeclaringType.Name, SymbolTable.StringToId(self.info.Name));
             }
         }
 
@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Operations {
             PerfTrack.NoteEvent(PerfTrack.Categories.Fields, self);
             if (instance != null && instance.GetType().IsValueType)
                 throw PythonOps.ValueError("Attempt to update field '{0}' on value type '{1}'; value type fields cannot be directly modified", self.info.Name, self.info.DeclaringType.Name);
-            if (self.info.IsInitOnly)
+            if (self.info.IsInitOnly || self.info.IsLiteral)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(self.info.DeclaringType.Name, SymbolTable.StringToId(self.info.Name));
 
             self.info.SetValue(instance, Converter.Convert(val, self.info.FieldType));

@@ -99,9 +99,8 @@ namespace IronPython.Compiler.Ast {
             MSAst.BoundAssignment init = Ast.Assign(
                 enumerator,
                 Ast.Call(
-                    null,
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
-                    ag.Transform(list)
+                    ag.TransformAsObject(list)
                 )
             );
 

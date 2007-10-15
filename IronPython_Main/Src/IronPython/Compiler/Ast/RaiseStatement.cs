@@ -43,14 +43,14 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            MSAst.ThrowExpression expr;
-            expr = Ast.Throw(
-                Ast.Call(null, AstGenerator.GetHelperMethod("MakeException"),
-                    ag.Transform(_type ?? new ConstantExpression(null)),
-                    ag.Transform(_value ?? new ConstantExpression(null)),
-                    ag.Transform(_traceback ?? new ConstantExpression(null))));
-
-            return Ast.Statement(Span, expr);
+            return Ast.Throw(
+                Span,
+                Ast.Call(AstGenerator.GetHelperMethod("MakeException"),
+                    ag.TransformOrConstantNull(_type, typeof(object)),
+                    ag.TransformOrConstantNull(_value, typeof(object)),
+                    ag.TransformOrConstantNull(_traceback, typeof(object))
+                )
+            );
         }
 
         public override void Walk(PythonWalker walker) {

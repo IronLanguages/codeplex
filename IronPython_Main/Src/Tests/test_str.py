@@ -156,6 +156,25 @@ def test_string_escape():
         else:
             AreEqual(chr(i).encode('string-escape'), repr(chr(i))[1:-1])
 
+@skip("silverlight") # not implemented exception on Silverlight 
+def test_encoding_backslashreplace():
+                # codec, input, output
+    tests =   [ ('ascii',      u"a\xac\u1234\u20ac\u8000", "a\\xac\\u1234\\u20ac\\u8000"),
+                ('latin-1',    u"a\xac\u1234\u20ac\u8000", "a\xac\\u1234\\u20ac\\u8000"),
+                ('iso-8859-15', u"a\xac\u1234\u20ac\u8000", "a\xac\\u1234\xa4\\u8000") ]
+    
+    for test in tests:        
+        AreEqual(test[1].encode(test[0], 'backslashreplace'), test[2])
+
+@skip("silverlight") # not implemented exception on Silverlight 
+def test_encoding_xmlcharrefreplace():
+                # codec, input, output
+    tests =   [ ('ascii',      u"a\xac\u1234\u20ac\u8000", "a&#172;&#4660;&#8364;&#32768;"),
+                ('latin-1',    u"a\xac\u1234\u20ac\u8000", "a\xac&#4660;&#8364;&#32768;"),
+                ('iso-8859-15', u"a\xac\u1234\u20ac\u8000", "a\xac&#4660;\xa4&#32768;") ]
+    for test in tests:
+        AreEqual(test[1].encode(test[0], 'xmlcharrefreplace'), test[2])
+
 def test_encode_decode():
     #AssertError(TypeError, 'abc'.encode, None) #INCOMPAT
     #AssertError(TypeError, 'abc'.decode, None)
@@ -193,7 +212,7 @@ def test_str_subclass():
 @skip('win32')
 def test_str_char_hash():
     import System 
-    #silverlightbug? System.Char.Parse('a') fails
+    #System.Char.Parse('a') is not available in Silverlight mscorlib
     if is_silverlight:
         a = 'a'.ToCharArray()[0]
     else:
@@ -226,5 +245,28 @@ def test_str_equals():
     y = 'defx' != 'def'
     AreEqual(id(x), id(y))
     AreEqual(id(x), id(True))
+
+def test_str_dict():
+    print "CodePlex Work Item 13115"
+    extra_str_dict_keys = [ "__cmp__", "__init__", "__radd__", "isdecimal", "isnumeric", "isunicode"]
+    missing_str_dict_keys = ["__rmod__"]
+    
+    #It's OK that __getattribute__ does not show up in the __dict__.  It is
+    #implemented.
+    Assert(hasattr(str, "__getattribute__"), "str has no __getattribute__ method")
+    
+    for temp_key in extra_str_dict_keys:
+        if sys.platform=="win32":
+            Assert(not temp_key in str.__dict__.keys())
+        else:
+            Assert(temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")    
+        
+    for temp_key in missing_str_dict_keys:
+        if sys.platform=="win32":
+            Assert(temp_key in str.__dict__.keys())    
+        else:
+            Assert(not temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")
+    
+        
 
 run_test(__name__)

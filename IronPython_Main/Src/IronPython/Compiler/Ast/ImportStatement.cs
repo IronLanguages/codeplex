@@ -55,7 +55,6 @@ namespace IronPython.Compiler.Ast {
                         Ast.Assign(
                             _variables[i].Variable,
                             Ast.Call(
-                                null,                                                   // instance
                                 AstGenerator.GetHelperMethod(                           // helper
                                     _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
                                 ),

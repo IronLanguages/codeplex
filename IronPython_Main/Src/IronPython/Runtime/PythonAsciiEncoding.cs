@@ -27,7 +27,21 @@ namespace IronPython.Runtime {
         }
 
         public override int GetByteCount(char[] chars, int index, int count) {
-            return count;
+            int byteCount = 0;
+            int charEnd = index + count;
+            while (index < charEnd) {
+                char c = chars[index];
+                if (c > 0x7f) {
+                    EncoderFallbackBuffer efb = EncoderFallback.CreateFallbackBuffer();
+                    if (efb.Fallback(c, index)) {
+                        byteCount += efb.Remaining;
+                    }
+                } else {
+                    byteCount++;
+                }
+                index++;
+            }
+            return byteCount;
         }
 
         public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
@@ -73,7 +87,7 @@ namespace IronPython.Runtime {
         }
 
         public override int GetMaxByteCount(int charCount) {
-            return charCount;
+            return charCount * 4;
         }
 
         public override int GetMaxCharCount(int byteCount) {
@@ -91,7 +105,7 @@ namespace IronPython.Runtime {
         public override EncoderFallbackBuffer CreateFallbackBuffer() {
             return new NonStrictEncoderFallbackBuffer();
         }
-
+        
         public override int MaxCharCount {
             get { return 1; }
         }
@@ -113,7 +127,7 @@ namespace IronPython.Runtime {
             _buffer.Add(charUnknown);
             return true;
         }
-
+        
         public override char GetNextChar() {
             return _buffer[_index++];
         }

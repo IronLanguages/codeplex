@@ -216,12 +216,16 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal MSAst.Expression[] Transform(Expression[] from) {
-            Debug.Assert(from != null);
-            MSAst.Expression[] to = new MSAst.Expression[from.Length];
-            for (int i = 0; i < from.Length; i++) {
-                Debug.Assert(from[i] != null);
-                to[i] = Transform(from[i]);
+        internal MSAst.Expression[] Transform(Expression[] expressions) {
+            return Transform(expressions, typeof(object));
+        }
+
+        internal MSAst.Expression[] Transform(Expression[] expressions, Type type) {
+            Debug.Assert(expressions != null);
+            MSAst.Expression[] to = new MSAst.Expression[expressions.Length];
+            for (int i = 0; i < expressions.Length; i++) {
+                Debug.Assert(expressions[i] != null);
+                to[i] = Transform(expressions[i], type);
             }
             return to;
         }
