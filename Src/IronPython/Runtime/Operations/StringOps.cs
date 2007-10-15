@@ -282,7 +282,7 @@ namespace IronPython.Runtime.Operations {
         public static string GetItem(string s, Slice slice) {
             if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
             int start, stop, step;
-            slice.Indicies(s.Length, out start, out stop, out step);
+            slice.Indices(s.Length, out start, out stop, out step);
             if (step == 1) {
                 return stop > start ? s.Substring(start, stop - start) : String.Empty;
             } else {
@@ -1386,6 +1386,8 @@ namespace IronPython.Runtime.Operations {
                 e = (Encoding)e.Clone();
 
                 switch (errors) {
+                    case "backslashreplace":
+                    case "xmlcharrefreplace":
                     case "strict": e.DecoderFallback = DecoderFallback.ExceptionFallback; break;
                     case "replace": e.DecoderFallback = DecoderFallback.ReplacementFallback; break;
                     default:
@@ -1441,6 +1443,8 @@ namespace IronPython.Runtime.Operations {
                 switch (errors) {
                     case "strict": e.EncoderFallback = EncoderFallback.ExceptionFallback; break;
                     case "replace": e.EncoderFallback = EncoderFallback.ReplacementFallback; break;
+                    case "backslashreplace": e.EncoderFallback = new BackslashEncoderReplaceFallback(); break;
+                    case "xmlcharrefreplace": e.EncoderFallback = new XmlCharRefEncoderReplaceFallback(); break;
                     default:
                         e.EncoderFallback = new PythonEncoderFallback(encoding,
                             s,
@@ -1514,12 +1518,19 @@ namespace IronPython.Runtime.Operations {
                 d["cp" + encs[i].CodePage.ToString()] = encs[i];
             }
 
+            d["raw_unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(true));
+            d["unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(false));
             codecs = d;
         }
 
         class EncodingInfoWrapper {
             private EncodingInfo _info;
+            private Encoding _encoding;
             private byte[] _preamble;
+
+            public EncodingInfoWrapper(Encoding enc) {
+                _encoding = enc;
+            }
 
             public EncodingInfoWrapper(EncodingInfo info) {
                 _info = info;
@@ -1531,6 +1542,8 @@ namespace IronPython.Runtime.Operations {
             }
 
             public virtual Encoding GetEncoding() {
+                if(_encoding != null) return _encoding;
+
                 if (_preamble == null) {
                     return _info.GetEncoding();
                 }
@@ -1545,7 +1558,7 @@ namespace IronPython.Runtime.Operations {
 
         class AsciiEncodingInfoWrapper : EncodingInfoWrapper {
             public AsciiEncodingInfoWrapper()
-                : base(null) {
+                : base((EncodingInfo)null) {
             }
 
             public override Encoding GetEncoding() {
@@ -2065,11 +2078,183 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override int MaxCharCount {
-                get { throw new Exception("The method or operation is not implemented."); }
+                get { throw new NotImplementedException(); }
             }
 
         }
+        
+        class BackslashEncoderReplaceFallback : EncoderFallback {
+            class BackslashReplaceFallbackBuffer : EncoderFallbackBuffer {
+                private List<char> _buffer = new List<char>();
+                private int _index;
 
+                public override bool Fallback(char charUnknownHigh, char charUnknownLow, int index) {
+                    return false;
+                }
+
+                public override bool Fallback(char charUnknown, int index) {
+                    _buffer.Add('\\');
+                    int val = (int)charUnknown;
+                    if (val > 0xFF) {
+                        _buffer.Add('u');
+                        AddCharacter(val >> 8);
+                        AddCharacter(val & 0xFF);
+                    } else {
+                        _buffer.Add('x');
+                        AddCharacter(charUnknown);
+                    }
+                    return true;
+                }
+
+                private void AddCharacter(int val) {
+                    AddOneDigit(((val) & 0xF0) >> 4);
+                    AddOneDigit(val & 0x0F);
+                }
+
+                private void AddOneDigit(int val) {
+                    if (val > 9) {
+                        _buffer.Add((char)('a' + val - 0x0A));
+                    } else {
+                        _buffer.Add((char)('0' + val));
+                    }
+                }
+
+                public override char GetNextChar() {
+                    if (_index == _buffer.Count) return Char.MinValue;
+
+                    return _buffer[_index++];
+                }
+
+                public override bool MovePrevious() {
+                    if (_index > 0) {
+                        _index--;
+                        return true;
+                    }
+                    return false;
+                }
+
+                public override int Remaining {
+                    get { return _buffer.Count - _index; }
+                }
+            }
+
+            public override EncoderFallbackBuffer CreateFallbackBuffer() {
+                return new BackslashReplaceFallbackBuffer();
+            }
+
+            public override int MaxCharCount {
+                get { Console.WriteLine("MaxCharCount"); throw new NotImplementedException(); }
+            }
+        }
+
+        class XmlCharRefEncoderReplaceFallback : EncoderFallback {
+            class XmlCharRefEncoderReplaceFallbackBuffer : EncoderFallbackBuffer {
+                private List<char> _buffer = new List<char>();
+                private int _index;
+
+                public override bool Fallback(char charUnknownHigh, char charUnknownLow, int index) {
+                    return false;
+                }
+
+                public override bool Fallback(char charUnknown, int index) {
+                    _buffer.Add('&');
+                    _buffer.Add('#');
+                    int val = (int)charUnknown;
+                    foreach (char c in val.ToString()) {
+                        _buffer.Add(c);
+                    }
+                    _buffer.Add(';');
+                    return true;
+                }
+
+                public override char GetNextChar() {
+                    if (_index == _buffer.Count) return Char.MinValue;
+
+                    return _buffer[_index++];
+                }
+
+                public override bool MovePrevious() {
+                    if (_index > 0) {
+                        _index--;
+                        return true;
+                    }
+                    return false;
+                }
+
+                public override int Remaining {
+                    get { return _buffer.Count - _index; }
+                }
+            }
+
+            public override EncoderFallbackBuffer CreateFallbackBuffer() {
+                return new XmlCharRefEncoderReplaceFallbackBuffer();
+            }
+
+            public override int MaxCharCount {
+                get { Console.WriteLine("MaxCharCount");  throw new NotImplementedException(); }
+            }
+        }
+
+        class UnicodeEscapeEncoding : Encoding {
+            private bool _raw;
+
+            public UnicodeEscapeEncoding(bool raw) {
+                _raw = raw;
+            }
+            
+            public override int GetByteCount(char[] chars, int index, int count) {
+                return EscapeEncode(chars, index, count).Length;
+            }
+
+            private string EscapeEncode(char[] chars, int index, int count) {
+                if (_raw) {
+                    return RawUnicodeEscapeEncode(new string(chars, index, count));
+                }
+
+                bool dummy = false;
+                return ReprEncode(new string(chars, index, count), ref dummy);
+            }
+
+            public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
+
+                string res = _raw ? RawUnicodeEscapeEncode(new string(chars, charIndex, charCount)) : null;
+                for (int i = 0; i < res.Length; i++) {
+                    bytes[i + byteIndex] = (byte)res[i];
+                }
+                return res.Length;                
+            }
+
+            public override int GetCharCount(byte[] bytes, int index, int count) {
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < count; i++) {
+                    builder.Append((char)bytes[i + index]);
+                }
+
+                return LiteralParser.ParseString(builder.ToString(), _raw, true).Length;
+            }
+
+            public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) {
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < byteCount; i++) {
+                    builder.Append((char)bytes[i + byteIndex]);
+                }
+
+                string res = LiteralParser.ParseString(builder.ToString(), _raw, true);
+                for (int i = 0; i < res.Length; i++) {
+                    chars[i + charIndex] = (char)res[i];
+                }
+
+                return res.Length;
+            }
+
+            public override int GetMaxByteCount(int charCount) {
+                return charCount * 5;
+            }
+
+            public override int GetMaxCharCount(int byteCount) {
+                return byteCount;
+            }
+        }
 #endif
         #endregion
 

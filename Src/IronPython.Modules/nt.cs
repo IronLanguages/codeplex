@@ -657,6 +657,8 @@ namespace IronPython.Modules {
         [Documentation("stat(path) -> stat result\nGathers statistics about the specified file or directory")]
         [PythonName("stat")]
         public static object GetFileStats(string path) {
+            if (path == null) throw PythonOps.TypeError("expected string, got NoneType");
+
             StatResult sr = new StatResult();
 
             try {
@@ -673,6 +675,8 @@ namespace IronPython.Modules {
                 } else {
                     throw new IOException("file does not exist");
                 }
+            } catch (ArgumentException) {
+                throw PythonOps.OSError("The path is invalid: {0}", path);
             } catch (Exception e) {
                 throw ToPythonException(e);
             }

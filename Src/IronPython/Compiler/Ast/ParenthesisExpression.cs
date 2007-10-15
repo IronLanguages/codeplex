@@ -32,7 +32,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.Parenthesize(Span, ag.Transform(_expression, type));
+            return Ast.Parenthesize(ag.Transform(_expression, type));
         }
 
         internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {

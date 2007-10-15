@@ -5,7 +5,7 @@
  * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
  * you cannot locate the  Microsoft Permissive License, please send an email to 
- * ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
  * by the terms of the Microsoft Permissive License.
  *
  * You must not remove this notice, or any other, from this software.
@@ -317,15 +317,18 @@ namespace IronPythonTest {
     }
 
     public class MultipleIndexes {
-#if !SILVERLIGHT
-        System.Collections.Hashtable ht = new System.Collections.Hashtable();
-#else
         Dictionary<object, object> ht = new Dictionary<object, object>();
-#endif
+
+        // works like Hashtable indexer--returns null instead of throwing if the key isn't found
+        private object GetValue(Tuple t) {
+            object result;
+            ht.TryGetValue(t, out result);
+            return result;
+        }
 
         public object this[object i] {
             get {
-                return ht[new Tuple(i)];
+                return GetValue(new Tuple(i));
             }
             set {
                 ht[new Tuple(i)] = value;
@@ -333,7 +336,7 @@ namespace IronPythonTest {
         }
         public object this[object i, object j] {
             get {
-                return ht[new Tuple(i, j)];
+                return GetValue(new Tuple(i, j));
             }
             set {
                 ht[new Tuple(i, j)] = value;
@@ -341,7 +344,7 @@ namespace IronPythonTest {
         }
         public object this[object i, object j, object k] {
             get {
-                return ht[new Tuple(i, j, k)];
+                return GetValue(new Tuple(i, j, k));
             }
             set {
                 ht[new Tuple(i, j, k)] = value;
@@ -349,7 +352,7 @@ namespace IronPythonTest {
         }
         public object this[object i, object j, object k, object l] {
             get {
-                return ht[new Tuple(i, j, k, l)];
+                return GetValue(new Tuple(i, j, k, l));
             }
             set {
                 ht[new Tuple(i, j, k, l)] = value;
@@ -357,7 +360,7 @@ namespace IronPythonTest {
         }
         public object this[object i, object j, object k, object l, object m] {
             get {
-                return ht[new Tuple(i, j, k, l, m)];
+                return GetValue(new Tuple(i, j, k, l, m));
             }
             set {
                 ht[new Tuple(i, j, k, l, m)] = value;

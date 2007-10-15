@@ -74,10 +74,14 @@ namespace IronPython.Hosting {
                     _engineOptions.MaximumRecursion = max_rec;
                     break;
 
+                case "-m":
+                    _consoleOptions.ModuleToRun = PeekNextArg();
+                    _engineOptions.Arguments = PopRemainingArgs();                                   
+                    break;
                 case "-x": _engineOptions.SkipFirstSourceLine = true; break;
                 case "-v": GlobalOptions.Verbose = true; break;
                 case "-u": GlobalOptions.BufferedStandardOutAndError = false; break;
-                case "-S": _consoleOptions.ImportSite = false; break;
+                case "-S": _consoleOptions.SkipImportSite = true; break;
                 case "-E": _consoleOptions.IgnoreEnvironmentVariables = true; break;
                 case "-t": _engineOptions.IndentationInconsistencySeverity = Severity.Warning; break;
                 case "-tt": _engineOptions.IndentationInconsistencySeverity = Severity.Error; break;
@@ -128,6 +132,7 @@ namespace IronPython.Hosting {
 #if !IRONPYTHON_WINDOW
                 { "-v",                     "Verbose (trace import statements) (also PYTHONVERBOSE=x)" },
 #endif
+                { "-m module",              "run library module as a script"},
                 { "-x",                     "Skip first line of the source" },
                 { "-u",                     "Unbuffered stdout & stderr" },
                 { "-E",                     "Ignore environment variables" },

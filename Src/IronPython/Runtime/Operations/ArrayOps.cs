@@ -272,7 +272,7 @@ namespace IronPython.Runtime.Operations {
 
         internal static object[] GetSlice(object[] data, Slice slice) {
             int start, stop, step;
-            slice.Indicies(data.Length, out start, out stop, out step);
+            slice.Indices(data.Length, out start, out stop, out step);
 
             if (step == 1) return GetSlice(data, start, stop);
 
@@ -287,7 +287,7 @@ namespace IronPython.Runtime.Operations {
             if (data.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
 
             int start, stop, step;
-            slice.Indicies(size, out start, out stop, out step);
+            slice.Indices(size, out start, out stop, out step);
 
             if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
                 if (data.GetType().GetElementType() == typeof(object))

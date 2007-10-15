@@ -27,9 +27,11 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             return Ast.Call(
-                null,                                                                       // instance
                 AstGenerator.GetHelperMethod("MakeList", new Type[] { typeof(object[]) }),  // method
-                ag.Transform(Items)                                                         // parameters
+                Ast.NewArray(                                                               // parameters
+                    typeof(object[]),
+                    ag.Transform(Items)
+                )
             );
         }
 

@@ -19,7 +19,9 @@ namespace IronPython.Runtime.Calls {
     [Flags]
     public enum CompileFlags {
         CO_NESTED = 0x0010,              //  nested_scopes
+        CO_DONT_IMPLY_DEDENT = 0x0200,   // report errors if statement isn't dedented.
         CO_GENERATOR_ALLOWED = 0x1000,   //  generators
         CO_FUTURE_DIVISION = 0x2000,   //  division
+        
     }
 }

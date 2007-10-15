@@ -267,5 +267,67 @@ def test_inplace_addition():
     x = [2,3,4]
     x += x
     AreEqual(x, [2,3,4,2,3,4])
+    
+    test_cases = [ ([],     [],     []),
+                   ([1],    [],     [1]),
+                   ([],     [1],    [1]),
+                   ([1],    [1],    [1, 1]),
+                   ([1],    [2],    [1, 2]),
+                   ([2],    [1],    [2, 1]),
+                   ([1, 2], [],     [1, 2]),
+                   ([],     [1, 2], [1, 2]),
+                   ([1, 2], [3],    [1, 2, 3]),
+                   ([3],    [1, 2], [3, 1, 2]),
+                   ([1, 2], [3, 4], [1, 2, 3, 4]),
+                   ([3, 4], [1, 2], [3, 4, 1, 2]),
+                   ([None], [],     [None]),
+                   ([None], [2],    [None, 2]),
+                   ([""],   [],     [""]),
+                   ]
+                   
+    for left_operand, right_operand, result in test_cases:
+    
+        #(No access to copy.deepcopy in IP) 
+        #  Create new list to verify no side effects to the RHS list
+        orig_right = [x for x in right_operand]
+            
+        left_operand += right_operand
+        
+        AreEqual(left_operand, result)
+        
+        #Side effects...
+        AreEqual(orig_right, right_operand)
+        
+    #interesting cases
+    x = [None]
+    x += xrange(3)
+    AreEqual(x, [None, 0, 1, 2])
+    
+    x = [None]
+    x += (0, 1, 2)
+    AreEqual(x, [None, 0, 1, 2])
+    
+    x = [None]
+    x += "012"
+    AreEqual(x, [None, "0", "1", "2"])
+    
+    x = [None]
+    x += Exception()
+    AreEqual(x, [None])
+    
+    #negative cases
+    neg_cases = [   ([],    None),
+                    ([],    1),
+                    ([],    1L),
+                    ([],    3.14),
+                    ([],    object),
+                    ([],    object()),
+                 ]
+    for left_operand, right_operand in neg_cases:
+        try:
+            left_operand += right_operand
+            AssertUnreachable()
+        except TypeError, e:
+            pass
 
 run_test(__name__)

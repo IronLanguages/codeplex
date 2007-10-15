@@ -103,15 +103,14 @@ using IronPython.Runtime.Operations;
 
             MethodInfo fastConvertMethod = GetFastConvertMethod(toType);
             if (fastConvertMethod != null) {
-                return Ast.Call(null, fastConvertMethod, expr);
+                return Ast.Call(fastConvertMethod, Ast.ConvertHelper(expr, typeof(object)));
             }
 
             if (typeof(Delegate).IsAssignableFrom(toType)) {
                 return Ast.Convert(
                     Ast.Call(
-                        null,
                         typeof(Converter).GetMethod("ConvertToDelegate"),
-                        expr,
+                        Ast.ConvertHelper(expr, typeof(object)),
                         Ast.Constant(toType)
                     ),
                     toType
@@ -123,7 +122,11 @@ using IronPython.Runtime.Operations;
             if (toType.IsVisible) {
                 typeIs = Ast.TypeIs(expr, toType);
             } else {
-                typeIs = Ast.Call(Ast.RuntimeConstant(toType), typeof(Type).GetMethod("IsInstanceOfType"), expr);
+                typeIs = Ast.Call(
+                    Ast.ConvertHelper(Ast.RuntimeConstant(toType), typeof(Type)),
+                    typeof(Type).GetMethod("IsInstanceOfType"),
+                    Ast.ConvertHelper(expr, typeof(object))
+                );
             }
 
             return Ast.Condition(
@@ -133,8 +136,9 @@ using IronPython.Runtime.Operations;
                     visType),
                 Ast.Convert(
                     Ast.Call(
-                        null, GetGenericConvertMethod(visType),
-                        expr, Ast.Constant(visType.TypeHandle)
+                        GetGenericConvertMethod(visType),
+                        Ast.ConvertHelper(expr, typeof(object)),
+                        Ast.Constant(visType.TypeHandle)
                     ),
                     visType
                 )
@@ -143,10 +147,14 @@ using IronPython.Runtime.Operations;
 
         public override Expression CheckExpression(Expression expr, Type toType) {
             if (toType == typeof(object) || toType.IsAssignableFrom(toType)) {
-                return Ast.Constant(true);
+                return Ast.True();
             }
 
-            return Ast.Call(null, typeof(Converter).GetMethod("CanConvert"), expr, Ast.Constant(toType));
+            return Ast.Call(
+                typeof(Converter).GetMethod("CanConvert"),
+                Ast.ConvertHelper(expr, typeof(object)),
+                Ast.Constant(toType)
+            );
         }
 
         private static MethodInfo GetGenericConvertMethod(Type toType) {
@@ -289,25 +297,25 @@ using IronPython.Runtime.Operations;
                 case "__str__":
                     MethodInfo tostr = type.GetMethod("ToString", ArrayUtils.EmptyTypes);
                     if (tostr != null && tostr.DeclaringType != typeof(object)) {
-                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("ToStringMethod") };
+                        return new MemberGroup(typeof(InstanceOps).GetMethod("ToStringMethod"));
                     }
                     break;
                 case "__repr__":
                     if (typeof(ICodeFormattable).IsAssignableFrom(type) && !type.IsInterface) {
-                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("ReprHelper") };
+                        return new MemberGroup(typeof(InstanceOps).GetMethod("ReprHelper"));
                     }
-                    return new MemberInfo[] { typeof(InstanceOps).GetMethod("FancyRepr") };
+                    return new MemberGroup(typeof(InstanceOps).GetMethod("FancyRepr"));
                 case "__init__":
                     // non-default init would have been handled by the Python binder.
-                    return new MemberInfo[] { typeof(InstanceOps).GetMethod("DefaultInit"), typeof(InstanceOps).GetMethod("DefaultInitKW") };
+                    return new MemberGroup(typeof(InstanceOps).GetMethod("DefaultInit"), typeof(InstanceOps).GetMethod("DefaultInitKW"));
                 case "next":
                     if (typeof(IEnumerator).IsAssignableFrom(type)) {
-                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("NextMethod") };
+                        return new MemberGroup(typeof(InstanceOps).GetMethod("NextMethod"));
                     }
                     break;
                 case "__get__":
                     if (typeof(DynamicTypeSlot).IsAssignableFrom(type)) {
-                        return new MemberInfo[] { typeof(InstanceOps).GetMethod("GetMethod") };
+                        return new MemberGroup(typeof(InstanceOps).GetMethod("GetMethod"));
                     }
                     break;
             }
@@ -326,12 +334,12 @@ using IronPython.Runtime.Operations;
                     string memberName = name.Substring(header.Length);
                     const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
                     
-                    res = type.GetMember(memberName, bf);
+                    res = new MemberGroup(type.GetMember(memberName, bf));
                     if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
                     }
                     
-                    res = type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf);
+                    res = new MemberGroup(type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf));
                     if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
                     }
@@ -339,7 +347,7 @@ using IronPython.Runtime.Operations;
             }
 
             // Python exposes protected members as public            
-            res = ArrayUtils.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly);
+            res = new MemberGroup(ArrayUtils.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly));
             if (res.Count > 0) {
                 return res;
             }
@@ -353,14 +361,14 @@ using IronPython.Runtime.Operations;
                     oldRes.AddRange(base.GetMember(action, type, newName));
                 }
                 
-                return oldRes.ToArray();
+                return new MemberGroup(oldRes.ToArray());
             }
 
             return res;
         }
 
         public override Statement MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(this,
+            return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
@@ -369,7 +377,7 @@ using IronPython.Runtime.Operations;
         }
 
         public override Statement MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(this,
+            return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Constant(
@@ -383,7 +391,7 @@ using IronPython.Runtime.Operations;
         }
 
         public override Statement MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(this,
+            return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Constant(
@@ -430,7 +438,7 @@ using IronPython.Runtime.Operations;
                         res.Add(mi);
                     }
                 }
-                return res.ToArray();
+                return new MemberGroup(res.ToArray());
             }
             return members;
         }

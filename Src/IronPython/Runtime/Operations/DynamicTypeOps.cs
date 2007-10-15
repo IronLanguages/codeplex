@@ -175,6 +175,17 @@ namespace IronPython.Runtime.Operations {
             return self.UnderlyingSystemType.Namespace + " in " + self.UnderlyingSystemType.Assembly.FullName;
         }
 
+        public static DynamicType __getitem__(DynamicType self, params DynamicType[] args) {
+            if (self.UnderlyingSystemType == typeof(Array)) {
+                if (args.Length == 1) {
+                    return DynamicHelpers.GetDynamicTypeFromType(args[0].UnderlyingSystemType.MakeArrayType());
+                }
+                throw PythonOps.TypeError("expected one argument to make array type, got {0}", args.Length);
+            }
+
+            return DynamicHelpers.GetDynamicTypeFromType(self.MakeGenericType(args));
+        }
+
         /// <summary>
         /// Helper slot for performing calls on types.    This class is here to both speed
         /// things up (hitting the ICallable* fast paths) and ensure correctness.  W/o this

@@ -20,20 +20,26 @@ load_iron_python_test()
 from IronPythonTest import *
 
 # properties w/ differening access
-@skip("silverlight", "Rowan #245494")
 def test_base():
-    a = BaseClass()
+    # can't access protected methods directly in Silverlight
+    # (need to create a derived class)
+    if not is_silverlight:
+        a = BaseClass()
+        AreEqual(a.Area, 0)
+        a.Area = 16
+        AreEqual(a.Area, 16)
+        
+    class WrapBaseClass(BaseClass): pass
+    a = WrapBaseClass()
     AreEqual(a.Area, 0)
     a.Area = 16
     AreEqual(a.Area, 16)
 
 
-@skip("silverlight", "Rowan #245494")
 def test_derived():
     class MyBaseClass(BaseClass):
         def MySetArea(self, size):
             self.Area = size
-
 
     a = MyBaseClass()
     AreEqual(a.Area, 0)
@@ -50,10 +56,18 @@ def test_derived():
     AreEqual(a.foo, 7)
 
 
-@skip("silverlight", "Rowan #245494")
 def test_override():
     # overriding methods
-    a = Inherited()
+
+    # can't access protected methods directly in Silverlight
+    # (need to create a derived class)
+    if not is_silverlight:
+        a = Inherited()
+        AreEqual(a.ProtectedMethod(), 'Inherited.ProtectedMethod')
+        AreEqual(a.ProtectedProperty, 'Inherited.Protected')
+    
+    class WrapInherited(Inherited): pass
+    a = WrapInherited()
     AreEqual(a.ProtectedMethod(), 'Inherited.ProtectedMethod')
     AreEqual(a.ProtectedProperty, 'Inherited.Protected')
 

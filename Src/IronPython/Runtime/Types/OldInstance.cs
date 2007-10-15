@@ -118,6 +118,21 @@ namespace IronPython.Runtime.Types {
             return dict;
         }
 
+
+        public static bool operator true(OldInstance self) {
+            return (bool)self.IsNonZero(DefaultContext.Default);
+        }
+
+        public static bool operator false(OldInstance self) {
+            return !(bool)self.IsNonZero(DefaultContext.Default);
+        }
+
+
+        public IEnumerator GetEnumerator() {
+            return PythonOps.GetEnumeratorForIteration(this);
+        }
+
+
         #region IDynamicObject Members
 
         LanguageContext IDynamicObject.LanguageContext {
@@ -164,11 +179,10 @@ namespace IronPython.Runtime.Types {
                             callParams
                         )
                     ),
-                    rule.MakeError(context.LanguageContext.Binder,
+                    rule.MakeError(
                         Ast.Call(
-                            null,
                             typeof(PythonOps).GetMethod("UncallableError"),
-                            rule.Parameters[0]
+                            Ast.ConvertHelper(rule.Parameters[0], typeof(object))
                         )
                     )
                 )
@@ -194,7 +208,8 @@ namespace IronPython.Runtime.Types {
             Expression tryGetValue = Ast.Call(
                 Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                 typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
-                Ast.Constant(dict.KeyVersion));
+                Ast.Constant(dict.KeyVersion)
+            );
             tryGetValue = Ast.Assign(tmp, tryGetValue);
 
             Expression test = Ast.AndAlso(
@@ -203,9 +218,12 @@ namespace IronPython.Runtime.Types {
                     Ast.Null()),
                 Ast.Equal(
                     Ast.Call(
-                        rule.Parameters[0], typeof(object).GetMethod("GetType")),
-                        Ast.Constant(typeof(OldInstance))
-                ));
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                        typeof(object).GetMethod("GetType")
+                    ),
+                    Ast.Constant(typeof(OldInstance))
+                )
+            );
             test = Ast.AndAlso(test,
                 Ast.NotEqual(
                     tryGetValue, Ast.Null()));
@@ -216,24 +234,27 @@ namespace IronPython.Runtime.Types {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     target = Ast.Call(
-                                Ast.ReadDefined(tmp),
-                                typeof(CustomOldClassDictionary).GetMethod("GetValueHelper"),
-                                Ast.Constant(key),
-                                rule.Parameters[0]);
+                        Ast.ReadDefined(tmp),
+                        typeof(CustomOldClassDictionary).GetMethod("GetValueHelper"),
+                        Ast.Constant(key),
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object))
+                    );
                     break;
                 case DynamicActionKind.SetMember:
                     target = Ast.Call(
-                                Ast.ReadDefined(tmp),
-                                typeof(CustomOldClassDictionary).GetMethod("SetExtraValue"),
-                                Ast.Constant(key),
-                                rule.Parameters[1]);
+                        Ast.ReadDefined(tmp),
+                        typeof(CustomOldClassDictionary).GetMethod("SetExtraValue"),
+                        Ast.Constant(key),
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                    );
                     break;
                 case DynamicActionKind.DeleteMember:
                     target = Ast.Call(
-                                rule.Parameters[0],
-                                typeof(OldInstance).GetMethod("DeleteCustomMember"),
-                                Ast.CodeContext(),
-                                Ast.Constant(action.Name));
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(OldInstance)),
+                        typeof(OldInstance).GetMethod("DeleteCustomMember"),
+                        Ast.CodeContext(),
+                        Ast.Constant(action.Name)
+                    );
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -264,27 +285,36 @@ namespace IronPython.Runtime.Types {
                                         Ast.Read(tmp)
                                     ),
                                     Ast.Read(tmp),
-                                    Ast.ReadField(null, typeof(OperationFailed).GetField("Value"))
+                                    Ast.Convert(
+                                        Ast.ReadField(null, typeof(OperationFailed).GetField("Value")),
+                                        typeof(object)
+                                    )
                                 );
                     } else {
-                        target = Ast.Call(instance,
+                        target = Ast.Call(
+                            instance,
                             typeof(OldInstance).GetMethod("GetBoundMember"),
-                                Ast.CodeContext(),
-                                Ast.Constant(action.Name));
+                            Ast.CodeContext(),
+                            Ast.Constant(action.Name)
+                        );
                     }
                     break;
                 case DynamicActionKind.SetMember:
-                    target = Ast.Call(instance,
+                    target = Ast.Call(
+                        instance,
                         typeof(OldInstance).GetMethod("SetCustomMember"),
-                            Ast.CodeContext(),
-                            Ast.Constant(action.Name),
-                            rule.Parameters[1]);
+                        Ast.CodeContext(),
+                        Ast.Constant(action.Name),
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                    );
                     break;
                  case DynamicActionKind.DeleteMember:
-                    target = Ast.Call(instance,
+                    target = Ast.Call(
+                        instance,
                         typeof(OldInstance).GetMethod("DeleteCustomMember"),
-                            Ast.CodeContext(),
-                            Ast.Constant(action.Name));
+                        Ast.CodeContext(),
+                        Ast.Constant(action.Name)
+                    );
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -329,7 +359,6 @@ namespace IronPython.Runtime.Types {
                 );
 
                 Expression sliceTest = Ast.Call(
-                    null,
                     typeof(PythonOps).GetMethod("TryGetBoundAttr", new Type[] { 
                         typeof(CodeContext), 
                         typeof(object), 
@@ -337,7 +366,7 @@ namespace IronPython.Runtime.Types {
                         typeof(object).MakeByRefType() 
                     }),
                     Ast.CodeContext(),
-                    rule.Parameters[0],
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                     Ast.Constant(GetDeprecatedSliceMethod(action)),
                     Ast.Read(var)
                 );
@@ -375,7 +404,7 @@ namespace IronPython.Runtime.Types {
             }
             Statement normalSlice = rule.MakeReturn(
                 context.LanguageContext.Binder,
-                Ast.Call(
+                Ast.SimpleCallHelper(
                     rule.Parameters[0],
                     typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
                     normalSliceArgs
@@ -386,10 +415,20 @@ namespace IronPython.Runtime.Types {
 
         private static Expression AddNumericTest<T>(StandardRule<T> rule, Expression sliceTest, Expression parameter) {
             if (!PythonOps.IsNumericType(parameter.Type) && parameter.Type != typeof(System.Reflection.Missing)) {
-                sliceTest = Ast.AndAlso(sliceTest,
-                    Ast.Call(null, typeof(PythonOps).GetMethod("IsNumericObject"),
-                    parameter)
-                );
+                sliceTest = Ast.AndAlso(
+                        sliceTest,
+                        Ast.OrElse(
+                            Ast.Equal(
+                                parameter,
+                                Ast.ReadField(null, typeof(MissingParameter), "Value")
+                            ),
+                            Ast.Call(
+                                null, 
+                                typeof(PythonOps).GetMethod("IsNumericObject"),
+                                parameter
+                            )
+                        )
+                    );
             }
             return sliceTest;
         }
@@ -399,7 +438,7 @@ namespace IronPython.Runtime.Types {
             if (sliceArgCount == 2) {
                 for (int i = 1; i < sliceArgCount + 1; i++) {
                     if (!PythonOps.IsNumericType(rule.Parameters[i].Type) &&
-                        rule.Parameters[i].Type != typeof(System.Reflection.Missing) &&
+                        rule.Parameters[i].Type != typeof(MissingParameter) &&
                         rule.Parameters[i].Type != typeof(object)) {
                         // strongly typed parameter which isn't an integer, we won't call __*slice__
                         return false;
@@ -426,27 +465,40 @@ namespace IronPython.Runtime.Types {
             int sliceArgCount = GetSliceArgumentCount<T>(action, rule);
             if (sliceArgCount <= 2) {
                 // no step is provided, we need a __len__ if either of the arguments are negative                
-                slice = Ast.Call(null,
+                slice = Ast.Call(
                      typeof(PythonOps).GetMethod("MakeOldStyleSlice"),
-                     rule.Parameters[0],
-                     sliceArgCount >= 1 ? rule.Parameters[1] : Ast.Null(),
-                     sliceArgCount >= 2 ? rule.Parameters[2] : Ast.Null()
+                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldInstance)),
+                     sliceArgCount >= 1 ?
+                        Ast.ConvertHelper(rule.Parameters[1], typeof(object)) :
+                        Ast.Null(),
+                     sliceArgCount >= 2 ?
+                        Ast.ConvertHelper(rule.Parameters[2], typeof(object)) :
+                        Ast.Null()
                  );
             } else {
-                slice = Ast.Call(null,
+                slice = Ast.Call(
                     typeof(PythonOps).GetMethod("MakeSlice"),
-                    CheckMissing(rule.Parameters[1]),
-                    CheckMissing(rule.Parameters[2]),
-                    CheckMissing(rule.Parameters[3]));
+                    Ast.ConvertHelper(CheckMissing(rule.Parameters[1]), typeof(object)),
+                    Ast.ConvertHelper(CheckMissing(rule.Parameters[2]), typeof(object)),
+                    Ast.ConvertHelper(CheckMissing(rule.Parameters[3]), typeof(object))
+                );
             }
             return slice;
         }
 
         internal static Expression CheckMissing(Expression toCheck) {
-            if (toCheck.Type == typeof(System.Reflection.Missing)) return Ast.Null();
-            if (toCheck.Type != typeof(object)) return toCheck;
+            if (toCheck.Type == typeof(MissingParameter)) {
+                return Ast.Null();
+            }
+            if (toCheck.Type != typeof(object)) {
+                return toCheck;
+            }
 
-            return Ast.Condition(Ast.TypeIs(toCheck, typeof(System.Reflection.Missing)), Ast.Null(), toCheck);
+            return Ast.Condition(
+                Ast.TypeIs(toCheck, typeof(MissingParameter)),
+                Ast.Null(),
+                toCheck
+            );
         }
 
         private static int GetSliceArgumentCount<T>(DoOperationAction action, StandardRule<T> rule) {
@@ -460,7 +512,7 @@ namespace IronPython.Runtime.Types {
 
             rule.SetTarget(
                 rule.MakeReturn(context.LanguageContext.Binder,
-                    Ast.Call(
+                    Ast.SimpleCallHelper(
                         rule.Parameters[0],
                         typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
                         PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule)

@@ -167,7 +167,7 @@ namespace IronPython.Runtime {
 #else
             platform = "cli";
 #endif
-            winver = "2.4";
+            winver = "2.5";
 
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value

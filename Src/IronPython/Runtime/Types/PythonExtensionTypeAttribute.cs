@@ -198,7 +198,7 @@ namespace IronPython.Runtime.Types {
                 Debug.Assert(opmap != null);
 
                 bool regular, reverse;
-                if (method != null && opmap.IsReversable) {
+                if (method != null && opmap.IsReversible) {
                     GetRegularReverse(_type.UnderlyingSystemType, method, out regular, out reverse);
                 } else {
                     // TODO: Support more arbitrary slot types, currently we're mainly just using call
@@ -277,7 +277,7 @@ namespace IronPython.Runtime.Types {
 
                     regular = parms.Length > ctxOffset && IsThis(declaringType, parms[ctxOffset]);
                     
-                    if (om.IsReversable && !CompilerHelpers.IsComparisonOperator(om.Operator)) {
+                    if (om.IsReversible && !CompilerHelpers.IsComparisonOperator(om.Operator)) {
                         Operators revOp = CompilerHelpers.OperatorToReverseOperator(om.Operator);
                         reverse = (!regular || revOp != om.Operator) && parms.Length > ctxOffset+1 && IsThis(declaringType, parms[ctxOffset+1]);
                     }

@@ -59,8 +59,8 @@ def get_all_paths():
         if sys.platform == "cli":
             ipython_executable = sys.executable
             compat_test_path   = sys.prefix + "/Tests/Compat/"
-            cpython_executable = sys.prefix + "/External/Python24/Python.exe"
-            cpython_lib_path   = sys.prefix + "/External/Python24/Lib"
+            cpython_executable = sys.prefix + "/External/Python25/Python.exe"
+            cpython_lib_path   = sys.prefix + "/External/Python25/Lib"
             
         elif sys.platform == "win32":
             cpython_executable = sys.executable

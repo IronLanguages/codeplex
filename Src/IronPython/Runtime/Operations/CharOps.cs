@@ -48,6 +48,7 @@ namespace IronPython.Runtime.Operations {
             return new String(self, 1).GetHashCode();
         }
 
+        [SpecialName, PythonName("__cmp__")]
         public static object Compare(char self, object other) {
             string strOther;
 

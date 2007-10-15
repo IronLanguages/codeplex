@@ -18,19 +18,20 @@ import sys, nt
 def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
 
 merlin_root = environ_var("MERLIN_ROOT")
-sys.path.append(merlin_root + r"\Languages\IronPython\Tests")
-sys.path.append(merlin_root + r"\Test\ClrAssembly\bin")
+sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
+sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
 
 from lib.assert_util import *
 
 skiptest("silverlight")
 
-# in order to make peverify happy
-from lib.file_util import filecopy, delete_files
-filecopy(merlin_root + r"\Test\ClrAssembly\bin\loadtypesample.dll", sys.exec_prefix + r"\loadtypesample.dll")
-
 import clr
 clr.AddReference("loadtypesample")
+
+# in order to make peverify happy
+from lib.file_util import *
+peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\loadtypesample.dll",]
+copy_dlls_for_peverify(peverify_dependency)
 
 keywords = ['pass', 'import', 'def', 'exec', 'except']
 bultin_funcs = ['abs', 'type', 'file']
@@ -215,4 +216,4 @@ def test_type_causing_load_exception():
 run_test(__name__)    
 
 # will not succeed in the SaveAssemblies mode
-delete_files(sys.exec_prefix + r"\loadtypesample.dll")
+delete_dlls_for_peverify(peverify_dependency)

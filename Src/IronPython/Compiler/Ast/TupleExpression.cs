@@ -37,9 +37,11 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Call(
-                null,
                 AstGenerator.GetHelperMethod("MakeTuple"),
-                ag.Transform(Items)
+                Ast.NewArray(
+                    typeof(object[]),
+                    ag.Transform(Items)
+                )
             );
         }
 

@@ -79,7 +79,7 @@ def test_field():
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, b)
-    AssertErrorWithMessage(AttributeError, "attribute 'Field' of 'OverrideNothing' object is read-only", f, o1)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, o1)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'OverrideAll'", f, o2)
     
 def test_property():
@@ -128,9 +128,9 @@ def test_property():
     AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f, OverrideNothing)
     AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'OverrideAll' object is read-only", f, OverrideAll)
     
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f, b)
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f, o1)
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'OverrideAll' object is read-only", f, o2)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, b)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, o1)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'OverrideAll'", f, o2)
 
 def test_event():
     lambda1 = lambda : 'FirstString'
@@ -198,9 +198,9 @@ def test_event():
     AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'Base' object is read-only", f, OverrideNothing)
     AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'OverrideAll' object is read-only", f, OverrideAll)
     
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'Base' object is read-only", f, b)
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'Base' object is read-only", f, o1)
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'OverrideAll' object is read-only", f, o2)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, b)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, o1)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'OverrideAll'", f, o2)
 
 def test_method():
     AreEqual(Base.Method_None(), 'Base.Method_None')
@@ -281,9 +281,9 @@ def test_method():
     AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Method_None'", f, OverrideNothing)
     AssertErrorWithMessage(AttributeError, "'OverrideAll' object has no attribute 'Method_None'", f, OverrideAll)
     
-    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'Base' object is read-only", f, b)
-    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'Base' object is read-only", f, o1)
-    AssertErrorWithMessage(AttributeError, "attribute 'Method_None' of 'OverrideAll' object is read-only", f, o2)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, b)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, o1)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'OverrideAll'", f, o2)
 
 def test_extra_generics():
     b = B()
@@ -324,7 +324,6 @@ def test_extra_generics():
     AssertError(TypeError, KD[str].M1, 10)
     AreEqual(KD[str].M1('s'), 'KD.M1')
     
-@disabled("Merlin Work Item 154329")
 def test_operator():
     from IronPythonTest.StaticTest.Operator import *
     sc = SC(123, "hello")
@@ -341,7 +340,8 @@ def test_operator():
     y = G2[int, str].op_Explicit(x)
     z = G2[str, int].op_Explicit(x)
     
-    AreEqual((y.Field1, y.Field2), (456, None))
-    AreEqual((z.Field1, z.Field2), (None, 456))
+    if not is_silverlight:
+        AreEqual((y.Field1, y.Field2), (456, None))
+        AreEqual((z.Field1, z.Field2), (None, 456))
 
 run_test(__name__)

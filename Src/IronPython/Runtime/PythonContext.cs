@@ -164,13 +164,18 @@ namespace IronPython.Runtime {
 
             long start_position = stream.Position;
 
-            StreamReader sr = new StreamReader(stream, PythonAsciiEncoding.Instance);
-            string line = sr.ReadLine();
+            StreamReader sr = new StreamReader(stream, PythonAsciiEncoding.Instance);            
+
+            int bytesRead = 0;
+            string line;
+            line = ReadOneLine(sr, ref bytesRead);
+
+            //string line = sr.ReadLine();
             bool gotEncoding = false;
 
             // magic encoding must be on line 1 or 2
             if (line != null && !(gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding))) {
-                line = sr.ReadLine();
+                line = ReadOneLine(sr, ref bytesRead);
 
                 if (line != null) {
                     gotEncoding = Tokenizer.TryGetEncoding(default_encoding, line, ref encoding);
@@ -185,16 +190,81 @@ namespace IronPython.Runtime {
             if (encoding == null)
                 throw new IOException("unknown encoding type");
 
-            // re-read w/ the correct encoding type...
-            stream.Seek(start_position, SeekOrigin.Begin);
+            if (!gotEncoding) {
+                // if we didn't get an encoding seek back to the beginning...
+                stream.Seek(start_position, SeekOrigin.Begin);
+            } else {
+                // if we got an encoding seek to the # of bytes we read (so the StreamReader's
+                // buffering doesn't throw us off)
+                stream.Seek(bytesRead, SeekOrigin.Begin);
+            }
 
+            // re-read w/ the correct encoding type...
             return new StreamReader(stream, encoding);
+        }
+
+        /// <summary>
+        /// Reads one line keeping track of the # of bytes read
+        /// </summary>
+        private static string ReadOneLine(StreamReader sr, ref int totalRead) {
+            char[] buffer = new char[256];
+            StringBuilder builder = null;
+            
+            int bytesRead = sr.Read(buffer, 0, buffer.Length);
+
+            while (bytesRead > 0) {
+                totalRead += bytesRead;
+
+                bool foundEnd = false;
+                for (int i = 0; i < bytesRead; i++) {
+                    if (buffer[i] == '\r') {
+                        if (i + 1 < bytesRead) {
+                            if (buffer[i + 1] == '\n') {
+                                totalRead -= (bytesRead - (i+2));   // skip cr/lf
+                                sr.BaseStream.Seek(i + 1, SeekOrigin.Begin);
+                                sr.DiscardBufferedData();
+                                foundEnd = true;
+                            }
+                        } else {
+                            totalRead -= (bytesRead - (i + 1)); // skip cr
+                            sr.BaseStream.Seek(i, SeekOrigin.Begin);
+                            sr.DiscardBufferedData();
+                            foundEnd = true;
+                        }
+                    } else if (buffer[i] == '\n') {
+                        totalRead -= (bytesRead - (i + 1)); // skip lf
+                        sr.BaseStream.Seek(i + 1, SeekOrigin.Begin);
+                        sr.DiscardBufferedData();
+                        foundEnd = true;
+                    }
+
+                    if (foundEnd) {                        
+                        if (builder != null) {
+                            builder.Append(buffer, 0, i);
+                            return builder.ToString();
+                        }
+                        return new string(buffer, 0, i);
+                    }
+                }
+
+                if (builder == null) builder = new StringBuilder();
+                builder.Append(buffer, 0, bytesRead);
+                bytesRead = sr.Read(buffer, 0, buffer.Length);
+            }
+
+            // no string
+            if (builder == null) {
+                return null;
+            }
+
+            // no new-line
+            return builder.ToString();
         }
 
 #if !SILVERLIGHT
         // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
         public override SourceUnit GenerateSourceCode(System.CodeDom.CodeObject codeDom) {
-            return new PythonCodeDomCodeGen().GenerateCode(codeDom, _engine);
+            return new PythonCodeDomCodeGen().GenerateCode((System.CodeDom.CodeMemberMethod)codeDom, _engine);
         }
 #endif
 

@@ -55,12 +55,12 @@ namespace IronPython.Runtime {
         [PythonName("indices")]
         public PythonTuple Indicies(int len) {
             int istart, istop, istep;
-            Indicies(len, out istart, out istop, out istep);
+            Indices(len, out istart, out istop, out istep);
             return PythonTuple.MakeTuple(istart, istop, istep);
         }
 
         [PythonName("indices")]
-        public void Indicies(int len, out int ostart, out int ostop, out int ostep) {
+        public void Indices(int len, out int ostart, out int ostop, out int ostep) {
             int count;
             PythonOps.FixSlice(len, start, stop, step, out ostart, out ostop, out ostep, out count);
         }
@@ -160,7 +160,7 @@ namespace IronPython.Runtime {
 
         internal void DoSliceAssign(SliceAssign assign, int size, object value) {
             int ostart, ostop, ostep;
-            Indicies(size, out ostart, out ostop, out ostep);
+            Indices(size, out ostart, out ostop, out ostep);
 
             if (this.step == null) throw PythonOps.ValueError("cannot do slice assignment w/ no step");
 

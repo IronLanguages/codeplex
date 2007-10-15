@@ -30,6 +30,7 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime.Types {
 
     [PythonType("ellipsis")]
+    [Documentation(null)]
     public class Ellipsis : ICodeFormattable {
 
         #region ICodeFormattable Members
@@ -41,6 +42,7 @@ namespace IronPython.Runtime.Types {
         #endregion
     }
 
+    [Documentation(null)]
     public class NotImplementedType : ICodeFormattable {
         #region ICodeFormattable Members
 

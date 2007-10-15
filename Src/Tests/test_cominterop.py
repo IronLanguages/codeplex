@@ -241,11 +241,111 @@ if IsExcelInstalled():
             graph = co.Add(100, 100, 200, 200)
             graph.Chart.ChartWizard(rng, Excel.XlChartType.xl3DColumn)                        
         finally:    
+            
+            # clean up outstanding RCWs 
+            ws = None
+            nb = None
+            rng = None
+            System.GC.Collect()
+            System.GC.WaitForPendingFinalizers()
+            
             if ex: ex.Quit()
             else: print "ex is %s" % ex
 
+    selection_counter = 0
+    def selection_change_eventhandler(range):
+        global selection_counter
+        selection_counter = selection_counter + 1
+        #print "selected range - " + range.Address()
+        
+
+    if preferComDispatch:
+        def add_worksheet_event(ws):
+            ws.Event_SelectionChange += selection_change_eventhandler
+
+        def remove_worksheet_event(ws):
+            ws.Event_SelectionChange -= selection_change_eventhandler
+
+        def test_excelevents():
+            TryLoadInteropAssembly()
+
+            try: import Microsoft.Office.Interop.Excel as Excel
+            except ImportError: 
+                print "Skip: VSTO/Excel is not installed"
+                return
+            
+            ex = None
+            try: 
+                ex = Excel.ApplicationClass() 
+                ex.DisplayAlerts = False 
+                #ex.Visible = True
+                wb = ex.Workbooks.Add()
+                
+                ws = ex.ActiveSheet
+
+                # test single event is firing
+                add_worksheet_event(ws)
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 1)
+
+                # test events chaining is working
+                add_worksheet_event(ws)
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 3)
+
+                # test removing event from a chain
+                remove_worksheet_event(ws)
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 4)
+
+                # test removing event alltogether
+                remove_worksheet_event(ws)
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 4)
+
+                add_worksheet_event(ws)
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 5)
+
+                # test GCing RCW detaches the event handler
+
+                # NOTICE: You might wonder why we call "add_worksheet_event"
+                # NOTICE: and "remove_worksheet_event" instead of just inlining
+                # NOTICE: ws.Event_SelectionChange += selection_change_eventhandler
+                # NOTICE: The reason is that IPy emits code with local vars
+                # NOTICE: for temporary variables. These vars are scoped to the current
+                # NOTICE: frame. As a result GC.Collect would not collect the object 
+                # NOTICE: returned by ws.Event_SelectionChange which holds a references to Worksheet.
+                # NOTICE: which will prevent the event handler from unadvising.
+
+                ws = None
+                System.GC.Collect()
+                System.GC.WaitForPendingFinalizers()
+
+                ex.ActiveCell.Offset(1, 0).Activate()
+                AreEqual(selection_counter, 5)
+
+            finally:    
+                
+                # clean up outstanding RCWs 
+                ws = None
+                wb = None
+                System.GC.Collect()
+                System.GC.WaitForPendingFinalizers()
+                
+                if ex: ex.Quit()
+                else: print "ex is %s" % ex
+
+
 if is_cli32:
     run_test(__name__)
+    
+    #Run this test with PreferComDispatch as well
+    if not preferComDispatch:
+        print "Re-running under '-X:PreferComDispatch' mode."
+        from lib.process_util import launch_ironpython_changing_extensions
+        AreEqual(launch_ironpython_changing_extensions(__file__, add=["-X:PreferComDispatch"]), 0)
+    
 
 if is_cli64: 
     print "Warning: Skipping Interop tests on 64-bit machines"

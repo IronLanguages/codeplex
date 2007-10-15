@@ -58,6 +58,9 @@ namespace IronPython.Compiler.Generation {
     class NewTypeMaker {
         public const string VtableNamesField = "#VTableNames#";
         public const string TypePrefix = "IronPython.NewTypes.";
+        public const string BaseMethodPrefix = "#base#";
+        public const string FieldGetterPrefix = "#field_get#", FieldSetterPrefix = "#field_set#";
+
         private static Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
         private static int _typeCount;
 
@@ -299,7 +302,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private static IEnumerable<string> GetBaseName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
-            Debug.Assert(mi.Name.StartsWith("#base#"));
+            Debug.Assert(mi.Name.StartsWith(BaseMethodPrefix));
 
             string newName = mi.Name.Substring(6);
 
@@ -362,6 +365,8 @@ namespace IronPython.Compiler.Generation {
             Dictionary<string, List<string>> specialNames = new Dictionary<string, List<string>>();
 
             OverrideVirtualMethods(_baseType, specialNames);
+
+            ImplementProtectedFieldAccessors();
 
             Dictionary<Type, bool> doneTypes = new Dictionary<Type, bool>();
             foreach (Type interfaceType in _interfaceTypes) {
@@ -444,6 +449,15 @@ namespace IronPython.Compiler.Generation {
             return true;
         }
 
+        private static bool CanOverrideMethod(MethodInfo mi) {
+#if !SILVERLIGHT
+            return true;
+#else
+            // can only override the method if it is not SecurityCritical
+            return mi.GetCustomAttributes(typeof(System.Security.SecurityCriticalAttribute), false).Length == 0;
+#endif
+        }
+
         private void AddBaseMethods(Type finishedType, Dictionary<string, List<string>> specialNames) {
             // "Adds" base methods to super type (should really add to the derived type)
             // this makes super(...).xyz to work - otherwise we'd return a function that
@@ -454,7 +468,7 @@ namespace IronPython.Compiler.Generation {
                 if (!ShouldOverrideVirtual(mi)) continue;
 
                 string methodName = mi.Name;
-                if (methodName.StartsWith("#base#")) {
+                if (methodName.StartsWith(BaseMethodPrefix)) {
                     foreach (string newName in GetBaseName(mi, specialNames)) {
                         DynamicMixinBuilder dtb = DynamicMixinBuilder.GetBuilder(rt);
                         DynamicTypeSlot dts;
@@ -854,13 +868,41 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
+        private void ImplementProtectedFieldAccessors() {
+            // For protected fields to be accessible from the derived type in Silverlight,
+            // we need to create public helper methods that expose them. These methods are
+            // used by the IDynamicObject implementation (in UserTypeOps.GetRuleHelper)
+
+            FieldInfo[] fields = _baseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
+            foreach (FieldInfo fi in fields) {
+                if (!fi.IsFamily) continue;
+
+                CodeGen cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
+                                             FieldGetterPrefix + fi.Name, fi.FieldType, ArrayUtils.EmptyTypes, ArrayUtils.EmptyStrings);
+
+                cg.EmitThis();
+                cg.EmitFieldGet(fi);
+                cg.EmitReturn();
+                cg.Finish();
+
+                cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
+                                             FieldSetterPrefix + fi.Name, null, new Type[] { fi.FieldType }, new string[] { "value" });
+
+                cg.EmitThis();
+                cg.EmitArgGet(0);
+                cg.EmitFieldSet(fi);                
+                cg.EmitReturn();
+                cg.Finish();
+            }
+        }
+
         private void OverrideVirtualMethods(Type type, Dictionary<string, List<string>> specialNames) {
             // if we have conflicting virtual's do to new slots only override the methods on the
             // most derived class.
             Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo> added = new Dictionary<KeyValuePair<string,MethodSignatureInfo>, MethodInfo>();
             
             MethodInfo overridden;
-            MethodInfo [] methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+            MethodInfo[] methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             
             foreach (MethodInfo mi in methods) {
                 KeyValuePair<string, MethodSignatureInfo> key = new KeyValuePair<string, MethodSignatureInfo>(mi.Name, new MethodSignatureInfo(mi.IsStatic, mi.GetParameters()));
@@ -876,7 +918,7 @@ namespace IronPython.Compiler.Generation {
             }
 
             foreach (MethodInfo mi in added.Values) {
-                if (!ShouldOverrideVirtual(mi)) continue;
+                if (!ShouldOverrideVirtual(mi) || !CanOverrideMethod(mi)) continue;
 
                 if (mi.IsPublic || mi.IsFamily || mi.IsFamilyOrAssembly) {
                     if (mi.IsGenericMethodDefinition) continue;
@@ -891,7 +933,17 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void OverrideSpecialName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
-            if (mi == null || !mi.IsVirtual || mi.IsFinal) return;
+            if (mi == null || !mi.IsVirtual || mi.IsFinal) {
+                if (mi.IsFamily) {
+                    // need to be able to call into protected getter/setter methods from derived types,
+                    // even if these methods aren't virtual and we are in partial trust.
+                    List<string> methodNames = new List<string>();
+                    methodNames.Add(mi.Name);
+                    specialNames[mi.Name] = methodNames;
+                    CreateVirtualMethodHelper(_tg, mi);
+                }
+                return;
+            }
 
             string name;
             PropertyInfo[] pis = mi.DeclaringType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -917,12 +969,14 @@ namespace IronPython.Compiler.Generation {
                         names.Add("__getitem__");
                         if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                         CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
+                        if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                     }
                     return;
                 } else if (mi == pi.GetSetMethod(true)) {
                     names.Add("__setitem__");
                     if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
+                    if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                     return;
                 }
             }
@@ -1148,7 +1202,7 @@ namespace IronPython.Compiler.Generation {
                 }
             }
             CodeGen cg = tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
-                                         "#base#" + mi.Name, mi.ReturnType, types, paramNames);
+                                         BaseMethodPrefix + mi.Name, mi.ReturnType, types, paramNames);
 
             EmitBaseMethodDispatch(mi, cg);
             cg.Finish();

@@ -2901,6 +2901,17 @@ def test_oldclass_and_direct():
         AssertUnreachable()
     except AttributeError:
         pass
+        
+    for x, y in [(-1, -1),
+                 (-2, 0),
+                 (0, -2),
+                 (-2, -2),
+                 ]:
+        try:
+            OldStyle()[x:y], 
+            AssertUnreachable()
+        except AttributeError:
+            pass 
     
     
     # but if we provide a step no length is needed because we'll never use __getslice__

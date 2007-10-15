@@ -82,33 +82,33 @@ namespace IronPython.Runtime.Calls {
             MakeOperatorGetMemberBody(parent.UnderlyingSystemType, "GetCustomMember");
 
             if ((rf = slot as ReflectedField) != null) {
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rf.info)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rf.info)));
             } else if ((rep = slot as ReflectedExtensionProperty) != null) {
                 Statement body;
                 if (TryMakePropertyGet(rep.ExtInfo.Getter, arg, out body)) {
-                    Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, body));
+                    AddToBody(AddClsCheck(parent, clsOnly, body));
                     Rule.SetTarget(Body);
                     return true;
                 }
                 return false;
             } else if ((rp = slot as ReflectedProperty) != null) {
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rp.Info)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rp.Info)));
             } else if ((ev = slot as ReflectedEvent) != null) {
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, ev.Info)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, ev.Info)));
             } else if ((bf = slot as BuiltinFunction) != null) {
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMethodCallRule(bf, false)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMethodCallRule(bf, false)));
             } else if ((bmd = slot as BuiltinMethodDescriptor) != null) {
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMethodCallRule(bmd.Template, true)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMethodCallRule(bmd.Template, true)));
             } else if ((vs = slot as DynamicTypeValueSlot) != null &&
                 vs.TryGetValue(Context, null, null, out value) &&
                     ((dtValue = value as DynamicType) != null)) {
 
                 Debug.Assert(dtValue.IsSystemType);
-                Body = Ast.Block(Body, AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType)));
+                AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType)));
             } else {
                 Variable tmp = Rule.GetTemporary(typeof(object), "res");
 
-                Body = Ast.Block(Body, 
+                AddToBody(
                         AddClsCheck(
                             parent, 
                             clsOnly, 
@@ -120,9 +120,10 @@ namespace IronPython.Runtime.Calls {
                                     ),
                                     typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
                                     Ast.CodeContext(),
-                                    arg,
-                                    Ast.RuntimeConstant(parent),
-                                    Ast.Read(tmp)),
+                                    Ast.ConvertHelper(arg, typeof(object)),
+                                    Ast.ConvertHelper(Ast.RuntimeConstant(parent), typeof(DynamicMixin)),
+                                    Ast.Read(tmp)
+                                ),
                                 Rule.MakeReturn(Binder, Ast.Read(tmp)),
                                 MakeError(parent)
                             )
@@ -193,7 +194,7 @@ namespace IronPython.Runtime.Calls {
                 return
                     Ast.Block(
                         Ast.IfThenElse(
-                            Ast.Call(null,
+                            Ast.Call(
                                 typeof(PythonOps).GetMethod("IsClsVisible"),
                                 Ast.CodeContext()
                             ),
@@ -209,11 +210,13 @@ namespace IronPython.Runtime.Calls {
             if (Action.IsNoThrow) {
                 return Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
             } else {
-                return Rule.MakeError(Binder, Ast.Call(null,
-                    typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                    Ast.Constant(DynamicTypeOps.GetName(argType)),
-                    Ast.Constant(Action.Name)
-                ));
+                return Rule.MakeError(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
+                        Ast.Constant(DynamicTypeOps.GetName(argType), typeof(string)),
+                        Ast.Constant(Action.Name)
+                    )
+                );
             }
         }
 

@@ -18,13 +18,18 @@ import sys, nt
 def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
 
 merlin_root = environ_var("MERLIN_ROOT")
-sys.path.extend([merlin_root + r"\Languages\IronPython\Tests", merlin_root + r"\Test\ClrAssembly\bin"])
+sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
+sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
 
 from lib.assert_util import *
 skiptest("silverlight")
 
 import clr
 clr.AddReference("fieldtests", "typesamples")
+
+from lib.file_util import *
+peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll", merlin_root + r"\Test\ClrAssembly\bin\fieldtests.dll"]
+copy_dlls_for_peverify(peverify_dependency)
 
 from Merlin.Testing.FieldTest.InitOnly import *
 from Merlin.Testing.TypeSample import *
@@ -155,7 +160,7 @@ def _test_set_by_instance(current_type):
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23]:
         AssertErrorWithMatch(AttributeError, "attribute .* of .* object is read-only", f)
     
-def _test_set_by_type(current_type):
+def _test_set_by_type(current_type, message="Cannot set field .* on type .*"):
     def f1(): current_type.InitOnlyByteField = 2
     def f2(): current_type.InitOnlySByteField = 3
     def f3(): current_type.InitOnlyUInt16Field = 4
@@ -184,7 +189,7 @@ def _test_set_by_type(current_type):
     def f23(): current_type.InitOnlySimpleInterfaceField = ClassImplementSimpleInterface(40)
 
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23]:
-        AssertErrorWithMatch(AttributeError, "Cannot set field .* on type .*", f)
+        AssertErrorWithMatch(AttributeError, message, f)
 
 def _test_set_by_descriptor(current_type):
     o = current_type()
@@ -213,9 +218,9 @@ def _test_set_by_descriptor(current_type):
      lambda : current_type.__dict__['InitOnlyEnumField'].__set__(current_type, EnumInt32.C),
      lambda : current_type.__dict__['InitOnlySimpleInterfaceField'].__set__(o, None),
     ]: 
-        AssertErrorWithMatch(AttributeError, "cannot set", f)
+        AssertErrorWithMatch(AttributeError, "attribute 'InitOnly.*Field' of '.*' object is read-only", f)
         
-def _test_delete_via_type(current_type):
+def _test_delete_via_type(current_type, message="cannot delete attribute 'InitOnly.*' of builtin type"):
     def f1(): del current_type.InitOnlyByteField
     def f2(): del current_type.InitOnlySByteField
     def f3(): del current_type.InitOnlyUInt16Field
@@ -244,9 +249,9 @@ def _test_delete_via_type(current_type):
     def f23(): del current_type.InitOnlySimpleInterfaceField
 
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23]:
-        AssertErrorWithMatch(AttributeError, "cannot delete attribute 'InitOnly.*' of builtin type", f)
+        AssertErrorWithMatch(AttributeError, message, f)
 
-def _test_delete_via_instance(current_type):
+def _test_delete_via_instance(current_type, message="cannot delete attribute 'InitOnly.*' of builtin type"):
     o = current_type()
     def f1(): del o.InitOnlyByteField
     def f2(): del o.InitOnlySByteField
@@ -276,7 +281,7 @@ def _test_delete_via_instance(current_type):
     def f23(): del o.InitOnlySimpleInterfaceField
 
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23]:
-        AssertErrorWithMatch(AttributeError, "cannot delete attribute 'InitOnly.*' of builtin type", f)
+        AssertErrorWithMatch(AttributeError, message, f)
 
 def _test_delete_via_descriptor(current_type):
     o = current_type()
@@ -338,10 +343,12 @@ def test_accessing_from_derived():
     _test_get_by_instance(DerivedClass)
     _test_get_by_type(DerivedClass)
     _test_set_by_instance(DerivedClass)
-    #_test_set_by_type(DerivedClass)
-    #_test_delete_via_instance(DerivedClass)
-    #_test_delete_via_type(DerivedClass)
+    _test_set_by_type(DerivedClass)
+    _test_delete_via_instance(DerivedClass)
+    _test_delete_via_type(DerivedClass)
     
     Assert('InitOnlyInt32Field' not in DerivedClass.__dict__)
     
 run_test(__name__)
+
+delete_dlls_for_peverify(peverify_dependency)

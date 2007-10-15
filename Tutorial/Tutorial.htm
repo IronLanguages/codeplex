@@ -1629,16 +1629,14 @@
 		</li>
 		<li>
 		<p class="Step">Import clr module and add a reference to the Word COM 
-		interop assembly.&nbsp; Also, import System so that we can use a special 
-		value from it later.</p>
+		interop assembly.</p>
 		</li>
 	</ol>
-	<p class="TypedExample">import clr</p>
 	<p class="TypedExample">
-	clr.AddReferenceByPartialName(&quot;Microsoft.Office.Interop.Word&quot;)<br>
+	import clr<br />
+	clr.AddReferenceByPartialName(&quot;Microsoft.Office.Interop.Word&quot;)<br /><br />
 	from Microsoft.Office.Interop.Word import ApplicationClass<br>
-	<br>
-	import System</p>
+	</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Start an instance of Word as a COM server running.&nbsp; 
@@ -1650,19 +1648,14 @@
 	<ol start="4">
 		<li>
 		<p class="Step">Define the following function to check the spelling.&nbsp; 
-		We have to build up an argument list so that we can supply the 12 
-		optional arguments we do not care about (System.Type.Missing).&nbsp; We 
-		get the answer by taking the first (at index zero) of a few return 
-		values (out parameters in COM interop).&nbsp; Remember to indent the 
-		lines of the function's body extra spaces, and you have to hit an extra 
-		return or enter to complete the function's definition.</p></li>
+		Remember to indent the lines of the function's body extra spaces, and you 
+		have to hit an extra return or enter to complete the function's definition.</p></li>
 	</ol>
 	<p class="TypedExample">def check_word (word):<br>
-&nbsp;&nbsp; args = [word] + [System.Type.Missing]*12<br>
-&nbsp;&nbsp; return w.CheckSpelling(*args)[0]</p>
+&nbsp;&nbsp; return w.CheckSpelling(word)</p>
 	<p class="TypedExample">&nbsp;</p>
-	<p class="TypedExample">check_word(&quot;foo&quot;)</p>
-	<p class="TypedExample">check_word(&quot;food&quot;)</p>
+	<p class="TypedExample">check_word(&quot;foo&quot;)<br />
+	check_word(&quot;food&quot;)</p>
 	<ol start="5">
 		<li>
 		<p class="Step">You can try that out on a couple of words, but now lets 
@@ -1671,12 +1664,10 @@
 		which gives a nice error message if you try to call it with no documents 
 		opened.</p></li>
 	</ol>
-	<p class="TypedExample">w.Documents.Add(*[System.Type.Missing]*4)</p>
+	<p class="TypedExample">w.Documents.Add()</p>
 	<ol start="6">
 		<li>
-		<p class="Step">The 
-		function we'll define builds an argument list just like check_word() did to 
-		supply several unneeded optional arguments.&nbsp; The first result of 
+		<p class="Step">The first result of 
 		several return values from GetSpellingSuggestions() is a collection of 
 		items, each of which is a correction suggestion.&nbsp; We use a Python 
 		list comprehension to iterate through the COM collection object and call 
@@ -1684,9 +1675,8 @@
 		item's Name property is a string that Word is suggesting as a correct 
 		spelling.</p></li>
 	</ol>
-	<p class="TypedExample">def suggestions (word):<br>
-&nbsp;&nbsp; args = [word] + [System.Type.Missing]*13<br>
-&nbsp;&nbsp; res_objects = w.GetSpellingSuggestions(*args)[0]<br>
+	<p class="TypedExample">def suggestions(word):<br>
+&nbsp;&nbsp; res_objects = w.GetSpellingSuggestions(word)<br>
 &nbsp;&nbsp; return [x.Name for x in res_objects]</p>
 	<ol start="7">
 		<li>
@@ -1695,7 +1685,7 @@
 		watching the Windows Task Manager, you will see the WINWORD.EXE process 
 		go away.</p></li>
 	</ol>
-	<p class="TypedExample">w.Quit(*[System.Type.Missing]*3)</p>
+	<p class="TypedExample">w.Quit()</p>
 	<p class="Body">&nbsp;</p>
 	<h3><a name="T3.2.2">Task 2: Use Windows Form Dialog to Correct Spelling</a></h3>
 	<p class="Body">In this task you will use an example already written that is 

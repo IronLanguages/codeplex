@@ -15,6 +15,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 
 using Microsoft.Scripting.Ast;
@@ -44,9 +46,10 @@ namespace IronPython.Runtime.Calls {
                     tupleArgs[i] = rule.Parameters[i + 1];
                 }
                 // multiple index arguments, pack into tuple.
-                exprargs[1] = Ast.Call(null,
+                exprargs[1] = Ast.ComplexCallHelper(
                     typeof(PythonOps).GetMethod("MakeTuple"),
-                    tupleArgs);
+                    tupleArgs
+                );
             } else {
                 // single index argument
                 exprargs[1] = rule.Parameters[1];
@@ -101,9 +104,9 @@ namespace IronPython.Runtime.Calls {
             } else {
                 test = Ast.Equal(
                     Ast.Call(
-                        null, 
-                        typeof(CompilerHelpers).GetMethod("GetType", new Type[]{typeof(object)}), 
-                        tested),
+                        typeof(CompilerHelpers).GetMethod("GetType", new Type[] { typeof(object) }),
+                        Ast.ConvertHelper(tested, typeof(object))
+                    ),
                     rule.AddTemplatedConstant(typeof(Type), type.UnderlyingSystemType)
                 );
             }
@@ -111,18 +114,30 @@ namespace IronPython.Runtime.Calls {
             if (!isStaticType) {
                 int version = type.Version;
                 if (version != DynamicType.DynamicVersion) {
-                    test = Ast.AndAlso(test,
-                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"), tested, GetVersionExpression(rule, templatable, version)));
+                    test = Ast.AndAlso(
+                        test,
+                        Ast.Call(
+                            typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
+                            Ast.ConvertHelper(tested, typeof(object)),
+                            GetVersionExpression(rule, templatable, version)
+                        )
+                    );
                     rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
                 } else {
                     version = type.AlternateVersion;
-                    test = Ast.AndAlso(test,
-                        Ast.Call(null, typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"), tested, GetVersionExpression(rule, templatable, version)));
+                    test = Ast.AndAlso(
+                        test,
+                        Ast.Call(
+                            typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"),
+                            Ast.ConvertHelper(tested, typeof(object)),
+                            GetVersionExpression(rule, templatable, version)
+                        )
+                    );
                     rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).AlternateValidate);
                 }
-            } 
+            }
 
-            return test;            
+            return test;
         }
 
         private static Expression GetVersionExpression(StandardRule rule, bool templatable, int version) {
@@ -139,11 +154,11 @@ namespace IronPython.Runtime.Calls {
         /// Produces an error message for the provided message and type names.  The error message should contain
         /// string formatting characters ({0}, {1}, etc...) for each of the type names.
         /// </summary>
-        public static StandardRule<T> TypeError<T>(string message, params DynamicType[] types) {            
+        public static StandardRule<T> TypeError<T>(string message, params DynamicType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
             MakeTest(ret, true, types);
-            Expression [] formatArgs = new Expression[types.Length + 1];
-            for(int i = 1; i<formatArgs.Length; i++) {                
+            Expression[] formatArgs = new Expression[types.Length + 1];
+            for (int i = 1; i < formatArgs.Length; i++) {
                 formatArgs[i] = ret.AddTemplatedConstant(typeof(string), DynamicTypeOps.GetName(types[i - 1]));
             }
             formatArgs[0] = ret.AddTemplatedConstant(typeof(string), message);
@@ -151,12 +166,13 @@ namespace IronPython.Runtime.Calls {
             typeArgs[0] = typeof(string);
 
             ret.SetTarget(
-                Ast.Statement(Ast.Throw(
-                    Ast.Call(null, typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        Ast.Call(
-                            null, 
-                            typeof(String).GetMethod("Format", typeArgs), 
-                            formatArgs)
+                Ast.Throw(
+                    Ast.Call(
+                        typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                        // ??? What does this exactly guarantee? is typeArgs.Length < 3, or can this deal with params array???
+                        Ast.ComplexCallHelper(
+                            typeof(String).GetMethod("Format", typeArgs),
+                            formatArgs
                         )
                     )
                 )
@@ -232,6 +248,5 @@ namespace IronPython.Runtime.Calls {
                 return dt != null && dt.AlternateVersion == _version;
             }
         }
-
     }
 }

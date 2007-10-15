@@ -68,7 +68,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal PythonVariable ModVariable {
-            get { return _modVariable;}
+            get { return _modVariable; }
             set { _modVariable = value; }
         }
 
@@ -125,7 +125,7 @@ namespace IronPython.Compiler.Ast {
             // Create the body
             AstGenerator body = new AstGenerator(block, ag.Context);
             MSAst.Statement bodyStmt = body.Transform(_body);
-            MSAst.Statement modStmt = 
+            MSAst.Statement modStmt =
                 Ast.Statement(
                     Ast.Assign(
                         _modVariable.Variable,
@@ -155,9 +155,8 @@ namespace IronPython.Compiler.Ast {
             );
 
             MSAst.Expression classDef = Ast.Call(
-                null,
                 AstGenerator.GetHelperMethod("MakeClass"),
-                Ast.CodeContext(), 
+                Ast.CodeContext(),
                 Ast.Constant(SymbolTable.IdToString(_name)),
                 bases,
                 Ast.Constant(FindSelfNames()),
@@ -219,7 +218,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            private Dictionary<SymbolId, bool> _names = new Dictionary<SymbolId,bool>();
+            private Dictionary<SymbolId, bool> _names = new Dictionary<SymbolId, bool>();
 
             private bool IsSelfReference(Expression expr) {
                 NameExpression ne = expr as NameExpression;

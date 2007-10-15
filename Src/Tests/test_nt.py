@@ -677,6 +677,12 @@ def test_open():
     #fd = nt.open(tempfilename,256,1)    
     pass     
 
+def test_system_minimal():
+    if sys.platform=="win32":
+        Assert(hasattr(nt, "system"))
+    else:
+        print "CodePlex Work Item 2982"
+        Assert(not hasattr(nt, "system"), "Please modify test_system_minimal now that nt.system has been implemented")
 
 # flags test
 def test_flags():

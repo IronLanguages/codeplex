@@ -140,6 +140,9 @@ namespace IronPythonTest.BinderTest {
         // generic method
         public void M200<T>(T arg) { Flag.Value = 200; }
 
+        // out on non-byref
+        public void M222([Out] int arg) { Flag.Value = 222; }
+
         // what does means when passing in None 
         public void M300(params C1[] args) {
             Flag.BValue = (args == null);

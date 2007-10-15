@@ -307,4 +307,13 @@ def test_no_names_provided():
     AssertError(ValueError, clr.AddReferenceByName)
     AssertError(ValueError, clr.AddReferenceByPartialName)
 
+def test_load_count():
+    # verify loading an assembly updates the assembly-loaded count in the repr
+    # if a new assembly gets loaded before this that contains System both numbers
+    # need to be updated
+    import clr, System
+    AreEqual(repr(System), "<module 'System' (CLS module, 3 assemblies loaded)>")
+    clr.AddReference('System.Drawing')
+    AreEqual(repr(System), "<module 'System' (CLS module, 4 assemblies loaded)>")
+    
 run_test(__name__)

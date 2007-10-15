@@ -194,7 +194,7 @@ namespace IronPython.Runtime.Types {
                             }
 
                             SymbolId revName;
-                            if (reverse && PythonExtensionTypeAttribute.ReverseOperatorTable.TryGetValue(opmap.GetReversed(), out revName)) {
+                            if (reverse && opmap.IsReversible && PythonExtensionTypeAttribute.ReverseOperatorTable.TryGetValue(opmap.GetReversed(), out revName)) {
                                 if (opmap.IsBinary) ft |= FunctionType.ReversedOperator;
 
                                 DynamicTypeSlot slot = StoreMethodNoConflicts(SymbolTable.IdToString(revName),

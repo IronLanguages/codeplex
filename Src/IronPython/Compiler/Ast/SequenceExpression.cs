@@ -82,7 +82,6 @@ namespace IronPython.Compiler.Ast {
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
             MSAst.Expression enumeratorValues = Ast.Call(
-                null,                                                   // instance
                 AstGenerator.GetHelperMethod("GetEnumeratorValues"),    // method
                 // arguments
                 right_temp,

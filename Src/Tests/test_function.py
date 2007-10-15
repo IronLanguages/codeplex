@@ -872,6 +872,17 @@ def test_method_attr_access():
     AreEqual(method(foo, 'abc').abc, 3)
 
 @skip("interpreted")  # we don't have FuncEnv's in interpret modes so this always returns None
+def test_function_closure_negative():
+    def f(): pass
+    
+    for assignment_val in [None, 1, "a string"]:
+        try:
+            f.func_closure = assignment_val
+            AssertUnreachable("func_closure is a read-only attribute of functions")
+        except TypeError, e:
+            pass
+
+@skip("interpreted")  # we don't have FuncEnv's in interpret modes so this always returns None
 def test_function_closure():
     def f(): pass
     

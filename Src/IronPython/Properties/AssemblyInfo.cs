@@ -26,7 +26,7 @@ using System;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython")]
-[assembly: AssemblyCopyright("??? Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("� Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -49,7 +49,7 @@ using System;
 // by using the '*' as shown below:
 
 #if !SILVERLIGHT
-[assembly: AssemblyFileVersion("2.0.10928.00")]
+[assembly: AssemblyFileVersion("2.0.11011.00")]
 [assembly: AssemblyInformationalVersion("2.0")]
 #endif
 [assembly: SecurityTransparent]

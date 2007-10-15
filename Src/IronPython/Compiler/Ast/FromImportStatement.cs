@@ -67,7 +67,6 @@ namespace IronPython.Compiler.Ast {
                 return Ast.Statement(
                     Span,
                     Ast.Call(
-                        null,
                         AstGenerator.GetHelperMethod("ImportStar"),
                         Ast.CodeContext(),
                         Ast.Constant(_root.MakeString())
@@ -92,7 +91,6 @@ namespace IronPython.Compiler.Ast {
                         Ast.Assign(
                             module.Variable,
                             Ast.Call(
-                                null,
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
                                 Ast.CodeContext(),
                                 Ast.Constant(_root.MakeString()),
@@ -110,7 +108,6 @@ namespace IronPython.Compiler.Ast {
                             Ast.Assign(
                                 _variables[i].Variable,
                                 Ast.Call(
-                                    null,
                                     AstGenerator.GetHelperMethod("ImportFrom"),
                                     Ast.CodeContext(),
                                     module,

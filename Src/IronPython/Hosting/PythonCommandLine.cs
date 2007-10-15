@@ -67,7 +67,16 @@ namespace IronPython.Hosting {
                 Console.Write(engine.FormatException(e), Style.Error);
             }
         }
-        
+
+        protected override int Run() {
+            if (Options.ModuleToRun != null) {
+                Engine.Execute("import " + Options.ModuleToRun);
+                return 0;
+            }
+
+            return base.Run();
+        }       
+
         #region Initialization
 
         protected override void Initialize() {
@@ -92,14 +101,36 @@ namespace IronPython.Hosting {
                     Engine.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
+
             InitializePath();
+            InitializeArguments();
             InitializeModules();
             ImportSite();
         }
-        
+
+        private void InitializeArguments() {
+            if (Options.ModuleToRun != null) {
+                // if the user used the -m option we need to update sys.argv to arv[0] is the full path
+                // to the module we'll run.  If we don't find the module we'll have an import error
+                // and this doesn't matter.
+                foreach (object o in PythonEngine.CurrentEngine.SystemState.path) {
+                    string str = o as string;
+                    if (str == null) continue;
+
+                    string libpath = Path.Combine(str, Options.ModuleToRun + ".py");
+                    if (File.Exists(libpath)) {
+                        // cast to List is a little scary but safe during startup
+                        ((List)SystemState.Instance.argv)[0] = libpath;
+                        break;
+                    }
+                }
+            }
+        }
+
         private ScriptModule CreateMainModule() {
             ModuleOptions trueDiv = (Engine.Options.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
             ScriptModule module = Engine.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
+            module.Scope.SetName(Symbols.Doc, null);
 
             // TODO: 
             // module.Scope.SetName(Symbols.Doc, null);
@@ -120,6 +151,10 @@ namespace IronPython.Hosting {
                     }
                 }
             }
+
+            string site = Assembly.GetEntryAssembly().Location;
+            site = Path.Combine(Path.GetDirectoryName(site), "Lib");
+            Engine.AddToPath(site);
 #endif
         }
 
@@ -141,16 +176,12 @@ namespace IronPython.Hosting {
 
         private void ImportSite() {
 #if !SILVERLIGHT // paths
-            string site = Assembly.GetEntryAssembly().Location;
-            site = Path.Combine(Path.GetDirectoryName(site), "Lib");
-            Engine.AddToPath(site);
-
-            if (!Options.ImportSite)
+            if (Options.SkipImportSite)
                 return;
 
             try {
                 // TODO: do better
-                Engine.Execute("import site", Module);
+                Engine.Execute("import site");
             } catch (Exception e) {
                 Console.Write(Engine.FormatException(e), Style.Error);
             }

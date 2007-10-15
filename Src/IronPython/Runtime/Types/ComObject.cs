@@ -650,6 +650,13 @@ namespace IronPython.Runtime.Types {
 
         private string _typeName;
         private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
+
+        class ComEventDesc {
+            public Guid sourceIID;
+            public int dispid;
+        };
+
+        private Dictionary<SymbolId, ComEventDesc> _events;
         private static Dictionary<Guid, Dictionary<SymbolId, ComDispatch.ComMethodDesc>> _cacheComTypeInfo;
 
         internal IDispatchObject(object rcw)
@@ -680,6 +687,9 @@ namespace IronPython.Runtime.Types {
         const int DISP_E_UNKNOWNNAME = unchecked((int)0x80020006);
         // The number of elements provided in DISPPARAMS is different from the number of arguments accepted by the method or property.
         const int DISP_E_BADPARAMCOUNT = unchecked((int)0x8002000E);
+
+        const int DISPID_VALUE = 0;
+        const int DISPID_NEWENUM = -4;
         #endregion
 
         static int GetIDsOfNames(IDispatch dispatch, SymbolId name, out int dispId) {
@@ -717,17 +727,24 @@ namespace IronPython.Runtime.Types {
         #region ICustomMembers-like members
 
         override internal bool TryGetAttr(CodeContext context, SymbolId name, out object value) {
+
             // Check if the name exists
-
             EnsureScanDefinedFunctions();
-
-            ComDispatch.ComMethodDesc methodDesc;
+            ComDispatch.ComMethodDesc methodDesc = null;
 
             // TODO: We have a thread-safety issue here right now
             // TODO: since we are mutating _funcs array
             // TODO: The workaround is to use Hashtable (which is thread-safe
             // TODO: on read operations) to fetch the value out.
             if (_funcs.TryGetValue(name, out methodDesc) == false) {
+
+                FindEvents();
+                ComEventDesc eventDesc;
+                if (_events.TryGetValue(name, out eventDesc)) {
+                    value = new ComDispatch.BoundDispEvent(this.Obj, eventDesc.sourceIID, eventDesc.dispid);
+                    return true;
+                }
+
                 int dispId;
                 int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
                 if (hresult == DISP_E_UNKNOWNNAME) {
@@ -747,7 +764,6 @@ namespace IronPython.Runtime.Types {
             //    (notice that execution of parameterized properties is also defered)
             // 2. If this is a property - we will return the result of 
             //    invoking the property
-
             if (methodDesc != null && methodDesc.IsPropertyGet) {
                 if (methodDesc.Parameters.Length == 0) {
                     value = new ComDispatch.DispMethod(DispatchObject, methodDesc).Call(context, ArrayUtils.EmptyObjects);
@@ -762,6 +778,16 @@ namespace IronPython.Runtime.Types {
         }
 
         override internal void SetAttr(CodeContext context, SymbolId name, object value) {
+
+            if (value is ComDispatch.BoundDispEvent) {
+                // CONSIDER: 
+                // SetAttr on BoundDispEvent is the last operator that is called
+                // during += on an actual event handler.
+                // In practice, we can do nothing here and just ingore this operation.
+                // But would it be the syntactically correct?
+                return;
+            }
+
             int dispId;
             int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
             if (hresult == DISP_E_UNKNOWNNAME) {
@@ -798,7 +824,14 @@ namespace IronPython.Runtime.Types {
         override internal IList<SymbolId> GetAttrNames(CodeContext context) {
 
             EnsureScanDefinedFunctions();
-            return new List<SymbolId>(_funcs.Keys);
+            FindEvents();
+            List<SymbolId> list = new List<SymbolId>(_funcs.Keys);
+
+            if (_events != null && _events.Count > 0) {
+                list.AddRange(_events.Keys);
+            }
+
+            return list;
         }
 
         override internal IDictionary<object, object> GetAttrDict(CodeContext context) {
@@ -853,6 +886,161 @@ namespace IronPython.Runtime.Types {
             funcDescHandle = pFuncDesc;
         }
 
+        internal static string GetNameOfType(ITypeInfo typeInfo) {
+            string name;
+            string strDocString;
+            int dwHelpContext;
+            string strHelpFile;
+            typeInfo.GetDocumentation(-1, out name, out strDocString, out dwHelpContext, out strHelpFile);
+            return name;
+        }
+
+        internal static SymbolId GetNameOfMethod(ITypeInfo typeInfo, int memid, string prefix) {
+            int cNames;
+            string[] rgNames = new string[1];
+            typeInfo.GetNames(memid, rgNames, 1, out cNames);
+            return SymbolTable.StringToId(prefix + rgNames[0]);
+        }
+
+        private void FindEvents() {
+
+            if (_events != null) {
+                return;
+            }
+
+            Dictionary<SymbolId, ComEventDesc> events = new Dictionary<SymbolId, ComEventDesc>();
+
+            ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
+            if (cpc == null) {
+                // No ICPC - this object does not support events - 
+                _events = events;
+                return;
+            }
+
+            ComTypes.ITypeInfo classTypeInfo = GetCoClassTypeInfo();
+            if (classTypeInfo == null) {
+                _events = events;
+                return;
+            }
+
+            ComTypes.TYPEATTR classTypeAttr;
+            GetTypeAttrForTypeInfo(classTypeInfo, out classTypeAttr);
+
+            for (int i = 0; i < classTypeAttr.cImplTypes; i++) {
+                int hRefType;
+                classTypeInfo.GetRefTypeOfImplType(i, out hRefType);
+                
+                ComTypes.ITypeInfo interfaceTypeInfo;
+                classTypeInfo.GetRefTypeInfo(hRefType, out interfaceTypeInfo);
+
+                ComTypes.IMPLTYPEFLAGS flags;
+                classTypeInfo.GetImplTypeFlags(i, out flags);
+                if ((flags & ComTypes.IMPLTYPEFLAGS.IMPLTYPEFLAG_FSOURCE) != 0) {
+                    ScanSourceInterface(interfaceTypeInfo, ref events);
+                }
+            }
+
+            _events = events;
+        }
+
+        private static void ScanSourceInterface(ComTypes.ITypeInfo sourceTypeInfo, ref Dictionary<SymbolId, ComEventDesc> events) {
+            ComTypes.TYPEATTR sourceTypeAttribute;
+            GetTypeAttrForTypeInfo(sourceTypeInfo, out sourceTypeAttribute);
+
+            for (int index = 0; index < sourceTypeAttribute.cFuncs; index++) {
+                IntPtr funcDescHandleToRelease = IntPtr.Zero;
+
+                try {
+                    ComTypes.FUNCDESC funcDesc;
+                    GetFuncDescForDescIndex(sourceTypeInfo, index, out funcDesc, out funcDescHandleToRelease);
+
+                    // we are not interested in hidden or restricted functions for now.
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FHIDDEN) != 0) {
+                        continue;
+                    }
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0) {
+                        continue;
+                    }
+
+                    // TODO: prefixing events is a temporary workaround to allow dsitinguising 
+                    // between methods and events in IntelliSense.
+                    // Ideally, we should solve this problem by passing out flags.
+                    SymbolId name = GetNameOfMethod(sourceTypeInfo, funcDesc.memid, "Event_");
+
+                    ComEventDesc eventDesc = new ComEventDesc();
+                    eventDesc.dispid = funcDesc.memid;
+                    eventDesc.sourceIID = sourceTypeAttribute.guid;
+                    events.Add(name, eventDesc);
+                } finally {
+                    if (funcDescHandleToRelease != IntPtr.Zero) {
+                        sourceTypeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
+                    }
+                }
+            }
+        }
+
+        private ComTypes.ITypeInfo GetCoClassTypeInfo()
+        {
+            IProvideClassInfo provideClassInfo = this.Obj as IProvideClassInfo;
+            if (provideClassInfo != null) {
+                IntPtr typeInfoPtr = IntPtr.Zero;
+                try {
+                    provideClassInfo.GetClassInfo(out typeInfoPtr);
+                    if (typeInfoPtr != IntPtr.Zero) {
+                        return Marshal.GetObjectForIUnknown(typeInfoPtr) as ITypeInfo;
+                    }
+                } finally {
+                    if (typeInfoPtr != IntPtr.Zero) {
+                        Marshal.Release(typeInfoPtr);
+                    }
+                }
+            }
+
+            // retrieving class information through IPCI has failed - 
+            // we can try scanning the typelib to find the coclass
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(DispatchObject);
+
+            if (_typeName == null)
+                _typeName = GetNameOfType(typeInfo);
+
+            // TODO: Why we scan typelib every time we need to find events
+            // TODO: Instead we might just keep a dictionary mapping 
+            // TODO: coclass's guids to implemented interfaces guids.
+            ComTypes.ITypeLib typeLib;
+            int typeInfoIndex;
+            typeInfo.GetContainingTypeLib(out typeLib, out typeInfoIndex);
+
+            // TODO: check that there are no 2 coclasses implementing same interface
+
+            int countTypes = typeLib.GetTypeInfoCount();
+            for (int i = 0; i < countTypes; i++)
+            {
+                ComTypes.TYPEKIND typeKind;
+                typeLib.GetTypeInfoType(i, out typeKind);
+                if (typeKind != ComTypes.TYPEKIND.TKIND_COCLASS)
+                    continue;
+
+                ComTypes.ITypeInfo classTypeInfo;
+                typeLib.GetTypeInfo(i, out classTypeInfo);
+
+                ComTypes.TYPEATTR classTypeAttr;
+                GetTypeAttrForTypeInfo(classTypeInfo, out classTypeAttr);
+
+                for (int j = 0; j < classTypeAttr.cImplTypes; j++) {
+                    int hRefType;
+                    classTypeInfo.GetRefTypeOfImplType(j, out hRefType);
+                    ComTypes.ITypeInfo interfaceTypeInfo;
+                    classTypeInfo.GetRefTypeInfo(hRefType, out interfaceTypeInfo);
+
+                    string interfaceName = GetNameOfType(interfaceTypeInfo);
+
+                    if (interfaceName == _typeName)
+                        return classTypeInfo;
+                }
+            }
+
+            return null;
+        }
 
         private void EnsureScanDefinedFunctions() {
             if (_funcs != null)
@@ -871,10 +1059,7 @@ namespace IronPython.Runtime.Types {
                 return;
             }
 
-            string typeDocString;
-            int dwHelpContext;
-            string helpFile;
-            typeInfo.GetDocumentation(-1, out this._typeName, out typeDocString, out dwHelpContext, out helpFile);
+            this._typeName = GetNameOfType(typeInfo);
 
             Dictionary<SymbolId, ComDispatch.ComMethodDesc> funcs;
             funcs = new Dictionary<SymbolId, ComDispatch.ComMethodDesc>(typeAttr.cFuncs);
@@ -899,7 +1084,7 @@ namespace IronPython.Runtime.Types {
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
                         (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0)
                     {
-                        if (funcDesc.memid == 0) //DISPID_VALUE
+                        if (funcDesc.memid == DISPID_VALUE)
                         {
                             methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                             name = SymbolTable.StringToId("__setitem__");
@@ -908,11 +1093,22 @@ namespace IronPython.Runtime.Types {
                         continue;
                     }
 
+                    // OLE defines an DISPID=-4 as a special DISPID
+                    // for enumeration support. This should be converted
+                    // to .NET-style enumeration support.
+                    if (funcDesc.memid == DISPID_NEWENUM)
+                    {
+                        methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
+                        name = SymbolTable.StringToId("GetEnumerator");
+                        funcs.Add(name, methodDesc);
+                        continue;
+                    }
+
                     methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                     name = SymbolTable.StringToId(methodDesc.Name);
                     funcs.Add(name, methodDesc);
 
-                    if (funcDesc.memid == 0) //DISPID_VALUE
+                    if (funcDesc.memid == DISPID_VALUE)
                     {
                         methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                         name = SymbolTable.StringToId("__getitem__");

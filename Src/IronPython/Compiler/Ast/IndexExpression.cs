@@ -81,7 +81,7 @@ namespace IronPython.Compiler.Ast {
                 return ag.Transform(expr);
             } 
 
-            return Ast.ReadField(null, typeof(System.Reflection.Missing).GetField("Value"));            
+            return Ast.ReadField(null, typeof(MissingParameter).GetField("Value"));            
         }
 
         private MSAst.Expression[] GetActionArgumentsForSet(AstGenerator ag, MSAst.Expression right) {

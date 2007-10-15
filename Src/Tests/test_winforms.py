@@ -15,11 +15,10 @@
 
 """Test cases for features that require WinForms and may display UI"""
 
-import sys
-if sys.platform == "win32":
-    sys.exit(0)
-
 from lib.assert_util import *
+skiptest("win32")
+skiptest("silverlight")
+
 import clr
 import System
 
@@ -61,7 +60,6 @@ class Person(System.Object):
 
 # test cases
 
-@skip("silverlight")
 def test_databinding_auto():
     class Form(SWF.Form):
         def __init__(self):
@@ -80,6 +78,7 @@ def test_databinding_auto():
     def close_form():
         while not form.Visible:
             System.Threading.Thread.Sleep(100)
+        System.Threading.Thread.Sleep(1000)
         
         for i in xrange(len(SAMPLE_DATA)):
             row = form.grid.Rows[i]
@@ -92,8 +91,7 @@ def test_databinding_auto():
     th.Start()
     SWF.Application.Run(form) 
     
-    
-@skip("silverlight")
+
 def test_databinding_manual():
     class Form(SWF.Form):
         def __init__(self):
@@ -118,6 +116,7 @@ def test_databinding_manual():
     def close_form():
         while not form.Visible:
             System.Threading.Thread.Sleep(100)
+        System.Threading.Thread.Sleep(1000)
             
         for i in xrange(len(SAMPLE_DATA)):
             row = form.grid.Rows[i]
@@ -128,6 +127,13 @@ def test_databinding_manual():
     th = System.Threading.Thread(System.Threading.ThreadStart(close_form))
     th.Start()
     SWF.Application.Run(form) 
+
+def test_class_name():
+    '''
+    This failed under IP 2.0A4.
+    '''
+    AreEqual(SWF.TextBox.__name__, "TextBox")
+    AreEqual(SWF.TextBox().__class__.__name__, "TextBox")
 
 
 run_test(__name__)

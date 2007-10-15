@@ -98,20 +98,27 @@ namespace IronPython.Runtime.Calls {
         private delegate object DynamicOperationMethod(CodeContext context, Operators op, object x, object y);
         private delegate object DynamicUnaryOperationMethod(CodeContext context, Operators op, object x);
         private void MakeDynamicTarget(DynamicOperationMethod action, StandardRule<T> rule) {
-            Expression expr = Ast.Call(
+            Expression expr =
+                Ast.SimpleCallHelper(
                     null,
                     action.Method,
                     Ast.CodeContext(),
                     Ast.Constant(this.Action.Operation),
                     rule.Parameters[0],
-                    rule.Parameters[1]);
+                    rule.Parameters[1]
+                );
             rule.SetTarget(rule.MakeReturn(Binder, expr));
         }
+
         private void MakeDynamicTarget(DynamicUnaryOperationMethod action, StandardRule<T> rule) {
-            Expression expr = Ast.Call(null, action.Method,
+            Expression expr =
+                Ast.SimpleCallHelper(
+                    null,
+                    action.Method,
                     Ast.CodeContext(),
                     Ast.Constant(Action.Operation),
-                    rule.Parameters[0]);
+                    rule.Parameters[0]
+                );
             rule.SetTarget(rule.MakeReturn(Binder, expr));
         }
 
@@ -408,8 +415,8 @@ namespace IronPython.Runtime.Calls {
                 PythonBinderHelper.MakeTest(ret, types);
 
                 Type[] callTypes = GetIndexerCallTypes(types);
-
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes);
+                Type[] testedTypes;
+                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes, out testedTypes);
                 if (cand != null) {
                     Expression call;
 
@@ -417,7 +424,7 @@ namespace IronPython.Runtime.Calls {
                         call = cand.Target.MakeExpression(Binder,
                             ret,
                             GetIndexArguments(ret),
-                            callTypes);
+                            testedTypes);
                     } else {
                         call = Ast.Comma(0,
                             ret.Parameters[ret.Parameters.Length - 1],
@@ -425,7 +432,7 @@ namespace IronPython.Runtime.Calls {
                                 Binder,
                                 ret,
                                 GetIndexArguments(ret),
-                                callTypes)
+                                testedTypes)
                         );
                     }
                     ret.SetTarget(ret.MakeReturn(Binder, call));
@@ -469,20 +476,20 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static Expression GetSetSlice(StandardRule<T> ret) {
-            return Ast.Call(null,
+            return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeSlice"),
-                GetSetParameter(ret, 1),
-                GetSetParameter(ret, 2),
-                GetSetParameter(ret, 3)
+                Ast.ConvertHelper(GetSetParameter(ret, 1), typeof(object)),
+                Ast.ConvertHelper(GetSetParameter(ret, 2), typeof(object)),
+                Ast.ConvertHelper(GetSetParameter(ret, 3), typeof(object))
             );
         }
 
         private static Expression GetGetOrDeleteSlice(StandardRule<T> ret) {
-            return Ast.Call(null,
+            return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeSlice"),
-                GetGetOrDeleteParameter(ret, 1),
-                GetGetOrDeleteParameter(ret, 2),
-                GetGetOrDeleteParameter(ret, 3)
+                Ast.ConvertHelper(GetGetOrDeleteParameter(ret, 1), typeof(object)),
+                Ast.ConvertHelper(GetGetOrDeleteParameter(ret, 2), typeof(object)),
+                Ast.ConvertHelper(GetGetOrDeleteParameter(ret, 3), typeof(object))
             );
         }
 
@@ -528,11 +535,17 @@ namespace IronPython.Runtime.Calls {
                 } else if (types.Length == 2) {
                     arg = ret.Parameters[1];
                 } else {
-                    arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret));
+                    arg = Ast.ComplexCallHelper(
+                        typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret)
+                    );
                 }
                 
                 string call = (action.Operation == Operators.GetItem || action.Operation == Operators.GetSlice) ? "GetIndex" : "DelIndex";
-                retExpr = Ast.Call(null, typeof(PythonOps).GetMethod(call), ret.Parameters[0], arg);
+                retExpr = Ast.SimpleCallHelper(
+                    typeof(PythonOps).GetMethod(call),
+                    ret.Parameters[0],
+                    arg
+                );
             } else {
                 Expression arg;
                 if (action.Operation == Operators.SetSlice) {
@@ -540,9 +553,17 @@ namespace IronPython.Runtime.Calls {
                 } else if (types.Length == 3) {
                     arg = ret.Parameters[1];
                 } else {
-                    arg = Ast.Call(null, typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetSetIndexParameters(ret));
+                    arg = Ast.ComplexCallHelper(
+                        typeof(PythonOps).GetMethod("MakeExpandableTuple"),
+                        GetSetIndexParameters(ret)
+                    );
                 }
-                retExpr = Ast.Call(null, typeof(PythonOps).GetMethod("SetIndex"), ret.Parameters[0], arg, ret.Parameters[ret.Parameters.Length - 1]);
+                retExpr = Ast.SimpleCallHelper(
+                    typeof(PythonOps).GetMethod("SetIndex"),
+                    ret.Parameters[0],
+                    arg,
+                    ret.Parameters[ret.Parameters.Length - 1]
+                );
             }
             ret.SetTarget(ret.MakeReturn(context.LanguageContext.Binder, retExpr));
             return ret;
@@ -665,17 +686,24 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Statement MakeUnaryThrow(StandardRule<T> block) {
-            return Ast.Statement(Ast.Throw(
-                Ast.Call(null, typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
+            return Ast.Throw(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
                     Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
-                    block.Parameters[0])));
+                    Ast.ConvertHelper(block.Parameters[0], typeof(object))
+                )
+            );
         }
 
         private Statement MakeBinaryThrow(StandardRule<T> block) {
-            return Ast.Statement(Ast.Throw(
-                Ast.Call(null, typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
+            return Ast.Throw(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
                     Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
-                    block.Parameters[0], block.Parameters[1])));
+                    Ast.ConvertHelper(block.Parameters[0], typeof(object)),
+                    Ast.ConvertHelper(block.Parameters[1], typeof(object))
+                )
+            );
         }
 
         private bool MakeOneCompare(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, DynamicType[] types) {
@@ -697,9 +725,14 @@ namespace IronPython.Runtime.Calls {
 
         private Statement MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
             return block.MakeReturn(Binder, 
-                Ast.Call(null, GetCompareMethod(reverse),
-                    Ast.Call(null, typeof(PythonOps).GetMethod("CompareToZero"),
-                        expr)));
+                Ast.Call(
+                    GetCompareMethod(reverse),
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("CompareToZero"),
+                        Ast.ConvertHelper(expr, typeof(object))
+                    )
+                )
+            );
         }
 
         private MethodInfo GetCompareMethod(bool reverse) {
@@ -720,9 +753,12 @@ namespace IronPython.Runtime.Calls {
 
         private Statement MakeFallbackCompare(StandardRule<T> block) {
             return block.MakeReturn(Binder, 
-                Ast.Call(null, GetComparisonFallbackMethod(Action.Operation),
-                    block.Parameters[0],
-                    block.Parameters[1]));
+                Ast.Call(
+                    GetComparisonFallbackMethod(Action.Operation),
+                    Ast.ConvertHelper(block.Parameters[0], typeof(object)),
+                    Ast.ConvertHelper(block.Parameters[1], typeof(object))
+                )
+            );
         }
 
 
@@ -1060,7 +1096,10 @@ namespace IronPython.Runtime.Calls {
                     if (notExpr.Type == typeof(bool)) {
                         notExpr = Ast.Equal(notExpr, Ast.False());
                     } else {
-                        notExpr = Ast.Call(null, typeof(PythonOps).GetMethod("Not"), notExpr);
+                        notExpr = Ast.Call(
+                            typeof(PythonOps).GetMethod("Not"),
+                            Ast.ConvertHelper(notExpr, typeof(object))
+                        );
                     }
                 } else {
                     // call len, compare w/ zero
@@ -1080,9 +1119,12 @@ namespace IronPython.Runtime.Calls {
             PythonBinderHelper.MakeTest(rule, types);
             rule.SetTarget(
                 rule.MakeReturn(Binder,
-                    Ast.Call(null,
+                    Ast.Call(
                         typeof(PythonOps).GetMethod("Not"),
-                        rule.Parameters[0])));
+                        Ast.ConvertHelper(rule.Parameters[0], typeof(object))
+                    )
+                )
+            );
             return rule;
         }
 

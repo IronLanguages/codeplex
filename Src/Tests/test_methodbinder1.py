@@ -469,6 +469,10 @@ def test_other_concern():
     AssertError(OverflowError, target.M200[System.Byte], 300)
     AssertError(OverflowError, target.M200[int], 12345678901234)
     
+    # calling an Out param on non-byref
+    AreEqual(target.M222(), 0)
+    AreEqual(Flag.Value, 222)
+    
     # what does means when passing in None 
     target.M300(None)
     AreEqual(Flag.Value, 300); Flag.Value = 99
@@ -702,15 +706,46 @@ def test_explicit_inheritance():
     d = Dictionary[object,object]()
     d.GetEnumerator() # not throw
 
-def test_nullable_property():
+def test_nullable_property_double():
     from IronPythonTest import NullableTest
     nt = NullableTest()
-    nt.Property = 1
-    AreEqual(nt.Property, 1.0)
-    nt.Property = 2.0
-    AreEqual(nt.Property, 2.0)
-    nt.Property = None
-    AreEqual(nt.Property, None)
+    nt.DProperty = 1
+    AreEqual(nt.DProperty, 1.0)
+    nt.DProperty = 2.0
+    AreEqual(nt.DProperty, 2.0)
+    nt.DProperty = None
+    AreEqual(nt.DProperty, None)
+    
+@disabled("Merlin 309716")
+def test_nullable_property_long():
+    from IronPythonTest import NullableTest
+    nt = NullableTest()
+    nt.LProperty = 1
+    AreEqual(nt.LProperty, 1L)
+    nt.LProperty = 2L
+    AreEqual(nt.LProperty, 2L)
+    nt.LProperty = None
+    AreEqual(nt.LProperty, None)    
+
+def test_nullable_property_bool():
+    from IronPythonTest import NullableTest
+    nt = NullableTest()
+    nt.BProperty = 1.0
+    AreEqual(nt.BProperty, True)
+    nt.BProperty = 0.0
+    AreEqual(nt.BProperty, False)
+    nt.BProperty = True
+    AreEqual(nt.BProperty, True)
+    nt.BProperty = None
+    AreEqual(nt.BProperty, None)
+    
+def test_nullable_property_enum():
+    from IronPythonTest import NullableTest
+    nt = NullableTest()
+    nt.EProperty = NullableTest.NullableEnums.NE1
+    AreEqual(nt.EProperty, NullableTest.NullableEnums.NE1)
+    nt.EProperty = None
+    AreEqual(nt.EProperty, None)    
 
 def test_nullable_parameter():
     from IronPythonTest import NullableTest
@@ -736,8 +771,24 @@ def test_xequals_call_for_optimization():
     clr.AddReference("System.Configuration");
     from System.Configuration import ConfigurationManager
     c = ConfigurationManager.ConnectionStrings
-    count = c.Count
-    count = c.Count
+    
+    #Invoke tests multiple times to make sure DynamicSites are utilized
+    for i in xrange(3):
+        AreEqual(1, c.Count)
+        
+    for i in xrange(3):
+        count = c.Count
+        AreEqual(1, count)
+        AreEqual(c.Count, count)
+            
+    for i in xrange(3):
+        #just ensure it doesn't throw
+        c[0].Name
+        
+    #Just to be sure this doesn't throw...
+    c.Count
+    c.Count
+        
 
 def test_interface_only_access():
     pc = InterfaceOnlyTest.PrivateClass

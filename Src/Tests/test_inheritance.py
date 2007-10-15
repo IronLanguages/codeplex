@@ -187,7 +187,7 @@ def test_override_hierarchy():
         
     AreEqual(D11().VirtualMethod(1), 10)
 
-@skip("win32")        
+@skip("win32", "silverlight") # remoting not supported in Silverlight     
 def test_mbr_inheritance():
     class InheritFromMarshalByRefObject(System.MarshalByRefObject):
         pass
@@ -890,9 +890,8 @@ def test_conversions():
         AreEqual(used.Use_UInt32(), System.UInt32.MaxValue)
         AreEqual(used.Use_UInt64(), System.UInt64.MaxValue)
         AreEqual(used.Use_UInt16(), System.UInt16.MaxValue)
-        if is_silverlight and is_interpreted():
-            print "Rowan Work Item 294586"
-        else:
+        #See Merlin Work Item 294586 for details on why this isn't supported
+        if not (is_silverlight and is_interpreted()):  
             AreEqual(used.Use_Type(), System.Type.GetType("System.Int32"))
         AreEqual(used.Use_RtEnum(), RtEnum.A)
         AreEqual(used.Use_RtDelegate().Invoke(30), 30 * 2)
@@ -926,8 +925,8 @@ def test_inherit_returntypes():
             def M_UInt64(self): return System.UInt64.MinValue
             def M_UInt16(self): return System.UInt16.MinValue
             def M_Type(self): 
+                #See Merlin Work Item 294586 for details on this
                 if is_silverlight and is_interpreted():
-                    print "Rowan Work Item 294586"
                     return System.Int64
                 return System.Type.GetType("System.Int64")
             def M_RtEnum(self): return RtEnum.B
@@ -952,9 +951,9 @@ def test_inherit_returntypes():
         AreEqual(used.Use_UInt32(), System.UInt32.MinValue)
         AreEqual(used.Use_UInt64(), System.UInt64.MinValue)
         AreEqual(used.Use_UInt16(), System.UInt16.MinValue)
-        if is_silverlight and is_interpreted():
-            print "Rowan Work Item 294586"
-        else:
+
+        #See Merlin Work Item 294586 for details on why this isn't supported
+        if not (is_silverlight and is_interpreted()):  
             AreEqual(used.Use_Type(), System.Type.GetType("System.Int64"))
         AreEqual(used.Use_RtEnum(), RtEnum.B)
         AreEqual(used.Use_RtDelegate().Invoke(100), 100)
@@ -1221,8 +1220,8 @@ if is_silverlight or is_cli:
                 def M_UInt64(self): return System.UInt64.MinValue
                 def M_UInt16(self): return System.UInt16.MinValue
                 def M_Type(self):
+                    #See Merlin Work Item 294586 for details on this
                     if is_silverlight and is_interpreted():
-                        print "Rowan Work Item 294586"
                         return System.Int64 
                     return System.Type.GetType("System.Int64")
                 def M_RtEnum(self): return RtEnum.B
@@ -1248,9 +1247,8 @@ if is_silverlight or is_cli:
             AreEqual(used.Use_UInt32(), System.UInt32.MinValue)
             AreEqual(used.Use_UInt64(), System.UInt64.MinValue)
             AreEqual(used.Use_UInt16(), System.UInt16.MinValue)
-            if is_silverlight and is_interpreted():
-                print "Rowan Work Item 294586"
-            else:
+            #See Merlin Work Item 294586 for details on why this isn't supported
+            if not (is_silverlight and is_interpreted()):  
                 AreEqual(used.Use_Type(), System.Type.GetType("System.Int64"))
             AreEqual(used.Use_RtEnum(), RtEnum.B)
             AreEqual(used.Use_RtDelegate().Invoke(100), 100 * 5)

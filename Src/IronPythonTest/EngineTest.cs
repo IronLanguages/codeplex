@@ -106,7 +106,11 @@ namespace IronPythonTest {
         }
     }
 
-    public class EngineTest : MarshalByRefObject {
+    public class EngineTest
+#if !SILVERLIGHT // remoting not supported in Silverlight
+        : MarshalByRefObject
+#endif
+    {
 
         PythonEngine pe = PythonEngine.CurrentEngine;
 

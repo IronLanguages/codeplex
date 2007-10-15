@@ -40,14 +40,13 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
-            MSAst.Expression destination = ag.Transform(_dest);
+            MSAst.Expression destination = ag.TransformAsObject(_dest);
 
             if (_expressions.Length == 0) {
                 if (destination != null) {
                     return Ast.Statement(
                         Span,
                         Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod("PrintNewlineWithDest"),
                             destination
                         )
@@ -56,7 +55,6 @@ namespace IronPython.Compiler.Ast {
                     return Ast.Statement(
                         Span,
                         Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod("PrintNewline")
                         )
                     );
@@ -82,16 +80,14 @@ namespace IronPython.Compiler.Ast {
 
                     if (destination != null) {
                         mce = Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod(method + "WithDest"),
                             destination,
-                            ag.Transform(current)
+                            ag.TransformAsObject(current)
                         );
                     } else {
                         mce = Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod(method),
-                            ag.Transform(current)
+                            ag.TransformAsObject(current)
                         );
                     }
 

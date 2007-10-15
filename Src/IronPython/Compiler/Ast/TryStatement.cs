@@ -155,7 +155,6 @@ namespace IronPython.Compiler.Ast {
                     //      CheckException(exception, Test)
                     MSAst.Expression test =
                         Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod("CheckException"),
                             extracted,
                             ag.TransformAsObject(tsh.Test)
@@ -237,9 +236,7 @@ namespace IronPython.Compiler.Ast {
             if (tests.Count > 0) {
                 // rethrow the exception if we have no catch-all block
                 if (catchAll == null) {
-                    catchAll = Ast.Statement(
-                        Ast.Throw(exception)
-                    );
+                    catchAll = Ast.Throw(exception);
                 }
 
                 body = Ast.If(
@@ -262,7 +259,6 @@ namespace IronPython.Compiler.Ast {
                     Ast.Assign(
                         extracted.Variable,
                         Ast.Call(
-                            null,
                             AstGenerator.GetHelperMethod("PushExceptionHandler"),
                             exception
                         )
@@ -272,7 +268,6 @@ namespace IronPython.Compiler.Ast {
             ).Finally(
                 Ast.Statement(
                     Ast.Call(
-                        null,
                         AstGenerator.GetHelperMethod("PopExceptionHandler")
                     )
                 )
@@ -282,7 +277,7 @@ namespace IronPython.Compiler.Ast {
         private static MSAst.Statement ClearDynamicStackFramesAst(SourceSpan span) {
             return Ast.Statement(
                 span,
-                Ast.Call(null, AstGenerator.GetHelperMethod("ClearDynamicStackFrames"))
+                Ast.Call(AstGenerator.GetHelperMethod("ClearDynamicStackFrames"))
             );
         }
 

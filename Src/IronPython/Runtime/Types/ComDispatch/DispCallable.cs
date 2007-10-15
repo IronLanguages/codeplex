@@ -38,8 +38,10 @@ namespace IronPython.Runtime.Types.ComDispatch {
                     }
                 }
 
-                if (countOfArgs == 0)
+                if (countOfArgs == 0) {
+                    parameterModifiers = new ParameterModifier();
                     return originalArgs;
+                }
 
                 object[] argsForCall = new object[countOfArgs];
 

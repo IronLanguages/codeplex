@@ -33,8 +33,12 @@ using Microsoft.Scripting.Actions;
 namespace IronPython.Runtime {
 
     [PythonType("dict")]
-    public class PythonDictionary : IMapping, IDictionary<object, object>, ICloneable, IValueEquality,
-                        IDictionary, ICodeFormattable, IAttributesCollection {
+    public class PythonDictionary : IMapping, IDictionary<object, object>, IValueEquality,
+        IDictionary, ICodeFormattable, IAttributesCollection
+#if !SILVERLIGHT
+        , ICloneable
+#endif
+    {
         internal static readonly IEqualityComparer<object> Comparer = new PythonObjectComparer();
         private static object DefaultGetItem;   // our cached __getitem__ method
 

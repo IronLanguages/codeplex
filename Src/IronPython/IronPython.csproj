@@ -1,4 +1,4 @@
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
   <Import Condition=" '$(BuildingTraversal)' == 'true' " Project="..\..\..\silverlight.settings.targets" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -10,6 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>IronPython</RootNamespace>
     <AssemblyName>IronPython</AssemblyName>
+    <OldToolsVersion>2.0</OldToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -266,9 +267,12 @@
     <Compile Include="Runtime\Symbols.Generated.cs" />
     <Compile Include="Runtime\SystemState.cs" />
     <Compile Include="Runtime\PythonTuple.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\ComEventSink.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\ComEventSinksContainer.cs" />
     <Compile Include="Runtime\Types\ComDispatch\ComMethodDesc.cs" />
     <Compile Include="Runtime\Types\ComDispatch\ComParamDesc.cs" />
     <Compile Include="Runtime\Types\ComDispatch\DispCallable.cs" />
+    <Compile Include="Runtime\Types\ComDispatch\BoundDispEvent.cs" />
     <Compile Include="Runtime\Types\ComDispatch\DispIndexer.cs" />
     <Compile Include="Runtime\Types\ComDispatch\DispMethod.cs" />
     <Compile Include="Runtime\Types\ComObject.cs" />

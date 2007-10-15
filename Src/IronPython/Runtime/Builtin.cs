@@ -232,13 +232,27 @@ namespace IronPython.Runtime {
             PythonContext lc = GetCompilerLanguageContext(context, inheritContext, cflags);
             ScriptEngine engine = context.LanguageContext.Engine;
             SourceUnit sourceUnit;
-            
+
             switch (kind) {
                 case "exec": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Default); break;
                 case "eval": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Expression); break;
                 case "single": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.SingleStatement); break;
                 default: 
                     throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
+            }
+
+            if ((cflags & CompileFlags.CO_DONT_IMPLY_DEDENT) != 0) {
+                // re-parse in interactive code mode to see if this is valid
+                ErrorSink es = new CompilerErrorSink();
+                SourceUnit altSourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.InteractiveCode);
+                CompilerContext compilerContext = new CompilerContext(altSourceUnit, null, es);
+                Parser p = Parser.CreateParser(compilerContext, PythonEngine.CurrentEngine.Options, false, false);
+                SourceCodeProperties prop;
+                IronPython.Compiler.Ast.PythonAst ast = p.ParseInteractiveCode(out prop);
+
+                if (prop == SourceCodeProperties.IsIncompleteStatement) {
+                    throw PythonOps.SyntaxError("invalid syntax", sourceUnit, ast != null ? ast.Body.Span : SourceSpan.Invalid, p.ErrorCode);
+                }
             }
 
             ScriptCode compiledCode = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, lc);
@@ -1383,7 +1397,7 @@ namespace IronPython.Runtime {
             CompileFlags cflags = 0;
             if (flags != null) {
                 cflags = (CompileFlags)Converter.ConvertToInt32(flags);
-                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION)) != 0) {
+                if ((cflags & ~(CompileFlags.CO_NESTED | CompileFlags.CO_GENERATOR_ALLOWED | CompileFlags.CO_FUTURE_DIVISION | CompileFlags.CO_DONT_IMPLY_DEDENT)) != 0) {
                     throw PythonOps.ValueError("unrecognized flags");
                 }
             }

@@ -14,7 +14,6 @@
 #####################################################################################
 
 ## BE PLATFORM NETURAL
-
 import nt
 import sys
 
@@ -180,3 +179,16 @@ def delete_all_f(module_name):
             if isinstance(fn, str):
                 try:    nt.unlink(fn)
                 except: pass
+                
+
+def copy_dlls_for_peverify(dlls):
+    import System
+    for x in dlls:
+        try:
+            filecopy(x, sys.exec_prefix + "\\" + System.IO.Path.GetFileName(x))
+        except: 
+            print "Warning: copying %s failed" % x
+
+def delete_dlls_for_peverify(dlls):
+    import System
+    delete_files([sys.exec_prefix + "\\" + System.IO.Path.GetFileName(x) for x in dlls])

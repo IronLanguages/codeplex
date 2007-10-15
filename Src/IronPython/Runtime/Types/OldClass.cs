@@ -548,7 +548,7 @@ namespace IronPython.Runtime.Types {
                         Ast.Assign(instTmp, Ast.New(typeof(OldInstance).GetConstructor(new Type[] { typeof(OldClass) }), rule.Parameters[0])),
                         Ast.Condition(
                             Ast.Call(
-                                rule.Parameters[0],
+                                Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                                 typeof(OldClass).GetMethod("TryLookupInit"),
                                 Ast.Read(instTmp),
                                 Ast.Read(tmp)
@@ -559,10 +559,10 @@ namespace IronPython.Runtime.Types {
                             ),
                             rule.Parameters.Length != 1 ?
                                 (Expression)Ast.Call(
-                                    rule.Parameters[0],
+                                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                                     typeof(OldClass).GetMethod("MakeCallError")
                                     ) :
-                                Ast.Constant(null)
+                                Ast.Null()
                         )
                     )
                 )
@@ -590,13 +590,30 @@ namespace IronPython.Runtime.Types {
             Expression call;
 
             if (action.Name == Symbols.Bases) {
-                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetBases"), rule.Parameters[1]);
+                call = Ast.Call(
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetMethod("SetBases"),
+                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                );
             } else if (action.Name == Symbols.Name) {
-                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetName"), rule.Parameters[1]);
+                call = Ast.Call(
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetMethod("SetName"),
+                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                );
             } else if (action.Name == Symbols.Dict) {
-                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetDictionary"), rule.Parameters[1]);
+                call = Ast.Call(
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetMethod("SetDictionary"),
+                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                );
             } else {
-                call = Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("SetNameHelper"), Ast.Constant(action.Name), rule.Parameters[1]);
+                call = Ast.Call(
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetMethod("SetNameHelper"),
+                    Ast.Constant(action.Name),
+                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+                );
             }
 
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, call));
@@ -635,7 +652,12 @@ namespace IronPython.Runtime.Types {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldClass));
             rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder,
-                Ast.Call(rule.Parameters[0], typeof(OldClass).GetMethod("DeleteCustomMember"), Ast.CodeContext(), Ast.Constant(action.Name))
+                Ast.Call(
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
+                    typeof(OldClass).GetMethod("DeleteCustomMember"),
+                    Ast.CodeContext(),
+                    Ast.Constant(action.Name)
+                )
             ));
             return rule;
         }
@@ -658,12 +680,16 @@ namespace IronPython.Runtime.Types {
                     )
                 );
             } else if (action.Name == Symbols.Bases) {
-                target = Ast.Call(null,
+                target = Ast.Call(
                     typeof(PythonTuple).GetMethod("Make"),
-                    Ast.ReadProperty(
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                        typeof(OldClass).GetProperty("BaseClasses"))
-                    );
+                    Ast.ConvertHelper(
+                        Ast.ReadProperty(
+                            Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                            typeof(OldClass).GetProperty("BaseClasses")
+                        ),
+                        typeof(object)
+                    )
+                );
             } else if (action.Name == Symbols.Name) {
                 target = Ast.ReadProperty(
                     Ast.Convert(rule.Parameters[0], typeof(OldClass)),
@@ -682,7 +708,10 @@ namespace IronPython.Runtime.Types {
                                 Ast.Read(tmp)
                             ),
                             Ast.Read(tmp),
-                            Ast.ReadField(null, typeof(OperationFailed).GetField("Value"))
+                            Ast.Convert(
+                                Ast.ReadField(null, typeof(OperationFailed).GetField("Value")),
+                                typeof(object)
+                            )
                         );
                 } else {
                     target = Ast.Call(

@@ -37,6 +37,8 @@ using IronPython.Runtime.Exceptions;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.Security;
+using System.IO;
+using Microsoft.Scripting.Actions;
 
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
@@ -330,9 +332,7 @@ namespace IronPython.Modules {
                 + "and bufsize arguments are as for the built-in open() function.")]
             [PythonName("makefile")]
             public PythonFile MakeFile([DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
-                if (bufSize == -1) bufSize = 8192;
-                socket.SendBufferSize = socket.ReceiveBufferSize = bufSize;
-                return new PythonFile(new NetworkStream(socket), System.Text.Encoding.Default, mode);
+                return new FileObject(this, mode, bufSize);
             }
 
             [Documentation("recv(bufsize[, flags]) -> string\n\n"
@@ -1577,6 +1577,122 @@ namespace IronPython.Modules {
             }
         }
 
+        class PythonUserSocketStream : Stream {
+            private object _userSocket;
+            private List<string> _data = new List<string>();
+            private int _dataSize, _bufSize;
+            private static FastDynamicSite<object, object, object> _sendAllSite = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
+            private static FastDynamicSite<object, object, string> _recvSite = RuntimeHelpers.CreateSimpleCallSite<object, object, string>(DefaultContext.Default);
+
+            public PythonUserSocketStream(object userSocket, int bufferSize) {
+                _userSocket = userSocket;
+                _bufSize = bufferSize;
+            }
+
+            public override bool CanRead {
+                get { return true; }
+            }
+
+            public override bool CanSeek {
+                get { return false; }
+            }
+
+            public override bool CanWrite {
+                get { return true; }
+            }
+
+            public override void Flush() {
+                if (_data.Count > 0) {
+                    StringBuilder res = new StringBuilder();
+                    foreach (string s in _data) {
+                        res.Append(s);
+                    }
+                    _sendAllSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("sendall")), res.ToString());
+                    _data.Clear();
+                }
+            }
+
+            public override long Length {
+                get { throw new NotImplementedException(); }
+            }
+
+            public override long Position {
+                get {
+                    throw new NotImplementedException();
+                }
+                set {
+                    throw new NotImplementedException();
+                }
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) {
+                int size = count;
+                string data = _recvSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("recv")), count);
+
+                return PythonAsciiEncoding.Instance.GetBytes(data, 0, data.Length, buffer, offset);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) {
+                throw new NotImplementedException();
+            }
+
+            public override void SetLength(long value) {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count) {
+                string strData = new string(PythonAsciiEncoding.Instance.GetChars(buffer, offset, count));
+                _data.Add(strData);
+                _dataSize += strData.Length;
+                if (_dataSize > _bufSize) {
+                    Flush();
+                }                               
+            }
+
+            public object Socket {
+                [PythonName("_sock")]
+                get {
+                    return _userSocket;
+                }
+            }
+        }
+
+        [PythonType("_fileobject")]
+        public class FileObject : PythonFile {
+            private const int DefaultBufferSize = 8192;
+            public static object default_bufsize = DefaultBufferSize;
+            public static object name = "<socket>";
+
+            public FileObject(SocketObj socket)
+                : this(socket, "rb", -1) {
+            }
+
+            public FileObject(SocketObj socket, string mode)
+                : this(socket, mode, -1) {
+            }
+
+            public FileObject(SocketObj socket, string mode, int bufsize)
+                : base(new NetworkStream(socket.socket), System.Text.Encoding.Default, mode) {                
+                socket.socket.SendBufferSize = socket.socket.ReceiveBufferSize = GetBufferSize(bufsize);
+            }
+
+            public FileObject(object socket)
+                : this(socket, "rb", -1) {
+            }
+
+            public FileObject(object socket, string mode)
+                : this(socket, mode, -1) {
+            }
+
+            public FileObject(object socket, string mode, int bufsize)
+                : base(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), System.Text.Encoding.Default, mode) {
+            }
+
+            private static int GetBufferSize(int size) {
+                if (size == -1) return DefaultBufferSize;
+                return size;
+            }
+        }
         #endregion
 
     }

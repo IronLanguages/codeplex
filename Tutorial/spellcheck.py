@@ -27,6 +27,7 @@ from System.Windows.Forms import Form
 
 import sys
 sys.path.append(r"c:\python24\lib")
+
 ## Let's us clean up the Word process on exit -- see _cleanup().
 import atexit
 
@@ -43,7 +44,7 @@ def _get_word_object ():
     return _word_object
 
 def _cleanup ():
-    _word_object.Quit(*[System.Type.Missing]*3)
+    _word_object.Quit()
 atexit.register(_cleanup)
 
 
@@ -53,9 +54,7 @@ atexit.register(_cleanup)
 
 ### Returns True if word is spelled correctly, otherwise false.
 def check_word (word):
-    w = _get_word_object()
-    args = [word] + [System.Type.Missing]*12
-    return w.CheckSpelling(*args)[0]
+    return w.CheckSpelling(word)
 
 
 ### Returns a list of possible corrections for word.  Returns an empty list
@@ -64,10 +63,8 @@ def get_suggestions (word):
     w = _get_word_object()
     if w.Documents.Count < 1:
         ## Must have a document, or can't call GetSpellingSuggestions.
-        w.Documents.Add(System.Type.Missing, System.Type.Missing, \
-                        System.Type.Missing, System.Type.Missing)
-    args = [word] + [System.Type.Missing]*13
-    suggestions_objects = w.GetSpellingSuggestions(*args)[0]
+        w.Documents.Add()
+    suggestions_objects = w.GetSpellingSuggestions(word)
     return [x.Name for x in suggestions_objects]
 
 
