@@ -56,8 +56,8 @@ def test_get_set():
     def f(): desc.__set__(EnumInt32, 12)
     AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
 
-    def f(): desc.__set__(None, EnumInt32.B) # bug 305557
-    #AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
+    def f(): desc.__set__(None, EnumInt32.B) 
+    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
     
 run_test(__name__)
 

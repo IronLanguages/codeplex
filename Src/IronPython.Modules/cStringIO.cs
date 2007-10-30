@@ -17,10 +17,12 @@ using System;
 using System.Collections;
 using System.IO;
 using System.Text;
-using IronPython.Runtime;
 
-using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("cStringIO", typeof(IronPython.Modules.PythonStringIO))]
 namespace IronPython.Modules {
@@ -167,8 +169,8 @@ namespace IronPython.Modules {
     }
 
     public static class PythonStringIO {
-        public static object InputType = DynamicHelpers.GetDynamicType(typeof(StringI));
-        public static object OutputType = DynamicHelpers.GetDynamicType(typeof(StringO));
+        public static object InputType = DynamicHelpers.GetPythonType(typeof(StringI));
+        public static object OutputType = DynamicHelpers.GetPythonType(typeof(StringO));
 
         public class StringI {
             private StringStream _sr;

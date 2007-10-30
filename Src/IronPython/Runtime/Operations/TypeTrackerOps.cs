@@ -27,7 +27,7 @@ namespace IronPython.Runtime.Operations {
     public static class TypeTrackerOps {
         [PropertyMethod]
         public static IDictionary<object, object> Get__dict__(CodeContext context, TypeTracker self) {
-            return new PythonDictionary(DynamicHelpers.GetDynamicTypeFromType(self.Type).GetCustomMemberDictionary(context));
+            return new PythonDictionary(((ICustomMembers)DynamicHelpers.GetPythonTypeFromType(self.Type)).GetCustomMemberDictionary(context));
         }
     }
 }

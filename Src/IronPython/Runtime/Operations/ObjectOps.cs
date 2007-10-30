@@ -24,7 +24,6 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -39,16 +38,16 @@ namespace IronPython.Runtime.Operations {
 
     public static class ObjectOps {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
-        private static Dictionary<DynamicType, object> nativelyPickleableTypes = null;
+        private static Dictionary<PythonType, object> nativelyPickleableTypes = null;
 
         [PropertyMethod, PythonName("__class__")]
-        public static DynamicType Get__class__(object self) {
-            return DynamicHelpers.GetDynamicType(self);
+        public static PythonType Get__class__(object self) {
+            return DynamicHelpers.GetPythonType(self);
         }
 
         [PropertyMethod, PythonName("__class__")]
         public static void Set__class__(CodeContext context, object self, object value) {
-            if (!new DynamicTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetDynamicType(self), value)) {
+            if (!new PythonTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetPythonType(self), value)) {
                 throw PythonOps.TypeError("__class__ assignment can only be performed on user defined types");
             }
         }
@@ -61,7 +60,7 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
-                DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(self)),
+                PythonTypeOps.GetName(DynamicHelpers.GetPythonType(self)),
                 PythonOps.HexId(self));
         }
 
@@ -80,6 +79,9 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static string __str__(object o) {
+            ICodeFormattable icf = o as ICodeFormattable;
+            if (icf != null) return icf.ToCodeString(DefaultContext.Default);
+
             return __repr__(o);
         }
 
@@ -93,23 +95,23 @@ namespace IronPython.Runtime.Operations {
 
         // This is a dynamically-initialized property rather than a statically-initialized field
         // to avoid a bootstrapping dependency loop
-        static Dictionary<DynamicType, object> NativelyPickleableTypes {
+        static Dictionary<PythonType, object> NativelyPickleableTypes {
             get {
                 if (nativelyPickleableTypes == null) {
-                    nativelyPickleableTypes = new Dictionary<DynamicType, object>();
+                    nativelyPickleableTypes = new Dictionary<PythonType, object>();
                     nativelyPickleableTypes.Add(TypeCache.None, null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(bool)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(int)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(double)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(string)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(List)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDictionary)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(OldInstance)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(OldClass)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFunction)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetDynamicTypeFromType(typeof(BuiltinFunction)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(bool)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(int)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(double)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(Complex64)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(string)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(List)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldInstance)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldClass)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonFunction)), null);
+                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(BuiltinFunction)), null);
                 }
                 return nativelyPickleableTypes;
             }
@@ -120,9 +122,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object __reduce_ex__(CodeContext context, object self, object protocol) {
-            object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetDynamicTypeFromType(typeof(object)), Symbols.Reduce);
+            object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetPythonTypeFromType(typeof(object)), Symbols.Reduce);
             object myReduce;
-            if (PythonOps.TryGetBoundAttr(context, DynamicHelpers.GetDynamicType(self), Symbols.Reduce, out myReduce)) {
+            if (PythonOps.TryGetBoundAttr(context, DynamicHelpers.GetPythonType(self), Symbols.Reduce, out myReduce)) {
                 if (!PythonOps.IsRetBool(myReduce, objectReduce)) {
                     // A derived class overrode __reduce__ but not __reduce_ex__, so call
                     // specialized __reduce__ instead of generic __reduce_ex__.
@@ -149,7 +151,7 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         private static PythonDictionary GetInitializedSlotValues(object obj) {
             PythonDictionary initializedSlotValues = new PythonDictionary();
-            IList<DynamicMixin> mro = DynamicHelpers.GetDynamicType(obj).ResolutionOrder;
+            IList<PythonType> mro = DynamicHelpers.GetPythonType(obj).ResolutionOrder;
             object slots;
             object slotValue;
             foreach (object type in mro) {
@@ -175,7 +177,7 @@ namespace IronPython.Runtime.Operations {
         private static PythonTuple ReduceProtocol0(CodeContext context, object self) {
             // CPython implements this in copy_reg._reduce_ex
 
-            DynamicType myType = DynamicHelpers.GetDynamicType(self); // PEP 307 calls this "D"
+            PythonType myType = DynamicHelpers.GetPythonType(self); // PEP 307 calls this "D"
             ThrowIfNativelyPickable(myType);
 
             object getState;
@@ -187,7 +189,7 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.TypeError("a class that defines __slots__ without defining __getstate__ cannot be pickled with protocols 0 or 1");
             }
 
-            DynamicType closestNonPythonBase = FindClosestNonPythonBase(myType); // PEP 307 calls this "B"
+            PythonType closestNonPythonBase = FindClosestNonPythonBase(myType); // PEP 307 calls this "B"
 
             object func = PythonOps.PythonReconstructor;
 
@@ -208,7 +210,7 @@ namespace IronPython.Runtime.Operations {
             return PythonTuple.MakeTuple(func, funcArgs, state);
         }
 
-        private static void ThrowIfNativelyPickable(DynamicType type) {
+        private static void ThrowIfNativelyPickable(PythonType type) {
             if (NativelyPickleableTypes.ContainsKey(type)) {
                 throw PythonOps.TypeError("can't pickle {0} objects", type.Name);
             }
@@ -217,8 +219,8 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Returns the closest base class (in terms of MRO) that isn't defined in Python code
         /// </summary>
-        private static DynamicType FindClosestNonPythonBase(DynamicType type) {
-            foreach (DynamicType pythonBase in type.ResolutionOrder) {
+        private static PythonType FindClosestNonPythonBase(PythonType type) {
+            foreach (PythonType pythonBase in type.ResolutionOrder) {
                 if (pythonBase.IsSystemType) {
                     return pythonBase;
                 }
@@ -230,7 +232,7 @@ namespace IronPython.Runtime.Operations {
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 3 (new-style instance, protocol 2)
         /// </summary>
         private static PythonTuple ReduceProtocol2(CodeContext context, object self) {
-            DynamicType myType = DynamicHelpers.GetDynamicType(self);
+            PythonType myType = DynamicHelpers.GetPythonType(self);
 
             object func, state, listIterator, dictIterator;
             object[] funcArgs;
@@ -293,7 +295,7 @@ namespace IronPython.Runtime.Operations {
             public override StandardRule<T> GetRule<T>(CodeContext callerContext, object[] args) {
                 switch (args.Length) {
                     // someObj.__getattribute__(name)
-                    case 2: return MakeRule<T>(callerContext, args, ((BoundBuiltinFunction)args[0]).Self, args[1]);
+                    case 2: return MakeRule<T>(callerContext, args, ((BoundBuiltinFunction)args[0]).__self__, args[1]);
                     // object.__getattribute__(object, name)                        
                     case 3: return MakeRule<T>(callerContext, args, args[1], args[2]);
                 }
@@ -303,15 +305,15 @@ namespace IronPython.Runtime.Operations {
             private StandardRule<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
                 string strAttr = attribute as string;
                 if (strAttr == null) return null;
-                if (self is ICustomMembers || self is ISuperDynamicObject) return null;
+                if (self is ICustomMembers || self is IPythonObject) return null;
 
-                DynamicType selfType = DynamicHelpers.GetDynamicType(self);
+                PythonType selfType = DynamicHelpers.GetPythonType(self);
 
                 return MakeGetMemberRule<T>(context, strAttr, selfType, args) ?? CreateCallRule<T>(context, args, strAttr);
             }
 
-            private StandardRule<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, DynamicType selfType, object[] args) {
-                DynamicTypeSlot dts;
+            private StandardRule<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, PythonType selfType, object[] args) {
+                PythonTypeSlot dts;
                 if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
                     PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr), args);                    
                     
@@ -344,7 +346,7 @@ namespace IronPython.Runtime.Operations {
                 // test is object types + test on the parameter being looked up.  The input name is
                 // either an object or a string so we call the appropriaet overload on string.
                 return Ast.AndAlso(
-                    PythonBinderHelper.MakeTestForTypes(res, DynamicTypeOps.ObjectTypes(args), 0),
+                    PythonBinderHelper.MakeTestForTypes(res, PythonTypeOps.ObjectTypes(args), 0),
                     Ast.Call(
                         Ast.Constant(strAttr, typeof(string)),
                         typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].Type }),
@@ -355,9 +357,9 @@ namespace IronPython.Runtime.Operations {
 
             private Expression GetTargetObject<T>(StandardRule<T> rule, object[] args) {
                 if (args.Length == 2) {
-                    return Ast.Call(
+                    return Ast.ReadProperty(
                         Ast.ConvertHelper(rule.Parameters[0], typeof(BoundBuiltinFunction)),
-                        typeof(BoundBuiltinFunction).GetMethod("get_Self")
+                        typeof(BoundBuiltinFunction).GetProperty("__self__")
                     );
                 } else {
                     Debug.Assert(args.Length == 3);

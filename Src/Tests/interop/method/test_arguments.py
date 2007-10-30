@@ -28,15 +28,17 @@ if is_cli:
     import clr
     clr.AddReference("methodargs", "typesamples")
 
-    #from lib.file_util import *
-    #peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\methodargs.dll", merlin_root + r"\Test\ClrAssembly\bin\fieldtests.dll"]
-    #copy_dlls_for_peverify(peverify_dependency)
+    from lib.file_util import *
+    peverify_dependency = [ 
+        merlin_root + r"\Test\ClrAssembly\bin\methodargs.dll", 
+        merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll"
+    ]
+    copy_dlls_for_peverify(peverify_dependency)
 
     from Merlin.Testing import *
     from Merlin.Testing.Call import *
     from Merlin.Testing.TypeSample import *
     o = VariousParameters()
-    flag = o.Flag
     
 else:
     def M100(): pass
@@ -49,7 +51,7 @@ else:
 
 def test_0_1_args():
 
-    # public void M100() { }
+    # public void M100() { Flag.Reset(); Flag.Set(10); }
     f = is_cli and o.M100 or M100
     f()
     AssertErrorWithMessages(TypeError, "M100() takes exactly 0 arguments (1 given)", 'M100() takes no arguments (1 given)', lambda: f(1))
@@ -61,7 +63,7 @@ def test_0_1_args():
     AssertErrorWithMessages(TypeError, "M100() got an unexpected keyword argument 'x'", 'M100() takes no arguments (1 given)', lambda: f(**{'x':10}))
     f(*(), **{})
     
-    #public void M200(int arg) { }
+    # public void M200(int arg) { Flag.Reset(); Flag.Set(arg); }
     f = is_cli and o.M200 or M200
     AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (0 given)", lambda: f())
     f(1)
@@ -82,7 +84,7 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M200() got an unexpected keyword argument 'other'", lambda: f(arg = 1, other = 2))
     AssertErrorWithMessages(TypeError, "M200() takes exactly 1 non-keyword argument (1 given)", "M200() got multiple values for keyword argument 'arg'", lambda: f(arg = 1, **{'arg' : 2})) # msg
 
-    #public void M201([DefaultParameterValue(20)] int arg) { }
+    # public void M201([DefaultParameterValue(20)] int arg) { Flag.Reset(); Flag.Set(arg); }
     f = is_cli and o.M201 or M201
     f()
     f(1)
@@ -106,7 +108,7 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M201() got an unexpected keyword argument 'arg1'", lambda: f(arg1 = 1, other = 2))
     AssertErrorWithMessage(TypeError, "M201() got an unexpected keyword argument 'arg1'", lambda: f(**{ "arg1" : 1}))
 
-    #public void M202(params int[] arg) { }
+    # public void M202(params int[] arg) { Flag.Reset(); Flag.Set(arg.Length); }
     f = is_cli and o.M202 or M202
     f()
     f(1)
@@ -122,47 +124,47 @@ def test_0_1_args():
 
 @skip("win32")    
 def test_optional():
-    #public void M231([Optional] int arg) { Flag.Reset(); Flag.Value1 = arg; }
-    #public void M232([Optional] bool arg) { Flag.Reset(); Flag.Value2 = arg; }
-    #public void M233([Optional] object arg) { Flag.Reset(); Flag.Value4 = arg; }
-    #public void M234([Optional] string arg) { Flag.Reset(); Flag.Value3 = arg; }
-    #public void M235([Optional] EnumInt32 arg) { Flag.Reset(); Flag.Value5 = arg; }
-    #public void M236([Optional] SimpleClass arg) { Flag.Reset(); Flag.Value6 = arg; }
-    #public void M237([Optional] SimpleStruct arg) { Flag.Reset(); Flag.Value7 = arg; }
-    
+    #public void M231([Optional] int arg) { Flag.Set(arg); }  // not reset any
+    #public void M232([Optional] bool arg) { Flag<bool>.Set(arg); }
+    #public void M233([Optional] object arg) { Flag<object>.Set(arg); }
+    #public void M234([Optional] string arg) { Flag<string>.Set(arg); }
+    #public void M235([Optional] EnumInt32 arg) { Flag<EnumInt32>.Set(arg); }
+    #public void M236([Optional] SimpleClass arg) { Flag<SimpleClass>.Set(arg); }
+    #public void M237([Optional] SimpleStruct arg) { Flag<SimpleStruct>.Set(arg); }
+
     ## testing the passed in value, and the default values
-    o.M231(12); AreEqual(flag.Value1, 12)
-    o.M231(); AreEqual(flag.Value1, 0)
+    o.M231(12); Flag.Check(12)
+    o.M231(); Flag.Check(0)
     
-    o.M232(True); AreEqual(flag.Value2, True)
-    o.M232(); AreEqual(flag.Value2, False)
-    
+    o.M232(True); Flag[bool].Check(True) 
+    o.M232(); Flag[bool].Check(False)
+        
     def t(): pass
-    o.M233(t); AreEqual(flag.Value4, t)
-    o.M233(); AreEqual(flag.Value4, System.Type.Missing.Value)
+    o.M233(t); Flag[object].Check(t)
+    o.M233(); Flag[object].Check(System.Type.Missing.Value)
     
-    o.M234("ironpython"); AreEqual(flag.Value3, "ironpython")
-    o.M234(); AreEqual(flag.Value3, None)
+    o.M234("ironpython"); Flag[str].Check("ironpython")
+    o.M234(); Flag[str].Check(None)
     
-    o.M235(EnumInt32.B); AreEqual(flag.Value5, EnumInt32.B)
-    o.M235(); AreEqual(flag.Value5, EnumInt32.A)
+    o.M235(EnumInt32.B); Flag[EnumInt32].Check(EnumInt32.B)
+    o.M235(); Flag[EnumInt32].Check(EnumInt32.A)
     
     x = SimpleClass(23)
-    o.M236(x); AreEqual(flag.Value6, x)
-    o.M236(); AreEqual(flag.Value6, None)
+    o.M236(x); Flag[SimpleClass].Check(x)
+    o.M236(); Flag[SimpleClass].Check(None)
     
     x = SimpleStruct(24)
-    o.M237(x); AreEqual(flag.Value7, x)
-    o.M237(); AreEqual(flag.Value7.Flag, 0) 
+    o.M237(x); Flag[SimpleStruct].Check(x)
+    o.M237(); AreEqual(Flag[SimpleStruct].Value1.Flag, 0) 
     
     ## testing the argument style
     f = is_cli and o.M231 or M231
     
-    f(*()); AreEqual(flag.Value1, 0)
-    f(*(2, )); AreEqual(flag.Value1, 2)
-    f(arg = 3); AreEqual(flag.Value1, 3)
-    f(**{}); AreEqual(flag.Value1, 0)
-    f(*(), **{'arg':4}); AreEqual(flag.Value1, 4)
+    f(*()); Flag.Check(0)
+    f(*(2, )); Flag.Check(2)
+    f(arg = 3); Flag.Check(3)
+    f(**{}); Flag.Check(0)
+    f(*(), **{'arg':4}); Flag.Check(4)
     
     AssertErrorWithMessage(TypeError, "M231() takes at most 0 arguments (2 given)", lambda: f(1, 2))  # msg
     AssertErrorWithMessage(TypeError, "M231() takes at most 0 arguments (1 given)", lambda: f(1, **{'arg': 2}))  # msg
@@ -234,7 +236,355 @@ def test_two_args():
     AssertErrorWithMessages(TypeError, "M350() takes at least 1 argument (0 given)", "M350() got an unexpected keyword argument 'y'", lambda: f(**{'x' : 1, 'y' : 2}))
     AssertErrorWithMessages(TypeError, "M350() takes at most 1 non-keyword argument (4 given)", "M350() got multiple values for keyword argument 'x'", lambda: f(2, 3, 4, x = 1))
     
+    # TODO: mixed 
+    f(x = 1)  # check the value
 
+def test_default_values_2():
+    # public void M310(int x, [DefaultParameterValue(30)]int y) { Flag.Reset(); Flag.Set(x + y); }
+    f = o.M310
+    AssertErrorWithMessage(TypeError, "M310() takes at least 0 arguments (0 given)", f) 
+    f(1); Flag.Check(31)
+    f(1, 2); Flag.Check(3)
+    AssertErrorWithMessage(TypeError, "M310() takes at most 1 argument (3 given)", lambda : f(1, 2, 3))
+    
+    f(x = 2); Flag.Check(32)
+    f(4, y = 5); Flag.Check(9)
+    f(y = 7, x = 10); Flag.Check(17)
+    f(*(8,)); Flag.Check(38)
+    f(*(9, 10)); Flag.Check(19)
+    
+    f(1, **{'y':2}); Flag.Check(3)
+    
+    # public void M320([DefaultParameterValue(40)] int y, int x) { Flag.Reset(); Flag.Set(x + y); }
+    f = o.M320
+    AssertErrorWithMessage(TypeError, "M320() takes at least 0 arguments (0 given)", f) 
+    f(1); Flag.Check(41)  # !!!
+    f(2, 3); Flag.Check(5)
+    AssertErrorWithMessage(TypeError, "M320() takes at most 1 argument (3 given)", lambda : f(1, 2, 3))
+    
+    f(x = 2); Flag.Check(42)
+    f(x = 2, y = 3); Flag.Check(5)
+    f(*(1,)); Flag.Check(41)
+    f(*(1, 2)); Flag.Check(3)
+    
+    AssertErrorWithMessage(TypeError, "M320() takes at most 1 non-keyword argument (2 given)", lambda : f(5, y = 6)) # !!!
+    f(6, x = 7); Flag.Check(13)
+    
+    # public void M330([DefaultParameterValue(50)] int x, [DefaultParameterValue(60)] int y) { Flag.Reset(); Flag.Set(x + y); }
+    f = o.M330
+    f(); Flag.Check(110)
+    f(1); Flag.Check(61)
+    f(1, 2); Flag.Check(3)
+    
+    f(x = 1); Flag.Check(61)
+    f(y = 2); Flag.Check(52)
+    f(y = 3, x = 4); Flag.Check(7)
+    
+    f(*(5,)); Flag.Check(65)
+    f(**{'y' : 6}); Flag.Check(56)
+
+def test_3_args():
+    # public void M500(int x, int y, int z) { Flag.Reset(); Flag.Set(x * 100 + y * 10 + z); }
+    f = o.M500
+    f(1, 2, 3); Flag.Check(123)
+    f(y = 1, z = 2, x = 3); Flag.Check(312)
+    f(3, *(2, 1)); Flag.Check(321)
+    f(1, z = 2, **{'y':3}); Flag.Check(132)
+    f(z = 1, **{'x':2, 'y':3}); Flag.Check(231)
+    f(1, z = 2, *(3,)); #Flag.Check(132)
+
+    # public void M510(int x, int y, [DefaultParameterValue(70)] int z) { Flag.Reset(); Flag.Set(x * 100 + y * 10 + z); }
+    f = o.M510
+    f(1, 2); Flag.Check(120 + 70)
+    f(2, y = 1); Flag.Check(210 + 70)
+
+    f(1, 2, 3); Flag.Check(123)
+    
+    # public void M520(int x, [DefaultParameterValue(80)]int y, int z) { Flag.Reset(); Flag.Set(x * 100 + y * 10 + z); }
+    f = o.M520
+    f(1, 2); Flag.Check(102 + 800)
+    f(2, z = 1); Flag.Check(201 + 800)
+    f(z=1, **{'x': 2}); Flag.Check(201 + 800)
+    f(2, *(1,)); Flag.Check(201 + 800)
+    
+    f(1, z = 2, y = 3); Flag.Check(132)
+    f(1, 2, 3); Flag.Check(123)
+    
+    # public void M530([DefaultParameterValue(90)]int x, int y, int z) { Flag.Reset(); Flag.Set(x * 100 + y * 10 + z); }
+    f = o.M530
+    f(1, 2); Flag.Check(12 + 9000)
+    f(3, z = 4); Flag.Check(34 + 9000)
+    f(*(5,), **{'z':6}); Flag.Check(56 + 9000)
+    AssertErrorWithMessage(TypeError, "M530() takes at most 2 non-keyword arguments (2 given)", lambda: f(2, y = 2)) # msg
+    
+    f(1, 2, 3); Flag.Check(123)
+    
+    # public void M550(int x, int y, params int[] z) { Flag.Reset(); Flag.Set(x * 100 + y * 10 + z.Length); }
+    f = o.M550
+    f(1, 2); Flag.Check(120)
+    f(1, 2, 3); Flag.Check(121)
+    f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); Flag.Check(128)
+    
+    f(1, 2, *()); Flag.Check(120)
+    f(1, 2, *(3,)); Flag.Check(121)
+    
+    # bug 311155
+    ##def  f(x, y, *z): print x, y, z
+    #f(1, y = 2); Flag.Check(120)
+    #f(x = 2, y = 3); Flag.Check(230)
+    #f(1, y = 2, *()); Flag.Check(120)
+
+    #f(1, y = 2, *(3, )); Flag.Check(121)
+    #f(y = 2, x = 3; *(3, 4)); Flag.Check(322)
+    #f(1, *(2, 3), **{'y': 4}); Flag.Check(142)
+    #f(*(4, 5, 6), **{'y':7}); Flag.Check(472)
+    #f(*(1, 2, 0, 1), **{'y':3, 'x':4}); Flag.Check(434)
+
+def test_many_args():
+    #public void M650(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8, int arg9, int arg10) { }
+    f = o.M650
+    expect = "1 2 3 4 5 6 7 8 9 10"
+    
+    f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10); Flag[str].Check(expect)
+    
+    #def f(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10): print arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10
+    f(arg2 = 2, arg3 = 3, arg4 = 4, arg5 = 5, arg6 = 6, arg7 = 7, arg8 = 8, arg9 = 9, arg10 = 10, arg1 = 1); Flag[str].Check(expect) 
+    f(1, 2, arg6 = 6, arg7 = 7, arg8 = 8, arg3 = 3, arg4 = 4, arg5 = 5, arg9 = 9, arg10 = 10); Flag[str].Check(expect) 
+
+    #AssertErrorWithMessage(TypeError, "M650() got multiple values for keyword argument 'arg5'", lambda: f(1, 2, 3, arg5 = 5, *(4, 6, 7, 8, 9, 10))) 
+    #AssertErrorWithMessage(TypeError, "M650() got multiple values for keyword argument 'arg1'", lambda: f(arg3 = 3, arg2 = 2, arg1 = 1, *(4, 5, 6, 7, 9, 10), **{'arg8': 8})) 
+    #AssertErrorWithMessage(TypeError, "M650() got multiple values for keyword argument 'arg3'", lambda: f(1, 2, 4, 5, 6, 7, 8, 9, 10, **{'arg3' : 3})) 
+    
+    f(1, 2, 3, arg9 = 9, arg10 = 10, *(4, 5, 6, 7, 8)); # Flag[str].Check(expect)  # bug 311195
+    f(1, 2, 3, arg10 = 10, *(4, 5, 6, 7, 8), ** {'arg9': 9}); # Flag[str].Check(expect) # bug 311195
+    
+    AssertErrorWithMessage(TypeError, "M650() takes exactly 10 non-keyword arguments (8 given)", lambda: f(2, 3, arg5 = 5, arg10 = 10, *(4, 6, 7, 9), **{'arg8': 8, 'arg1': 1})) # msg (should be 6 given)
+    
+    #public void M700(int arg1, string arg2, bool arg3, object arg4, EnumInt16 arg5, SimpleClass arg6, SimpleStruct arg7) { }
+    
+    f = o.M700
+
+def test_special_name():
+    #// keyword argument name, or **dict style
+    #public void M800(int True) { }
+    #public void M801(int def) { }
+    
+    f = o.M800
+    f(True=9); Flag.Check(9)
+    AreEqual(str(True), "True")
+    
+    f(**{"True": 19}); Flag.Check(19)
+
+    f = o.M801
+    AssertError(SyntaxError, eval, "f(def = 3)")
+    f(**{"def": 8}); Flag.Check(8)
+
+def test_1_byref_arg():
+    obj = ByRefParameters()
+
+    #public void M100(ref int arg) { arg = 1; }
+    f = obj.M100
+    
+    AreEqual(f(2), 1)
+    AreEqual(f(arg = 3), 1)
+    AreEqual(f(*(4,)), 1)
+    AreEqual(f(**{'arg': 5}), 1)
+    
+    x = clr.Reference[int](6); AreEqual(f(x), None); AreEqual(x.Value, 1)
+    x = clr.Reference[int](7); f(arg = x); AreEqual(x.Value, 1)
+    x = clr.Reference[int](8); f(*(x,)); AreEqual(x.Value, 1)
+    x = clr.Reference[int](9); f(**{'arg':x}); AreEqual(x.Value, 1)
+    
+    #public void M120(out int arg) { arg = 2; }
+    f = obj.M120
+    AreEqual(f(), 2)
+    #AssertError(TypeError, lambda: f(1))  # bug 311218
+    
+    x = clr.Reference[int](); AreEqual(f(x), None); AreEqual(x.Value, 2)
+    x = clr.Reference[int](7); f(arg = x); AreEqual(x.Value, 2)
+    x = clr.Reference[int](8); f(*(x,)); AreEqual(x.Value, 2)
+    x = clr.Reference[int](9); f(**{'arg':x}); AreEqual(x.Value, 2)
+
+def test_2_byref_args():
+    obj = ByRefParameters()
+
+    #public void M200(int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg2 = 10; }
+    f = obj.M200
+    AreEqual(f(1, 2), 10); Flag.Check(12)
+    AreEqual(f(3, arg2 = 4), 10); Flag.Check(34)
+    AreEqual(f(arg2 = 6, arg1 = 5), 10); Flag.Check(56)
+    AreEqual(f(*(7, 8)), 10); Flag.Check(78)
+    AreEqual(f(9, *(1,)), 10); Flag.Check(91)
+    
+    x = clr.Reference[int](5); AreEqual(f(1, x), None); AreEqual(x.Value, 10); Flag.Check(15)
+    x = clr.Reference[int](6); f(2, x); AreEqual(x.Value, 10); Flag.Check(26)
+    x = clr.Reference[int](7); f(3, *(x,)); AreEqual(x.Value, 10); Flag.Check(37)
+    x = clr.Reference[int](8); f(**{'arg1': 4, 'arg2' : x}); AreEqual(x.Value, 10); Flag.Check(48)
+    
+    #public void M201(ref int arg1, int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg1 = 20; }
+    f = obj.M201
+    AreEqual(f(1, 2), 20)
+    x = clr.Reference[int](2); f(x, *(2,)); AreEqual(x.Value, 20); Flag.Check(22)
+    
+    #public void M202(ref int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg1 = 30; arg2 = 40; }
+    f = obj.M202
+    AreEqual(f(1, 2), (30, 40))
+    AreEqual(f(arg2 = 1, arg1 = 2), (30, 40)); Flag.Check(21)
+    
+    AssertErrorWithMessage(TypeError, "M202() takes exactly 2 arguments (2 given)", lambda: f(clr.Reference[int](3), 4))  # bug 311239
+    x = clr.Reference[int](3)
+    y = clr.Reference[int](4)
+    #f(arg2 = y, *(x,)); Flag.Check(34) # bug 311169
+    AssertErrorWithMessage(TypeError, "M202() takes exactly 2 non-keyword arguments (2 given)", lambda: f(arg1 = x, *(y,))) # msg
+    
+    # just curious
+    x = y = clr.Reference[int](5)
+    f(x, y); AreEqual(x.Value, 40); AreEqual(y.Value, 40); Flag.Check(55)
+
+def test_2_out_args():
+    obj = ByRefParameters()
+    
+    #public void M203(int arg1, out int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10; arg2 = 50; }
+    f = obj.M203
+    AreEqual(f(1), 50)
+    AreEqual(f(*(2,)), 50)
+    #AssertError(TypeError, lambda: f(1, 2))  # bug 311218
+    
+    x = clr.Reference[int](4)
+    f(1, x); AreEqual(x.Value, 50)
+    
+    #public void M204(out int arg1, int arg2) { Flag.Reset(); Flag.Value1 = arg2; arg1 = 60; }
+    # TODO
+    
+    #public void M205(out int arg1, out int arg2) { arg1 = 70; arg2 = 80; }
+    f = obj.M205
+    AreEqual(f(), (70, 80))
+    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 arguments (1 given)", lambda: f(1))
+    #AssertErrorWithMessage(TypeError, "M205() ??)", lambda: f(1, 2))
+    
+    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 non-keyword arguments (1 given)", lambda: f(arg2 = clr.Reference[int](2)))
+    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 non-keyword arguments (1 given)", lambda: f(arg1 = clr.Reference[int](2)))
+    
+    for l in [
+        lambda: f(*(x, y)),
+        lambda: f(x, y, *()),
+        lambda: f(arg2 = y, arg1 = x, *()),
+        lambda: f(x, arg2 = y, ),
+        lambda: f(x, **{"arg2":y})
+             ]:
+        x, y = clr.Reference[int](1), clr.Reference[int](2)
+        #print l
+        l()
+        AreEqual(x.Value, 70)
+        AreEqual(y.Value, 80)
+    
+    
+    #public void M206(ref int arg1, out int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10; arg1 = 10; arg2 = 20; }
+    f = obj.M206
+    AreEqual(f(1), (10, 20))
+    AreEqual(f(arg1 = 2), (10, 20))
+    AreEqual(f(*(3,)), (10, 20))
+    AssertError(TypeError, lambda: f(clr.Reference[int](5)))
+   
+    x, y = clr.Reference[int](4), clr.Reference[int](5)
+    f(x, y); AreEqual(x.Value, 10); AreEqual(y.Value, 20); 
+    
+    #public void M207(out int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg2; arg1 = 30; arg2 = 40; }
+    
+    f = obj.M207
+    AreEqual(f(1), (30, 40))
+    AreEqual(f(arg2 = 2), (30, 40)); Flag.Check(2)
+    #AssertError(TypeError, lambda: f(1, 2))
+    AssertError(TypeError, lambda: f(arg2 = 1, arg1 = 2))
+    
+    for l in [ 
+            lambda: f(x, y), 
+            lambda: f(arg2 = y, arg1 = x),
+            lambda: f(x, *(y,)),
+            lambda: f(*(x, y,)),
+            #lambda: f(arg1 = x, *(y,)),
+            lambda: f(arg1 = x, **{'arg2': y}),
+             ]:
+        x, y = clr.Reference[int](1), clr.Reference[int](2)
+        #print l
+        l()
+        AreEqual(x.Value, 30)
+        AreEqual(y.Value, 40)
+        Flag.Check(2)
+
+    #// 1 argument 
+    #public class Ctor100 {
+        #public Ctor100(int arg) { }
+    #}
+    #public class Ctor101 {
+        #public Ctor101([DefaultParameterValue(10)]int arg) { }
+    #}
+    #public class Ctor102 {
+        #public Ctor102([Optional]int arg) { }
+    #}
+    
+def test_ctor_1_arg():
+    Ctor101()
+    
+    #public class Ctor103 {
+    #   public Ctor103(params int[] arg) { }
+    #}
+    Ctor103()
+    Ctor103(1)
+    Ctor103(1, 2, 3)
+    
+    #public class Ctor110 {
+    #   public Ctor110(ref int arg) { arg = 10; }
+    #}
+    
+    # bug: 313995
+    #Ctor110(2)
+
+    #x = clr.Reference[int]()
+    #Ctor110(x)
+    #AreEqual(x.Value, 10)  # bug 313045
+    
+
+    #public class Ctor111 {
+    #   public Ctor111(out int arg) { arg = 10; }
+    #}
+
+    #Ctor111() # bug 312981
+
+    #x = clr.Reference[int]()
+    #Ctor111(x)
+    #AreEqual(x.Value, 10)   # bug 313045
+    
+
+def test_ctor_keyword():
+    def check(o):
+        Flag[int, int, int].Check(1, 2, 3)
+        AreEqual(o.Arg4, 4)
+        Flag[int, int, int].Reset()
+        
+    x = 4
+    o = Ctor610(1, arg2 = 2, Arg3 = 3, Arg4 = x); check(o)
+    o = Ctor610(Arg3 = 3, Arg4 = x, arg1 = 1, arg2 = 2); check(o)
+    #o = Ctor610(Arg3 = 3, Arg4 = x, *(1, 2)); check(o)
+
+# parameter name is same as property
+def test_ctor_keyword2():
+    Ctor620(arg1 = 1)
+    f = Flag[int, int, int, str]
+    o = Ctor620(arg1 = 1, arg2 = 2); f.Check(1, 2, 0, None); f.Reset()
+    o = Ctor620(arg1 = 1, arg2 = "hello"); f.Check(1, 0, 0, "hello"); f.Reset()
+    #Ctor620(arg1 = 1, arg2 = 2, **{ 'arg1' : 3})
+    pass
+
+def test_ctor_bad_property_field():
+    AssertErrorWithMessage(AttributeError, "Property ReadOnlyProperty is read-only", lambda: Ctor700(1, ReadOnlyProperty = 1))
+    AssertErrorWithMessage(AttributeError, "Field ReadOnlyField is read-only", lambda: Ctor720(ReadOnlyField = 2))
+    AssertErrorWithMessage(AttributeError, "Field LiteralField is read-only", lambda: Ctor730(LiteralField = 3))
+    #AssertErrorWithMessage(AttributeError, "xxx", lambda: Ctor710(StaticField = 10))
+    #AssertErrorWithMessage(AttributeError, "xxx", lambda: Ctor750(StaticProperty = 10))
+    AssertErrorWithMessage(TypeError, "Ctor760() got an unexpected keyword argument 'InstanceMethod'", lambda: Ctor760(InstanceMethod = 1))
+    AssertErrorWithMessage(TypeError, "Ctor760() got an unexpected keyword argument 'MyEvent'", lambda: Ctor760(MyEvent = 1))
+    
 run_test(__name__)
 
-#delete_dlls_for_peverify(peverify_dependency)
+delete_dlls_for_peverify(peverify_dependency)

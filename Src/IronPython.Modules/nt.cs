@@ -22,16 +22,17 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-using IronPython.Runtime;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Calls;
-
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -428,7 +429,7 @@ namespace IronPython.Modules {
             IEnumerator argsEnumerator;
             System.Text.StringBuilder sb = null;
             if (!Converter.TryConvertToIEnumerator(args, out argsEnumerator)) {
-                throw PythonOps.TypeError("args parameter must be sequence, not {0}", DynamicHelpers.GetDynamicType(args));
+                throw PythonOps.TypeError("args parameter must be sequence, not {0}", DynamicHelpers.GetPythonType(args));
             }
 
             bool space = false;
@@ -576,7 +577,7 @@ namespace IronPython.Modules {
                 timeDict["st_mtime"] = StatMTime;
 
                 return PythonTuple.MakeTuple(
-                    DynamicHelpers.GetDynamicTypeFromType(typeof(StatResult)),
+                    DynamicHelpers.GetPythonTypeFromType(typeof(StatResult)),
                     PythonTuple.MakeTuple(MakeTuple(), timeDict)
                 );
             }

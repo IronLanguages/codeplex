@@ -18,6 +18,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime;
 
@@ -45,17 +46,17 @@ namespace IronPython.Compiler.Ast {
             return base.ToString() + ":" + SymbolTable.IdToString(_name);
         }
 
-        internal MSAst.Arg Transform(AstGenerator ag) {
-            MSAst.Expression expression = ag.Transform(_expression);
+        internal ArgumentInfo Transform(AstGenerator ag, out MSAst.Expression expression) {
+            expression = ag.Transform(_expression);
 
             if (_name == SymbolId.Empty) {
-                return MSAst.Arg.Simple(expression);
+                return ArgumentInfo.Simple;
             } else if (_name == Symbols.Star) {
-                return MSAst.Arg.List(expression);
+                return new ArgumentInfo(MSAst.ArgumentKind.List);
             } else if (_name == Symbols.StarStar) {
-                return MSAst.Arg.Dictionary(expression);
+                return new ArgumentInfo(MSAst.ArgumentKind.Dictionary);
             } else {
-                return MSAst.Arg.Named(_name, expression);
+                return new ArgumentInfo(_name);
             }
         }
 

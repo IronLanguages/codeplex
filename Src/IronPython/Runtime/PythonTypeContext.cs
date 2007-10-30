@@ -18,13 +18,12 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
-    /// Context object to store Python specific information on DynamicType objects.
+    /// Context object to store Python specific information on PythonType objects.
     /// </summary>
     class PythonTypeContext : IWeakReferenceable {
         private WeakRefTracker _tracker;
@@ -60,7 +59,7 @@ namespace IronPython.Runtime.Types {
         /// Checks to see if the declaring type is the same as the owning type or
         /// if the declaring type's members should be shown for the owning type.
         /// </summary>
-        public static bool IsMineOrVisible(DynamicType owner, DynamicType declaring) {
+        public static bool IsMineOrVisible(PythonType owner, PythonType declaring) {
             if (owner != null && !object.ReferenceEquals(owner, declaring)) {
                 PythonTypeContext ctx = owner.GetContextTag(PythonContext.Id) as PythonTypeContext;
                 if (ctx != null && ctx.IsPythonType) {

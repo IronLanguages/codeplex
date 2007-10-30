@@ -24,11 +24,11 @@ using System.IO;
 using System.Xml;
 using System.Xml.XPath;
 
-using IronPython.Runtime.Operations;
-
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Types;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     static class DocBuilder {
@@ -53,7 +53,6 @@ namespace IronPython.Runtime {
                 case "__mod__": return "x.__mod__(y) <==> x%y";
                 case "__mul__": return "x.__mul__(y) <==> x*y";
                 case "__neg__": return "x.__neg__() <==> -x";
-                case "__new__": return "T.__new__(S, ...) -> a new object with type S, a subtype of T";
                 case "__pow__": return "x.__pow__(y[, z]) <==> pow(x, y[, z])";
                 case "__reduce__":
                 case "__reduce_ex__": return "helper for pickle";
@@ -336,7 +335,7 @@ namespace IronPython.Runtime {
                 type = type.GetElementType();
             }
 
-            return DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type));
+            return PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type));
         }
 
 #if !SILVERLIGHT // XML doc

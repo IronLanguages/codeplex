@@ -20,7 +20,6 @@ using System.Reflection;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -64,24 +63,24 @@ namespace IronPython.Compiler.Generation {
             if (NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
-                CodeGen cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("get_Dict"));
+                CodeGen cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_Dict"));
                 _dictField.EmitGet(cg);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("get_HasDictionary"));
+                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_HasDictionary"));
                 cg.EmitBoolean(true);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("ReplaceDict"));
+                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("ReplaceDict"));
                 cg.EmitArgGet(0);
                 _dictField.EmitSet(cg);
                 cg.EmitBoolean(true);
                 cg.EmitReturn();
                 cg.Finish();
 
-                cg = _tg.DefineMethodOverride(typeof(ISuperDynamicObject).GetMethod("SetDict"));
+                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("SetDict"));
                 _dictField.EmitGetAddr(cg);
                 cg.EmitArgGet(0);
                 cg.EmitCall(typeof(UserTypeOps), "SetDictHelper");
@@ -91,8 +90,8 @@ namespace IronPython.Compiler.Generation {
         }
 
         private bool NeedsNewWeakRef() {
-            foreach (DynamicType dt in _baseClasses) {
-                DynamicTypeSlot dts;
+            foreach (PythonType dt in _baseClasses) {
+                PythonTypeSlot dts;
                 if (dt.TryLookupSlot(DefaultContext.Default, Symbols.WeakRef, out dts))
                     return false;
             }

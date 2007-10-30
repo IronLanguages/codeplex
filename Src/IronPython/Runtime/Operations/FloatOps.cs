@@ -23,7 +23,6 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -34,14 +33,14 @@ namespace IronPython.Runtime.Operations {
 
     public static partial class DoubleOps {
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls) {
+        public static object Make(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Double) return 0.0;
 
             return cls.CreateInstance(context);
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls, object x) {
+        public static object Make(CodeContext context, PythonType cls, object x) {
             if (cls == TypeCache.Double) {
                 if (x is string) {
                     return ParseFloat((string)x);
@@ -57,7 +56,7 @@ namespace IronPython.Runtime.Operations {
 
                 object d = PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, x, Symbols.ConvertToFloat));
                 if (d is double) return d;
-                throw PythonOps.TypeError("__float__ returned non-float (type %s)", DynamicHelpers.GetDynamicType(d));
+                throw PythonOps.TypeError("__float__ returned non-float (type %s)", DynamicHelpers.GetPythonType(d));
             } else {
                 return cls.CreateInstance(context, x);
             }
@@ -295,7 +294,7 @@ namespace IronPython.Runtime.Operations {
                 return 1;
             } else {
                 object res;
-                if (DynamicHelpers.GetDynamicType(other).TryInvokeBinaryOperator(context, Operators.Coerce, other, self, out res)) {
+                if (DynamicHelpers.GetPythonType(other).TryInvokeBinaryOperator(context, Operators.Coerce, other, self, out res)) {
                     if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
                         return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
                     }

@@ -26,31 +26,32 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 
 using TypeCache = IronPython.Runtime.Types.TypeCache;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Threading;
-using IronPython.Runtime.Operations;
+    using IronPython.Runtime.Operations;
     using IronPython.Runtime.Types;
     using Microsoft.Scripting.Utils;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
-        private static Dictionary<Type, Type> _extTypes = new Dictionary<Type,Type>();
+        private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
 
         public PythonBinder(CodeContext context)
             : base(context) {
         }
 
-        private StandardRule<T> MakeRuleWorker<T>(CodeContext context, DynamicAction action, object[] args) {
+        private StandardRule<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
                     return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
                 case DynamicActionKind.GetMember:
                     return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
+                case DynamicActionKind.SetMember:
+                    return new PythonSetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
                 case DynamicActionKind.Call:
                     // if call fails Python will try and create an instance as it treats these two operations as the same.
                     StandardRule<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
@@ -67,12 +68,14 @@ using IronPython.Runtime.Operations;
                         }
                     }
                     return rule;
+                case DynamicActionKind.ConvertTo:
+                    return new PythonConvertToBinderHelper<T>(context, (ConvertToAction)action, args).MakeRule();
                 default:
                     return null;
             }
         }
 
-        protected override StandardRule<T> MakeRule<T>(CodeContext context, DynamicAction action, object[] args) {
+        protected override StandardRule<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
         }
 
@@ -142,7 +145,7 @@ using IronPython.Runtime.Operations;
                     ),
                     visType
                 )
-            );                       
+            );
         }
 
         public override Expression CheckExpression(Expression expr, Type toType) {
@@ -261,8 +264,17 @@ using IronPython.Runtime.Operations;
             return PythonTuple.MakeTuple(args);
         }
 
+        public override ErrorInfo MakeConversionError(Type toType, Expression value) {
+            return ErrorInfo.FromException(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("CannotConvertError"),
+                    Ast.RuntimeConstant(toType),
+                    value
+               )
+            );
+        }
 
-        public override Statement MakeInvalidParametersError(MethodBinder binder, DynamicAction action, CallType callType, MethodBase[] targets, StandardRule rule, object[] args) {
+        public override Statement MakeInvalidParametersError(MethodBinder binder, DynamicAction action, CallType callType, IList<MethodBase> targets, StandardRule rule, object[] args) {
             if (binder.IsBinaryOperator) {
                 CallAction ca = action as CallAction;
                 if (ca != null) {
@@ -291,31 +303,40 @@ using IronPython.Runtime.Operations;
 
         #region .NET member binding
 
+        private MemberGroup GetInstanceOpsMethod(params string[] names) {
+            MethodTracker[] trackers = new MethodTracker[names.Length];
+            for (int i = 0; i < names.Length; i++) {
+                trackers[i] = (MethodTracker)MemberTracker.FromMemberInfo(typeof(InstanceOps).GetMethod(names[i]), true);
+            }
+
+            return new MemberGroup(trackers);
+        }
+
         public override MemberGroup GetMember(DynamicAction action, Type type, string name) {
             // Python type customization:
             switch (name) {
                 case "__str__":
                     MethodInfo tostr = type.GetMethod("ToString", ArrayUtils.EmptyTypes);
                     if (tostr != null && tostr.DeclaringType != typeof(object)) {
-                        return new MemberGroup(typeof(InstanceOps).GetMethod("ToStringMethod"));
+                        return GetInstanceOpsMethod("ToStringMethod");
                     }
                     break;
                 case "__repr__":
                     if (typeof(ICodeFormattable).IsAssignableFrom(type) && !type.IsInterface) {
-                        return new MemberGroup(typeof(InstanceOps).GetMethod("ReprHelper"));
+                        return GetInstanceOpsMethod("ReprHelper");
                     }
-                    return new MemberGroup(typeof(InstanceOps).GetMethod("FancyRepr"));
+                    return GetInstanceOpsMethod("FancyRepr");
                 case "__init__":
                     // non-default init would have been handled by the Python binder.
-                    return new MemberGroup(typeof(InstanceOps).GetMethod("DefaultInit"), typeof(InstanceOps).GetMethod("DefaultInitKW"));
+                    return GetInstanceOpsMethod("DefaultInit", "DefaultInitKW");
                 case "next":
                     if (typeof(IEnumerator).IsAssignableFrom(type)) {
-                        return new MemberGroup(typeof(InstanceOps).GetMethod("NextMethod"));
+                        return GetInstanceOpsMethod("NextMethod");
                     }
                     break;
                 case "__get__":
-                    if (typeof(DynamicTypeSlot).IsAssignableFrom(type)) {
-                        return new MemberGroup(typeof(InstanceOps).GetMethod("GetMethod"));
+                    if (typeof(PythonTypeSlot).IsAssignableFrom(type)) {
+                        return GetInstanceOpsMethod("GetMethod");
                     }
                     break;
             }
@@ -326,19 +347,19 @@ using IronPython.Runtime.Operations;
             if (res.Count > 0) {
                 return res;
             }
-            
+
             if (ScriptDomainManager.Options.PrivateBinding) {
                 // in private binding mode Python exposes private members under a mangled name.
                 string header = "_" + type.Name + "__";
                 if (name.StartsWith(header)) {
                     string memberName = name.Substring(header.Length);
                     const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-                    
+
                     res = new MemberGroup(type.GetMember(memberName, bf));
                     if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
                     }
-                    
+
                     res = new MemberGroup(type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf));
                     if (res.Count > 0) {
                         return FilterFieldAndEvent(res);
@@ -360,7 +381,7 @@ using IronPython.Runtime.Operations;
                 foreach (string newName in newNames) {
                     oldRes.AddRange(base.GetMember(action, type, newName));
                 }
-                
+
                 return new MemberGroup(oldRes.ToArray());
             }
 
@@ -371,7 +392,7 @@ using IronPython.Runtime.Operations;
             return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                    Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type)), name))
+                    Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type)), name))
                 )
             );
         }
@@ -381,9 +402,9 @@ using IronPython.Runtime.Operations;
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Constant(
-                        String.Format("attribute '{0}' of '{1}' object is read-only", 
+                        String.Format("attribute '{0}' of '{1}' object is read-only",
                             name,
-                            DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+                            PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type))
                         )
                     )
                 )
@@ -397,7 +418,7 @@ using IronPython.Runtime.Operations;
                     Ast.Constant(
                         String.Format("cannot delete attribute '{0}' of builtin type '{1}'",
                             name,
-                            DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(type))
+                            PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type))
                         )
                     )
                 )
@@ -410,7 +431,7 @@ using IronPython.Runtime.Operations;
                     return ((MethodInfo)input).IsFamily || ((MethodInfo)input).IsFamilyOrAssembly;
                 case MemberTypes.Property:
                     MethodInfo mi = ((PropertyInfo)input).GetGetMethod(true);
-                    if(mi != null) return ProtectedOnly(mi);
+                    if (mi != null) return ProtectedOnly(mi);
                     return false;
                 case MemberTypes.Field:
                     return ((FieldInfo)input).IsFamily || ((FieldInfo)input).IsFamilyOrAssembly;
@@ -502,56 +523,102 @@ using IronPython.Runtime.Operations;
             _extTypes[extended] = extension;
         }
 
-        protected override bool AllowKeywordArgumentConstruction(Type t) {
-            return !PythonTypeCustomizer.IsPythonType(t);
-        }
-
-        protected override Expression ReturnMemberTracker(MemberTracker memberTracker) {
+        protected override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
             switch (memberTracker.MemberType) {
                 case TrackerTypes.TypeGroup:
                     return Ast.RuntimeConstant(memberTracker);
                 case TrackerTypes.Type:
                     return ReturnTypeTracker((TypeTracker)memberTracker);
-                case TrackerTypes.MemberGroup:
-                    // member group
-                    return ReturnMemberGroup((MemberGroup)memberTracker);
+                case TrackerTypes.Bound:
+                    return ReturnBoundTracker((BoundMemberTracker)memberTracker);
+                case TrackerTypes.Property:
+                    return ReturnPropertyTracker((PropertyTracker)memberTracker);
+                case TrackerTypes.Event:
+                    return Ast.Call(
+                        typeof(PythonOps).GetMethod("MakeBoundEvent"),
+                        Ast.RuntimeConstant(PythonTypeOps.GetReflectedEvent((EventTracker)memberTracker)),
+                        Ast.Null(),
+                        Ast.Constant(type)
+                    );
+                case TrackerTypes.MethodGroup:
+                    return ReturnMethodGroup((MethodGroup)memberTracker);
             }
 
-            return base.ReturnMemberTracker(memberTracker);
+            return base.ReturnMemberTracker(type, memberTracker);
+        }
+
+        private Expression ReturnMethodGroup(MethodGroup methodGroup) {
+            return Ast.RuntimeConstant(GetBuiltinFunction(methodGroup));
+        }
+
+        private Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker) {
+            MemberTracker boundTo = boundMemberTracker.BoundTo;
+            switch (boundTo.MemberType) {
+                case TrackerTypes.Property:
+                    PropertyTracker pt = (PropertyTracker)boundTo;
+                    Debug.Assert(pt.GetIndexParameters().Length > 0);
+                    return Ast.New(
+                        typeof(ReflectedIndexer).GetConstructor(new Type[] { typeof(ReflectedIndexer), typeof(object) }),
+                        Ast.RuntimeConstant(new ReflectedIndexer(((ReflectedPropertyTracker)pt).Property, NameType.Property)),
+                        boundMemberTracker.Instance
+                    );
+                case TrackerTypes.Event:
+                    return Ast.Call(
+                        typeof(PythonOps).GetMethod("MakeBoundEvent"),
+                        Ast.RuntimeConstant(PythonTypeOps.GetReflectedEvent((EventTracker)boundMemberTracker.BoundTo)),
+                        boundMemberTracker.Instance,
+                        Ast.Constant(boundMemberTracker.DeclaringType)
+                    );
+                case TrackerTypes.MethodGroup:
+                    return Ast.Call(
+                        typeof(PythonOps).GetMethod("MakeBoundBuiltinFunction"),
+                        Ast.RuntimeConstant(GetBuiltinFunction((MethodGroup)boundTo)),
+                        boundMemberTracker.Instance
+                    );
+            }
+            throw new NotImplementedException();
+        }
+
+        private PythonTypeSlot GetBuiltinFunction(MethodGroup mg) {
+            return PythonTypeOps.GetBuiltinFunction(mg.DeclaringType,
+                mg.Methods[0].Name,
+                (mg.ContainsInstance ? FunctionType.Method : FunctionType.None) |
+                (mg.ContainsStatic ? FunctionType.Function : FunctionType.None),
+                mg.GetMethodBases());
+        }
+
+        private PythonTypeSlot GetBuiltinFunction(MethodTracker mt) {
+            return PythonTypeOps.GetBuiltinFunction(mt.DeclaringType,
+                mt.Name,
+                mt.IsStatic ? FunctionType.Function : FunctionType.Method,
+                mt.Method);
+        }
+
+        private Expression ReturnPropertyTracker(PropertyTracker propertyTracker) {
+            if (propertyTracker.GetIndexParameters().Length > 0) {
+                return Ast.RuntimeConstant(new ReflectedIndexer(((ReflectedPropertyTracker)propertyTracker).Property, NameType.Property));
+            }
+
+            ReflectedPropertyTracker rpt = propertyTracker as ReflectedPropertyTracker;
+            if (rpt != null) {
+                return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property,
+                    rpt.GetGetMethod(ScriptDomainManager.Options.PrivateBinding),
+                    rpt.GetSetMethod(ScriptDomainManager.Options.PrivateBinding),
+                    NameType.Property));
+            }
+
+            return Ast.RuntimeConstant(new ReflectedExtensionProperty(
+                new ExtensionPropertyInfo(
+                    rpt.DeclaringType,
+                    rpt.GetGetMethod(ScriptDomainManager.Options.PrivateBinding) ?? rpt.GetSetMethod(ScriptDomainManager.Options.PrivateBinding)
+                ),
+                NameType.Property)
+            );
         }
 
         private static Expression ReturnTypeTracker(TypeTracker memberTracker) {
-            // all non-group types get exposed as DynamicType's
-            return Ast.RuntimeConstant(DynamicHelpers.GetDynamicTypeFromType(memberTracker.Type));
-        }
-
-        private Expression ReturnMemberGroup(MemberGroup memberGroup) {
-            TrackerTypes types = TrackerTypes.None;
-            foreach (MemberTracker mt in memberGroup) {
-                types |= mt.MemberType;
-            }
-
-            switch (types) {
-                case TrackerTypes.Event:
-                    return Ast.RuntimeConstant(ReflectionCache.GetReflectedEvent(((EventTracker)memberGroup[0]).Event));
-                case TrackerTypes.Field:
-                    return Ast.RuntimeConstant(ReflectionCache.GetReflectedField(((FieldTracker)memberGroup[0]).Field));
-                case TrackerTypes.Property:
-                    PropertyTracker pt = (PropertyTracker)memberGroup[0];
-                    ReflectedPropertyTracker rpt = pt as ReflectedPropertyTracker;
-                    if (rpt != null) {
-                        if (rpt.Property.GetIndexParameters().Length > 0) {
-                            return Ast.RuntimeConstant(ReflectionCache.GetReflectedIndexer(rpt.Property));
-                        } else {
-                            return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property, rpt.GetGetMethod(), rpt.GetSetMethod(), NameType.Property));
-                        }
-                    }
-
-                    throw new InvalidOperationException();
-                default:
-                    return base.ReturnMemberTracker(memberGroup);
-            }
-
+            // all non-group types get exposed as PythonType's
+            return Ast.RuntimeConstant(DynamicHelpers.GetPythonTypeFromType(memberTracker.Type));
         }
     }
 }

@@ -62,5 +62,17 @@ namespace IronPython.Runtime.Operations {
 
             return PythonOps.NotImplemented;
         }
+
+        [ImplicitConversionMethod]
+        public static string ConvertToString(char self) {
+            return new string(self, 1);
+        }
+
+        [ExplicitConversionMethod]
+        public static char ConvertToChar(int value) {
+            if (value < 0 || value > Char.MaxValue) throw new OverflowException();
+
+            return (char)value;
+        }
     }
 }

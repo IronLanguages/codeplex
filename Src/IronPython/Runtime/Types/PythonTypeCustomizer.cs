@@ -22,7 +22,6 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
@@ -35,14 +34,14 @@ namespace IronPython.Runtime.Types {
         private static DocumentationDescriptor _docDescr = new DocumentationDescriptor();
         private static MethodInfo[] _equalsHelper, _notEqualsHelper;
         private static Dictionary<Type, string> _sysTypes = MakeSystemTypes();
-        private static Dictionary<DynamicType, Type> _inited = new Dictionary<DynamicType, Type>();
+        private static Dictionary<PythonType, Type> _inited = new Dictionary<PythonType, Type>();
 
-        private PythonTypeCustomizer(DynamicTypeBuilder builder) {
+        private PythonTypeCustomizer(PythonTypeBuilder builder) {
             Builder = builder;
         }
 
         public static void OnTypeInit(object sender, TypeCreatedEventArgs e) {
-            DynamicType dt = e.Type;
+            PythonType dt = e.Type;
             if (!dt.IsSystemType) return;
             lock (_inited) {
                 if (_inited.ContainsKey(dt) || ExtensionTypeAttribute.IsExtensionType(dt.UnderlyingSystemType)) {
@@ -53,7 +52,7 @@ namespace IronPython.Runtime.Types {
 
 #if DEBUG
                 Dictionary<Type, Type> assertDict = new Dictionary<Type,Type>();
-                foreach (KeyValuePair<DynamicType, Type> types in _inited) {
+                foreach (KeyValuePair<PythonType, Type> types in _inited) {
                     Debug.Assert(!assertDict.ContainsKey(types.Value));
 
                     assertDict[types.Value] = types.Value;
@@ -61,7 +60,7 @@ namespace IronPython.Runtime.Types {
 #endif
             }
 
-            PythonTypeCustomizer customizer = new PythonTypeCustomizer(DynamicTypeBuilder.GetBuilder(dt));
+            PythonTypeCustomizer customizer = new PythonTypeCustomizer(PythonTypeBuilder.GetBuilder(dt));
 
             customizer.AddInitCode();
             customizer.AddDocumentation();
@@ -98,7 +97,7 @@ namespace IronPython.Runtime.Types {
             // __new__
             object newFunc;
             if (TryGetValue(Symbols.NewInst, PythonContext.Id, out newFunc)) {
-                // user provided a __new__ method, first argument should be DynamicType
+                // user provided a __new__ method, first argument should be PythonType
                 // We will set our allocator to be a bound-method that passes our type
                 // through, and we'll leave __new__ unchanged, other than making sure
                 // it's a function, not a method.
@@ -177,7 +176,7 @@ namespace IronPython.Runtime.Types {
 
                             if (forward) {
                                 SymbolId name;
-                                DynamicTypeSlot slot;
+                                PythonTypeSlot slot;
                                 if (PythonExtensionTypeAttribute.ReverseOperatorTable.TryGetValue(opmap, out name)) {
                                     slot = StoreMethodNoConflicts(SymbolTable.IdToString(name),
                                         PythonContext.Id,
@@ -197,7 +196,7 @@ namespace IronPython.Runtime.Types {
                             if (reverse && opmap.IsReversible && PythonExtensionTypeAttribute.ReverseOperatorTable.TryGetValue(opmap.GetReversed(), out revName)) {
                                 if (opmap.IsBinary) ft |= FunctionType.ReversedOperator;
 
-                                DynamicTypeSlot slot = StoreMethodNoConflicts(SymbolTable.IdToString(revName),
+                                PythonTypeSlot slot = StoreMethodNoConflicts(SymbolTable.IdToString(revName),
                                     PythonContext.Id,
                                     mi,
                                     ft);
@@ -293,7 +292,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            if (typeof(DynamicTypeSlot).IsAssignableFrom(type)) {
+            if (typeof(PythonTypeSlot).IsAssignableFrom(type)) {
                 AddProtocolMethod(Symbols.GetDescriptor, "GetMethod");
                 // TODO: Set & delete
             }
@@ -420,7 +419,7 @@ namespace IronPython.Runtime.Types {
 
             if (reflectedCtors != null) {
                 object newVal;
-                if (reflectedCtors.Targets.Length == 1 && reflectedCtors.Targets[0].GetParameters().Length == 0) {
+                if (reflectedCtors.Targets.Count == 1 && reflectedCtors.Targets[0].GetParameters().Length == 0) {
                     if (IsPythonType()) {
                         newVal = InstanceOps.New;
                     } else {
@@ -442,7 +441,7 @@ namespace IronPython.Runtime.Types {
             return t.IsDefined(typeof(PythonTypeAttribute), false) || _sysTypes.ContainsKey(t);
         }
 
-        private static string GetDocumentation(DynamicType type) {
+        private static string GetDocumentation(PythonType type) {
             // Python documentation
             object[] docAttr = type.UnderlyingSystemType.GetCustomAttributes(typeof(DocumentationAttribute), false);
             if (docAttr != null && docAttr.Length > 0) {
@@ -468,14 +467,14 @@ namespace IronPython.Runtime.Types {
             return autoDoc;
         }
 
-        private static string FixCtorDoc(DynamicType type, string autoDoc) {
+        private static string FixCtorDoc(PythonType type, string autoDoc) {
             return autoDoc.Replace("__new__(cls)", type.Name + "()").
                             Replace("__new__(cls, ", type.Name + "(");
         }
 
-        class DocumentationDescriptor : DynamicTypeSlot {
-            public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-                value = GetDocumentation((DynamicType)owner);
+        class DocumentationDescriptor : PythonTypeSlot {
+            internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
+                value = GetDocumentation((PythonType)owner);
                 return true;
             }
         }
@@ -512,7 +511,7 @@ namespace IronPython.Runtime.Types {
 
             Debug.Assert(methodInfos.Length != 0);
 
-            DynamicTypeSlot method = null;
+            PythonTypeSlot method = null;
 
             foreach(MethodInfo mi in methodInfos) {
                 method = StoreMethod(SymbolTable.IdToString(symbol),
@@ -528,7 +527,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private void AddTupleExpansionGetOrDeleteItem(SymbolId op, MethodInfo mi) {
-            DynamicTypeSlot callable = StoreMethodNoConflicts(SymbolTable.IdToString(op), 
+            PythonTypeSlot callable = StoreMethodNoConflicts(SymbolTable.IdToString(op), 
                 PythonContext.Id, 
                 mi, 
                 FunctionType.Method | FunctionType.AlwaysVisible);
@@ -559,7 +558,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private void AddTupleExpansionSetItem(MethodInfo mi) {
-            DynamicTypeSlot callable = StoreMethodNoConflicts("__setitem__",
+            PythonTypeSlot callable = StoreMethodNoConflicts("__setitem__",
                 PythonContext.Id,
                 mi,
                 FunctionType.Method | FunctionType.AlwaysVisible);
@@ -605,20 +604,12 @@ namespace IronPython.Runtime.Types {
             res[typeof(decimal)] = "decimal";
             res[typeof(BigInteger)] = "long";
             res[typeof(Complex64)] = "complex";
-            res[typeof(DynamicType)] = "type";
-            res[typeof(DynamicMixin)] = "mixin";
+            res[typeof(PythonType)] = "type";
             res[typeof(ScriptModule)] = "module";
             res[typeof(SymbolDictionary)] = "dict";
             res[typeof(CustomSymbolDictionary)] = "dict";
             res[typeof(BaseSymbolDictionary)] = "dict";
-            res[typeof(BuiltinFunction)] = "builtin_function_or_method";
-            res[typeof(BuiltinMethodDescriptor)] = "method_descriptor";
             res[typeof(ClassMethodDescriptor)] = "method_descriptor";
-            res[typeof(BoundBuiltinFunction)] = "builtin_function_or_method";
-            res[typeof(ReflectedField)] = "field#";
-            res[typeof(ReflectedProperty)] = "property#";
-            res[typeof(ReflectedIndexer)] = "indexer#";
-            res[typeof(ReflectedEvent)] = "event#";
             res[typeof(ValueType)] = "ValueType";   // just hiding it's methods in the inheritance hierarchy
             res[typeof(TypeGroup)] = "type-collision";
             res[typeof(None)] = "NoneType";

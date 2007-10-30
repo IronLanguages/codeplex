@@ -374,7 +374,7 @@ namespace IronPython.Hosting {
 
             StringBuilder result = new StringBuilder();
             result.AppendLine("Traceback (most recent call last):");
-            DynamicStackFrame[] dfs = DynamicHelpers.GetDynamicStackFrames(e);
+            DynamicStackFrame[] dfs = RuntimeHelpers.GetDynamicStackFrames(e);
             for (int i = 0; i < dfs.Length; ++i) {
                 DynamicStackFrame frame = dfs[i];
                 result.AppendFormat("  at {0} in {1}, line {2}\n", frame.GetMethodName(), frame.GetFileName(), frame.GetFileLineNumber());
@@ -434,7 +434,7 @@ namespace IronPython.Hosting {
                 result += "Traceback (most recent call last):" + Environment.NewLine;
                 printedHeader = true;
             }
-            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(DynamicHelpers.GetDynamicStackFrames(e));
+            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(RuntimeHelpers.GetDynamicStackFrames(e));
             IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
             if (traces != null && traces.Count > 0) {
                 for (int i = traces.Count - 1; i >= 0; i--) {

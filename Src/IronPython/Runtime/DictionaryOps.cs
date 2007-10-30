@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -319,12 +318,12 @@ namespace IronPython.Runtime {
         #region Dictionary Helper APIs
 
         internal static bool TryGetValueVirtual(CodeContext context, IMapping self, object key, ref object DefaultGetItem, out object value) {
-            ISuperDynamicObject sdo = self as ISuperDynamicObject;
+            IPythonObject sdo = self as IPythonObject;
             if (sdo != null) {
                 Debug.Assert(sdo != null);
-                DynamicType myType = sdo.DynamicType;
+                PythonType myType = sdo.PythonType;
                 object ret;
-                DynamicTypeSlot dts;
+                PythonTypeSlot dts;
 
                 if (DefaultGetItem == null) {
                     // lazy init our cached DefaultGetItem

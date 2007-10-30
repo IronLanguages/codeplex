@@ -29,7 +29,6 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -71,6 +70,8 @@ namespace IronPython.Runtime.Operations {
         private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
         private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
         private static FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
+        private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+        private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();               
 
 
         #endregion
@@ -86,9 +87,9 @@ namespace IronPython.Runtime.Operations {
             });
 #endif
 
-            DynamicTypeBuilder.TypeInitialized += new EventHandler<TypeCreatedEventArgs>(PythonTypeCustomizer.OnTypeInit);
+            PythonTypeBuilder.TypeInitialized += new EventHandler<TypeCreatedEventArgs>(PythonTypeCustomizer.OnTypeInit);
 
-            MakeDynamicTypesTable();
+            MakePythonTypeTable();
                         
             NotImplemented = NotImplementedTypeOps.CreateInstance();
             Ellipsis = EllipsisTypeOps.CreateInstance();
@@ -169,7 +170,7 @@ namespace IronPython.Runtime.Operations {
         internal static string GetPythonTypeName(object obj) {
             OldInstance oi = obj as OldInstance;
             if (oi != null) return oi.__class__.__name__.ToString();
-            else return DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(obj));
+            else return PythonTypeOps.GetName(DynamicHelpers.GetPythonType(obj));
         }
 
         public static string StringRepr(object o) {
@@ -220,7 +221,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            return DynamicHelpers.GetDynamicType(o).InvokeUnaryOperator(context, Operators.CodeRepresentation, o) as string;
+            return DynamicHelpers.GetPythonType(o).InvokeUnaryOperator(context, Operators.CodeRepresentation, o) as string;
         }
 
         private static List<object> GetAndCheckInfinite(object o) {
@@ -245,14 +246,14 @@ namespace IronPython.Runtime.Operations {
         public static string ToString(object o) {
             string x = o as string;
             Array ax;
-            DynamicType dt;
+            PythonType dt;
             OldClass oc;
             if (x != null) return x;
             if (o == null) return "None";
             if (o is double) return DoubleOps.ToString((double)o);
             if (o is float) return DoubleOps.ToString((float)o);
             if ((ax = o as Array) != null) return StringRepr(ax);
-            if ((dt = o as DynamicType) != null) return DynamicTypeOps.Repr(DefaultContext.Default, dt);
+            if ((dt = o as PythonType) != null) return PythonTypeOps.Repr(DefaultContext.Default, dt);
             if ((oc = o as OldClass) != null) return oc.ToString();
 
             object tostr;
@@ -329,7 +330,7 @@ namespace IronPython.Runtime.Operations {
                 out ret))
                 return ret;
 
-            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Positive, o, out ret) &&
+            if (DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Positive, o, out ret) &&
                 ret != PythonOps.NotImplemented)
                 return ret;
 
@@ -346,14 +347,14 @@ namespace IronPython.Runtime.Operations {
             else if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -1 : 0);
 
             object ret;
-            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Negate, o, out ret) &&
+            if (DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Negate, o, out ret) &&
                 ret != PythonOps.NotImplemented)
                 return ret;
 
             throw PythonOps.TypeError("bad operand type for unary -");
         }
 
-        public static bool IsSubClass(DynamicType c, object typeinfo) {
+        public static bool IsSubClass(PythonType c, object typeinfo) {
             if (c == null) throw PythonOps.TypeError("issubclass: arg 1 must be a class");
             if (typeinfo == null) throw PythonOps.TypeError("issubclass: arg 2 must be a class");
 
@@ -372,7 +373,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             object bases;
-            DynamicType dt = typeinfo as DynamicType;
+            PythonType dt = typeinfo as PythonType;
             if (dt == null) {
                 if (!PythonOps.TryGetBoundAttr(typeinfo, Symbols.Bases, out bases)) {
                     //!!! deal with classes w/ just __bases__ defined.
@@ -381,11 +382,11 @@ namespace IronPython.Runtime.Operations {
 
                 IEnumerator ie = PythonOps.GetEnumerator(bases);
                 while (ie.MoveNext()) {
-                    DynamicType baseType = ie.Current as DynamicType;
+                    PythonType baseType = ie.Current as PythonType;
 
                     if (baseType == null) {
                         OldClass ocType = ie.Current as OldClass;
-                        if (ocType == null) throw PythonOps.TypeError("expected type, got {0}", DynamicHelpers.GetDynamicType(ie.Current));
+                        if (ocType == null) throw PythonOps.TypeError("expected type, got {0}", DynamicHelpers.GetPythonType(ie.Current));
 
                         baseType = ocType.TypeObject;
                     }
@@ -425,7 +426,7 @@ namespace IronPython.Runtime.Operations {
                 if (oi != null) return oi.__class__.IsSubclassOf(typeinfo);
             }
 
-            DynamicType odt = DynamicHelpers.GetDynamicType(o);
+            PythonType odt = DynamicHelpers.GetPythonType(o);
             if (IsSubClass(odt, typeinfo)) {
                 return true;
             }
@@ -471,7 +472,7 @@ namespace IronPython.Runtime.Operations {
             if (o is bool) return RuntimeHelpers.Int32ToObject((bool)o ? -2 : -1);
 
             object ret;
-            if (DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.OnesComplement, o, out ret) &&
+            if (DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.OnesComplement, o, out ret) &&
                 ret != PythonOps.NotImplemented)
                 return ret;
 
@@ -587,49 +588,27 @@ namespace IronPython.Runtime.Operations {
             return !InRetBool(x, y);  //???
         }
 
-        //        public static object DynamicHelpers.GetDynamicType1(object o) {
-        //            IConvertible ic = o as IConvertible;
-        //            if (ic != null) {
-        //                switch (ic.GetTypeCode()) {
-        //                    case TypeCode.Int32: return "int";
-        //                    case TypeCode.Double: return "double";
-        //                    default: throw new NotImplementedException();
-        //                }
-        //            } else {
-        //                throw new NotImplementedException();
-        //            }
-        //        }
-        //
-        //        private static object[] oas = new object[] { "int", "double" };
-        //
-        //        public static object DynamicHelpers.GetDynamicType2(object o) {
-        //            Type ty = o.GetType();
-        //            int hc = ty.GetHashCode();
-        //
-        //            return oas[hc%1];
-        //        }
-
         // TODO: Remove this method, assemblies get registered as packages?
-        private static void MakeDynamicTypesTable() {
+        private static void MakePythonTypeTable() {
             RegisterLanguageAssembly(Assembly.GetExecutingAssembly());
-            DynamicHelpers.TypeExtended += new EventHandler<DynamicHelpers.TypeExtendedEventArgs>(DynamicHelpers_TypeExtended);
+            RuntimeHelpers.TypeExtended += new EventHandler<RuntimeHelpers.TypeExtendedEventArgs>(DynamicHelpers_TypeExtended);
 
             // TODO: Remove impersonation
-            DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
+            PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
 
             // TODO: Contest specific MRO?
-            DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(typeof(bool))).AddInitializer(delegate(DynamicMixinBuilder builder) {
-                DynamicTypeBuilder dtb = (DynamicTypeBuilder)builder;
-                builder.SetResolutionOrder(new DynamicType[]{
+            PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(typeof(bool))).AddInitializer(delegate(PythonTypeBuilder builder) {
+                PythonTypeBuilder dtb = (PythonTypeBuilder)builder;
+                builder.SetResolutionOrder(new PythonType[]{
                     TypeCache.Boolean,
                     TypeCache.Int32,
                     TypeCache.Object});
-                dtb.SetBases(new DynamicType[] { TypeCache.Int32 });
+                dtb.SetBases(new PythonType[] { TypeCache.Int32 });
             });
         }
 
-        private static void DynamicHelpers_TypeExtended(object sender, DynamicHelpers.TypeExtendedEventArgs e) {
-            DynamicTypeExtender.ExtendType(DynamicHelpers.GetDynamicTypeFromType(e.Extending), e.Extension);
+        private static void DynamicHelpers_TypeExtended(object sender, RuntimeHelpers.TypeExtendedEventArgs e) {
+            PythonTypeExtender.ExtendType(DynamicHelpers.GetPythonTypeFromType(e.Extending), e.Extension);
         }
                 
         public static bool EqualIsTrue(object x, int y) {
@@ -747,7 +726,7 @@ namespace IronPython.Runtime.Operations {
             string name1, name2;
             int diff;
 
-            if (DynamicHelpers.GetDynamicType(x) != DynamicHelpers.GetDynamicType(y)) {
+            if (DynamicHelpers.GetPythonType(x) != DynamicHelpers.GetPythonType(y)) {
                 if (x.GetType() == typeof(OldInstance)) {
                     name1 = ((OldInstance)x).__class__.Name;
                     if (y.GetType() == typeof(OldInstance)) {
@@ -760,8 +739,8 @@ namespace IronPython.Runtime.Operations {
                     // old instances are always less than new-style classes
                     return 1;
                 } else {
-                    name1 = DynamicTypeOps.GetName(x);
-                    name2 = DynamicTypeOps.GetName(y);
+                    name1 = PythonTypeOps.GetName(x);
+                    name2 = PythonTypeOps.GetName(y);
                 }
                 diff = String.CompareOrdinal(name1, name2);
             } else {
@@ -791,7 +770,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object InternalCompare(CodeContext context, Operators op, object self, object other) {
             object ret;
-            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(context, op, self, other, out ret))
+            if (DynamicHelpers.GetPythonType(self).TryInvokeBinaryOperator(context, op, self, other, out ret))
                 return ret;
 
             return PythonOps.NotImplemented;
@@ -800,7 +779,7 @@ namespace IronPython.Runtime.Operations {
         public static object RichEqualsHelper(object self, object other) {
             object res;
 
-            if (DynamicHelpers.GetDynamicType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equals, self, other, out res))
+            if (DynamicHelpers.GetPythonType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equals, self, other, out res))
                 return res;
 
             return PythonOps.NotImplemented;
@@ -841,7 +820,7 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.ValueError("complex modulo");
             }
 
-            if (DynamicHelpers.GetDynamicType(x).TryInvokeTernaryOperator(DefaultContext.Default, Operators.Power, x, y, z, out ret) && ret != PythonOps.NotImplemented)
+            if (DynamicHelpers.GetPythonType(x).TryInvokeTernaryOperator(DefaultContext.Default, Operators.Power, x, y, z, out ret) && ret != PythonOps.NotImplemented)
                 return ret;
 
             throw PythonOps.TypeErrorForBinaryOp("power with modulus", x, y);
@@ -869,7 +848,7 @@ namespace IronPython.Runtime.Operations {
             IEnumerator ie;
             if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
                 throw PythonOps.TypeError("unpack non-sequence of type {0}",
-                    StringRepr(DynamicTypeOps.GetName(enumerable)));
+                    StringRepr(PythonTypeOps.GetName(enumerable)));
             }
             return ie;
         }
@@ -905,7 +884,7 @@ namespace IronPython.Runtime.Operations {
             if (ipe != null) {
                 // invoke operator dynamically to go through protocol wrapper override, if defined.
                 object ret;
-                DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default,
+                DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default,
                     Operators.ValueHash,
                     o,
                     out ret);
@@ -927,7 +906,7 @@ namespace IronPython.Runtime.Operations {
                 o,
                 out hex)) {            
                 if (!(hex is string) && !(hex is ExtensibleString))
-                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(hex)));
+                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(hex)));
 
                 return hex;
             }
@@ -947,7 +926,7 @@ namespace IronPython.Runtime.Operations {
                 o,
                 out octal)) {            
                 if (!(octal is string) && !(octal is ExtensibleString))
-                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(octal)));
+                    throw PythonOps.TypeError("hex expected string type as return, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(octal)));
 
                 return octal;
             }
@@ -965,7 +944,7 @@ namespace IronPython.Runtime.Operations {
             if (ic != null) return ic.Count;
 
             object objres;
-            if (!DynamicHelpers.GetDynamicType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Length, o, out objres))
+            if (!DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Length, o, out objres))
                 throw PythonOps.TypeError("len() of unsized object");
             int res = (int)objres;
             if (res < 0) {
@@ -975,24 +954,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object CallWithContext(CodeContext context, object func, params object[] args) {
-            ICallableWithCodeContext icc = func as ICallableWithCodeContext;
-            if (icc != null) return icc.Call(context, args);
-
-            return SlowCallWithContext(context, func, args);
-        }
-
-        private static object SlowCallWithContext(CodeContext context, object func, object[] args) {
-            PerfTrack.NoteEvent(PerfTrack.Categories.OperatorInvoke, new KeyValuePair<Operators, DynamicType>(Operators.Call, DynamicHelpers.GetDynamicType(func)));
-
-            object res;
-            if (!DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, args, out res))
-                throw UncallableError(func);
-
-            return res;
+            return PythonCalls.Call(func, args);
         }
 
         public static Exception UncallableError(object func) {
-            return PythonOps.TypeError("{0} is not callable", DynamicTypeOps.GetName(func));
+            return PythonOps.TypeError("{0} is not callable", PythonTypeOps.GetName(func));
         }
 
         /// <summary>
@@ -1012,11 +978,11 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static object ToPythonType(DynamicMixin dt) {
+        public static object ToPythonType(PythonType dt) {
             if (dt != null && dt != TypeCache.Object) {
-                DynamicTypeSlot ret;
+                PythonTypeSlot ret;
                 if (dt.TryLookupSlot(DefaultContext.Default, Symbols.Class, out ret) &&
-                    ret.GetType() == typeof(DynamicTypeValueSlot)) {
+                    ret.GetType() == typeof(PythonTypeValueSlot)) {
                     object tmp;
                     if (ret.TryGetValue(DefaultContext.Default, null, dt, out tmp)) {
                         return tmp;
@@ -1084,27 +1050,14 @@ namespace IronPython.Runtime.Operations {
                 IFancyCallable ic = func as IFancyCallable;
                 if (ic != null) {
                     return ic.Call(context, largs.ToArray(), lnames.ToArray());
-                } 
+                }
 
-                // slow path
-                object ret;
-                if (DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, new KwCallInfo(largs.ToArray(), lnames.ToArray()), out ret))
-                    return ret;
-
-                throw new Exception("this object is not callable with keyword parameters");                
+                return PythonCalls.CallWithKeywordArgs(func, largs.ToArray(), lnames.ToArray());
             }
         }
 
         public static object CallWithKeywordArgs(CodeContext context, object func, object[] args, string[] names) {
-            IFancyCallable ic = func as IFancyCallable;
-            if (ic != null) return ic.Call(context, args, names);
-
-            object ret;
-            if(DynamicHelpers.GetDynamicType(func).TryInvokeBinaryOperator(context, Operators.Call, func, new KwCallInfo(args, names), out ret)) {
-                return ret;
-            }
-
-            throw PythonOps.TypeError("{0} object is not callable", DynamicHelpers.GetDynamicType(func));
+            return PythonCalls.CallWithKeywordArgs(func, args, names);
         }
 
         public static object CallWithArgsTuple(object func, object[] args, object argsTuple) {
@@ -1176,44 +1129,44 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            DynamicType dt = o as DynamicType;
+            PythonType dt = o as PythonType;
             if (dt != null) {
                 if (dt == TypeCache.Array) {
                     Type[] types = TypeHelpers.GetTypesFromTuple(index);
                     if (types.Length != 1) throw PythonOps.TypeError("expected single type");
 
-                    return DynamicHelpers.GetDynamicTypeFromType(types[0].MakeArrayType());
+                    return DynamicHelpers.GetPythonTypeFromType(types[0].MakeArrayType());
                 } else {
                     PythonTuple tindex = index as PythonTuple;
                     if (tindex == null) {
-                        DynamicType dti = index as DynamicType;
+                        PythonType dti = index as PythonType;
                         if (dti != null) {
                             tindex = PythonTuple.MakeTuple(dti);
                         } else {
-                            throw PythonOps.TypeError("__getitem__ expected tuple, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(index)));
+                            throw PythonOps.TypeError("__getitem__ expected tuple, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(index)));
                         }
                     }
 
-                    DynamicType[] dta = new DynamicType[tindex.Count];
+                    PythonType[] dta = new PythonType[tindex.Count];
                     for (int i = 0; i < tindex.Count; i++) {
-                        dta[i] = (DynamicType)tindex[i];
+                        dta[i] = (PythonType)tindex[i];
                     }
 
-                    return DynamicHelpers.GetDynamicTypeFromType(dt.MakeGenericType(dta));
+                    return DynamicHelpers.GetPythonTypeFromType(dt.MakeGenericType(dta));
                 }
             }
 
             BuiltinFunction bf = o as BuiltinFunction;
             if (bf != null) {
-                return PythonBuiltinFunctionOps.GetItem(bf, index);
+                return bf[index];
             }
 
-            if (DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.GetItem, o, index, out ret)) {
+            if (DynamicHelpers.GetPythonType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.GetItem, o, index, out ret)) {
                 return ret;
             }
 
             throw PythonOps.AttributeError("{0} object has no attribute '__getitem__'",
-                PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+                PythonOps.StringRepr(PythonTypeOps.GetName(o)));
         }
 
         public static void SetIndexId(object o, SymbolId index, object value) {
@@ -1278,9 +1231,9 @@ namespace IronPython.Runtime.Operations {
             }
 
             object ret;
-            if (!DynamicHelpers.GetDynamicType(o).TryInvokeTernaryOperator(DefaultContext.Default, Operators.SetItem, o, index, value, out ret)) {
+            if (!DynamicHelpers.GetPythonType(o).TryInvokeTernaryOperator(DefaultContext.Default, Operators.SetItem, o, index, value, out ret)) {
                 throw PythonOps.AttributeError("{0} object has no attribute '__setitem__'",
-                    PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+                    PythonOps.StringRepr(PythonTypeOps.GetName(o)));
             }
         }
 
@@ -1315,9 +1268,9 @@ namespace IronPython.Runtime.Operations {
             }
 
             object ret;
-            if (!DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.DeleteItem, o, index, out ret)) {
+            if (!DynamicHelpers.GetPythonType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.DeleteItem, o, index, out ret)) {
                 throw PythonOps.AttributeError("{0} object has no attribute '__delitem__'",
-                    PythonOps.StringRepr(DynamicTypeOps.GetName(o)));
+                    PythonOps.StringRepr(PythonTypeOps.GetName(o)));
             }
         }
 
@@ -1325,8 +1278,6 @@ namespace IronPython.Runtime.Operations {
             return TryGetBoundAttr(DefaultContext.Default, o, name, out ret);
         }
 
-        private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        
         class AttrKey : IEquatable<AttrKey> {
             private Type _type;
             private SymbolId _name;
@@ -1368,6 +1319,18 @@ namespace IronPython.Runtime.Operations {
             return ret != OperationFailed.Value;
         }
 
+        public static void DeleteAttr(CodeContext context, object o, SymbolId name) {
+            DynamicSite<object, object> site;
+            lock (_deleteAttrSites) {
+                AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
+                if (!_deleteAttrSites.TryGetValue(key, out site)) {
+                    _deleteAttrSites[key] = site = DynamicSite<object, object>.Create(DeleteMemberAction.Make(name));
+                }
+            }
+
+            site.Invoke(context, o);            
+        }
+
         public static bool HasAttr(CodeContext context, object o, SymbolId name) {
             object dummy;
             try {
@@ -1384,7 +1347,7 @@ namespace IronPython.Runtime.Operations {
                     throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'",
                         ((OldClass)o).Name, SymbolTable.IdToString(name));
                 } else {
-                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicTypeOps.GetName(DynamicHelpers.GetDynamicType(o)), SymbolTable.IdToString(name));
+                    throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", PythonTypeOps.GetName(DynamicHelpers.GetPythonType(o)), SymbolTable.IdToString(name));
                 }
             }
             return ret;           
@@ -1402,8 +1365,8 @@ namespace IronPython.Runtime.Operations {
                 return;
             }
 
-            if (!DynamicHelpers.GetDynamicType(o).TrySetNonCustomMember(context, o, name, value))
-                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+            if (!DynamicHelpers.GetPythonType(o).TrySetNonCustomMember(context, o, name, value))
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
         }
 
         public static void ObjectDeleteAttribute(CodeContext context, object o, SymbolId name) {
@@ -1418,8 +1381,8 @@ namespace IronPython.Runtime.Operations {
             }
 
             object dummy;
-            if (!DynamicHelpers.GetDynamicType(o).TryInvokeBinaryOperator(context, Operators.DeleteDescriptor, o, name, out dummy)) {                
-                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+            if (!DynamicHelpers.GetPythonType(o).TryInvokeBinaryOperator(context, Operators.DeleteDescriptor, o, name, out dummy)) {                
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
             }
         }
 
@@ -1430,11 +1393,11 @@ namespace IronPython.Runtime.Operations {
             }
 
             object value;
-            if (DynamicHelpers.GetDynamicType(o).TryGetNonCustomMember(context, o, name, out value)) {
+            if (DynamicHelpers.GetPythonType(o).TryGetNonCustomMember(context, o, name, out value)) {
                 return value;
             }            
 
-            throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetDynamicType(o).Name, name);
+            throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetPythonType(o).Name, name);
         }
 
         private static object GetCustomMembers(CodeContext context, ICustomMembers ifca, SymbolId name) {
@@ -1444,7 +1407,7 @@ namespace IronPython.Runtime.Operations {
             if (ifca is OldClass) {
                 throw PythonOps.AttributeError("type object '{0}' has no attribute '{1}'", ((OldClass)ifca).Name, SymbolTable.IdToString(name));
             } else {
-                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetDynamicType(ifca).Name, SymbolTable.IdToString(name));
+                throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'", DynamicHelpers.GetPythonType(ifca).Name, SymbolTable.IdToString(name));
             }
         }
 
@@ -1460,25 +1423,25 @@ namespace IronPython.Runtime.Operations {
                 return;
             }
 
-            if (!DynamicHelpers.GetDynamicType(o).TrySetMember(context, o, name, value))
-                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(o), name);
+            if (!DynamicHelpers.GetPythonType(o).TrySetMember(context, o, name, value))
+                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
         }
 
-        public static Exception AttributeErrorForMissingOrReadonly(CodeContext context, DynamicType dt, SymbolId name) {
-            DynamicTypeSlot dts;
+        public static Exception AttributeErrorForMissingOrReadonly(CodeContext context, PythonType dt, SymbolId name) {
+            PythonTypeSlot dts;
             if (dt.TryResolveSlot(context, name, out dts)) {
-                throw PythonOps.AttributeErrorForReadonlyAttribute(DynamicTypeOps.GetName(dt), name);
+                throw PythonOps.AttributeErrorForReadonlyAttribute(PythonTypeOps.GetName(dt), name);
             }
 
-            throw PythonOps.AttributeErrorForMissingAttribute(DynamicTypeOps.GetName(dt), name);
+            throw PythonOps.AttributeErrorForMissingAttribute(PythonTypeOps.GetName(dt), name);
         }
 
         public static Exception AttributeErrorForMissingAttribute(object o, SymbolId name) {
-            DynamicType dt = o as DynamicType;
+            PythonType dt = o as PythonType;
             if (dt != null)
                 return PythonOps.AttributeErrorForMissingAttribute(dt.Name, name);
 
-            return AttributeErrorForReadonlyAttribute(DynamicTypeOps.GetName(o), name);
+            return AttributeErrorForReadonlyAttribute(PythonTypeOps.GetName(o), name);
         }
 
 
@@ -1491,11 +1454,11 @@ namespace IronPython.Runtime.Operations {
             }
 
             List res = new List();
-            foreach(SymbolId x in DynamicHelpers.GetDynamicType(o).GetMemberNames(context, o))
+            foreach(SymbolId x in DynamicHelpers.GetPythonType(o).GetMemberNames(context, o))
                 res.AddNoLock(SymbolTable.IdToString(x));
 
             //!!! ugly, we need to check fro non-SymbolID keys
-            ISuperDynamicObject dyno = o as ISuperDynamicObject;
+            IPythonObject dyno = o as IPythonObject;
             if (dyno != null) {
                 IAttributesCollection iac = dyno.Dict;
                 if (iac != null) {
@@ -1514,11 +1477,11 @@ namespace IronPython.Runtime.Operations {
                 return ids.GetCustomMemberDictionary(context);
             }
 
-            IAttributesCollection iac = DynamicHelpers.GetDynamicType(o).GetMemberDictionary(context, o);
+            IAttributesCollection iac = DynamicHelpers.GetPythonType(o).GetMemberDictionary(context, o);
             if (iac != null) {
                 return iac.AsObjectKeyedDictionary();
             }
-            throw PythonOps.AttributeErrorForMissingAttribute(DynamicTypeOps.GetName(o), Symbols.Dict);
+            throw PythonOps.AttributeErrorForMissingAttribute(PythonTypeOps.GetName(o), Symbols.Dict);
         }
 
         /// <summary>
@@ -1527,7 +1490,7 @@ namespace IronPython.Runtime.Operations {
         public static void CheckInitializedAttribute(object o, object self, string name) {
             if (o == Uninitialized.Instance) {
                 throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'",
-                    DynamicHelpers.GetDynamicType(self),
+                    DynamicHelpers.GetPythonType(self),
                     name);
             }
         }               
@@ -1537,7 +1500,7 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         public static object GetUserDescriptor(object o, object instance, object context) {
             if (o != null && o.GetType() == typeof(OldInstance)) return o;   // only new-style classes can have descriptors
-            if (o is ISuperDynamicObject) {
+            if (o is IPythonObject) {
                 // slow, but only encountred for user defined descriptors.
                 PerfTrack.NoteEvent(PerfTrack.Categories.DictInvoke, "__get__");
                 object ret;
@@ -1598,17 +1561,17 @@ namespace IronPython.Runtime.Operations {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public static bool TryInvokeOperator(CodeContext context, Operators name, object target, out object ret) {
-            return DynamicHelpers.GetDynamicType(target).TryInvokeUnaryOperator(context, name, target, out ret);
+            return DynamicHelpers.GetPythonType(target).TryInvokeUnaryOperator(context, name, target, out ret);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object other, out object ret) {
-            return DynamicHelpers.GetDynamicType(target).TryInvokeBinaryOperator(context, name, target, other, out ret);
+            return DynamicHelpers.GetPythonType(target).TryInvokeBinaryOperator(context, name, target, other, out ret);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object value1, object value2, out object ret) {
-            return DynamicHelpers.GetDynamicType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
+            return DynamicHelpers.GetPythonType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
         }
 
         public static Delegate CreateDynamicDelegate(DynamicMethod meth, Type delegateType, object target) {
@@ -1868,12 +1831,12 @@ namespace IronPython.Runtime.Operations {
 
         // If an unbound method is called without a "self" argument, or a "self" argument of a bad type
         public static Exception TypeErrorForUnboundMethodCall(string methodName, Type methodType, object instance) {
-            return TypeErrorForUnboundMethodCall(methodName, DynamicHelpers.GetDynamicTypeFromType(methodType), instance);
+            return TypeErrorForUnboundMethodCall(methodName, DynamicHelpers.GetPythonTypeFromType(methodType), instance);
         }
 
-        public static Exception TypeErrorForUnboundMethodCall(string methodName, DynamicType methodType, object instance) {
+        public static Exception TypeErrorForUnboundMethodCall(string methodName, PythonType methodType, object instance) {
             string message = string.Format("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
-                                           methodName, methodType.Name, DynamicHelpers.GetDynamicType(instance).Name);
+                                           methodName, methodType.Name, DynamicHelpers.GetPythonType(instance).Name);
             return TypeError(message);
         }
 
@@ -1893,7 +1856,7 @@ namespace IronPython.Runtime.Operations {
             return TypeError(typeName + " objects are unhashable");
         }
 
-        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, DynamicType type, Type newType) {
+        internal static Exception TypeErrorForIncompatibleObjectLayout(string prefix, PythonType type, Type newType) {
             return TypeError("{0}: '{1}' object layout differs from '{2}'", prefix, type.Name, newType);
         }
 
@@ -1958,7 +1921,7 @@ namespace IronPython.Runtime.Operations {
 
             //Otherwise, if there is at least one base class, its metaclass is used
             for (int i = 0; i < bases.Count; i++) {
-                if (!(bases[i] is OldClass)) return DynamicHelpers.GetDynamicType(bases[i]);
+                if (!(bases[i] is OldClass)) return DynamicHelpers.GetPythonType(bases[i]);
             }
 
             //Otherwise, if there's a global variable named __metaclass__, it is used.
@@ -1994,7 +1957,7 @@ namespace IronPython.Runtime.Operations {
                             if (!tc.TryGetNonGenericType(out nonGenericType)) {
                                 throw PythonOps.TypeError("cannot derive from open generic types " + Builtin.repr(tc).ToString());
                             }
-                            newBases[i] = DynamicHelpers.GetDynamicTypeFromType(nonGenericType);
+                            newBases[i] = DynamicHelpers.GetPythonTypeFromType(nonGenericType);
                         } else {
                             newBases[i] = bases[i];
                         }
@@ -2008,7 +1971,7 @@ namespace IronPython.Runtime.Operations {
             object metaclass = FindMetaclass(context, tupleBases, vars);
             if (metaclass == TypeCache.OldInstance)
                 return new OldClass(name, tupleBases, vars, selfNames);
-            if (metaclass == TypeCache.DynamicType)
+            if (metaclass == TypeCache.PythonType)
                 return UserTypeBuilder.Build(context, name, tupleBases, vars);
 
             // eg:
@@ -2441,7 +2404,7 @@ namespace IronPython.Runtime.Operations {
             IEnumerator ie;
             if (!Converter.TryConvertToIEnumerator(enumerable, out ie)) {
                 throw PythonOps.TypeError("iteration over non-sequence of type {0}",
-                    PythonOps.StringRepr(DynamicHelpers.GetDynamicType(enumerable)));
+                    PythonOps.StringRepr(DynamicHelpers.GetPythonType(enumerable)));
             }
             return ie;
         }
@@ -2496,8 +2459,8 @@ namespace IronPython.Runtime.Operations {
                     // catching a Python type.
                     return exception;
                 }
-            } else if (test is DynamicType) {
-                if (PythonOps.IsSubClass(test as DynamicType, DynamicHelpers.GetDynamicTypeFromType(typeof(Exception)))) {
+            } else if (test is PythonType) {
+                if (PythonOps.IsSubClass(test as PythonType, DynamicHelpers.GetPythonTypeFromType(typeof(Exception)))) {
                     // catching a CLR exception type explicitly.
                     Exception clrEx = ExceptionConverter.ToClr(exception);
                     if (PythonOps.IsInstance(clrEx, test)) return clrEx;
@@ -2514,12 +2477,12 @@ namespace IronPython.Runtime.Operations {
                 return (TraceBack)result;
             }
 
-            DynamicStackFrame[] frames = DynamicHelpers.GetDynamicStackFrames(e, false);
+            DynamicStackFrame[] frames = RuntimeHelpers.GetDynamicStackFrames(e, false);
             TraceBack tb = null;
             for (int i = frames.Length - 1; i >= 0; i--) {
                 DynamicStackFrame frame = frames[i];
 
-                PythonFunction fx = new Function0(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects);
+                PythonFunction fx = new PythonFunction(frame.CodeContext, frame.GetMethodName(), null, ArrayUtils.EmptyStrings, ArrayUtils.EmptyObjects, FunctionAttributes.None);
 
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),
@@ -2607,7 +2570,7 @@ namespace IronPython.Runtime.Operations {
             } else if (type is OldInstance) {
                 throwable = ExceptionConverter.ToClr(type);
             } else {
-                throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetDynamicType(type));
+                throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
             }
 
             IDictionary dict = ExceptionUtils.GetDataDictionary(throwable);
@@ -2788,7 +2751,7 @@ namespace IronPython.Runtime.Operations {
             return pmc == null || pmc.ShowCls;
         }
 
-        public static object GetInitMember(CodeContext context, DynamicType type, object instance) {
+        public static object GetInitMember(CodeContext context, PythonType type, object instance) {
             object value;
             bool res = type.TryGetNonCustomBoundMember(context, instance, Symbols.Init, out value);
             Debug.Assert(res);
@@ -2796,8 +2759,8 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
-        public static object GetMixedMember(CodeContext context, DynamicType type, object instance, SymbolId name) {
-            foreach (DynamicType t in type.ResolutionOrder) {
+        public static object GetMixedMember(CodeContext context, PythonType type, object instance, SymbolId name) {
+            foreach (PythonType t in type.ResolutionOrder) {
                 if (Mro.IsOldStyle(t)) {
                     OldClass oc = (OldClass)ToPythonType(t);
                     object ret;
@@ -2806,7 +2769,7 @@ namespace IronPython.Runtime.Operations {
                         return ret;
                     }
                 } else {
-                    DynamicTypeSlot dts;
+                    PythonTypeSlot dts;
                     if (t.TryLookupSlot(context, name, out dts)) {
                         if (instance != null) {
                             object ret;
@@ -2827,21 +2790,21 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         private static void RegisterLanguageAssembly(Assembly assembly) {
             object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
-            foreach (ExtensionTypeAttribute et in attrs) {
-                ExtendOneType(et, DynamicHelpers.GetDynamicTypeFromType(et.Extends));
+            foreach (PythonExtensionTypeAttribute et in attrs) {
+                ExtendOneType(et, DynamicHelpers.GetPythonTypeFromType(et.Extends));
             }
         }
 
-        internal static void ExtendOneType(ExtensionTypeAttribute et, DynamicType dt) {
+        internal static void ExtendOneType(PythonExtensionTypeAttribute et, PythonType dt) {
             // new-style extensions:
-            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type, dt);
+            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type);
 
-            DynamicTypeExtender.ExtendType(dt, et.Type, et.Transformer);
+            PythonTypeExtender.ExtendType(dt, et.Type, et.Transformer);
 
             if (et.EnableDerivation) {
-                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetIsExtensible();
+                PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(et.Extends)).SetIsExtensible();
             } else if (et.DerivationType != null) {
-                DynamicTypeBuilder.GetBuilder(DynamicHelpers.GetDynamicTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
+                PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(et.Extends)).SetExtensionType(et.DerivationType);
             }
         }
 
@@ -2966,5 +2929,184 @@ namespace IronPython.Runtime.Operations {
         }
 
         #endregion
+        
+        public static ReflectedEvent.BoundEvent MakeBoundEvent(ReflectedEvent eventObj, object instance, Type type) {
+            return new ReflectedEvent.BoundEvent(eventObj, instance, DynamicHelpers.GetPythonTypeFromType(type));
+        }
+
+        /// <summary>
+        /// Helper method for DynamicSite rules that check the version of their dynamic object
+        /// TODO - Remove this method for more direct field accesses
+        /// </summary>
+        /// <param name="o"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        public static bool CheckTypeVersion(object o, int version) {
+            return ((IPythonObject)o).PythonType.Version == version;
+        }
+
+        /// <summary>
+        /// Helper method for DynamicSite rules that check the version of their dynamic object
+        /// TODO - Remove this method for more direct field accesses
+        /// </summary>
+        /// <param name="o"></param>
+        /// <param name="version"></param>
+        /// <returns></returns>
+        public static bool CheckAlternateTypeVersion(object o, int version) {
+            return ((IPythonObject)o).PythonType.AlternateVersion == version;
+        }
+
+        public static Exception CannotConvertError(Type toType, object value) {
+            return Converter.CannotConvertTo(PythonTypeOps.GetName(toType), value);
+        }
+
+        #region Conversion helpers 
+        
+        internal static MethodInfo GetConversionHelper(string name, ConversionResultKind resultKind) {
+            MethodInfo res;
+            switch (resultKind) {
+                case ConversionResultKind.ExplicitCast:
+                case ConversionResultKind.ImplicitCast:
+                    res = typeof(PythonOps).GetMethod("Throwing" + name); 
+                    break;
+                case ConversionResultKind.ImplicitTry:
+                case ConversionResultKind.ExplicitTry:
+                    res = typeof(PythonOps).GetMethod("NonThrowing" + name); 
+                    break;
+                default: throw new InvalidOperationException();
+            }
+            Debug.Assert(res != null);
+            return res;
+        }
+
+        public static bool CheckingConvertToInt(object value) {
+            return value is int || value is BigInteger || value is Extensible<int> || value is Extensible<BigInteger>;
+        }
+
+        public static bool CheckingConvertToLong(object value) {
+            return CheckingConvertToInt(value);
+        }
+
+        public static bool CheckingConvertToFloat(object value) {
+            return value is double || value is Extensible<double>;
+        }
+
+        public static bool CheckingConvertToComplex(object value) {
+            return value is Complex64 || value is Extensible<Complex64> || CheckingConvertToInt(value) || CheckingConvertToFloat(value);
+        }
+
+        public static bool CheckingConvertToString(object value) {
+            return value is string || value is Extensible<string>;
+        }
+
+        public static bool CheckingConvertToNonZero(object value) {
+            return value is bool || value is int;
+        }
+
+        public static object NonThrowingConvertToInt(object value) {
+            if (!CheckingConvertToInt(value)) return 0;
+            return value;
+        }
+
+        public static object NonThrowingConvertToLong(object value) {
+            if (!CheckingConvertToInt(value)) return BigInteger.Zero;
+            return value;
+        }
+
+        public static object NonThrowingConvertToFloat(object value) {
+            if (!CheckingConvertToFloat(value)) return 0D;
+            return value;
+        }
+
+        public static object NonThrowingConvertToComplex(object value) {
+            if (!CheckingConvertToComplex(value)) return new Complex64();
+            return value;                            
+        }
+
+        public static object NonThrowingConvertToString(object value) {
+            if (!CheckingConvertToString(value)) return null;
+            return value;
+        }
+
+        public static object NonThrowingConvertToNonZero(object value) {
+            if (!CheckingConvertToNonZero(value)) return RuntimeHelpers.False;
+            return value;
+        }
+
+        public static object ThrowingConvertToInt(object value) {
+            if (!CheckingConvertToInt(value)) throw TypeError(" __int__ returned non-int (type {0})", PythonTypeOps.GetName(value));
+            return value;
+        }
+
+        public static object ThrowingConvertToFloat(object value) {
+            if (!CheckingConvertToFloat(value)) throw TypeError(" __float__ returned non-float (type {0})", PythonTypeOps.GetName(value));
+            return value;
+        }
+
+        public static object ThrowingConvertToComplex(object value) {
+            if (!CheckingConvertToComplex(value)) throw TypeError(" __complex__ returned non-complex (type {0})", PythonTypeOps.GetName(value));
+            return value;
+        }
+
+        public static object ThrowingConvertToLong(object value) {
+            if (!CheckingConvertToComplex(value)) throw TypeError(" __long__ returned non-long (type {0})", PythonTypeOps.GetName(value));
+            return value;
+        }
+
+        public static object ThrowingConvertToString(object value) {
+            if (!CheckingConvertToString(value)) throw TypeError(" __str__ returned non-str (type {0})", PythonTypeOps.GetName(value));
+            return value;
+        }
+
+        public static object ThrowingConvertToNonZero(object value) {
+            if (!CheckingConvertToNonZero(value)) throw TypeError("__nonzero__ should return bool or int, returned {0}", PythonTypeOps.GetName(value));
+            return value;
+        }
+                
+        #endregion
+
+        public static bool SlotTryGetBoundValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
+            return slot.TryGetBoundValue(context, instance, owner, out value);
+        }
+
+        public static bool SlotTryGetValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
+            return slot.TryGetValue(context, instance, owner, out value);
+        }
+
+        public static bool SlotTrySetValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, object value) {
+            return slot.TrySetValue(context, instance, owner, value);
+        }
+
+        public static bool SlotTryDeleteValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner) {
+            return slot.TryDeleteValue(context, instance, owner);
+        }
+
+        public static BoundBuiltinFunction/*!*/ MakeBoundBuiltinFunction(BuiltinFunction/*!*/ function, object/*!*/ target) {
+            return new BoundBuiltinFunction(function, target);
+        }
+
+        public static BuiltinFunction/*!*/ GetBoundBuiltinFunctionTarget(BoundBuiltinFunction/*!*/ self) {
+            return self.Target;
+        }
+
+        public static BuiltinFunction/*!*/ GetBuiltinMethodDescriptorTemplate(BuiltinMethodDescriptor/*!*/ descriptor) {
+            return descriptor.Template;
+        }
+
+        public static int GetTypeVersion(PythonType type) {
+            return type.Version;
+        }
+
+        public static int GetAlternateTypeVersion(PythonType type) {
+            return type.AlternateVersion;
+        }
+
+        public static bool TypeHasGetAttribute(PythonType type) {
+            return type.HasGetAttribute;
+        }
+
+        public static bool TryResolveTypeSlot(CodeContext context, PythonType type, SymbolId name, out PythonTypeSlot slot) {
+            return type.TryResolveSlot(context, name, out slot);
+        }
     }
 }

@@ -22,12 +22,12 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Compiler;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {
 
@@ -44,6 +44,8 @@ namespace IronPython.Runtime.Operations {
 
 
     public static partial class Int32Ops {
+        private static FastDynamicSite<object, object> _intSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
+
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
 
@@ -56,9 +58,6 @@ namespace IronPython.Runtime.Operations {
 
             if (o is Complex64) throw PythonOps.TypeError("can't convert complex to int; use int(abs(z))");
 
-            if (o is Byte) return (Int32)(Byte)o;
-            if (o is SByte) return (Int32)(SByte)o;
-            if (o is Int16) return (Int32)(Int16)o;
             if (o is Int64) {
                 Int64 val = (Int64)o;
                 if (Int32.MinValue <= val && val <= Int32.MaxValue) {
@@ -67,8 +66,6 @@ namespace IronPython.Runtime.Operations {
                     return BigInteger.Create(val);
                 }
             }
-            if (o is UInt16) return (Int32)(UInt16)o;
-
             if (o is UInt32) {
                 UInt32 val = (UInt32)o;
                 if (val <= Int32.MaxValue) {
@@ -99,34 +96,20 @@ namespace IronPython.Runtime.Operations {
                 return Converter.CastEnumToInt32(o);
             }
 
-            object newValue;
-            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToInt32,
-                o,
-                out newValue)) {
-                // Convert resulting object to the desired type
-                if (newValue is int) return newValue;
-                if (newValue is BigInteger) return newValue;
-                if (newValue is Extensible<BigInteger>)return ((Extensible<BigInteger>)newValue).Value;
-                if (newValue is Extensible<int>) return ((Extensible<int>)newValue).Value;
-
-                throw PythonOps.TypeError("__int__ returned non-int");
-            }
-
-            return Converter.ConvertToInt32(o);
+            return _intSite.Invoke(o);
         }
 
         public static object Make(CodeContext context, object o) {
             return Make(context, TypeCache.Int32, o);
         }
 
-        private static void ValidateType(DynamicType cls) {
+        private static void ValidateType(PythonType cls) {
             if (cls == TypeCache.Boolean)
                 throw PythonOps.TypeError("int.__new__(bool) is not safe, use bool.__new__()");
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, string s, int radix) {
+        public static object Make(PythonType cls, string s, int radix) {
             ValidateType(cls);
 
             //try {
@@ -137,7 +120,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls, object x) {
+        public static object Make(CodeContext context, PythonType cls, object x) {
             if (cls == TypeCache.Int32)  return FastNew(x); // TODO: Call site?
 
             ValidateType(cls);
@@ -149,7 +132,7 @@ namespace IronPython.Runtime.Operations {
         // "int()" calls ReflectedType.Call(), which calls "Activator.CreateInstance" and return directly.
         // this is for derived int creation or direct calls to __new__...
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls) {
+        public static object Make(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Int32) return 0;
 
             return cls.CreateInstance(context);
@@ -361,7 +344,7 @@ namespace IronPython.Runtime.Operations {
             } else {
                 if (!Converter.TryConvertToInt32(obj, out otherInt)) {
                     object res;
-                    if(DynamicHelpers.GetDynamicType(obj).TryInvokeBinaryOperator(context,
+                    if(DynamicHelpers.GetPythonType(obj).TryInvokeBinaryOperator(context,
                         Operators.Coerce,
                         obj,
                         self, 

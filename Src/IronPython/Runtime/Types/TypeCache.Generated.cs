@@ -19,7 +19,6 @@ using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
@@ -31,7 +30,7 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static DynamicType array, builtinfunction, pythondictionary, frozensetcollection, pythonfunction, builtin, generator, obj, setcollection, dynamictype, str, systemstate, pythontuple, weakreference, list, pythonfile, scriptmodule, method, enumerate, intType, doubleType, biginteger, complex64, super, oldclass, oldinstance, noneType, boolType;
+        private static PythonType array, builtinfunction, pythondictionary, frozensetcollection, pythonfunction, builtin, generator, obj, setcollection, pythontype, str, systemstate, pythontuple, weakreference, list, pythonfile, scriptmodule, method, enumerate, intType, doubleType, biginteger, complex64, super, oldclass, oldinstance, noneType, boolType;
 
         // *** END GENERATED CODE ***
 
@@ -41,198 +40,198 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        public static DynamicType Array {
+        public static PythonType Array {
             get {
-                if (array == null) array = DynamicHelpers.GetDynamicTypeFromType(typeof(Array));
+                if (array == null) array = DynamicHelpers.GetPythonTypeFromType(typeof(Array));
                 return array;
             }
         }
 
-        public static DynamicType BuiltinFunction {
+        public static PythonType BuiltinFunction {
             get {
-                if (builtinfunction == null) builtinfunction = DynamicHelpers.GetDynamicTypeFromType(typeof(BuiltinFunction));
+                if (builtinfunction == null) builtinfunction = DynamicHelpers.GetPythonTypeFromType(typeof(BuiltinFunction));
                 return builtinfunction;
             }
         }
 
-        public static DynamicType Dict {
+        public static PythonType Dict {
             get {
-                if (pythondictionary == null) pythondictionary = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDictionary));
+                if (pythondictionary == null) pythondictionary = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary));
                 return pythondictionary;
             }
         }
 
-        public static DynamicType FrozenSet {
+        public static PythonType FrozenSet {
             get {
-                if (frozensetcollection == null) frozensetcollection = DynamicHelpers.GetDynamicTypeFromType(typeof(FrozenSetCollection));
+                if (frozensetcollection == null) frozensetcollection = DynamicHelpers.GetPythonTypeFromType(typeof(FrozenSetCollection));
                 return frozensetcollection;
             }
         }
 
-        public static DynamicType Function {
+        public static PythonType Function {
             get {
-                if (pythonfunction == null) pythonfunction = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFunction));
+                if (pythonfunction == null) pythonfunction = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFunction));
                 return pythonfunction;
             }
         }
 
-        public static DynamicType Builtin {
+        public static PythonType Builtin {
             get {
-                if (builtin == null) builtin = DynamicHelpers.GetDynamicTypeFromType(typeof(Builtin));
+                if (builtin == null) builtin = DynamicHelpers.GetPythonTypeFromType(typeof(Builtin));
                 return builtin;
             }
         }
 
-        public static DynamicType Generator {
+        public static PythonType Generator {
             get {
-                if (generator == null) generator = DynamicHelpers.GetDynamicTypeFromType(typeof(Generator));
+                if (generator == null) generator = DynamicHelpers.GetPythonTypeFromType(typeof(Generator));
                 return generator;
             }
         }
 
-        public static DynamicType Object {
+        public static PythonType Object {
             get {
-                if (obj == null) obj = DynamicHelpers.GetDynamicTypeFromType(typeof(Object));
+                if (obj == null) obj = DynamicHelpers.GetPythonTypeFromType(typeof(Object));
                 return obj;
             }
         }
 
-        public static DynamicType Set {
+        public static PythonType Set {
             get {
-                if (setcollection == null) setcollection = DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection));
+                if (setcollection == null) setcollection = DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection));
                 return setcollection;
             }
         }
 
-        public static DynamicType DynamicType {
+        public static PythonType PythonType {
             get {
-                if (dynamictype == null) dynamictype = DynamicHelpers.GetDynamicTypeFromType(typeof(DynamicType));
-                return dynamictype;
+                if (pythontype == null) pythontype = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
+                return pythontype;
             }
         }
 
-        public static DynamicType String {
+        public static PythonType String {
             get {
-                if (str == null) str = DynamicHelpers.GetDynamicTypeFromType(typeof(String));
+                if (str == null) str = DynamicHelpers.GetPythonTypeFromType(typeof(String));
                 return str;
             }
         }
 
-        public static DynamicType SystemState {
+        public static PythonType SystemState {
             get {
-                if (systemstate == null) systemstate = DynamicHelpers.GetDynamicTypeFromType(typeof(SystemState));
+                if (systemstate == null) systemstate = DynamicHelpers.GetPythonTypeFromType(typeof(SystemState));
                 return systemstate;
             }
         }
 
-        public static DynamicType PythonTuple {
+        public static PythonType PythonTuple {
             get {
-                if (pythontuple == null) pythontuple = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple));
+                if (pythontuple == null) pythontuple = DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple));
                 return pythontuple;
             }
         }
 
-        public static DynamicType WeakReference {
+        public static PythonType WeakReference {
             get {
-                if (weakreference == null) weakreference = DynamicHelpers.GetDynamicTypeFromType(typeof(WeakReference));
+                if (weakreference == null) weakreference = DynamicHelpers.GetPythonTypeFromType(typeof(WeakReference));
                 return weakreference;
             }
         }
 
-        public static DynamicType List {
+        public static PythonType List {
             get {
-                if (list == null) list = DynamicHelpers.GetDynamicTypeFromType(typeof(List));
+                if (list == null) list = DynamicHelpers.GetPythonTypeFromType(typeof(List));
                 return list;
             }
         }
 
-        public static DynamicType PythonFile {
+        public static PythonType PythonFile {
             get {
-                if (pythonfile == null) pythonfile = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
+                if (pythonfile == null) pythonfile = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
                 return pythonfile;
             }
         }
 
-        public static DynamicType Module {
+        public static PythonType Module {
             get {
-                if (scriptmodule == null) scriptmodule = DynamicHelpers.GetDynamicTypeFromType(typeof(ScriptModule));
+                if (scriptmodule == null) scriptmodule = DynamicHelpers.GetPythonTypeFromType(typeof(ScriptModule));
                 return scriptmodule;
             }
         }
 
-        public static DynamicType Method {
+        public static PythonType Method {
             get {
-                if (method == null) method = DynamicHelpers.GetDynamicTypeFromType(typeof(Method));
+                if (method == null) method = DynamicHelpers.GetPythonTypeFromType(typeof(Method));
                 return method;
             }
         }
 
-        public static DynamicType Enumerate {
+        public static PythonType Enumerate {
             get {
-                if (enumerate == null) enumerate = DynamicHelpers.GetDynamicTypeFromType(typeof(Enumerate));
+                if (enumerate == null) enumerate = DynamicHelpers.GetPythonTypeFromType(typeof(Enumerate));
                 return enumerate;
             }
         }
 
-        public static DynamicType Int32 {
+        public static PythonType Int32 {
             get {
-                if (intType == null) intType = DynamicHelpers.GetDynamicTypeFromType(typeof(Int32));
+                if (intType == null) intType = DynamicHelpers.GetPythonTypeFromType(typeof(Int32));
                 return intType;
             }
         }
 
-        public static DynamicType Double {
+        public static PythonType Double {
             get {
-                if (doubleType == null) doubleType = DynamicHelpers.GetDynamicTypeFromType(typeof(Double));
+                if (doubleType == null) doubleType = DynamicHelpers.GetPythonTypeFromType(typeof(Double));
                 return doubleType;
             }
         }
 
-        public static DynamicType BigInteger {
+        public static PythonType BigInteger {
             get {
-                if (biginteger == null) biginteger = DynamicHelpers.GetDynamicTypeFromType(typeof(BigInteger));
+                if (biginteger == null) biginteger = DynamicHelpers.GetPythonTypeFromType(typeof(BigInteger));
                 return biginteger;
             }
         }
 
-        public static DynamicType Complex64 {
+        public static PythonType Complex64 {
             get {
-                if (complex64 == null) complex64 = DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64));
+                if (complex64 == null) complex64 = DynamicHelpers.GetPythonTypeFromType(typeof(Complex64));
                 return complex64;
             }
         }
 
-        public static DynamicType Super {
+        public static PythonType Super {
             get {
-                if (super == null) super = DynamicHelpers.GetDynamicTypeFromType(typeof(Super));
+                if (super == null) super = DynamicHelpers.GetPythonTypeFromType(typeof(Super));
                 return super;
             }
         }
 
-        public static DynamicType OldClass {
+        public static PythonType OldClass {
             get {
-                if (oldclass == null) oldclass = DynamicHelpers.GetDynamicTypeFromType(typeof(OldClass));
+                if (oldclass == null) oldclass = DynamicHelpers.GetPythonTypeFromType(typeof(OldClass));
                 return oldclass;
             }
         }
 
-        public static DynamicType OldInstance {
+        public static PythonType OldInstance {
             get {
-                if (oldinstance == null) oldinstance = DynamicHelpers.GetDynamicTypeFromType(typeof(OldInstance));
+                if (oldinstance == null) oldinstance = DynamicHelpers.GetPythonTypeFromType(typeof(OldInstance));
                 return oldinstance;
             }
         }
 
-        public static DynamicType None {
+        public static PythonType None {
             get {
-                if (noneType == null) noneType = DynamicHelpers.GetDynamicTypeFromType(typeof(None));
+                if (noneType == null) noneType = DynamicHelpers.GetPythonTypeFromType(typeof(None));
                 return noneType;
             }
         }
 
-        public static DynamicType Boolean {
+        public static PythonType Boolean {
             get {
-                if (boolType == null) boolType = DynamicHelpers.GetDynamicTypeFromType(typeof(Boolean));
+                if (boolType == null) boolType = DynamicHelpers.GetPythonTypeFromType(typeof(Boolean));
                 return boolType;
             }
         }

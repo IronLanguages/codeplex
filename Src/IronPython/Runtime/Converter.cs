@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.ComponentModel;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
@@ -32,276 +31,41 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime {
 
     public static partial class Converter {
+        private static FastDynamicSite<object, int> _intSite = MakeExplicitConvertSite<int>();
+        private static FastDynamicSite<object, double> _doubleSite = MakeExplicitConvertSite<double>();
+        private static FastDynamicSite<object, Complex64> _complexSite = MakeExplicitConvertSite<Complex64>();
+        private static FastDynamicSite<object, BigInteger> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
+        private static FastDynamicSite<object, string> _stringSite = MakeExplicitConvertSite<string>();
+        private static FastDynamicSite<object, bool> _boolSite = MakeExplicitConvertSite<bool>();
+        private static FastDynamicSite<object, char> _charSite = MakeImplicitConvertSite<char>();
+        private static FastDynamicSite<object, char> _explicitCharSite = MakeExplicitConvertSite<char>();
+
+        private static FastDynamicSite<object, T> MakeImplicitConvertSite<T>() {
+            return MakeConvertSite<T>(ConversionResultKind.ImplicitCast);
+        }
+
+        private static FastDynamicSite<object, T> MakeExplicitConvertSite<T>() {
+            return MakeConvertSite<T>(ConversionResultKind.ExplicitCast);
+        }
+
+        private static FastDynamicSite<object, T> MakeConvertSite<T>(ConversionResultKind kind) {
+            return FastDynamicSite<object, T>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(T), kind));
+        }
+        
         #region Conversion entry points
 
-        //
-        // ConvertToInt32 - fast paths and custom logic
-        //
-        public static Int32 ConvertToInt32(object value) {
-            // Fast Paths
-            Extensible<int> ei;
-            BigInteger bi;
-            if (value is Int32) return (Int32)value;
-            if ((ei = value as Extensible<int>) != null) return ei.Value;
-            if (value is Boolean) return ((Boolean)value) ? 1 : 0;
-            if ((Object)(bi = value as BigInteger) != null) return bi.ToInt32();
-
-            // Fall back to comprehensive conversion
-            Int32 result;
-            if (ConvertToInt32Impl(value, out result)) return result;
-
-            if (value is double) return checked((int)((double)value));
-
-            // Fall back to __xxx__ method call
-            object newValue;
-            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                            Operators.ConvertToInt32,
-                            value,
-                            out newValue)) {            
-                // Convert resulting object to the desired type
-                if (ConvertToInt32Impl(newValue, out result)) return result;
-            }
-
-            if (TryConvertObject(value, typeof(Int32), out newValue) && newValue is Int32) return (Int32)newValue;
-
-            throw CannotConvertTo("Int32", value);
-        }
-
-        //
-        // ConvertToDouble - fast paths and custom logic
-        //
-        public static Double ConvertToDouble(object value) {
-            // Fast Paths
-            Extensible<int> ei;
-            Extensible<double> ef;
-            if (value is Double) return (Double)value;
-            if (value is Int32) return (Double)(Int32)value;
-            if ((ef = value as Extensible<double>) != null) return ef.Value;
-            if ((ei = value as Extensible<int>) != null) return ei.Value;
-
-            // Fall back to comprehensive conversion
-            Double result;
-            if (ConvertToDoubleImpl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            object newValue;
-            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToDouble,
-                value,
-                out newValue)) {
-
-                // Convert resulting object to the desired type
-                if (ConvertToDoubleImpl(newValue, out result)) return result;
-            }
-
-            if (TryConvertObject(value, typeof(Double), out newValue) && newValue is Double) return (Double)newValue;
-
-            throw CannotConvertTo("Double", value);
-        }
-
-        //
-        // ConvertToBigInteger - fast paths and custom logic
-        //
-        public static BigInteger ConvertToBigInteger(object value) {
-            // Fast Paths
-            BigInteger bi;
-            Extensible<BigInteger> el;
-
-            if ((Object)(bi = value as BigInteger) != null) return bi;
-            if (value is Int32) return BigInteger.Create((Int32)value);
-            if ((el = value as Extensible<BigInteger>) != null) return el.Value;
-            if (value == null) return null;
-
-            // Fall back to comprehensive conversion
-            BigInteger result;
-            if (ConvertToBigIntegerImpl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            object newValue;
-            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToBigInteger,
-                value,
-                out newValue)) {
-                // Convert resulting object to the desired type
-                if (ConvertToBigIntegerImpl(newValue, out result)) return result;
-            }
-
-            if (TryConvertObject(value, typeof(BigInteger), out newValue) && newValue is BigInteger) return (BigInteger)newValue;
-
-            throw CannotConvertTo("BigInteger", value);
-        }
-
-        //
-        // ConvertToComplex64 - fast paths and custom logic
-        //
-        public static Complex64 ConvertToComplex64(object value) {
-            // Fast Paths
-            if (value is Complex64) return (Complex64)value;
-            if (value is Double) return Complex64.MakeReal((Double)value);
-
-            // Fall back to comprehensive conversion
-            Complex64 result;
-            if (ConvertToComplex64Impl(value, out result)) return result;
-
-            // Fall back to __xxx__ method call
-            object newValue;
-            if (PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToComplex,
-                value,
-                out newValue)) {               // Convert resulting object to the desired type
-                if (ConvertToComplex64Impl(newValue, out result)) return result;
-            }
-
-            // Try converting to double and use it as a real part of the complex number
-            Double dresult;
-            if (ConvertToDoubleImpl(value, out dresult)) return new Complex64(dresult);
-
-            // Fall back to __xxx__ method call
-            if (PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToDouble,
-                value,
-                out newValue)) {        
-        
-                if (newValue is double) {
-                    dresult = (double)newValue;
-                } else if (newValue is Extensible<double>) {
-                    dresult = ((Extensible<double>)newValue).Value;
-                } else {
-                    throw PythonOps.TypeError("__float__ returned non-float");
-                }
-                return new Complex64(dresult);
-            }
-
-            if (TryConvertObject(value, typeof(Complex64), out newValue) && newValue is Complex64) return (Complex64)newValue;
-
-            throw CannotConvertTo("Complex64", value);
-        }
-
-        //
-        // ConvertToString - fast paths and custom logic
-        //
-        public static String ConvertToString(object value) {
-            // Fast Paths
-            Object res;
-            String result;
-            ExtensibleString es;
-
-            if ((result = value as String) != null) return result;
-            if (value == null) return null;
-            if (value is Char) return RuntimeHelpers.CharToString((Char)value);
-            if ((Object)(es = value as ExtensibleString) != null) return es.Value;
-            if (TryConvertObject(value, typeof(String), out res) && res is String) return (String)res;
-
-            throw CannotConvertTo("String", value);
-        }
-
-        //
-        // ConvertToChar - fast paths and custom logic
-        //
-        public static Char ConvertToChar(object value) {
-            // Fast Paths
-            Object res;
-            string str;
-            ExtensibleString es;
-
-            if (value is Char) return (Char)value;
-            if ((object)(str = value as string) != null && str.Length == 1) return str[0];
-            if ((object)(es = value as ExtensibleString) != null && es.Value.Length == 1) return es.Value[0];
-            if (TryConvertObject(value, typeof(Char), out res) && res is Char) return (Char)res;
-
-            throw CannotConvertTo("Char", value);
-        }
-
-        //
-        // ConvertToBoolean - fast paths and custom logic
-        //
-        public static Boolean ConvertToBoolean(object value) {
-            // Fast Paths
-            if (value is Int32) return (Int32)value != 0;
-            if (value is Boolean) return (Boolean)value;
-            if (value == null) return false;
-
-            return SlowConvertToBoolean(value);
-        }
-
-        private static bool SlowConvertToBoolean(object value) {
-            Boolean result;
-
-            // Fall back to comprehensive conversion
-            if (ConvertToBooleanImpl(value, out result)) return result;
-
-            // Additional logic to convert to bool
-            if (value == null) return false;
-            if (value is IPythonContainer) return ((IPythonContainer)value).GetLength() != 0;
-            if (value is ICollection) return ((ICollection)value).Count != 0;
-
-            // Explictly block conversion of References to bool
-            if (value is IStrongBox) {
-                throw RuntimeHelpers.SimpleTypeError("Can't convert a Reference<> instance to a bool");
-            }
-
-            // Fall back to __xxx__ method call
-            object newValue;
-
-            // First, try __nonzero__
-            if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                Operators.ConvertToBoolean,
-                value,
-                out newValue)) {
-                // Convert resulting object to the desired type
-                if (newValue is bool || newValue is Int32) {
-                    if (ConvertToBooleanImpl(newValue, out result)) return result;
-                }
-                throw PythonOps.TypeError("__nonzero__ should return bool or int, returned {0}", PythonOps.GetClassName(newValue));
-            }
-
-            // Then, try __len__
-            try {
-                    if(PythonOps.TryInvokeOperator(DefaultContext.Default,
-                                    Operators.Length,
-                                    value,
-                                    out newValue)) {
-                    // Convert resulting object to the desired type
-                    if (newValue is Int32 || newValue is BigInteger) {
-                        if (ConvertToBooleanImpl(newValue, out result)) return result;
-                    }
-                    throw PythonOps.TypeError("an integer is required");
-                }
-            } catch (MissingMemberException) {
-                // old-style __len__ throws if we don't have __len__ defined on the instance
-            }
-
-            // Try Extensible types as last due to possible __nonzero__ overload
-            if (value is Extensible<int>) return (Int32)((Extensible<int>)value).Value != (Int32)0;
-            if (value is Extensible<BigInteger>) return ((Extensible<BigInteger>)value).Value != BigInteger.Zero;
-            if (value is Extensible<double>) return ((Extensible<double>)value).Value != (Double)0;
-
-            if (TryConvertObject(value, typeof(bool), out newValue) && newValue is Boolean) return (bool)newValue;
-
-            // Non-null value is true
-            result = true;
-            return true;
-        }
+        public static Int32 ConvertToInt32(object value) { return _intSite.Invoke(value);             }
+        public static Double ConvertToDouble(object value) { return _doubleSite.Invoke(value); }
+        public static BigInteger ConvertToBigInteger(object value) { return _bigIntSite.Invoke(value); }
+        public static Complex64 ConvertToComplex64(object value) { return _complexSite.Invoke(value); }
+        public static String ConvertToString(object value) { return _stringSite.Invoke(value); }
+        public static Char ConvertToChar(object value) { return _charSite.Invoke(value); }
+        public static Boolean ConvertToBoolean(object value) { return _boolSite.Invoke(value); }
 
         #endregion
 
         internal static Char ExplicitConvertToChar(object value) {
-            string str;
-            ExtensibleString es;
-            if (value is Char) return (Char)value;
-            if (value is Int32) return checked((Char)(Int32)value);
-            if ((Object)(str = value as string) != null && str.Length == 1) return str[0];
-            if ((Object)(es = value as ExtensibleString) != null && es.Value.Length == 1) return es.Value[0];
-            if (value is SByte) return checked((Char)(SByte)value);
-            if (value is Int16) return checked((Char)(Int16)value);
-            if (value is UInt32) return checked((Char)(UInt32)value);
-            if (value is UInt64) return checked((Char)(UInt64)value);
-            if (value is Decimal) return checked((Char)(Decimal)value);
-            if (value is Int64) return checked((Char)(Int64)value);
-            if (value is Byte) return (Char)(Byte)value;
-            if (value is UInt16) return checked((Char)(UInt16)value);
-
-            throw CannotConvertTo("char", value);
+            return _explicitCharSite.Invoke(value);
         }
 
         public static T Convert<T>(object value) {
@@ -378,8 +142,8 @@ namespace IronPython.Runtime {
 
         internal static bool TrySlowConvert(object value, Type to, out object result) {
             // check for implicit conversions 
-            DynamicType tt = DynamicHelpers.GetDynamicTypeFromType(to);
-            DynamicType dt = DynamicHelpers.GetDynamicType(value);
+            PythonType tt = DynamicHelpers.GetPythonTypeFromType(to);
+            PythonType dt = DynamicHelpers.GetPythonType(value);
 
             if (tt.IsSystemType && dt.IsSystemType) {
                 if (dt.TryConvertTo(value, tt, out result)) {
@@ -497,7 +261,7 @@ namespace IronPython.Runtime {
             ItemEnumerable ie;
             // only user types get converted through ItemEnumerable, otherwise we use the
             // strong typing of the system types.
-            if ((o is ISuperDynamicObject || o is OldInstance) && ItemEnumerable.TryCreate(o, out ie)) {
+            if ((o is IPythonObject || o is OldInstance) && ItemEnumerable.TryCreate(o, out ie)) {
                 return ie;
             }
 
@@ -558,11 +322,15 @@ namespace IronPython.Runtime {
         }
 
         internal static Exception CannotConvertTo(string name, object value) {
-            return PythonOps.TypeError("Cannot convert {0}({1}) to {2}", DynamicTypeOps.GetName(value), value, name);
+            return PythonOps.TypeError("Cannot convert {0}({1}) to {2}", PythonTypeOps.GetName(value), value, name);
+        }
+
+        internal static Exception CannotConvertOverflow(string name, object value) {
+            return PythonOps.OverflowError("Cannot convert {0}({1}) to {2}", PythonTypeOps.GetName(value), value, name);
         }
 
         private static Exception MakeTypeError(Type expectedType, object o) {
-            return MakeTypeError(DynamicHelpers.GetDynamicTypeFromType(expectedType).Name.ToString(), o);
+            return MakeTypeError(DynamicHelpers.GetPythonTypeFromType(expectedType).Name.ToString(), o);
         }
 
         private static Exception MakeTypeError(string expectedType, object o) {
@@ -611,86 +379,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        #region Implementation routines
-        //
-        //  ConvertToBooleanImpl Conversion Routine
-        //
-        private static bool ConvertToBooleanImpl(object value, out Boolean result) {
-            if (value is Boolean) {
-                result = (Boolean)value;
-                return true;
-            } else if (value is Int32) {
-                result = (Int32)value != (Int32)0;
-                return true;
-            } else if (value is Double) {
-                result = (Double)value != (Double)0;
-                return true;
-            } else if (value is BigInteger) {
-                result = ((BigInteger)value) != BigInteger.Zero;
-                return true;
-            } else if (value is String) {
-                result = ((String)value).Length != 0;
-                return true;
-            } else if (value is Complex64) {
-                result = !((Complex64)value).IsZero;
-                return true;
-            } else if (value is Int64) {
-                result = (Int64)value != (Int64)0;
-                return true;
-            } else if (value is Byte) {
-                result = (Byte)value != (Byte)0;
-                return true;
-            } else if (value is SByte) {
-                result = (SByte)value != (SByte)0;
-                return true;
-            } else if (value is Int16) {
-                result = (Int16)value != (Int16)0;
-                return true;
-            } else if (value is UInt16) {
-                result = (UInt16)value != (UInt16)0;
-                return true;
-            } else if (value is UInt32) {
-                result = (UInt32)value != (UInt32)0;
-                return true;
-            } else if (value is UInt64) {
-                result = (UInt64)value != (UInt64)0;
-                return true;
-            } else if (value is Single) {
-                result = (Single)value != (Single)0;
-                return true;
-            } else if (value is Decimal) {
-                result = (Decimal)value != (Decimal)0;
-                return true;
-            } else if (value is Enum) {
-                return TryConvertEnumToBoolean(value, out result);
-            }
-
-            result = default(Boolean);
-            return false;
-        }
-
-        private static bool TryConvertEnumToBoolean(object value, out bool result) {
-            switch (((Enum)value).GetTypeCode()) {
-                case TypeCode.Int32:
-                    result = (int)value != 0; return true;
-                case TypeCode.Int64:
-                    result = (long)value != 0; return true;
-                case TypeCode.Int16:
-                    result = (short)value != 0; return true;
-                case TypeCode.UInt32:
-                    result = (uint)value != 0; return true;
-                case TypeCode.UInt64:
-                    result = (ulong)value != 0; return true;
-                case TypeCode.SByte:
-                    result = (sbyte)value != 0; return true;
-                case TypeCode.UInt16:
-                    result = (ushort)value != 0; return true;
-                case TypeCode.Byte:
-                    result = (byte)value != 0; return true;
-                default:
-                    result = default(Boolean); return false;
-            }
-        }
+        #region Implementation routines        
 
         //
         // ConvertToComplex64Impl Conversion Routine
@@ -746,8 +435,8 @@ namespace IronPython.Runtime {
             Type TypeVal = value as Type;
             if (TypeVal != null) return TypeVal;
 
-            DynamicType DynamicTypeVal = value as DynamicType;
-            if (DynamicTypeVal != null) return DynamicTypeVal.UnderlyingSystemType;
+            PythonType pythonTypeVal = value as PythonType;
+            if (pythonTypeVal != null) return pythonTypeVal.UnderlyingSystemType;
 
             TypeGroup typeCollision = value as TypeGroup;
             if (typeCollision != null) {
@@ -762,7 +451,7 @@ namespace IronPython.Runtime {
 
         public static object ConvertToDelegate(object value, Type to) {
             if (value == null) return null;
-            return DynamicHelpers.GetDelegate(value, to, null);
+            return RuntimeHelpers.GetDelegate(value, to);
         }
 
 
@@ -797,7 +486,7 @@ namespace IronPython.Runtime {
             if (HasImplicitNumericConversion(fromType, toType)) return true;
 
             // Handling the hole that Type is the only object that we 'box'
-            if (toType == TypeType && typeof(DynamicType).IsAssignableFrom(fromType)) return true;
+            if (toType == TypeType && typeof(PythonType).IsAssignableFrom(fromType)) return true;
 
             // Support extensible types with simple implicit conversions to their base types
             if (typeof(Extensible<int>).IsAssignableFrom(fromType) && CanConvertFrom(Int32Type, toType, allowNarrowing)) {
@@ -1155,9 +844,9 @@ namespace IronPython.Runtime {
         private static bool HasPythonProtocol(Type t, SymbolId name) {
             if (t.FullName.StartsWith(Compiler.Generation.NewTypeMaker.TypePrefix)) return true;
             if (t == typeof(OldInstance)) return true;
-            DynamicType dt = DynamicHelpers.GetDynamicTypeFromType(t);
+            PythonType dt = DynamicHelpers.GetPythonTypeFromType(t);
             if (dt == null) return false;
-            DynamicTypeSlot tmp;
+            PythonTypeSlot tmp;
             return dt.TryResolveSlot(DefaultContext.Default, name, out tmp);
         }
     }

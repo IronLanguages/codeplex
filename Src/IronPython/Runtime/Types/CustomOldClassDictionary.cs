@@ -14,7 +14,6 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -101,12 +100,12 @@ namespace IronPython.Runtime.Types {
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq) {
+        public static object FromKeys(CodeContext context, PythonType cls, object seq) {
             return PythonDictionary.FromKeys(context, cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {
+        public static object FromKeys(CodeContext context, PythonType cls, object seq, object value) {
             return PythonDictionary.FromKeys(context, cls, seq, value);
         }
 

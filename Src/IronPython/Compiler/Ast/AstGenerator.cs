@@ -155,7 +155,7 @@ namespace IronPython.Compiler.Ast {
             return expression;
         }
 
-        private static bool CanAssign(Type to, Type from) {
+        internal static bool CanAssign(Type to, Type from) {
             return to.IsAssignableFrom(from) && (to.IsValueType == from.IsValueType);
         }
 
@@ -230,6 +230,16 @@ namespace IronPython.Compiler.Ast {
             return to;
         }
 
+        internal MSAst.Expression[] TransformAndConvert(Expression[] expressions, Type type) {
+            Debug.Assert(expressions != null);
+            MSAst.Expression[] to = new MSAst.Expression[expressions.Length];
+            for (int i = 0; i < expressions.Length; i++) {
+                Debug.Assert(expressions[i] != null);
+                to[i] = TransformAndConvert(expressions[i], type);
+            }
+            return to;
+        }
+
         internal MSAst.Statement[] Transform(Statement[] from) {
             Debug.Assert(from != null);
             MSAst.Statement[] to = new MSAst.Statement[from.Length];
@@ -243,16 +253,6 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.IfStatementTest[] Transform(IfStatementTest[] from) {
             Debug.Assert(from != null);
             MSAst.IfStatementTest[] to = new MSAst.IfStatementTest[from.Length];
-            for (int i = 0; i < from.Length; i++) {
-                Debug.Assert(from[i] != null);
-                to[i] = from[i].Transform(this);
-            }
-            return to;
-        }
-
-        internal MSAst.Arg[] Transform(Arg[] from) {
-            Debug.Assert(from != null);
-            MSAst.Arg[] to = new MSAst.Arg[from.Length];
             for (int i = 0; i < from.Length; i++) {
                 Debug.Assert(from[i] != null);
                 to[i] = from[i].Transform(this);

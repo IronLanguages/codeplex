@@ -360,6 +360,10 @@ def skiptest(*args):
         print '... %s, skipping whole test module under "interpreted" mode...' % sys.platform
         exit_module()     
     
+    elif is_cli64 and 'cli64' in args:
+        print '... %s, skipping whole test module on 64-bit CLI...' % sys.platform
+        exit_module()
+    
     if sys.platform in args: 
         print '... %s, skipping whole test module...' % sys.platform
         exit_module()

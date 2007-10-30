@@ -116,7 +116,7 @@ namespace IronPython.Compiler.Ast {
 
             MSAst.Expression bases = Ast.NewArray(
                 typeof(object[]),
-                ag.Transform(_bases)
+                ag.TransformAndConvert(_bases, typeof(object))
             );
 
             SetParent(block);

@@ -30,7 +30,7 @@ namespace IronPython.Compiler.Ast {
                 AstGenerator.GetHelperMethod("MakeList", new Type[] { typeof(object[]) }),  // method
                 Ast.NewArray(                                                               // parameters
                     typeof(object[]),
-                    ag.Transform(Items)
+                    ag.TransformAndConvert(Items, typeof(object))
                 )
             );
         }

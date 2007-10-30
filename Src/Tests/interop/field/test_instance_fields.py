@@ -257,7 +257,8 @@ def _test_set_by_type(o, vf, t):
         def f2(): t.InstanceCharField.__set__(v, "abc")
         def f3(): t.InstanceEnumField.__set__(v, EnumInt32.B)
 
-        for f in [f1, f2]: AssertErrorWithMatch(TypeError, "Cannot convert",  f)
+        AssertErrorWithMatch(TypeError, "Cannot convert",  f1)
+        AssertErrorWithMatch(TypeError, "expected string of length 1 when converting to char, got 'abc'", f2)
         AssertErrorWithMatch(TypeError, "expected EnumInt64, got EnumInt32",  f3)
 
 def _test_set_by_descriptor(o, vf, t):
@@ -493,7 +494,7 @@ def test_access_from_derived_types():
         _test_set_by_instance(o, False, current_type) 
         _test_set_by_type(o, False, current_type)    
 
-        #_test_delete_by_instance(current_type) # bug 305356
+        _test_delete_by_instance(current_type) 
         _test_delete_by_type(current_type)    
 
 run_test(__name__)

@@ -14,15 +14,56 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
+
 using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {
-        public static object Call(object func, params object[] args) {
-            FastCallable fc = func as FastCallable;
-            if (fc != null) return fc.Call(DefaultContext.Default, args);
+        private static DynamicSite<object, object[], object> _splatSite = MakeSplatSite();
+        private static DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite = MakeDictSplatSite();
 
-            return PythonOps.CallWithContext(DefaultContext.Default, func, args);
+        public static object Call(object func, params object[] args) {
+            ICallableWithCodeContext icc = func as ICallableWithCodeContext;
+            if (icc != null) return icc.Call(DefaultContext.Default, args);
+
+            return _splatSite.Invoke(DefaultContext.Default, func, args);
+        }
+
+        public static object CallWithKeywordArgs(object func, object[] args, string[] names) {
+            IFancyCallable ic = func as IFancyCallable;
+            if (ic != null) return ic.Call(DefaultContext.Default, args, names);
+
+            PythonDictionary dict = new PythonDictionary();
+            for (int i = 0; i < names.Length; i++) {
+                dict[names[i]] = args[args.Length - names.Length + i];
+            }
+            object[] newargs = new object[args.Length - names.Length];
+            for (int i = 0; i < newargs.Length; i++) {
+                newargs[i] = args[i];
+            }
+
+            return CallWithKeywordArgs(func, newargs, dict);
+        }
+
+        public static object CallWithKeywordArgs(object func, object[] args, IAttributesCollection dict) {
+            return _dictSplatSite.Invoke(DefaultContext.Default, func, args, dict);
+        }
+
+        private static DynamicSite<object, object[], object> MakeSplatSite() {
+            return DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+        }
+
+        private static DynamicSite<object, object[], IAttributesCollection, object> MakeDictSplatSite() {
+            return DynamicSite<object, object[], IAttributesCollection, object>.Create(
+                CallAction.Make(
+                    new CallSignature(
+                        new ArgumentInfo(ArgumentKind.List),
+                        new ArgumentInfo(ArgumentKind.Dictionary)
+                    )
+                )
+            );
         }
     }
 }

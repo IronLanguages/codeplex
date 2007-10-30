@@ -20,7 +20,6 @@ using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -30,9 +29,9 @@ using IronPython.Runtime.Calls;
 namespace IronPython.Runtime.Types {
     [PythonType("dictproxy")]
     public class DictProxy : IMapping, IEnumerable {
-        private DynamicMixin _dt;
+        private PythonType _dt;
         
-        public DictProxy(DynamicMixin dt) {
+        public DictProxy(PythonType dt) {
             Debug.Assert(dt != null);
             _dt = dt;
         }
@@ -40,15 +39,15 @@ namespace IronPython.Runtime.Types {
         public object GetIndex(CodeContext context, object index) {
             string strIndex = index as string;
             if (strIndex != null) {
-                DynamicTypeSlot dts;
+                PythonTypeSlot dts;
                 if (_dt.TryLookupSlot(context, SymbolTable.StringToId(strIndex), out dts)) {
                     object res;
-                    DynamicTypeUserDescriptorSlot uds = dts as DynamicTypeUserDescriptorSlot;
+                    PythonTypeUserDescriptorSlot uds = dts as PythonTypeUserDescriptorSlot;
                     if (uds != null) {
                         return uds.Value;
                     }
 
-                    if ((dts is DynamicTypeValueSlot) && dts.TryGetValue(context, null, _dt, out res)) {
+                    if ((dts is PythonTypeValueSlot) && dts.TryGetValue(context, null, _dt, out res)) {
                         return res;
                     }
                     return dts;
@@ -85,9 +84,9 @@ namespace IronPython.Runtime.Types {
         public bool TryGetValue(object key, out object value) {
             string strIndex = key as string;
             if (strIndex != null) {
-                DynamicTypeSlot dts;
+                PythonTypeSlot dts;
                 if (_dt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(strIndex), out dts)) {
-                    DynamicTypeUserDescriptorSlot uds = dts as DynamicTypeUserDescriptorSlot;
+                    PythonTypeUserDescriptorSlot uds = dts as PythonTypeUserDescriptorSlot;
                     if (uds != null) {
                         value = uds.Value;
                         return true;
@@ -145,7 +144,7 @@ namespace IronPython.Runtime.Types {
         public object GetValues(CodeContext context) {
             List res = new List();
             foreach(KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)){
-                DynamicTypeUserDescriptorSlot dts = kvp.Value as DynamicTypeUserDescriptorSlot;
+                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
 
                 if (dts != null) {
                     res.AddNoLock(dts.Value);

@@ -38,7 +38,7 @@ def get_invoke_type_names(i):
     return get_type_names(i - 1) + ['TRet']
 
 def get_cast_args(i):
-    return ['(%s)%s' % (x[1], x[0]) for x in zip(get_args(i), get_type_names(i))]
+    return ['%s != null ? (%s)%s : default(%s)' % (x[0], x[1], x[0], x[1]) for x in zip(get_args(i), get_type_names(i))]
 
 def get_type_params(i):
     if i == 0: return ''

@@ -14,14 +14,15 @@
  * ***************************************************************************/
 
 namespace IronPython.Compiler.Ast {
-    #region Generated Python AST Walker
-
-    // *** BEGIN GENERATED CODE ***
-
     /// <summary>
     /// PythonWalker class - The Python AST Walker (default result is true)
     /// </summary>
     public class PythonWalker {
+
+        #region Generated Python AST Walker
+
+        // *** BEGIN GENERATED CODE ***
+
         // AndExpression
         public virtual bool Walk(AndExpression node) { return true; }
         public virtual void PostWalk(AndExpression node) { }
@@ -233,6 +234,10 @@ namespace IronPython.Compiler.Ast {
         // TryStatementHandler
         public virtual bool Walk(TryStatementHandler node) { return true; }
         public virtual void PostWalk(TryStatementHandler node) { }
+
+        // *** END GENERATED CODE ***
+
+        #endregion
     }
 
 
@@ -240,6 +245,10 @@ namespace IronPython.Compiler.Ast {
     /// PythonWalkerNonRecursive class - The Python AST Walker (default result is false)
     /// </summary>
     public class PythonWalkerNonRecursive : PythonWalker {
+        #region Generated Python AST Walker Nonrecursive
+
+        // *** BEGIN GENERATED CODE ***
+
         // AndExpression
         public override bool Walk(AndExpression node) { return false; }
         public override void PostWalk(AndExpression node) { }
@@ -451,9 +460,9 @@ namespace IronPython.Compiler.Ast {
         // TryStatementHandler
         public override bool Walk(TryStatementHandler node) { return false; }
         public override void PostWalk(TryStatementHandler node) { }
+
+        // *** END GENERATED CODE ***
+
+        #endregion
     }
-
-    // *** END GENERATED CODE ***
-
-    #endregion
 }

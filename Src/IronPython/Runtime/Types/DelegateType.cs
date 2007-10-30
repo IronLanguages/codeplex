@@ -22,7 +22,7 @@ using System.Reflection.Emit;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
+
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -35,10 +35,10 @@ using IronPython.Compiler;
 namespace IronPython.Runtime.Types {
     public static class DelegateOps {
         [StaticExtensionMethod("__new__")]
-        public static object MakeNew(DynamicType type, object function) {
-            if (type == null) throw PythonOps.TypeError("expected type for 1st param, got {0}", DynamicTypeOps.GetName(type));
+        public static object MakeNew(PythonType type, object function) {
+            if (type == null) throw PythonOps.TypeError("expected type for 1st param, got {0}", PythonTypeOps.GetName(type));
 
-            return DynamicHelpers.GetDelegate(function, type.UnderlyingSystemType, null);
+            return RuntimeHelpers.GetDelegate(function, type.UnderlyingSystemType);
         }
     }    
 }

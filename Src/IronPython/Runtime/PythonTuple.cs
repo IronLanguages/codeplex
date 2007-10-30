@@ -21,7 +21,6 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
@@ -39,7 +38,7 @@ namespace IronPython.Runtime {
         // appropriate caching.  
 
         [StaticExtensionMethod("__new__")]
-        public static PythonTuple PythonNew(CodeContext context, DynamicType cls) {
+        public static PythonTuple PythonNew(CodeContext context, PythonType cls) {
             if (cls == TypeCache.PythonTuple) {
                 return EMPTY;
             } else {
@@ -50,7 +49,7 @@ namespace IronPython.Runtime {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static PythonTuple PythonNew(CodeContext context, DynamicType cls, object sequence) {
+        public static PythonTuple PythonNew(CodeContext context, PythonType cls, object sequence) {
             if (sequence == null) throw PythonOps.TypeError("iteration over a non-sequence");
 
             if (cls == TypeCache.PythonTuple) {
@@ -98,7 +97,7 @@ namespace IronPython.Runtime {
                 Array.Copy(arr, res, arr.Length);
                 return res;
             } else {
-                PerfTrack.NoteEvent(PerfTrack.Categories.OverAllocate, "TupleOA: " + DynamicHelpers.GetDynamicType(o).Name);
+                PerfTrack.NoteEvent(PerfTrack.Categories.OverAllocate, "TupleOA: " + DynamicHelpers.GetPythonType(o).Name);
 
                 List<object> l = new List<object>();
                 IEnumerator i = PythonOps.GetEnumerator(o);
@@ -331,16 +330,6 @@ namespace IronPython.Runtime {
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
             return new TupleEnumerator(this);
-        }
-
-        #endregion
-
-        #region IDynamicObject Members
-
-        public virtual DynamicType DynamicType {
-            get {
-                return TypeCache.PythonTuple;
-            }
         }
 
         #endregion

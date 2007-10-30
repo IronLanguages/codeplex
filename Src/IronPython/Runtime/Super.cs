@@ -18,7 +18,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
@@ -26,8 +25,8 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
     [PythonType("super")]
-    public class Super : DynamicTypeSlot, ICustomMembers {
-        private DynamicType __thisclass__;
+    public class Super : PythonTypeSlot, ICustomMembers {
+        private PythonType __thisclass__;
         private object __self__;
         private object __self_class__;
 
@@ -35,24 +34,24 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__init__")]
-        public void Initialize(DynamicType type) {
+        public void Initialize(PythonType type) {
             Initialize(type, null);
         }
 
         [PythonName("__init__")]
-        public void Initialize(DynamicType type, object obj) {
+        public void Initialize(PythonType type, object obj) {
             if (obj != null) {
-                DynamicType dt = obj as DynamicType;
+                PythonType dt = obj as PythonType;
                 if (PythonOps.IsInstance(obj, type)) {
                     this.__thisclass__ = type;
                     this.__self__ = obj;
-                    this.__self_class__ = DynamicHelpers.GetDynamicType(obj);
+                    this.__self_class__ = DynamicHelpers.GetPythonType(obj);
                 } else if (dt != null && dt.IsSubclassOf(type)) {
                     this.__thisclass__ = type;
                     this.__self_class__ = obj;
                     this.__self__ = obj;
                 } else {
-                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", DynamicTypeOps.GetName(obj), DynamicTypeOps.GetName(type));
+                    throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", PythonTypeOps.GetName(obj), PythonTypeOps.GetName(type));
                 }
             } else {
                 this.__thisclass__ = type;
@@ -61,7 +60,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public DynamicType ThisClass {
+        public PythonType ThisClass {
             [PythonName("__thisclass__")]
             get { return __thisclass__; }
         }
@@ -82,19 +81,19 @@ namespace IronPython.Runtime {
                 selfRepr = "<super object>";
             else
                 selfRepr = PythonOps.StringRepr(__self__);
-            return string.Format("<{0}: {1}, {2}>", DynamicTypeOps.GetName(this), PythonOps.StringRepr(__thisclass__), selfRepr);
+            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(__thisclass__), selfRepr);
         }
 
         // TODO needed because ICustomMembers is too hard to implement otherwise.  Let's fix that and get rid of this.
-        private DynamicType DynamicType {
+        private PythonType PythonType {
             get {
                 if (GetType() == typeof(Super))
                     return TypeCache.Super;
 
-                ISuperDynamicObject sdo = this as ISuperDynamicObject;
+                IPythonObject sdo = this as IPythonObject;
                 Debug.Assert(sdo != null);
 
-                return sdo.DynamicType;
+                return sdo.PythonType;
             }
         }
 
@@ -108,10 +107,10 @@ namespace IronPython.Runtime {
 
         public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
             // first find where we are in the mro...
-            DynamicMixin mroType = __self_class__ as DynamicMixin;
+            PythonType mroType = __self_class__ as PythonType;
 
             if (mroType != null) { // can be null if the user does super.__new__
-                IList<DynamicMixin> mro = mroType.ResolutionOrder;
+                IList<PythonType> mro = mroType.ResolutionOrder;
 
                 int lookupType;
                 bool foundThis = false;
@@ -144,13 +143,13 @@ namespace IronPython.Runtime {
                 }
             }
 
-            return DynamicType.TryGetBoundMember(context, this, name, out value);
+            return PythonType.TryGetBoundMember(context, this, name, out value);
         }
 
         private bool TryLookupInBase(CodeContext context, object type, SymbolId name, object self, out object value) {
-            DynamicType pt = type as DynamicType;
+            PythonType pt = type as PythonType;
 
-            DynamicTypeSlot dts;
+            PythonTypeSlot dts;
             object ocObj;
             if (pt == TypeCache.Object ||
                 !pt.TryLookupSlot(context, Symbols.Class, out dts)) {
@@ -173,37 +172,37 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        private DynamicType DescriptorContext {
+        private PythonType DescriptorContext {
             get {
-                if (!DynamicHelpers.GetDynamicType(__self__).IsSubclassOf(__thisclass__)) {
+                if (!DynamicHelpers.GetPythonType(__self__).IsSubclassOf(__thisclass__)) {
                     return __thisclass__;
                 }
 
-                DynamicType dt = __self_class__ as DynamicType;
+                PythonType dt = __self_class__ as PythonType;
                 if (dt != null) return dt;
 
                 return ((OldClass)__self_class__).TypeObject;
             }
         }
         public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            DynamicType.SetMember(context, this, name, value);
+            PythonType.SetMember(context, this, name, value);
         }
 
         public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            DynamicType.DeleteMember(context, this, name);
+            PythonType.DeleteMember(context, this, name);
             return true;
         }
 
         public IList<object> GetCustomMemberNames(CodeContext context) {
             List res = new List();
-            foreach (SymbolId si in DynamicType.GetMemberNames(context, this)) {
+            foreach (SymbolId si in PythonType.GetMemberNames(context, this)) {
                 res.AddNoLock(si.ToString());
             }
             return res;
         }
 
         public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            return DynamicType.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
+            return PythonType.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
         }
 
         #endregion
@@ -212,7 +211,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
-            DynamicType selfType = DynamicType;
+            PythonType selfType = PythonType;
 
             if (selfType == TypeCache.Super) {
                 Super res = new Super();
@@ -225,7 +224,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = GetAttribute(instance, owner);
             return true;
         }

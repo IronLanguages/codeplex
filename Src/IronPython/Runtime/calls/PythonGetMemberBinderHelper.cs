@@ -22,7 +22,6 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -40,10 +39,10 @@ namespace IronPython.Runtime.Calls {
             Type type = CompilerHelpers.GetType(Arguments[0]);
             // we extend None & our standard built-in python types.  DLR doesn't support COM objects natively yet.
             if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type) || type.IsCOMObject) {
-                // look up in the Dynamictype so that we can 
+                // look up in the PythonType so that we can 
                 // get our custom method names (e.g. string.startswith)            
-                DynamicType argType = DynamicHelpers.GetDynamicTypeFromType(type);
-                DynamicTypeSlot dts;
+                PythonType argType = DynamicHelpers.GetPythonTypeFromType(type);
+                PythonTypeSlot dts;
 
                 // first try in the default context and see if it's defined
                 if (argType.TryResolveSlot(DefaultContext.Default, Action.Name, out dts)) {
@@ -57,7 +56,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        internal bool TryMakeGetMemberRule(DynamicType parent, DynamicTypeSlot slot, Expression arg) {
+        internal bool TryMakeGetMemberRule(PythonType parent, PythonTypeSlot slot, Expression arg) {
             return TryMakeGetMemberRule(parent, slot, arg, false);
         }
 
@@ -66,15 +65,15 @@ namespace IronPython.Runtime.Calls {
         /// 
         /// This does not check if the object is unsuitable for producing a GetMember rule.
         /// </summary>
-        internal bool TryMakeGetMemberRule(DynamicType parent, DynamicTypeSlot slot, Expression arg, bool clsOnly) {
+        internal bool TryMakeGetMemberRule(PythonType parent, PythonTypeSlot slot, Expression arg, bool clsOnly) {
             ReflectedField rf;
             ReflectedProperty rp;
             ReflectedEvent ev;
             BuiltinFunction bf;
             ReflectedExtensionProperty rep;
-            DynamicTypeValueSlot vs;
+            PythonTypeValueSlot vs;
             BuiltinMethodDescriptor bmd;
-            DynamicType dtValue;
+            PythonType dtValue;
             object value;
 
             Instance = arg;
@@ -99,9 +98,9 @@ namespace IronPython.Runtime.Calls {
                 AddToBody(AddClsCheck(parent, clsOnly, MakeMethodCallRule(bf, false)));
             } else if ((bmd = slot as BuiltinMethodDescriptor) != null) {
                 AddToBody(AddClsCheck(parent, clsOnly, MakeMethodCallRule(bmd.Template, true)));
-            } else if ((vs = slot as DynamicTypeValueSlot) != null &&
+            } else if ((vs = slot as PythonTypeValueSlot) != null &&
                 vs.TryGetValue(Context, null, null, out value) &&
-                    ((dtValue = value as DynamicType) != null)) {
+                    ((dtValue = value as PythonType) != null)) {
 
                 Debug.Assert(dtValue.IsSystemType);
                 AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType)));
@@ -114,14 +113,14 @@ namespace IronPython.Runtime.Calls {
                             clsOnly, 
                             Ast.IfThenElse(
                                 Ast.Call(
+                                    typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
+                                    Ast.CodeContext(),
                                     Ast.Convert(
                                         Ast.WeakConstant(slot),
-                                        typeof(DynamicTypeSlot)
+                                        typeof(PythonTypeSlot)
                                     ),
-                                    typeof(DynamicTypeSlot).GetMethod("TryGetBoundValue"),
-                                    Ast.CodeContext(),
                                     Ast.ConvertHelper(arg, typeof(object)),
-                                    Ast.ConvertHelper(Ast.RuntimeConstant(parent), typeof(DynamicMixin)),
+                                    Ast.ConvertHelper(Ast.RuntimeConstant(parent), typeof(PythonType)),
                                     Ast.Read(tmp)
                                 ),
                                 Rule.MakeReturn(Binder, Ast.Read(tmp)),
@@ -145,9 +144,9 @@ namespace IronPython.Runtime.Calls {
                 return Ast.Block(Body,
                     Rule.MakeReturn(
                     Binder,
-                    Ast.New(typeof(BoundBuiltinFunction).GetConstructor(new Type[] { typeof(BuiltinFunction), typeof(object) }),
+                    Ast.Call(typeof(PythonOps).GetMethod("MakeBoundBuiltinFunction"),
                         Ast.RuntimeConstant(target),
-                        Instance
+                        Ast.ConvertHelper(Instance, typeof(object))
                     )
                 ));
             } else {
@@ -167,16 +166,16 @@ namespace IronPython.Runtime.Calls {
         /// the same FunctionType.
         /// </summary>
         private static BuiltinFunction GetCachedTarget(BuiltinFunction target) {
-            BuiltinFunction cachedTarget = ReflectionCache.GetMethodGroup(target.DeclaringType, target.Name, target.Targets);
+            BuiltinFunction cachedTarget = PythonTypeOps.GetBuiltinFunction(target.DeclaringType, target.Name, ArrayUtils.ToArray<MethodBase>(target.Targets));
             if (cachedTarget.FunctionType == (target.FunctionType & ~FunctionType.AlwaysVisible)) {
                 target = cachedTarget;
             }
             return target;
         }
 
-        private StandardRule<T> MakePythonTypeRule(DynamicTypeSlot slot, DynamicType argType, bool clsOnly) {
+        private StandardRule<T> MakePythonTypeRule(PythonTypeSlot slot, PythonType argType, bool clsOnly) {
             if (Arguments[0] is ICustomMembers) {
-                Rule.SetTarget(UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, DynamicTypeOps.GetName(argType), Rule));
+                Rule.SetTarget(UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, PythonTypeOps.GetName(argType), Rule));
                 PythonBinderHelper.MakeTest(Rule, argType);
                 return Rule;
             }
@@ -189,7 +188,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private Statement AddClsCheck(DynamicType argType, bool clsOnly, Statement body) {
+        private Statement AddClsCheck(PythonType argType, bool clsOnly, Statement body) {
             if (clsOnly) {
                 return
                     Ast.Block(
@@ -206,14 +205,14 @@ namespace IronPython.Runtime.Calls {
             return body;
         }
 
-        private Statement MakeError(DynamicType argType) {
+        private Statement MakeError(PythonType argType) {
             if (Action.IsNoThrow) {
                 return Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
             } else {
                 return Rule.MakeError(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(string), typeof(SymbolId) }),
-                        Ast.Constant(DynamicTypeOps.GetName(argType), typeof(string)),
+                        Ast.Constant(PythonTypeOps.GetName(argType), typeof(string)),
                         Ast.Constant(Action.Name)
                     )
                 );

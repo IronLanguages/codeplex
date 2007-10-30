@@ -21,7 +21,6 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -33,7 +32,7 @@ namespace IronPython.Compiler {
     /// Contains helper methods for converting C# names into Python names.
     /// </summary>
     public static class NameConverter {
-        public static NameType TryGetName(DynamicType dt, MethodInfo mi, out string name) {
+        public static NameType TryGetName(PythonType dt, MethodInfo mi, out string name) {
             Debug.Assert(IsValidSubtype(dt, mi),
                 String.Format(
                     System.Globalization.CultureInfo.InvariantCulture,
@@ -46,7 +45,7 @@ namespace IronPython.Compiler {
             return GetNameFromMethod(dt, mi, NameType.Method, ref name);
         }
 
-        public static NameType TryGetName(DynamicType dt, FieldInfo fi, out string name) {
+        public static NameType TryGetName(PythonType dt, FieldInfo fi, out string name) {
             Debug.Assert(dt.IsSubclassOf(TypeHelpers.GetDeclaringType(fi)));
 
             NameType nt = NameType.PythonField;
@@ -56,7 +55,7 @@ namespace IronPython.Compiler {
             if (fi.DeclaringType == typeof(string) ||
                 fi.DeclaringType == typeof(int) ||
                 fi.DeclaringType == typeof(double) ||
-                fi.IsDefined(typeof(PythonHiddenFieldAttribute), false)) nt = NameType.Field;
+                fi.IsDefined(typeof(PythonHiddenAttribute), false)) nt = NameType.Field;
 
             object [] attrs = fi.GetCustomAttributes(typeof(ScriptNameAttribute), false);
             string namePrefix = "";
@@ -76,7 +75,7 @@ namespace IronPython.Compiler {
             return nt;
         }
 
-        public static NameType TryGetName(DynamicType dt, EventInfo ei, MethodInfo eventMethod, out string name) {
+        public static NameType TryGetName(PythonType dt, EventInfo ei, MethodInfo eventMethod, out string name) {
             Debug.Assert(IsValidSubtype(dt, ei));
 
             name = ei.Name;
@@ -85,7 +84,7 @@ namespace IronPython.Compiler {
             return GetNameFromMethod(dt, eventMethod, res, ref name);
         }
 
-        public static NameType TryGetName(DynamicType dt, PropertyInfo pi, MethodInfo prop, out string name) {
+        public static NameType TryGetName(PythonType dt, PropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(IsValidSubtype(dt, pi));
 
             name = pi.Name;
@@ -93,7 +92,7 @@ namespace IronPython.Compiler {
             return GetNameFromMethod(dt, prop, NameType.Property, ref name);
         }
 
-        public static NameType TryGetName(DynamicType dt, ExtensionPropertyInfo pi, MethodInfo prop, out string name) {
+        public static NameType TryGetName(PythonType dt, ExtensionPropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(dt.IsSubclassOf(TypeHelpers.GetDeclaringType(pi.DeclaringType)));
 
             name = pi.Name;
@@ -110,7 +109,7 @@ namespace IronPython.Compiler {
                 if (!ScriptDomainManager.Options.PrivateBinding) {
                     return NameType.None;
                 } else {
-                    namePrefix = "_" + DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(t.DeclaringType)) + "__";
+                    namePrefix = "_" + PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(t.DeclaringType)) + "__";
                 }
             }
 
@@ -125,6 +124,14 @@ namespace IronPython.Compiler {
                 }
             }
 
+            attribute = t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
+            if (attribute.Length > 0) {
+                PythonSystemTypeAttribute attr = attribute[0] as PythonSystemTypeAttribute;
+                if (attr.Name != null) {
+                    name = attr.Name;
+                }
+            }
+
             name = namePrefix + name;
             return res;
         }
@@ -134,7 +141,7 @@ namespace IronPython.Compiler {
             name = t.Name;
 
             if (t.IsArray) {
-                return "Array[" + DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(t.GetElementType())) + "]";
+                return "Array[" + PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(t.GetElementType())) + "]";
             }
 
             int backtickIndex;
@@ -146,7 +153,7 @@ namespace IronPython.Compiler {
                 bool first = true;
                 foreach (Type tof in typeOf) {
                     if (first) first = false; else sb.Append(", ");
-                    sb.Append(DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(tof)));
+                    sb.Append(PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(tof)));
                 }
                 sb.Append(']');
                 name = sb.ToString();                
@@ -154,7 +161,7 @@ namespace IronPython.Compiler {
             return name;
         }
 
-        internal static NameType GetNameFromMethod(DynamicType dt, MethodInfo mi, NameType res, ref string name) {
+        internal static NameType GetNameFromMethod(PythonType dt, MethodInfo mi, NameType res, ref string name) {
             string namePrefix = null;
 
             if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
@@ -201,7 +208,7 @@ namespace IronPython.Compiler {
             return res;
         }
 
-        private static bool IsValidSubtype(DynamicType dt, MemberInfo mi) {
+        private static bool IsValidSubtype(PythonType dt, MemberInfo mi) {
             return dt.IsSubclassOf(TypeHelpers.GetDeclaringType(mi)) || mi.DeclaringType.IsInterface;
         }
 

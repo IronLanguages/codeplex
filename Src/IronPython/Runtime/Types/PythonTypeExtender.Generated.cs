@@ -24,7 +24,7 @@ using IronPython.Runtime;
 using Microsoft.Scripting;
 
 namespace IronPython.Runtime.Types {
-    public partial class PythonExtensionTypeAttribute {
+    internal partial class PythonExtensionTypeAttribute {
         public static void InitializeOperatorTable() {
             Dictionary<SymbolId, OperatorMapping> pyOp = new Dictionary<SymbolId, OperatorMapping>();
 

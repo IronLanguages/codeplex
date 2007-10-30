@@ -26,7 +26,6 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
@@ -276,7 +275,7 @@ namespace IronPython.Runtime {
                     //@todo share logic to copy old values in when not already there from reload
                     module.Execute();
                 } else {
-                    DynamicType type = DynamicHelpers.GetDynamicTypeFromType(ty);
+                    PythonType type = DynamicHelpers.GetPythonTypeFromType(ty);
 
                     foreach (SymbolId attrName in type.GetMemberNames(DefaultContext.DefaultCLS)) {
                         module.Scope.SetName(attrName, type.GetBoundMember(DefaultContext.DefaultCLS, null, attrName));
@@ -334,7 +333,7 @@ namespace IronPython.Runtime {
                 if (nested is ScriptModule) return true;
 
                 // This allows from System.Math import *
-                DynamicType dt = nested as DynamicType;
+                PythonType dt = nested as PythonType;
                 if (dt != null && dt.IsSystemType) return true;
             }
             return false;
@@ -382,7 +381,7 @@ namespace IronPython.Runtime {
         }
 
         internal object ImportBuiltin(CodeContext context, string name) {
-            DynamicHelpers.TopNamespace.Initialize();
+            RuntimeHelpers.TopNamespace.Initialize();
 
             if (name.Equals("sys")) return SystemState;
             if (name.Equals("clr")) {
@@ -393,7 +392,7 @@ namespace IronPython.Runtime {
             if (SystemState.Builtins.TryGetValue(name, out ty)) {
                 // RuntimeHelpers.RunClassConstructor
                 // run the type's .cctor before doing any custom reflection on the type.
-                // This allows modules to lazily initialize DynamicType's to custom values
+                // This allows modules to lazily initialize PythonType's to custom values
                 // rather than having them get populated w/ the ReflectedType.  W/o this the
                 // cctor runs after we've done a bunch of reflection over the type that doesn't
                 // force the cctor to run.
@@ -406,18 +405,18 @@ namespace IronPython.Runtime {
         }
 
         private object ImportReflected(CodeContext context, string name) {
-            MemberTracker res = DynamicHelpers.TopNamespace.TryGetPackageAny(name);
+            MemberTracker res = RuntimeHelpers.TopNamespace.TryGetPackageAny(name);
             if (res != null) {
                 context.ModuleContext.ShowCls = true;
                 object realRes = res;
 
                 switch (res.MemberType) {
-                    case TrackerTypes.Type: realRes = DynamicHelpers.GetDynamicTypeFromType(((TypeTracker)res).Type); break;
-                    case TrackerTypes.Event: realRes = ReflectionCache.GetReflectedEvent(((EventTracker)res).Event); break;
-                    case TrackerTypes.Field: realRes = ReflectionCache.GetReflectedField(((FieldTracker)res).Field); break;
+                    case TrackerTypes.Type: realRes = DynamicHelpers.GetPythonTypeFromType(((TypeTracker)res).Type); break;
+                    case TrackerTypes.Field: realRes = PythonTypeOps.GetReflectedField(((FieldTracker)res).Field); break;
+                    case TrackerTypes.Event: realRes = PythonTypeOps.GetReflectedEvent((EventTracker)res); break;
                     case TrackerTypes.Method:
                         MethodTracker mt = res as MethodTracker;
-                        realRes = ReflectionCache.GetMethodGroup(mt.DeclaringType, mt.Name, new MemberInfo[] { mt.Method });
+                        realRes = PythonTypeOps.GetBuiltinFunction(mt.DeclaringType, mt.Name, new MemberInfo[] { mt.Method });
                         break;
                 }
              
@@ -430,7 +429,7 @@ namespace IronPython.Runtime {
         private static bool IsReflected(object module) {
             // corresponds to the list of types that can be returned by ImportReflected
             return module is MemberTracker
-                || module is DynamicType
+                || module is PythonType
                 || module is ReflectedEvent
                 || module is ReflectedField
                 || module is BuiltinFunction;

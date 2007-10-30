@@ -25,7 +25,6 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
@@ -108,12 +107,12 @@ namespace IronPython.Runtime {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object MakeModule(CodeContext context, DynamicType cls, params object[] args\u00F8) {
+        public static object MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
             return PythonModuleOps.MakeModule(context, cls);
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object MakeModule(CodeContext context, DynamicType cls, [ParamDictionary] IAttributesCollection kwDict\u00F8, params object[] args\u00F8) {
+        public static object MakeModule(CodeContext context, PythonType cls, [ParamDictionary] IAttributesCollection kwDict\u00F8, params object[] args\u00F8) {
             return MakeModule(context, cls, args\u00F8);
         }
 
@@ -540,7 +539,7 @@ namespace IronPython.Runtime {
             // We should register builtins, if any, from IronPython.dll
             _autoLoadBuiltins.Add(typeof(SystemState).Assembly);
 
-            DynamicHelpers.TopNamespace.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
+            RuntimeHelpers.TopNamespace.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
 
             PythonExtensionTypeAttribute._sysState = this;
             // Load builtins from IronPython.Modules
@@ -561,7 +560,9 @@ namespace IronPython.Runtime {
                 Debug.Assert(_builtinsDict.ContainsKey("nt"));
                 _builtinsDict["posix"] = _builtinsDict["nt"];
                 _builtinsDict.Remove("nt");
-            }            
+            }
+
+            PublishBuiltinModuleNames();
         }
 
         private void TopPackage_AssemblyLoaded(object sender, AssemblyLoadedEventArgs e) {
@@ -581,14 +582,16 @@ namespace IronPython.Runtime {
                     Builtins.Add(pma.Name, pma.Type);
                     BuiltinModuleNames[pma.Type] = pma.Name;
                 }
-
-                object[] keys = new object[_builtinsDict.Keys.Count];
-                int index = 0;
-                foreach (object key in _builtinsDict.Keys) {
-                    keys[index++] = key;
-                }
-                builtin_module_names = PythonTuple.MakeTuple(keys);
             }
+        }
+
+        private void PublishBuiltinModuleNames() {
+            object[] keys = new object[_builtinsDict.Keys.Count];
+            int index = 0;
+            foreach (object key in _builtinsDict.Keys) {
+                keys[index++] = key;
+            }
+            builtin_module_names = PythonTuple.MakeTuple(keys);
         }
 
         public static string GetIronPythonAssembly(string baseName) {

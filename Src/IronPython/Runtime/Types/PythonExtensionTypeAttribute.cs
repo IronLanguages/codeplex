@@ -20,7 +20,6 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 
@@ -30,9 +29,11 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     // TODO: Make private
-    public partial class PythonExtensionTypeAttribute : ExtensionTypeAttribute {
-        private DynamicType _type;
+    internal partial class PythonExtensionTypeAttribute : ExtensionTypeAttribute {
+        private PythonType _type;
         private bool _extension;
+        private bool _enableDerivation;
+        private Type _derivationType;
         internal static Dictionary<SymbolId, OperatorMapping> _pythonOperatorTable;
         private static Dictionary<OperatorMapping, SymbolId> _reverseOperatorTable;
 
@@ -58,7 +59,7 @@ namespace IronPython.Runtime.Types {
                 PythonTypeCustomizer.SystemTypes[Extends] = name;
             }
 
-            _type = DynamicHelpers.GetDynamicTypeFromType(base.Extends);
+            _type = DynamicHelpers.GetPythonTypeFromType(base.Extends);
 
             PythonTypeContext ctx = new PythonTypeContext();
             ctx.IsPythonType = true;
@@ -66,7 +67,7 @@ namespace IronPython.Runtime.Types {
             _extension = true;
         }
 
-        internal PythonExtensionTypeAttribute(DynamicType pythonType)
+        internal PythonExtensionTypeAttribute(PythonType pythonType)
             : base(pythonType.UnderlyingSystemType, null) {
             _type = pythonType;
 
@@ -75,11 +76,11 @@ namespace IronPython.Runtime.Types {
             _type.SetContextTag(PythonContext.Id, ctx);
 
             string name;
-            DynamicTypeBuilder.GetBuilder(_type).AddInitializer(delegate(DynamicMixinBuilder builder) {
+            PythonTypeBuilder.GetBuilder(_type).AddInitializer(delegate(PythonTypeBuilder builder) {
                 Type t = _type.UnderlyingSystemType;
                 while (t != null) {
                     if (_sysState != null && _sysState.BuiltinModuleNames.TryGetValue(t, out name)) {
-                        builder.AddSlot(Symbols.Module, new DynamicTypeValueSlot(name));
+                        builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(name));
                         break;
                     }
                     t = t.DeclaringType;
@@ -87,9 +88,31 @@ namespace IronPython.Runtime.Types {
             });
         }
 
-        public override ExtensionNameTransformer Transformer {
+        internal ExtensionNameTransformer Transformer {
             get {
                 return PythonNameTransformer;
+            }
+        }
+
+
+        public bool EnableDerivation {
+            get {
+                return _enableDerivation;
+            }
+            set {
+                _enableDerivation = value;
+            }
+        }
+
+        /// <summary>
+        ///  TODO: Remove me and need to have custom derivation types.
+        /// </summary>
+        public Type DerivationType {
+            get {
+                return _derivationType;
+            }
+            set {
+                _derivationType = value;
             }
         }
 
@@ -311,7 +334,7 @@ namespace IronPython.Runtime.Types {
             return  param.ParameterType == declaringType || param.IsDefined(typeof(StaticThisAttribute), false);
         }
 
-        internal DynamicTypeSlot CreateClassMethod(MemberInfo mi, DynamicTypeSlot existing) {
+        internal PythonTypeSlot CreateClassMethod(MemberInfo mi, PythonTypeSlot existing) {
             MethodInfo method = mi as MethodInfo;
             if (existing != null) {
                 ClassMethodDescriptor cm = existing as ClassMethodDescriptor;
@@ -332,9 +355,9 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static Dictionary<OperatorMapping, SymbolId> ReverseOperatorTable {
+        internal static Dictionary<OperatorMapping, SymbolId> ReverseOperatorTable {
             get { return PythonExtensionTypeAttribute._reverseOperatorTable; }
-            internal set { PythonExtensionTypeAttribute._reverseOperatorTable = value; }
+            set { PythonExtensionTypeAttribute._reverseOperatorTable = value; }
         }
 
 

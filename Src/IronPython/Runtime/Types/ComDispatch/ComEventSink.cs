@@ -1,3 +1,18 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Permissive License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
 #if !SILVERLIGHT // ComObject
 
 using System;
@@ -28,7 +43,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
     /// ComEventSinksContainer finalizer. Notice that lifetime of ComEventSinksContainer
     /// is bound to the lifetime of the RCW. 
     /// </summary>
-    internal class ComEventSink : IReflect, IDisposable 
+    internal class ComEventSink : MarshalByRefObject, IReflect, IDisposable 
     {
         #region private fields
 
@@ -66,6 +81,8 @@ namespace IronPython.Runtime.Types.ComDispatch {
         }
         #endregion
 
+        private const int CONNECT_E_NOCONNECTION = unchecked((int)0x80040200);
+
         #region ctor
         private ComEventSink(object rcw, Guid sourceIid) {
             Initialize(rcw, sourceIid);
@@ -87,9 +104,10 @@ namespace IronPython.Runtime.Types.ComDispatch {
             if (_connectionPoint == null)
                 throw new ArgumentException("COM object does not support specified source interface");
 
-            _connectionPoint.Advise(this, out _adviseCookie);
+            // Read the comments for ComEventSinkProxy about why we need it
+            ComEventSinkProxy proxy = new ComEventSinkProxy(this, _sourceIid);
+            _connectionPoint.Advise(proxy.GetTransparentProxy(), out _adviseCookie);
         }
-
 
         #region static methods
         internal static ComEventSink FromRCW(object rcw, Guid sourceIid, bool createIfNotFound) {
@@ -276,18 +294,30 @@ namespace IronPython.Runtime.Types.ComDispatch {
             if (_adviseCookie == -1)
                 return;
 
-            _connectionPoint.Unadvise(_adviseCookie);
+            try {
+                _connectionPoint.Unadvise(_adviseCookie);
 
-            // _connectionPoint has entered the CLR in the constructor
-            // for this object and hence its ref counter has been increased
-            // by us. We have not exposed it to other components and
-            // hence it is safe to call RCO on it w/o worrying about
-            // killing the RCW for other objects that link to it.
-            Marshal.ReleaseComObject(_connectionPoint);
-
-            _connectionPoint = null;
-            _adviseCookie = -1;
-            _sourceIid = Guid.Empty;
+                // _connectionPoint has entered the CLR in the constructor
+                // for this object and hence its ref counter has been increased
+                // by us. We have not exposed it to other components and
+                // hence it is safe to call RCO on it w/o worrying about
+                // killing the RCW for other objects that link to it.
+                Marshal.ReleaseComObject(_connectionPoint);
+            } catch (Exception ex) {
+                // if something has gone wrong, and the object is no longer attached to the CLR,
+                // the Unadvise is going to throw.  In this case, since we're going away anyway,
+                // we'll ignore the failure and quietly go on our merry way.
+                COMException exCOM = ex as COMException;
+                if (exCOM != null && exCOM.ErrorCode == CONNECT_E_NOCONNECTION)
+                {
+                    Debug.Assert(false, "IConnectionPoint::Unadvise returned CONNECT_E_NOCONNECTION.");
+                    throw;
+                }
+            } finally {
+                _connectionPoint = null;
+                _adviseCookie = -1;
+                _sourceIid = Guid.Empty;
+            }
         }
 
         private ComEventSinkMethod FindSinkMethod(string name) {

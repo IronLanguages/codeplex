@@ -27,7 +27,6 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Types;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -103,22 +102,22 @@ namespace IronPython.Runtime.Operations {
                     string s = o as string;
                     if (s == null) continue;
 
-                    DynamicTypeSlot attrSlot;
+                    PythonTypeSlot attrSlot;
                     object attrVal;
 
                     if (self is OldInstance) {
                         if (!((OldInstance)self).__class__.TryLookupSlot(SymbolTable.StringToId(s), out attrVal)) {
                             continue;
                         }
-                        attrSlot = attrVal as DynamicTypeSlot;
+                        attrSlot = attrVal as PythonTypeSlot;
                     } else {
-                        DynamicType dt = DynamicHelpers.GetDynamicType(self);
+                        PythonType dt = DynamicHelpers.GetPythonType(self);
                         if (!dt.TryResolveSlot(DefaultContext.DefaultCLS, SymbolTable.StringToId(s), out attrSlot)) {
                             continue;
                         }
                     }
 
-                    if(attrSlot == null || !attrSlot.TryGetBoundValue(DefaultContext.DefaultCLS, self, DynamicHelpers.GetDynamicType(self), out attrVal)) continue;
+                    if(attrSlot == null || !attrSlot.TryGetBoundValue(DefaultContext.DefaultCLS, self, DynamicHelpers.GetPythonType(self), out attrVal)) continue;
 
                     Type attrType = (attrVal == null) ? typeof(NoneTypeOps) : attrVal.GetType();
 
@@ -131,7 +130,7 @@ namespace IronPython.Runtime.Operations {
             return descrs.ToArray();
         }
 
-        private static bool ShouldIncludeProperty(DynamicTypeSlot attrSlot, Attribute[] attributes) {
+        private static bool ShouldIncludeProperty(PythonTypeSlot attrSlot, Attribute[] attributes) {
             bool include = true;
             foreach (Attribute attr in attributes) {
                 ReflectedProperty rp;
@@ -139,12 +138,12 @@ namespace IronPython.Runtime.Operations {
                 if ((rp = attrSlot as ReflectedProperty) != null && rp.Info != null) {
                     include &= rp.Info.IsDefined(attr.GetType(), true);
                 } else if (attr.GetType() == typeof(BrowsableAttribute)) {
-                    DynamicTypeUserDescriptorSlot userSlot = attrSlot as DynamicTypeUserDescriptorSlot;
+                    PythonTypeUserDescriptorSlot userSlot = attrSlot as PythonTypeUserDescriptorSlot;
                     if (userSlot == null) {
                         if (!(attrSlot is PythonProperty)) {
                             include = false;
                         }
-                    } else if (!(userSlot.Value is ISuperDynamicObject)) {
+                    } else if (!(userSlot.Value is IPythonObject)) {
                         include = false;
                     }
                 } else {
@@ -201,7 +200,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override void ResetValue(object component) {
-                DefaultContext.DefaultCLS.LanguageContext.DeleteMember(DefaultContext.DefaultCLS, component, SymbolTable.StringToId(_name));
+                PythonOps.DeleteAttr(DefaultContext.DefaultCLS, component, SymbolTable.StringToId(_name));
             }
 
             public override bool ShouldSerializeValue(object component) {

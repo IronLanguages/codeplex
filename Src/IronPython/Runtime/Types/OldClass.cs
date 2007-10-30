@@ -25,7 +25,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
@@ -64,7 +63,7 @@ namespace IronPython.Runtime.Types {
 
         [NonSerialized]
         private List<OldClass> _bases;
-        private DynamicType _type = null;
+        private PythonType _type = null;
 
         public IAttributesCollection __dict__;
         private int _attrs;  // actually OldClassAttributes - losing type safety for thread safety
@@ -211,7 +210,7 @@ namespace IronPython.Runtime.Types {
         }
 
         internal object GetOldStyleDescriptor(CodeContext context, object self, object instance, object type) {
-            DynamicTypeSlot dts = self as DynamicTypeSlot;
+            PythonTypeSlot dts = self as PythonTypeSlot;
             object callable;
             if (dts != null && dts.TryGetValue(context, instance, TypeObject, out callable)) {
                 return callable;
@@ -294,7 +293,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        internal DynamicType TypeObject {
+        internal PythonType TypeObject {
             get {
                 if (_type == null) {
                     _type = OldInstanceTypeBuilder.Build(this);
@@ -336,7 +335,7 @@ namespace IronPython.Runtime.Types {
             List<OldClass> res = new List<OldClass>(t.Count);
             foreach (object o in t) {
                 OldClass oc = o as OldClass;
-                if (oc == null) throw PythonOps.TypeError("__bases__ items must be classes (got {0})", DynamicTypeOps.GetName(o));
+                if (oc == null) throw PythonOps.TypeError("__bases__ items must be classes (got {0})", PythonTypeOps.GetName(o));
 
                 if (oc.IsSubclassOf(this)) {
                     throw PythonOps.TypeError("a __bases__ item causes an inheritance cycle");
@@ -545,7 +544,13 @@ namespace IronPython.Runtime.Types {
             rule.SetTarget(
                 rule.MakeReturn(context.LanguageContext.Binder,
                     Ast.Comma(0,
-                        Ast.Assign(instTmp, Ast.New(typeof(OldInstance).GetConstructor(new Type[] { typeof(OldClass) }), rule.Parameters[0])),
+                        Ast.Assign(
+                            instTmp,
+                            Ast.New(
+                                typeof(OldInstance).GetConstructor(new Type[] { typeof(OldClass) }),
+                                Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass))
+                            )
+                        ),
                         Ast.Condition(
                             Ast.Call(
                                 Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),

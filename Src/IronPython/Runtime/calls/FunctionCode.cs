@@ -51,6 +51,7 @@ namespace IronPython.Runtime.Calls {
         private int _lineNo;
         private FunctionAttributes _flags;      // future division, generator
         #endregion
+        private static DynamicSite<PythonFunction, object> _callSite = RuntimeHelpers.CreateSimpleCallSite<PythonFunction, object>();
 
         internal FunctionCode(Delegate target) {
             _target = target;            
@@ -225,7 +226,7 @@ namespace IronPython.Runtime.Calls {
             if (_code != null) {
                 return _code.Run(scope, context.ModuleContext, tryEvaluate);
             } else if (_func != null) {
-                return _func.Call(context);
+                return _callSite.Invoke(context, _func);
             }
 
             throw PythonOps.TypeError("bad code");

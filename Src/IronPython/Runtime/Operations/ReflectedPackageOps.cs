@@ -19,7 +19,6 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime;
@@ -62,7 +61,7 @@ namespace IronPython.Runtime.Operations {
                 if (kvp.Value is TypeGroup || kvp.Value is NamespaceTracker) {
                     res[kvp.Key] = kvp.Value;
                 } else {
-                    res[kvp.Key] = DynamicHelpers.GetDynamicTypeFromType(((TypeTracker)kvp.Value).Type);
+                    res[kvp.Key] = DynamicHelpers.GetPythonTypeFromType(((TypeTracker)kvp.Value).Type);
                 }
             }
             return res;

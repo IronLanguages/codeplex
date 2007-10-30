@@ -23,12 +23,12 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Compiler.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -40,7 +40,7 @@ namespace IronPython.Runtime.Types {
     /// OldClass is the equivalent of UserType for old-style Python classes (which cannot inherit from 
     /// built-in types).
     /// </summary>
-    public class UserTypeBuilder : ReflectedTypeBuilder {
+    internal class UserTypeBuilder : ReflectedTypeBuilder {
         private string _name;
         private PythonTuple _bases;
         private IAttributesCollection _vars;
@@ -54,10 +54,10 @@ namespace IronPython.Runtime.Types {
             _vars = vars;
         }
 
-        public static DynamicType Build(CodeContext context, string name, PythonTuple bases, IAttributesCollection vars) {
+        public static PythonType Build(CodeContext context, string name, PythonTuple bases, IAttributesCollection vars) {
             UserTypeBuilder utb = new UserTypeBuilder(name, bases, vars);
             Type type = NewTypeMaker.GetNewType(name, bases, vars);
-            DynamicTypeBuilder builder = new DynamicTypeBuilder(name, type);
+            PythonTypeBuilder builder = new PythonTypeBuilder(name, type);
 
             utb.Builder = builder;
             utb._type = type;
@@ -65,9 +65,9 @@ namespace IronPython.Runtime.Types {
             return utb.DoBuild(context);
         }
 
-        public static void Build(CodeContext context, DynamicType dt, string name, PythonTuple bases, IAttributesCollection vars) {
+        public static void Build(CodeContext context, PythonType dt, string name, PythonTuple bases, IAttributesCollection vars) {
             Type type = NewTypeMaker.GetNewType(name, bases, vars);
-            DynamicTypeBuilder builder = DynamicTypeBuilder.GetBuilder(dt);
+            PythonTypeBuilder builder = PythonTypeBuilder.GetBuilder(dt);
 
             UserTypeBuilder utb = new UserTypeBuilder(name, bases, vars);
             utb.Builder = builder;
@@ -77,8 +77,11 @@ namespace IronPython.Runtime.Types {
             utb.DoBuild(context);
         }
 
+        /// <summary>
+        /// TODO: This needs to become an IDynamicObject
+        /// </summary>
         class TypePrepender : ICallableWithCodeContext, IFancyCallable {
-            private DynamicType _type;
+            private PythonType _type;
             private PrependerState _state;
 
             public class PrependerState {
@@ -87,13 +90,10 @@ namespace IronPython.Runtime.Types {
                 }
 
                 public BuiltinFunction Ctor;
-                public FastDynamicSite<BuiltinFunction, DynamicType, object> Site;
-                public FastDynamicSite<BuiltinFunction, DynamicType, object, object> Site1;
-                public FastDynamicSite<BuiltinFunction, DynamicType, object, object, object> Site2;
-                public FastDynamicSite<BuiltinFunction, DynamicType, object, object, object, object> Site3;
+                public FastDynamicSite<BuiltinFunction, PythonType, object[], object> Site;                
             }
 
-            public TypePrepender(DynamicType dt, PrependerState state) {
+            public TypePrepender(PythonType dt, PrependerState state) {
                 _type = dt;
                 _state = state;
             }
@@ -101,23 +101,25 @@ namespace IronPython.Runtime.Types {
             #region ICallableWithCodeContext Members
 
             public object Call(CodeContext context, object[] args) {
-                // most common uses of this are object.__new__ and int.__new__, make those go fast.
-                switch(args.Length) {
-                    case 0:
-                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site);
-                        return _state.Site.Invoke(_state.Ctor, _type);
-                    case 1: 
-                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site1);
-                        return _state.Site1.Invoke(_state.Ctor, _type, args[0]);
-                    case 2:
-                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site2);
-                        return _state.Site2.Invoke(_state.Ctor, _type, args[0], args[1]);
-                    case 3:
-                        RuntimeHelpers.CreateSimpleCallSite(DefaultContext.Default, ref _state.Site3);
-                        return _state.Site3.Invoke(_state.Ctor, _type, args[0], args[1], args[2]);
+                // we've already boxed the args so we'll just call through a splat-site
+                // which will do the unsplat for us.
+                if (_state.Site == null) {
+                    CreateCallSite();
                 }
 
-                return _state.Ctor.Call(context, ArrayUtils.Insert<object>(_type, args));
+                return _state.Site.Invoke(_state.Ctor, _type, args);
+            }
+
+            private void CreateCallSite() {
+                _state.Site = FastDynamicSite<BuiltinFunction, PythonType, object[], object>.Create(
+                    DefaultContext.Default,
+                    CallAction.Make(
+                        new CallSignature(
+                            new ArgumentInfo(ArgumentKind.Simple),
+                            new ArgumentInfo(ArgumentKind.List)
+                        )
+                    )
+                );
             }
 
             #endregion
@@ -125,13 +127,13 @@ namespace IronPython.Runtime.Types {
             #region IFancyCallable Members
 
             public object Call(CodeContext context, object[] args, string[] names) {
-                return _state.Ctor.Call(context, ArrayUtils.Insert<object>(_type, args), names);
+                return PythonCalls.CallWithKeywordArgs(_state.Ctor, ArrayUtils.Insert((object)_type, args), names);
             }
 
             #endregion
         }
 
-        private DynamicType DoBuild(CodeContext context) {
+        private PythonType DoBuild(CodeContext context) {
             Debug.Assert(Builder != null);
 
             Builder.SetTypeContext(context.LanguageContext.ContextId);
@@ -146,15 +148,15 @@ namespace IronPython.Runtime.Types {
             Builder.SetConstructor(new TypePrepender(Builder.UnfinishedType, prependerState));
 
             Builder.SetDefaultSlotType(delegate(object value) {
-                return new DynamicTypeUserDescriptorSlot(value);
+                return new PythonTypeUserDescriptorSlot(value);
             });
 
             ValidateSupportedInheritance();
 
             IAttributesCollection fastDict = (IAttributesCollection)_vars;
 
-            Builder.AddSlot(Symbols.Name, new DynamicTypeValueSlot(_name));
-            Builder.AddSlot(Symbols.Module, new DynamicTypeValueSlot(fastDict[Symbols.Module]));
+            Builder.AddSlot(Symbols.Name, new PythonTypeValueSlot(_name));
+            Builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(fastDict[Symbols.Module]));
 
             if (fastDict.ContainsKey(Symbols.Slots)) {
                 HasSlots = true;
@@ -177,15 +179,15 @@ namespace IronPython.Runtime.Types {
 
             PublishDictionary(fastDict);
 
-            Builder.UnfinishedType.OnChange += new EventHandler<DynamicTypeChangedEventArgs>(DoOperatorPropagation);
+            Builder.UnfinishedType.OnChange += new EventHandler<PythonTypeChangedEventArgs>(DoOperatorPropagation);
             Builder.IsSystemType = false;
 
-            return (DynamicType)Builder.Finish(false);
+            return (PythonType)Builder.Finish(false);
         }
 
         private void PublishDictionary(IAttributesCollection dict) {
             foreach (KeyValuePair<SymbolId, object> kvp in dict.SymbolAttributes) {
-                DynamicTypeSlot dts = kvp.Value as DynamicTypeSlot;
+                PythonTypeSlot dts = kvp.Value as PythonTypeSlot;
                 if (dts == null) {
                     dts = CreateValueSlot(kvp.Value);
                 }
@@ -200,14 +202,14 @@ namespace IronPython.Runtime.Types {
         /// Adds an operator that does a lookup in the type searching according to normal
         /// lookup rules.
         /// </summary>
-        internal static bool AddLookupOperator(DynamicType dt, SymbolId id) {
+        internal static bool AddLookupOperator(PythonType dt, SymbolId id) {
             if (id == Symbols.GetSlice) id = Symbols.GetItem;
             if (id == Symbols.SetSlice) id = Symbols.SetItem;
             if (id == Symbols.DeleteSlice) id = Symbols.DelItem;
 
             OperatorMapping op;
             if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(id, out op)) {
-                DynamicTypeBuilder builder = DynamicTypeBuilder.GetBuilder(dt);
+                PythonTypeBuilder builder = PythonTypeBuilder.GetBuilder(dt);
 
                 // some operators need specific transformations from the DLR semantics into the 
                 // Python semantics - those transformations are done here.
@@ -287,8 +289,8 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        internal static void AddOperatorGetItem(DynamicTypeBuilder builder) {
-            DynamicType dt = builder.UnfinishedType;
+        internal static void AddOperatorGetItem(PythonTypeBuilder builder) {
+            PythonType dt = builder.UnfinishedType;
 
             builder.AddOperator(Operators.GetItem,
                 delegate(CodeContext context, object self, object other, out object ret) {
@@ -318,8 +320,8 @@ namespace IronPython.Runtime.Types {
 
         }
 
-        internal static void AddOperatorDeleteItem(DynamicTypeBuilder builder) {
-            DynamicType dt = builder.UnfinishedType;
+        internal static void AddOperatorDeleteItem(PythonTypeBuilder builder) {
+            PythonType dt = builder.UnfinishedType;
 
             builder.AddOperator(Operators.DeleteItem,
                 delegate(CodeContext context, object self, object other, out object ret) {
@@ -349,8 +351,8 @@ namespace IronPython.Runtime.Types {
 
         }
 
-        internal static void AddOperatorSetItem(DynamicTypeBuilder builder) {
-            DynamicType dt = builder.UnfinishedType;
+        internal static void AddOperatorSetItem(PythonTypeBuilder builder) {
+            PythonType dt = builder.UnfinishedType;
 
             builder.AddOperator(Operators.SetItem,
                 delegate(CodeContext context, object self, object value1, object value2, out object ret) {
@@ -380,36 +382,36 @@ namespace IronPython.Runtime.Types {
             );
 
         }
-        private void DoOperatorPropagation(object sender, DynamicTypeChangedEventArgs args) {
-            DynamicType dt = sender as DynamicType;
+        private void DoOperatorPropagation(object sender, PythonTypeChangedEventArgs args) {
+            PythonType dt = sender as PythonType;
             Debug.Assert(dt != null);
 
             if (args.ChangeType == ChangeType.Added) {
                 if (args.Symbol == Symbols.GetAttribute) {
-                    DynamicTypeBuilder dtb = DynamicTypeBuilder.GetBuilder(dt);
+                    PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(dt);
 
                     CustomAttributeInfo info = new CustomAttributeInfo(args.NewValue);
                     dtb.SetCustomBoundGetter(info.HookedGetAttribute);
-                    dtb.AddSlot(Symbols.GetAttribute, new DynamicTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.GetAttribute));
+                    dtb.AddSlot(Symbols.GetAttribute, new PythonTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.GetAttribute));
                     dtb.SetHasGetAttribute(true);
 
                     dtb.ReleaseBuilder();
                     return;
                 } else if (args.Symbol == Symbols.SetAttr) {
-                    DynamicTypeBuilder dtb = DynamicTypeBuilder.GetBuilder(dt);
+                    PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(dt);
 
                     CustomAttributeInfo info = new CustomAttributeInfo(args.NewValue);
                     dtb.SetCustomSetter(info.HookedSetAttribute);
-                    dtb.AddSlot(Symbols.SetAttr, new DynamicTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.SetAttr));
+                    dtb.AddSlot(Symbols.SetAttr, new PythonTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.SetAttr));
 
                     dtb.ReleaseBuilder();
                     return;
                 } else if (args.Symbol == Symbols.DelAttr) {
-                    DynamicTypeBuilder dtb = DynamicTypeBuilder.GetBuilder(dt);
+                    PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(dt);
 
                     CustomAttributeInfo info = new CustomAttributeInfo(args.NewValue);
                     dtb.SetCustomDeleter(info.HookedDeleteAttribute);
-                    dtb.AddSlot(Symbols.DelAttr, new DynamicTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.DelAttr));
+                    dtb.AddSlot(Symbols.DelAttr, new PythonTypeGetAttributeSlot(dtb.UnfinishedType, info, Symbols.DelAttr));
 
                     dtb.ReleaseBuilder();
                     return;
@@ -419,7 +421,7 @@ namespace IronPython.Runtime.Types {
             AddOperatorAndPropagate(args.Context, dt, args.Symbol, args.ChangeType, args.PreviousValue);
         }
 
-        protected void AddOperatorAndPropagate(CodeContext context, DynamicType dt, SymbolId id, ChangeType type, object previous) {
+        protected void AddOperatorAndPropagate(CodeContext context, PythonType dt, SymbolId id, ChangeType type, object previous) {
             if ((type == ChangeType.Added && AddLookupOperator(dt, id)) ||
                 (type == ChangeType.Removed && RemoveOperator(dt, id))) {
                 IList<WeakReference> subtypes = dt.SubTypes;
@@ -428,8 +430,8 @@ namespace IronPython.Runtime.Types {
                 foreach (WeakReference weaksubtype in subtypes) {
                     if (!weaksubtype.IsAlive) continue;
 
-                    DynamicType subtype = (DynamicType)weaksubtype.Target;
-                    DynamicTypeSlot dts;
+                    PythonType subtype = (PythonType)weaksubtype.Target;
+                    PythonTypeSlot dts;
 
                     if (subtype.TryLookupSlot(context, id, out dts)) {
                         object oldVal;
@@ -448,10 +450,10 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static bool RemoveOperator(DynamicType dt, SymbolId id) {
+        private static bool RemoveOperator(PythonType dt, SymbolId id) {
             OperatorMapping op;
             if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(id, out op)) {
-                DynamicTypeBuilder builder = DynamicTypeBuilder.GetBuilder(dt);
+                PythonTypeBuilder builder = PythonTypeBuilder.GetBuilder(dt);
                 if (op.IsUnary) {
                     builder.AddOperator(op.Operator, (UnaryOperator)null);
                 }
@@ -468,8 +470,8 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        protected override DynamicTypeSlot CreateValueSlot(object value) {
-            return new DynamicTypeUserDescriptorSlot(value);
+        protected override PythonTypeSlot CreateValueSlot(object value) {
+            return new PythonTypeUserDescriptorSlot(value);
         }
 
         private static object NewDict() {
@@ -479,7 +481,7 @@ namespace IronPython.Runtime.Types {
         private void ValidateSupportedInheritance() {
             if (_type.GetInterface("ICustomMembers", false) == typeof(ICustomMembers)) {
                 // ICustomAttributes is a well-known type. Ops.GetAttr etc first check for it, and dispatch to the
-                // ICustomAttributes implementation. At the same time, built-in types like PythonModule, DynamicType, 
+                // ICustomAttributes implementation. At the same time, built-in types like PythonModule, PythonType, 
                 // Super, SystemState, etc implement ICustomAttributes. If a user type inherits from these,
                 // then Ops.GetAttr still dispatches to the ICustomAttributes implementation of the built-in types
                 // instead of checking the user-type.
@@ -498,8 +500,8 @@ namespace IronPython.Runtime.Types {
             // cannot override mro when inheriting from type
             if (_vars.ContainsKey(SymbolTable.StringToId("mro"))) {
                 foreach (object o in _bases) {
-                    DynamicType dt = o as DynamicType;
-                    if (dt != null && dt.IsSubclassOf(TypeCache.DynamicType)) {
+                    PythonType dt = o as PythonType;
+                    if (dt != null && dt.IsSubclassOf(TypeCache.PythonType)) {
                         throw new NotImplementedException("Overriding type.mro is not implemented");
                     }
                 }
@@ -512,11 +514,11 @@ namespace IronPython.Runtime.Types {
             }
 
             if (HasWeakRef && !fastDict.ContainsKey(Symbols.WeakRef)) {
-                fastDict[Symbols.WeakRef] = new DynamicTypeWeakRefSlot(this.Builder.UnfinishedType);
+                fastDict[Symbols.WeakRef] = new PythonTypeWeakRefSlot(this.Builder.UnfinishedType);
             }
 
             if (!fastDict.ContainsKey(Symbols.Dict) && HasDictionary) {
-                fastDict[Symbols.Dict] = new DynamicTypeDictSlot();
+                fastDict[Symbols.Dict] = new PythonTypeDictSlot();
             }
         }
 
@@ -572,19 +574,19 @@ namespace IronPython.Runtime.Types {
                         if (oc != null) {
                             throw PythonOps.TypeError("duplicate base class {0}", oc.Name);
                         } else {
-                            throw PythonOps.TypeError("duplicate base class {0}", ((DynamicType)newBases[i]).Name);
+                            throw PythonOps.TypeError("duplicate base class {0}", ((PythonType)newBases[i]).Name);
                         }
                     }
                 }
             }
 
-            List<DynamicType> newbs = new List<DynamicType>();
+            List<PythonType> newbs = new List<PythonType>();
             TryGetMemberCustomizer baseCustomizer = null;
             SetMemberCustomizer setCustomizer = null;
             DeleteMemberCustomizer deleteCustomizer = null;
             bool mixedOldNew = false;
             foreach (object typeObj in newBases) {
-                DynamicType dt = typeObj as DynamicType;
+                PythonType dt = typeObj as PythonType;
                 if (dt == null) {
                     dt = ((OldClass)typeObj).TypeObject;
                     mixedOldNew = true;
@@ -611,10 +613,10 @@ namespace IronPython.Runtime.Types {
             // we have a finalizer.
             bool hasFinalizer = newDict.ContainsKey(Symbols.Unassign);
 
-            foreach (DynamicType baseTypeObj in Builder.UnfinishedType.BaseTypes) {
+            foreach (PythonType baseTypeObj in Builder.UnfinishedType.BaseTypes) {
                 if (baseTypeObj.IsSystemType) continue;
 
-                DynamicTypeSlot dts;
+                PythonTypeSlot dts;
                 if (baseTypeObj.TryLookupSlot(context, Symbols.Unassign, out dts)) {
                     hasFinalizer = true;
                 }
@@ -630,7 +632,7 @@ namespace IronPython.Runtime.Types {
             if (newDict.TryGetValue(Symbols.GetAttribute, out value)) {
                 CustomAttributeInfo info = new CustomAttributeInfo(value);
                 Builder.SetCustomBoundGetter(info.HookedGetAttribute);
-                newDict[Symbols.GetAttribute] = new DynamicTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.GetAttribute);
+                newDict[Symbols.GetAttribute] = new PythonTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.GetAttribute);
                 Builder.SetHasGetAttribute(true);
             } else if (baseCustomizer != null) {
                 Builder.SetCustomBoundGetter(baseCustomizer);
@@ -639,7 +641,7 @@ namespace IronPython.Runtime.Types {
             if (newDict.TryGetValue(Symbols.SetAttr, out value)) {
                 CustomAttributeInfo info = new CustomAttributeInfo(value);
                 Builder.SetCustomSetter(info.HookedSetAttribute);
-                newDict[Symbols.SetAttr] = new DynamicTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.SetAttr);
+                newDict[Symbols.SetAttr] = new PythonTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.SetAttr);
             } else if (setCustomizer != null) {
                 Builder.SetCustomSetter(setCustomizer);
             }
@@ -647,13 +649,13 @@ namespace IronPython.Runtime.Types {
             if (newDict.TryGetValue(Symbols.DelAttr, out value)) {
                 CustomAttributeInfo info = new CustomAttributeInfo(value);
                 Builder.SetCustomDeleter(info.HookedDeleteAttribute);
-                newDict[Symbols.DelAttr] = new DynamicTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.DelAttr);
+                newDict[Symbols.DelAttr] = new PythonTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.DelAttr);
             } else if (deleteCustomizer != null) {
                 Builder.SetCustomDeleter(deleteCustomizer);
             }
         }
 
-        protected static BinaryOperator MakeDefaultCall(DynamicType dt) {
+        protected static BinaryOperator MakeDefaultCall(PythonType dt) {
             return delegate(CodeContext context, object self, object other, out object ret) {
                 object value;
                 if (!dt.TryGetBoundMember(context, self, Symbols.Call, out value)) {
@@ -684,7 +686,7 @@ namespace IronPython.Runtime.Types {
         private void AddAllOperators() {
             Dictionary<SymbolId, OperatorMapping> ops = PythonExtensionTypeAttribute._pythonOperatorTable;
 
-            DynamicType dt = Builder.UnfinishedType;
+            PythonType dt = Builder.UnfinishedType;
             foreach (KeyValuePair<SymbolId, OperatorMapping> op in ops) {
                 AddLookupOperator(Builder.UnfinishedType, op.Key);
             }
@@ -734,7 +736,7 @@ namespace IronPython.Runtime.Types {
             foreach (object baseClass in bases) {
                 if (baseClass is OldClass) continue;
 
-                DynamicType dt = baseClass as DynamicType;
+                PythonType dt = baseClass as PythonType;
 
                 if (!dt.UnderlyingSystemType.IsInterface)
                     return bases;

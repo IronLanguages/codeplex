@@ -43,6 +43,12 @@ def test_del_getframe():
     except AttributeError: pass
     else: raise AssertionError("Deletion of sys._getframe didn't take effect")
 
+@disabled("Merlin Work Item 148638")
+def test_assign_getframe():
+    for val in [None, 0, 1L, str, False]:
+        sys._getframe = val
+        AreEqual(sys._getframe, val)
+
 def test_negative():
 	# api_version
 	AreEqual(sys.api_version, 'IronPython does not support the C APIs, the api_version is not supported')

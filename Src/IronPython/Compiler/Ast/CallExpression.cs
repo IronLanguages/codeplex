@@ -65,21 +65,20 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.Arg[] args = ag.Transform(_args);
-            MSAst.Expression[] argVals = new MSAst.Expression[args.Length + 1];
-            int i = 1;
-            argVals[0] = ag.Transform(_target);
-            foreach (MSAst.Arg arg in args) {
-                argVals[i] = args[i-1].Expression;
-                i++;
+            MSAst.Expression[] values = new MSAst.Expression[_args.Length + 1];
+            ArgumentInfo[] kinds = new ArgumentInfo[_args.Length];
+
+            values[0] = ag.Transform(_target);
+
+            for (int i = 0; i < _args.Length; i++) {
+                kinds[i] = _args[i].Transform(ag, out values[i + 1]);
             }
 
             return Ast.Action.Call(
-                CallAction.Make(new CallSignature(args)),
+                CallAction.Make(new CallSignature(kinds)),
                 type,
-                argVals
+                values
             );
-            
         }
 
         internal override MSAst.Statement TransformDelete(AstGenerator ag) {

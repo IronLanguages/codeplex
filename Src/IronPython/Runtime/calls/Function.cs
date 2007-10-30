@@ -27,7 +27,6 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -40,7 +39,7 @@ namespace IronPython.Runtime.Calls {
     /// Created for a user-defined function.  
     /// </summary>
     [PythonType("function")]
-    public abstract partial class PythonFunction : FastCallable, IFancyCallable, IWeakReferenceable, ICustomMembers, IDynamicObject {
+    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, ICustomMembers, IDynamicObject {
         private FunctionCode _code;
         private FunctionAttributes _flags;
         // Given "foo(a, b, c=3, *argList, **argDist), only a, b, and c are considered "normal" parameters
@@ -56,6 +55,7 @@ namespace IronPython.Runtime.Calls {
         private object _doc;
         private IAttributesCollection _dict;
         private int _id;
+        private Delegate _target;
 
         // hi-perf thread static data:
         private static int[] _depth_fast = new int[20];
@@ -65,11 +65,7 @@ namespace IronPython.Runtime.Calls {
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
         private static int _CurrentId = 1;
 
-        protected PythonFunction(CodeContext context, string name, string[] argNames, object[] defaults)
-            : this(context, name, argNames, defaults, FunctionAttributes.None) {
-        }
-
-        protected PythonFunction(CodeContext context, string name, string[] argNames, object[] defaults, FunctionAttributes flags) {
+        public PythonFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults, FunctionAttributes flags) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(context, "context");
 
@@ -79,6 +75,7 @@ namespace IronPython.Runtime.Calls {
             _flags = flags;
             _nparams = argNames.Length;
             _context = context;
+            _target = target;
 
             if ((flags & FunctionAttributes.KeywordDictionary) != 0) {
                 _nparams--;
@@ -107,7 +104,7 @@ namespace IronPython.Runtime.Calls {
 
         public static PythonFunction MakeFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults,
             FunctionAttributes attributes, string docString, int lineNumber, string fileName) {
-            PythonFunction ret = MakeFunction(context, name, target, argNames, defaults, attributes);
+            PythonFunction ret = new PythonFunction(context, name, target, argNames, defaults, attributes);
             if (docString != null) ret.Documentation = docString;
             ret.FunctionCode.SetLineNumber(lineNumber);
             ret.FunctionCode.SetFilename(fileName);
@@ -228,7 +225,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public virtual object Documentation {
+        public object Documentation {
             [PythonName("__doc__")]
             get {
                 return _doc;
@@ -248,6 +245,16 @@ namespace IronPython.Runtime.Calls {
             set {
                 _code = value;
             }
+        }
+
+        [PythonName("__call__")]
+        public object Call(params object[] args) {
+            return PythonCalls.Call(this, args);
+        }
+
+        [PythonName("__call__")]
+        public object Call([ParamDictionary]IAttributesCollection dict, params object[] args) {
+            return PythonCalls.CallWithKeywordArgs(this, args, dict);
         }
 
         /*
@@ -270,34 +277,7 @@ namespace IronPython.Runtime.Calls {
 
             return _body.Execute(funcContext);
         }*/
-
-
-        public override object CallInstance(CodeContext context, object instance, params object[] args) {
-            return Call(context, PrependInstance(instance, args));
-        }
-
-        [SpecialName]
-        public override object Call(CodeContext context, params object[] args) {
-            throw new NotImplementedException();
-        }
-
-        [SpecialName]
-        public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dictArgs, params object[] args) {
-            object[] realArgs = new object[args.Length + dictArgs.Count];
-            string[] argNames = new string[dictArgs.Count];
-
-            Array.Copy(args, realArgs, args.Length);
-
-            int index = 0;
-            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dictArgs) {
-                argNames[index] = kvp.Key as string;
-                realArgs[index + args.Length] = kvp.Value;
-                index++;
-            }
-
-            return Call(context, realArgs, argNames);
-        }
-
+        
         public CodeContext Context {
             get {
                 return _context;
@@ -412,13 +392,13 @@ namespace IronPython.Runtime.Calls {
             --Depth;
         }
 
-        public abstract Delegate Target { get; }
+        public Delegate Target { get { return _target; } }
 
         #endregion
 
         #region Protected APIs
 
-        protected internal object[] Defaults {
+        internal object[] Defaults {
             get { return _defaults; }
         }
 
@@ -430,60 +410,20 @@ namespace IronPython.Runtime.Calls {
             return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(Name, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, true);
         }
 
-        protected int FindParamIndex(string name) {
+        private int FindParamIndex(string name) {
             for (int i = 0; i < _argNames.Length; i++) {
                 if (name == _argNames[i]) return i;
             }
             return -1;
         }
 
-        protected int FindParamIndexOrError(string name) {
+        private int FindParamIndexOrError(string name) {
             int ret = FindParamIndex(name);
             if (ret != -1) return ret;
             throw PythonOps.TypeError("no parameter for " + name);
         }
 
-        #endregion
-
-        #region IFancyCallable Members
-
-        public virtual object Call(CodeContext context, object[] args, string[] names) {
-            int nparams = _argNames.Length;
-            int nargs = args.Length - names.Length;
-            if (nargs > nparams) throw BadArgumentError(nparams);
-
-            object[] inArgs = args;
-            args = new object[nparams];
-            bool[] haveArg = new bool[nparams];
-            for (int i = 0; i < nargs; i++) { args[i] = inArgs[i]; haveArg[i] = true; }
-
-            for (int i = 0; i < names.Length; i++) {
-                int paramIndex = FindParamIndex(names[i]);
-                if (paramIndex == -1) {
-                    throw PythonOps.TypeError("{0}() got an unexpected keyword argument '{1}'", _name, names[i]);
-                }
-                if (haveArg[paramIndex]) {
-                    throw PythonOps.TypeError("multiple values for " + names[i]);
-                }
-                haveArg[paramIndex] = true;
-                args[paramIndex] = inArgs[nargs + i];
-            }
-
-            for (int i = 0; i < nparams; i++) {
-                if (!haveArg[i]) {
-                    int defaultIndex = i - (nparams - _defaults.Length);
-                    if (defaultIndex < 0) {
-                        throw RuntimeHelpers.TypeErrorForIncorrectArgumentCount(_name, nparams, _defaults.Length, nargs, false, true);
-                    }
-                    args[i] = _defaults[defaultIndex];
-                    haveArg[i] = true;
-                }
-            }
-
-            return Call(context, args);
-        }
-
-        #endregion
+        #endregion       
 
         #region ICustomMembers Members
 
@@ -634,9 +574,9 @@ namespace IronPython.Runtime.Calls {
         }
         #endregion
 
-        #region DynamicTypeSlot Overrides
+        #region PythonTypeSlot Overrides
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = new Method(this, instance, owner);
             return true;
         }
@@ -681,6 +621,7 @@ namespace IronPython.Runtime.Calls {
             private bool _extractedParams;                          // true if we needed to extract a parameter from the parameter list.
             private bool _extractedKeyword;                         // true if we needed to extract a parameter from the kw list.
             private Expression _userProvidedParams;                 // expression the user provided that should be expanded for params.
+            private Expression _paramlessCheck;                     // tests when we have no parameters
 
             public FunctionBinderHelper(CodeContext context, CallAction action, PythonFunction function)
                 : base(context, action) {
@@ -729,12 +670,21 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             private Expression MakeSimpleTest() {
                 return Ast.AndAlso(
-                    _rule.MakeTypeTestExpression(_func.GetType(), 0),
-                    Ast.Equal(
-                        Ast.ReadProperty(
-                            GetFunctionParam(),
-                            typeof(PythonFunction).GetProperty("FunctionCompatibility")),
-                        Ast.Constant(_func.FunctionCompatibility))
+                    _rule.MakeTypeTestExpression(_func.GetType(), 0),                    
+                    Ast.AndAlso(
+                        Ast.TypeIs(
+                            Ast.ReadProperty(
+                                Ast.Convert(_rule.Parameters[0], typeof(PythonFunction)),
+                                typeof(PythonFunction).GetProperty("Target")
+                            ),
+                            _func.Target.GetType()
+                        ),
+                        Ast.Equal(
+                            Ast.ReadProperty(
+                                GetFunctionParam(),
+                                typeof(PythonFunction).GetProperty("FunctionCompatibility")),
+                            Ast.Constant(_func.FunctionCompatibility))
+                    )
                 );
             }
 
@@ -967,49 +917,52 @@ namespace IronPython.Runtime.Calls {
             /// all the parameters) to ensure that we don't have any extra params or kw-params
             /// when we don't have a params array or params dict to expand them into.
             /// </summary>
-            private void AddCheckForNoExtraParameters(Expression[] exprArgs) {
-                if (exprArgs.Length > 0) {
-                    List<Expression> tests = new List<Expression>(3);
-                    tests.Add(exprArgs[exprArgs.Length - 1]);
+            private void AddCheckForNoExtraParameters(Expression[] exprArgs) {                
+                List<Expression> tests = new List<Expression>(3);
 
-                    // test we've used all of the extra parameters
-                    if (_func.ExpandListPosition == -1) {
-                        if (_params != null) {
-                            // we used some params, they should have gone down to zero...
-                            tests.Add(
-                                Ast.Call(
-                                    typeof(PythonOps).GetMethod("CheckParamsZero"),
-                                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                    Ast.ReadDefined(_params)
-                                )
-                            );
-                        } else if (_userProvidedParams != null) {
-                            // the user provided params, we didn't need any, and they should be zero
-                            tests.Add(
-                                Ast.Call(
-                                    typeof(PythonOps).GetMethod("CheckUserParamsZero"),
-                                    Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                    Ast.ConvertHelper(_userProvidedParams, typeof(object))
-                                )
-                            );
-                        }
-                    }
-
-                    // test that we've used all the extra named arguments
-                    if (_func.ExpandDictPosition == -1 && _dict != null) {
+                // test we've used all of the extra parameters
+                if (_func.ExpandListPosition == -1) {
+                    if (_params != null) {
+                        // we used some params, they should have gone down to zero...
                         tests.Add(
                             Ast.Call(
-                                typeof(PythonOps).GetMethod("CheckDictionaryZero"),
+                                typeof(PythonOps).GetMethod("CheckParamsZero"),
                                 Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IDictionary))
+                                Ast.ReadDefined(_params)
+                            )
+                        );
+                    } else if (_userProvidedParams != null) {
+                        // the user provided params, we didn't need any, and they should be zero
+                        tests.Add(
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("CheckUserParamsZero"),
+                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                                Ast.ConvertHelper(_userProvidedParams, typeof(object))
                             )
                         );
                     }
+                }
 
-                    // if we needed any tests have them run after the last argument.
-                    if (tests.Count != 1) {
+                // test that we've used all the extra named arguments
+                if (_func.ExpandDictPosition == -1 && _dict != null) {
+                    tests.Add(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CheckDictionaryZero"),
+                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                            Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IDictionary))
+                        )
+                    );
+                }
+
+                if (tests.Count != 0) {                    
+                    if (exprArgs.Length != 0) {
+                        // if we have arguments run the tests after the last arg is evaluated.
+                        tests.Insert(0, exprArgs[exprArgs.Length - 1]);
                         exprArgs[exprArgs.Length - 1] = Ast.Comma(0, tests.ToArray());
-                    }
+                    } else {
+                        // otherwise run them right before the method call
+                        _paramlessCheck = Ast.Comma(tests.ToArray());
+                    }                        
                 }
             }
 
@@ -1141,11 +1094,11 @@ namespace IronPython.Runtime.Calls {
                 if (_func.Target.GetType() == typeof(CallTargetWithContextN)) {
                     exprArgs = new Expression[] {
                         GetContextExpression(),
-                        Ast.NewArray(typeof(object[]), exprArgs) 
+                        Ast.NewArrayHelper(typeof(object[]), exprArgs) 
                     };
                 } else if (_func.Target.GetType() == typeof(CallTargetN)) {
                     exprArgs = new Expression[] {
-                        Ast.NewArray(typeof(object[]), exprArgs) 
+                        Ast.NewArrayHelper(typeof(object[]), exprArgs) 
                     };
                 } else if (NeedsContext) {
                     exprArgs = ArrayUtils.Insert(GetContextExpression(), exprArgs);
@@ -1287,18 +1240,21 @@ namespace IronPython.Runtime.Calls {
             /// Creates the code to invoke the target delegate function w/ the specified arguments.
             /// </summary>
             private Statement MakeFunctionInvoke(Expression[] invokeArgs) {
-                return _rule.MakeReturn(Context.LanguageContext.Binder,
-                    Ast.SimpleCallHelper(
-                        Ast.Convert(
-                            Ast.ReadProperty(
-                                GetFunctionParam(),
-                                _func.GetType().GetProperty("Target")),
-                            _func.Target.GetType()
-                        ),
-                        _func.Target.GetType().GetMethod("Invoke"),
-                        invokeArgs
-                    )
+                Expression invoke = Ast.SimpleCallHelper(
+                    Ast.Convert(
+                        Ast.ReadProperty(
+                            GetFunctionParam(),
+                            _func.GetType().GetProperty("Target")),
+                        _func.Target.GetType()
+                    ),
+                    _func.Target.GetType().GetMethod("Invoke"),
+                    invokeArgs
                 );
+
+                if (_paramlessCheck != null) {
+                    invoke = Ast.Comma(1, _paramlessCheck, invoke);
+                }
+                return _rule.MakeReturn(Context.LanguageContext.Binder, invoke);
             }
 
             /// <summary>
@@ -1382,151 +1338,7 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
     }
-
-    /// <summary>
-    /// Targets a single delegate that takes many arguments.
-    /// </summary>
-    [PythonType(typeof(PythonFunction))]
-    public partial class FunctionN : PythonFunction {
-        public CallTargetWithContextN target;
-
-        public FunctionN(CodeContext context, string name, CallTargetWithContextN target, string[] argNames, object[] defaults)
-            : this(context, name, target, argNames, defaults, FunctionAttributes.None) {
-        }
-
-        public FunctionN(CodeContext context, string name, CallTargetWithContextN target, string[] argNames, object[] defaults, FunctionAttributes flags)
-            : base(context, name, argNames, defaults, flags) {
-            this.target = target;
-        }
-
-        [SpecialName]
-        public override object Call(CodeContext context, params object[] args) {
-            int nparams = ArgNames.Length;
-            int nargs = args.Length;
-            if (nargs < nparams) {
-                if (nargs + Defaults.Length < nparams) {
-                    throw BadArgumentError(nargs);
-                }
-                object[] inArgs = args;
-                args = new object[nparams];
-                for (int i = 0; i < nargs; i++) args[i] = inArgs[i];
-                object[] defs = Defaults;
-                int di = defs.Length - 1;
-                for (int i = nparams - 1; i >= nargs; i--) {
-                    args[i] = defs[di--];
-                }
-            } else if (nargs > nparams) {
-                throw BadArgumentError(nargs);
-            }
-
-            if (!EnforceRecursion) return target(Context, args);
-
-            PushFrame();
-            try {
-                return target(Context, args);
-            } finally {
-                PopFrame();
-            }
-        }
-
-        public override Delegate Target {
-            get { return target; }
-        }
-    }
-
-    /// <summary>
-    /// Targets a single delegate that takes a variety of arguments (kw-arg list or arg list)
-    /// </summary>
-    [PythonType(typeof(PythonFunction))]
-    public class FunctionX : FunctionN {
-        public FunctionX(CodeContext context, string name, CallTargetWithContextN target, string[] argNames, object[] defaults, FunctionAttributes flags)
-            : base(context, name, target, argNames, defaults, flags) {
-        }
-
-        [SpecialName]
-        public override object Call(CodeContext context, params object[] args) {
-            int nargs = args.Length;
-            object argList = null;
-            object[] outArgs = new object[ArgNames.Length];
-
-            if (nargs < NormalArgumentCount) {
-                if (nargs + Defaults.Length < NormalArgumentCount) {
-                    throw BadArgumentError(nargs);
-                }
-                for (int i = 0; i < nargs; i++) outArgs[i] = args[i];
-                object[] defs = Defaults;
-                int di = defs.Length - 1;
-                for (int i = NormalArgumentCount - 1; i >= nargs; i--) {
-                    outArgs[i] = defs[di--];
-                }
-            } else if (nargs > NormalArgumentCount) {
-                if (ExpandListPosition >= 0) {
-                    for (int i = 0; i < NormalArgumentCount; i++) outArgs[i] = args[i];
-
-                    object[] extraArgs = new object[nargs - NormalArgumentCount];
-                    for (int i = 0; i < extraArgs.Length; i++) {
-                        extraArgs[i] = args[i + NormalArgumentCount];
-                    }
-                    argList = PythonTuple.Make(extraArgs);
-                } else {
-                    throw BadArgumentError(nargs);
-                }
-            } else {
-                for (int i = 0; i < nargs; i++) outArgs[i] = args[i];
-            }
-
-            if (ExpandListPosition >= 0) {
-                if (argList == null) argList = PythonTuple.MakeTuple();
-                outArgs[ExpandListPosition] = argList;
-            }
-            if (ExpandDictPosition >= 0) {
-                outArgs[ExpandDictPosition] = new PythonDictionary(); //PyDictionary.make();
-            }
-
-            if (!EnforceRecursion) return target(Context, outArgs);
-
-            PushFrame();
-            try {
-                return target(Context, outArgs);
-            } finally {
-                PopFrame();
-            }
-        }
-
-        [SpecialName]
-        public override object Call(CodeContext context, object[] args, string[] names) {
-            KwArgBinder argBinder = new KwArgBinder(context, null, args, names);
-            object[] defaults = this.Defaults;
-            if (defaults.Length != ArgNames.Length) {
-                // we need a 1<->1 mapping here for kwarg binder.  
-                object[] newDefs = new object[ArgNames.Length];
-
-                for (int i = 0; i < (NormalArgumentCount - defaults.Length); i++) {
-                    newDefs[i] = DBNull.Value;
-                }
-
-                Array.Copy(defaults, 0, newDefs, (NormalArgumentCount - defaults.Length), defaults.Length);
-                defaults = newDefs;
-            }
-
-            object[] realArgs = argBinder.DoBind(Name, ArgNames, defaults, ExpandDictPosition, ExpandListPosition);
-
-            if (realArgs != null) {
-                if (!EnforceRecursion) return target(Context, realArgs);
-                PushFrame();
-                try {
-                    return target(Context, realArgs);
-                } finally {
-                    PopFrame();
-                }
-            } else if (argBinder.GetError() != null) {
-                throw argBinder.GetError();
-            } else {
-                throw BadArgumentError(args.Length);
-            }
-        }
-    }
-
+  
     [PythonType("cell")]
     public class ClosureCell : ICodeFormattable, IValueEquality {
         private object _value;
@@ -1547,7 +1359,7 @@ namespace IronPython.Runtime.Calls {
         public string ToCodeString(CodeContext context) {
             return String.Format("<cell at {0}: {1} object at {2}>",
                 IdDispenser.GetId(this),
-                DynamicTypeOps.GetName(_value),
+                PythonTypeOps.GetName(_value),
                 IdDispenser.GetId(_value));
         }
 
@@ -1573,7 +1385,7 @@ namespace IronPython.Runtime.Calls {
         [SpecialNameAttribute]
         public int CompareTo(object other) {
             ClosureCell cc = other as ClosureCell;
-            if (cc == null) throw PythonOps.TypeError("cell.__cmp__(x,y) expected cell, got {0}", DynamicTypeOps.GetName(other));
+            if (cc == null) throw PythonOps.TypeError("cell.__cmp__(x,y) expected cell, got {0}", PythonTypeOps.GetName(other));
 
             return PythonOps.Compare(_value, cc._value);
         }

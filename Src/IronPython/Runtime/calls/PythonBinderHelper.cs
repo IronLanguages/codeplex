@@ -19,13 +19,14 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 
+using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Types;
-using Microsoft.Scripting.Generation;
+using IronPython.Runtime.Types;
+using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime.Calls {
     static class PythonBinderHelper {
@@ -62,19 +63,20 @@ namespace IronPython.Runtime.Calls {
             return exprargs;
         }
 
-        public static void MakeTest(StandardRule rule, bool templatable, params DynamicType[] types) {
+        public static void MakeTest(StandardRule rule, bool templatable, params PythonType[] types) {
             rule.SetTest(MakeTestForTypes(rule, types, templatable, 0));
         }
 
-        public static void MakeTest(StandardRule rule, params DynamicType[] types) {
+        public static void MakeTest(StandardRule rule, params PythonType[] types) {
             rule.SetTest(MakeTestForTypes(rule, types, 0));
         }
 
-        public static Expression MakeTestForTypes(StandardRule rule, DynamicType[] types, int index) {
+        public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, int index) {
             return MakeTestForTypes(rule, types, false, index);
         }
 
-        public static Expression MakeTestForTypes(StandardRule rule, DynamicType[] types, bool templatable, int index) {
+        public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, bool templatable, int index) {
+            Debug.Assert(rule != null);
             Expression test = MakeTypeTest(rule, types[index], rule.Parameters[index], templatable);
             if (index + 1 < types.Length) {
                 Expression nextTests = MakeTestForTypes(rule, types, templatable, index + 1);
@@ -90,13 +92,13 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public static Expression MakeTypeTest(StandardRule rule, DynamicType type, Expression tested, bool templatable) {
+        public static Expression MakeTypeTest(StandardRule rule, PythonType type, Expression tested, bool templatable) {
             if (!templatable && (type == null || type.IsNull)) {
                 return Ast.Equal(tested, Ast.Null());
             }
 
             Type clrType = type.UnderlyingSystemType;
-            bool isStaticType = !typeof(ISuperDynamicObject).IsAssignableFrom(clrType);
+            bool isStaticType = !typeof(IPythonObject).IsAssignableFrom(clrType);
 
             Expression test;
             if (!templatable) {
@@ -113,27 +115,27 @@ namespace IronPython.Runtime.Calls {
 
             if (!isStaticType) {
                 int version = type.Version;
-                if (version != DynamicType.DynamicVersion) {
+                if (version != PythonType.DynamicVersion) {
                     test = Ast.AndAlso(
                         test,
                         Ast.Call(
-                            typeof(RuntimeHelpers).GetMethod("CheckTypeVersion"),
+                            typeof(PythonOps).GetMethod("CheckTypeVersion"),
                             Ast.ConvertHelper(tested, typeof(object)),
                             GetVersionExpression(rule, templatable, version)
                         )
                     );
-                    rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).Validate);
+                    rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).Validate);
                 } else {
                     version = type.AlternateVersion;
                     test = Ast.AndAlso(
                         test,
                         Ast.Call(
-                            typeof(RuntimeHelpers).GetMethod("CheckAlternateTypeVersion"),
+                            typeof(PythonOps).GetMethod("CheckAlternateTypeVersion"),
                             Ast.ConvertHelper(tested, typeof(object)),
                             GetVersionExpression(rule, templatable, version)
                         )
                     );
-                    rule.AddValidator(new DynamicTypeValidator(new WeakReference(type), version).AlternateValidate);
+                    rule.AddValidator(new PythonTypeValidator(new WeakReference(type), version).AlternateValidate);
                 }
             }
 
@@ -154,12 +156,12 @@ namespace IronPython.Runtime.Calls {
         /// Produces an error message for the provided message and type names.  The error message should contain
         /// string formatting characters ({0}, {1}, etc...) for each of the type names.
         /// </summary>
-        public static StandardRule<T> TypeError<T>(string message, params DynamicType[] types) {
+        public static StandardRule<T> TypeError<T>(string message, params PythonType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
             MakeTest(ret, true, types);
             Expression[] formatArgs = new Expression[types.Length + 1];
             for (int i = 1; i < formatArgs.Length; i++) {
-                formatArgs[i] = ret.AddTemplatedConstant(typeof(string), DynamicTypeOps.GetName(types[i - 1]));
+                formatArgs[i] = ret.AddTemplatedConstant(typeof(string), PythonTypeOps.GetName(types[i - 1]));
             }
             formatArgs[0] = ret.AddTemplatedConstant(typeof(string), message);
             Type[] typeArgs = CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), types.Length + 1);
@@ -196,7 +198,7 @@ namespace IronPython.Runtime.Calls {
             private Type _type;
             private bool[] _static;
 
-            public TypeErrorKey(Type type, DynamicType[] types) {
+            public TypeErrorKey(Type type, PythonType[] types) {
                 _type = type;
                 _static = new bool[types.Length];
                 for (int i = 0; i < types.Length; i++) {
@@ -222,31 +224,67 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private class DynamicTypeValidator {
+        private class PythonTypeValidator {
             /// <summary>
             /// Weak reference to the dynamic type. Since they can be collected,
             /// we need to be able to let that happen and then disable the rule.
             /// </summary>
-            private WeakReference _dynamicType;
+            private WeakReference _pythonType;
 
             /// <summary>
             /// Expected version of the instance's dynamic type
             /// </summary>
             private int _version;
 
-            public DynamicTypeValidator(WeakReference dynamicType, int version) {
-                this._dynamicType = dynamicType;
+            public PythonTypeValidator(WeakReference pythonType, int version) {
+                this._pythonType = pythonType;
                 this._version = version;
             }
 
             public bool Validate() {
-                DynamicType dt = _dynamicType.Target as DynamicType;
+                PythonType dt = _pythonType.Target as PythonType;
                 return dt != null && dt.Version == _version;
             }
             public bool AlternateValidate() {
-                DynamicType dt = _dynamicType.Target as DynamicType;
+                PythonType dt = _pythonType.Target as PythonType;
                 return dt != null && dt.AlternateVersion == _version;
             }
+        }
+
+        //
+        // Various helpers related to calling Python __*__ conversion methods 
+        //
+        internal static Statement GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, StandardRule<T> rule) {
+            ErrorInfo error = context.LanguageContext.Binder.MakeConversionError(convertToAction.ToType, rule.Parameters[0]);
+            Statement failed;
+            switch (convertToAction.ResultKind) {
+                case ConversionResultKind.ImplicitTry:
+                case ConversionResultKind.ExplicitTry:
+                    failed = CompilerHelpers.GetTryConvertReturnValue(context, rule);
+                    break;
+                case ConversionResultKind.ExplicitCast:
+                case ConversionResultKind.ImplicitCast:
+                    failed = error.MakeErrorForRule(rule, context.LanguageContext.Binder);
+                    break;
+                default: throw new InvalidOperationException(convertToAction.ResultKind.ToString());
+            }
+            return failed;
+        }
+
+        /// <summary>
+        /// Used for conversions to bool
+        /// </summary>
+        internal static Expression GetConvertByLengthBody(ConvertToAction convertToAction, Variable tmp) {
+            return Ast.NotEqual(
+                Ast.Action.ConvertTo(
+                    typeof(int),
+                    Ast.Action.Call(
+                        convertToAction.ToType,
+                        Ast.Read(tmp)
+                    )
+                ),
+                Ast.Constant(0)
+            );
         }
     }
 }

@@ -177,7 +177,7 @@ def test_event():
     b.Event -= lambda1
     
     def f(): o1.Event += lambda2
-    AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Event'", f)
+    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'OverrideNothing' object is read-only", f)
    
     # ISSUE
     try:    o1.Event -= lambda2

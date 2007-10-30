@@ -44,11 +44,16 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.Condition(
-                ag.TransformAndDynamicConvert(_testExpr, typeof(bool)),
-                ag.TransformAndDynamicConvert(_trueExpr, type),
-                ag.TransformAndDynamicConvert(_falseExpr, type)
-            );
+            MSAst.Expression test = ag.TransformAndDynamicConvert(_testExpr, typeof(bool));
+            MSAst.Expression ifTrue = ag.TransformAndDynamicConvert(_trueExpr, type);
+            MSAst.Expression ifFalse = ag.TransformAndDynamicConvert(_falseExpr, type);
+
+            // Convert both to "type" ... since they are assignable already
+            // it is really just a cosmetic cast.
+            ifTrue = Ast.ConvertHelper(ifTrue, type);
+            ifFalse = Ast.ConvertHelper(ifFalse, type);
+
+            return Ast.Condition(test, ifTrue, ifFalse);
         }
 
         public override void Walk(PythonWalker walker) {

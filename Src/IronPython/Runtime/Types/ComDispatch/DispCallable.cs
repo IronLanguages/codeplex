@@ -1,3 +1,18 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Permissive License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
 #if !SILVERLIGHT // ComObject
 
 using System;
@@ -49,9 +64,6 @@ namespace IronPython.Runtime.Types.ComDispatch {
                 for (int i = 0; i < countOfArgs; i++) {
                     if (i < originalArgs.Length) {
                         object arg = originalArgs[i];
-                        // REVIEW: is it possible that ComDispatch args
-                        // REVIEW: are IReference? DLR seems to not have 
-                        // REVIEW: enough information to imply this.
                         if (arg is IStrongBox) {
                             argsForCall[i] = (arg as IStrongBox).Value;
                             parameterModifiers[i] = true;
@@ -81,11 +93,12 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
             static void UpdateByrefArguments(object[] originalArgs, object[] argsForCall, ParameterModifier parameterModifiers) {
 
-                // REVIEW: Same as in GetArgsForCall - this is weird, there should be no IReference's passed
-                // REVIEW: to IDispatch calls.
                 for (int i = 0; i < originalArgs.Length; i++) {
                     if (parameterModifiers[i]) {
-                        (originalArgs[i] as IStrongBox).Value = argsForCall[i];
+                        IStrongBox strongBox = originalArgs[i] as IStrongBox;
+                        if (strongBox != null) {
+                            strongBox.Value = argsForCall[i];
+                        }
                     }
                 }
             }
@@ -109,7 +122,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
                     // have to worry about marshalling the arguments. Type.InvokeMember will use
                     // IDispatch.Invoke under the hood.
                     object retVal = _dispatch.GetType().InvokeMember(
-                        _methodDesc.Name,
+                        _methodDesc.DispIdOrName,
                         bindingFlags,
                         Type.DefaultBinder,
                         _dispatch,

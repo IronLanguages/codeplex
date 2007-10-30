@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Diagnostics;   
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
@@ -28,8 +27,7 @@ using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("generator")]
-    public sealed class PythonGenerator : Generator, IEnumerable, ICustomMembers, IEnumerable<object> {
-        private static BuiltinFunction nextFunction = GetNextFunctionTemplate();
+    public sealed class PythonGenerator : Generator, IEnumerable, IEnumerable<object> {
         private NextTarget _next;
 
         public delegate bool NextTarget(PythonGenerator generator, out object ret);
@@ -64,13 +62,7 @@ namespace IronPython.Runtime {
         public override string ToString() {
             return string.Format("<generator object at {0}>", PythonOps.HexId(this));
         }
-
-        private static BuiltinFunction GetNextFunctionTemplate() {
-            BuiltinMethodDescriptor bimd = (BuiltinMethodDescriptor)TypeCache.Generator.GetMember(
-                DefaultContext.Default, null, Symbols.GeneratorNext);
-            return bimd.Template;
-        }
-
+        
         #region IEnumerable Members
 
         [PythonName("__iter__")]
@@ -78,47 +70,7 @@ namespace IronPython.Runtime {
             return this;
         }
 
-        #endregion
-
-        private static DynamicType generatorType = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonGenerator));
-
-
-        #region ICustomMembers Members
-
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return generatorType.TryGetMember(context, this, name, out value);
-        }
-
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            if (name == Symbols.GeneratorNext) {
-                // next is the most common call on generators, we optimize that call here.  We get
-                // two benefits out of this:
-                //      1. Avoid the dictionary lookup for next
-                //      2. Avoid the self-check in the method descriptor (because we know we're binding to a generator)
-                value = new BoundBuiltinFunction(nextFunction, this);
-                return true;
-            }
-            return generatorType.TryGetBoundMember(context, this, name, out value);
-        }
-
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            generatorType.SetMember(context, this, name, value);
-        }
-
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            generatorType.DeleteMember(context, this, name);
-            return true;
-        }
-
-        public IList<object> GetCustomMemberNames(CodeContext context) {
-            return new List(generatorType.GetMemberNames(context, this));
-        }
-
-        public System.Collections.Generic.IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            return generatorType.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
-        }
-
-        #endregion
+        #endregion      
 
         #region IEnumerable<object> Members
 

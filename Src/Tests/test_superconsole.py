@@ -51,7 +51,18 @@ def getTestOutput():
     '''
     Returns stdout and stderr output for a console test.
     '''
-    tfile = open('ip_session.log', 'r')
+    
+    #On some platforms 'ip_session.log' is not immediately created after
+    #calling the 'close' method of the file object writing to 'ip_session.log'.
+    #Give it a few seconds to catch up.
+    for i in xrange(5):
+        if "ip_session.log" in nt.listdir(nt.getcwd()):
+            tfile = open('ip_session.log', 'r')
+            break
+        from time import sleep
+        print "Waiting for ip_session.log to be created..."
+        sleep(1)
+    
     outlines = tfile.readlines()
     tfile.close()
     

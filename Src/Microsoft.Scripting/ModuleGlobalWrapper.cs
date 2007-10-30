@@ -103,7 +103,7 @@ namespace Microsoft.Scripting {
         }
 
         private string GetStringDisplay(object val) {
-            return (string)DynamicHelpers.GetDynamicType(val).InvokeUnaryOperator(_context, Operators.ConvertToString, val);
+            return val == null ? "(null)" : val.ToString();
         }
 
         public override string ToString() {

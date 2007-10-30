@@ -882,6 +882,19 @@ def test_function_closure_negative():
         except TypeError, e:
             pass
 
+def test_paramless_function_call_error():
+    def f(): pass
+    
+    try:
+        f(*(1, ))
+        AssertUnreachable()
+    except TypeError: pass
+        
+    try:
+        f(**{'abc':'def'})
+        AssertUnreachable()
+    except TypeError: pass
+
 @skip("interpreted")  # we don't have FuncEnv's in interpret modes so this always returns None
 def test_function_closure():
     def f(): pass

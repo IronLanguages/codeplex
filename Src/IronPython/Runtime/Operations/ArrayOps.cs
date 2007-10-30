@@ -21,7 +21,6 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -36,19 +35,19 @@ namespace IronPython.Runtime.Operations {
         #region Python APIs
 
         [OperatorSlot]
-        public static DynamicTypeSlot Call = new ArrayCallSlot();
+        public static PythonTypeSlot Call = new ArrayCallSlot();
 
-        internal class ArrayCallSlot : DynamicTypeSlot, ICallableWithCodeContext, IFancyCallable {
-            private DynamicType _type;
+        internal class ArrayCallSlot : PythonTypeSlot, ICallableWithCodeContext, IFancyCallable {
+            private PythonType _type;
 
             public ArrayCallSlot() { }
 
-            public ArrayCallSlot(DynamicType type) {
+            public ArrayCallSlot(PythonType type) {
                 _type = type;
             }
 
-            public override bool TryGetBoundValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
-                value = new ArrayCallSlot((DynamicType)owner);
+            internal override bool TryGetBoundValue(CodeContext context, object instance, PythonType owner, out object value) {
+                value = new ArrayCallSlot((PythonType)owner);
                 return true;
             }
 
@@ -99,8 +98,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object CreateArray(CodeContext context, DynamicType dynamicType, ICollection items) {
-            Type type = dynamicType.UnderlyingSystemType.GetElementType();
+        public static object CreateArray(CodeContext context, PythonType pythonType, ICollection items) {
+            Type type = pythonType.UnderlyingSystemType.GetElementType();
 
             Array res = Array.CreateInstance(type, items.Count);
 
@@ -113,8 +112,8 @@ namespace IronPython.Runtime.Operations {
         }
         
         [StaticExtensionMethod("__new__")]
-        public static object CreateArray(CodeContext context, DynamicType dynamicType, object items) {
-            Type type = dynamicType.UnderlyingSystemType.GetElementType();
+        public static object CreateArray(CodeContext context, PythonType pythonType, object items) {
+            Type type = pythonType.UnderlyingSystemType.GetElementType();
 
             object lenFunc;
             if (!PythonOps.TryGetBoundAttr(items, Symbols.Length, out lenFunc))

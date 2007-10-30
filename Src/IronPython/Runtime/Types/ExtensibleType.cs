@@ -19,26 +19,25 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    [PythonType(typeof(DynamicType))]
-    public class ExtensibleType : DynamicType, ICustomMembers, ICallableWithCodeContext {
+    [PythonType(typeof(PythonType))]
+    public class ExtensibleType : PythonType, ICustomMembers, ICallableWithCodeContext {
         
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object o) {
-            return DynamicHelpers.GetDynamicType(o);
+        public static object Make(PythonType cls, object o) {
+            return DynamicHelpers.GetPythonType(o);
         }
         
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType dt, string name, PythonTuple bases, IAttributesCollection dict) {
+        public static object Make(CodeContext context, PythonType dt, string name, PythonTuple bases, IAttributesCollection dict) {
             return new ExtensibleType(context, name, bases, dict);
         }
 
         public ExtensibleType(CodeContext context)
-            : base(Compiler.Generation.NewTypeMaker.GetNewType("type", PythonTuple.MakeTuple(TypeCache.DynamicType), new PythonDictionary())) {                        
+            : base(Compiler.Generation.NewTypeMaker.GetNewType("type", PythonTuple.MakeTuple(TypeCache.PythonType), new PythonDictionary())) {                        
         }
 
         public ExtensibleType(CodeContext context, string name, PythonTuple bases, IAttributesCollection dict)
@@ -52,36 +51,36 @@ namespace IronPython.Runtime.Types {
 
         bool ICustomMembers.TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
             if (name == Symbols.Class) {
-                value = DynamicHelpers.GetDynamicType(this);
+                value = DynamicHelpers.GetPythonType(this);
                 return true;
             }
 
             // we search the slots instead of doing a TryGetAttr so we can pass in the
-            // correct context (us instead of the DynamicType object)
-            DynamicTypeSlot dts;
+            // correct context (us instead of the PythonType object)
+            PythonTypeSlot dts;
             if (Value.TryResolveSlot(context, name, out dts)) {
                 if(dts.TryGetValue(context, null, this.Value, out value))
                     return true;
             }
 
-            return DynamicHelpers.GetDynamicType(this).TryGetMember(context, this, name, out value);
+            return DynamicHelpers.GetPythonType(this).TryGetMember(context, this, name, out value);
         }
 
         bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
             if (name == Symbols.Class) {
-                value = DynamicHelpers.GetDynamicType(this);
+                value = DynamicHelpers.GetPythonType(this);
                 return true;
             }
 
             // we search the slots instead of doing a TryGetAttr so we can pass in the
-            // correct context (us instead of the DynamicType object)
-            DynamicTypeSlot dts;
+            // correct context (us instead of the PythonType object)
+            PythonTypeSlot dts;
             if (Value.TryResolveSlot(context, name, out dts)) {
                 if (dts.TryGetBoundValue(context, null, this.Value, out value))
                     return true;
             }
 
-            return DynamicHelpers.GetDynamicType(this).TryGetMember(context, this, name, out value);
+            return DynamicHelpers.GetPythonType(this).TryGetMember(context, this, name, out value);
         }
 
         void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {
@@ -94,7 +93,7 @@ namespace IronPython.Runtime.Types {
 
         IList<object> IMembersList.GetCustomMemberNames(CodeContext context) {
             IList<object> res = Value.GetCustomMemberNames(context);
-            foreach (object x in TypeCache.DynamicType.GetCustomMemberNames(context)){
+            foreach (object x in TypeCache.PythonType.GetCustomMemberNames(context)){
                 res.Add(x);
             }
             return res;
@@ -102,7 +101,7 @@ namespace IronPython.Runtime.Types {
 
         IDictionary<object, object> ICustomMembers.GetCustomMemberDictionary(CodeContext context) {            
             IDictionary<object, object> dict = Value.GetMemberDictionary(context).AsObjectKeyedDictionary();
-            foreach (KeyValuePair<object, object> kvp in TypeCache.DynamicType.GetCustomMemberDictionary(context)) {
+            foreach (KeyValuePair<object, object> kvp in TypeCache.PythonType.GetCustomMemberDictionary(context)) {
                 if (!dict.ContainsKey(kvp.Key))
                     dict[kvp.Key] = kvp.Value;
             }
@@ -111,7 +110,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        public DynamicType Value {
+        public PythonType Value {
             get {
                 return this;
             }
@@ -122,7 +121,7 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName, PythonName("__call__")]    // still need PythonName for the virtual override to work
         public virtual object Call(CodeContext context, params object[] args) {
-            return DynamicTypeOps.CallParams(context, this, args);
+            return PythonTypeOps.CallParams(context, this, args);
         }
 
         #endregion

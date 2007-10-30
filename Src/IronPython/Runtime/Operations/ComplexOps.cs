@@ -22,7 +22,6 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -39,7 +38,7 @@ namespace IronPython.Runtime.Operations {
 
     public static partial class ComplexOps {
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls) {
+        public static object Make(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Complex64) return new Complex64();
             return cls.CreateInstance(context);
         }
@@ -47,7 +46,7 @@ namespace IronPython.Runtime.Operations {
         [StaticExtensionMethod("__new__")]
         public static object Make(
             CodeContext context, 
-            DynamicType cls,
+            PythonType cls,
             [DefaultParameterValueAttribute(null)]object real,
             [DefaultParameterValueAttribute(null)]object imag
            ) {
@@ -167,7 +166,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName, PythonName("__coerce__")]
         public static object Coerce(object x, object y) {
-            if (!(x is Complex64)) throw PythonOps.TypeError("__coerce__ requires a complex object, but got {0}", PythonOps.StringRepr(DynamicHelpers.GetDynamicType(x)));
+            if (!(x is Complex64)) throw PythonOps.TypeError("__coerce__ requires a complex object, but got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(x)));
             Complex64 right;
             if (Converter.TryConvertToComplex64(y, out right)) return PythonTuple.MakeTuple(x, right);
 
@@ -212,7 +211,7 @@ namespace IronPython.Runtime.Operations {
                 } else {
                     object res;
 
-                    if (DynamicHelpers.GetDynamicType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
+                    if (DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
                         if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
                             return PythonOps.Compare(((PythonTuple)res)[1], ((PythonTuple)res)[0]);
                         }
@@ -227,7 +226,7 @@ namespace IronPython.Runtime.Operations {
 
                 // Complex vs user type, check what the user type says
                 object ret;
-                if (DynamicHelpers.GetDynamicType(y).TryInvokeBinaryOperator(context,
+                if (DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context,
                     Operators.Compare,
                     y,
                     x,

@@ -32,7 +32,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
@@ -105,7 +104,7 @@ namespace IronPython.Compiler.Generation {
                     }
 
                     if (name == "__dict__") {
-                        dict[SymbolTable.StringToId(name)] = new DynamicTypeDictSlot();
+                        dict[SymbolTable.StringToId(name)] = new PythonTypeDictSlot();
                         continue;
                     } else if (name == "__weakref__") {
                         continue;
@@ -198,10 +197,10 @@ namespace IronPython.Compiler.Generation {
         private static NewTypeInfo GetTypeInfo(string typeName, PythonTuple bases, List<string> slots) {
             List<Type> interfaceTypes = new List<Type>();
             Type baseCLIType = typeof(object); // Pure Python object instances inherit from System.Object
-            DynamicType basePythonType = null;
+            PythonType basePythonType = null;
 
             foreach (object curBaseType in bases) {
-                DynamicType curBasePythonType = curBaseType as DynamicType;
+                PythonType curBasePythonType = curBaseType as PythonType;
 
                 if (curBasePythonType == null) {
                     if (curBaseType is OldClass)
@@ -216,7 +215,7 @@ namespace IronPython.Compiler.Generation {
                     curTypeToExtend = typeof(object);
                 } else {
                     if (IsInstanceType(curTypeToExtend)) {
-                        DynamicTypeSlot dummy;
+                        PythonTypeSlot dummy;
                         baseInterfaces = new List<Type>();
                         if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy) &&
                             (slots == null || slots.Count == 0)) {
@@ -272,13 +271,13 @@ namespace IronPython.Compiler.Generation {
             return new NewTypeInfo(baseCLIType, interfaceTypes, slots);
         }
 
-        private static Type GetBaseTypeFromUserType(DynamicType curBasePythonType, IList<Type> baseInterfaces, Type curTypeToExtend) {
-            Queue<DynamicType> processing = new Queue<DynamicType>();
+        private static Type GetBaseTypeFromUserType(PythonType curBasePythonType, IList<Type> baseInterfaces, Type curTypeToExtend) {
+            Queue<PythonType> processing = new Queue<PythonType>();
             processing.Enqueue(curBasePythonType);
 
             do {
-                DynamicType walking = processing.Dequeue();
-                foreach (DynamicType dt in walking.BaseTypes) {
+                PythonType walking = processing.Dequeue();
+                foreach (PythonType dt in walking.BaseTypes) {
                     if (dt.ExtensionType == curTypeToExtend) continue;
 
                     if (dt.ExtensionType.IsInterface) {
@@ -410,9 +409,9 @@ namespace IronPython.Compiler.Generation {
         private void GetOrDefineClass() {
             FieldInfo baseTypeField = _baseType.GetField("__class__");
             if (baseTypeField == null) {
-                _typeField = _tg.AddField(typeof(DynamicType), "__class__");
+                _typeField = _tg.AddField(typeof(PythonType), "__class__");
             } else {
-                Debug.Assert(baseTypeField.FieldType == typeof(DynamicType));
+                Debug.Assert(baseTypeField.FieldType == typeof(PythonType));
                 _typeField = new FieldSlot(new ThisSlot(_tg.TypeBuilder), baseTypeField);
                 _hasBaseTypeField = true;
             }
@@ -462,7 +461,7 @@ namespace IronPython.Compiler.Generation {
             // "Adds" base methods to super type (should really add to the derived type)
             // this makes super(...).xyz to work - otherwise we'd return a function that
             // did a virtual call resulting in a stack overflow.
-            DynamicType rt = DynamicHelpers.GetDynamicTypeFromType(_baseType);
+            PythonType rt = DynamicHelpers.GetPythonTypeFromType(_baseType);
 
             foreach (MethodInfo mi in finishedType.GetMethods()) {
                 if (!ShouldOverrideVirtual(mi)) continue;
@@ -470,8 +469,8 @@ namespace IronPython.Compiler.Generation {
                 string methodName = mi.Name;
                 if (methodName.StartsWith(BaseMethodPrefix)) {
                     foreach (string newName in GetBaseName(mi, specialNames)) {
-                        DynamicMixinBuilder dtb = DynamicMixinBuilder.GetBuilder(rt);
-                        DynamicTypeSlot dts;
+                        PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(rt);
+                        PythonTypeSlot dts;
                         if (rt.TryLookupSlot(DefaultContext.Default, SymbolTable.StringToId(newName), out dts)) {
                             BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
                             if (bmd != null) {
@@ -634,7 +633,7 @@ namespace IronPython.Compiler.Generation {
                 if (_slots == null) return true;
                 if (_slots.Contains("__dict__")) return true;
                 
-                foreach (DynamicType pt in _baseClasses) {
+                foreach (PythonType pt in _baseClasses) {
                     if (IsInstanceType(pt.UnderlyingSystemType)) return true;
                 }
 
@@ -664,12 +663,12 @@ namespace IronPython.Compiler.Generation {
         private void ImplementSuperDynamicObject() {
             CodeGen cg;
 
-            _tg.TypeBuilder.AddInterfaceImplementation(typeof(ISuperDynamicObject));
+            _tg.TypeBuilder.AddInterfaceImplementation(typeof(IPythonObject));
 
             MethodAttributes attrs = (MethodAttributes)0;
             if (_slots != null) attrs = MethodAttributes.Virtual;
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("get_Dict"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_Dict"));
             if (NeedsDictionary) {
                 _dictField.EmitGet(cg);
                 cg.EmitReturn();
@@ -679,7 +678,7 @@ namespace IronPython.Compiler.Generation {
             }
             cg.Finish();
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("ReplaceDict"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("ReplaceDict"));
             if (NeedsDictionary) {
                 cg.EmitArgGet(0);
                 _dictField.EmitSet(cg);
@@ -691,7 +690,7 @@ namespace IronPython.Compiler.Generation {
             }
             cg.Finish();
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("get_HasDictionary"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_HasDictionary"));
             if (NeedsDictionary) {
                 cg.EmitBoolean(true);
                 cg.EmitReturn();
@@ -701,7 +700,7 @@ namespace IronPython.Compiler.Generation {
             }
             cg.Finish();
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("SetDict"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("SetDict"));
             if (NeedsDictionary) {
                 _dictField.EmitGetAddr(cg);
                 cg.EmitArgGet(0);
@@ -716,12 +715,12 @@ namespace IronPython.Compiler.Generation {
 
             if (_hasBaseTypeField) return;
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("get_DynamicType"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_PythonType"));
             _typeField.EmitGet(cg);
             cg.EmitReturn();
             cg.Finish();
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(ISuperDynamicObject).GetMethod("SetDynamicType"));
+            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("SetPythonType"));
             cg.EmitArgGet(0);
             _typeField.EmitSet(cg);
             cg.EmitReturn();
@@ -786,16 +785,16 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        internal bool BaseHasWeakRef(DynamicType curType) {
-            DynamicType dt = curType;
-            DynamicTypeSlot dts;
+        internal bool BaseHasWeakRef(PythonType curType) {
+            PythonType dt = curType;
+            PythonTypeSlot dts;
             if (dt != null && 
                 dt.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dts) &&
                 dt.TryLookupSlot(DefaultContext.Default, Symbols.WeakRef, out dts)) {
                 return true;
             }
 
-            foreach (DynamicType baseType in curType.BaseTypes) {
+            foreach (PythonType baseType in curType.BaseTypes) {
                 if (BaseHasWeakRef(baseType)) return true;
             }
             return false;
@@ -809,7 +808,7 @@ namespace IronPython.Compiler.Generation {
                 // if we are slotless or the user defined __weakref__ in slots
                 bool baseHasWeakRef = false;
                 foreach (object pt in _baseClasses) {
-                    DynamicType dt = pt as DynamicType;
+                    PythonType dt = pt as PythonType;
                     if (dt != null && BaseHasWeakRef(dt)) {
                         baseHasWeakRef = true;
                         break;
@@ -965,16 +964,16 @@ namespace IronPython.Compiler.Generation {
                         return;
                     }
                 } else if (mi == pi.GetGetMethod(true)) {
-                    if (mi.Name != "get_DynamicType") {
+                    if (mi.Name != "get_PythonType") {
                         names.Add("__getitem__");
-                        if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
+                        if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                         CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
                         if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                     }
                     return;
                 } else if (mi == pi.GetSetMethod(true)) {
                     names.Add("__setitem__");
-                    if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
+                    if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
                     if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
                     return;
@@ -984,11 +983,11 @@ namespace IronPython.Compiler.Generation {
             EventInfo[] eis = mi.DeclaringType.GetEvents(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (EventInfo ei in eis) {
                 if (ei.GetAddMethod() == mi) {
-                    if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
+                    if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
                     CreateVTableEventOverride(mi, GetOrMakeVTableEntry(mi.Name));
                     return;
                 } else if (ei.GetRemoveMethod() == mi) {
-                    if (NameConverter.TryGetName(DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
+                    if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), ei, mi, out name) == NameType.None) return;
                     CreateVTableEventOverride(mi, GetOrMakeVTableEntry(mi.Name));
                     return;
                 }
@@ -1020,17 +1019,17 @@ namespace IronPython.Compiler.Generation {
                 return;
             }
 
-            DynamicType baseDynamicType;
+            PythonType basePythonType;
             if (_baseType == mi.DeclaringType || _baseType.IsSubclassOf(mi.DeclaringType)) {
-                baseDynamicType = DynamicHelpers.GetDynamicTypeFromType(_baseType);
+                basePythonType = DynamicHelpers.GetPythonTypeFromType(_baseType);
             } else {
                 // We must be inherting from an interface
                 Debug.Assert(mi.DeclaringType.IsInterface);
-                baseDynamicType = DynamicHelpers.GetDynamicTypeFromType(mi.DeclaringType);
+                basePythonType = DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType);
             }
 
             string name = null;
-            if (NameConverter.TryGetName(baseDynamicType, mi, out name) == NameType.None)
+            if (NameConverter.TryGetName(basePythonType, mi, out name) == NameType.None)
                 return;
 
             if (mi.DeclaringType == typeof(object) && mi.Name == "Finalize") return;
@@ -1185,7 +1184,7 @@ namespace IronPython.Compiler.Generation {
             }
             cg.ContextSlot = context;
 
-            StubGenerator.EmitClrCallStub(cg, callTarget, argStart, attrs, null);
+            StubGenerator.EmitClrCallStub(cg, callTarget, argStart, attrs);
 
             cg.Finish();
         }
