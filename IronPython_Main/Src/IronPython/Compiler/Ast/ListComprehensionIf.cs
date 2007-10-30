@@ -34,7 +34,11 @@ namespace IronPython.Compiler.Ast {
             return Ast.If(
                 Span,
                 Ast.IfConditions(
-                    Ast.IfCondition(Span, Span.End, ag.Transform(_test), body)
+                    Ast.IfCondition(
+                        Span, Span.End,
+                        ag.TransformAndDynamicConvert(_test, typeof(bool)),
+                        body
+                    )
                 ),
                 null
             );

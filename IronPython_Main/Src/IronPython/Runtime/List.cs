@@ -66,7 +66,7 @@ namespace IronPython.Runtime {
             }
 
             try {
-                if (DynamicHelpers.GetDynamicType(sequence).TryInvokeUnaryOperator(context, Operators.Length, sequence, out len)) {
+                if (DynamicHelpers.GetPythonType(sequence).TryInvokeUnaryOperator(context, Operators.Length, sequence, out len)) {
                     int ilen = Converter.ConvertToInt32(len);
                     _data = new object[ilen];
                     _size = 0;

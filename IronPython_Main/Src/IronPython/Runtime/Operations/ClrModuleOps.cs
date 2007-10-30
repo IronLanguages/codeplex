@@ -20,7 +20,6 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -31,7 +30,7 @@ using IronPython.Runtime.Calls;
 [assembly: PythonExtensionType(typeof(ClrModule.ReferencesList), typeof(ClrReferencesListOps))]
 namespace IronPython.Runtime.Operations {
     public static class ClrModuleOps {
-        private static DynamicType _strongBoxType;
+        private static PythonType _strongBoxType;
 
         #region Runtime Type Checking support
 #if !SILVERLIGHT // files, paths
@@ -64,20 +63,23 @@ namespace IronPython.Runtime.Operations {
         public static Type GetClrType(ClrModule self, Type type) {
             return type;
         }
-        
-        public static DynamicType GetDynamicType(ClrModule self, Type t) {
-            return DynamicHelpers.GetDynamicTypeFromType(t);
+
+        /// <summary>
+        /// TODO: Remove me before 2.0 ships (not necessary for backwards compatibility except for w/ alpha 2.0 builds)... 
+        /// </summary>
+        public static PythonType GetDynamicType(ClrModule self, Type t) {
+            return DynamicHelpers.GetPythonTypeFromType(t);
         }
 
         [PropertyMethod]
-        public static DynamicType GetReference(ClrModule mod) {
+        public static PythonType GetReference(ClrModule mod) {
            return GetStrongBox(mod);
         }
 
         [PropertyMethod]
-        public static DynamicType GetStrongBox(ClrModule mod) {
+        public static PythonType GetStrongBox(ClrModule mod) {
             if (_strongBoxType == null) {
-                _strongBoxType = DynamicHelpers.GetDynamicTypeFromType(typeof(StrongBox<>));
+                _strongBoxType = DynamicHelpers.GetPythonTypeFromType(typeof(StrongBox<>));
             }
             return _strongBoxType;
         }
@@ -129,7 +131,7 @@ namespace IronPython.Runtime.Operations {
             #endregion
         }
 
-        public class RuntimeArgChecker : DynamicTypeSlot, ICallableWithCodeContext, IFancyCallable {
+        public class RuntimeArgChecker : PythonTypeSlot, ICallableWithCodeContext, IFancyCallable {
             private object[] _expected;
             private object _func;
             private object _inst;
@@ -154,9 +156,9 @@ namespace IronPython.Runtime.Operations {
 
                 // no need to validate self... the method should handle it.
                 for (int i = start; i < args.Length + start; i++) {
-                    DynamicType dt = DynamicHelpers.GetDynamicType(args[i - start]);
+                    PythonType dt = DynamicHelpers.GetPythonType(args[i - start]);
 
-                    DynamicType expct = _expected[i] as DynamicType;
+                    PythonType expct = _expected[i] as PythonType;
                     if (expct == null) expct = ((OldClass)_expected[i]).TypeObject;
                     if (dt != _expected[i] && !dt.IsSubclassOf(expct)) {
                         throw PythonOps.AssertionError("argument {0} has bad value (got {1}, expected {2})", i, dt, _expected[i]);
@@ -178,7 +180,7 @@ namespace IronPython.Runtime.Operations {
 
             #endregion
 
-            public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+            internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 value = new RuntimeArgChecker(instance, _func, _expected);
                 return true;
             }
@@ -229,7 +231,7 @@ namespace IronPython.Runtime.Operations {
             #endregion
         }
 
-        public class RuntimeReturnChecker : DynamicTypeSlot, ICallableWithCodeContext, IFancyCallable {
+        public class RuntimeReturnChecker : PythonTypeSlot, ICallableWithCodeContext, IFancyCallable {
             private object _retType;
             private object _func;
             private object _inst;
@@ -248,9 +250,9 @@ namespace IronPython.Runtime.Operations {
                 // we return void...
                 if (ret == null && _retType == null) return;
 
-                DynamicType dt = DynamicHelpers.GetDynamicType(ret);
+                PythonType dt = DynamicHelpers.GetPythonType(ret);
                 if (dt != _retType) {
-                    DynamicType expct = _retType as DynamicType;
+                    PythonType expct = _retType as PythonType;
                     if (expct == null) expct = ((OldClass)_retType).TypeObject;
 
                     if (!dt.IsSubclassOf(expct))
@@ -281,7 +283,7 @@ namespace IronPython.Runtime.Operations {
 
             #endregion
 
-            public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+            internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 value = GetAttribute(instance, owner);
                 return true;
             }
@@ -303,8 +305,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         // backwards compatibility w/ IronPython v1.x
-        public static DynamicType GetPythonType(ClrModule self, Type t) {
-            return DynamicHelpers.GetDynamicTypeFromType(t);
+        public static PythonType GetPythonType(ClrModule self, Type t) {
+            return DynamicHelpers.GetPythonTypeFromType(t);
         }
 
     }

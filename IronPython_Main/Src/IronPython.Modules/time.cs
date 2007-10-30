@@ -21,11 +21,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {
@@ -278,7 +278,7 @@ namespace IronPython.Modules {
                 return (long)dblVal;
             }
 
-            throw PythonOps.TypeError("expected int, got {0}", DynamicHelpers.GetDynamicType(seconds));
+            throw PythonOps.TypeError("expected int, got {0}", DynamicHelpers.GetPythonType(seconds));
         }
 
         enum FormatInfoType {
@@ -479,7 +479,7 @@ namespace IronPython.Modules {
 
         [PythonType("struct_time")]
         public class StructTime : PythonTuple {
-            private static DynamicType _StructTimeType = DynamicHelpers.GetDynamicTypeFromType(typeof(StructTime));
+            private static PythonType _StructTimeType = DynamicHelpers.GetPythonTypeFromType(typeof(StructTime));
 
             public object Year {
                 [PythonName("tm_year")]
@@ -523,7 +523,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__new__")]
-            public static StructTime Make(CodeContext context, DynamicType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
+            public static StructTime Make(CodeContext context, PythonType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
                 if (cls == _StructTimeType) {
                     return new StructTime(year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst);
                 } else {
@@ -542,12 +542,6 @@ namespace IronPython.Modules {
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(CodeContext context, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
                 return PythonTuple.MakeTuple(StructTime.Make(context, _StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
-            }
-
-            public override DynamicType DynamicType {
-                get {
-                    return _StructTimeType;
-                }
             }
         }
     }

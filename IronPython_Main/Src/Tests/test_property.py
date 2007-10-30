@@ -97,14 +97,14 @@ def test_reflected_extension_property_ops():
     '''
     Test to hit IronPython.RunTime.Operations.ReflectedExtensionPropertyOps
     '''
-    t_list = [  type(max).__dict__['__name__'],
-                type(len).__dict__['__name__'],
-                type(pow).__dict__['__name__'],
-                type(hex).__dict__['__name__'],
+    t_list = [  (complex.__dict__['real'], 'complex', 'float', 'Real'),
+                (complex.__dict__['imag'], 'complex', 'float', 'Imaginary'),
+                (object.__dict__['__class__'], 'object', 'type', '__class__'),
+                (object.__dict__['__module__'], 'object', 'str', '__module__'),
                 ]
     
-    for stuff in t_list:
-        AreEqual(stuff.__doc__(), "Get: str Name(builtin_function_or_method self)" + newline)
+    for stuff, typename, returnType, propName in t_list:
+        Assert(stuff.__doc__.startswith("Get: " + returnType + " " + propName + "(" + typename + " self)" + newline), stuff.__doc__)
                 
         
 def test_prop_doc_only():

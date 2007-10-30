@@ -149,9 +149,141 @@ namespace IronPython.Runtime.Types {
                     return MakeOperationRule<T>((DoOperationAction)action, context, args);
                 case DynamicActionKind.Call:
                     return MakeCallRule<T>((CallAction)action, context, args);
+                case DynamicActionKind.ConvertTo:
+                    return MakeConvertToRule<T>((ConvertToAction)action, context, args);
                 default:
                     return null;
             }
+        }
+
+        private StandardRule<T> MakeConvertToRule<T>(ConvertToAction convertToAction, CodeContext context, object[] args) {
+            Type toType = convertToAction.ToType;
+            if (toType == typeof(int)) {
+                return MakeConvertRuleForCall<T>(context, convertToAction, Symbols.ConvertToInt, "ConvertToInt");
+            } else if (toType == typeof(BigInteger)) {
+                return MakeConvertRuleForCall<T>(context, convertToAction, Symbols.ConvertToLong, "ConvertToLong");
+            } else if (toType == typeof(double)) {
+                return MakeConvertRuleForCall<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat");
+            } else if (toType == typeof(Complex64)) {
+                return MakeConvertComplexRuleForCall<T>(context, convertToAction);
+            } else if (toType == typeof(bool)) {
+                return MakeBoolConvertRuleForCall<T>(context, convertToAction);
+            }
+
+            return null;
+        }
+
+        private static StandardRule<T> MakeConvertComplexRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+
+            // we could get better throughput w/ a more specific rule against our current custom old class but
+            // this favors less code generation.
+            Variable tmp = rule.GetTemporary(typeof(object), "callFunc"); // , Symbols.ConvertToComplex, "ConvertToComplex"
+
+            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            Statement tryFloat = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat", rule, tmp, failed);
+            rule.SetTarget(
+                MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToComplex, "ConvertToComplex", rule, tmp, tryFloat)
+            );
+
+            return rule;
+        }
+
+        private static StandardRule<T> MakeConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+
+            // we could get better throughput w/ a more specific rule against our current custom old class but
+            // this favors less code generation.
+            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+
+            Statement failed =  PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            rule.SetTarget(
+                MakeConvertCallBody<T>(context, convertToAction, symbolId, returner, rule, tmp, failed)
+            );
+
+            
+            return rule;
+        }
+
+        private static IfStatement MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, Variable tmp, Statement @else) {
+            return Ast.IfThenElse(
+                Ast.Call(
+                    Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
+                    typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
+                    Ast.CodeContext(),
+                    Ast.Constant(symbolId),
+                    Ast.Read(tmp)
+                ),
+                rule.MakeReturn(context.LanguageContext.Binder,
+                    Ast.Call(
+                        PythonOps.GetConversionHelper(returner, convertToAction.ResultKind),
+                        Ast.Action.Call(
+                            typeof(object),
+                            Ast.Read(tmp)
+                        )
+                    )
+                ),
+                @else
+            );
+        }
+
+        private static StandardRule<T> MakeBoolConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+
+            // we could get better throughput w/ a more specific rule against our current custom old class but
+            // this favors less code generation.
+            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+
+            // Python anything can be converted to a bool (by default if it's not null it's true).  If we don't
+            // find the conversion methods, and the request comes from Python, the result is true.
+            Statement error;
+            if (context.LanguageContext.Binder is PythonBinder) {
+                error = rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Constant(true)
+                );
+            } else {
+                error = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            }
+
+            rule.SetTarget(
+                Ast.IfThenElse(
+                    Ast.Call(
+                        Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
+                        typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
+                        Ast.CodeContext(),
+                        Ast.Constant(Symbols.NonZero),
+                        Ast.Read(tmp)
+                    ),
+                    rule.MakeReturn(context.LanguageContext.Binder,
+                        Ast.Call(
+                            PythonOps.GetConversionHelper("ConvertToNonZero", convertToAction.ResultKind),
+                            Ast.Action.Call(
+                                typeof(object),
+                                Ast.Read(tmp)
+                            )
+                        )
+                    ),
+                    Ast.IfThenElse(
+                        Ast.Call(
+                            Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
+                            typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
+                            Ast.CodeContext(),
+                            Ast.Constant(Symbols.Length),
+                            Ast.Read(tmp)
+                        ),
+                        rule.MakeReturn(context.LanguageContext.Binder,
+                            PythonBinderHelper.GetConvertByLengthBody(convertToAction, tmp)
+                        ),
+                        error
+                    )
+                )
+            );
+
+            return rule;
         }
 
         private StandardRule<T> MakeCallRule<T>(CallAction callAction, CodeContext context, object[] args) {
@@ -414,7 +546,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static Expression AddNumericTest<T>(StandardRule<T> rule, Expression sliceTest, Expression parameter) {
-            if (!PythonOps.IsNumericType(parameter.Type) && parameter.Type != typeof(System.Reflection.Missing)) {
+            if (!PythonOps.IsNumericType(parameter.Type) && parameter.Type != typeof(MissingParameter)) {
                 sliceTest = Ast.AndAlso(
                         sliceTest,
                         Ast.OrElse(
@@ -550,7 +682,7 @@ namespace IronPython.Runtime.Types {
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
                 }
-                throw PythonOps.TypeError("__str__ returned non-string type ({0})", DynamicTypeOps.GetName(ret));
+                throw PythonOps.TypeError("__str__ returned non-string type ({0})", PythonTypeOps.GetName(ret));
             }
 
             return ToCodeString(DefaultContext.Default);
@@ -570,7 +702,7 @@ namespace IronPython.Runtime.Types {
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
                 }
-                throw PythonOps.TypeError("__repr__ returned non-string type ({0})", DynamicTypeOps.GetName(ret));
+                throw PythonOps.TypeError("__repr__ returned non-string type ({0})", PythonTypeOps.GetName(ret));
             }
 
             return string.Format("<{0} instance at {1}>", __class__.FullName, PythonOps.HexId(this));
@@ -774,7 +906,7 @@ namespace IronPython.Runtime.Types {
                 if (value is Int32 || value is BigInteger) {
                     return RuntimeHelpers.BooleanToObject(Converter.ConvertToBoolean(value));
                 }
-                throw PythonOps.TypeError("an integer is required, got {0}", DynamicTypeOps.GetName(value));
+                throw PythonOps.TypeError("an integer is required, got {0}", PythonTypeOps.GetName(value));
             }
 
             return RuntimeHelpers.True;
@@ -850,7 +982,7 @@ namespace IronPython.Runtime.Types {
                 return ret;
             }
             throw PythonOps.AttributeError("'{0}' object has no attribute '{1}'",
-                DynamicTypeOps.GetName(this), SymbolTable.IdToString(name));
+                PythonTypeOps.GetName(this), SymbolTable.IdToString(name));
         }
 
         #region ICustomMembers Members
@@ -983,7 +1115,7 @@ namespace IronPython.Runtime.Types {
             OldInstance oiOther = other as OldInstance;
             // CPython raises this if called directly, but not via cmp(os,ns) which still calls the user __cmp__
             //if(!(oiOther is OldInstance)) 
-            //    throw Ops.TypeError("instance.cmp(x,y) -> y must be an instance, got {0}", Ops.StringRepr(DynamicHelpers.GetDynamicType(other)));
+            //    throw Ops.TypeError("instance.cmp(x,y) -> y must be an instance, got {0}", Ops.StringRepr(DynamicHelpers.GetPythonType(other)));
 
             object res = InternalCompare(Symbols.Cmp, other);
             if (res != PythonOps.NotImplemented) return res;
@@ -1115,7 +1247,7 @@ namespace IronPython.Runtime.Types {
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Hash, out func)) {
                 object res = PythonCalls.Call(func);
                 if (!(res is int))
-                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(DynamicTypeOps.GetName(res)));
+                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(res)));
 
                 return (int)res;
             }

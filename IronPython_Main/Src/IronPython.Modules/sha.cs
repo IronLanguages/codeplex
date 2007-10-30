@@ -18,8 +18,6 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
-using Microsoft.Scripting.Types;
-
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 

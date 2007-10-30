@@ -37,9 +37,13 @@ for s in dir(et):
     if s.startswith("Scenario"):
         exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
 
+#Rowan Work Item 312902
+@skip("interpreted")
 def test_trivial():
     Assert(IronPython.Hosting.PythonEngine.Version != "")
 
+#Rowan Work Item 312902
+@skip("interpreted")
 def test_interpreted():
     global pe
 
@@ -86,6 +90,8 @@ def test_interpreted():
         # "Un-import" these modules so that they get re-imported in emit mode
         sys.modules = modules
 
+#Rowan Work Item 312902
+@skip("interpreted")
 def test_deferred_compilation():
     global pe
     
@@ -322,6 +328,8 @@ def skip_test_CreateLambda_Division():
     Assert(result < 1)
 
 
+#Rowan Work Item 312902
+@skip("interpreted")
 def test_get_exception_message():
     ex = System.Exception("BAD")
     tName, tType = pe.GetExceptionMessage(ex)

@@ -19,7 +19,6 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
@@ -36,8 +35,8 @@ namespace IronPython.Runtime.Operations {
                 if (pastFirstType) { 
                     sb.Append(", ");
                 }
-                DynamicType dt = DynamicHelpers.GetDynamicTypeFromType(type);
-                sb.Append(PythonOps.StringRepr(DynamicTypeOps.GetName(dt)));
+                PythonType dt = DynamicHelpers.GetPythonTypeFromType(type);
+                sb.Append(PythonOps.StringRepr(PythonTypeOps.GetName(dt)));
                 pastFirstType = true;
             }
             sb.Append(">");
@@ -52,17 +51,17 @@ namespace IronPython.Runtime.Operations {
         /// when no bindings are available.
         /// </summary>
         [SpecialName]
-        public static DynamicType GetItem(TypeGroup self, params DynamicType[] types) {
+        public static PythonType GetItem(TypeGroup self, params PythonType[] types) {
             return GetItemHelper(self, types);
         }
 
         [SpecialName]
-        public static DynamicType GetItem(TypeGroup self, params object[] types) {
-            DynamicType[] dynamicTypes = new DynamicType[types.Length];
+        public static PythonType GetItem(TypeGroup self, params object[] types) {
+            PythonType[] pythonTypes = new PythonType[types.Length];
             for(int i = 0; i < types.Length; i++) {
                 object t = types[i];
-                if (t is DynamicType) {
-                    dynamicTypes[i] = (DynamicType)t;
+                if (t is PythonType) {
+                    pythonTypes[i] = (PythonType)t;
                     continue;
                 } else if (t is TypeGroup) {
                     TypeGroup typeGroup = t as TypeGroup;
@@ -70,16 +69,16 @@ namespace IronPython.Runtime.Operations {
                     if (!typeGroup.TryGetNonGenericType(out nonGenericType)) {
                         throw PythonOps.TypeError("cannot use open generic type {0} as type argument", typeGroup.NormalizedName);
                     }
-                    dynamicTypes[i] = DynamicHelpers.GetDynamicTypeFromType(nonGenericType);
+                    pythonTypes[i] = DynamicHelpers.GetPythonTypeFromType(nonGenericType);
                 } else {
                     throw PythonOps.TypeErrorForTypeMismatch("type", t);
                 }
             }
 
-            return GetItemHelper(self, dynamicTypes);
+            return GetItemHelper(self, pythonTypes);
         }
 
-        private static DynamicType GetItemHelper(TypeGroup self, DynamicType[] types) {
+        private static PythonType GetItemHelper(TypeGroup self, PythonType[] types) {
             TypeTracker genType = self.GetTypeForArity(types.Length);
             if (genType == null) {
                 throw new ArgumentException(String.Format("could not find compatible generic type for {0} type arguments", types.Length));
@@ -87,10 +86,10 @@ namespace IronPython.Runtime.Operations {
 
             Type res = genType.Type;
             if (types.Length != 0) {
-                res = res.MakeGenericType(DynamicTypeOps.ConvertToTypes(types));
+                res = res.MakeGenericType(PythonTypeOps.ConvertToTypes(types));
             }
 
-            return DynamicHelpers.GetDynamicTypeFromType(res);
+            return DynamicHelpers.GetPythonTypeFromType(res);
         }
 
     }

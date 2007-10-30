@@ -15,18 +15,20 @@
 
 using System;
 using System.Collections.Generic;
-using IronPython.Runtime;
 using System.Text;
 using System.Runtime.InteropServices;
 
-using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+
+using IronPython.Runtime;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
     [PythonType("gc")]
     public static class PythonGC {
-        public static object gc = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonGC));
+        public static object gc = DynamicHelpers.GetPythonTypeFromType(typeof(PythonGC));
         public const int DEBUG_STATS = 1;
         public const int DEBUG_COLLECTABLE = 2;
         public const int DEBUG_UNCOLLECTABLE = 4;

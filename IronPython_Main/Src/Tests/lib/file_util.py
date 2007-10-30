@@ -183,6 +183,9 @@ def delete_all_f(module_name):
 
 def copy_dlls_for_peverify(dlls):
     import System
+    if "-X:SaveAssemblies" not in System.Environment.GetCommandLineArgs(): 
+        return 
+                
     for x in dlls:
         try:
             filecopy(x, sys.exec_prefix + "\\" + System.IO.Path.GetFileName(x))

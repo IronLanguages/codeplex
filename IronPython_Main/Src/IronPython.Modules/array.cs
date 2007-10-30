@@ -28,11 +28,12 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]
 namespace IronPython.Modules {
     public static class ArrayModule  {
-        public static object ArrayType = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonArray));
+        public static object ArrayType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonArray));
         public static object array = ArrayType;
 
         [PythonType("array")]
@@ -42,7 +43,7 @@ namespace IronPython.Modules {
             private WeakRefTracker tracker;
 
             public PythonArray(string type, [Optional]object initializer) {
-                if (type == null || type.Length != 1) throw PythonOps.TypeError("expected character, got {0}", DynamicHelpers.GetDynamicType(type));
+                if (type == null || type.Length != 1) throw PythonOps.TypeError("expected character, got {0}", DynamicHelpers.GetPythonType(type));
 
                 typeCode = type[0];
                 data = CreateData(typeCode);
@@ -186,8 +187,8 @@ namespace IronPython.Modules {
                 while (ie.MoveNext()) {
                     if (!data.CanStore(ie.Current)) {
                         throw PythonOps.TypeError("expected {0}, got {1}",
-                            PythonOps.StringRepr(DynamicHelpers.GetDynamicTypeFromType(data.StorageType)),
-                            PythonOps.StringRepr(DynamicHelpers.GetDynamicType(ie.Current)));
+                            PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(data.StorageType)),
+                            PythonOps.StringRepr(DynamicHelpers.GetPythonType(ie.Current)));
                     }
                     items.Add(ie.Current);
                 }
@@ -580,11 +581,11 @@ namespace IronPython.Modules {
                         if (!Converter.TryConvert(value, typeof(T), out newVal)) {
                             if(value != null && typeof(T).IsPrimitive && typeof(T) != typeof(char))
                                 throw PythonOps.OverflowError("couldn't convert {1} to {0}",
-                                    PythonOps.StringRepr(DynamicHelpers.GetDynamicTypeFromType(typeof(T))),
-                                    PythonOps.StringRepr(DynamicHelpers.GetDynamicType(value)));
+                                    PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(typeof(T))),
+                                    PythonOps.StringRepr(DynamicHelpers.GetPythonType(value)));
                             throw PythonOps.TypeError("expected {0}, got {1}",
-                                PythonOps.StringRepr(DynamicHelpers.GetDynamicTypeFromType(typeof(T))),
-                                PythonOps.StringRepr(DynamicHelpers.GetDynamicType(value)));
+                                PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(typeof(T))),
+                                PythonOps.StringRepr(DynamicHelpers.GetPythonType(value)));
                         }
                         value = newVal;
                     }

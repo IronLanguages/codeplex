@@ -25,7 +25,6 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Types;
 
 using IronPython.Hosting;
 using IronPython.Compiler;
@@ -45,7 +44,7 @@ namespace IronPython.Runtime.Types {
         #region Public Python API Surface
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptModule MakeModule(CodeContext context, DynamicType cls, params object[] args\u00F8) {
+        public static ScriptModule MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
                 ScriptModule module = PythonEngine.CurrentEngine.MakePythonModule("?");
                 
@@ -60,7 +59,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptModule MakeModule(CodeContext context, DynamicType cls, [ParamDictionary] PythonDictionary kwDict\u00F8, params object[] args\u00F8) {
+        public static ScriptModule MakeModule(CodeContext context, PythonType cls, [ParamDictionary] PythonDictionary kwDict\u00F8, params object[] args\u00F8) {
             return MakeModule(context, cls, args\u00F8);
         }
 
@@ -189,7 +188,7 @@ namespace IronPython.Runtime.Types {
         private static IAttributesCollection MakeModuleDictionary(Type type) {
             IAttributesCollection dict = new SymbolDictionary();
 
-            // we could take the easy way out and build a DynamicType for the module
+            // we could take the easy way out and build a PythonType for the module
             // and then copy but that causes a bunch of overhead we don't need.  
             // Instead we simply extract the items we need out for the modules and
             // put them into the dictionary.  Note for fields & propreties we publish
@@ -239,7 +238,7 @@ namespace IronPython.Runtime.Types {
 
                 if (nt == NameType.None) continue;
 
-                dict[SymbolTable.StringToId(strName)] = DynamicHelpers.GetDynamicTypeFromType(t);
+                dict[SymbolTable.StringToId(strName)] = DynamicHelpers.GetPythonTypeFromType(t);
             }
 
             return dict;

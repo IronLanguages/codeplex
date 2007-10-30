@@ -22,7 +22,6 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Types;
@@ -44,7 +43,7 @@ namespace IronPython.Runtime {
 
         internal Dictionary<object, object> data;
 
-        internal static object MakeDict(DynamicType cls) {
+        internal static object MakeDict(PythonType cls) {
             if (cls == TypeCache.Dict) return new PythonDictionary();
             return PythonCalls.Call(cls);
         }
@@ -235,7 +234,7 @@ namespace IronPython.Runtime {
 
                 // we need to manually look up a slot to get the correct behavior when
                 // the __missing__ function is declared on a sub-type which is an old-class
-                if (DynamicHelpers.GetDynamicType(this).TryInvokeBinaryOperator(DefaultContext.Default,
+                if (DynamicHelpers.GetPythonType(this).TryInvokeBinaryOperator(DefaultContext.Default,
                     Operators.Missing,
                     this,
                     key,
@@ -357,7 +356,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("fromkeysany")]
-        private static object fromkeysAny(DynamicType cls, object o, object value) {
+        private static object fromkeysAny(PythonType cls, object o, object value) {
             object ret = MakeDict(cls);
             if (ret.GetType() == typeof(PythonDictionary)) {
                 PythonDictionary dr = ret as PythonDictionary;
@@ -375,18 +374,18 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        private static FastDynamicSite<DynamicType, object> _fromkeysSite;
+        private static FastDynamicSite<PythonType, object> _fromkeysSite;
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq) {
+        public static object FromKeys(CodeContext context, PythonType cls, object seq) {
             return FromKeys(context, cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {            
+        public static object FromKeys(CodeContext context, PythonType cls, object seq, object value) {            
             XRange xr = seq as XRange;
             if (xr != null) {
                 if (_fromkeysSite == null) {
-                    _fromkeysSite = RuntimeHelpers.CreateSimpleCallSite<DynamicType, object>(DefaultContext.Default);
+                    _fromkeysSite = RuntimeHelpers.CreateSimpleCallSite<PythonType, object>(DefaultContext.Default);
                 }
 
                 int n = xr.GetLength();

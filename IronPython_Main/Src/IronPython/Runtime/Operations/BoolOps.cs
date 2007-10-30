@@ -165,5 +165,9 @@ namespace IronPython.Runtime.Operations {
         public static Double ConvertToDouble(Boolean x) {
             return (Double)(x ? 1 : 0);
         }
+        [ImplicitConversionMethod]
+        public static Complex64 ConvertToComplex64(Boolean x) {
+            return x ? new Complex64(1) : new Complex64();
+        }
     }
 }

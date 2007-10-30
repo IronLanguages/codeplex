@@ -21,7 +21,6 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
@@ -54,13 +53,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class SByteOps {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(SByte));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(SByte))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(SByte))) {
                 throw PythonOps.TypeError("SByte.__new__: first argument must be SByte type.");
             }
             IConvertible valueConvertible;
@@ -230,7 +229,10 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(SByte x) {
-            return checked((Byte)x);
+            if (x >= 0) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ImplicitConversionMethod]
         public static Int16 ConvertToInt16(SByte x) {
@@ -238,7 +240,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(SByte x) {
-            return checked((UInt16)x);
+            if (x >= 0) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ImplicitConversionMethod]
         public static Int32 ConvertToInt32(SByte x) {
@@ -246,7 +251,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(SByte x) {
-            return checked((UInt32)x);
+            if (x >= 0) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ImplicitConversionMethod]
         public static Int64 ConvertToInt64(SByte x) {
@@ -254,7 +262,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(SByte x) {
-            return checked((UInt64)x);
+            if (x >= 0) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(SByte x) {
@@ -268,13 +279,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class ByteOps {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(Byte));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(Byte))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(Byte))) {
                 throw PythonOps.TypeError("Byte.__new__: first argument must be Byte type.");
             }
             IConvertible valueConvertible;
@@ -570,7 +581,10 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Byte x) {
-            return checked((SByte)x);
+            if (x <= (Byte)SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ImplicitConversionMethod]
         public static Int16 ConvertToInt16(Byte x) {
@@ -608,13 +622,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class Int16Ops {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(Int16));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(Int16))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(Int16))) {
                 throw PythonOps.TypeError("Int16.__new__: first argument must be Int16 type.");
             }
             IConvertible valueConvertible;
@@ -782,17 +796,26 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Conversion operators
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Int16 x) {
-            return (SByte)x;
+            if (SByte.MinValue <= x && x <= SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(Int16 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Int16 x) {
-            return checked((UInt16)x);
+            if (x >= 0) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ImplicitConversionMethod]
         public static Int32 ConvertToInt32(Int16 x) {
@@ -800,7 +823,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Int16 x) {
-            return checked((UInt32)x);
+            if (x >= 0) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ImplicitConversionMethod]
         public static Int64 ConvertToInt64(Int16 x) {
@@ -808,7 +834,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Int16 x) {
-            return checked((UInt64)x);
+            if (x >= 0) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(Int16 x) {
@@ -822,13 +851,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class UInt16Ops {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(UInt16));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(UInt16))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(UInt16))) {
                 throw PythonOps.TypeError("UInt16.__new__: first argument must be UInt16 type.");
             }
             IConvertible valueConvertible;
@@ -1124,15 +1153,24 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(UInt16 x) {
-            return checked((SByte)x);
+            if (x <= (UInt16)SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(UInt16 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(UInt16 x) {
-            return checked((Int16)x);
+            if (x <= (UInt16)Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ImplicitConversionMethod]
         public static Int32 ConvertToInt32(UInt16 x) {
@@ -1276,25 +1314,40 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Conversion operators
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Int32 x) {
-            return (SByte)x;
+            if (SByte.MinValue <= x && x <= SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(Int32 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(Int32 x) {
-            return (Int16)x;
+            if (Int16.MinValue <= x && x <= Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Int32 x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Int32 x) {
-            return checked((UInt32)x);
+            if (x >= 0) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ImplicitConversionMethod]
         public static Int64 ConvertToInt64(Int32 x) {
@@ -1302,7 +1355,10 @@ namespace IronPython.Runtime.Operations {
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Int32 x) {
-            return checked((UInt64)x);
+            if (x >= 0) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(Int32 x) {
@@ -1316,13 +1372,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class UInt32Ops {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(UInt32));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(UInt32))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(UInt32))) {
                 throw PythonOps.TypeError("UInt32.__new__: first argument must be UInt32 type.");
             }
             IConvertible valueConvertible;
@@ -1610,23 +1666,38 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(UInt32 x) {
-            return checked((SByte)x);
+            if (x <= (UInt32)SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(UInt32 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(UInt32 x) {
-            return checked((Int16)x);
+            if (x <= (UInt32)Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(UInt32 x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ExplicitConversionMethod]
         public static Int32 ConvertToInt32(UInt32 x) {
-            return checked((Int32)x);
+            if (x <= (UInt32)Int32.MaxValue) {
+                return (Int32)x;
+            }
+            throw Converter.CannotConvertOverflow("Int32", x);
         }
         [ImplicitConversionMethod]
         public static Int64 ConvertToInt64(UInt32 x) {
@@ -1648,13 +1719,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class Int64Ops {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(Int64));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(Int64))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(Int64))) {
                 throw PythonOps.TypeError("Int64.__new__: first argument must be Int64 type.");
             }
             IConvertible valueConvertible;
@@ -1811,33 +1882,54 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Conversion operators
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Int64 x) {
-            return (SByte)x;
+            if (SByte.MinValue <= x && x <= SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(Int64 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(Int64 x) {
-            return (Int16)x;
+            if (Int16.MinValue <= x && x <= Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Int64 x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
-        [ImplicitConversionMethod]
+        [ExplicitConversionMethod]
         public static Int32 ConvertToInt32(Int64 x) {
-            return (Int32)x;
+            if (Int32.MinValue <= x && x <= Int32.MaxValue) {
+                return (Int32)x;
+            }
+            throw Converter.CannotConvertOverflow("Int32", x);
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Int64 x) {
-            return checked((UInt32)x);
+            if (UInt32.MinValue <= x && x <= UInt32.MaxValue) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Int64 x) {
-            return checked((UInt64)x);
+            if (x >= 0) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(Int64 x) {
@@ -1851,13 +1943,13 @@ namespace IronPython.Runtime.Operations {
 
     public static class UInt64Ops {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(UInt64));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(UInt64))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(UInt64))) {
                 throw PythonOps.TypeError("UInt64.__new__: first argument must be UInt64 type.");
             }
             IConvertible valueConvertible;
@@ -2142,31 +2234,52 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(UInt64 x) {
-            return checked((SByte)x);
+            if (x <= (UInt64)SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(UInt64 x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(UInt64 x) {
-            return checked((Int16)x);
+            if (x <= (UInt64)Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(UInt64 x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ExplicitConversionMethod]
         public static Int32 ConvertToInt32(UInt64 x) {
-            return checked((Int32)x);
+            if (x <= (UInt64)Int32.MaxValue) {
+                return (Int32)x;
+            }
+            throw Converter.CannotConvertOverflow("Int32", x);
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(UInt64 x) {
-            return checked((UInt32)x);
+            if (UInt32.MinValue <= x && x <= UInt32.MaxValue) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ExplicitConversionMethod]
         public static Int64 ConvertToInt64(UInt64 x) {
-            return checked((Int64)x);
+            if (x <= (UInt64)Int64.MaxValue) {
+                return (Int64)x;
+            }
+            throw Converter.CannotConvertOverflow("Int64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(UInt64 x) {
@@ -2180,13 +2293,13 @@ namespace IronPython.Runtime.Operations {
 
     public static partial class SingleOps {
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls) {
+        public static object Make(PythonType cls) {
             return Make(cls, default(Single));
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(DynamicType cls, object value) {
-            if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(Single))) {
+        public static object Make(PythonType cls, object value) {
+            if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(Single))) {
                 throw PythonOps.TypeError("Single.__new__: first argument must be Single type.");
             }
             IConvertible valueConvertible;
@@ -2292,35 +2405,59 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Single x) {
-            return checked((SByte)x);
+            if (SByte.MinValue <= x && x <= SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(Single x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(Single x) {
-            return checked((Int16)x);
+            if (Int16.MinValue <= x && x <= Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Single x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ExplicitConversionMethod]
         public static Int32 ConvertToInt32(Single x) {
-            return checked((Int32)x);
+            if (Int32.MinValue <= x && x <= Int32.MaxValue) {
+                return (Int32)x;
+            }
+            throw Converter.CannotConvertOverflow("Int32", x);
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Single x) {
-            return checked((UInt32)x);
+            if (UInt32.MinValue <= x && x <= UInt32.MaxValue) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ExplicitConversionMethod]
         public static Int64 ConvertToInt64(Single x) {
-            return checked((Int64)x);
+            if (Int64.MinValue <= x && x <= Int64.MaxValue) {
+                return (Int64)x;
+            }
+            throw Converter.CannotConvertOverflow("Int64", x);
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Single x) {
-            return checked((UInt64)x);
+            if (UInt64.MinValue <= x && x <= UInt64.MaxValue) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Double ConvertToDouble(Single x) {
@@ -2406,35 +2543,59 @@ namespace IronPython.Runtime.Operations {
         // Conversion operators
         [ExplicitConversionMethod]
         public static SByte ConvertToSByte(Double x) {
-            return checked((SByte)x);
+            if (SByte.MinValue <= x && x <= SByte.MaxValue) {
+                return (SByte)x;
+            }
+            throw Converter.CannotConvertOverflow("SByte", x);
         }
         [ExplicitConversionMethod]
         public static Byte ConvertToByte(Double x) {
-            return checked((Byte)x);
+            if (Byte.MinValue <= x && x <= Byte.MaxValue) {
+                return (Byte)x;
+            }
+            throw Converter.CannotConvertOverflow("Byte", x);
         }
         [ExplicitConversionMethod]
         public static Int16 ConvertToInt16(Double x) {
-            return checked((Int16)x);
+            if (Int16.MinValue <= x && x <= Int16.MaxValue) {
+                return (Int16)x;
+            }
+            throw Converter.CannotConvertOverflow("Int16", x);
         }
         [ExplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Double x) {
-            return checked((UInt16)x);
+            if (UInt16.MinValue <= x && x <= UInt16.MaxValue) {
+                return (UInt16)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt16", x);
         }
         [ExplicitConversionMethod]
         public static Int32 ConvertToInt32(Double x) {
-            return checked((Int32)x);
+            if (Int32.MinValue <= x && x <= Int32.MaxValue) {
+                return (Int32)x;
+            }
+            throw Converter.CannotConvertOverflow("Int32", x);
         }
         [ExplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Double x) {
-            return checked((UInt32)x);
+            if (UInt32.MinValue <= x && x <= UInt32.MaxValue) {
+                return (UInt32)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt32", x);
         }
         [ExplicitConversionMethod]
         public static Int64 ConvertToInt64(Double x) {
-            return checked((Int64)x);
+            if (Int64.MinValue <= x && x <= Int64.MaxValue) {
+                return (Int64)x;
+            }
+            throw Converter.CannotConvertOverflow("Int64", x);
         }
         [ExplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Double x) {
-            return checked((UInt64)x);
+            if (UInt64.MinValue <= x && x <= UInt64.MaxValue) {
+                return (UInt64)x;
+            }
+            throw Converter.CannotConvertOverflow("UInt64", x);
         }
         [ImplicitConversionMethod]
         public static Single ConvertToSingle(Double x) {

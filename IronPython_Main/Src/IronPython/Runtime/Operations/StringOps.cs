@@ -26,7 +26,6 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -44,30 +43,19 @@ namespace IronPython.Runtime.Operations {
     /// that derive from string.  It carries along with it the string's value and
     /// our converter recognizes it as a string.
     /// </summary>
-    public class ExtensibleString : ICodeFormattable, IValueEquality, ISequence {
-        private string _self;
-
-        public ExtensibleString() { this._self = String.Empty; }
-        public ExtensibleString(string self) { this._self = self; }
-
-        public string Value {
-            get { return _self; }
-        }
+    public class ExtensibleString : Extensible<string>, ICodeFormattable, IValueEquality, ISequence {
+        public ExtensibleString() : base(String.Empty) { }
+        public ExtensibleString(string self) : base(self) { }
 
         public override string ToString() {
-            return _self;
-        }
-
-
-        public override int GetHashCode() {
-            return _self.GetHashCode();
+            return Value;
         }
 
         #region ICodeFormattable Members
 
         [SpecialName, PythonName("__repr__")]
         public virtual string ToCodeString(CodeContext context) {
-            return StringOps.Quote(_self);
+            return StringOps.Quote(Value);
         }
 
         #endregion
@@ -133,9 +121,9 @@ namespace IronPython.Runtime.Operations {
             if (other == null) return false;
 
             ExtensibleString es = other as ExtensibleString;
-            if (es != null) return _self == es._self;
+            if (es != null) return Value == es.Value;
             string os = other as string;
-            if (os != null) return _self == os;
+            if (os != null) return Value == os;
 
             return false;
         }
@@ -149,15 +137,15 @@ namespace IronPython.Runtime.Operations {
         #region ISequence Members
 
         public virtual object this[int index] {
-            get { return RuntimeHelpers.CharToString(_self[index]); }
+            get { return RuntimeHelpers.CharToString(Value[index]); }
         }
 
         public object this[Slice slice] {
-            get { return StringOps.GetItem(_self, slice); }
+            get { return StringOps.GetItem(Value, slice); }
         }
 
         public object GetSlice(int start, int stop) {
-            return StringOps.GetSlice(_self, start, stop);
+            return StringOps.GetSlice(Value, start, stop);
         }
 
         #endregion
@@ -166,13 +154,13 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName, PythonName("__len__")]
         public virtual int GetLength() {
-            return _self.Length;
+            return Value.Length;
         }
 
         [SpecialName, PythonName("__contains__")]
         public virtual bool ContainsValue(object value) {
-            if (value is string) return _self.Contains((string)value);
-            else if (value is ExtensibleString) return _self.Contains(((ExtensibleString)value)._self);
+            if (value is string) return Value.Contains((string)value);
+            else if (value is ExtensibleString) return Value.Contains(((ExtensibleString)value).Value);
 
             throw PythonOps.TypeErrorForBadInstance("expected string, got {0}", value);
         }
@@ -203,7 +191,7 @@ namespace IronPython.Runtime.Operations {
                     if (s[i] > '\x80')
                         return StringOps.Make(
                             (CodeContext)context,
-                            (DynamicType)DynamicHelpers.GetDynamicTypeFromType(typeof(String)),
+                            (PythonType)DynamicHelpers.GetPythonTypeFromType(typeof(String)),
                             s,
                             null,
                             "strict"
@@ -221,7 +209,7 @@ namespace IronPython.Runtime.Operations {
         #region Python Constructors
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls) {
+        public static object Make(CodeContext context, PythonType cls) {
             if (cls == TypeCache.String) {
                 return "";
             } else {
@@ -230,7 +218,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls, object @object) {
+        public static object Make(CodeContext context, PythonType cls, object @object) {
             if (cls == TypeCache.String) {
                 return FastNew(context, @object);
             } else {
@@ -239,13 +227,13 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls,
+        public static object Make(CodeContext context, PythonType cls,
             object @string,
             [DefaultParameterValue(null)] string encoding,
             [DefaultParameterValue("strict")] string errors) {
 
             string str = @string as string;
-            if (str == null) throw PythonOps.TypeError("converting to unicode: need string, got {0}", DynamicHelpers.GetDynamicType(@string).Name);
+            if (str == null) throw PythonOps.TypeError("converting to unicode: need string, got {0}", DynamicHelpers.GetPythonType(@string).Name);
 
             if (cls == TypeCache.String) {
                 return Decode(context, str, encoding ?? SystemState.Instance.GetDefaultEncoding(), errors);
@@ -1361,7 +1349,7 @@ namespace IronPython.Runtime.Operations {
                 encoding = encodingType as string;
                 if (encoding == null) {
                     if (encodingType != null)
-                        throw PythonOps.TypeError("decode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetDynamicType(encodingType).Name));
+                        throw PythonOps.TypeError("decode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
                     encoding = SystemState.Instance.GetDefaultEncoding();
                 }
             }
@@ -1418,7 +1406,7 @@ namespace IronPython.Runtime.Operations {
                 encoding = encodingType as string;
                 if (encoding == null) {
                     if (encodingType != null)
-                        throw PythonOps.TypeError("encode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetDynamicType(encodingType).Name));
+                        throw PythonOps.TypeError("encode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
                     encoding = SystemState.Instance.GetDefaultEncoding();
                 }
             }

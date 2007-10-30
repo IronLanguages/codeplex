@@ -19,7 +19,6 @@ using System.Text;
 using System.Reflection;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
@@ -30,7 +29,7 @@ namespace IronPython.Runtime.Types {
     /// __slots__ have storage allocated for them with the type and provide fast get/set access.
     /// </summary>
     [PythonType("member_descriptor")]
-    class ReflectedSlotProperty : DynamicTypeSlot, ICodeFormattable {
+    class ReflectedSlotProperty : PythonTypeSlot, ICodeFormattable {
         private string _name;
         private SlotInfo _slotInfo;
 
@@ -41,7 +40,7 @@ namespace IronPython.Runtime.Types {
             _name = name;
         }
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             if (instance != null) {
                 value = Getter(instance);
                 PythonOps.CheckInitializedAttribute(value, instance, _name);
@@ -52,7 +51,7 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {
+        internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             if (instance != null) {
                 Setter(instance, value);
                 return true;
@@ -61,7 +60,7 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
+        internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             return TrySetValue(context, instance, owner, Uninitialized.Instance);
         }
 

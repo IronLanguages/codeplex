@@ -80,8 +80,8 @@ namespace IronPython.Compiler.Ast {
             set { _variable = value; }
         }
 
-        internal virtual MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Variable parameter = inner.Block.CreateParameter(Name, typeof(object), outer.Transform(_defaultValue));
+        internal MSAst.Variable Transform(AstGenerator inner) {
+            MSAst.Variable parameter = inner.Block.CreateParameter(Name, typeof(object));
             _variable.SetParameter(parameter);
             return parameter;
         }
@@ -110,12 +110,6 @@ namespace IronPython.Compiler.Ast {
 
         public TupleExpression Tuple {
             get { return _tuple; }
-        }
-
-        internal override MSAst.Variable Transform(AstGenerator outer, AstGenerator inner) {
-            MSAst.Variable parameter = inner.Block.CreateParameter(Name, typeof(object), outer.Transform(_defaultValue));
-            Variable.SetParameter(parameter);
-            return parameter;
         }
 
         internal override void Init(AstGenerator inner, List<MSAst.Statement> init) {

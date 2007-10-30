@@ -19,7 +19,6 @@ using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
@@ -63,41 +62,41 @@ namespace IronPython.Runtime.Types {
         public Mro() {
         }
 
-        public static IList<DynamicMixin> Calculate(DynamicType startingType, IList<DynamicType> bases) {
-            return Calculate(startingType, new List<DynamicType>(bases), false);
+        public static IList<PythonType> Calculate(PythonType startingType, IList<PythonType> bases) {
+            return Calculate(startingType, new List<PythonType>(bases), false);
         }
 
-        internal static bool IsOldStyle(DynamicMixin dt) {
-            DynamicTypeSlot dummy;
+        internal static bool IsOldStyle(PythonType dt) {
+            PythonTypeSlot dummy;
             return dt != TypeCache.Object &&
                 dt.TryLookupSlot(DefaultContext.Default, Symbols.Class, out dummy) &&
-                dummy.GetType() == typeof(DynamicTypeValueSlot);   // not an old-style class if the user added __class__
+                dummy.GetType() == typeof(PythonTypeValueSlot);   // not an old-style class if the user added __class__
         }
 
         /// <summary>
         /// </summary>
-        public static IList<DynamicMixin> Calculate(DynamicType startingType, IList<DynamicType> baseTypes, bool forceNewStyle) {
-            List<DynamicMixin> bases = new List<DynamicMixin>();
-            foreach (DynamicType dt in baseTypes) bases.Add(dt);
+        public static IList<PythonType> Calculate(PythonType startingType, IList<PythonType> baseTypes, bool forceNewStyle) {
+            List<PythonType> bases = new List<PythonType>();
+            foreach (PythonType dt in baseTypes) bases.Add(dt);
 
             if (bases.Contains(startingType)) {
                 throw PythonOps.TypeError("a __bases__ item causes an inheritance cycle ({0})", startingType.Name);
             }
 
-            List<DynamicMixin> mro = new List<DynamicMixin>();
+            List<PythonType> mro = new List<PythonType>();
             mro.Add(startingType);
 
             if (bases.Count != 0) {
-                List<IList<DynamicMixin>> mroList = new List<IList<DynamicMixin>>();
+                List<IList<PythonType>> mroList = new List<IList<PythonType>>();
                 // build up the list - it contains the MRO of all our
                 // bases as well as the bases themselves in the order in
                 // which they appear.
                 int oldSytleCount = 0;
-                foreach (DynamicMixin type in bases) {
+                foreach (PythonType type in bases) {
                     if (IsOldStyle(type)) oldSytleCount++;
                 }
 
-                foreach (DynamicMixin dt in bases) {
+                foreach (PythonType dt in bases) {
                     if (!IsOldStyle(dt)) {
                         mroList.Add(TupleToList(dt.ResolutionOrder));
                     } else if (oldSytleCount == 1 && !forceNewStyle) {
@@ -117,7 +116,7 @@ namespace IronPython.Runtime.Types {
                         if (mroList[i].Count == 0) continue;    // we've removed everything from this list.
 
                         sawNonZero = true;
-                        DynamicMixin head = mroList[i][0];
+                        PythonType head = mroList[i][0];
                         // see if we're in the tail of any other lists...
                         bool inTail = false;
                         for (int j = 0; j < mroList.Count; j++) {
@@ -158,42 +157,42 @@ namespace IronPython.Runtime.Types {
             return mro;
         }
 
-        private static IList<DynamicType> TupleToList(PythonTuple t) {
-            List<DynamicType> innerList = new List<DynamicType>();
-            foreach (DynamicType ipt in t) innerList.Add(ipt);
+        private static IList<PythonType> TupleToList(PythonTuple t) {
+            List<PythonType> innerList = new List<PythonType>();
+            foreach (PythonType ipt in t) innerList.Add(ipt);
             return innerList;
         }
 
-        private static IList<DynamicMixin> TupleToList(IList<DynamicMixin> t) {
-            return new List<DynamicMixin>(t);
+        private static IList<PythonType> TupleToList(IList<PythonType> t) {
+            return new List<PythonType>(t);
         }
 
-        private static IList<DynamicMixin> GetOldStyleMro(DynamicMixin oldStyleType) {
-            List<DynamicMixin> res = new List<DynamicMixin>();
+        private static IList<PythonType> GetOldStyleMro(PythonType oldStyleType) {
+            List<PythonType> res = new List<PythonType>();
             GetOldStyleMroWorker(oldStyleType, res);
             return res;
         }
 
-        private static void GetOldStyleMroWorker(DynamicMixin curType, List<DynamicMixin> res) {
-            DynamicType dt = curType as DynamicType;
+        private static void GetOldStyleMroWorker(PythonType curType, List<PythonType> res) {
+            PythonType dt = curType as PythonType;
             Debug.Assert(dt != null);
 
             if (!res.Contains(curType)) {
                 res.Add(curType);
 
-                foreach (DynamicType baseDt in dt.BaseTypes) {
+                foreach (PythonType baseDt in dt.BaseTypes) {
                     GetOldStyleMroWorker(baseDt, res);
                 }
             }
         }
 
-        private static IList<DynamicMixin> GetNewStyleMro(DynamicMixin oldStyleType) {
-            DynamicType dt = oldStyleType as DynamicType;
+        private static IList<PythonType> GetNewStyleMro(PythonType oldStyleType) {
+            PythonType dt = oldStyleType as PythonType;
             Debug.Assert(dt != null);
 
-            List<DynamicMixin> res = new List<DynamicMixin>();
+            List<PythonType> res = new List<PythonType>();
             res.Add(oldStyleType);
-            foreach (DynamicType baseDt in dt.BaseTypes) {
+            foreach (PythonType baseDt in dt.BaseTypes) {
                 res.AddRange(TupleToList(Calculate(baseDt, baseDt.BaseTypes, true)));
             }
             return res;

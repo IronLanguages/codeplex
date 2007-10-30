@@ -18,7 +18,6 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -130,9 +129,9 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal static DynamicType TypeInstance {
+        internal static PythonType TypeInstance {
             get {
-                return DynamicHelpers.GetDynamicType(instance);
+                return DynamicHelpers.GetPythonType(instance);
             }
         }
 

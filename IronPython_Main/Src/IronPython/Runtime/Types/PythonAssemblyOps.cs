@@ -20,7 +20,6 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
@@ -42,7 +41,7 @@ namespace IronPython.Runtime.Types {
             MemberTracker mem = reflectedAssembly.TryGetPackageAny(name);
             if (mem != null) {
                 if (mem.MemberType == TrackerTypes.Type) {
-                    return DynamicHelpers.GetDynamicTypeFromType(((TypeTracker)mem).Type);
+                    return DynamicHelpers.GetPythonTypeFromType(((TypeTracker)mem).Type);
                 }
                 // namespace or type collision
                 return mem;

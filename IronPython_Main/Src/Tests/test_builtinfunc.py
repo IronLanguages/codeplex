@@ -328,5 +328,12 @@ def test_str_none():
     AreEqual(foo().__str__(), None)
     AssertError(TypeError, str, foo())
 
+def test_not_in_globals():
+    AssertError(NameError, lambda: __dict__)
+    AssertError(NameError, lambda: __module__)
+    AssertError(NameError, lambda: __class__)
+    AssertError(NameError, lambda: __init__)
+    
+
 run_test(__name__)
 

@@ -21,20 +21,21 @@ using System.Threading;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Hosting;
-using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
     [PythonType("thread")]
     public static class PythonThread {
         #region Public API Surface
-        public static object LockType = DynamicHelpers.GetDynamicTypeFromType(typeof(Lock));
+        public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(Lock));
         public static object error = ExceptionConverter.CreatePythonException("error", "thread");
 
 

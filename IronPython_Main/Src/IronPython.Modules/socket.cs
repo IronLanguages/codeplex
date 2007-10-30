@@ -24,7 +24,6 @@ using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -68,8 +67,8 @@ namespace IronPython.Modules {
 
         #region Socket object
 
-        public static DynamicType socket = DynamicHelpers.GetDynamicTypeFromType(typeof(SocketObj));
-        public static DynamicType SocketType = socket;
+        public static PythonType socket = DynamicHelpers.GetPythonTypeFromType(typeof(SocketObj));
+        public static PythonType SocketType = socket;
 
         [PythonType("socket")]
         public class SocketObj : IWeakReferenceable {

@@ -806,15 +806,11 @@ def test_constructor_function():
     Test to hit IronPython.Runtime.Operations.ConstructionFunctionOps.
     '''
     
-    t_list = [  System.DateTime.__new__,
-                ]
+    AreEqual(System.DateTime.__new__.__name__, '__new__')
+    Assert(System.DateTime.__new__.__doc__.find('__new__(cls, int year, int month, int day)') != -1)
                 
     if not is_silverlight:
-        t_list.append(System.AssemblyLoadEventArgs.__new__)
-    
-    for constr in t_list:
-        AreEqual(constr.__name__, "__new__")
-        AreEqual(constr.__doc__, "ConstructorFunction(builtin_function_or_method realTarget, Array[MethodBase] constructors)" + newline)
+        Assert(System.AssemblyLoadEventArgs.__new__.__doc__.find('__new__(cls, Assembly loadedAssembly)') != -1)
 
 def test_class_property():
     """__class__ should work on standard .NET types and should return the type object associated with that class"""

@@ -18,20 +18,19 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Modules {
-    partial class ProxyDynamicTypeBuilder : OpsReflectedTypeBuilder {
+    partial class ProxyPythonTypeBuilder : OpsReflectedTypeBuilder {
 
-        public new static DynamicType Build(Type t) {
-            return new ProxyDynamicTypeBuilder().DoBuild(t);
+        public new static PythonType Build(Type t) {
+            return new ProxyPythonTypeBuilder().DoBuild(t);
         }
 
-        private void AddWrapperOperator(SymbolId id, DynamicType weakrefType) {
+        private void AddWrapperOperator(SymbolId id, PythonType weakrefType) {
             SlotWrapper sw = new SlotWrapper(id, weakrefType);
 
             AddOperator(sw, PythonExtensionTypeAttribute._pythonOperatorTable[id]);
@@ -39,8 +38,8 @@ namespace IronPython.Modules {
         }
 
         protected override void AddOps() {
-            DynamicType res = Builder.UnfinishedType;
-            DynamicTypeBuilder dtb = Builder;
+            PythonType res = Builder.UnfinishedType;
+            PythonTypeBuilder dtb = Builder;
 
             #region Generated WeakRef Operators Initialization
 

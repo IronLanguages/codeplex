@@ -27,7 +27,6 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -162,12 +161,12 @@ namespace IronPython.Runtime {
             return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, ArrayUtils.EmptyObjects, ArrayUtils.EmptyStrings, args, kws);
         }
 
-        public static object basestring = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
+        public static object basestring = DynamicHelpers.GetPythonTypeFromType(typeof(string));
 
-        public static object @bool = DynamicHelpers.GetDynamicTypeFromType(typeof(bool));
+        public static object @bool = DynamicHelpers.GetPythonTypeFromType(typeof(bool));
 
 
-        public static object buffer = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonBuffer));
+        public static object buffer = DynamicHelpers.GetPythonTypeFromType(typeof(PythonBuffer));
 
         [Documentation("callable(object) -> bool\n\nReturn whether the object is callable (i.e., some kind of function).")]
         public static bool callable(object o) {
@@ -184,7 +183,7 @@ namespace IronPython.Runtime {
 
         private static object TryCoerce(CodeContext context, object x, object y) {
             object res;
-            if (DynamicHelpers.GetDynamicType(x).TryInvokeBinaryOperator(context,
+            if (DynamicHelpers.GetPythonType(x).TryInvokeBinaryOperator(context,
                 Operators.Coerce,
                 x,
                 y,
@@ -273,19 +272,19 @@ namespace IronPython.Runtime {
             return compile(context, source, filename, kind, null, null);
         }
 
-        public static object classmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(classmethod));
+        public static object classmethod = DynamicHelpers.GetPythonTypeFromType(typeof(classmethod));
 
         public static int cmp(CodeContext context, object x, object y) {
             return PythonOps.Compare(context, x, y);
         }
 
-        public static object complex = DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64));
+        public static object complex = DynamicHelpers.GetPythonTypeFromType(typeof(Complex64));
 
         public static void delattr(CodeContext context, object o, string name) {
-            context.LanguageContext.DeleteMember(context, o, SymbolTable.StringToId(name));
+            PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name)); 
         }
 
-        public static object dict = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDictionary));
+        public static object dict = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public static List dir(CodeContext context) {
@@ -307,10 +306,10 @@ namespace IronPython.Runtime {
         public static object divmod(CodeContext context, object x, object y) {
             Debug.Assert(PythonOps.NotImplemented != null);
             object ret;
-            if (DynamicHelpers.GetDynamicType(x).TryInvokeBinaryOperator(context, Operators.DivMod, x, y, out ret)
+            if (DynamicHelpers.GetPythonType(x).TryInvokeBinaryOperator(context, Operators.DivMod, x, y, out ret)
                 && ret != PythonOps.NotImplemented) return ret;
 
-            if (DynamicHelpers.GetDynamicType(y).TryInvokeBinaryOperator(context, Operators.ReverseDivMod, y, x, out ret)
+            if (DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context, Operators.ReverseDivMod, y, x, out ret)
                 && ret != PythonOps.NotImplemented) return ret;
 
             return SlowDivMod(x, y);
@@ -320,7 +319,7 @@ namespace IronPython.Runtime {
             return PythonTuple.MakeTuple(PythonSites.FloorDivide(x, y), PythonSites.Mod(x, y));
         }
 
-        public static object enumerate = DynamicHelpers.GetDynamicTypeFromType(typeof(Enumerate));
+        public static object enumerate = DynamicHelpers.GetPythonTypeFromType(typeof(Enumerate));
 
         public static object eval(CodeContext context, FunctionCode code) {
             Debug.Assert(context != null);
@@ -428,7 +427,7 @@ namespace IronPython.Runtime {
             code.Run(execScope, context.ModuleContext, false); // Do not attempt evaluation mode for execfile
         }
 
-        public static object file = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
+        public static object file = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
 
         public static object filter(object function, object list) {
             string str = list as string;
@@ -439,7 +438,7 @@ namespace IronPython.Runtime {
                     if (PythonOps.IsTrue(PythonCalls.Call(function, RuntimeHelpers.CharToString(c)))) sb.Append(c);
                 }
                 return sb.ToString();
-            } else if (issubclass(DynamicHelpers.GetDynamicType(list), TypeCache.String)) {
+            } else if (issubclass(DynamicHelpers.GetPythonType(list), TypeCache.String)) {
                 StringBuilder sb = new StringBuilder();
                 IEnumerator e = PythonOps.GetEnumerator(list);
                 while (e.MoveNext()) {
@@ -465,14 +464,14 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (isinstance(list, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple)))) {
+            if (isinstance(list, DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple)))) {
                 return PythonTuple.Make(ret);
             } else {
                 return ret;
             }
         }
 
-        public static object @float = DynamicHelpers.GetDynamicTypeFromType(typeof(double));
+        public static object @float = DynamicHelpers.GetPythonTypeFromType(typeof(double));
 
         public static object getattr(CodeContext context, object o, string name) {
             return PythonOps.GetBoundAttr(context, o, SymbolTable.StringToId(name));
@@ -505,7 +504,7 @@ namespace IronPython.Runtime {
 
             if (doc.Length == 0) {
                 if (!(o is string)) {
-                    help(context, DynamicHelpers.GetDynamicType(o));
+                    help(context, DynamicHelpers.GetPythonType(o));
                     return;
                 }
                 doc.Append("no documentation found for ");
@@ -525,7 +524,7 @@ namespace IronPython.Runtime {
         }
 
         private static void help(CodeContext context, List<object> doced, StringBuilder doc, int indent, object o) {
-            DynamicType dt;
+            PythonType dt;
             BuiltinFunction bf;
             PythonFunction pf;
             BuiltinMethodDescriptor methodDesc;
@@ -546,7 +545,7 @@ namespace IronPython.Runtime {
                     object module = kvp.Value;
 
                     IList<object> attrs = PythonOps.GetAttrNames(context, module);
-                    DynamicType modType = DynamicHelpers.GetDynamicType(module);
+                    PythonType modType = DynamicHelpers.GetPythonType(module);
                     List candidates = new List();
                     foreach (string s in attrs) {
                         if (s == strVal) {
@@ -564,7 +563,7 @@ namespace IronPython.Runtime {
                     bf = null;
                     pf = null;
                     for (int i = 0; i < candidates.Count; i++) {
-                        if ((dt = candidates[i] as DynamicType) != null) {
+                        if ((dt = candidates[i] as PythonType) != null) {
                             break;
                         }
 
@@ -579,11 +578,11 @@ namespace IronPython.Runtime {
                     else if (bf != null) help(context, doced, doc, indent, bf);
                     else if (pf != null) help(context, doced, doc, indent, pf);
                 }
-            } else if ((dt = o as DynamicType) != null) {
+            } else if ((dt = o as PythonType) != null) {
                 // find all the functions, and display their 
                 // documentation                
                 if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.Name, PythonOps.GetBoundAttr(context, dt, Symbols.Module));
-                DynamicTypeSlot dts;
+                PythonTypeSlot dts;
                 if (dt.TryResolveSlot(context, Symbols.Doc, out dts)) {
                     object docText;
                     if (dts.TryGetValue(context, null, dt, out docText) && docText != null)
@@ -602,26 +601,26 @@ namespace IronPython.Runtime {
                 foreach (SymbolId name in names) {
                     if (name == Symbols.Class) continue;
 
-                    DynamicTypeSlot value;
+                    PythonTypeSlot value;
                     object val;
                     if (dt.TryLookupSlot(context, name, out value) && value.TryGetValue(context, null, dt, out val)) {
                         help(context, doced, doc, indent + 1, val);
                     }
                 }
             } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
-                if (indent == 0) doc.AppendFormat("Help on method-descriptor {0}\n\n", methodDesc.Name);
+                if (indent == 0) doc.AppendFormat("Help on method-descriptor {0}\n\n", methodDesc.__name__);
                 AppendIndent(doc, indent);
-                doc.Append(methodDesc.Name);
+                doc.Append(methodDesc.__name__);
                 doc.Append("(...)\n");
 
-                AppendMultiLine(doc, BuiltinMethodDescriptorOps.GetDocumentation(methodDesc), indent + 1);
+                AppendMultiLine(doc, methodDesc.__doc__, indent + 1);
             } else if ((bf = o as BuiltinFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bf.Name);
                 AppendIndent(doc, indent);
                 doc.Append(bf.Name);
                 doc.Append("(...)\n");
 
-                AppendMultiLine(doc, PythonBuiltinFunctionOps.GetDocumentation(bf), indent + 1);
+                AppendMultiLine(doc, bf.__doc__, indent + 1);
             } else if ((pf = o as PythonFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", pf.Name, pf.Module);
 
@@ -712,7 +711,7 @@ namespace IronPython.Runtime {
             return eval(context, raw_input(context, prompt));
         }
 
-        public static object @int = DynamicHelpers.GetDynamicTypeFromType(typeof(int));
+        public static object @int = DynamicHelpers.GetPythonTypeFromType(typeof(int));
 
         public static string intern(object o) {
             string s = o as string;
@@ -730,7 +729,7 @@ namespace IronPython.Runtime {
             return PythonOps.IsSubClass(c.TypeObject, typeinfo);
         }
 
-        public static bool issubclass(DynamicType c, object typeinfo) {
+        public static bool issubclass(PythonType c, object typeinfo) {
             return PythonOps.IsSubClass(c, typeinfo);
         }
 
@@ -750,16 +749,16 @@ namespace IronPython.Runtime {
         }
 
 
-        public static object set = DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection));
-        public static object frozenset = DynamicHelpers.GetDynamicTypeFromType(typeof(FrozenSetCollection));
-        public static object list = DynamicHelpers.GetDynamicTypeFromType(typeof(List));
+        public static object set = DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection));
+        public static object frozenset = DynamicHelpers.GetPythonTypeFromType(typeof(FrozenSetCollection));
+        public static object list = DynamicHelpers.GetPythonTypeFromType(typeof(List));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public static IAttributesCollection locals(CodeContext context) {
             return new LocalsDictionary(context.Scope);
         }
 
-        public static object @long = DynamicHelpers.GetDynamicTypeFromType(typeof(BigInteger));
+        public static object @long = DynamicHelpers.GetPythonTypeFromType(typeof(BigInteger));
 
         public static List map(params object[] param) {
             if (param == null || param.Length < 2) {
@@ -987,14 +986,14 @@ namespace IronPython.Runtime {
             return value;
         }
 
-        public static object @object = DynamicHelpers.GetDynamicTypeFromType(typeof(object));
+        public static object @object = DynamicHelpers.GetPythonTypeFromType(typeof(object));
 
         public static object oct(object o) {
             return PythonOps.Oct(o);
         }
 
 #if !SILVERLIGHT // files
-        public static object open = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonFile));
+        public static object open = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
 #endif
 
         public static int ord(object value) {
@@ -1014,7 +1013,7 @@ namespace IronPython.Runtime {
                     }
                     ch = stringValue[0];
                 } else {
-                    throw PythonOps.TypeError("expected a character, but {0} found", DynamicHelpers.GetDynamicType(value));
+                    throw PythonOps.TypeError("expected a character, but {0} found", DynamicHelpers.GetPythonType(value));
                 }
             }
             return (int)ch;
@@ -1033,7 +1032,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static object property = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonProperty));
+        public static object property = DynamicHelpers.GetPythonTypeFromType(typeof(PythonProperty));
 
         public static List range(int stop) {
             return rangeWorker(stop);
@@ -1254,7 +1253,7 @@ namespace IronPython.Runtime {
             PythonOps.SetAttr(context, o, SymbolTable.StringToId(name), val);
         }
 
-        public static object slice = DynamicHelpers.GetDynamicTypeFromType(typeof(Slice));
+        public static object slice = DynamicHelpers.GetPythonTypeFromType(typeof(Slice));
 
         public static List sorted(object iterable) {
             return sorted(iterable, null, null, false);
@@ -1282,7 +1281,7 @@ namespace IronPython.Runtime {
             return l;
         }
 
-        public static object staticmethod = DynamicHelpers.GetDynamicTypeFromType(typeof(staticmethod));
+        public static object staticmethod = DynamicHelpers.GetPythonTypeFromType(typeof(staticmethod));
 
         public static object sum(object sequence) {
             return sum(sequence, 0);
@@ -1305,13 +1304,13 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static object super = DynamicHelpers.GetDynamicTypeFromType(typeof(Super));
+        public static object super = DynamicHelpers.GetPythonTypeFromType(typeof(Super));
 
-        public static object str = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
+        public static object str = DynamicHelpers.GetPythonTypeFromType(typeof(string));
 
-        public static object tuple = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTuple));
+        public static object tuple = DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple));
 
-        public static object type = DynamicHelpers.GetDynamicTypeFromType(typeof(DynamicType));
+        public static object type = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
 
         public static string unichr(int i) {
             if (i < Char.MinValue || i > Char.MaxValue) {
@@ -1320,7 +1319,7 @@ namespace IronPython.Runtime {
             return RuntimeHelpers.CharToString((char)i);
         }
 
-        public static object unicode = DynamicHelpers.GetDynamicTypeFromType(typeof(string));
+        public static object unicode = DynamicHelpers.GetPythonTypeFromType(typeof(string));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         [Documentation("vars([object]) -> dictionary\n\nWithout arguments, equivalent to locals().\nWith an argument, equivalent to object.__dict__.")]
@@ -1336,7 +1335,7 @@ namespace IronPython.Runtime {
             return value;
         }
 
-        public static object xrange = DynamicHelpers.GetDynamicTypeFromType(typeof(XRange)); //PyXRange.pytype;
+        public static object xrange = DynamicHelpers.GetPythonTypeFromType(typeof(XRange)); //PyXRange.pytype;
 
         public static List zip(object s0, object s1) {
             IEnumerator i0 = PythonOps.GetEnumerator(s0);

@@ -33,7 +33,6 @@ using System.Diagnostics;
 using System.Threading;
 
 using Microsoft.Win32;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 
@@ -113,20 +112,20 @@ namespace IronPython.Runtime.Types {
     }
 
     class ComTypeBuilder : ReflectedTypeBuilder {
-        private static DynamicType _comType;
+        private static PythonType _comType;
 
         public ComTypeBuilder() {
         }
 
-        public static DynamicType ComType {
+        public static PythonType ComType {
             get {
                 if (_comType == null) {
                     lock (typeof(ComTypeBuilder)) {
                         // TODO: ComOps needs to not use a type builder to be created, instead all of the op methods could be generated
                         // and it'd end this funny dance.
-                        DynamicType newType = new ComTypeBuilder().DoBuild("System.__ComObject", ComObject.comObjectType, null, ContextId.Empty);
-                        if (Interlocked.CompareExchange<DynamicType>(ref _comType, newType, null) == null) {
-                            DynamicType.SetDynamicType(ComObject.comObjectType, newType);
+                        PythonType newType = new ComTypeBuilder().DoBuild("System.__ComObject", ComObject.comObjectType, null, ContextId.Empty);
+                        if (Interlocked.CompareExchange<PythonType>(ref _comType, newType, null) == null) {
+                            PythonType.SetPythonType(ComObject.comObjectType, newType);
                             PythonOps.ExtendOneType(new PythonExtensionTypeAttribute(ComObject.comObjectType, typeof(ComOps)), newType);
 
                             return newType;
@@ -141,7 +140,7 @@ namespace IronPython.Runtime.Types {
         protected override void AddOps() {
             Dictionary<SymbolId, OperatorMapping> ops = PythonExtensionTypeAttribute._pythonOperatorTable;
 
-            DynamicType dt = Builder.UnfinishedType;
+            PythonType dt = Builder.UnfinishedType;
             foreach (KeyValuePair<SymbolId, OperatorMapping> op in ops) {
                 if (op.Key == Symbols.GetBoundAttr) continue;
 
@@ -263,8 +262,7 @@ namespace IronPython.Runtime.Types {
         static ComObject CreateComObject(object rcw) {
             PythonEngineOptions engineOptions;
             engineOptions = PythonOps.GetLanguageContext().Engine.Options as PythonEngineOptions;
-            if (engineOptions.PreferComDispatchOverTypeInfo && (rcw is IDispatch))
-            {
+            if (engineOptions.PreferComDispatchOverTypeInfo && (rcw is IDispatch)) {
                 // We can do method invocations on IDispatch objects
                 return new IDispatchObject(rcw);
             }
@@ -286,7 +284,7 @@ namespace IronPython.Runtime.Types {
         }
 
         static internal bool Is__ComObject(Type type) {
-            return type == comObjectType;
+                return type == comObjectType;
         }
 
         public override string ToString() {
@@ -306,7 +304,7 @@ namespace IronPython.Runtime.Types {
     /// We have no additional information about this COM object.
     /// </summary>
     internal class GenericComObject : ComObject {
-        internal GenericComObject(object rcw) : base(rcw) {}
+        internal GenericComObject(object rcw) : base(rcw) { }
 
         public override string ToString() {
             return "<System.__ComObject>";
@@ -339,8 +337,7 @@ namespace IronPython.Runtime.Types {
     InterfaceType(ComInterfaceType.InterfaceIsIDispatch),
     Guid("00020400-0000-0000-C000-000000000046")
     ]
-    interface IDispatchForReflection
-    {
+    interface IDispatchForReflection {
     }
 
     [
@@ -396,13 +393,13 @@ namespace IronPython.Runtime.Types {
     /// harder.
     /// </summary>
     class ComObjectWithTypeInfo : GenericComObject {
-        private DynamicType _comInterface; // The COM type of the COM object
+        private PythonType _comInterface; // The COM type of the COM object
         private static Dictionary<Guid, Type> ComTypeCache = new Dictionary<Guid, Type>();
 
         private ComObjectWithTypeInfo(object rcw, Type comInterface) : base(rcw) {
 
             Debug.Assert(comInterface.IsInterface && comInterface.IsImport);
-            _comInterface = DynamicHelpers.GetDynamicTypeFromType(comInterface);
+            _comInterface = DynamicHelpers.GetPythonTypeFromType(comInterface);
         }
 
         internal static ComObjectWithTypeInfo CheckClassInfo(object rcw) {
@@ -641,38 +638,80 @@ namespace IronPython.Runtime.Types {
     /// 2. IDispatch cannot distinguish between properties and methods with 0 arguments (and non-0 
     ///    default arguments?). So obj.foo() is ambiguous as it could mean invoking method foo, 
     ///    or it could mean invoking the function pointer returned by property foo.
+    ///    We are attempting to find whether we need to call a method or a property by examining
+    ///    the ITypeInfo associated with the IDispatch. ITypeInfo tell's use what parameters the method
+    ///    expects, is it a method or a property, what is the default property of the object, how to 
+    ///    create an enumerator for collections etc.
     /// 3. IronPython processes the signature and converts ref arguments into return values. 
     ///    However, since the signature of a DispMethod is not available beforehand, this conversion 
     ///    is not possible. There could be other signature conversions that may be affected. How does 
     ///    VB6 deal with ref arguments and IDispatch?
-    /// </summary>
+    ///    
+    /// We also support events for IDispatch objects:
+    /// Background:
+    /// COM objects support events through a mechanism known as Connect Points.
+    /// Connection Points are separate objects created off the actual COM 
+    /// object (this is to prevent circular references between event sink
+    /// and event source). When clients want to sink events generated  by 
+    /// COM object they would implement callback interfaces (aka source 
+    /// interfaces) and hand it over (advise) to the Connection Point. 
+    /// 
+    /// Implementation details:
+    /// When IDispatchObject.TryGetMember request is received we first check
+    /// whether the requested member is a property or a method. If this check
+    /// fails we will try to determine whether an event is requested. To do 
+    /// so we will do the following set of steps:
+    /// 1. Verify the COM object implements IConnectionPointContainer
+    /// 2. Attempt to find COM object?s coclass?s description
+    ///    a. Query the object for IProvideClassInfo interface. Go to 3, if found
+    ///    b. From object?s IDispatch retrieve primary interface description
+    ///    c. Scan coclasses declared in object?s type library.
+    ///    d. Find coclass implementing this particular primary interface 
+    /// 3. Scan coclass for all its source interfaces.
+    /// 4. Check whether to any of the methods on the source interfaces matches 
+    /// the request name
+    /// 
+    /// Once we determine that TryGetMember requests an event we will return
+    /// an instance of BoundDispEvent class. This class has InPlaceAdd and
+    /// InPlaceSubtract operators defined. Calling InPlaceAdd operator will:
+    /// 1. An instance of ComEventSinksContainer class is created (unless 
+    /// RCW already had one). This instance is hanged off the RCW in attempt
+    /// to bind the lifetime of event sinks to the lifetime of the RCW itself,
+    /// meaning event sink will be collected once the RCW is collected (this
+    /// is the same way event sinks lifetime is controlled by PIAs).
+    /// Notice: ComEventSinksContainer contains a Finalizer which will go and
+    /// unadvise all event sinks.
+    /// Notice: ComEventSinksContainer is a list of ComEventSink objects. 
+    /// 2. Unless we have already created a ComEventSink for the required 
+    /// source interface, we will create and advise a new ComEventSink. Each
+    /// ComEventSink implements a single source interface that COM object 
+    /// supports. 
+    /// 3. ComEventSink contains a map between method DISPIDs to  the 
+    /// multicast delegate that will be invoked when the event is raised.
+    /// 4. ComEventSink implements IReflect interface which is exposed as
+    /// custom IDispatch to COM consumers. This allows us to intercept calls
+    /// to IDispatch.Invoke and apply  custom logic ? in particular we will
+    /// just find and invoke the multicast delegate corresponding to the invoked
+    /// dispid.
+    ///  </summary>
+
     class IDispatchObject : GenericComObject {
 
-        private string _typeName;
-        private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
+        private ComDispatch.ComTypeDesc _comTypeDesc;
+        private static Dictionary<Guid, ComDispatch.ComTypeDesc> _CacheComTypeDesc;
+        private static Dictionary<SymbolId, ComDispatch.ComEventDesc> _EventsEmptyDict;
 
-        class ComEventDesc {
-            public Guid sourceIID;
-            public int dispid;
-        };
-
-        private Dictionary<SymbolId, ComEventDesc> _events;
-        private static Dictionary<Guid, Dictionary<SymbolId, ComDispatch.ComMethodDesc>> _cacheComTypeInfo;
-
-        internal IDispatchObject(object rcw)
-            : base(rcw) {
+        internal IDispatchObject(object rcw) : base(rcw) {
             Debug.Assert(rcw is IDispatch);
         }
 
         public override string ToString() {
-            
+
             EnsureScanDefinedFunctions();
 
-            string typeName;
-            if (String.IsNullOrEmpty(this._typeName))
+            string typeName = this._comTypeDesc.TypeName;
+            if (String.IsNullOrEmpty(typeName))
                 typeName = "IDispatch";
-            else
-                typeName = this._typeName;
 
             return String.Format("<System.__ComObject ({0})>", typeName);
         }
@@ -736,11 +775,11 @@ namespace IronPython.Runtime.Types {
             // TODO: since we are mutating _funcs array
             // TODO: The workaround is to use Hashtable (which is thread-safe
             // TODO: on read operations) to fetch the value out.
-            if (_funcs.TryGetValue(name, out methodDesc) == false) {
+            if (_comTypeDesc.Funcs.TryGetValue(name, out methodDesc) == false) {
 
-                FindEvents();
-                ComEventDesc eventDesc;
-                if (_events.TryGetValue(name, out eventDesc)) {
+                EnsureScanDefinedEvents();
+                ComDispatch.ComEventDesc eventDesc;
+                if (_comTypeDesc.Events.TryGetValue(name, out eventDesc)) {
                     value = new ComDispatch.BoundDispEvent(this.Obj, eventDesc.sourceIID, eventDesc.dispid);
                     return true;
                 }
@@ -755,7 +794,7 @@ namespace IronPython.Runtime.Types {
                 }
 
                 methodDesc = new ComDispatch.ComMethodDesc(name.ToString());
-                _funcs.Add(name, methodDesc);
+                _comTypeDesc.Funcs.Add(name, methodDesc);
             }
 
             // There is a member with the given name.
@@ -784,7 +823,7 @@ namespace IronPython.Runtime.Types {
                 // SetAttr on BoundDispEvent is the last operator that is called
                 // during += on an actual event handler.
                 // In practice, we can do nothing here and just ingore this operation.
-                // But would it be the syntactically correct?
+                // But is it syntactically correct?
                 return;
             }
 
@@ -824,11 +863,11 @@ namespace IronPython.Runtime.Types {
         override internal IList<SymbolId> GetAttrNames(CodeContext context) {
 
             EnsureScanDefinedFunctions();
-            FindEvents();
-            List<SymbolId> list = new List<SymbolId>(_funcs.Keys);
+            EnsureScanDefinedEvents();
+            List<SymbolId> list = new List<SymbolId>(_comTypeDesc.Funcs.Keys);
 
-            if (_events != null && _events.Count > 0) {
-                list.AddRange(_events.Keys);
+            if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
+                list.AddRange(_comTypeDesc.Events.Keys);
             }
 
             return list;
@@ -840,7 +879,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        internal static void GetTypeAttrForTypeInfo(ComTypes.ITypeInfo typeInfo, out ComTypes.TYPEATTR typeAttr) {
+        internal static ComTypes.TYPEATTR GetTypeAttrForTypeInfo(ComTypes.ITypeInfo typeInfo) {
             IntPtr pAttrs = IntPtr.Zero;
             typeInfo.GetTypeAttr(out pAttrs);
 
@@ -850,7 +889,7 @@ namespace IronPython.Runtime.Types {
             }
 
             try {
-                typeAttr = (ComTypes.TYPEATTR)Marshal.PtrToStructure(pAttrs, typeof(ComTypes.TYPEATTR));
+                return (ComTypes.TYPEATTR)Marshal.PtrToStructure(pAttrs, typeof(ComTypes.TYPEATTR));
             } finally {
                 typeInfo.ReleaseTypeAttr(pAttrs);
             }
@@ -886,15 +925,6 @@ namespace IronPython.Runtime.Types {
             funcDescHandle = pFuncDesc;
         }
 
-        internal static string GetNameOfType(ITypeInfo typeInfo) {
-            string name;
-            string strDocString;
-            int dwHelpContext;
-            string strHelpFile;
-            typeInfo.GetDocumentation(-1, out name, out strDocString, out dwHelpContext, out strHelpFile);
-            return name;
-        }
-
         internal static SymbolId GetNameOfMethod(ITypeInfo typeInfo, int memid, string prefix) {
             int cNames;
             string[] rgNames = new string[1];
@@ -902,50 +932,89 @@ namespace IronPython.Runtime.Types {
             return SymbolTable.StringToId(prefix + rgNames[0]);
         }
 
-        private void FindEvents() {
+        private static Dictionary<SymbolId, ComDispatch.ComEventDesc> EmptyEvents {
+            get {
+                if (_EventsEmptyDict == null) {
+                    _EventsEmptyDict = new Dictionary<SymbolId, ComDispatch.ComEventDesc>();
+                }
+                return _EventsEmptyDict;
+            }
+        }
 
-            if (_events != null) {
+        private void EnsureScanDefinedEvents() {
+
+            // _comTypeDesc.Events is null if we have not yet attempted
+            // to scan the object for events.
+            if (_comTypeDesc != null && _comTypeDesc.Events != null) {
                 return;
             }
 
-            Dictionary<SymbolId, ComEventDesc> events = new Dictionary<SymbolId, ComEventDesc>();
+            // check type info in the type descriptions cache
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
+            ComTypes.TYPEATTR typeAttr = GetTypeAttrForTypeInfo(typeInfo);
 
-            ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
-            if (cpc == null) {
-                // No ICPC - this object does not support events - 
-                _events = events;
-                return;
-            }
-
-            ComTypes.ITypeInfo classTypeInfo = GetCoClassTypeInfo();
-            if (classTypeInfo == null) {
-                _events = events;
-                return;
-            }
-
-            ComTypes.TYPEATTR classTypeAttr;
-            GetTypeAttrForTypeInfo(classTypeInfo, out classTypeAttr);
-
-            for (int i = 0; i < classTypeAttr.cImplTypes; i++) {
-                int hRefType;
-                classTypeInfo.GetRefTypeOfImplType(i, out hRefType);
-                
-                ComTypes.ITypeInfo interfaceTypeInfo;
-                classTypeInfo.GetRefTypeInfo(hRefType, out interfaceTypeInfo);
-
-                ComTypes.IMPLTYPEFLAGS flags;
-                classTypeInfo.GetImplTypeFlags(i, out flags);
-                if ((flags & ComTypes.IMPLTYPEFLAGS.IMPLTYPEFLAG_FSOURCE) != 0) {
-                    ScanSourceInterface(interfaceTypeInfo, ref events);
+            if (_comTypeDesc == null) {
+                if (_CacheComTypeDesc != null &&
+                    _CacheComTypeDesc.TryGetValue(typeAttr.guid, out _comTypeDesc) == true &&
+                    _comTypeDesc.Events != null) {
+                    return;
                 }
             }
 
-            _events = events;
+            ComDispatch.ComTypeDesc typeDesc = new ComDispatch.ComTypeDesc(typeInfo);
+
+            ComTypes.ITypeInfo classTypeInfo = null;
+            Dictionary<SymbolId, ComDispatch.ComEventDesc> events = null;
+
+            ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
+            if (cpc == null) {
+                // No ICPC - this object does not support events
+                events = EmptyEvents;
+            } else if ((classTypeInfo = GetCoClassTypeInfo(this.Obj, typeInfo)) == null) {
+                // no class info found - this object may support events
+                // but we could not discover those
+                Debug.Assert(false, "object support IConnectionPoint but no class info found");
+                events = EmptyEvents;
+            } else {
+                events = new Dictionary<SymbolId, ComDispatch.ComEventDesc>();
+
+                ComTypes.TYPEATTR classTypeAttr = GetTypeAttrForTypeInfo(classTypeInfo);
+                for (int i = 0; i < classTypeAttr.cImplTypes; i++) {
+                    int hRefType;
+                    classTypeInfo.GetRefTypeOfImplType(i, out hRefType);
+
+                    ComTypes.ITypeInfo interfaceTypeInfo;
+                    classTypeInfo.GetRefTypeInfo(hRefType, out interfaceTypeInfo);
+
+                    ComTypes.IMPLTYPEFLAGS flags;
+                    classTypeInfo.GetImplTypeFlags(i, out flags);
+                    if ((flags & ComTypes.IMPLTYPEFLAGS.IMPLTYPEFLAG_FSOURCE) != 0) {
+                        ScanSourceInterface(interfaceTypeInfo, ref events);
+                    }
+                }
+
+                if (events.Count ==  0)
+                    events = EmptyEvents;
+            }
+
+            EnsureComTypeDescCache();
+
+            lock (_CacheComTypeDesc) {
+                ComDispatch.ComTypeDesc cachedTypeDesc;
+                if (_CacheComTypeDesc.TryGetValue(typeAttr.guid, out cachedTypeDesc)) {
+                    _comTypeDesc = cachedTypeDesc;
+                } else {
+                    _comTypeDesc = typeDesc;
+                    _CacheComTypeDesc.Add(typeAttr.guid, _comTypeDesc);
+                }
+
+                _comTypeDesc.Events = events;
+            }
+
         }
 
-        private static void ScanSourceInterface(ComTypes.ITypeInfo sourceTypeInfo, ref Dictionary<SymbolId, ComEventDesc> events) {
-            ComTypes.TYPEATTR sourceTypeAttribute;
-            GetTypeAttrForTypeInfo(sourceTypeInfo, out sourceTypeAttribute);
+        private static void ScanSourceInterface(ComTypes.ITypeInfo sourceTypeInfo, ref Dictionary<SymbolId, ComDispatch.ComEventDesc> events) {
+            ComTypes.TYPEATTR sourceTypeAttribute = GetTypeAttrForTypeInfo(sourceTypeInfo);
 
             for (int index = 0; index < sourceTypeAttribute.cFuncs; index++) {
                 IntPtr funcDescHandleToRelease = IntPtr.Zero;
@@ -967,10 +1036,16 @@ namespace IronPython.Runtime.Types {
                     // Ideally, we should solve this problem by passing out flags.
                     SymbolId name = GetNameOfMethod(sourceTypeInfo, funcDesc.memid, "Event_");
 
-                    ComEventDesc eventDesc = new ComEventDesc();
-                    eventDesc.dispid = funcDesc.memid;
-                    eventDesc.sourceIID = sourceTypeAttribute.guid;
-                    events.Add(name, eventDesc);
+                    // Sometimes coclass has multiple source interfaces. Usually this is caused by
+                    // adding new events and putting them on new interfaces while keeping the
+                    // old interfaces around. This may cause name collisioning which we are
+                    // resolving by keeping only the first event with the same name.
+                    if (events.ContainsKey(name) == false) {
+                        ComDispatch.ComEventDesc eventDesc = new ComDispatch.ComEventDesc();
+                        eventDesc.dispid = funcDesc.memid;
+                        eventDesc.sourceIID = sourceTypeAttribute.guid;
+                        events.Add(name, eventDesc);
+                    }
                 } finally {
                     if (funcDescHandleToRelease != IntPtr.Zero) {
                         sourceTypeInfo.ReleaseFuncDesc(funcDescHandleToRelease);
@@ -979,9 +1054,10 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private ComTypes.ITypeInfo GetCoClassTypeInfo()
-        {
-            IProvideClassInfo provideClassInfo = this.Obj as IProvideClassInfo;
+        private static ComTypes.ITypeInfo GetCoClassTypeInfo(object rcw, ComTypes.ITypeInfo typeInfo) {
+            Debug.Assert(typeInfo != null);
+
+            IProvideClassInfo provideClassInfo = rcw as IProvideClassInfo;
             if (provideClassInfo != null) {
                 IntPtr typeInfoPtr = IntPtr.Zero;
                 try {
@@ -998,10 +1074,6 @@ namespace IronPython.Runtime.Types {
 
             // retrieving class information through IPCI has failed - 
             // we can try scanning the typelib to find the coclass
-            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(DispatchObject);
-
-            if (_typeName == null)
-                _typeName = GetNameOfType(typeInfo);
 
             // TODO: Why we scan typelib every time we need to find events
             // TODO: Instead we might just keep a dictionary mapping 
@@ -1010,11 +1082,12 @@ namespace IronPython.Runtime.Types {
             int typeInfoIndex;
             typeInfo.GetContainingTypeLib(out typeLib, out typeInfoIndex);
 
+            string typeName = ComDispatch.ComTypeDesc.GetNameOfType(typeInfo);
+
             // TODO: check that there are no 2 coclasses implementing same interface
 
             int countTypes = typeLib.GetTypeInfoCount();
-            for (int i = 0; i < countTypes; i++)
-            {
+            for (int i = 0; i < countTypes; i++) {
                 ComTypes.TYPEKIND typeKind;
                 typeLib.GetTypeInfoType(i, out typeKind);
                 if (typeKind != ComTypes.TYPEKIND.TKIND_COCLASS)
@@ -1023,18 +1096,16 @@ namespace IronPython.Runtime.Types {
                 ComTypes.ITypeInfo classTypeInfo;
                 typeLib.GetTypeInfo(i, out classTypeInfo);
 
-                ComTypes.TYPEATTR classTypeAttr;
-                GetTypeAttrForTypeInfo(classTypeInfo, out classTypeAttr);
+                ComTypes.TYPEATTR classTypeAttr = GetTypeAttrForTypeInfo(classTypeInfo);
 
                 for (int j = 0; j < classTypeAttr.cImplTypes; j++) {
                     int hRefType;
                     classTypeInfo.GetRefTypeOfImplType(j, out hRefType);
-                    ComTypes.ITypeInfo interfaceTypeInfo;
-                    classTypeInfo.GetRefTypeInfo(hRefType, out interfaceTypeInfo);
+                    ComTypes.ITypeInfo currentTypeInfo;
+                    classTypeInfo.GetRefTypeInfo(hRefType, out currentTypeInfo);
 
-                    string interfaceName = GetNameOfType(interfaceTypeInfo);
-
-                    if (interfaceName == _typeName)
+                    string currentTypeName = ComDispatch.ComTypeDesc.GetNameOfType(currentTypeInfo);
+                    if (currentTypeName == typeName)
                         return classTypeInfo;
                 }
             }
@@ -1042,24 +1113,36 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
+        private void EnsureComTypeDescCache() {
+            if (_CacheComTypeDesc != null)
+                return;
+
+            lock(this.GetType()) {
+
+                if (_CacheComTypeDesc != null)
+                    return;
+
+                _CacheComTypeDesc = new Dictionary<Guid, IronPython.Runtime.Types.ComDispatch.ComTypeDesc>();
+            }
+        }
+
+
         private void EnsureScanDefinedFunctions() {
-            if (_funcs != null)
+            if (_comTypeDesc != null && _comTypeDesc.Funcs != null)
                 return;
 
             ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
+            ComTypes.TYPEATTR typeAttr= GetTypeAttrForTypeInfo(typeInfo);
 
-            ComTypes.TYPEATTR typeAttr;
-            GetTypeAttrForTypeInfo(typeInfo, out typeAttr);
-
-            // TODO: accessing _cacheComTypeInfo is currently not thread-safe
-            // TODO: Suggested workaround is to use Hashtable
-            if (_cacheComTypeInfo == null) {
-                _cacheComTypeInfo = new Dictionary<Guid, Dictionary<SymbolId, IronPython.Runtime.Types.ComDispatch.ComMethodDesc> >();
-            }  else if (_cacheComTypeInfo.TryGetValue(typeAttr.guid, out this._funcs) == true) {
-                return;
+            if (_comTypeDesc == null) {
+                if (_CacheComTypeDesc != null &&
+                    _CacheComTypeDesc.TryGetValue(typeAttr.guid, out _comTypeDesc) == true &&
+                    _comTypeDesc.Funcs != null) {
+                    return;
+                }
             }
 
-            this._typeName = GetNameOfType(typeInfo);
+            ComDispatch.ComTypeDesc typeDesc = new ComDispatch.ComTypeDesc(typeInfo);
 
             Dictionary<SymbolId, ComDispatch.ComMethodDesc> funcs;
             funcs = new Dictionary<SymbolId, ComDispatch.ComMethodDesc>(typeAttr.cFuncs);
@@ -1079,13 +1162,12 @@ namespace IronPython.Runtime.Types {
 
                     ComDispatch.ComMethodDesc methodDesc;
                     SymbolId name;
+
                     // we do not need to store any info for property_put's as well - we will wait
                     // for corresponding property_get to come along.
                     if ((funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT) != 0 ||
-                        (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0)
-                    {
-                        if (funcDesc.memid == DISPID_VALUE)
-                        {
+                        (funcDesc.invkind & ComTypes.INVOKEKIND.INVOKE_PROPERTYPUTREF) != 0) {
+                        if (funcDesc.memid == DISPID_VALUE) {
                             methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                             name = SymbolTable.StringToId("__setitem__");
                             funcs.Add(name, methodDesc);
@@ -1093,11 +1175,7 @@ namespace IronPython.Runtime.Types {
                         continue;
                     }
 
-                    // OLE defines an DISPID=-4 as a special DISPID
-                    // for enumeration support. This should be converted
-                    // to .NET-style enumeration support.
-                    if (funcDesc.memid == DISPID_NEWENUM)
-                    {
+                    if (funcDesc.memid == DISPID_NEWENUM) {
                         methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                         name = SymbolTable.StringToId("GetEnumerator");
                         funcs.Add(name, methodDesc);
@@ -1108,8 +1186,7 @@ namespace IronPython.Runtime.Types {
                     name = SymbolTable.StringToId(methodDesc.Name);
                     funcs.Add(name, methodDesc);
 
-                    if (funcDesc.memid == DISPID_VALUE)
-                    {
+                    if (funcDesc.memid == DISPID_VALUE) {
                         methodDesc = new ComDispatch.ComMethodDesc(typeInfo, funcDesc);
                         name = SymbolTable.StringToId("__getitem__");
                         funcs.Add(name, methodDesc);
@@ -1122,8 +1199,19 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            _funcs = funcs;
-            _cacheComTypeInfo.Add(typeAttr.guid, _funcs);
+            EnsureComTypeDescCache();
+
+            lock (_CacheComTypeDesc) {
+                ComDispatch.ComTypeDesc cachedTypeDesc;
+                if (_CacheComTypeDesc.TryGetValue(typeAttr.guid, out cachedTypeDesc)) {
+                    _comTypeDesc = cachedTypeDesc;
+                } else {
+                    _comTypeDesc = typeDesc;
+                    _CacheComTypeDesc.Add(typeAttr.guid, _comTypeDesc);
+                }
+
+                _comTypeDesc.Funcs = funcs;
+            }
         }
     }
 }

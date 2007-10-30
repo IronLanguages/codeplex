@@ -18,7 +18,6 @@ using System.Text;
 using System.IO;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
@@ -885,12 +884,12 @@ namespace IronPython.Runtime {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, DynamicType cls, string name) {
+        public static PythonFile Make(CodeContext context, PythonType cls, string name) {
             return Make(context, cls, name, "r", -1);
         }
 
         [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, DynamicType cls, string name, string mode) {
+        public static PythonFile Make(CodeContext context, PythonType cls, string name, string mode) {
             return Make(context, cls, name, mode, -1);
         }
 
@@ -901,7 +900,7 @@ namespace IronPython.Runtime {
         // Seems C-Python allows "b|t" at the beginning too.
         // 
         [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, DynamicType cls, string name, string mode, int bufsize) {
+        public static PythonFile Make(CodeContext context, PythonType cls, string name, string mode, int bufsize) {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
@@ -971,7 +970,7 @@ namespace IronPython.Runtime {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, DynamicType cls, Stream stream) {
+        public static PythonFile Make(CodeContext context, PythonType cls, Stream stream) {
             string mode;
             if (stream.CanRead && stream.CanWrite) mode = "w+";
             else if (stream.CanWrite) mode = "w";
@@ -983,7 +982,7 @@ namespace IronPython.Runtime {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, DynamicType cls, Stream stream, string mode) {
+        public static PythonFile Make(CodeContext context, PythonType cls, Stream stream, string mode) {
             if (cls == TypeCache.PythonFile) return new PythonFile(stream, SystemState.Instance.DefaultEncoding, mode);
 
             return cls.CreateInstance(context, stream, SystemState.Instance.DefaultEncoding, mode) as PythonFile;

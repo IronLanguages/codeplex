@@ -21,14 +21,13 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    public class OpsReflectedTypeBuilder : ReflectedTypeBuilder {
+    internal class OpsReflectedTypeBuilder : ReflectedTypeBuilder {
         private Type _opsType;
 
         public OpsReflectedTypeBuilder() {
@@ -42,24 +41,24 @@ namespace IronPython.Runtime.Types {
             _opsType = opsType;
         }
 
-        public static DynamicType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget1 optimizedCtor) {
+        public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget1 optimizedCtor) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            DynamicType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
-            ExtensionTypeAttribute.RegisterType(baseType, opsType, res);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }
 
-        public static DynamicType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget2 optimizedCtor) {
+        public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget2 optimizedCtor) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            DynamicType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
-            ExtensionTypeAttribute.RegisterType(baseType, opsType, res);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }
 
-        public static DynamicType Build(string name, Type baseType, Type opsType, Type extensibleType) {
+        public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            DynamicType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
-            ExtensionTypeAttribute.RegisterType(baseType, opsType, res);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }        
 
@@ -138,7 +137,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        protected override DynamicTypeSlot StoreMethod(SymbolId methodId, string name, ContextId context, MethodInfo mi, FunctionType ft) {
+        protected override PythonTypeSlot StoreMethod(SymbolId methodId, string name, ContextId context, MethodInfo mi, FunctionType ft) {
             if ((ft & FunctionType.OpsFunction) != 0) RemoveNonOps(SymbolTable.StringToId(name));
             return base.StoreMethod(methodId, name, context, mi, ft);
         }

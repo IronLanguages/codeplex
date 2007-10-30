@@ -87,7 +87,7 @@ class NumType:
             elif self.is_signed:
                 if oty.is_signed:
                     if self.name == 'Double': return oty.name == 'Double' or oty.name == 'Complex64'
-                    else: return True
+                    else: return self.size <= oty.size
                 else:
                     return False
             else:
@@ -316,13 +316,38 @@ public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
 explicit_conv = """\
 [ExplicitConversionMethod]
 public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
-    return checked((%(otype)s)x);
+    if (%(otype)s.MinValue <= x && x <= %(otype)s.MaxValue) {
+        return (%(otype)s)x;
+    }
+    throw Converter.CannotConvertOverflow("%(otype)s", x);
+}"""
+
+explicit_conv_to_unsigned_from_signed = """\
+[ExplicitConversionMethod]
+public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
+    if (x >= 0) {
+        return (%(otype)s)x;
+    }
+    throw Converter.CannotConvertOverflow("%(otype)s", x);
+}"""
+
+explicit_conv_tosigned_from_unsigned = """\
+[ExplicitConversionMethod]
+public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
+    if (x <= (%(type)s)%(otype)s.MaxValue) {
+        return (%(otype)s)x;
+    }
+    throw Converter.CannotConvertOverflow("%(otype)s", x);
 }"""
 
 
 def write_conversion(cw, ty, oty):
     if ty.is_implicit(oty):
         cw.write(implicit_conv, otype=oty.name)
+    elif ty.is_signed and not oty.is_signed and ty.size <= oty.size:
+        cw.write(explicit_conv_to_unsigned_from_signed, otype=oty.name)
+    elif not ty.is_signed and oty.is_signed:
+        cw.write(explicit_conv_tosigned_from_unsigned, otype=oty.name)
     else:
         cw.write(explicit_conv, otype=oty.name)
     
@@ -337,13 +362,13 @@ def gen_conversions(cw, ty):
             
 type_header = """\
 [StaticExtensionMethod("__new__")]
-public static object Make(DynamicType cls) {
+public static object Make(PythonType cls) {
     return Make(cls, default(%(type)s));
 }
 
 [StaticExtensionMethod("__new__")]
-public static object Make(DynamicType cls, object value) {
-    if (cls != DynamicHelpers.GetDynamicTypeFromType(typeof(%(type)s))) {
+public static object Make(PythonType cls, object value) {
+    if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(%(type)s))) {
         throw PythonOps.TypeError("%(type)s.__new__: first argument must be %(type)s type.");
     }
     IConvertible valueConvertible;

@@ -30,10 +30,10 @@ namespace IronPython.Modules {
     [Documentation("High performance data structures\n")]
     [PythonType("collections")]
     public class PythonCollections {
-        public static object deque = DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDequeCollection));
+        public static object deque = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDequeCollection));
 
         [PythonType("deque")]
-        public class PythonDequeCollection : IEnumerable, IComparable, ICodeFormattable, IValueEquality {
+        public class PythonDequeCollection : IEnumerable, IComparable, ICodeFormattable, IValueEquality, ICollection {
             object[] data;
             object lockObj = new object();
             int head, tail;
@@ -221,7 +221,7 @@ namespace IronPython.Modules {
                     res.Extend(this.GetEnumerator());
                     return res;
                 } else {
-                    return PythonCalls.Call(DynamicHelpers.GetDynamicType(this), GetEnumerator());
+                    return PythonCalls.Call(DynamicHelpers.GetPythonType(this), GetEnumerator());
                 }
             }
 
@@ -285,7 +285,7 @@ namespace IronPython.Modules {
                     });
 
                     return PythonTuple.MakeTuple(
-                        DynamicHelpers.GetDynamicTypeFromType(GetType()),
+                        DynamicHelpers.GetPythonTypeFromType(GetType()),
                         PythonTuple.MakeTuple(new List(items)),
                         null
                     );
@@ -579,6 +579,26 @@ namespace IronPython.Modules {
             }
 
             #endregion
+
+            #region ICollection Members
+
+            void ICollection.CopyTo(Array array, int index) {
+                throw new NotImplementedException();
+            }
+
+            int ICollection.Count {
+                get { return this.itemCnt;  }
+            }
+
+            bool ICollection.IsSynchronized {
+                get { return false; }
+            }
+
+            object ICollection.SyncRoot {
+                get { return this; }
+            }
+
+            #endregion           
         }
 
     }

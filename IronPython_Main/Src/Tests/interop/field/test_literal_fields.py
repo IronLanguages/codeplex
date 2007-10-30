@@ -142,8 +142,7 @@ def _test_set_by_type(current_type):
     def f8(): current_type.LiteralInt64Field = 9
     def f9(): current_type.LiteralDoubleField = 10
     def f10(): current_type.LiteralSingleField = 11
-    def f11(): current_type.LiteralDecimalField = 12 # bug: 308339
-    def f11(): current_type.LiteralSingleField = 11  # this should be removed after bug fix 
+    def f11(): current_type.LiteralDecimalField = 12 
 
     def f12(): current_type.LiteralCharField = 'L'
     def f13(): current_type.LiteralBooleanField = False
@@ -162,7 +161,7 @@ def _test_set_by_descriptor(current_type):
      lambda : current_type.__dict__['LiteralByteField'].__set__(None, 2),
      lambda : current_type.__dict__['LiteralUInt16Field'].__set__(None, 4),
      lambda : current_type.__dict__['LiteralUInt64Field'].__set__(None, 8),
-     #lambda : current_type.__dict__['LiteralDecimalField'].__set__(None, 12),
+     lambda : current_type.__dict__['LiteralDecimalField'].__set__(None, 12),
      lambda : current_type.__dict__['LiteralBooleanField'].__set__(None, False),
      lambda : current_type.__dict__['LiteralClassField'].__set__(None, None),
      lambda : current_type.__dict__['LiteralUInt64Field'].__set__(None, 8),
@@ -178,7 +177,7 @@ def _test_set_by_descriptor(current_type):
      lambda : current_type.__dict__['LiteralDoubleField'].__set__(current_type, 10),
      lambda : current_type.__dict__['LiteralSingleField'].__set__(o, 11),
     
-     lambda : current_type.__dict__['LiteralCharField'].__set__(o, "Long"),  # wrong type
+     lambda : current_type.__dict__['LiteralCharField'].__set__(o, "Long"),  # wrong type by purpose
      lambda : current_type.__dict__['LiteralStringField'].__set__(o, "Python"),
 
      lambda : current_type.__dict__['LiteralEnumField'].__set__(current_type, EnumInt32.C),
@@ -200,8 +199,7 @@ def _test_delete_via_type(current_type):
     def f8(): del current_type.LiteralInt64Field
     def f9(): del current_type.LiteralDoubleField
     def f10(): del current_type.LiteralSingleField
-    #def f11(): del current_type.LiteralDecimalField
-    def f11(): del current_type.LiteralSingleField
+    def f11(): del current_type.LiteralDecimalField
     
     def f12(): del current_type.LiteralCharField
     def f13(): del current_type.LiteralBooleanField

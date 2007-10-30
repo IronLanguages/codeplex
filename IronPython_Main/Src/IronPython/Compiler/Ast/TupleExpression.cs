@@ -32,7 +32,7 @@ namespace IronPython.Compiler.Ast {
             if (_expandable) {
                 return Ast.NewArray(
                     typeof(object[]),
-                    ag.Transform(Items)
+                    ag.TransformAndConvert(Items, typeof(object))
                 );
             }
 
@@ -40,7 +40,7 @@ namespace IronPython.Compiler.Ast {
                 AstGenerator.GetHelperMethod("MakeTuple"),
                 Ast.NewArray(
                     typeof(object[]),
-                    ag.Transform(Items)
+                    ag.TransformAndConvert(Items, typeof(object))
                 )
             );
         }

@@ -21,7 +21,6 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -36,7 +35,7 @@ namespace IronPython.Runtime.Operations {
         private static BigInteger DecimalMin = BigInteger.Create(Decimal.MinValue);        
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls, string s, int radix) {
+        public static object Make(CodeContext context, PythonType cls, string s, int radix) {
             if (cls == TypeCache.BigInteger) {
                 return ParseBigIntegerSign(s, radix);
             } else {
@@ -54,7 +53,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls, object x) {
+        public static object Make(CodeContext context, PythonType cls, object x) {
             Extensible<BigInteger> el;
 
             if (cls == TypeCache.BigInteger) {
@@ -67,7 +66,7 @@ namespace IronPython.Runtime.Operations {
                 else {
                     BigInteger intVal;
                     if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", DynamicTypeOps.GetName(x));
+                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
                         return intVal;
                     }
                 }
@@ -82,7 +81,7 @@ namespace IronPython.Runtime.Operations {
                 else if (x is long) intVal = (long)x;
                 else {
                     if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", DynamicTypeOps.GetName(x));
+                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
                         return intVal;
                     }
                 }
@@ -99,7 +98,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, DynamicType cls) {
+        public static object Make(CodeContext context, PythonType cls) {
             if (cls == TypeCache.BigInteger) {
                 return BigInteger.Zero;
             } else {
@@ -512,6 +511,18 @@ namespace IronPython.Runtime.Operations {
             return DecimalOps.Compare(x, y) != 0;
         }
 
+        [ExplicitConversionMethod]
+        public static int ConvertToInt32(BigInteger self) {
+            int res;
+            if (self.AsInt32(out res)) return res;
+
+            throw Converter.CannotConvertOverflow("int", self);
+        }
+
+        [ImplicitConversionMethod]
+        public static BigInteger ConvertToBigInteger(bool self) {
+            return self ? BigInteger.One : BigInteger.Zero;
+        }
 
         [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
@@ -536,7 +547,7 @@ namespace IronPython.Runtime.Operations {
             BigInteger bi;
             if (!Converter.TryConvertToBigInteger(y, out bi)) {
                 object res;
-                if(DynamicHelpers.GetDynamicType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
+                if(DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
                     if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
                         return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
                     }

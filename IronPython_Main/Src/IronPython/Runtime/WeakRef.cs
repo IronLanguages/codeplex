@@ -20,11 +20,12 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -164,7 +165,7 @@ namespace IronPython.Runtime {
                     return _site.Invoke(context, o);
                 }
             } else {
-                DynamicHelpers.GetDynamicType(_instance).TryInvokeUnaryOperator(context, Operators.Unassign, _instance, out o);
+                DynamicHelpers.GetPythonType(_instance).TryInvokeUnaryOperator(context, Operators.Unassign, _instance, out o);
             }
 
             return null;

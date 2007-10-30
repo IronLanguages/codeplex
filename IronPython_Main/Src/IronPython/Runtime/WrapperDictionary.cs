@@ -18,7 +18,8 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
+
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -176,12 +177,12 @@ namespace IronPython.Runtime {
         #endregion
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq) {
+        public static object FromKeys(CodeContext context, PythonType cls, object seq) {
             return PythonDictionary.FromKeys(context, cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, DynamicType cls, object seq, object value) {
+        public static object FromKeys(CodeContext context, PythonType cls, object seq, object value) {
             return PythonDictionary.FromKeys(context, cls, seq, value);
         }
 

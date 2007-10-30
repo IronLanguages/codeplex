@@ -55,34 +55,7 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
             return _target(this, context, %(targs)s);
         }
 
-        rule = context.LanguageContext.Binder.GetRule<%(prefix)sDynamicSiteTarget<%(ts)s>>(context, Action, %(getargsarray)s);
-
-#if DEBUG
-        // This is much slower than building the ruleset, since we have to look up the rule every time;
-        // we do it in debug mode to make sure we can still get through this code path
-        // without generating IL.
-        if (context.LanguageContext.Engine != null && context.LanguageContext.Engine.Options.InterpretedMode) {
-            object[] args = new object[] { %(targs)s };
-            using (context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
-                bool result = (bool)rule.Test.Evaluate(context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(context);
-            }
-        }
-#endif
-        %(prefix)sDynamicSiteTarget<%(ts)s> target;
-        lock (this) {
-            bool monomorphic = _rules.HasMonomorphicTarget(_target);
-
-            _rules = _rules.AddRule(rule);
-            if (monomorphic || _rules == EmptyRuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>>.FixedInstance) {
-                _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(context);
-            } else {
-                _target = target = _rules.GetOrMakeTarget(context);
-            }
-        }
-
-        return target(this, context, %(targs)s);
+        return (Tret)context.LanguageContext.Binder.UpdateSiteAndExecute<%(prefix)sDynamicSiteTarget<%(ts)s>>(context, Action, %(getargsarray)s, this, ref _target, ref _rules);
     }
 }
 
@@ -120,31 +93,8 @@ public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s
             return _target(this, %(targs)s);
         }
 
-        rule = Context.LanguageContext.Binder.GetRule<%(prefix)sFastDynamicSiteTarget<%(ts)s>>(Context, Action, %(getargsarray)s);
-
-#if DEBUG
-        if (Context.LanguageContext.Engine != null && Context.LanguageContext.Engine.Options.InterpretedMode) {
-            object[] args = new object[] { %(targs)s };
-            using (Context.Scope.TemporaryVariableContext(rule.TemporaryVariables, rule.ParamVariables, args)) {
-                bool result = (bool)rule.Test.Evaluate(Context);
-                Debug.Assert(result);
-                return (Tret)rule.Target.Execute(Context);
-            }
-        }
-#endif
-        %(prefix)sFastDynamicSiteTarget<%(ts)s> target;
-        lock (this) {
-            bool monomorphic = _rules.HasMonomorphicTarget(_target);
-
-            _rules = _rules.AddRule(rule);
-            if (monomorphic || _rules == EmptyRuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>>.FixedInstance) {
-                _target = target = rule.MonomorphicRuleSet.GetOrMakeTarget(Context);
-            } else {
-                _target = target = _rules.GetOrMakeTarget(Context);
-            }
-        }
-
-        return target(this, %(targs)s);
+        
+        return (Tret)Context.LanguageContext.Binder.UpdateSiteAndExecute<%(prefix)sFastDynamicSiteTarget<%(ts)s>>(Context, Action, %(getargsarray)s, this, ref _target, ref _rules);
     }
 }"""
 
@@ -210,29 +160,7 @@ def gen_uninitialized_type(cw):
     cw.exit_block()
 
 
-executor = """\
-while(true) {
-    StandardRule<DynamicSiteTarget<%(typeargs)s>> rule%(k)d = 
-        binder.GetRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args);
-
-    using (context.Scope.TemporaryVariableContext(rule%(k)d.TemporaryVariables, rule%(k)d.ParamVariables, args)) {
-        result = (bool)rule%(k)d.Test.Evaluate(context);
-        if (!result) {
-            // The test may evaluate as false if:
-            // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
-            //    generating invalid rules.
-            // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
-            //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
-            //    side-effects are visible to Execute below.
-            // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
-            // the interpreter and the language binders are flushed out
-            Debug.Assert(result);
-            continue;
-        }
-
-        return rule%(k)d.Target.Execute(context);
-    }
-}"""
+executor = """return binder.ExecuteRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args); """
 
 big_executor = '''\
 //TODO: use CompilerHelpers.GetTypes(args) instead?
@@ -252,8 +180,9 @@ while(true) {
 
     Tuple t = Tuple.MakeTuple(tupleType, args);
     object[] tupArg = new object[] {t};
-    using (context.Scope.TemporaryVariableContext(tempVars, paramVars, tupArg)) {
-        result = (bool)test.Evaluate(context);
+    CodeContext tmpCtx = context.Scope.GetTemporaryVariableContext(context, paramVars, tupArg);
+    try {    
+        bool result = (bool)test.Evaluate(tmpCtx);
         if (!result) {
             // The test may evaluate as false if:
             // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
@@ -267,13 +196,14 @@ while(true) {
             continue;
         }
 
-        return target.Execute(context);
+        return target.Execute(tmpCtx);
+    } finally {
+        tmpCtx.Scope.TemporaryStorage.Clear();
     }
 }'''
 
 def gen_execute(cw):
     cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, params object[] args)")
-    cw.write('bool result;')
     cw.enter_block("switch (args.Length)")
     for i in range(MaxSiteArity):
         cw.case_label("case %d:" % (i+1))

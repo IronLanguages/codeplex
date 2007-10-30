@@ -22,7 +22,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
@@ -42,13 +41,13 @@ namespace IronPython.Runtime.Calls {
         }
 
         public new StandardRule<T> MakeRule() {            
-            DynamicType dt = Arguments[0] as DynamicType;
+            PythonType dt = Arguments[0] as PythonType;
             if (dt != null) {
                 if (IsStandardDotNetType(dt)) {
                     return ((IDynamicObject)dt).GetRule<T>(MakeCreateInstanceAction(Action), Context, Arguments);
                 }
 
-                // TODO: this should move into DynamicType's IDynamicObject implementation when that exists
+                // TODO: this should move into PythonType's IDynamicObject implementation when that exists
                 return MakePythonTypeCallRule(dt);
             }
 
@@ -56,7 +55,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private StandardRule<T> MakePythonTypeCallRule(DynamicType creating) {
+        private StandardRule<T> MakePythonTypeCallRule(PythonType creating) {
             ArgumentValues ai = MakeArgumentInfo();
             NewAdapter newAdapter;
             InitAdapter initAdapter;
@@ -151,8 +150,8 @@ namespace IronPython.Runtime.Calls {
 
         #region Adapter support
 
-        private void GetAdapters(DynamicType creating, ArgumentValues ai, out NewAdapter newAdapter, out InitAdapter initAdapter) {
-            DynamicTypeSlot newInst, init;
+        private void GetAdapters(PythonType creating, ArgumentValues ai, out NewAdapter newAdapter, out InitAdapter initAdapter) {
+            PythonTypeSlot newInst, init;
             creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
             creating.TryResolveSlot(Context, Symbols.Init, out init);
 
@@ -161,10 +160,10 @@ namespace IronPython.Runtime.Calls {
             _canTemplate = newAdapter.TemplateKey != null && initAdapter.TemplateKey != null;
         }
 
-        private InitAdapter GetInitAdapter(ArgumentValues ai, DynamicType creating, DynamicTypeSlot init) {
+        private InitAdapter GetInitAdapter(ArgumentValues ai, PythonType creating, PythonTypeSlot init) {
             if (IsMixedNewStyleOldStyle(creating)) {
                 return new MixedInitAdapter(ai, Action);
-            } else if ((init == InstanceOps.Init && !HasFinalizer(creating)) || (creating == TypeCache.DynamicType && Arguments.Length == 2)) {
+            } else if ((init == InstanceOps.Init && !HasFinalizer(creating)) || (creating == TypeCache.PythonType && Arguments.Length == 2)) {
                 return new DefaultInitAdapter(ai, Action);
             } else if (init is BuiltinMethodDescriptor) {
                 return new BuiltinInitAdapter(ai, Action, ((BuiltinMethodDescriptor)init).Template);
@@ -175,7 +174,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private NewAdapter GetNewAdapter(ArgumentValues ai, DynamicType creating, DynamicTypeSlot newInst) {
+        private NewAdapter GetNewAdapter(ArgumentValues ai, PythonType creating, PythonTypeSlot newInst) {
             if (IsMixedNewStyleOldStyle(creating)) {
                 return new MixedNewAdapter(ai, Action);
             } else if (newInst == InstanceOps.New) {
@@ -267,8 +266,8 @@ namespace IronPython.Runtime.Calls {
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicMixin)),
-                                typeof(DynamicMixin).GetMethod("GetMember"),
+                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
+                                typeof(PythonType).GetMethod("GetMember"),
                                 Ast.CodeContext(),
                                 Ast.Null(),
                                 Ast.Constant(Symbols.NewInst)
@@ -295,9 +294,9 @@ namespace IronPython.Runtime.Calls {
         }
 
         private class DefaultNewAdapter : NewAdapter {
-            private DynamicType _creating;
+            private PythonType _creating;
 
-            public DefaultNewAdapter(ArgumentValues ai, CallAction action, DynamicType creating)
+            public DefaultNewAdapter(ArgumentValues ai, CallAction action, PythonType creating)
                 : base(ai, action) {
                 _creating = creating;
             }
@@ -305,13 +304,13 @@ namespace IronPython.Runtime.Calls {
             public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
                 MethodCandidate cand = _creating.IsSystemType ?
                     GetTypeConstructor(binder, _creating, ArrayUtils.EmptyTypes) :
-                    GetTypeConstructor(binder, _creating, new Type[] { typeof(DynamicType) });
+                    GetTypeConstructor(binder, _creating, new Type[] { typeof(PythonType) });
 
                 Debug.Assert(cand != null);
                 return cand.Target.MakeExpression(binder,
                     rule,
                     _creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
-                    _creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(DynamicType) });
+                    _creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(PythonType) });
             }
 
             public override object TemplateKey {
@@ -323,17 +322,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private class ConstructorNewAdapter : NewAdapter {
-            private DynamicType _creating;
+            private PythonType _creating;
             private ConstructorFunction _ctor;
 
             public ConstructorNewAdapter(ArgumentValues ai, CallAction action, ConstructorFunction ctor)
                 : base(ai, action) {
-                _creating = (DynamicType)ai.Arguments[0];
+                _creating = (PythonType)ai.Arguments[0];
                 _ctor = ctor;
             }
 
             public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
-                Type[] types = _creating.IsSystemType ? Arguments.Types : ArrayUtils.Insert(typeof(DynamicType), Arguments.Types);
+                Type[] types = _creating.IsSystemType ? Arguments.Types : ArrayUtils.Insert(typeof(PythonType), Arguments.Types);
 
                 MethodBinder mb = GetMethodBinder(binder);
                 MethodCandidate cand = mb.MakeBindingTarget(CallType.None, types);
@@ -347,7 +346,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             private MethodBinder GetMethodBinder(ActionBinder binder) {
-                return MethodBinder.MakeBinder(binder, DynamicTypeOps.GetName(_creating), _creating.UnderlyingSystemType.GetConstructors(), BinderType.Normal, Arguments.Names);
+                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _creating.UnderlyingSystemType.GetConstructors(), BinderType.Normal, Arguments.Names);
             }
 
             public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
@@ -364,17 +363,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private class BuiltinNewAdapter : NewAdapter {
-            private DynamicType _creating;
+            private PythonType _creating;
             private BuiltinFunction _ctor;
 
             public BuiltinNewAdapter(ArgumentValues ai, CallAction action, BuiltinFunction ctor)
                 : base(ai, action) {
-                _creating = (DynamicType)ai.Arguments[0];
+                _creating = (PythonType)ai.Arguments[0];
                 _ctor = ctor;
             }
 
             public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
-                Type[] types = ArrayUtils.Insert(typeof(DynamicType), Arguments.Types);
+                Type[] types = ArrayUtils.Insert(typeof(PythonType), Arguments.Types);
 
                 MethodBinder mb = GetMethodBinder(binder);
 
@@ -395,7 +394,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             private MethodBinder GetMethodBinder(ActionBinder binder) {
-                return MethodBinder.MakeBinder(binder, DynamicTypeOps.GetName(_creating), _ctor.Targets, BinderType.Normal, Arguments.Names);
+                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _ctor.Targets, BinderType.Normal, Arguments.Names);
             }
 
             public override object TemplateKey {
@@ -420,7 +419,7 @@ namespace IronPython.Runtime.Calls {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
+                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.Constant(null),
                                 Ast.Constant(Symbols.NewInst)
                             ),
@@ -448,7 +447,7 @@ namespace IronPython.Runtime.Calls {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("GetInitMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
+                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.ConvertHelper(createExpr, typeof(object))
                             ),
                             ArrayUtils.RemoveFirst(rule.Parameters)
@@ -488,12 +487,12 @@ namespace IronPython.Runtime.Calls {
 
         private class BuiltinInitAdapter : InitAdapter {
             private BuiltinFunction _method;
-            private DynamicType _creating;
+            private PythonType _creating;
 
             public BuiltinInitAdapter(ArgumentValues ai, CallAction action, BuiltinFunction method)
                 : base(ai, action) {
                 _method = method;
-                _creating = (DynamicType)ai.Arguments[0];
+                _creating = (PythonType)ai.Arguments[0];
             }
 
             public override Expression MakeInitCall(ActionBinder binder, StandardRule<T> rule, Expression createExpr) {
@@ -553,7 +552,7 @@ namespace IronPython.Runtime.Calls {
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("GetMixedMember"),
                                 Ast.CodeContext(),
-                                Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
+                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.ConvertHelper(createExpr, typeof(object)),
                                 Ast.Constant(Symbols.Init)
                             ),
@@ -589,7 +588,7 @@ namespace IronPython.Runtime.Calls {
                         Test,
                         MakeNecessaryTests(Rule, new Type[][] { newAdapter.TestTypes, initAdapter.TestTypes }, ai.Expressions)
                     ),
-                    MakeTypeTestForCreateInstance((DynamicType)Arguments[0], Rule)
+                    MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
                 )
             );
         }
@@ -602,7 +601,7 @@ namespace IronPython.Runtime.Calls {
                         Test,
                         MakeNecessaryTests(Rule, new Type[][] { ai.Types }, ai.Expressions)
                     ),
-                    MakeTypeTestForCreateInstance((DynamicType)Arguments[0], Rule)
+                    MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
                 )
             );
         }
@@ -612,7 +611,7 @@ namespace IronPython.Runtime.Calls {
         }
 
 
-        private bool IsStandardDotNetType(DynamicType type) {
+        private bool IsStandardDotNetType(PythonType type) {
             return type.IsSystemType &&
                 !PythonTypeCustomizer.IsPythonType(type.UnderlyingSystemType) &&            
                 !type.UnderlyingSystemType.IsDefined(typeof(PythonSystemTypeAttribute), true) &&
@@ -627,15 +626,15 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private bool HasFinalizer(DynamicType creating) {
-            DynamicTypeSlot del;
+        private bool HasFinalizer(PythonType creating) {
+            PythonTypeSlot del;
             bool hasDel = creating.TryResolveSlot(Context, Symbols.Unassign, out del);
             return hasDel;
         }
 
-        private static bool IsMixedNewStyleOldStyle(DynamicType dt) {
+        private static bool IsMixedNewStyleOldStyle(PythonType dt) {
             if (!Mro.IsOldStyle(dt)) {
-                foreach (DynamicType baseType in dt.ResolutionOrder) {
+                foreach (PythonType baseType in dt.ResolutionOrder) {
                     if (Mro.IsOldStyle(baseType)) {
                         // mixed new-style/old-style class, we can't handle
                         // __init__ in an old-style class yet (it doesn't show
@@ -647,19 +646,19 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
 
-        private bool HasDefaultNew(DynamicType creating) {
-            DynamicTypeSlot newInst;
+        private bool HasDefaultNew(PythonType creating) {
+            PythonTypeSlot newInst;
             creating.TryResolveSlot(Context, Symbols.NewInst, out newInst);
             return newInst == InstanceOps.New;
         }
 
-        private bool HasDefaultInit(DynamicType creating) {
-            DynamicTypeSlot init;
+        private bool HasDefaultInit(PythonType creating) {
+            PythonTypeSlot init;
             creating.TryResolveSlot(Context, Symbols.Init, out init);
             return init == InstanceOps.Init;
         }
 
-        private bool HasDefaultNewAndInit(DynamicType creating) {
+        private bool HasDefaultNewAndInit(PythonType creating) {
             return HasDefaultNew(creating) && HasDefaultInit(creating);
         }
 
@@ -667,7 +666,7 @@ namespace IronPython.Runtime.Calls {
         /// Checks if we have a default new and init - in this case if we have any
         /// arguments we don't allow the call.
         /// </summary>
-        private bool TooManyArgsForDefaultNew(DynamicType creating, bool hasArgs) {
+        private bool TooManyArgsForDefaultNew(PythonType creating, bool hasArgs) {
             if (hasArgs) {
                 return HasDefaultNewAndInit(creating);
             }
@@ -677,10 +676,10 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Generates an expression which calls a .NET constructor directly.
         /// </summary>
-        public static MethodCandidate GetTypeConstructor(ActionBinder binder, DynamicType creating, Type[] argTypes) {
+        public static MethodCandidate GetTypeConstructor(ActionBinder binder, PythonType creating, Type[] argTypes) {
             // type has no __new__ override, call .NET ctor directly
             MethodBinder mb = MethodBinder.MakeBinder(binder,
-                DynamicTypeOps.GetName(creating),
+                PythonTypeOps.GetName(creating),
                 creating.UnderlyingSystemType.GetConstructors(),
                 BinderType.Normal);
 
@@ -694,9 +693,9 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Creates a test which tests the specific version of the type.
         /// </summary>
-        public Expression MakeTypeTestForCreateInstance(DynamicType creating, StandardRule<T> rule) {
-            _altVersion = creating.Version == DynamicType.DynamicVersion;
-            string vername = _altVersion ? "AlternateVersion" : "Version";
+        public Expression MakeTypeTestForCreateInstance(PythonType creating, StandardRule<T> rule) {
+            _altVersion = creating.Version == PythonType.DynamicVersion;
+            string vername = _altVersion ? "GetAlternateTypeVersion" : "GetTypeVersion";
             int version = _altVersion ? creating.AlternateVersion : creating.Version;
 
             Expression versionExpr;
@@ -707,9 +706,10 @@ namespace IronPython.Runtime.Calls {
             }
 
             return Ast.Equal(
-                Ast.ReadProperty(
-                    Ast.Convert(rule.Parameters[0], typeof(DynamicType)),
-                    typeof(DynamicType).GetProperty(vername)),
+                Ast.Call(
+                    typeof(PythonOps).GetMethod(vername),
+                    Ast.Convert(rule.Parameters[0], typeof(PythonType))
+                ),
                 versionExpr
             );
         }
@@ -764,14 +764,14 @@ namespace IronPython.Runtime.Calls {
             #endregion
         }
 
-        private void CopyTemplateToRule(CodeContext context, DynamicType t, params object[] templateData) {
+        private void CopyTemplateToRule(CodeContext context, PythonType t, params object[] templateData) {
             TemplatedRuleBuilder<T> builder;
 
             lock (PythonCallTemplateBuilders) {
                 ShareableTemplateKey key =
                     new ShareableTemplateKey(Action,
                     t.UnderlyingSystemType,
-                    t.Version == DynamicMixin.DynamicVersion,
+                    t.Version == PythonType.DynamicVersion,
                     ArrayUtils.Insert<object>(HasFinalizer(t), templateData));
                 if (!PythonCallTemplateBuilders.TryGetValue(key, out builder)) {
                     PythonCallTemplateBuilders[key] = Rule.GetTemplateBuilder();

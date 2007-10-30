@@ -182,14 +182,22 @@ def test_sanity_re_pattern():
     AreEqual(re.compile("(abc){1}", re.L).flags, re.L)
     
     #groupindex
-    #Merlin Work Item 148105
-    #AreEqual(pattern.groupindex, {})
+    AreEqual(pattern.groupindex, {})
     AreEqual(re.compile("(?P<abc>)(?P<bcd>)").groupindex, {'bcd': 2, 'abc': 1})
     
     #pattern
     AreEqual(pattern.pattern, "(abc){1}")
     AreEqual(re.compile("").pattern, "")
     
+def test_groupindex_empty():
+    test_list = [   ".", "^", "$", "1*", "2+", "3?", "4*?", "5+?", "6??", "7{1}", "8{1,2}", 
+                    "9{1,2}?", "[a-z]", "|", "(...)", "(?:abc)",
+                    "\(\?P\<Blah\>abc\)", "(?#...)", "(?=...)", "(?!...)", "(?<=...)",
+                    "(?<!...)", "\1", "\A", "\d"
+                    ]
+    for x in test_list:
+        AreEqual(re.compile(x).groupindex, {})
+
     
 def test_sanity_re_match():
     '''

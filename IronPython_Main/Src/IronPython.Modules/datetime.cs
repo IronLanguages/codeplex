@@ -22,7 +22,6 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -90,7 +89,7 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__new__")]
-            public static PythonTimeDelta Make(CodeContext context, DynamicType cls,
+            public static PythonTimeDelta Make(CodeContext context, PythonType cls,
                 [DefaultParameterValue(0D)] double days,
                 [DefaultParameterValue(0D)] double seconds,
                 [DefaultParameterValue(0D)] double microseconds,
@@ -98,7 +97,7 @@ namespace IronPython.Modules {
                 [DefaultParameterValue(0D)] double minutes,
                 [DefaultParameterValue(0D)] double hours,
                 [DefaultParameterValue(0D)] double weeks) {
-                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonTimeDelta))) {
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonTimeDelta))) {
                     return new PythonTimeDelta(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
                 } else {
                     PythonTimeDelta delta = cls.CreateInstance(context, days, seconds, microseconds, milliseconds, minutes, hours, weeks) as PythonTimeDelta;
@@ -204,7 +203,7 @@ namespace IronPython.Modules {
 
             [PythonName("__reduce__")]
             public PythonTuple Reduce() {
-                return PythonTuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), PythonTuple.MakeTuple(_days, _seconds, _microseconds));
+                return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_days, _seconds, _microseconds));
             }
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(int days, int seconds, int microseconds) {
@@ -244,7 +243,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonTimeDelta delta = other as PythonTimeDelta;
                 if (delta == null)
-                    throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", DynamicTypeOps.GetName(other));
+                    throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", PythonTypeOps.GetName(other));
 
                 int res = this._days - delta._days;
                 if (res != 0) return res;
@@ -366,8 +365,8 @@ namespace IronPython.Modules {
             }
 
             [PythonName("__new__")]
-            public static PythonDate Make(CodeContext context, DynamicType cls, int year, int month, int day) {
-                if (cls == DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate))) {
+            public static PythonDate Make(CodeContext context, PythonType cls, int year, int month, int day) {
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonDate))) {
                     return new PythonDate(year, month, day);
                 } else {
                     PythonDate date = cls.CreateInstance(context, year, month, day) as PythonDate;
@@ -452,12 +451,12 @@ namespace IronPython.Modules {
 
             [PythonName("__reduce__")]
             public virtual PythonTuple Reduce() {
-                return PythonTuple.MakeTuple(DynamicHelpers.GetDynamicTypeFromType(this.GetType()), PythonTuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
+                return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
             }
 
             [PythonName("__getnewargs__")]
             public static object GetNewArgs(CodeContext context, int year, int month, int day) {
-                return PythonTuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetDynamicTypeFromType(typeof(PythonDate)), year, month, day));
+                return PythonTuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetPythonTypeFromType(typeof(PythonDate)), year, month, day));
             }
 
             [PythonName("replace")]
@@ -589,7 +588,7 @@ namespace IronPython.Modules {
                     throw PythonOps.TypeError("can't compare datetime.date to NoneType");
 
                 if (other.GetType() != typeof(PythonDate))
-                    throw PythonOps.TypeError("can't compare datetime.date to {0}", DynamicTypeOps.GetName(other));
+                    throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));
 
                 PythonDate date = other as PythonDate;
                 return this._dateTime.CompareTo(date._dateTime);
@@ -991,7 +990,7 @@ namespace IronPython.Modules {
 
                 PythonDateTimeCombo combo = other as PythonDateTimeCombo;
                 if (combo == null)
-                    throw PythonOps.TypeError("can't compare datetime.datetime to {0}", DynamicTypeOps.GetName(other));
+                    throw PythonOps.TypeError("can't compare datetime.datetime to {0}", PythonTypeOps.GetName(other));
 
                 if (CheckTzInfoBeforeCompare(this, combo)) {
                     int res = this.InternalDateTime.CompareTo(combo.InternalDateTime);
@@ -1160,6 +1159,10 @@ namespace IronPython.Modules {
                 return this.UtcTime.TimeSpan.Ticks != 0 || this.UtcTime.LostMicroseconds != 0;
             }
 
+            public static explicit operator bool(PythonDateTimeTime time) {
+                return time.NonZero();
+            }
+
             // instance methods
             [PythonName("replace")]
             public object Replace() {
@@ -1286,7 +1289,7 @@ namespace IronPython.Modules {
             private int CompareTo(object other) {
                 PythonDateTimeTime other2 = other as PythonDateTimeTime;
                 if (other2 == null)
-                    throw PythonOps.TypeError("can't compare datetime.time to {0}", DynamicTypeOps.GetName(other));
+                    throw PythonOps.TypeError("can't compare datetime.time to {0}", PythonTypeOps.GetName(other));
 
                 if (CheckTzInfoBeforeCompare(this, other2)) {
                     int res = this._timeSpan.CompareTo(other2._timeSpan);

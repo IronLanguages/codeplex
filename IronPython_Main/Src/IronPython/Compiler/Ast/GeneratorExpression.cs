@@ -40,14 +40,10 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(func.Type == typeof(PythonFunction));
             // Generator expressions always return functions.  We could do even better here when all PythonFunction's are in the same class.
 
-            return Ast.Call(
+            return Ast.Action.Call(
+                typeof(object),
                 func,
-                typeof(PythonFunction).GetMethod("Call", new Type[] { typeof(CodeContext), typeof(object[]) }),
-                Ast.CodeContext(),
-                Ast.NewArray(
-                    typeof(object[]),
-                    ag.TransformAsObject(_iterable)
-                )
+                ag.TransformAsObject(_iterable)
             );
         }
 

@@ -23,9 +23,9 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -45,7 +45,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        protected object GetOverload(Type[] sig, MethodBase[] targets) {
+        protected object GetOverload(Type[] sig, IList<MethodBase> targets) {
             // We can still end up with more than one target since generic and non-generic
             // methods can share the same name and signature. So we'll build up a new
             // reflected method with all the candidate targets. A caller can then index this
@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        private void FindMatchingTargets(Type[] sig, MethodBase[] targets, BuiltinFunction rm) {
+        private void FindMatchingTargets(Type[] sig, IList<MethodBase> targets, BuiltinFunction rm) {
             int args = sig.Length;
 
             foreach (MethodBase mb in targets) {
@@ -95,7 +95,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public virtual MethodBase[] Targets {
+        public virtual IList<MethodBase> Targets {
             get {
                 return _function.Targets;
             }
@@ -131,7 +131,7 @@ namespace IronPython.Runtime.Operations {
             : base(builtinFunction, instance) {
         }
 
-        public override MethodBase[] Targets {
+        public override IList<MethodBase> Targets {
             get {
                 return ((ConstructorFunction)Function).ConstructorTargets;
             }

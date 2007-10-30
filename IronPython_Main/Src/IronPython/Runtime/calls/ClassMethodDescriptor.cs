@@ -17,20 +17,19 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    public class ClassMethodDescriptor : DynamicTypeSlot, ICodeFormattable {
+    public class ClassMethodDescriptor : PythonTypeSlot, ICodeFormattable {
         internal BuiltinFunction func;
 
         internal ClassMethodDescriptor(BuiltinFunction func) {
             this.func = func;
         }
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = GetAttribute(context, instance, owner);
             return true;
         }
@@ -42,26 +41,26 @@ namespace IronPython.Runtime.Calls {
         [PythonName("__get__")]
         public object GetAttribute(CodeContext context, object instance, object owner) {
             owner = CheckGetArgs(context, instance, owner);
-            return new Method(func, owner, DynamicHelpers.GetDynamicType(owner));
+            return new Method(func, owner, DynamicHelpers.GetPythonType(owner));
         }
 
         private object CheckGetArgs(CodeContext context, object instance, object owner) {
             if (owner == null) {
                 if (instance == null) throw PythonOps.TypeError("__get__(None, None) is invalid");
-                owner = DynamicHelpers.GetDynamicType(instance);
+                owner = DynamicHelpers.GetPythonType(instance);
             } else {
-                DynamicType dt = owner as DynamicType;
+                PythonType dt = owner as PythonType;
                 if (dt == null) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} needs a type, not a {2}",
                         PythonOps.StringRepr(func.Name),
-                        PythonOps.StringRepr(DynamicTypeOps.GetName(func.DeclaringType)),
-                        PythonOps.StringRepr(DynamicTypeOps.GetName(owner)));
+                        PythonOps.StringRepr(PythonTypeOps.GetName(func.DeclaringType)),
+                        PythonOps.StringRepr(PythonTypeOps.GetName(owner)));
                 }
                 if (!dt.IsSubclassOf(TypeCache.Dict)) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} doesn't apply to type {2}",
                         PythonOps.StringRepr(func.Name),
-                        PythonOps.StringRepr(DynamicTypeOps.GetName(func.DeclaringType)),
-                        PythonOps.StringRepr(DynamicTypeOps.GetName(dt)));
+                        PythonOps.StringRepr(PythonTypeOps.GetName(func.DeclaringType)),
+                        PythonOps.StringRepr(PythonTypeOps.GetName(dt)));
                 }
             }
             if (instance != null)
@@ -78,7 +77,7 @@ namespace IronPython.Runtime.Calls {
             if (bf != null) {
                 return String.Format("<method {0} of {1} objects>",
                     PythonOps.StringRepr(bf.Name),
-                    PythonOps.StringRepr(DynamicTypeOps.GetName(bf.DeclaringType)));
+                    PythonOps.StringRepr(PythonTypeOps.GetName(bf.DeclaringType)));
             }
 
             return String.Format("<classmethod object at {0}>",

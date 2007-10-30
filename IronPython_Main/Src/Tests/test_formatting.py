@@ -184,7 +184,7 @@ AreEqual("%r" % b, "repr")
 # if str() returns Unicode, so should 
 # test character
 AreEqual("%c" % 23, chr(23))
-AssertError(StandardError, (lambda: "%c" % -1) ) # IP currently raises TypeError, CP raises Overflow
+AssertError(OverflowError, (lambda: "%c" % -1) ) 
 AreEqual("%c" % unicode('x'), unicode('x'))
 try:
     AreEqual("%c" % 65535, u'\uffff')

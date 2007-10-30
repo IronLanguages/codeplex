@@ -258,7 +258,7 @@ def _test_set_by_descriptor(current_type):
     # pass correct values
     current_type.__dict__['StaticByteField'].__set__(None, 5)
     current_type.__dict__['StaticSByteField'].__set__(None, 10)
-    #current_type.__dict__['StaticSByteField'].__set__(o, 10)  ???
+    #current_type.__dict__['StaticSByteField'].__set__(o, 10)  
     current_type.__dict__['StaticUInt16Field'].__set__(None, 20)
     current_type.__dict__['StaticInt16Field'].__set__(None, 30)
     current_type.__dict__['StaticUInt32Field'].__set__(None, 40)
@@ -461,16 +461,20 @@ def test_access_from_derived_types():
         _test_get_by_instance(current_type)
         _test_get_by_type(current_type)
 
+        #
+        # the behavior for derived type is different from that for the base type. 
+        # I have to write seperate tests as below, instead of using the 2 lines
+        #
+        
         #_test_set_by_instance(current_type) 
         #_test_set_by_type(current_type)
         
-        # current behavior
         o = current_type()
         def f1(): o.StaticByteField = 1
         def f2(): current_type.StaticByteField = 1
 
-        for f in [f1, f2]:
-            AssertError(AttributeError, f)
+        AssertErrorWithMatch(AttributeError, "attribute 'StaticByteField' of '.*' object is read-only", f1)
+        AssertErrorWithMatch(AttributeError, "'.*' object has no attribute 'StaticByteField'", f2)
         
         Assert('StaticByteField' not in current_type.__dict__)
 

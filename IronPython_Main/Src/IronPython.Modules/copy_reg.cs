@@ -21,7 +21,6 @@ using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -145,7 +144,7 @@ namespace IronPython.Modules {
         [PythonName("pickle_complex")]
         public static PythonTuple ReduceComplex(CodeContext context, object complex) {
             return PythonTuple.MakeTuple(
-                DynamicHelpers.GetDynamicTypeFromType(typeof(Complex64)),
+                DynamicHelpers.GetPythonTypeFromType(typeof(Complex64)),
                 PythonTuple.MakeTuple(
                     PythonOps.GetBoundAttr(context, complex, Symbols.RealPart),
                     PythonOps.GetBoundAttr(context, complex, Symbols.ImaginaryPart)

@@ -26,7 +26,6 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -37,7 +36,7 @@ using IronPython.Hosting;
 
 namespace IronPython.Runtime.Calls {
     [PythonType("instancemethod")]
-    public sealed partial class Method : FastCallable, IFancyCallable, IWeakReferenceable, ICustomMembers, IDynamicObject {
+    public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, ICustomMembers, IDynamicObject {
         private object _func;
         private object _inst;
         private object _declaringClass;
@@ -83,7 +82,7 @@ namespace IronPython.Runtime.Calls {
         public object DeclaringClass {
             [PythonName("im_class")]
             get {
-                return PythonOps.ToPythonType((DynamicType)_declaringClass);
+                return PythonOps.ToPythonType((PythonType)_declaringClass);
             }
         }
 
@@ -124,39 +123,11 @@ namespace IronPython.Runtime.Calls {
             return nargs;
         }
 
-        [SpecialName]
-        public override object Call(CodeContext context, params object[] args) {
-            FastCallable fc = _func as FastCallable;
-            if (fc != null) {
-                if (_inst != null) {
-                    return fc.CallInstance(context, _inst, args);
-                } else {
-                    if (args.Length > 0) CheckSelf(args[0]);
-                    return fc.Call(context, args);
-                }
-            }
-            return PythonOps.CallWithContext(context, _func, AddInstToArgs(args));
-        }
-
-        public override object CallInstance(CodeContext context, object instance, params object[] args) {
-            FastCallable fc = _func as FastCallable;
-            if (fc != null) {
-                if (_inst != null) return fc.CallInstance(context, instance, AddInstToArgs(args));
-                else return fc.CallInstance(context, instance, args); //??? check instance type
-            }
-            return PythonOps.CallWithContext(context, _func, PrependInstance(instance, AddInstToArgs(args)));
-        }
-
-        [SpecialName]
-        public object Call(CodeContext context, object[] args, string[] names) {
-            return PythonOps.CallWithKeywordArgs(context, _func, AddInstToArgs(args), names);
-        }
-
         #region Object Overrides
         private string DeclaringClassAsString() {
             if (DeclaringClass == null) return "?";
-            DynamicType dt = DeclaringClass as DynamicType;
-            if (dt != null) return DynamicTypeOps.GetName(dt);
+            PythonType dt = DeclaringClass as PythonType;
+            if (dt != null) return PythonTypeOps.GetName(dt);
             OldClass oc = DeclaringClass as OldClass;
             if (oc != null) return oc.Name;
             return DeclaringClass.ToString();
@@ -194,7 +165,7 @@ namespace IronPython.Runtime.Calls {
         [PythonName("__get__")]
         public object GetAttribute(object instance, object owner) {
             if (this.Self == null) {
-                if (owner == DeclaringClass || PythonOps.IsSubClass((DynamicType)owner, DeclaringClass)) {
+                if (owner == DeclaringClass || PythonOps.IsSubClass((PythonType)owner, DeclaringClass)) {
                     return new Method(_func, instance, owner);
                 }
             }
@@ -274,9 +245,9 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
 
-        #region DynamicTypeSlot Overrides
+        #region PythonTypeSlot Overrides
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = GetAttribute(instance, owner);
             return true;
         }

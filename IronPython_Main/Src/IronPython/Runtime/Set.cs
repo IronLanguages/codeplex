@@ -22,7 +22,6 @@ using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -63,7 +62,7 @@ namespace IronPython.Runtime {
             } else if (setType == typeof(FrozenSetCollection)) {
                 setTypeStr = "frozenset";
             } else {
-                setTypeStr = DynamicTypeOps.GetName(set);
+                setTypeStr = PythonTypeOps.GetName(set);
             }
             StringBuilder sb = new StringBuilder();
             sb.Append(setTypeStr);
@@ -102,7 +101,7 @@ namespace IronPython.Runtime {
                 return new FrozenSetCollection();
             } else {
                 // subclass                
-                DynamicType dt = DynamicHelpers.GetDynamicType(setObj);
+                PythonType dt = DynamicHelpers.GetPythonType(setObj);
 
                 ISet set = PythonCalls.Call(dt) as ISet;
                 Debug.Assert(set != null);
@@ -119,7 +118,7 @@ namespace IronPython.Runtime {
                 return new FrozenSetCollection(set);
             } else {
                 // subclass                
-                DynamicType dt = DynamicHelpers.GetDynamicType(setObj);
+                PythonType dt = DynamicHelpers.GetPythonType(setObj);
 
                 ISet res = PythonCalls.Call(dt) as ISet;
 
@@ -191,7 +190,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public static PythonTuple Reduce(PythonDictionary items, DynamicType type) {
+        public static PythonTuple Reduce(PythonDictionary items, PythonType type) {
             object[] keys = new object[items.Keys.Count];
             items.Keys.CopyTo(keys, 0);
             return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(new List(keys)), null);
@@ -202,7 +201,7 @@ namespace IronPython.Runtime {
     /// Mutable set class
     /// </summary>
     [PythonType("set")]
-    public class SetCollection : ISet, IValueEquality, ICodeFormattable {
+    public class SetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         PythonDictionary items;
 
         #region Set contruction
@@ -322,7 +321,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__reduce__")]
         public PythonTuple Reduce() {
-            return SetHelpers.Reduce(items, DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection)));
+            return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
         private void Init(params object[] o) {
@@ -428,7 +427,7 @@ namespace IronPython.Runtime {
         [SpecialName, PythonName("__iand__")]
         public SetCollection InPlaceAnd(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
             IntersectionUpdate(set);
             return this;
@@ -437,7 +436,7 @@ namespace IronPython.Runtime {
         [SpecialName, PythonName("__ior__")]
         public SetCollection InPlaceOr(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
             Update(set);
             return this;
@@ -446,7 +445,7 @@ namespace IronPython.Runtime {
         [SpecialName, PythonName("__isub__")]
         public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
             DifferenceUpdate(set);
             return this;
@@ -455,7 +454,7 @@ namespace IronPython.Runtime {
         [SpecialName, PythonName("__ixor__")]
         public SetCollection InPlaceXor(object s) {
             ISet set = s as ISet;
-            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(DynamicTypeOps.GetName(s)), PythonOps.StringRepr(DynamicTypeOps.GetName(this)));
+            if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
             SymmetricDifferenceUpdate(set);
             return this;
@@ -634,6 +633,26 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+
+        #region ICollection Members
+
+        void ICollection.CopyTo(Array array, int index) {
+            throw new NotImplementedException();
+        }
+
+        int ICollection.Count {
+            get { return this.items.Count; }
+        }
+
+        bool ICollection.IsSynchronized {
+            get { return false; }
+        }
+
+        object ICollection.SyncRoot {
+            get { return this; }
+        }
+
+        #endregion      
     }
 
 
@@ -641,7 +660,7 @@ namespace IronPython.Runtime {
     /// Non-mutable set class
     /// </summary>
     [PythonType("frozenset")]
-    public class FrozenSetCollection : ISet, IValueEquality, ICodeFormattable {
+    public class FrozenSetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         internal static FrozenSetCollection EMPTY = new FrozenSetCollection();
 
         PythonDictionary items;
@@ -656,7 +675,7 @@ namespace IronPython.Runtime {
             if (cls == TypeCache.FrozenSet) {
                 return EMPTY;
             } else {
-                DynamicType dt = cls as DynamicType;
+                PythonType dt = cls as PythonType;
                 object res = dt.CreateInstance(context);
                 FrozenSetCollection fs = res as FrozenSetCollection;
                 if (fs == null) throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
@@ -676,7 +695,7 @@ namespace IronPython.Runtime {
                 fs = FrozenSetCollection.Make(setData);
                 return fs;
             } else {
-                object res = ((DynamicType)cls).CreateInstance(context, setData);
+                object res = ((PythonType)cls).CreateInstance(context, setData);
                 FrozenSetCollection fs = res as FrozenSetCollection;
                 if (fs == null) throw PythonOps.TypeError("{0} is not a subclass of frozenset", res);
 
@@ -851,7 +870,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__reduce__")]
         public PythonTuple Reduce() {
-            return SetHelpers.Reduce(items, DynamicHelpers.GetDynamicTypeFromType(typeof(SetCollection)));
+            return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
         #endregion
@@ -1049,6 +1068,26 @@ namespace IronPython.Runtime {
 
         public string ToCodeString(CodeContext context) {
             return ToString();
+        }
+
+        #endregion
+
+        #region ICollection Members
+
+        void ICollection.CopyTo(Array array, int index) {
+            throw new NotImplementedException();
+        }
+
+        int ICollection.Count {
+            get { return items.Count; }
+        }
+
+        bool ICollection.IsSynchronized {
+            get { return false; }
+        }
+
+        object ICollection.SyncRoot {
+            get { return this; }
         }
 
         #endregion

@@ -50,11 +50,11 @@ namespace Microsoft.Scripting {
             return (method.CallingConvention & CallingConventions.VarArgs) != 0 || method.ContainsGenericParameters;
         }
 
-        public static MethodBinder MakeBinder(ActionBinder binder, string name, MethodBase[] mis, BinderType binderType, SymbolId[] keywordArgs) {
+        public static MethodBinder MakeBinder(ActionBinder binder, string name, IList<MethodBase> mis, BinderType binderType, SymbolId[] keywordArgs) {
             return new MethodBinder(binder, name, mis, binderType, keywordArgs);
         }
 
-        public static MethodBinder MakeBinder(ActionBinder binder, string name, MethodBase[] mis, BinderType binderType) {
+        public static MethodBinder MakeBinder(ActionBinder binder, string name, IList<MethodBase> mis, BinderType binderType) {
             return new MethodBinder(binder, name, mis, binderType, SymbolId.EmptySymbols);
         }
 
@@ -81,7 +81,7 @@ namespace Microsoft.Scripting {
             return null;
         }
 
-        private MethodBinder(ActionBinder binder, string name, MethodBase[] methods, BinderType binderType, SymbolId[] kwArgs) {
+        private MethodBinder(ActionBinder binder, string name, IList<MethodBase> methods, BinderType binderType, SymbolId[] kwArgs) {
             _binder = binder;
             _name = name;
             _binderType = binderType;
@@ -476,10 +476,16 @@ namespace Microsoft.Scripting {
 
         public override string ToString() {
             string res = "";
-            for (int i = 0; i < _targetSets.Count; i++) {
-                res += _targetSets[i] + Environment.NewLine;
+            foreach(TargetSet ts in _targetSets.Values) {            
+                res += ts + Environment.NewLine;
             }
             return res;
+        }
+
+        public string Name {
+            get {
+                return _name;
+            }
         }
     }
 

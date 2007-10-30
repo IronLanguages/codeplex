@@ -18,11 +18,10 @@ using System.Collections;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
 
@@ -54,12 +53,12 @@ namespace IronPython.Hosting {
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object fromkeys(CodeContext context, DynamicType cls, object seq) {
+        public static object fromkeys(CodeContext context, PythonType cls, object seq) {
             return PythonDictionary.FromKeys(context, cls, seq, null);
         }
 
         [PythonClassMethod("fromkeys")]
-        public static object fromkeys(CodeContext context, DynamicType cls, object seq, object value) {
+        public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {
             return PythonDictionary.FromKeys(context, cls, seq, value);
         }
 

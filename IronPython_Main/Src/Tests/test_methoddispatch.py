@@ -171,8 +171,6 @@ def test_system_drawing():
     # multiple sites should produce the same function
     i = box.Intersect
     j = box.Intersect
-    
-    AreEqual(i.Target.Id, j.Target.Id)
 
 def test_io_memorystream():
     s = System.IO.MemoryStream()
@@ -554,8 +552,8 @@ Check(283, Dispatch.M83, d, "True")
 #======================================================================
 #        public void M90<T>(int arg) { Flag = 190; }
 #======================================================================
-## Bug 474: AssertError(TypeError, d.M90, 1)
-## Check(191, d.M91, 1) : not sure this?
+AssertError(TypeError, d.M90, 1)
+Check(191, d.M91, 1) 
 
 #======================================================================
 #======================================================================
@@ -1327,7 +1325,6 @@ def test_multicall_generator():
         AreEqual(res, 'abc')
 
 
-#***** Above code are from 'BindingTest' *****
 # verify calling a generic method w/o args throws a reasonable exception
 def test_array_badargs():
     import System

@@ -19,18 +19,17 @@ using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     public class OldInstanceTypeBuilder {        
-        public static DynamicType Build(OldClass oc) {
-            DynamicTypeBuilder dtb = new DynamicTypeBuilder(oc.Name, typeof(OldInstance));
+        public static PythonType Build(OldClass oc) {
+            PythonTypeBuilder dtb = new PythonTypeBuilder(oc.Name, typeof(OldInstance));
             foreach (OldClass subtype in oc.BaseClasses) {
                 dtb.AddBaseType(subtype.TypeObject);                
             }
-            dtb.AddSlot(Symbols.Class, new DynamicTypeValueSlot(oc));
+            dtb.AddSlot(Symbols.Class, new PythonTypeValueSlot(oc));
 
             // a customizer is defined on old-instances even though we usually hit ICustomAttributes.
             // This is because if we have a type that inherits from both new-style & old-style 
@@ -39,19 +38,19 @@ namespace IronPython.Runtime.Types {
             dtb.SetCustomSetter(SetMemberCustomizer);
             dtb.SetCustomDeleter(DeleteMemberCustomizer);
 
-            return (DynamicType)dtb.Finish(false);
+            return (PythonType)dtb.Finish(false);
         }
 
         private static void SetMemberCustomizer(CodeContext context, object instance, SymbolId name, object value) {
-            DynamicHelpers.GetDynamicType(instance).TrySetNonCustomMember(context, instance, name, value);
+            DynamicHelpers.GetPythonType(instance).TrySetNonCustomMember(context, instance, name, value);
         }
 
         private static void DeleteMemberCustomizer(CodeContext context, object instance, SymbolId name) {
-            DynamicHelpers.GetDynamicType(instance).TryDeleteNonCustomMember(context, instance, name);
+            DynamicHelpers.GetPythonType(instance).TryDeleteNonCustomMember(context, instance, name);
         }
 
         internal static bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value) {
-            ISuperDynamicObject sdo = instance as ISuperDynamicObject;
+            IPythonObject sdo = instance as IPythonObject;
             if (sdo != null) {
                 IAttributesCollection iac = sdo.Dict;
                 if (iac != null && iac.TryGetValue(name, out value)) {
@@ -59,10 +58,10 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            DynamicType dt = DynamicHelpers.GetDynamicType(instance);
+            PythonType dt = DynamicHelpers.GetPythonType(instance);
 
-            foreach (DynamicType type in dt.ResolutionOrder) {
-                DynamicTypeSlot dts;
+            foreach (PythonType type in dt.ResolutionOrder) {
+                PythonTypeSlot dts;
                 if (type != TypeCache.Object && type.TryLookupSlot(context, Symbols.Class, out dts) &&
                     dts.TryGetValue(context, instance, type, out value)) {
 

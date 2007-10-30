@@ -18,7 +18,6 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
@@ -26,8 +25,11 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime {
 
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
-    internal class PythonHiddenFieldAttribute : Attribute {
+    /// <summary>
+    /// Marks a member as being hidden from Python code.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
+    internal class PythonHiddenAttribute : Attribute {
     }
 
     /// <summary>
@@ -112,10 +114,26 @@ namespace IronPython.Runtime {
     /// Currently PythonSystemType's will only be treated differently for the purposes of creating instances.  These
     /// types will go through the normal __new__ / __init__ protocol instead of the .NET call the ctor protocol.
     ///
+    /// They can also be used to specify a name on a type.
+    /// 
     /// In the future this will also hide standard .NET methods such as Equals, GetHashCode, etc...
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct, Inherited = false)]
     public sealed class PythonSystemTypeAttribute : Attribute {
+        private readonly string _name;
+
+        public PythonSystemTypeAttribute() {
+        }
+
+        public PythonSystemTypeAttribute(string name) {
+            _name = name;
+        }
+
+        public string Name {
+            get {
+                return _name;
+            }
+        }
     }
 
     /// <summary>
@@ -143,10 +161,10 @@ namespace IronPython.Runtime {
         /// the type this is added on, but this type will logically appear to be a subclass of the
         /// impersonated type and will have its repr.
         /// </summary>
-        public PythonTypeAttribute(Type impersonateType) : base(DynamicTypeOps.GetName(DynamicHelpers.GetDynamicTypeFromType(impersonateType)), impersonateType) {            
+        public PythonTypeAttribute(Type impersonateType) : base(PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(impersonateType)), impersonateType) {            
         }
 
-        public override ExtensionNameTransformer GetTransformer(DynamicType type) {
+        internal override ExtensionNameTransformer GetTransformer(PythonType type) {
             return new PythonExtensionTypeAttribute(type).PythonNameTransformer;
         }
     }

@@ -25,7 +25,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Types;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
@@ -416,24 +415,6 @@ namespace IronPython.Runtime {
             }
 
             return res;
-        }
-
-        // Python's delete operator doesn't have a return value. Return null
-        public override object DeleteMember(CodeContext context, object obj, SymbolId name) {
-            ICustomMembers ifca = obj as ICustomMembers;
-            if (ifca != null) {
-                try {
-                    ifca.DeleteCustomMember(context, name);
-                } catch (InvalidOperationException) {
-                    throw PythonOps.AttributeErrorForMissingAttribute(obj, name);
-                }
-                return null;
-            }
-
-            if (!DynamicHelpers.GetDynamicType(obj).TryDeleteMember(context, obj, name)) {
-                throw PythonOps.AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetDynamicType(obj), name);
-            }
-            return null;
         }
 
         public override object Call(CodeContext context, object function, object[] args) {

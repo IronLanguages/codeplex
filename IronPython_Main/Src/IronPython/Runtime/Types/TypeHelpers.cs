@@ -20,14 +20,13 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
     class TypeHelpers {
-        public static IDictionary<object, object> GetAttrDictWithCustomDict(DynamicType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict) {
+        public static IDictionary<object, object> GetAttrDictWithCustomDict(PythonType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict) {
             Debug.Assert(dt.IsInstanceOfType(self));
 
             // Get the attributes from the instance
@@ -42,13 +41,13 @@ namespace IronPython.Runtime.Types {
             return res;
         }
 
-        public static void SetAttrWithCustomDict(DynamicType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict, SymbolId name, object value) {
+        public static void SetAttrWithCustomDict(PythonType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict, SymbolId name, object value) {
             Debug.Assert(dt.IsInstanceOfType(self), String.Format("{0} not instance of {1}", self, dt.Name));
 
             if (name == Symbols.Dict)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(dt.Name, name);
 
-            DynamicTypeSlot dts;
+            PythonTypeSlot dts;
             if (dt.TryLookupSlot(context, name, out dts)) {
                 dts.TrySetValue(context, self, dt, value);
             } else {
@@ -56,7 +55,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static bool DeleteAttrWithCustomDict(DynamicType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict, SymbolId name) {
+        public static bool DeleteAttrWithCustomDict(PythonType dt, CodeContext context, ICustomMembers self, IAttributesCollection selfDict, SymbolId name) {
             Debug.Assert(dt.IsInstanceOfType(self));
 
             if (name == Symbols.Dict)
@@ -70,7 +69,7 @@ namespace IronPython.Runtime.Types {
                 return true;
             }
 
-            DynamicTypeSlot dummy;
+            PythonTypeSlot dummy;
             if (dt.TryLookupSlot(context, name, out dummy)) {
                 selfDict[name] = Uninitialized.Instance;
                 return true;
@@ -79,16 +78,16 @@ namespace IronPython.Runtime.Types {
             return false;            
         }
 
-        public static DynamicType GetDeclaringType(MemberInfo member) {
+        public static PythonType GetDeclaringType(MemberInfo member) {
             return GetDeclaringType(member.DeclaringType);
         }
 
-        public static DynamicType GetDeclaringType(Type declaringType) {
+        public static PythonType GetDeclaringType(Type declaringType) {
             if(ExtensionTypeAttribute.IsExtensionType(declaringType)) {
                 // declaringType is an Ops type
-                return ExtensionTypeAttribute.GetExtendedTypeFromExtension(declaringType);
+                return DynamicHelpers.GetPythonTypeFromType(ExtensionTypeAttribute.GetExtendedTypeFromExtension(declaringType));
             } else {
-                return DynamicHelpers.GetDynamicTypeFromType(declaringType);
+                return DynamicHelpers.GetPythonTypeFromType(declaringType);
             }
         }
 
@@ -105,7 +104,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public static string ReprMethod(object self) {
-            return string.Format("<{0} object at {1}>", DynamicTypeOps.GetName(self), PythonOps.HexId(self));
+            return string.Format("<{0} object at {1}>", PythonTypeOps.GetName(self), PythonOps.HexId(self));
         }
 
         public static Type[] GetTypesFromTuple(object index) {

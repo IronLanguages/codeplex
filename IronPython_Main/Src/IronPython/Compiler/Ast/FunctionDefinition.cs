@@ -209,7 +209,7 @@ namespace IronPython.Compiler.Ast {
             Debug.Assert(_block == null);
             MSAst.CodeBlock code;
             if (IsGenerator) {
-                code = new MSAst.GeneratorCodeBlock(
+                code = Ast.Generator(
                     SourceSpan.None,
                     SymbolTable.IdToString(_name),
                     typeof(PythonGenerator),
@@ -225,10 +225,11 @@ namespace IronPython.Compiler.Ast {
             // Create AST generator to generate the body with
             AstGenerator bodyGen = new AstGenerator(code, ag.Context);
 
-            // Transform the parameters, should any require initialization,
-            // it will be added into the list
-            List<MSAst.Statement> statements = new List<MSAst.Statement>();
-            TransformParameters(ag, bodyGen);
+            // Transform the parameters.
+            // Populate the list of the parameter names and defaults.
+            List<MSAst.Expression> defaults = new List<MSAst.Expression>();
+            List<MSAst.Expression> names = new List<MSAst.Expression>();
+            TransformParameters(ag, bodyGen, defaults, names);
 
             // Create variables and references. Since references refer to
             // parameters, do this after parameters have been created.
@@ -236,6 +237,7 @@ namespace IronPython.Compiler.Ast {
 
             // Initialize parameters - unpack tuples.
             // Since tuples unpack into locals, this must be done after locals have been created.
+            List<MSAst.Statement> statements = new List<MSAst.Statement>();
             InitializeParameters(bodyGen, statements);
 
             // Transform the body and add the resulting statements into the list
@@ -255,14 +257,6 @@ namespace IronPython.Compiler.Ast {
             code.Body = Ast.Block(statements);
 
             FunctionAttributes flags = ComputeFlags(_parameters);
-
-            List<MSAst.Expression> defaults = new List<MSAst.Expression>();
-            List<MSAst.Expression> names = new List<MSAst.Expression>();
-            // There's a weird question about where to get these
-            foreach (MSAst.Variable p in code.Parameters) {
-                names.Add(Ast.Constant(SymbolTable.IdToString(p.Name)));
-                if (p.DefaultValue != null) defaults.Add(p.DefaultValue);
-            }
 
             MSAst.Expression ret = Ast.Call(
                 typeof(PythonFunction).GetMethod("MakeFunction"),                               // method
@@ -291,9 +285,24 @@ namespace IronPython.Compiler.Ast {
             return ret;
         }
 
-        private void TransformParameters(AstGenerator outer, AstGenerator inner) {
+        private void TransformParameters(AstGenerator outer, AstGenerator inner, List<MSAst.Expression> defaults, List<MSAst.Expression> names) {
             for (int i = 0; i < _parameters.Length; i++) {
-                _parameters[i].Transform(outer, inner);
+                // Create the parameter in the inner code block
+                Parameter p = _parameters[i];
+                p.Transform(inner);
+
+                // Transform the default value
+                if (p.DefaultValue != null) {
+                    defaults.Add(
+                        outer.TransformAndConvert(p.DefaultValue, typeof(object))
+                    );
+                }
+
+                names.Add(
+                    Ast.Constant(
+                        SymbolTable.IdToString(p.Name)
+                    )
+                );
             }
         }
 

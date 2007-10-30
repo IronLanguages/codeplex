@@ -17,20 +17,20 @@ using System;
 using System.Runtime.InteropServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Types;
 
+using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Calls {
-    public class staticmethod : DynamicTypeSlot {
+    public class staticmethod : PythonTypeSlot {
         private object _func;
 
         public staticmethod(object func) {
             this._func = func;
         }
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
@@ -46,16 +46,16 @@ namespace IronPython.Runtime.Calls {
         #endregion
     }
 
-    public class classmethod : DynamicTypeSlot {
+    public class classmethod : PythonTypeSlot {
         internal object func;
 
         public classmethod(object func) {
             if (!PythonOps.IsCallable(func))
-                throw PythonOps.TypeError("{0} object is not callable", DynamicTypeOps.GetName(func));
+                throw PythonOps.TypeError("{0} object is not callable", PythonTypeOps.GetName(func));
             this.func = func;
         }
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
@@ -67,15 +67,15 @@ namespace IronPython.Runtime.Calls {
         public object __get__(object instance, object owner) {
             if (owner == null) {
                 if (instance == null) throw PythonOps.TypeError("__get__(None, None) is invalid");
-                owner = DynamicHelpers.GetDynamicType(instance);
+                owner = DynamicHelpers.GetPythonType(instance);
             }
-            return new Method(func, owner, DynamicHelpers.GetDynamicType(owner));
+            return new Method(func, owner, DynamicHelpers.GetPythonType(owner));
         }
 
         #endregion
     }
 
-    public class PythonProperty : DynamicTypeSlot {
+    public class PythonProperty : PythonTypeSlot {
         private object _fget, _fset, _fdel, _doc;
 
         public PythonProperty([DefaultParameterValueAttribute(null)]object fget,
@@ -85,20 +85,20 @@ namespace IronPython.Runtime.Calls {
             _fget = fget; _fset = fset; _fdel = fdel; _doc = doc;
         }
 
-        public override bool TryGetValue(CodeContext context, object instance, DynamicMixin owner, out object value) {
+        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = __get__(instance, PythonOps.ToPythonType(owner));
             return true;
         }
 
-        public override bool TrySetValue(CodeContext context, object instance, DynamicMixin owner, object value) {
+        internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
             return __set__(instance, value);
         }
 
-        public override bool TryDeleteValue(CodeContext context, object instance, DynamicMixin owner) {
+        internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
             return __delete__(instance);
         }
 
-        public override bool IsSetDescriptor(CodeContext context, DynamicMixin owner) {
+        internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
             return true;
         }
 

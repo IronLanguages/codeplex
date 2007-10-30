@@ -17,8 +17,6 @@ import generate
 import System
 import clr
 
-ast_walker = "PythonWalker"
-
 def inherits(t, p):
     if not t:
         return False
@@ -49,29 +47,14 @@ def get_ast(assembly, roots):
 
     return result
     
-def gen_walker(cw, nodes, name, base, ast, value):
-    cw.write("/// <summary>")
-    cw.write("/// %s class - The %s AST Walker (default result is %s)" % (name, ast, value))
-    cw.write("/// </summary>")
-    if base:
-        cw.enter_block("public class %s : %s" % (name, base))
-        method = "override"
-    else:
-        cw.enter_block("public class %s" % name)
-        method = "virtual"
-
+def gen_walker(cw, nodes, method, value):
     space = 0
     for node in nodes:
         if space: cw.write("")
         cw.write("// %s" % node)
-        cw.write("public %s bool Walk(%s node) { return %s; }" % (method, node, value))
-        cw.write("public %s void PostWalk(%s node) { }" % (method, node))
+        cw.write("%s bool Walk(%s node) { return %s; }" % (method, node, value))
+        cw.write("%s void PostWalk(%s node) { }" % (method, node))
         space = 1
-    cw.exit_block()
-
-def gen_newline(cw):
-    cw.write("")
-    cw.write("")
 
 def gen_scripting_walker(cw):
     nodes = get_ast(
@@ -82,15 +65,9 @@ def gen_scripting_walker(cw):
             "Microsoft.Scripting.Ast.Node"
         ]
     )
-    gen_walker(cw, nodes, "Walker", None, "Scripting", "true")
-    
-    # Do not create the non-recursive walker, currently it is not used.
-    # if it is needed in the future, simply uncomment the following code
-    #gen_newline(cw)
-    #gen_walker(cw, nodes, "WalkerNonRecursive", "Walker", "Scripting", "false")
+    gen_walker(cw, nodes, "protected internal virtual", "true")
 
-
-def gen_python_walker(cw):
+def get_python_nodes():
     nodes = get_ast(
         clr.LoadAssemblyByPartialName("IronPython"),
         [
@@ -99,9 +76,14 @@ def gen_python_walker(cw):
             "IronPython.Compiler.Ast.Node"
         ]
     )
-    gen_walker(cw, nodes, "PythonWalker", None, "Python", "true")
-    gen_newline(cw)
-    gen_walker(cw, nodes, "PythonWalkerNonRecursive", "PythonWalker", "Python", "false")
+    return nodes
 
-generate.CodeGenerator("Scripting AST Walker", gen_scripting_walker).doit()
+def gen_python_walker(cw):
+    gen_walker(cw, get_python_nodes(), "public virtual", "true")
+
+def gen_python_walker_nr(cw):
+    gen_walker(cw, get_python_nodes(), "public override", "false")
+
+generate.CodeGenerator("DLR AST Walker", gen_scripting_walker).doit()
 generate.CodeGenerator("Python AST Walker", gen_python_walker).doit()
+generate.CodeGenerator("Python AST Walker Nonrecursive", gen_python_walker_nr).doit()
