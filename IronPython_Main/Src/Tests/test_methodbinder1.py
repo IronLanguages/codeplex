@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -112,8 +112,8 @@ def test_this_matrix():
 (        "Int64Max", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),
 (       "UInt64Max", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, True,  TypeE, True,  True,  ),
 (      "decimalMax", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
-(       "SingleMax", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
-(        "floatMax", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, OverF, TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
+(       "SingleMax", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
+(        "floatMax", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
 (        "SByteMin", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
@@ -125,8 +125,8 @@ def test_this_matrix():
 (        "Int64Min", OverF, OverF, True,  True,  True,  TypeE, OverF, OverF, True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (       "UInt64Min", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (      "decimalMin", OverF, OverF, True , True,  True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, True , True,  ), 
-(       "SingleMin", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
-(        "floatMin", OverF, OverF, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, OverF, TypeE, TypeE, TypeE, TypeE, TypeE, OverF, True,  ),
+(       "SingleMin", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
+(        "floatMin", OverF, OverF, True,  TypeE, True,  TypeE, OverF, OverF, OverF, True,  OverF, OverF, OverF, OverF, TypeE, OverF, True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
 (    "SBytePlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
@@ -138,10 +138,10 @@ def test_this_matrix():
 (   "UInt32PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (    "Int64PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 (   "UInt64PlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(  "decimalPlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
-(   "SinglePlusOne", True,  True, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(    "floatPlusOne", True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(          myfloat1, True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(  "decimalPlusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE,  True,  True,  ),
+(   "SinglePlusOne", True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(    "floatPlusOne", True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
+(          myfloat1, True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  True,  True,  True,  True,  TypeE, True,  True,  ),
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
 (   "SByteMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
@@ -150,9 +150,9 @@ def test_this_matrix():
 (            myint2, True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 (   "Int64MinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 ( "decimalMinusOne", True,  True,  True,  True,  True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
-(  "SingleMinusOne", True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(   "floatMinusOne", True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
-(          myfloat2, True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ),
+(  "SingleMinusOne", True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(   "floatMinusOne", True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
+(          myfloat2, True,  True,  True,  TypeE, True,  TypeE, True,  True,  True,  True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ),
 ##################################################   pass in bool   #########################################################
 ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
 ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
@@ -178,17 +178,17 @@ def test_this_matrix():
     if is_silverlight==False:       
         matrix = list(matrix)
         ##################################################  pass in char    #########################################################
-        ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
-        ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-        matrix.append((System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  TypeE, True,  ))
+        ####                                     M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
+        ####                                     int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
+        matrix.append((System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True, True,  ))
         
         ##################################################  pass in float   #########################################################
-        ####   single/double becomes Int32, but this does not apply to other primitive types
-        ####                          int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj 
-        matrix.append((System.Single.Parse("8.01"), True,  True, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ))
-        matrix.append((System.Single.Parse("-8.1"), True,  True, True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ))
-        matrix.append((System.Double.Parse("10.2"), True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ))
-        matrix.append((System.Double.Parse("-1.8"), True,  True,  True,  TypeE, True,  TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, True,  True,  ))
+        ####    single/double becomes Int32, but this does not apply to other primitive types
+        ####                                         int    int?  double  bigint bool   str    sbyte i16   i64   single byte   ui16   ui32   ui64   char   decm   obj 
+        matrix.append((System.Single.Parse("8.01"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
+        matrix.append((System.Double.Parse("10.2"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  True,  True,  True,  True,  TypeE, True,  True,  ))
+        matrix.append((System.Single.Parse("-8.1"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
+        matrix.append((System.Double.Parse("-1.8"), True,  True, True,  TypeE, True,  TypeE, True, True, True, True,  OverF, OverF, OverF, OverF, TypeE, True,  True,  ))
         matrix = tuple(matrix)
     
     for scenario in matrix: 

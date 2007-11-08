@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -1368,6 +1368,22 @@ def test_slots():
     # but if it's just a class member we respect MRO
     AreEqual(baz2().abc, 3)
     
+    
+def test_slots11457():
+    class COld:
+        __slots__ = ['a']
+
+    class CNew(object):
+        __slots__ = ['a']
+        
+    for C in [COld, CNew]:
+        for i in xrange(2):
+            setattr(C, 'a', 5)
+            AreEqual(C().a, 5)
+            
+            setattr(C, 'a', 7)
+            AreEqual(C().a, 7)        
+    
 ############################################################
 def test_inheritance_cycle():
     """test for inheritance cycle"""
@@ -1871,10 +1887,21 @@ def test_type_type_is_type():
     class OS: pass    
     class NS(object): pass
     
-    for x in [type, NS, int, float, tuple, str]:
+    true_values = [type, NS, int, float, tuple, str]
+    if is_cli:
+        import System
+        true_values += [System.Boolean, System.Int32, System.Version, System.Exception]
+    
+    for x in true_values:
         Assert(type(x) is type)
         
-    Assert(type(OS) is not type)
+    false_values = [OS]
+    if is_cli:
+        false_values += [ System.Boolean(1), System.Int32(3), System.Version(), System.Exception() ]
+        
+    for x in false_values:    
+        Assert(type(x) is not type)
+    
 
 def test_hash_return_values():
     # new-style classes do conversion to int

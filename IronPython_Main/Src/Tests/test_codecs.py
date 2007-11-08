@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -344,8 +344,36 @@ def test_misc_encodings():
     AreEqual('abc'.encode('unicode-escape'), 'abc')
     AreEqual('abc\u1234'.encode('unicode-escape'), 'abc\\\\u1234')
 
-@disabled("CodePlex Work Item 3094")
+@skip("silverlight")
 def test_file_encodings():
+    '''
+    Once this gets fixed, we should use *.py files in the correct encoding instead
+    of dynamically generating ASCII files.  Also, need variations on the encoding 
+    names.
+    '''
+    
+    sys.path.append(nt.getcwd() + "\\tmp_encodings")
+    try:
+        nt.mkdir(nt.getcwd() + "\\tmp_encodings")
+    except:
+        pass
+    
+    try:
+        #positive cases
+        for coding in [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']:
+            temp_mod_name = "test_encoding_" + coding.replace("-", "_")
+            f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py", 
+                    "w")
+            f.write("# coding: %s" % (coding))
+            f.close()
+            __import__(temp_mod_name)    
+    finally:
+        #cleanup
+        sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
+
+
+@disabled("CodePlex Work Item 13617")    
+def test_file_encodings_negative():
     '''
     Once this gets fixed, we should use *.py files in the correct encoding instead
     of dynamically generating ASCII files.  Also, need variations on the encoding 
@@ -358,23 +386,15 @@ def test_file_encodings():
         nt.mkdir(nt.getcwd() + "\\tmp_encodings")
     except:
         pass
-    
-    #positive cases
-    for coding in [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']:
-        temp_mod_name = "test_encoding_" + coding.replace("-", "_")
-        f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py", 
-                 "w")
-        f.write("# coding: %s" % (coding))
-        f.close()
-        __import__(temp_mod_name)
-               
-    #negative case               
-    f = open(nt.getcwd() + "\\tmp_encodings\\" + "bad_encoding.py", "w")
-    f.write("# coding: bad")
-    f.close() 
-    AssertError(SyntaxError, __import__, "bad_encoding")
-    
-    #cleanup
-    sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
+             
+    try:           
+        #negative case               
+        f = open(nt.getcwd() + "\\tmp_encodings\\" + "bad_encoding.py", "w")
+        f.write("# coding: bad")
+        f.close() 
+        AssertError(SyntaxError, __import__, "bad_encoding")
+    finally:
+        #cleanup
+        sys.path.remove(nt.getcwd() + "\\tmp_encodings")               
     
 run_test(__name__)

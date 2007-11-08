@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * you cannot locate the  Microsoft Public License, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Permissive License.
+ * by the terms of the Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -68,7 +68,7 @@ namespace IronPython.Hosting {
 
         public override string VersionString {
             get {
-                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A5", GetFileVersion(), Environment.Version);
+                return String.Format("IronPython {0} ({1}) on .NET {2}", "2.0A6", GetFileVersion(), Environment.Version);
             }
         }
         
@@ -138,7 +138,9 @@ namespace IronPython.Hosting {
                 _systemState.warnoptions = IronPython.Runtime.List.Make(Options.WarningFilters);
 
             _systemState.SetRecursionLimit(Options.MaximumRecursion);
-            _systemState.argv = List.Make((ICollection)Options.Arguments);
+            // sys.argv always includes at least one empty string.
+            Debug.Assert(Options.Arguments != null);
+            _systemState.argv = List.Make(Options.Arguments.Length == 0 ? new object[] { String.Empty } : Options.Arguments);
 
 #if !SILVERLIGHT // AssemblyResolve
             try {

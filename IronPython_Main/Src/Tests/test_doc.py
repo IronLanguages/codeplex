@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -176,10 +176,15 @@ def test_types():
     AreEqual(Ellipsis.__doc__, None)
     AreEqual(NotImplemented.__doc__, None)
 
-@disabled("CodePlex Work Item 10823")
 def test_builtin_nones():
-    for x in [Ellipsis, None, NotImplemented, exit, quit, ]:
+    for x in [Ellipsis, None, NotImplemented, ]:
         Assert(x.__doc__==None, str(x) + ".__doc__ != None")    
 
+#Needs CPython's site.py for this to work under IP.  
+#See CodePlex 10823 for details.
+@skip("cli", "silverlight")
+def test_builtin_nones_cpy_site():
+    for x in [exit, quit, ]:
+        Assert(x.__doc__==None, str(x) + ".__doc__ != None")
 
 run_test(__name__)
