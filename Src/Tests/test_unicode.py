@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -36,7 +36,6 @@ def test_raw_unicode_escape_dashes():
 
     Assert(ok, "dashes and underscores should be interchangable")
 
-#CodePlex Work Item 6010
 @skip("silverlight")
 def test_unicode_error():
     
@@ -46,7 +45,8 @@ def test_unicode_error():
         return (u"", ex.end)
     register_error("test_unicode_error", handler)
     
-    supported_modes = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'raw-unicode-escape']
+    supported_modes = [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']
+                        
     for mode in supported_modes:  unichr(0xac00).encode(mode, "test_unicode_error")
 
 

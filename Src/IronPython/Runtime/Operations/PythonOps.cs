@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * you cannot locate the  Microsoft Public License, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Permissive License.
+ * by the terms of the Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -2473,8 +2473,8 @@ namespace IronPython.Runtime.Operations {
         private static TraceBack CreateTraceBack(Exception e) {
             // user provided trace back
             object result;
-            if (ExceptionUtils.TryGetData(e, typeof(TraceBack), out result)) {
-                return (TraceBack)result;
+            if (e.Data.Contains(typeof(TraceBack))) {
+                return (TraceBack)e.Data[typeof(TraceBack)];
             }
 
             DynamicStackFrame[] frames = RuntimeHelpers.GetDynamicStackFrames(e, false);
@@ -2573,7 +2573,7 @@ namespace IronPython.Runtime.Operations {
                 throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
             }
 
-            IDictionary dict = ExceptionUtils.GetDataDictionary(throwable);
+            IDictionary dict = throwable.Data;
 
             if (traceback != null) {
                 TraceBack tb = traceback as TraceBack;
@@ -2979,23 +2979,23 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static bool CheckingConvertToInt(object value) {
+        internal static bool CheckingConvertToInt(object value) {
             return value is int || value is BigInteger || value is Extensible<int> || value is Extensible<BigInteger>;
         }
 
-        public static bool CheckingConvertToLong(object value) {
+        internal static bool CheckingConvertToLong(object value) {
             return CheckingConvertToInt(value);
         }
 
-        public static bool CheckingConvertToFloat(object value) {
+        internal static bool CheckingConvertToFloat(object value) {
             return value is double || value is Extensible<double>;
         }
 
-        public static bool CheckingConvertToComplex(object value) {
+        internal static bool CheckingConvertToComplex(object value) {
             return value is Complex64 || value is Extensible<Complex64> || CheckingConvertToInt(value) || CheckingConvertToFloat(value);
         }
 
-        public static bool CheckingConvertToString(object value) {
+        internal static bool CheckingConvertToString(object value) {
             return value is string || value is Extensible<string>;
         }
 

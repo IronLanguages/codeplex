@@ -2,11 +2,11 @@
  *
  * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
  * copy of the license can be found in the License.html file at the root of this distribution. If 
- * you cannot locate the  Microsoft Permissive License, please send an email to 
+ * you cannot locate the  Microsoft Public License, please send an email to 
  * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
- * by the terms of the Microsoft Permissive License.
+ * by the terms of the Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
@@ -662,10 +662,10 @@ namespace IronPython.Runtime.Types {
     /// fails we will try to determine whether an event is requested. To do 
     /// so we will do the following set of steps:
     /// 1. Verify the COM object implements IConnectionPointContainer
-    /// 2. Attempt to find COM object?s coclass?s description
+    /// 2. Attempt to find COM object’s coclass’s description
     ///    a. Query the object for IProvideClassInfo interface. Go to 3, if found
-    ///    b. From object?s IDispatch retrieve primary interface description
-    ///    c. Scan coclasses declared in object?s type library.
+    ///    b. From object’s IDispatch retrieve primary interface description
+    ///    c. Scan coclasses declared in object’s type library.
     ///    d. Find coclass implementing this particular primary interface 
     /// 3. Scan coclass for all its source interfaces.
     /// 4. Check whether to any of the methods on the source interfaces matches 
@@ -690,7 +690,7 @@ namespace IronPython.Runtime.Types {
     /// multicast delegate that will be invoked when the event is raised.
     /// 4. ComEventSink implements IReflect interface which is exposed as
     /// custom IDispatch to COM consumers. This allows us to intercept calls
-    /// to IDispatch.Invoke and apply  custom logic ? in particular we will
+    /// to IDispatch.Invoke and apply  custom logic – in particular we will
     /// just find and invoke the multicast delegate corresponding to the invoked
     /// dispid.
     ///  </summary>

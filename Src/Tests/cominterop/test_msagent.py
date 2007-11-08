@@ -2,11 +2,11 @@
 #
 #  Copyright (c) Microsoft Corporation. All rights reserved.
 #
-# This source code is subject to terms and conditions of the Microsoft Permissive License. A 
+# This source code is subject to terms and conditions of the Microsoft Public License. A 
 # copy of the license can be found in the License.html file at the root of this distribution. If 
-# you cannot locate the  Microsoft Permissive License, please send an email to 
+# you cannot locate the  Microsoft Public License, please send an email to 
 # ironpy@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
-# by the terms of the Microsoft Permissive License.
+# by the terms of the Microsoft Public License.
 #
 # You must not remove this notice, or any other, from this software.
 #
@@ -56,7 +56,7 @@ def test_merlin():
     c.GestureAt(True, False)
     c.GestureAt(100, 200)
     if not preferComDispatch:
-        AssertError(TypeError, c.GestureAt, 11.34, 32) # Cannot convert float(11.34) to Int16
+        AssertError(OverflowError, c.GestureAt, 65537.34, 32) # Cannot convert float(11.34) to Int16
 
     c.Speak('hello world', None)
 
