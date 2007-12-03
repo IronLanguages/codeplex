@@ -15,7 +15,7 @@
 
 from exceptions import SystemExit
 
-for test_module in ["test_excel", "test_msagent", "test_scriptpw", "test_word"]:
+for test_module in ["apps", "dlrcomlib"]:
     print "--------------------------------------------------------------------"
     print "Importing", test_module, "..."
     try:

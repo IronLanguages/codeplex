@@ -100,5 +100,22 @@ def test_pass_in_clrarray():
     a3 = System.Array[System.Guid]([])
     AssertError(TypeError, buffer, a3)
         
+def test_equality():
+    x = buffer('abc')
+    AreEqual(x == None, False)
+    AreEqual(None == x, False)
+    AreEqual(x == x, True)
+    
+
+def test_buffer_add():
+    AreEqual(buffer('abc') + 'def', 'abcdef')
+    import array
+    arr = array.array('b', [1,2,3,4,5])
+    AreEqual(buffer(arr) + 'abc', '\x01\x02\x03\x04\x05abc')
+    
+def test_buffer_tostr():
+    import array
+    AreEqual(str(buffer('abc')), 'abc')
+    AreEqual(str(buffer(array.array('b', [1,2,3,4,5]))), '\x01\x02\x03\x04\x05')
 
 run_test(__name__)

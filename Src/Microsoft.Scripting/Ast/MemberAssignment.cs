@@ -15,10 +15,7 @@
 
 using System;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -26,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
     /// property or field set, both static and instance.
     /// For instance property/field, Expression must be != null.
     /// </summary>
-    public class MemberAssignment : Expression {
+    public sealed class MemberAssignment : Expression {
         private readonly MemberInfo /*!*/ _member;
         private readonly Expression _expression;
         private readonly Expression /*!*/ _value;
@@ -43,62 +40,11 @@ namespace Microsoft.Scripting.Ast {
             get { return _value; }
         }
 
-        public override Type Type {
-            get {
-                return typeof(void);
-            }
-        }
-
         internal MemberAssignment(MemberInfo /*!*/ member, Expression expression, Expression /*!*/ value)
-            : base(AstNodeType.MemberAssignment) {
+            : base(AstNodeType.MemberAssignment, typeof(void)) {        // TODO: Not a void type !!!
             _member = member;
             _expression = expression;
             _value = value;
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object target = _expression != null ? _expression.Evaluate(context) : null;
-            object value = _value.Evaluate(context);
-            
-            switch (_member.MemberType) {
-                case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)_member;
-                    field.SetValue(target, value);
-                    break;
-                case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)_member;
-                    property.SetValue(target, value, null);
-                    break;
-                default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
-            }
-            return null;
-        }
-
-        public override void Emit(CodeGen cg) {
-            // emit "this", if any
-            if (_expression != null) {
-                if (_member.DeclaringType.IsValueType) {
-                    _expression.EmitAddress(cg, _member.DeclaringType);
-                } else {
-                    _expression.Emit(cg);
-                }
-            }
-
-            switch (_member.MemberType) {
-                case MemberTypes.Field:
-                    _value.Emit(cg);
-                    cg.EmitFieldSet((FieldInfo)_member);
-                    break;
-                case MemberTypes.Property:
-                    _value.Emit(cg);
-                    cg.EmitPropertySet((PropertyInfo)_member);
-                    break;
-                default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
-            }
         }
     }
 

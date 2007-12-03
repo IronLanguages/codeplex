@@ -15,13 +15,12 @@
 
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// AST node representing deletion of the variable value.
     /// </summary>
-    public class DeleteStatement : Statement {
+    public sealed class DeleteStatement : Statement {
         private readonly Variable /*!*/ _var;
         private VariableReference _ref;
         private bool _defined;
@@ -47,28 +46,6 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(_ref == null);
                 _ref = value;
             }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            switch (_var.Kind) {
-                case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
-                    context.Scope.TemporaryStorage.Remove(_var);
-                    break;
-                case Variable.VariableKind.Global:
-                    RuntimeHelpers.RemoveGlobalName(context, _var.Name);
-                    break;
-                default:
-                    RuntimeHelpers.RemoveName(context, _var.Name);
-                    break;
-            }
-            
-            return Statement.NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-            _ref.Slot.EmitDelete(cg, _var.Name, !_defined);
         }
     }
 

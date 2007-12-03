@@ -24,10 +24,6 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
-    public interface ILanguageService {
-        // TODO:
-    }
-
     public interface ILanguageProvider : IRemotable {
         IScriptEnvironment Environment { get; }
         string LanguageDisplayName { get; }
@@ -37,11 +33,18 @@ namespace Microsoft.Scripting.Hosting {
         // well known services:
         IScriptEngine GetEngine();
         IScriptEngine GetEngine(EngineOptions options);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         ITokenCategorizer GetTokenCategorizer();
 
         // TODO:
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         OptionsParser GetOptionsParser(); // TODO
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         CommandLine GetCommandLine(); // TODO
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         IConsole GetConsole(CommandLine commandLine, IScriptEngine engine, ConsoleOptions options); // TODO
        
         // generic interface:
@@ -103,18 +106,22 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Local Service Factories
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual ScriptEngine GetEngine(EngineOptions options) {
             throw new NotSupportedException(String.Format(Resources.MissingService_OptionsParser, LanguageDisplayName));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual CommandLine GetCommandLine() {
             throw new NotSupportedException(String.Format(Resources.MissingService_CommandLine, LanguageDisplayName));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual OptionsParser GetOptionsParser() {
             throw new NotSupportedException(String.Format(Resources.MissingService_OptionsParser, LanguageDisplayName));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual TokenCategorizer GetTokenCategorizer() {
             throw new NotSupportedException(String.Format(Resources.MissingService_TokenCategorizer, LanguageDisplayName));
         }

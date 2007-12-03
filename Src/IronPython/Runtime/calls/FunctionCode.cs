@@ -113,7 +113,10 @@ namespace IronPython.Runtime.Calls {
             [PythonName("co_argcount")]
             get {
                 if (_code != null) return 0;
-                return _func.ArgNames.Length;
+                int argCnt = _func.ArgNames.Length;
+                if ((_flags & FunctionAttributes.ArgumentList) != 0) argCnt--;
+                if ((_flags & FunctionAttributes.KeywordDictionary) != 0) argCnt--;
+                return argCnt;
             }
         }
 
@@ -176,7 +179,7 @@ namespace IronPython.Runtime.Calls {
         public object Name {
             [PythonName("co_name")]
             get {
-                if (_func != null) return _func.Name;
+                if (_func != null) return _func.__name__;
                 if (_code != null) return _code.GetType().Name;
 
                 throw PythonOps.NotImplementedError("");

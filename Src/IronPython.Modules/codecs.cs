@@ -465,26 +465,30 @@ namespace IronPython.Modules {
 
             string instr = Converter.ConvertToString(input);
             bool match = true;
-            for (int i = 0; i < lePre.Length; i++) {
-                if ((byte)instr[i] != lePre[i]) {
-                    match = false;
-                    break;
+            if (instr.Length > lePre.Length) {
+                for (int i = 0; i < lePre.Length; i++) {
+                    if ((byte)instr[i] != lePre[i]) {
+                        match = false;
+                        break;
+                    }
                 }
-            }
-            if (match) {
-                return PythonTuple.MakeTuple(String.Empty, lePre.Length, -1);
-            }
-            match = true;
-
-            for (int i = 0; i < bePre.Length; i++) {
-                if ((byte)instr[i] != bePre[i]) {
-                    match = false;
-                    break;
+                if (match) {
+                    return PythonTuple.MakeTuple(String.Empty, lePre.Length, -1);
                 }
+                match = true;
             }
 
-            if (match) {
-                return PythonTuple.MakeTuple(String.Empty, bePre.Length, 1);
+            if (instr.Length > bePre.Length) {
+                for (int i = 0; i < bePre.Length; i++) {
+                    if ((byte)instr[i] != bePre[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) {
+                    return PythonTuple.MakeTuple(String.Empty, bePre.Length, 1);
+                }
             }
 
             PythonTuple res = Utf16Decode(input, errors) as PythonTuple;

@@ -16,6 +16,7 @@ using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
+using System.Windows.Forms;
 
 internal sealed class PythonWindowsConsoleHost : ConsoleHost {
 
@@ -27,6 +28,15 @@ internal sealed class PythonWindowsConsoleHost : ConsoleHost {
     
     [STAThread]
     static int Main(string[] args) {
+        if (args.Length == 0) {
+            new PythonWindowsConsoleHost().PrintHelp();
+            return 1;
+        }
+
         return new PythonWindowsConsoleHost().Run(args);
+    }
+
+    protected override void PrintHelp() {
+        MessageBox.Show(GetHelp(), "IronPython Window Console Help");
     }
 }

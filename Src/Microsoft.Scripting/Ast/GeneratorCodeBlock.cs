@@ -17,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using System.Threading;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -35,7 +34,7 @@ namespace Microsoft.Scripting.Ast {
     /// The inner function of the generator will have the signature:
     /// bool GetNext(GeneratorType, out object value);
     /// </summary>
-    public class GeneratorCodeBlock : CodeBlock {
+    public sealed class GeneratorCodeBlock : CodeBlock {
         /// <summary>
         /// The type of the generator instance.
         /// The CodeBlock will emit code to create a new instance of this type, using constructor:
@@ -202,7 +201,9 @@ namespace Microsoft.Scripting.Ast {
 
             // fall-through on first pass
             // yield statements will insert the needed labels after their returns
-            Body.Emit(ncg);
+
+            Compiler.Emit(ncg, Body);
+
             // fall-through is almost always possible in generators, so this
             // is almost always needed
             ncg.EmitReturnInGenerator(null);

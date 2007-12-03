@@ -241,6 +241,7 @@ namespace Microsoft.Scripting.Utils {
                     case 5: result = typeof(Action<,,,,>); break;
                     case 6: result = typeof(Action<,,,,,>); break;
                     case 7: result = typeof(Action<,,,,,,>); break;
+                    case 8: result = typeof(Action<,,,,,,,>); break;
                     default:
                         throw new NotImplementedException("Action delegate not implemented for " + arguments.Length + " arguments.");
                 }
@@ -256,6 +257,7 @@ namespace Microsoft.Scripting.Utils {
                     case 6: result = typeof(Function<,,,,,>); break;
                     case 7: result = typeof(Function<,,,,,,>); break;
                     case 8: result = typeof(Function<,,,,,,,>); break;
+                    case 9: result = typeof(Function<,,,,,,,,>); break;
                     default:
                         throw new NotImplementedException("Function delegate not implemented for " + arguments.Length + " arguments.");
                 }

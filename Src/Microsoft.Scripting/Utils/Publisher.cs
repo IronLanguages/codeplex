@@ -29,13 +29,10 @@ namespace Microsoft.Scripting.Utils {
     /// once for each key.  
     /// </summary>
     public class Publisher<TKey, TValue> {
-        Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey, PublishInfo<TValue>>();
+        private readonly Dictionary<TKey, PublishInfo<TValue>> data = new Dictionary<TKey, PublishInfo<TValue>>();
 
-        public delegate TValue CreateValue();
-
-        // TODO: fix
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        public TValue GetOrCreateValue(TKey key, CreateValue create) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")] // TODO: fix
+        public TValue GetOrCreateValue(TKey key, Function<TValue> create) {
             lock (data) {
                 PublishInfo<TValue> pubValue;
                 if (data.TryGetValue(key, out pubValue)) {

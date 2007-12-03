@@ -24,6 +24,7 @@ using Microsoft.Scripting.Utils;
 #if !SILVERLIGHT // CodeDom objects are not available in Silverlight
 
 namespace Microsoft.Scripting.Hosting {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")] // TODO: fix
     public abstract class CodeDomCodeGen {
         // This is the key used in the UserData of the CodeDom objects to track
         // the source location of the CodeObject in the original source file.

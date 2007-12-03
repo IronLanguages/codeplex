@@ -13,27 +13,11 @@
 #
 #####################################################################################
     
-import sys, nt
-
-def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
-
-merlin_root = environ_var("MERLIN_ROOT")
-sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
-sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
-
 from lib.assert_util import *
 skiptest("silverlight")
 
 if is_cli:
-    import clr
-    clr.AddReference("methodargs", "typesamples")
-
-    from lib.file_util import *
-    peverify_dependency = [ 
-        merlin_root + r"\Test\ClrAssembly\bin\methodargs.dll", 
-        merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll"
-    ]
-    copy_dlls_for_peverify(peverify_dependency)
+    add_clr_assemblies("methodargs", "typesamples")
 
     from Merlin.Testing import *
     from Merlin.Testing.Call import *
@@ -587,4 +571,3 @@ def test_ctor_bad_property_field():
     
 run_test(__name__)
 
-delete_dlls_for_peverify(peverify_dependency)

@@ -75,7 +75,7 @@ def test_field():
     # del 
     def f(target): del target.Field
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, Base)
-    AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Field'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideNothing'", f, OverrideNothing)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, b)
@@ -114,13 +114,14 @@ def test_property():
     b, o1, o2 = Base(), OverrideNothing(), OverrideAll()
 
     def f_read(target): print target.Property
-    for x in [b, o1, o2]:
-        AssertErrorWithMessage(TypeError, "Property() takes exactly 0 arguments (0 given)", f_read, x)
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be read through a type, not an instance", f_read, b)
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be read through a type, not an instance", f_read, o1)
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be read through a type, not an instance", f_read, o2)
 
     def f_write(target): target.Property = 'Anything'  
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f_write, b)      
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'OverrideAll' object is read-only", f_write, o2)      
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'OverrideNothing' object is read-only", f_write, o1)                
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, b)      
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'OverrideAll' can only be assigned to through a type, not an instance", f_write, o2)      
+    AssertErrorWithMessage(AttributeError, "static property 'Property' of 'Base' can only be assigned to through a type, not an instance", f_write, o1)                
       
     # del 
     def f(target): del target.Property
@@ -277,9 +278,9 @@ def test_method():
     # del 
     def f(target): del target.Method_None
 
-    AssertErrorWithMessage(AttributeError, "'Base' object has no attribute 'Method_None'", f, Base)
-    AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Method_None'", f, OverrideNothing)
-    AssertErrorWithMessage(AttributeError, "'OverrideAll' object has no attribute 'Method_None'", f, OverrideAll)
+    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'Base'", f, Base)
+    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideNothing'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, b)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, o1)

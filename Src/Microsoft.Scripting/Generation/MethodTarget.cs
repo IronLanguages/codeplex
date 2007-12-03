@@ -130,26 +130,30 @@ namespace Microsoft.Scripting.Generation {
                 args[i] = _argBuilders[i].ToExpression(context, parameters);
             }
 
-            MethodInfo mi = Method as MethodInfo;
+            MethodBase mb = Method;
+            MethodInfo mi = mb as MethodInfo;
             Expression ret, call;
-            if (!Method.IsPublic || !Method.DeclaringType.IsVisible) {
+            if (!mb.IsPublic || !mb.DeclaringType.IsVisible) {
                 if (mi != null) {
                     mi = CompilerHelpers.GetCallableMethod(mi);
+                    if (mi != null) mb = mi;
                 }
             }
 
-            if (Method.IsPublic && Method.DeclaringType.IsVisible) {
+            ConstructorInfo ci = mb as ConstructorInfo; // to stop fxcop from complaining about multiple casts
+            Debug.Assert(mi != null || ci != null);
+            if (mb.IsPublic && mb.DeclaringType.IsVisible) {
                 // public method
                 if (mi != null) {
                     Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters);
                     call = Ast.SimpleCallHelper(instance, mi, args);
                 } else {
-                    call = Ast.SimpleNewHelper((ConstructorInfo)Method, args);
+                    call = Ast.SimpleNewHelper(ci, args);
                 }
             } else {
                 // Private binding, invoke via reflection
                 if (mi != null) {
-                    Expression instance = mi.IsStatic ? null : _instanceBuilder.ToExpression(context, parameters);
+                    Expression instance = mi.IsStatic ? Ast.Null() : _instanceBuilder.ToExpression(context, parameters);
                     call = Ast.Call(
                         Ast.RuntimeConstant(mi),
                         typeof(MethodInfo).GetMethod("Invoke", new Type[] { typeof(object), typeof(object[]) }),
@@ -158,7 +162,7 @@ namespace Microsoft.Scripting.Generation {
                     );
                 } else {
                     call = Ast.Call(
-                        Ast.RuntimeConstant((ConstructorInfo)Method),
+                        Ast.RuntimeConstant(ci),
                         typeof(ConstructorInfo).GetMethod("Invoke", new Type[] { typeof(object[]) }), 
                         Ast.NewArrayHelper(typeof(object[]), args)
                     ); 

@@ -80,7 +80,7 @@ namespace IronPython.Modules {
             // already loaded? do reload()
             object mod;
             if (SystemState.Instance.modules.TryGetValue(name, out mod)) {
-                ScriptModule module = mod as ScriptModule;
+                ScriptScope module = mod as ScriptScope;
                 if (module != null) {
                     return Builtin.reload(context, module);
                 }
@@ -103,7 +103,7 @@ namespace IronPython.Modules {
         [Documentation("new_module(name) -> module\nCreates a new module without adding it to sys.modules.")]
         [PythonName("new_module")]
         public static object NewModule(CodeContext context, string name) { // TODO: remove context?
-            ScriptModule res = PythonEngine.CurrentEngine.MakePythonModule(name);
+            ScriptScope res = PythonEngine.CurrentEngine.MakePythonModule(name);
 
             PythonModuleOps.SetPythonCreated(res);
             return res;
@@ -235,7 +235,7 @@ namespace IronPython.Modules {
                 string fileName = pathName + ".py";
                 if (File.Exists(fileName)) {
                     FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    PythonFile pf = new PythonFile(fs, SystemState.Instance.DefaultEncoding, fileName, "U");
+                    PythonFile pf = PythonFile.Create(fs, fileName, "U");
                     return PythonTuple.MakeTuple(pf, fileName, PythonTuple.MakeTuple(".py", "U", PythonSource));
                 }
             }
@@ -261,14 +261,14 @@ namespace IronPython.Modules {
             return PythonTuple.MakeTuple(null, name, PythonTuple.MakeTuple("", "", CBuiltin));
         }
 
-        private static ScriptModule LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {
+        private static ScriptScope LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {
             ScriptEngine engine = PythonEngine.CurrentEngine;
             SourceUnit sourceUnit = SourceUnit.CreateFileUnit(engine, filename, file.Read());
             return GenerateAndInitializeModule(context, name, filename, sourceUnit);
         }
 
-        private static ScriptModule GenerateAndInitializeModule(CodeContext context, string moduleName, string path, SourceUnit sourceUnit) {
-            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
+        private static ScriptScope GenerateAndInitializeModule(CodeContext context, string moduleName, string path, SourceUnit sourceUnit) {
+            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
             
             PythonModuleOps.Set__file__(module, path);
             PythonModuleOps.Set__name__(module, moduleName);
@@ -277,18 +277,18 @@ namespace IronPython.Modules {
         }
 
 #if !SILVERLIGHT // files
-        private static ScriptModule LoadPackageDirectory(CodeContext context, string moduleName, string path) {
+        private static ScriptScope LoadPackageDirectory(CodeContext context, string moduleName, string path) {
             
             string initPath = Path.Combine(path, "__init__.py");
             
             PythonEngine engine = PythonEngine.CurrentEngine;
             SourceUnit codeUnit = SourceUnit.CreateFileUnit(engine, initPath, engine.SystemState.DefaultEncoding);
-            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, codeUnit);
+            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, codeUnit);
 
             module.FileName = initPath;
             module.ModuleName = moduleName;
 
-            return PythonEngine.CurrentEngine.Importer.InitializeModule(initPath, module, true);
+            return PythonEngine.CurrentEngine.Importer.InitializeModule(moduleName, module, true);
         }
 #endif
 

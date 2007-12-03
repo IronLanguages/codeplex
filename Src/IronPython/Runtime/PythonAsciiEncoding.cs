@@ -21,12 +21,15 @@ namespace IronPython.Runtime {
             Encoding enc = (Encoding)new PythonAsciiEncoding().Clone();
 #if !SILVERLIGHT
             enc.DecoderFallback = new NonStrictDecoderFallback();
-#endif
             enc.EncoderFallback = new NonStrictEncoderFallback();
+#endif
             return enc;
         }
 
         public override int GetByteCount(char[] chars, int index, int count) {
+#if SILVERLIGHT
+            return count;
+#else
             int byteCount = 0;
             int charEnd = index + count;
             while (index < charEnd) {
@@ -42,12 +45,14 @@ namespace IronPython.Runtime {
                 index++;
             }
             return byteCount;
+#endif
         }
 
         public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
             int charEnd = charIndex + charCount;
             while (charIndex < charEnd) {
-                char c = chars[charIndex];                
+                char c = chars[charIndex];
+#if !SILVERLIGHT
                 if (c > 0x7f) {
                     EncoderFallbackBuffer efb = EncoderFallback.CreateFallbackBuffer();
                     if (efb.Fallback(c, charIndex)) {
@@ -58,6 +63,9 @@ namespace IronPython.Runtime {
                 } else {
                     bytes[byteIndex++] = (byte)c;
                 }
+#else
+                bytes[byteIndex++] = (byte)c;
+#endif
                 charIndex++;
             }
             return charCount;
@@ -71,6 +79,7 @@ namespace IronPython.Runtime {
             int byteEnd = byteIndex + byteCount;
             while (byteIndex < byteEnd) {
                 byte b = bytes[byteIndex];
+#if !SILVERLIGHT
                 if (b > 0x7f) {
                     DecoderFallbackBuffer dfb = DecoderFallback.CreateFallbackBuffer();
                     if (dfb.Fallback(new byte[] { b }, byteIndex)) {
@@ -81,6 +90,9 @@ namespace IronPython.Runtime {
                 } else {
                     chars[charIndex++] = (char)b;
                 }
+#else
+                chars[charIndex++] = (char)b;
+#endif
                 byteIndex++;
             }
             return byteCount;
@@ -101,6 +113,7 @@ namespace IronPython.Runtime {
         }
     }
 
+#if !SILVERLIGHT
     class NonStrictEncoderFallback : EncoderFallback {
         public override EncoderFallbackBuffer CreateFallbackBuffer() {
             return new NonStrictEncoderFallbackBuffer();
@@ -145,7 +158,6 @@ namespace IronPython.Runtime {
         }
     }
 
-#if !SILVERLIGHT
     class NonStrictDecoderFallback : DecoderFallback {
         public override DecoderFallbackBuffer CreateFallbackBuffer() {
             return new NonStrictDecoderFallbackBuffer();

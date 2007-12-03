@@ -36,6 +36,10 @@ namespace IronPython.Runtime.Operations {
 
         [StaticExtensionMethod("__new__")]
         public static object Make(CodeContext context, PythonType cls, string s, int radix) {
+            if (radix == 16) {
+                s = Int32Ops.TrimRadix(s);
+            }
+
             if (cls == TypeCache.BigInteger) {
                 return ParseBigIntegerSign(s, radix);
             } else {
@@ -54,36 +58,19 @@ namespace IronPython.Runtime.Operations {
 
         [StaticExtensionMethod("__new__")]
         public static object Make(CodeContext context, PythonType cls, object x) {
-            Extensible<BigInteger> el;
-
             if (cls == TypeCache.BigInteger) {
                 if (x is string) return ParseBigIntegerSign((string)x, 10);
-                if (x is BigInteger) return (BigInteger)x;
-                else if ((el = x as Extensible<BigInteger>) != null) return el.Value;
-                else if (x is int) return BigInteger.Create((int)x);
-                else if (x is double) return BigInteger.Create((double)x);
-                else if (x is long) return BigInteger.Create((long)x);
-                else {
-                    BigInteger intVal;
-                    if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
-                        return intVal;
-                    }
+                BigInteger intVal;
+                if (Converter.TryConvertToBigInteger(x, out intVal)) {
+                    if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
+                    return intVal;
                 }
             } else {
                 BigInteger intVal = null;
 
                 if (x is string) intVal = ParseBigIntegerSign((string)x, 10);
-                else if (x is BigInteger) intVal = (BigInteger)x;
-                else if ((el = x as Extensible<BigInteger>) != null) intVal = el.Value;
-                else if (x is int) intVal = (long)(int)x;
-                else if (x is double) intVal = BigInteger.Create((double)x);
-                else if (x is long) intVal = (long)x;
-                else {
-                    if (Converter.TryConvertToBigInteger(x, out intVal)) {
-                        if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
-                        return intVal;
-                    }
+                if (Converter.TryConvertToBigInteger(x, out intVal)) {
+                    if (Object.Equals(intVal, null)) throw PythonOps.TypeError("can't convert {0} to long", PythonTypeOps.GetName(x));
                 }
 
                 if (!Object.ReferenceEquals(intVal, null)) {
@@ -357,9 +344,16 @@ namespace IronPython.Runtime.Operations {
             return x;
         }
 
+
         [SpecialName, PythonName("__int__")]
-        public static int ToInt(BigInteger x) {
-            return x.ToInt32();
+        public static object ToInt(BigInteger x) {
+            // The python spec says __int__  should return a long if needed, rather than overflow.
+            int i32;
+            if (x.AsInt32(out i32)) {
+                return i32;
+            }
+
+            return x;
         }
 
         [SpecialName, PythonName("__float__")]
@@ -420,98 +414,6 @@ namespace IronPython.Runtime.Operations {
             return x ^ y;
         }
 
-        // Binary Operations - Comparisons
-        [SpecialName]
-        public static bool LessThan([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals([NotNull]BigInteger x, [NotNull]BigInteger y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool Equals([NotNull]BigInteger x, ulong y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals([NotNull]BigInteger x, ulong y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool Equals(ulong y, [NotNull]BigInteger x) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(ulong y, [NotNull]BigInteger x) {
-            return x != y;
-        }
-
-        [SpecialName]
-        public static bool LessThan(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) < 0;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) <= 0;
-        }
-        [SpecialName]
-        public static bool GreaterThan(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) > 0;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) >= 0;
-        }
-        [SpecialName]
-        public static bool Equals(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) == 0;
-        }
-        [SpecialName]
-        public static bool NotEquals(BigInteger x, double y) {
-            return DoubleOps.Compare(x, y) != 0;
-        }
-
-        [SpecialName]
-        public static bool LessThan(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) < 0;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) <= 0;
-        }
-        [SpecialName]
-        public static bool GreaterThan(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) > 0;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) >= 0;
-        }
-        [SpecialName]
-        public static bool Equals(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) == 0;
-        }
-        [SpecialName]
-        public static bool NotEquals(BigInteger x, decimal y) {
-            return DecimalOps.Compare(x, y) != 0;
-        }
-
         [ExplicitConversionMethod]
         public static int ConvertToInt32(BigInteger self) {
             int res;
@@ -526,24 +428,54 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName, PythonName("__cmp__")]
+        public static int Compare(BigInteger x, BigInteger y) {
+            return x.CompareTo(y);
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, int y) {
+            int ix;
+            if (x.AsInt32(out ix)) {                
+                return ix == y ? 0 : ix > y ? 1 : -1;
+            }
+
+            return BigInteger.Compare(x, y);
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, uint y) {
+            uint ix;
+            if (x.AsUInt32(out ix)) {
+                return ix == y ? 0 : ix > y ? 1 : -1;
+            }
+
+            return BigInteger.Compare(x, y);
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, double y) {
+            return -((int)DoubleOps.Compare(y, x));
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, Extensible<double> y) {
+            return -((int)DoubleOps.Compare(y.Value, x));
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, decimal y) {            
+            return DecimalOps.Compare(x, y);
+        }
+
+        [SpecialName, PythonName("__cmp__")]
+        public static int Compare(CodeContext context, BigInteger x, bool y) {
+            return Compare(x, y ? 1 : 0);
+        }
+
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public static object Compare(CodeContext context, BigInteger x, object y) {
             if (y == null) return 1;
-
-            int intVal;
-            if (y is int) {
-                if (x.AsInt32(out intVal)) return Int32Ops.Compare(context, intVal, y);
-            } else if (y is double) {
-                return -((int)DoubleOps.Compare((double)y, x));
-            } else if (y is Extensible<double>) {
-                double dbl = x.ToFloat64();
-                return DoubleOps.Compare(context, dbl, ((Extensible<double>)y).Value);
-            } else if (y is bool) {
-                if (x.AsInt32(out intVal)) return Int32Ops.Compare(context, intVal, ((bool)y) ? 1 : 0);
-            } else if (y is decimal) {
-                double dbl = x.ToFloat64();
-                return DoubleOps.Compare(context, dbl, y);
-            }
 
             BigInteger bi;
             if (!Converter.TryConvertToBigInteger(y, out bi)) {

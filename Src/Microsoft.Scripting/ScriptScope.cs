@@ -15,14 +15,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
-using System.Runtime.Remoting;
 using System.Runtime.CompilerServices;
+using System.Runtime.Remoting;
+using System.Threading;
 
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
@@ -33,7 +30,7 @@ namespace Microsoft.Scripting {
         ShowCls = 0x01,
     }
 
-    public interface IScriptModule : IRemotable {
+    public interface IScriptScope : IRemotable {
         string ModuleName { get; }
         string FileName { get; set; } // TODO: setter?
 
@@ -42,8 +39,10 @@ namespace Microsoft.Scripting {
         void Reload();
 
         // module variables:
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryGetVariable(string name, out object value);
         void SetVariable(string name, object value);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryLookupVariable(string name, out object value);
         object LookupVariable(string name); // TODO: rename to GetVariable
         bool VariableExists(string name);
@@ -54,8 +53,8 @@ namespace Microsoft.Scripting {
         CompilerOptions GetCompilerOptions(IScriptEngine engine);
 
 #if !SILVERLIGHT
-        IObjectHandle LookupVariableAndWrap(string name);
-        // TODO: void SetVariable(string name, IObjectHandle value);
+        ObjectHandle LookupVariableAndWrap(string name);
+        // TODO: void SetVariable(string name, ObjectHandle value);
 #endif
     }
 
@@ -67,7 +66,7 @@ namespace Microsoft.Scripting {
     /// ScriptModule is not thread safe. Host should either lock when multiple threads could 
     /// access the same module or should make a copy for each thread.
     /// </summary>
-    public sealed class ScriptModule : IScriptModule, IMembersList, ILocalObject {
+    public sealed class ScriptScope : IScriptScope, IMembersList, ILocalObject {
         private readonly Scope _scope;
         private ScriptCode[] _codeBlocks;
         private ModuleContext[] _moduleContexts; // resizable
@@ -81,7 +80,7 @@ namespace Microsoft.Scripting {
         /// ScriptCode block belonging to a different language). 
         /// Can ONLY be called from ScriptDomainManager.CreateModule factory (due to host notification).
         /// </summary>
-        internal ScriptModule(string name, ScriptModuleKind kind, Scope scope, ScriptCode[] codeBlocks) {
+        internal ScriptScope(string name, ScriptModuleKind kind, Scope scope, ScriptCode[] codeBlocks) {
             Assert.NotNull(name, scope, codeBlocks);
             Assert.NotNull(codeBlocks);
 
@@ -219,7 +218,7 @@ namespace Microsoft.Scripting {
 
         #region IMembersList
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             List<object> ret;
             if (!context.ModuleContext.ShowCls) {
                 ret = new List<object>();
@@ -248,7 +247,7 @@ namespace Microsoft.Scripting {
             return new RemoteScriptModule(this);
         }
 
-        public IObjectHandle LookupVariableAndWrap(string name) {
+        public ObjectHandle LookupVariableAndWrap(string name) {
             return new ObjectHandle(LookupVariable(name));
         }
 #endif
@@ -328,7 +327,9 @@ namespace Microsoft.Scripting {
                 Array.Resize(ref _moduleContexts, languageContextId.Id + 1);
             }
 
-            ModuleContext original = Interlocked.CompareExchange<ModuleContext>(ref _moduleContexts[languageContextId.Id],
+            int i = languageContextId.Id;
+
+            ModuleContext original = Interlocked.CompareExchange<ModuleContext>(ref _moduleContexts[i],
                 moduleContext,
                 null);
 

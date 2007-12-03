@@ -15,9 +15,6 @@
 
 #if !SILVERLIGHT
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.Remoting;
 
 namespace Microsoft.Scripting.Hosting {
@@ -34,15 +31,15 @@ namespace Microsoft.Scripting.Hosting {
 
         #region ICompiledCode Members
 
-        public IScriptModule MakeModule(string name) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_compiledCode.MakeModule(name));
+        public IScriptScope MakeModule(string name) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_compiledCode.MakeModule(name));
         }
 
         public void Execute() {
             _compiledCode.Execute();
         }
 
-        public void Execute(IScriptModule module) {
+        public void Execute(IScriptScope module) {
             _compiledCode.Execute(module);
         }
 
@@ -52,15 +49,15 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // throws SerializationException
-        public object Evaluate(IScriptModule module) {
+        public object Evaluate(IScriptScope module) {
             return _compiledCode.Evaluate(module);
         }
 
-        public IObjectHandle EvaluateAndWrap() {
+        public ObjectHandle EvaluateAndWrap() {
             return _compiledCode.EvaluateAndWrap();
         }
 
-        public IObjectHandle EvaluateAndWrap(IScriptModule module) {
+        public ObjectHandle EvaluateAndWrap(IScriptScope module) {
             return _compiledCode.EvaluateAndWrap(module);
         }
 

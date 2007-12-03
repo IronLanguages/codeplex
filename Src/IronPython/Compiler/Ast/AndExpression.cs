@@ -18,6 +18,10 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+
+using IronPython.Runtime;
+
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
@@ -45,11 +49,29 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            return Ast.CoalesceTrue(ag.Block,
-                Ast.ConvertHelper(ag.Transform(_left), typeof(object)),
-                Ast.ConvertHelper(ag.Transform(_right), typeof(object)),
-                AstGenerator.GetHelperMethod("IsTrue")
-            );
+            MSAst.Expression left = ag.Transform(_left);
+            MSAst.Expression right = ag.Transform(_right);
+
+            Type t = left.Type == right.Type ? left.Type : typeof(object);
+            MSAst.Variable tmp = ag.MakeTemp(Symbols.All, t);
+            
+            return Ast.Condition(
+                Ast.Action.ConvertTo(
+                    ConvertToAction.Make(typeof(bool), ConversionResultKind.ExplicitCast),
+                    Ast.Assign(
+                        tmp,
+                        Ast.ConvertHelper(
+                            left,
+                            t
+                        )
+                    )
+                ),
+                Ast.ConvertHelper(
+                    right,
+                    t
+                ),
+                Ast.Read(tmp)
+            );            
         }
 
         public override void Walk(PythonWalker walker) {

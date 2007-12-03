@@ -160,7 +160,8 @@ namespace IronPython.Compiler.Ast {
             // Use the PrintExpression value for the body (global level code)
             AstGenerator body = new AstGenerator(ast, ag.Context, _printExpressions);
 
-            MSAst.Statement bodyStmt = body.Transform(_body);
+            MSAst.Statement bodyStmt = body.Transform(_body);            
+
             MSAst.Statement docStmt;
 
             if (_isModule && _body.Documentation != null) {
@@ -176,7 +177,7 @@ namespace IronPython.Compiler.Ast {
 
             ast.Body = Ast.Block(
                 docStmt,
-                bodyStmt
+                bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
             );
             return ast;
         }

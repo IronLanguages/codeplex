@@ -80,7 +80,7 @@ namespace IronPython.Runtime {
         /// result.
         /// </summary>
         public object ImportFrom(CodeContext context, object mod, string name) {
-            ScriptModule from = mod as ScriptModule;
+            ScriptScope from = mod as ScriptScope;
             if (from != null) {
                 object ret;
                 if (from.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out ret)) {
@@ -103,7 +103,7 @@ namespace IronPython.Runtime {
 
 
         private object ImportModuleFrom(CodeContext context, object mod, string name) {
-            ScriptModule from = mod as ScriptModule;
+            ScriptScope from = mod as ScriptScope;
             if (from != null) {
                 object path;
                 if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
@@ -154,7 +154,7 @@ namespace IronPython.Runtime {
                 
                 // fallback to DLR way of resolving source units:
                 if (newmod == null) {
-                    ScriptModule mod = ScriptDomainManager.CurrentManager.UseModule(modName);
+                    ScriptScope mod = ScriptDomainManager.CurrentManager.UseModule(modName);
                     if (mod != null) {
                         return InitializeModule(modName, mod, false);
                     }
@@ -249,8 +249,8 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            ScriptModule parentModule;
-            if ((parentModule = parentObject as ScriptModule) == null) {
+            ScriptScope parentModule;
+            if ((parentModule = parentObject as ScriptScope) == null) {
                 // the sys.module entry is not module, fallback to absolute import
                 return false;
             }
@@ -266,7 +266,7 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal void ReloadBuiltin(ScriptModule module) {
+        internal void ReloadBuiltin(ScriptScope module) {
             Type ty;
 
             if (SystemState.Builtins.TryGetValue(module.ModuleName, out ty)) {
@@ -328,9 +328,9 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        private bool TryGetNestedModule(CodeContext context, ScriptModule mod, string name, out object nested) {
+        private bool TryGetNestedModule(CodeContext context, ScriptScope mod, string name, out object nested) {
             if (mod.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out nested)) {
-                if (nested is ScriptModule) return true;
+                if (nested is ScriptScope) return true;
 
                 // This allows from System.Math import *
                 PythonType dt = nested as PythonType;
@@ -339,7 +339,7 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        private object ImportNestedModule(CodeContext context, ScriptModule mod, string name) {
+        private object ImportNestedModule(CodeContext context, ScriptScope mod, string name) {
             object ret;
             if (TryGetNestedModule(context, mod, name, out ret)) { return ret; }
 
@@ -372,7 +372,7 @@ namespace IronPython.Runtime {
                 builtin = SystemState.Instance.BuiltinModuleInstance;
             }
 
-            ScriptModule sm = builtin as ScriptModule;            
+            ScriptScope sm = builtin as ScriptScope;            
             if (sm != null && sm.Scope.TryGetName(context.LanguageContext, Symbols.Import, out import)) {
                 return import;
             }
@@ -397,7 +397,7 @@ namespace IronPython.Runtime {
                 // cctor runs after we've done a bunch of reflection over the type that doesn't
                 // force the cctor to run.
                 System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(ty.TypeHandle);
-                ScriptModule ret = PythonModuleOps.MakePythonModule(name, ty);
+                ScriptScope ret = PythonModuleOps.MakePythonModule(name, ty);
                 SystemState.modules[name] = ret;                
                 return ret;
             }
@@ -438,7 +438,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Initializes the specified module and returns the user-exposable PythonModule.
         /// </summary>
-        internal ScriptModule InitializeModule(string fullName, ScriptModule smod, bool executeModule) {
+        internal ScriptScope InitializeModule(string fullName, ScriptScope smod, bool executeModule) {
             //Put this in modules dict so we won't reload with circular imports
             SystemState.modules[fullName] = smod;            
             bool success = false;
@@ -452,7 +452,7 @@ namespace IronPython.Runtime {
             return smod;
         }
 
-        private List ResolveSearchPath(CodeContext context, ScriptModule mod, out string baseName) {
+        private List ResolveSearchPath(CodeContext context, ScriptScope mod, out string baseName) {
             baseName = mod.ModuleName;
 
             object path;            
@@ -489,8 +489,8 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        private ScriptModule ImportFromPath(CodeContext context, string name, string fullName, List path) {
-            ScriptModule ret = null;
+        private ScriptScope ImportFromPath(CodeContext context, string name, string fullName, List path) {
+            ScriptScope ret = null;
             foreach (object dirname in path) {
                 string str;
                 if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
@@ -511,7 +511,7 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        private ScriptModule LoadModuleFromSource(CodeContext context, string name, string path) {
+        private ScriptScope LoadModuleFromSource(CodeContext context, string name, string path) {
             SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(_engine, path, _engine.SystemState.DefaultEncoding);
             if (sourceUnit == null) {
                 return null;
@@ -519,12 +519,12 @@ namespace IronPython.Runtime {
             return LoadFromSourceUnit(sourceUnit, name, path);
         }
 
-        private ScriptModule LoadPackageFromSource(CodeContext context, string name, string path) {
+        private ScriptScope LoadPackageFromSource(CodeContext context, string name, string path) {
             return LoadModuleFromSource(context, name, Path.Combine(path, "__init__.py"));
         }
 
-        private ScriptModule LoadFromSourceUnit(SourceUnit sourceUnit, string name, string path) {
-            ScriptModule res = InitializeModule(name, ScriptDomainManager.CurrentManager.CompileModule(name, sourceUnit), true);
+        private ScriptScope LoadFromSourceUnit(SourceUnit sourceUnit, string name, string path) {
+            ScriptScope res = InitializeModule(name, ScriptDomainManager.CurrentManager.CompileModule(name, sourceUnit), true);
             ScriptDomainManager.CurrentManager.PublishModule(res, path);
             return res;
         }

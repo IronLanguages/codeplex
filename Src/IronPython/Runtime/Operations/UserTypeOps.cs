@@ -14,25 +14,24 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler.Generation;
-using IronPython.Hosting;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Math;
 
     public static class UserTypeOps {
         public static string ToStringReturnHelper(object o) {
@@ -97,6 +96,8 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
+        #region Conversion support
+
         private static StandardRule<T> MakeConvertRule<T>(CodeContext context, ConvertToAction convertToAction, object[] args) {
             Contract.Requires(args.Length == 1, "args", "args must contain 1 argument for conversion");
             Contract.Requires(args[0] is IPythonObject, "args[0]", "must be IPythonObject");
@@ -121,6 +122,10 @@ namespace IronPython.Runtime.Operations {
                     // __len__
                     res = MakeConvertLengthToBoolRule<T>(context, convertToAction, args[0]);
                 }
+            } else if (toType == typeof(IEnumerable)) {
+                res = MakeConvertToIEnumerable<T>(context, args);
+            } else if (toType == typeof(IEnumerator)) {
+                res = MakeConvertToIEnumerator<T>(context, args);
             }
             
             if (res == null) {
@@ -129,6 +134,44 @@ namespace IronPython.Runtime.Operations {
                       new ConvertToBinderHelper<T>(context, convertToAction, args).MakeRule();
             }
             res.AddTest(PythonBinderHelper.MakeTestForTypes(res, new PythonType[] { ((IPythonObject)args[0]).PythonType }, 0));
+            return res;
+        }
+
+        private static StandardRule<T> MakeConvertToIEnumerable<T>(CodeContext context, object[] args) {
+            PythonType pt = ((IPythonObject)args[0]).PythonType;
+            PythonTypeSlot pts;
+            StandardRule<T> rule = null;
+            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {                
+                rule = MakeIterRule<T>(context, typeof(PythonEnumerable));
+            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {                
+                rule = MakeIterRule<T>(context, typeof(ItemEnumerable));
+            }
+            return rule;
+        }
+        
+        private static StandardRule<T> MakeConvertToIEnumerator<T>(CodeContext context, object[] args) {
+            PythonType pt = ((IPythonObject)args[0]).PythonType;
+            PythonTypeSlot pts;
+            StandardRule<T> rule = null;
+            if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {
+                rule = MakeIterRule<T>(context, typeof(PythonEnumerator));
+            } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {
+                rule = MakeIterRule<T>(context, typeof(ItemEnumerator));
+            }
+            return rule;
+        }
+
+        private static StandardRule<T> MakeIterRule<T>(CodeContext context, Type t) {
+            StandardRule<T> res = new StandardRule<T>();
+            res.SetTarget(
+                res.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Call(
+                        t.GetMethod("Create"),
+                        res.Parameters[0]
+                    )
+                )
+            );
             return res;
         }
 
@@ -146,7 +189,7 @@ namespace IronPython.Runtime.Operations {
                             MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
-                                PythonBinderHelper.GetConvertByLengthBody(convertToAction, tmp)
+                                PythonBinderHelper.GetConvertByLengthBody(tmp)
                             )
                         ),
                         PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule)
@@ -162,7 +205,7 @@ namespace IronPython.Runtime.Operations {
             PythonType pt = ((IPythonObject)self).PythonType;
             PythonTypeSlot pts;
 
-            if (pt.TryResolveSlot(context, symbolId, out pts)) {                
+            if (pt.TryResolveSlot(context, symbolId, out pts) && !IsBuiltinConversion(context, pts, symbolId, pt)) {                
                 StandardRule<T> rule = new StandardRule<T>();
                 Variable tmp = rule.GetTemporary(typeof(object), "func");
 
@@ -204,6 +247,26 @@ namespace IronPython.Runtime.Operations {
             return null;
         }
 
+        private static bool IsBuiltinConversion(CodeContext context, PythonTypeSlot pts, SymbolId name, PythonType selfType) {
+            Type baseType = selfType.UnderlyingSystemType.BaseType;
+            Type tmpType = baseType;
+            do {
+                if (tmpType.IsGenericType && tmpType.GetGenericTypeDefinition() == typeof(Extensible<>)) {
+                    baseType = tmpType.GetGenericArguments()[0];
+                    break;
+                }
+                tmpType = tmpType.BaseType;
+            } while (tmpType != null);
+            
+            PythonType ptBase = DynamicHelpers.GetPythonTypeFromType(baseType);
+            PythonTypeSlot baseSlot;
+            if(ptBase.TryResolveSlot(context, name, out baseSlot) && pts == baseSlot) {
+                return true;
+            }
+
+            return false;
+        }
+
         private static Expression AddExtensibleSelfCheck<T>(object self, Type toType, StandardRule<T> rule, Variable tmp, Expression callExpr) {
             callExpr = Ast.Comma(
                 -1,
@@ -222,7 +285,9 @@ namespace IronPython.Runtime.Operations {
             );
             return callExpr;
         }
-        
+
+        #endregion
+
         private static StandardRule<T> MakeCallRule<T>(CodeContext context, CallAction callAction, object[] args) {
             StandardRule<T> rule = new StandardRule<T>();            
 
@@ -527,23 +592,30 @@ namespace IronPython.Runtime.Operations {
                     if (gas != null) {
                         // inherited __getattribute__ slots won't provide their value so
                         // we need to get the one that's actually going to provide a value.
-                        if (gas.Inherited) {
-                            for (int i = 1; i < sdo.PythonType.ResolutionOrder.Count; i++) {
-                                if (sdo.PythonType.ResolutionOrder[i] != TypeCache.Object &&
-                                    sdo.PythonType.ResolutionOrder[i].TryLookupSlot(context, Symbols.GetAttribute, out dts)) {
-                                    gas = dts as PythonTypeGetAttributeSlot;
-                                    if (gas == null || !gas.Inherited) break;
-
-                                    dts = null;
-                                }
-                            }
-                        }
+                        SymbolId symbol = Symbols.GetAttribute;
+                        dts = GetNonInheritedSlot(context, sdo, gas, symbol);
                     }
 
                     return dts != null;
                 }                
             }
             return false;
+        }
+
+        private static PythonTypeSlot GetNonInheritedSlot(CodeContext context, IPythonObject sdo, PythonTypeGetAttributeSlot gas, SymbolId symbol) {
+            PythonTypeSlot dts = gas;
+            if (gas.Inherited) {
+                for (int i = 1; i < sdo.PythonType.ResolutionOrder.Count; i++) {
+                    if (sdo.PythonType.ResolutionOrder[i] != TypeCache.Object &&
+                        sdo.PythonType.ResolutionOrder[i].TryLookupSlot(context, symbol, out dts)) {
+                        gas = dts as PythonTypeGetAttributeSlot;
+                        if (gas == null || !gas.Inherited) break;
+
+                        dts = null;
+                    }
+                }
+            }
+            return dts;
         }
 
         public static bool TryGetMixedNewStyleOldStyleSlot(CodeContext context, object instance, SymbolId name, out object value) {
@@ -818,9 +890,16 @@ namespace IronPython.Runtime.Operations {
                     // call __setattr__ if it exists
                     PythonTypeSlot dts;
                     if (sdo.PythonType.TryResolveSlot(context, Symbols.SetAttr, out dts) && !IsStandardObjectMethod(dts)) {
-                        MakeSetAttrTarget<T>(context, action, sdo, rule, dts);
-                        templateType = "__setattr__";
-                        return rule;
+                        // skip the fake __setattr__ on mixed new-style/old-style types
+                        PythonTypeGetAttributeSlot gas = dts as PythonTypeGetAttributeSlot;
+                        if (gas != null) {
+                            dts = GetNonInheritedSlot(context, sdo, gas, Symbols.SetAttr);
+                        }
+                        if (dts != null) {
+                            MakeSetAttrTarget<T>(context, action, sdo, rule, dts);
+                            templateType = "__setattr__";
+                            return rule;
+                        }
                     }
 
                     // then see if we have a set descriptor

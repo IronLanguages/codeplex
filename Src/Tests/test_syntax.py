@@ -182,11 +182,12 @@ compile_tests = [
     ("def f((a,b),(c,b)): pass", "duplicate argument 'b' in function definition", 1),
     ("x = 10\nx = x[]", "unexpected token ']'", 2),
     ("None = 2", "assignment to None", 1),
-    ("break", "'break' not properly in loop", 1),
-    ("if 1:\n\tbreak", "'break' not properly in loop", 2),
+    ("break", "'break' outside loop", 1),
+    ("if 1:\n\tbreak", "'break' outside loop", 2),
     ("if 1:\n\tx+y=22", "can't assign to BinaryExpression", 2),
     ("if 1:\n\tdel f()", "can't delete function call", 2),
-    
+    ("def a(x):\n    def b():\n        print x\n    del x", "can not delete variable 'x' referenced in nested scope", 2),
+    ("if 1:\nfoo()\n", "expected an indented block", 2),
 ]
 
 if is_cli:
@@ -476,3 +477,13 @@ print "No ^L's..."
 
 def endoffile():
     return "Hi" # and some comment here
+    
+    
+try:
+    exec("""
+    def f():
+        x = 3
+            y = 5""")
+    AssertUnreachable()
+except IndentationError, e:
+    AreEqual(e.lineno, 2)

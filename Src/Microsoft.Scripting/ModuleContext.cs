@@ -30,14 +30,14 @@ namespace Microsoft.Scripting {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
         public static readonly ModuleContext[] EmptyArray = new ModuleContext[0];
 
-        private readonly ScriptModule _module;
+        private readonly ScriptScope _module;
         private bool _showCls;
         private CompilerContext _compilerContext;
 
         /// <summary>
         /// Optional.
         /// </summary>
-        public ScriptModule Module {
+        public ScriptScope Module {
             get { return _module; }
         }
 
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting {
         /// Creates a module context.
         /// </summary>
         /// <param name="module">Optional. <c>null</c> for default and invariant contexts.</param>
-        public ModuleContext(ScriptModule module) {
+        public ModuleContext(ScriptScope module) {
             _module = module;
         }
 

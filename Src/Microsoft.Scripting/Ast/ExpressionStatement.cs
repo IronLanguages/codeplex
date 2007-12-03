@@ -13,11 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ExpressionStatement : Statement {
+    public sealed class ExpressionStatement : Statement {
         private readonly Expression /*!*/ _expression;
 
         internal ExpressionStatement(SourceSpan span, Expression /*!*/ expression)
@@ -27,17 +26,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Expression {
             get { return _expression; }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            _expression.Evaluate(context);
-            return NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-            // expression needs to be emitted incase it has side-effects.
-            _expression.EmitAs(cg, typeof(void));
         }
     }
 

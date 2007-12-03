@@ -99,12 +99,14 @@ namespace Microsoft.Scripting {
             get { return _errorCode; }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetSymbolDocumentName() {
             return (_sourceUnit != null) ? _sourceUnit.GetSymbolDocument(_span.Start.Line) : null;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCodeLine() {
-            return (_sourceUnit != null) ? _sourceUnit.GetCodeLine(Line) : null;
+            return (_sourceUnit != null && Line > 0) ? _sourceUnit.GetCodeLine(Line) : null;
         }
     }
 }

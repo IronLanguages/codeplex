@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Hosting {
 
         public ConsoleHostOptions Options { get { return _options; } }
 
-        public ConsoleHost() {
+        protected ConsoleHost() {
         }
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Hosting {
         protected virtual string ExeName {
             get {
 #if !SILVERLIGHT
-                return GetType().Assembly.GetName().Name;
+                return Assembly.GetEntryAssembly().GetName().Name;
 #else
                 return "ConsoleHost";
 #endif
@@ -68,6 +68,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// To be called from entry point.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public int Run(string[] args) {
             
             try {
@@ -97,28 +98,35 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         protected virtual void PrintHelp() {
+            Console.WriteLine(GetHelp());            
+        }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        protected virtual string GetHelp() {
+            StringBuilder sb = new StringBuilder();
+            
             string[,] options_help = _options.GetHelp();
 
-            Console.WriteLine("{0}: {1}.exe [<host-options>] [--] [<language-specific-command-line>]", Resources.Usage, ExeName);
-            Console.WriteLine();
+            sb.AppendLine(String.Format("{0}: {1}.exe [<host-options>] [--] [<language-specific-command-line>]", Resources.Usage, ExeName));
+            sb.AppendLine();
 
             if (options_help != null) {
-                Console.WriteLine("Host options:");
+                sb.AppendLine("Host options:");
 
-                ArrayUtils.PrintTable(Console.Out, options_help);
-                Console.WriteLine();
+                ArrayUtils.PrintTable(sb, options_help);                
             }
 
             if (_options.LanguageProvider != null) {
-                Console.WriteLine("{0} command line:", _options.LanguageProvider.LanguageDisplayName);
-                Console.WriteLine();
-                PrintLanguageHelp(_options.LanguageProvider, Console.Out);
-                Console.WriteLine();
+                sb.AppendLine(String.Format("{0} command line:", _options.LanguageProvider.LanguageDisplayName));
+                sb.AppendLine();
+                PrintLanguageHelp(_options.LanguageProvider, sb);
+                sb.AppendLine();
             }
+
+            return sb.ToString();
         }
 
-        public void PrintLanguageHelp(ILanguageProvider provider, TextWriter output) {
+        public void PrintLanguageHelp(ILanguageProvider provider, StringBuilder output) {
             Contract.RequiresNotNull(provider, "provider");
             Contract.RequiresNotNull(output, "output");
 
@@ -127,26 +135,34 @@ namespace Microsoft.Scripting.Hosting {
 
             provider.GetOptionsParser().GetHelp(out command_line, out options, out environment_variables, out comments);
 
-            if (command_line != null) {
-                output.WriteLine("{0}: {1}", Resources.Usage, command_line);
-                output.WriteLine();
-            }
+            // only display language specific options if one or more optinos exists.
+            if (command_line != null || options != null || environment_variables != null || comments != null) {
+                output.AppendLine(String.Format("{0} command line:", _options.LanguageProvider.LanguageDisplayName));
+                output.AppendLine();
 
-            if (options != null) {
-                output.WriteLine("{0}:", Resources.Options);
-                ArrayUtils.PrintTable(output, options);
-                output.WriteLine();
-            }
+                if (command_line != null) {
+                    output.AppendLine(String.Format("{0}: {1}", Resources.Usage, command_line));
+                    output.AppendLine();
+                }
 
-            if (environment_variables != null) {
-                output.WriteLine("{0}:", Resources.EnvironmentVariables);
-                ArrayUtils.PrintTable(output, environment_variables);
-                output.WriteLine();
-            }
+                if (options != null) {
+                    output.AppendLine(String.Format("{0}:", Resources.Options));
+                    ArrayUtils.PrintTable(output, options);
+                    output.AppendLine();
+                }
 
-            if (comments != null) {
-                output.Write(comments);
-                output.WriteLine();
+                if (environment_variables != null) {
+                    output.AppendLine(String.Format("{0}:", Resources.EnvironmentVariables));
+                    ArrayUtils.PrintTable(output, environment_variables);
+                    output.AppendLine();
+                }
+
+                if (comments != null) {
+                    output.Append(comments);
+                    output.AppendLine();
+                }
+
+                output.AppendLine();
             }
         }
 
@@ -233,7 +249,7 @@ namespace Microsoft.Scripting.Hosting {
 
             int result = 0;
             foreach (string filePath in _options.Files) {
-                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, Encoding.Default);
+                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding);
                 if (sourceUnit == null) {
                     throw new FileNotFoundException(string.Format("Source file '{0}' not found.", filePath));
                 }
@@ -243,6 +259,7 @@ namespace Microsoft.Scripting.Hosting {
             return result;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected virtual int RunFile(IScriptEngine engine, SourceUnit sourceUnit) {
             try {
                 return engine.ExecuteProgram(sourceUnit);
@@ -279,7 +296,7 @@ namespace Microsoft.Scripting.Hosting {
             return (result is int) ? (int)result : Environment.ExitCode;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         protected virtual int RunCommandLine(OptionsParser optionsParser) {
             Contract.RequiresNotNull(optionsParser, "optionsParser");
             
@@ -301,7 +318,9 @@ namespace Microsoft.Scripting.Hosting {
 
             if (console_options.PrintUsageAndExit) {
                 if (optionsParser != null) {
-                    PrintLanguageHelp(_options.LanguageProvider, Console.Out);
+                    StringBuilder sb = new StringBuilder();
+                    PrintLanguageHelp(_options.LanguageProvider, sb);
+                    Console.Write(sb.ToString());
                 }
                 return 0;
             }

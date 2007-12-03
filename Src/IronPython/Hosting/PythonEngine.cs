@@ -16,26 +16,22 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
 using System.Threading;
 
+using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
+
 using IronPython.Compiler;
-using IronPython.Compiler.Generation;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
 
 namespace IronPython.Hosting {
 
@@ -183,11 +179,11 @@ namespace IronPython.Hosting {
         }
 
 
-        public ScriptModule CreateModule(string moduleName) {
+        public ScriptScope CreateModule(string moduleName) {
             return CreateModule(moduleName, new Dictionary<string, object>(), ModuleOptions.None);
         }
 
-        public ScriptModule CreateModule(string moduleName, ModuleOptions options) {
+        public ScriptScope CreateModule(string moduleName, ModuleOptions options) {
             return CreateModule(moduleName, new Dictionary<string, object>(), options);
         }
 
@@ -200,37 +196,37 @@ namespace IronPython.Hosting {
         /// The module may later be unpublished by executing "del sys.modules[moduleName]". All resources associated
         /// with the module will be reclaimed after that.
         /// </param>
-        public ScriptModule CreateModule(string moduleName, IDictionary<string, object> globals, ModuleOptions options) {
+        public ScriptScope CreateModule(string moduleName, IDictionary<string, object> globals, ModuleOptions options) {
             Contract.RequiresNotNull(moduleName, "moduleName");
             Contract.RequiresNotNull(globals, "globals");
 
             IAttributesCollection globalDict = globals as IAttributesCollection ?? GetGlobalsDictionary(globals);
-            ScriptModule module = MakePythonModule(moduleName, new Scope(globalDict), options);
+            ScriptScope module = MakePythonModule(moduleName, new Scope(globalDict), options);
 
             return module;
         }
 
-        public override void PublishModule(IScriptModule module) {
+        public override void PublishModule(IScriptScope module) {
             Contract.RequiresNotNull(module, "module");
 
             // TODO: remote modules here...
             _systemState.modules[module.ModuleName] = module;
         }        
 
-        public ScriptModule MakePythonModule(string name) {
+        public ScriptScope MakePythonModule(string name) {
             return MakePythonModule(name, null, ModuleOptions.None);
         }
 
-        public ScriptModule MakePythonModule(string name, Scope scope) {
+        public ScriptScope MakePythonModule(string name, Scope scope) {
             return MakePythonModule(name, scope, ModuleOptions.None);
         }
 
         // scope can be null
-        public ScriptModule MakePythonModule(string name, Scope scope, ModuleOptions options) {
+        public ScriptScope MakePythonModule(string name, Scope scope, ModuleOptions options) {
             Contract.RequiresNotNull(name, "name");
             if (scope == null) scope = new Scope(new SymbolDictionary());
 
-            ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule(name, scope);
+            ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule(name, scope);
 
             PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
             moduleContext.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
@@ -253,7 +249,7 @@ namespace IronPython.Hosting {
             }
         }
         
-        public void Execute(string scriptCode, ScriptModule module, IDictionary<string, object> locals) {
+        public void Execute(string scriptCode, ScriptScope module, IDictionary<string, object> locals) {
             Execute(SourceUnit.CreateSnippet(this, scriptCode), module, locals);
         }
 
@@ -265,7 +261,7 @@ namespace IronPython.Hosting {
         /// <param name="sourceUnit">Source unit to execute.</param>
         /// <param name="scope">The scope to execute the code in.</param>
         /// <param name="locals">Dictionary of locals</param>
-        public void Execute(SourceUnit sourceUnit, ScriptModule module, IDictionary<string, object> locals) {
+        public void Execute(SourceUnit sourceUnit, ScriptScope module, IDictionary<string, object> locals) {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
             Contract.RequiresNotNull(module, "module");
 
@@ -274,7 +270,7 @@ namespace IronPython.Hosting {
             code.Run(locals != null ? new Scope(module.Scope, GetAttrDict(locals)) : module.Scope, moduleContext);
         }
 
-        public object Evaluate(string expression, ScriptModule module, IDictionary<string, object> locals) {
+        public object Evaluate(string expression, ScriptScope module, IDictionary<string, object> locals) {
             Contract.RequiresNotNull(expression, "expression");
             Contract.RequiresNotNull(module, "module");
 
@@ -291,14 +287,10 @@ namespace IronPython.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public T EvaluateAs<T>(string expression, ScriptModule module, IDictionary<string, object> locals) {
-            return ConvertObject<T>(Evaluate(expression, module, locals));
+        public T EvaluateAs<T>(string expression, ScriptScope module, IDictionary<string, object> locals) {
+            return Operations.ConvertTo<T>(Evaluate(expression, module, locals));
         }
-
-        public override T ConvertObject<T>(object value) {
-            return Converter.Convert<T>(value);
-        }
-
+        
         #region Non-Public Members
 
         internal static string FormatPythonException(object pythonException) {
@@ -585,19 +577,19 @@ namespace IronPython.Hosting {
         /// Create a module with optimized code. The restriction is that the user cannot specify a globals 
         /// dictionary of her liking.
         /// </summary>
-        public ScriptModule CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
+        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
             return CreateOptimizedModule(fileName, moduleName, publishModule, false);
         }
 
         //TODO simplify
-        public ScriptModule CreateOptimizedModule(string fileName, string moduleName, bool publishModule, bool skipFirstLine) {
+        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule, bool skipFirstLine) {
             Contract.RequiresNotNull(fileName, "fileName");
             Contract.RequiresNotNull(moduleName, "moduleName");
 
             SourceUnit sourceUnit = SourceUnit.CreateFileUnit(this, fileName, _systemState.DefaultEncoding);
             PythonCompilerOptions options = (PythonCompilerOptions)GetDefaultCompilerOptions();
             options.SkipFirstLine = skipFirstLine;
-            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, ScriptModuleKind.Default, null, options, null, sourceUnit); 
+            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, ScriptModuleKind.Default, null, options, null, sourceUnit); 
 
             if (publishModule) {
                 _systemState.modules[moduleName] = module;
@@ -630,9 +622,11 @@ namespace IronPython.Hosting {
             }
         }
 
+#if !SILVERLIGHT // finalizers not supported
         ~PythonEngine() {
             Dispose(true);
         }
+#endif
 
         #endregion
 
@@ -683,7 +677,7 @@ namespace IronPython.Hosting {
             return new PythonCompilerOptions(Options.DivisionOptions == PythonDivisionOptions.New);
         }
 
-        public override CompilerOptions GetModuleCompilerOptions(ScriptModule module) {
+        public override CompilerOptions GetModuleCompilerOptions(ScriptScope module) {
             Assert.NotNull(module);
 
             PythonCompilerOptions result = new PythonCompilerOptions();
@@ -698,7 +692,7 @@ namespace IronPython.Hosting {
             return result;
         }
 
-        protected override LanguageContext GetLanguageContext(ScriptModule module) {
+        protected override LanguageContext GetLanguageContext(ScriptScope module) {
             Debug.Assert(module != null);
             return new PythonContext(this, (PythonCompilerOptions)GetModuleCompilerOptions(module));
         }
@@ -708,56 +702,9 @@ namespace IronPython.Hosting {
             return new PythonContext(this, (PythonCompilerOptions)compilerOptions);
         }
 
-        #endregion
-
-        #region Runtime Code Sense
-
-        protected override string[] FormatObjectMemberNames(IList<object> names) {
-            Contract.RequiresNotNull(names, "names");
-
-            string[] result = new string[names.Count];
-
-            for (int i = 0; i < names.Count; i++) {
-                try {
-                    result[i] = PythonOps.ToString(names[i]);
-                } catch (ArgumentTypeException e) {
-                    // TODO: is this ok?
-                    result[i] = String.Format("<Exception: {0}>", e.Message);
-                }
-            }
-
-            return result;
-        }
-
-        public override string[] GetObjectCallSignatures(object obj) {
-            // TODO:
-            return IsObjectCallable(obj) ? GetObjectDocumentation(obj).Replace("\r", "").Split('\n') : null;
-        }
-
-        public override string GetObjectDocumentation(object obj) {
-            // TODO:
-            return PythonOps.ToString(PythonOps.GetBoundAttr(DefaultContext.Default, obj, Symbols.Doc));
-        }
-
-        #endregion
+        #endregion        
 
         #region // TODO: workarounds
-
-        protected override IList<object> Ops_GetAttrNames(CodeContext context, object obj) {
-            return PythonOps.GetAttrNames(context, obj);
-        }
-
-        protected override bool Ops_TryGetAttr(CodeContext context, object obj, SymbolId id, out object value) {
-            return PythonOps.TryGetBoundAttr(context, obj, id, out value);
-        }
-
-        protected override bool Ops_IsCallable(CodeContext context, object obj) {
-            return PythonOps.IsCallable(context, obj);
-        }
-
-        protected override object Ops_Call(CodeContext context, object obj, object[] args) {
-            return PythonOps.CallWithContext(context, obj, args);
-        }
 
         #endregion
 

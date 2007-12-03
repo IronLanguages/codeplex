@@ -33,6 +33,7 @@ def test_main(level='full'):
         'generate_reflected_calls',
         'generate_walker',
         'generate_typecache',
+        'generate_comdispatch',
         ]
 
     for gen in generators:

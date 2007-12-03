@@ -34,6 +34,7 @@ using System.Threading;
 
 using Microsoft.Win32;
 using Microsoft.Scripting;
+using ComDispatch = Microsoft.Scripting.Actions.ComDispatch;
 using Microsoft.Scripting.Hosting;
 
 using IronPython.Runtime.Operations;
@@ -212,7 +213,7 @@ namespace IronPython.Runtime.Types {
     /// This is a helper class for runtime-callable-wrappers of COM instances. We create one instance of this type
     /// for every generic RCW instance.
     /// </summary>
-    internal abstract class ComObject {
+    public abstract class ComObject {
         private readonly object _comObject; // the runtime-callable wrapper
 
         private static readonly object _ComObjectInfoKey = (object)1; // use an int as the key since hashing an Int32.GetHashCode is cheap
@@ -262,9 +263,10 @@ namespace IronPython.Runtime.Types {
         static ComObject CreateComObject(object rcw) {
             PythonEngineOptions engineOptions;
             engineOptions = PythonOps.GetLanguageContext().Engine.Options as PythonEngineOptions;
-            if (engineOptions.PreferComDispatchOverTypeInfo && (rcw is IDispatch)) {
+            ComDispatch.IDispatch dispatchObject = rcw as ComDispatch.IDispatch;
+            if (engineOptions.PreferComDispatchOverTypeInfo && (dispatchObject != null)) {
                 // We can do method invocations on IDispatch objects
-                return new IDispatchObject(rcw);
+                return new IDispatchObject(dispatchObject);
             }
             ComObject comObject;
             
@@ -274,9 +276,9 @@ namespace IronPython.Runtime.Types {
                 return comObject;
             }
 
-            if (rcw is IDispatch) {
+            if (rcw is ComDispatch.IDispatch) {
                 // We can do method invocations on IDispatch objects
-                return new IDispatchObject(rcw);
+                return new IDispatchObject(dispatchObject);
             } 
 
             // There is not much we can do in this case
@@ -303,7 +305,7 @@ namespace IronPython.Runtime.Types {
     /// <summary>
     /// We have no additional information about this COM object.
     /// </summary>
-    internal class GenericComObject : ComObject {
+    public class GenericComObject : ComObject {
         internal GenericComObject(object rcw) : base(rcw) { }
 
         public override string ToString() {
@@ -330,56 +332,6 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
-    }
-
-    [
-    ComImport,
-    InterfaceType(ComInterfaceType.InterfaceIsIDispatch),
-    Guid("00020400-0000-0000-C000-000000000046")
-    ]
-    interface IDispatchForReflection {
-    }
-
-    [
-    ComImport,
-    InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
-    Guid("00020400-0000-0000-C000-000000000046")
-    ]
-    interface IDispatch {
-        void GetTypeInfoCount(out uint pctinfo);
-
-        void GetTypeInfo(uint iTInfo, int lcid, out IntPtr info);
-
-        [PreserveSig]
-        int GetIDsOfNames(
-            ref Guid iid,
-            [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPWStr, SizeParamIndex = 2)]
-            string[] names,
-            uint cNames,
-            int lcid,
-            [Out]
-            [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.I4, SizeParamIndex = 2)]
-            int[] rgDispId);
-
-        [PreserveSig]
-        int Invoke(
-            int dispIdMember,
-            ref Guid riid,
-            int lcid,
-            ushort wFlags,
-            out ComTypes.DISPPARAMS pDispParams,
-            out object VarResult,
-            out ComTypes.EXCEPINFO pExcepInfo,
-            out int puArgErr);
-    }
-
-    [
-    ComImport,
-    InterfaceType(ComInterfaceType.InterfaceIsIUnknown),
-    Guid("B196B283-BAB4-101A-B69C-00AA00341D07")
-    ]
-    interface IProvideClassInfo {
-        void GetClassInfo(out IntPtr info);
     }
 
     /// <summary>
@@ -565,7 +517,7 @@ namespace IronPython.Runtime.Types {
         const int TYPE_E_LIBNOTREGISTERED = unchecked((int)0x8002801D);
 
         private static ComObjectWithTypeInfo CheckIDispatchTypeInfo(object rcw) {
-            IDispatch dispatch = rcw as IDispatch;
+            ComDispatch.IDispatch dispatch = rcw as ComDispatch.IDispatch;
 
             if (dispatch == null) {
                 return null;
@@ -598,7 +550,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static ComObjectWithTypeInfo CheckIProvideClassInfo(object rcw) {
-            IProvideClassInfo provideClassInfo = rcw as IProvideClassInfo;
+            ComDispatch.IProvideClassInfo provideClassInfo = rcw as ComDispatch.IProvideClassInfo;
 
             if (provideClassInfo == null) {
                 return null;
@@ -662,10 +614,10 @@ namespace IronPython.Runtime.Types {
     /// fails we will try to determine whether an event is requested. To do 
     /// so we will do the following set of steps:
     /// 1. Verify the COM object implements IConnectionPointContainer
-    /// 2. Attempt to find COM object’s coclass’s description
+    /// 2. Attempt to find COM object?s coclass?s description
     ///    a. Query the object for IProvideClassInfo interface. Go to 3, if found
-    ///    b. From object’s IDispatch retrieve primary interface description
-    ///    c. Scan coclasses declared in object’s type library.
+    ///    b. From object?s IDispatch retrieve primary interface description
+    ///    c. Scan coclasses declared in object?s type library.
     ///    d. Find coclass implementing this particular primary interface 
     /// 3. Scan coclass for all its source interfaces.
     /// 4. Check whether to any of the methods on the source interfaces matches 
@@ -690,19 +642,21 @@ namespace IronPython.Runtime.Types {
     /// multicast delegate that will be invoked when the event is raised.
     /// 4. ComEventSink implements IReflect interface which is exposed as
     /// custom IDispatch to COM consumers. This allows us to intercept calls
-    /// to IDispatch.Invoke and apply  custom logic – in particular we will
+    /// to IDispatch.Invoke and apply  custom logic ? in particular we will
     /// just find and invoke the multicast delegate corresponding to the invoked
     /// dispid.
     ///  </summary>
 
-    class IDispatchObject : GenericComObject {
+    public class IDispatchObject : GenericComObject {
 
-        private ComDispatch.ComTypeDesc _comTypeDesc;
+        private readonly ComDispatch.IDispatchObject _dispatchObject;
+
+        public ComDispatch.ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComDispatch.ComTypeDesc> _CacheComTypeDesc;
         private static Dictionary<SymbolId, ComDispatch.ComEventDesc> _EventsEmptyDict;
 
-        internal IDispatchObject(object rcw) : base(rcw) {
-            Debug.Assert(rcw is IDispatch);
+        internal IDispatchObject(ComDispatch.IDispatch rcw) : base(rcw) {
+            _dispatchObject = new ComDispatch.IDispatchObject(rcw);
         }
 
         public override string ToString() {
@@ -715,8 +669,6 @@ namespace IronPython.Runtime.Types {
 
             return String.Format("<System.__ComObject ({0})>", typeName);
         }
-
-        IDispatch DispatchObject { get { return (IDispatch)Obj; } }
 
         #region HRESULT values returned by IDispatch::GetIDsOfNames and IDispatch::Invoke
         const int S_OK = 0;
@@ -731,7 +683,7 @@ namespace IronPython.Runtime.Types {
         const int DISPID_NEWENUM = -4;
         #endregion
 
-        static int GetIDsOfNames(IDispatch dispatch, SymbolId name, out int dispId) {
+        static int GetIDsOfNames(ComDispatch.IDispatch dispatch, SymbolId name, out int dispId) {
             int[] dispIds = new int[1];
             Guid emtpyRiid = Guid.Empty;
             int hresult = dispatch.GetIDsOfNames(
@@ -745,20 +697,20 @@ namespace IronPython.Runtime.Types {
             return hresult;
         }
 
-        static int Invoke(IDispatch dispatch, int memberDispId, out object result) {
+        static int Invoke(ComDispatch.IDispatch dispatch, int memberDispId, out object result) {
             Guid emtpyRiid = Guid.Empty;
             ComTypes.DISPPARAMS dispParams = new ComTypes.DISPPARAMS();
             ComTypes.EXCEPINFO excepInfo = new ComTypes.EXCEPINFO();
-            int puArgErr;
+            uint argErr;
             int hresult = dispatch.Invoke(
                 memberDispId,
                 ref emtpyRiid,
                 0,
-                (ushort)ComTypes.INVOKEKIND.INVOKE_PROPERTYGET,
-                out dispParams,
+                ComTypes.INVOKEKIND.INVOKE_PROPERTYGET,
+                ref dispParams,
                 out result,
                 out excepInfo,
-                out puArgErr);
+                out argErr);
 
             return hresult;
         }
@@ -785,7 +737,7 @@ namespace IronPython.Runtime.Types {
                 }
 
                 int dispId;
-                int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
+                int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
                 if (hresult == DISP_E_UNKNOWNNAME) {
                     value = null;
                     return false;
@@ -793,7 +745,7 @@ namespace IronPython.Runtime.Types {
                     throw PythonOps.AttributeError("Could not get DispId for {0} (error:0x{1:X})", name, hresult);
                 }
 
-                methodDesc = new ComDispatch.ComMethodDesc(name.ToString());
+                methodDesc = new ComDispatch.ComMethodDesc(name.ToString(), dispId);
                 _comTypeDesc.Funcs.Add(name, methodDesc);
             }
 
@@ -805,12 +757,12 @@ namespace IronPython.Runtime.Types {
             //    invoking the property
             if (methodDesc != null && methodDesc.IsPropertyGet) {
                 if (methodDesc.Parameters.Length == 0) {
-                    value = new ComDispatch.DispMethod(DispatchObject, methodDesc).Call(context, ArrayUtils.EmptyObjects);
+                    value = new ComDispatch.DispMethod(_dispatchObject, methodDesc).CallAsProperty(context);
                 } else {
-                    value = new ComDispatch.DispIndexer(DispatchObject, methodDesc);
+                    value = new ComDispatch.DispIndexer(_dispatchObject, methodDesc);
                 }
             } else {
-                value = new ComDispatch.DispMethod(DispatchObject, methodDesc);
+                value = new ComDispatch.DispMethod(_dispatchObject, methodDesc);
             }
 
             return true;
@@ -828,7 +780,7 @@ namespace IronPython.Runtime.Types {
             }
 
             int dispId;
-            int hresult = GetIDsOfNames(DispatchObject, name, out dispId);
+            int hresult = GetIDsOfNames(_dispatchObject.DispatchObject, name, out dispId);
             if (hresult == DISP_E_UNKNOWNNAME) {
                 throw PythonOps.AttributeErrorForMissingAttribute(ComTypeBuilder.ComType.Name, name);
             }
@@ -845,18 +797,16 @@ namespace IronPython.Runtime.Types {
                 bindingFlags |= System.Reflection.BindingFlags.SetProperty;
                 bindingFlags |= System.Reflection.BindingFlags.Instance;
 
-                typeof(IDispatchForReflection).InvokeMember(
+                typeof(ComDispatch.IDispatchForReflection).InvokeMember(
                     SymbolTable.IdToString(name),
                     bindingFlags,
                     Type.DefaultBinder,
                     Obj,
                     new object[1] { value }
                     );
-            } catch (Exception e) {
-                if (e.InnerException != null) {
-                    throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-                }
-                throw;
+            } catch (TargetInvocationException e) {
+                // Unwrap the real (inner) exception and raise it
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
             }
         }
 
@@ -895,7 +845,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal static ComTypes.ITypeInfo GetITypeInfoFromIDispatch(IDispatch dispatch) {
+        internal static ComTypes.ITypeInfo GetITypeInfoFromIDispatch(ComDispatch.IDispatch dispatch) {
             IntPtr pTypeInfo = IntPtr.Zero;
             dispatch.GetTypeInfo(0, 0, out pTypeInfo);
 
@@ -950,7 +900,7 @@ namespace IronPython.Runtime.Types {
             }
 
             // check type info in the type descriptions cache
-            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject);
             ComTypes.TYPEATTR typeAttr = GetTypeAttrForTypeInfo(typeInfo);
 
             if (_comTypeDesc == null) {
@@ -1057,7 +1007,7 @@ namespace IronPython.Runtime.Types {
         private static ComTypes.ITypeInfo GetCoClassTypeInfo(object rcw, ComTypes.ITypeInfo typeInfo) {
             Debug.Assert(typeInfo != null);
 
-            IProvideClassInfo provideClassInfo = rcw as IProvideClassInfo;
+            ComDispatch.IProvideClassInfo provideClassInfo = rcw as ComDispatch.IProvideClassInfo;
             if (provideClassInfo != null) {
                 IntPtr typeInfoPtr = IntPtr.Zero;
                 try {
@@ -1122,7 +1072,7 @@ namespace IronPython.Runtime.Types {
                 if (_CacheComTypeDesc != null)
                     return;
 
-                _CacheComTypeDesc = new Dictionary<Guid, IronPython.Runtime.Types.ComDispatch.ComTypeDesc>();
+                _CacheComTypeDesc = new Dictionary<Guid, ComDispatch.ComTypeDesc>();
             }
         }
 
@@ -1131,7 +1081,7 @@ namespace IronPython.Runtime.Types {
             if (_comTypeDesc != null && _comTypeDesc.Funcs != null)
                 return;
 
-            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(this.DispatchObject);
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject);
             ComTypes.TYPEATTR typeAttr= GetTypeAttrForTypeInfo(typeInfo);
 
             if (_comTypeDesc == null) {

@@ -21,7 +21,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
-    public interface ICodeSenseProvider : IRemotable, ILanguageService {
+    public interface ICodeSenseProvider : IRemotable {
         string GetFunctionSignature(string name);
         string[] GetMemberNames(string name);
         string GetFunctionDoc(string name);
@@ -29,12 +29,12 @@ namespace Microsoft.Scripting.Hosting {
 
     public abstract class CodeSenseProvider : ICodeSenseProvider, ILocalObject {
         private readonly IScriptEngine _engine;
-        private readonly IScriptModule _module;
+        private readonly IScriptScope _module;
 
         protected IScriptEngine Engine { get { return _engine; } }
-        protected IScriptModule Module { get { return _module; } }
+        protected IScriptScope Module { get { return _module; } }
 
-        public CodeSenseProvider(IScriptEngine engine, IScriptModule module) {
+        protected CodeSenseProvider(IScriptEngine engine, IScriptScope module) {
             Contract.RequiresNotNull(engine, "engine");
             _engine = engine;
             _module = module;

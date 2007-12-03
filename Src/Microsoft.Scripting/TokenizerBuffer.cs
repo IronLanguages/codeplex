@@ -327,6 +327,7 @@ namespace Microsoft.Scripting {
             return _buffer[_position + disp];
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetTokenString() {
             CheckInvariants();
             Debug.Assert(_tokenEnd != -1, "Token end not marked");

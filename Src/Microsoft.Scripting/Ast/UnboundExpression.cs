@@ -15,36 +15,20 @@
 
 using System;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class UnboundExpression : Expression {
+
+    // TODO: Can be a simple helper call?
+    public sealed class UnboundExpression : Expression {
         private readonly SymbolId _name;
 
         internal UnboundExpression(SymbolId name)
-            : base(AstNodeType.UnboundExpression) {
+            : base(AstNodeType.UnboundExpression, typeof(object)) {
             _name = name;
         }
 
         public SymbolId Name {
             get { return _name; }
-        }
-
-        public override Type Type {
-            get {
-                return typeof(object);
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return RuntimeHelpers.LookupName(context, _name);
-        }
-
-        public override void Emit(CodeGen cg) {
-            // RuntimeHelpers.LookupName(CodeContext, name)
-            cg.EmitCodeContext();
-            cg.EmitSymbolId(_name);
-            cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
         }
     }
 

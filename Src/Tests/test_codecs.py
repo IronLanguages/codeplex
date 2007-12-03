@@ -26,6 +26,7 @@ Disabled Silverlight tests are due to Rowan #304084
 '''
 
 from lib.assert_util import *
+from lib.misc_util import ip_supported_encodings
 
 if is_cli or is_silverlight:
     import _codecs as codecs
@@ -194,6 +195,10 @@ def test_latin_1_encode():
     new_str, size = codecs.latin_1_encode("abc")
     AreEqual(new_str, 'abc')
     AreEqual(size, 3)
+    
+    # so many ways to express latin 1...
+    for x in ['iso-8859-1', 'iso8859-1', '8859', 'cp819', 'latin', 'latin1', 'L1']:
+        AreEqual('abc'.encode(x), 'abc')
 
 @skip('silverlight')
 def test_lookup_error():
@@ -278,6 +283,11 @@ def test_utf_16_le_encode():
     AreEqual(new_str, 'a\x00b\x00c\x00')
     AreEqual(size, 3)
 
+@skip('silverlight')        
+def test_utf_16_le_str_encode():
+    for x in ('utf_16_le', 'UTF-16LE', 'utf-16le'):
+        AreEqual('abc'.encode(x), 'a\x00b\x00c\x00')
+
 def test_utf_8_decode():
     '''
     '''
@@ -360,13 +370,15 @@ def test_file_encodings():
     
     try:
         #positive cases
-        for coding in [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']:
+        for coding in ip_supported_encodings:
             temp_mod_name = "test_encoding_" + coding.replace("-", "_")
             f = open(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py", 
                     "w")
             f.write("# coding: %s" % (coding))
             f.close()
             __import__(temp_mod_name)    
+            nt.remove(nt.getcwd() + "\\tmp_encodings\\" + temp_mod_name + ".py")
+            
     finally:
         #cleanup
         sys.path.remove(nt.getcwd() + "\\tmp_encodings")           

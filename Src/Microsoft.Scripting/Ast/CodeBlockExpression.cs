@@ -14,17 +14,6 @@
  * ***************************************************************************/
 
 using System;
-
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Diagnostics;
-using System.Text;
-using System.Threading;
-
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -33,14 +22,13 @@ namespace Microsoft.Scripting.Ast {
     /// Currently these references are created by emitting a delegate of the 
     /// requested type.
     /// </summary>
-    public class CodeBlockExpression : Expression {
+    public sealed class CodeBlockExpression : Expression {
         private readonly CodeBlock /*!*/ _block;
         private readonly bool _forceWrapperMethod;
         private readonly bool _stronglyTyped;
         private readonly Type _delegateType;
         private readonly bool _isDeclarative;
         
-#if DEBUG
         internal bool ForceWrapperMethod {
             get { return _forceWrapperMethod; }
         }
@@ -49,7 +37,6 @@ namespace Microsoft.Scripting.Ast {
             get { return _stronglyTyped; }
         }
 
-#endif
         internal Type DelegateType {
             get { return _delegateType; }
         }
@@ -63,7 +50,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal CodeBlockExpression(CodeBlock /*!*/ block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType)
-            : base(AstNodeType.CodeBlockExpression) {
+            : base(AstNodeType.CodeBlockExpression, typeof(Delegate)) {
             Assert.NotNull(block);
 
             if (isDeclarative) {
@@ -79,20 +66,6 @@ namespace Microsoft.Scripting.Ast {
 
         public CodeBlock Block {
             get { return _block; }
-        }
-
-        public override Type Type {
-            get {
-                return typeof(Delegate);
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return _block.GetDelegateForInterpreter(context, _delegateType, _forceWrapperMethod);
-        }
-
-        public override void Emit(CodeGen cg) {
-            _block.EmitDelegateConstruction(cg, _forceWrapperMethod, _stronglyTyped, _delegateType);
         }
     }
 

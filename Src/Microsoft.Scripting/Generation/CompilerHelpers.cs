@@ -14,16 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.Reflection.Emit;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Generation {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public static object GetMissingValue(Type type) {
             Contract.RequiresNotNull(type, "type");
-            
+
             if (type.IsByRef) type = type.GetElementType();
             if (type.IsEnum) return Activator.CreateInstance(type);
 
@@ -588,19 +588,61 @@ namespace Microsoft.Scripting.Generation {
         /// ExplicitTry.
         /// </summary>
         public static Statement GetTryConvertReturnValue(CodeContext context, StandardRule rule) {
-            Statement failed;            
+            Statement failed;
             if (rule.ReturnType == typeof(BigInteger)) {
                 failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(BigInteger), "Zero"));
             } else if (rule.ReturnType.IsInterface || rule.ReturnType.IsClass) {
                 failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.Constant(null));
-            } else if(rule.ReturnType.IsGenericType && rule.ReturnType.GetGenericTypeDefinition() == typeof(Nullable<>) ||
+            } else if (rule.ReturnType.IsGenericType && rule.ReturnType.GetGenericTypeDefinition() == typeof(Nullable<>) ||
                 (rule.ReturnType.IsGenericType && rule.ReturnType.GetGenericTypeDefinition() == typeof(Nullable<>))) {
                 failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.Constant(null));
-            } else { 
+            } else {
                 failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.RuntimeConstant(Activator.CreateInstance(rule.ReturnType)));
             }
             rule.IsError = true;
             return failed;
+        }
+
+        public static MethodBase[] GetMethodTargets(object obj) {
+            Type t = CompilerHelpers.GetType(obj);
+
+            if (typeof(Delegate).IsAssignableFrom(t)) {
+                MethodInfo mi = t.GetMethod("Invoke");
+                return new MethodBase[] { mi };
+            } else if (typeof(BoundMemberTracker).IsAssignableFrom(t)) {
+                BoundMemberTracker bmt = obj as BoundMemberTracker;
+                if (bmt.BoundTo.MemberType == TrackerTypes.Method) {
+                }
+            } else if (typeof(MethodGroup).IsAssignableFrom(t)) {
+            } else if (typeof(MemberGroup).IsAssignableFrom(t)) {
+            } else {
+                return MakeCallSignatureForCallableObject(t);
+            }
+
+            return null;
+        }
+
+        private static MethodBase[] MakeCallSignatureForCallableObject(Type t) {
+            List<MethodBase> res = new List<MethodBase>();
+            MemberInfo[] members = t.GetMember("Call");
+            foreach (MemberInfo mi in members) {
+                if (mi.MemberType == MemberTypes.Method) {
+                    MethodInfo method = mi as MethodInfo;
+                    if (method.IsSpecialName) {
+                        res.Add(method);
+                    }
+                }
+            }
+            return res.ToArray();
+        }
+
+        internal static Type[] GetSiteTypes(ActionExpression node) {
+            Type[] ret = new Type[node.Arguments.Count + 1];
+            for (int i = 0; i < node.Arguments.Count; i++) {
+                ret[i] = node.Arguments[i].Type;
+            }
+            ret[node.Arguments.Count] = node.Type;
+            return ret;
         }
     }
 }

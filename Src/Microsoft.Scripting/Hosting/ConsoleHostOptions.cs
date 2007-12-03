@@ -26,6 +26,7 @@ using System.Globalization;
 namespace Microsoft.Scripting.Hosting {
 
     public class ConsoleHostOptions {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public enum Action {
             None,
             RunConsole,
@@ -212,8 +213,8 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             if (name.StartsWith("--")) name = name.Substring("--".Length);
-            else if (name.StartsWith("-")) name = name.Substring("-".Length);
-            else if (name.StartsWith("/")) name = name.Substring("/".Length);
+            else if (name.StartsWith("-") && name.Length > 1) name = name.Substring("-".Length);
+            else if (name.StartsWith("/") && name.Length > 1) name = name.Substring("/".Length);
             else {
                 value = name;
                 name = null;

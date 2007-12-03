@@ -15,33 +15,32 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading;
 using System.Diagnostics;
+using System.Reflection;
+using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
-using IronPython.Compiler.Generation;
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Ast;
     using Microsoft.Scripting.Utils;
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
+        private object[] _args;
         public DoOperationBinderHelper(ActionBinder binder, CodeContext context, DoOperationAction action)
             : base(context, action) {
         }
 
         public StandardRule<T> MakeRule(object[] args) {
+            _args = args;
             return MakeNewRule(PythonTypeOps.ObjectTypes(args));
         }
 
@@ -128,12 +127,14 @@ namespace IronPython.Runtime.Calls {
             } else {
                 // we get the error message w/ {0}, {1} so that TypeError formats it correctly
                 return PythonBinderHelper.TypeError<T>(
-                       MakeBinaryOpErrorMessage(Action.ToString(), "{0}", "{1}"),
+                       MakeBinaryOpErrorMessage(Action.Operation, "{0}", "{1}"),
                        types);
             }
         }
 
         protected StandardRule<T> MakeNewRule(PythonType[] types) {
+            if (Action.Operation == Operators.IsCallable) return null;  // let the base binder handle this...
+
             for (int i = 0; i < types.Length; i++) {
                 if (types[i].Version == PythonType.DynamicVersion) {
                     return MakeDynamicMatchRule(types);
@@ -141,6 +142,12 @@ namespace IronPython.Runtime.Calls {
             }
 
             Operators op = Action.Operation;
+            if (op == Operators.MemberNames) {
+                return MakeMemberNamesRule(types);
+            } else if (op == Operators.CallSignatures) {
+                return MakeCallSignatureRule(Binder, CompilerHelpers.GetMethodTargets(_args[0]), types);
+            }
+
             if (Action.IsInPlace) {
                 PythonType xType = types[0];
                 PythonTypeSlot xSlot;
@@ -176,7 +183,68 @@ namespace IronPython.Runtime.Calls {
 
             return MakeSimpleRule(types, op);
         }
-        
+
+        internal static StandardRule<T> MakeCallSignatureRule(ActionBinder binder, IList<MethodBase> targets, params PythonType[] types) {
+            List<string> arrres = new List<string>();
+            foreach (MethodBase mb in targets) {
+                StringBuilder res = new StringBuilder();
+                string comma = "";
+
+                Type retType = CompilerHelpers.GetReturnType(mb);
+                if (retType != typeof(void)) {
+                    res.Append(PythonTypeOps.GetName(retType));
+                    res.Append(" ");
+                }
+
+                MethodInfo mi = mb as MethodInfo;
+                if (mi != null) {
+                    string name;
+                    NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mb.DeclaringType), mi, out name);
+                    res.Append(name);
+                } else {
+                    res.Append(PythonTypeOps.GetName(mb.DeclaringType));
+                }
+
+                res.Append("(");
+                if (!CompilerHelpers.IsStatic(mb)) {
+                    res.Append("self");
+                    comma = ", ";
+                }
+
+                foreach (ParameterInfo pi in mb.GetParameters()) {
+                    if (pi.ParameterType == typeof(CodeContext)) continue;
+
+                    res.Append(comma);
+                    res.Append(PythonTypeOps.GetName(pi.ParameterType) + " " + pi.Name);
+                    comma = ", ";
+                }
+                res.Append(")");
+                arrres.Add(res.ToString());
+            }
+            StandardRule<T> rule = new StandardRule<T>();
+            PythonBinderHelper.MakeTest(rule, types);
+            rule.SetTarget(rule.MakeReturn(binder, Ast.RuntimeConstant(arrres.ToArray())));
+            return rule;
+        }
+
+        private StandardRule<T> MakeMemberNamesRule(PythonType[] types) {
+            if (typeof(IMembersList).IsAssignableFrom(types[0].UnderlyingSystemType)) {
+                return null;
+            }
+
+            IList<SymbolId> names = types[0].GetMemberNames(Context);
+            StandardRule<T> rule = new StandardRule<T>();
+            PythonBinderHelper.MakeTest(rule, types);
+
+            rule.SetTarget(
+                rule.MakeReturn(
+                    Binder,
+                    Ast.RuntimeConstant(SymbolTable.IdsToStrings(names))
+                )
+            );
+            return rule;
+        }
+
         private StandardRule<T> MakeSimpleRule(PythonType[] types, Operators oper) {
             SymbolId op = Symbols.OperatorToSymbol(oper);
             SymbolId rop = Symbols.OperatorToReversedSymbol(oper);
@@ -318,7 +386,7 @@ namespace IronPython.Runtime.Calls {
                     rule.SetTarget(rule.MakeReturn(Binder, Ast.Constant(-1)));
                     return rule;
                 }
-            } 
+            }
 
             List<Statement> stmts = new List<Statement>();
 
@@ -402,7 +470,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             if (!HasBadSlice(indexedType, altAction) &&
-                TryGetStaticFunction(getOrSet, indexedType, out bf) && 
+                TryGetStaticFunction(getOrSet, indexedType, out bf) &&
                 bf != null) {
 
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
@@ -436,7 +504,7 @@ namespace IronPython.Runtime.Calls {
                     }
                     ret.SetTarget(ret.MakeReturn(Binder, call));
                     return ret;
-                } 
+                }
             }
 
             return MakeDynamicIndexRule(Action, Context, types);
@@ -504,7 +572,7 @@ namespace IronPython.Runtime.Calls {
                 return OldInstance.CheckMissing(ret.Parameters[index]);
             }
 
-            return Ast.Null(); 
+            return Ast.Null();
         }
 
         /// <summary>
@@ -516,15 +584,15 @@ namespace IronPython.Runtime.Calls {
         private bool HasBadSlice(PythonType indexedType, SymbolId altAction) {
             BuiltinFunction bf;
             return !TryGetStaticFunction(altAction, indexedType, out bf) ||
-                        (bf != null && 
+                        (bf != null &&
                         DynamicHelpers.GetPythonTypeFromType(bf.DeclaringType) != indexedType);
-        }        
+        }
 
         internal static StandardRule<T> MakeDynamicIndexRule(DoOperationAction action, CodeContext context, PythonType[] types) {
             StandardRule<T> ret = new StandardRule<T>();
             PythonBinderHelper.MakeTest(ret, types);
             Expression retExpr;
-            if (action.Operation == Operators.GetItem || 
+            if (action.Operation == Operators.GetItem ||
                 action.Operation == Operators.DeleteItem ||
                 action.Operation == Operators.GetSlice ||
                 action.Operation == Operators.DeleteSlice) {
@@ -538,7 +606,7 @@ namespace IronPython.Runtime.Calls {
                         typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret)
                     );
                 }
-                
+
                 string call = (action.Operation == Operators.GetItem || action.Operation == Operators.GetSlice) ? "GetIndex" : "DelIndex";
                 retExpr = Ast.SimpleCallHelper(
                     typeof(PythonOps).GetMethod(call),
@@ -588,7 +656,7 @@ namespace IronPython.Runtime.Calls {
                 newVars[1] = vars[0];
                 vars = newVars;
             }
-            
+
             Type[] clrtypes = null;
             if (types != null) {
                 clrtypes = PythonTypeOps.ConvertToTypes(types);
@@ -609,17 +677,17 @@ namespace IronPython.Runtime.Calls {
             if (target == null) return true;
 
             if (ReturnsNotImplemented(target)) {
-                Variable tmp = rule.GetTemporary(target.ReturnType, "tmp");                
+                Variable tmp = rule.GetTemporary(target.ReturnType, "tmp");
                 Statement body;
-                if(val != null){
+                if (val != null) {
                     body = MakeValueCheck(rule, val, tmp);
-                }else{
-                    body = reverse ?                        
-                        rule.MakeReturn(Binder, 
+                } else {
+                    body = reverse ?
+                        rule.MakeReturn(Binder,
                             Ast.Multiply(
                                 Ast.Convert(
-                                    Ast.ReadDefined(tmp), 
-                                    typeof(int)), 
+                                    Ast.ReadDefined(tmp),
+                                    typeof(int)),
                                 Ast.Constant(-1))) :
                         rule.MakeReturn(Binder, Ast.ReadDefined(tmp));
                 }
@@ -630,7 +698,7 @@ namespace IronPython.Runtime.Calls {
                     body));
             } else {
                 Expression call = MakeCall(target, rule, reverse);
-                if (val == null) {                    
+                if (val == null) {
                     if (reverse) {
                         call = Ast.Multiply(call, Ast.Constant(-1));
                     }
@@ -647,16 +715,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private IfStatement MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
+            Expression test = Ast.ReadDefined(var);
+            if (test.Type != typeof(bool)) {
+                test = Ast.DynamicConvert(test, typeof(bool));
+            }
             return Ast.IfThen(
-                Ast.Equal(
-                    Ast.ReadDefined(var),
-                    Ast.True()),
-
+                test,
                 rule.MakeReturn(Binder, Ast.Constant(val))
             );
         }
 
-        private bool MakeOneTarget(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, PythonType [] types) {
+        private bool MakeOneTarget(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, PythonType[] types) {
             if (target == null) return true;
 
             if (ReturnsNotImplemented(target)) {
@@ -723,15 +792,34 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Statement MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
-            return block.MakeReturn(Binder, 
-                Ast.Call(
-                    GetCompareMethod(reverse),
+            if (expr.Type == typeof(int)) {
+                // fast path, just do a compare in IL
+                return block.MakeReturn(Binder,
+                    GetCompareNode(reverse, expr)
+                );
+            } else {
+                return block.MakeReturn(Binder,
                     Ast.Call(
-                        typeof(PythonOps).GetMethod("CompareToZero"),
-                        Ast.ConvertHelper(expr, typeof(object))
+                        GetCompareMethod(reverse),
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CompareToZero"),
+                            Ast.ConvertHelper(expr, typeof(object))
+                        )
                     )
-                )
-            );
+                );
+            }
+        }
+
+        private Expression GetCompareNode(bool reverse, Expression expr) {
+            switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Action.Operation) : Action.Operation) {
+                case Operators.Equals: return Ast.Equal(expr, Ast.Constant(0));
+                case Operators.NotEquals: return Ast.NotEqual(expr, Ast.Constant(0));
+                case Operators.GreaterThan: return Ast.GreaterThan(expr, Ast.Constant(0));
+                case Operators.GreaterThanOrEqual: return Ast.GreaterThanEquals(expr, Ast.Constant(0));
+                case Operators.LessThan: return Ast.LessThan(expr, Ast.Constant(0));
+                case Operators.LessThanOrEqual: return Ast.LessThanEquals(expr, Ast.Constant(0));
+                default: throw new InvalidOperationException();
+            }
         }
 
         private MethodInfo GetCompareMethod(bool reverse) {
@@ -751,7 +839,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Statement MakeFallbackCompare(StandardRule<T> block) {
-            return block.MakeReturn(Binder, 
+            return block.MakeReturn(Binder,
                 Ast.Call(
                     GetComparisonFallbackMethod(Action.Operation),
                     Ast.ConvertHelper(block.Parameters[0], typeof(object)),
@@ -894,12 +982,64 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            throw PythonOps.TypeError(MakeBinaryOpErrorMessage(op.ToString(), xDType.Name, yDType.Name));
+            throw PythonOps.TypeError(MakeBinaryOpErrorMessage(op, xDType.Name, yDType.Name));
         }
 
-        internal static string MakeBinaryOpErrorMessage(string op, string xType, string yType) {
+        internal static string MakeBinaryOpErrorMessage(Operators op, string xType, string yType) {
             return string.Format("unsupported operand type(s) for {2}: '{0}' and '{1}'",
-                                xType, yType, op);
+                                xType, yType, GetOperatorDisplay(op));
+        }
+
+        private static string GetOperatorDisplay(Operators op) {
+            switch (op) {
+                case Operators.Add: return "+";
+                case Operators.Subtract: return "-";
+                case Operators.Power: return "**";
+                case Operators.Multiply: return "*";
+                case Operators.FloorDivide: return "/";
+                case Operators.Divide: return "/";
+                case Operators.TrueDivide: return "//";
+                case Operators.Mod: return "%";
+                case Operators.LeftShift: return "<<";
+                case Operators.RightShift: return ">>";
+                case Operators.BitwiseAnd: return "&";
+                case Operators.BitwiseOr: return "|";
+                case Operators.Xor: return "^";
+                case Operators.LessThan: return "<";
+                case Operators.GreaterThan: return ">";
+                case Operators.LessThanOrEqual: return "<=";
+                case Operators.GreaterThanOrEqual: return ">=";
+                case Operators.Equals: return "==";
+                case Operators.NotEquals: return "!=";
+                case Operators.LessThanGreaterThan: return "<>";
+                case Operators.InPlaceAdd: return "+=";
+                case Operators.InPlaceSubtract: return "-=";
+                case Operators.InPlacePower: return "**=";
+                case Operators.InPlaceMultiply: return "*=";
+                case Operators.InPlaceFloorDivide: return "/=";
+                case Operators.InPlaceDivide: return "/=";
+                case Operators.InPlaceTrueDivide: return "//=";
+                case Operators.InPlaceMod: return "%=";
+                case Operators.InPlaceLeftShift: return "<<=";
+                case Operators.InPlaceRightShift: return ">>=";
+                case Operators.InPlaceBitwiseAnd: return "&=";
+                case Operators.InPlaceBitwiseOr: return "|=";
+                case Operators.InPlaceXor: return "^=";
+                case Operators.ReverseAdd: return "+";
+                case Operators.ReverseSubtract: return "-";
+                case Operators.ReversePower: return "**";
+                case Operators.ReverseMultiply: return "*";
+                case Operators.ReverseFloorDivide: return "/";
+                case Operators.ReverseDivide: return "/";
+                case Operators.ReverseTrueDivide: return "//";
+                case Operators.ReverseMod: return "%";
+                case Operators.ReverseLeftShift: return "<<";
+                case Operators.ReverseRightShift: return ">>";
+                case Operators.ReverseBitwiseAnd: return "&";
+                case Operators.ReverseBitwiseOr: return "|";
+                case Operators.ReverseXor: return "^";
+                default: return op.ToString();
+            }
         }
 
         internal static string MakeUnaryOpErrorMessage(string op, string xType) {

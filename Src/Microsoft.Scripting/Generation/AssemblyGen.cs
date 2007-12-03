@@ -313,6 +313,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void CopyFilesCreatedSinceStart(string pythonPath, string dir) {
             DateTime start = Process.GetCurrentProcess().StartTime;
             foreach (string filename in Directory.GetFiles(dir)) {
@@ -321,14 +322,15 @@ namespace Microsoft.Scripting.Generation {
                     if (fi.LastWriteTime - start >= TimeSpan.Zero) {
                         try {
                             File.Copy(filename, Path.Combine(pythonPath, fi.Name), true);
-                        } catch {
-                            Console.WriteLine("Error copying {0}", filename);
+                        } catch (Exception e) {
+                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message);
                         }
                     }
                 }
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void CopyDirectory(string to, string from) {
             foreach (string filename in Directory.GetFiles(from)) {
                 FileInfo fi = new FileInfo(filename);
@@ -339,8 +341,8 @@ namespace Microsoft.Scripting.Generation {
                     if (!File.Exists(toFile) || toInfo.LastWriteTime < fi.LastWriteTime) {
                         try {
                             File.Copy(filename, toFile, true);
-                        } catch { 
-                            Console.WriteLine("Error copying {0}", filename); 
+                        } catch (Exception e) { 
+                            Console.WriteLine("Error copying {0}: {1}", filename, e.Message); 
                         }
                     }
                 }

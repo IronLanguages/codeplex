@@ -267,13 +267,13 @@ namespace IronPython.Runtime {
         }
 #endif
 
-        public override ModuleContext CreateModuleContext(ScriptModule module) {
+        public override ModuleContext CreateModuleContext(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             InitializeModuleScope(module);
             return new PythonModuleContext(module);
         }
 
-        private void InitializeModuleScope(ScriptModule module) {
+        private void InitializeModuleScope(ScriptScope module) {
             // TODO: following should be context sensitive variables:
 
             // adds __builtin__ variable if this is not a __builtin__ module itself:             
@@ -329,7 +329,7 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            ScriptModule sm = builtins as ScriptModule;
+            ScriptScope sm = builtins as ScriptScope;
             if (sm == null) {
                 value = null;
                 return false;
@@ -344,7 +344,7 @@ namespace IronPython.Runtime {
             throw PythonOps.NameError(name);
         }
 
-        public override ScriptCode Reload(ScriptCode original, ScriptModule module) {
+        public override ScriptCode Reload(ScriptCode original, ScriptScope module) {
             PythonModuleContext moduleContext = (PythonModuleContext)GetModuleContext(module);
             if (moduleContext != null && moduleContext.IsPythonCreatedModule) {
                 CheckReloadablePythonModule(module);
@@ -372,7 +372,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public void CheckReloadable(ScriptModule module) {
+        public void CheckReloadable(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
 
             // only check for Python requirements of reloading on modules created from Python.code.
@@ -382,7 +382,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private void CheckReloadablePythonModule(ScriptModule pythonCreatedModule) {
+        private void CheckReloadablePythonModule(ScriptScope pythonCreatedModule) {
             Scope scope = pythonCreatedModule.Scope;
 
             if (!scope.ContainsName(this, Symbols.Name))

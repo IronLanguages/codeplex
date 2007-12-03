@@ -104,6 +104,7 @@ def test_imp_package():
     AreEqual(px, "")
     AreEqual(pm, "")
     module = imp.load_module(_testdir, pf, pp, (px, pm, pt))
+    Assert(_testdir in sys.modules)
     AreEqual(module.my_name, 'imp package test')
 
     save_sys_path = sys.path
@@ -291,20 +292,74 @@ def test_is_builtin():
         AreEqual(imp.is_builtin("sys"),-1)
         AreEqual(imp.is_builtin("__builtin__"),-1)
         
-    
-def test_sys_path_contains_none():
+
+@skip("win32")
+def test_sys_path_none_builtins():
     prevPath = sys.path
+
+    #import some builtin modules not previously imported
     try:
-        sys.path = [None] + sys.path
-        # none in sys.path shouldn't cause TypeError
-        try:
-            import does_not_exist
-            AssertUnerachable()
-        except ImportError:
-            pass
-        del sys.path[0]
+        sys.path = [None] + prevPath
+        Assert('datetime' not in sys.modules.keys())
+        import datetime
+        Assert('datetime' in sys.modules.keys())
+        
+        sys.path = prevPath + [None]
+        Assert('copy_reg' not in sys.modules.keys())
+        import datetime
+        import copy_reg
+        Assert('datetime' in sys.modules.keys())
+        Assert('copy_reg' in sys.modules.keys())
+        
+        sys.path = [None]
+        Assert('cStringIO' not in sys.modules.keys())
+        import datetime
+        import copy_reg
+        import cStringIO
+        Assert('datetime' in sys.modules.keys())
+        Assert('copy_reg' in sys.modules.keys())
+        Assert('cStringIO' in sys.modules.keys())
+        
     finally:
         sys.path = prevPath
+
+
+@skip("silverlight")        
+def test_sys_path_none_userpy():
+    prevPath = sys.path
+
+    #import a *.py file
+    temp_syspath_none = path_combine(testpath.public_testdir, "temp_syspath_none.py")
+    write_to_file(temp_syspath_none, "stuff = 3.14")
+    
+    try:
+        sys.path = [None] + prevPath
+        import temp_syspath_none
+        AreEqual(temp_syspath_none.stuff, 3.14)
+        
+    finally:
+        sys.path = prevPath
+
+
+def test_sys_path_none_negative():
+    prevPath = sys.path
+    test_paths = [  [None] + prevPath,
+                    prevPath + [None],
+                    [None],
+                 ]
+                 
+    try:
+        for temp_path in test_paths:
+            
+            sys.path = temp_path
+            try:
+                import does_not_exist
+                AssertUnerachable()
+            except ImportError:
+                pass       
+    finally:
+        sys.path = prevPath
+
 
 #init_builtin           
 def test_init_builtin():

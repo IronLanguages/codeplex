@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class DebugStatement : Statement {
+    public sealed class DebugStatement : Statement {
         private readonly string /*!*/ _marker;
 
         internal DebugStatement(string /*!*/ marker)
@@ -28,10 +26,6 @@ namespace Microsoft.Scripting.Ast {
 
         public string Marker {
             get { return _marker; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitDebugMarker(_marker);
         }
     }
 

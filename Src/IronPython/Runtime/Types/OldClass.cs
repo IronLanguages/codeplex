@@ -15,19 +15,20 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.Serialization;
 using System.Threading;
-using System.Diagnostics;
-using System.ComponentModel;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -410,7 +411,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICustomMembers Members
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             SymbolDictionary attrs = new SymbolDictionary(__dict__);
             RecurseAttrHierarchy(this, attrs);
             return List.Make(attrs);

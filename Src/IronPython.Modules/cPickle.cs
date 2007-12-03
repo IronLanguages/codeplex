@@ -1355,7 +1355,7 @@ namespace IronPython.Modules {
             }
 
             private Exception CannotUnpickle(string format, params object[] args) {
-                return ExceptionConverter.CreateThrowable(PicklingError, String.Format(format, args));
+                return ExceptionConverter.CreateThrowable(UnpicklingError, String.Format(format, args));
             }
 
             public IDictionary<object, object> memo {

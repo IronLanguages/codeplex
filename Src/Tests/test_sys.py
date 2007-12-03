@@ -69,7 +69,7 @@ def test_negative():
 	# settrace
 	AssertError(NotImplementedError, sys.settrace, None)
 	# getrefcount
-	AssertError(NotImplementedError, sys.getrefcount, None)
+	Assert(not hasattr(sys, 'getrefcount'))
 
 def test_winver():
     Assert(hasattr(sys, 'winver'))

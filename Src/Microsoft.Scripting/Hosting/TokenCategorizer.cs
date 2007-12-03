@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting.Hosting {
-    public interface ITokenCategorizer : IRemotable, ILanguageService {
+    public interface ITokenCategorizer : IRemotable {
         void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation);
         
         /// <summary>

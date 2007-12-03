@@ -23,33 +23,36 @@ using VarEnum = System.Runtime.InteropServices.VarEnum;
 using Marshal = System.Runtime.InteropServices.Marshal;
 using System.Diagnostics;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-    class ComParamDesc {
-
+namespace Microsoft.Scripting.Actions.ComDispatch {
+    public class ComParamDesc {
         # region private fields
+
         private readonly bool _isOut; // is an output parameter?
         private readonly bool _isOpt; // is an optional parameter?
         private readonly bool _byRef; // is a reference or pointer parameter?
         private readonly bool _isArray;
         private readonly short _vt;
         Type type;
+
         # endregion
 
         # region ctor
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: fix
         public ComParamDesc(ELEMDESC elemDesc) {
             this._isOut = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOUT) != 0;
             this._isOpt = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOPT) != 0;
 
             _vt = elemDesc.tdesc.vt;
             TYPEDESC typeDesc = elemDesc.tdesc;
-            while (true)
-            {
-                if (_vt == (short)VarEnum.VT_PTR)
+            while (true) {
+                if (_vt == (short)VarEnum.VT_PTR) {
                     this._byRef = true;
-                else if (_vt == (short)VarEnum.VT_ARRAY)
+                } else if (_vt == (short)VarEnum.VT_ARRAY) {
                     this._isArray = true;
-                else
+                } else {
                     break;
+                }
 
                 TYPEDESC childTypeDesc = (TYPEDESC)Marshal.PtrToStructure(typeDesc.lpValue, typeof(TYPEDESC));
                 _vt = childTypeDesc.vt;
@@ -62,8 +65,9 @@ namespace IronPython.Runtime.Types.ComDispatch {
             // need to instantiate.
             // This logic should usually only apply to output params, since input data
             // is provided by the user.
-            if (this._isOut == false)
+            if (this._isOut == false) {
                 return;
+            }
 
             switch (_vt) {
                 case (short)VarEnum.VT_EMPTY:
@@ -168,6 +172,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
             }
              */
         }
+
         # endregion
 
         # region properties
@@ -186,14 +191,15 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
         public bool IsArray {
             get { return _isArray; }
-        } 
-
-        public Type GetParamType() 
-        {
-            return type;
         }
-        # endregion
 
+        public Type ParameterType {
+            get {
+                return type;
+            }
+        }
+
+        # endregion
     }
 }
 

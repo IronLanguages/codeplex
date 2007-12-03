@@ -14,15 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Collections;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Reflection;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
@@ -39,6 +39,9 @@ namespace IronPython.Runtime {
         private static FastDynamicSite<object, bool> _boolSite = MakeExplicitConvertSite<bool>();
         private static FastDynamicSite<object, char> _charSite = MakeImplicitConvertSite<char>();
         private static FastDynamicSite<object, char> _explicitCharSite = MakeExplicitConvertSite<char>();
+        private static FastDynamicSite<object, IEnumerable> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
+        private static FastDynamicSite<object, IEnumerator> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
+        private static Dictionary<Type, FastDynamicSite<object, object>> _siteDict = new Dictionary<Type, FastDynamicSite<object, object>>();
         private static FastDynamicSite<object, byte> _byteSite = MakeExplicitConvertSite<byte>();
         private static FastDynamicSite<object, sbyte> _sbyteSite = MakeExplicitConvertSite<sbyte>();
         private static FastDynamicSite<object, Int16> _int16Site = MakeExplicitConvertSite<Int16>();
@@ -268,52 +271,19 @@ namespace IronPython.Runtime {
         }
 
         internal static object Convert(object value, Type to) {
-            if (value == null) {
-                if (to == BooleanType) return RuntimeHelpers.False;
-
-                if (to.IsValueType &&                    
-                    (!to.IsGenericType || to.GetGenericTypeDefinition() != typeof(Nullable<>))) {
-
-                    throw MakeTypeError(to, value);
+            FastDynamicSite<object, object> site;
+            lock (_siteDict) {
+                if (!_siteDict.TryGetValue(to, out site)) {
+                    _siteDict[to] = site = FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(to, ConversionResultKind.ExplicitCast));
                 }
-                return null;
             }
 
-            Type from = value.GetType();
-            if (from == to || to == ObjectType) return value;
-            if (to.IsInstanceOfType(value)) return value;
-
-            if (to == TypeType) return ConvertToType(value);
-            if (to == Int32Type) return ConvertToInt32(value);
-            if (to == DoubleType) return ConvertToDouble(value);
-            if (to == BooleanType) return ConvertToBoolean(value);
-
-            if (to == CharType) return ConvertToChar(value);
-            if (to == StringType) return ConvertToString(value);
-
-            if (to == BigIntegerType) return ConvertToBigInteger(value);
-            if (to == Complex64Type) return ConvertToComplex64(value);
-
-            if (to == ByteType) return ConvertToByte(value);
-            if (to == SByteType) return ConvertToSByte(value);
-            if (to == Int16Type) return ConvertToInt16(value);
-            if (to == UInt32Type) return ConvertToUInt32(value);
-            if (to == UInt64Type) return ConvertToUInt64(value);
-            if (to == UInt16Type) return ConvertToUInt16(value);
-            if (to == SingleType) return ConvertToSingle(value);
-            if (to == Int64Type) return ConvertToInt64(value);
-            if (to == DecimalType) return ConvertToDecimal(value);
-
-            if (to == IEnumerableType) return ConvertToIEnumerable(value);
-
-            if (DelegateType.IsAssignableFrom(to)) return ConvertToDelegate(value, to);
-
-            if (to.IsArray) return ConvertToArray(value, to);
-
-            Object result;
-            if (TrySlowConvert(value, to, out result)) return result;
-
-            throw MakeTypeError(to, value);
+            object res = site.Invoke(value);
+            if (to.IsValueType && res == null && 
+                (!to.IsGenericType || to.GetGenericTypeDefinition() != typeof(Nullable<>))) {
+                throw MakeTypeError(to, value);
+            }
+            return res;
         }
 
         internal static bool TrySlowConvert(object value, Type to, out object result) {
@@ -402,46 +372,25 @@ namespace IronPython.Runtime {
         /// Do not use this function directly. It is only meant to be used by Ops.GetEnumerator.
         /// </summary>
         internal static bool TryConvertToIEnumerator(object o, out IEnumerator e) {
-            if (o is string) {
-                e = StringOps.GetEnumerator((string)o);
-                return true;
-            } else if (o is IEnumerable) {
-                e = ((IEnumerable)o).GetEnumerator();
-                return true;
-            } else if (o is IEnumerator) {
-                e = (IEnumerator)o;
-                return true;
-            }
+            try {
+                e = _ienumeratorSite.Invoke(o);
+                return e != null;
+            } catch {
+                e = null;
+                return false;
+            }            
+        }
 
-            if (PythonEnumerator.TryCreate(o, out e)) {
-                return true;
-            }
-            if (ItemEnumerator.TryCreate(o, out e)) {
-                return true;
-            }
-            e = null;
-            return false;
+        /// <summary>
+        /// This function tries to convert an object to IEnumerator, or wraps it into an adapter
+        /// Do not use this function directly. It is only meant to be used by Ops.GetEnumerator.
+        /// </summary>
+        internal static IEnumerator ConvertToIEnumerator(object o) {
+            return _ienumeratorSite.Invoke(o);
         }
 
         public static IEnumerable ConvertToIEnumerable(object o) {
-            if (o == null) return null;
-
-            IEnumerable e = o as IEnumerable;
-            if (e != null) return e;
-
-            PythonEnumerable pe;
-            if (PythonEnumerable.TryCreate(o, out pe)) {
-                return pe;
-            }
-
-            ItemEnumerable ie;
-            // only user types get converted through ItemEnumerable, otherwise we use the
-            // strong typing of the system types.
-            if ((o is IPythonObject || o is OldInstance) && ItemEnumerable.TryCreate(o, out ie)) {
-                return ie;
-            }
-
-            throw MakeTypeError("IEnumerable", o);
+            return _ienumerableSite.Invoke(o);
         }
 
         public static object ConvertToIEnumerableT(object value, Type[] enumOf) {
@@ -481,7 +430,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            throw MakeTypeError("Array", value);
+            throw MakeTypeError(PythonTypeOps.GetName(to), value);
         }
 
         internal static int ConvertToSliceIndex(object value) {
@@ -967,7 +916,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static bool IsNumeric(Type t) {
+        internal static bool IsNumeric(Type t) {
             if (t.IsEnum) return false;
 
             switch (Type.GetTypeCode(t)) {

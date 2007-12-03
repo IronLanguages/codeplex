@@ -243,7 +243,7 @@ if is_silverlight:
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
-        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=b03f5f7f11d50a3a"
+        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=31bf3856ad364e35"
         if args: 
             return clr.LoadAssembly(ipt_fullname)
         else: 
@@ -449,3 +449,18 @@ else:
 is_peverify_run = False
 if is_cli:    
     is_peverify_run = sys.exec_prefix.endswith("Debug") and "-X:SaveAssemblies" in System.Environment.CommandLine    
+
+is_snap = False
+#If the 'THISISSNAP' env variable is set we're running tests under the SNAP harness.
+if not is_silverlight and get_environ_variable("THISISSNAP")!=None: 
+    is_snap = True
+
+def add_clr_assemblies(*dlls):
+    import clr
+    prefix = "rowantest."
+    for x in dlls:
+        if x.startswith(prefix):
+            clr.AddReference(x)
+        else:
+            clr.AddReference(prefix + x)
+    

@@ -14,24 +14,18 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Collections;
 using System.Diagnostics;
-using System.Reflection.Emit;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class SwitchStatement : Statement {
+    public sealed class SwitchStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _testValue;
         private readonly ReadOnlyCollection<SwitchCase> _cases;
-
-        private const int MaxJumpTableSize = 65536;
-        private const double MaxJumpTableSparsity = 10;
 
         internal SwitchStatement(SourceSpan span, SourceLocation header, Expression/*!*/ testValue, ReadOnlyCollection<SwitchCase>/*!*/ cases)
             : base(AstNodeType.SwitchStatement, span) {
@@ -52,127 +46,6 @@ namespace Microsoft.Scripting.Ast {
 
         public SourceLocation Header {
             get { return _header; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, _header);
-
-            Label breakTarget = cg.DefineLabel();
-            Label defaultTarget = breakTarget;
-            Label[] labels = new Label[_cases.Count];
-
-            // Create all labels
-            for (int i = 0; i < _cases.Count; i++) {
-                labels[i] = cg.DefineLabel();
-
-                // Default case.
-                if (_cases[i].IsDefault) {
-                    // Set the default target
-                    defaultTarget = labels[i];
-                }
-            }
-
-            // Emit the test value
-            _testValue.Emit(cg);
-
-            // Check if jmp table can be emitted
-            if (!TryEmitJumpTable(cg, labels, defaultTarget)) {
-                // There might be scenario(s) where the jmp table is not emitted
-                // Emit the switch as conditional branches then
-                EmitConditionalBranches(cg, labels);
-            }
-
-            // If "default" present, execute default code, else exit the switch            
-            cg.Emit(OpCodes.Br, defaultTarget);
-
-            cg.PushTargets(breakTarget, cg.BlockContinueLabel, this);
-
-            // Emit the bodies
-            for (int i = 0; i < _cases.Count; i++) {
-                // First put the corresponding labels
-                cg.MarkLabel(labels[i]);
-                // And then emit the Body!!
-                _cases[i].Body.Emit(cg);
-            }
-
-            cg.PopTargets();
-            cg.MarkLabel(breakTarget);
-        }
-
-        // Emits the switch as if stmts
-        private void EmitConditionalBranches(CodeGen cg, Label[] labels) {
-            Slot testValueSlot = cg.GetNamedLocal(typeof(int), "switchTestValue");
-            testValueSlot.EmitSet(cg);
-
-            // For all the "cases" create their conditional branches
-            for (int i = 0; i < _cases.Count; i++) {
-                // Not default case emit the condition
-                if (!_cases[i].IsDefault) {
-                    // Test for equality of case value and the test expression
-                    cg.EmitInt(_cases[i].Value);
-                    testValueSlot.EmitGet(cg);
-                    cg.Emit(OpCodes.Beq, labels[i]);
-                }
-            }
-        }
-
-        // Tries to emit switch as a jmp table
-        private bool TryEmitJumpTable(CodeGen cg, Label[] labels, Label defaultTarget) {
-            if (_cases.Count > MaxJumpTableSize) {
-                return false;
-            }
-
-            int min = Int32.MaxValue;
-            int max = Int32.MinValue;
-
-            // Find the min and max of the values
-            for (int i = 0; i < _cases.Count; ++i) {
-                // Not the default case.
-                if (!_cases[i].IsDefault) {
-                    int val = _cases[i].Value;
-                    if (min > val) min = val;
-                    if (max < val) max = val;
-                }
-            }
-
-            long delta = (long)max - (long)min;
-            if (delta > MaxJumpTableSize) {
-                return false;
-            }
-
-            // Value distribution is too sparse, don't emit jump table.
-            if (delta > _cases.Count + MaxJumpTableSparsity) {
-                return false;
-            }
-
-            // The actual jmp table of switch
-            int len = (int)delta + 1;
-            Label[] jmpLabels = new Label[len];
-
-            // Initialize all labels to the default
-            for (int i = 0; i < len; i++) {
-                jmpLabels[i] = defaultTarget;
-            }
-
-            // Replace with the actual label target for all cases
-            for (int i = 0; i < _cases.Count; i++) {
-                SwitchCase sc = _cases[i];
-                if (!sc.IsDefault) {
-                    jmpLabels[sc.Value - min] = labels[i];
-                }
-            }
-
-            // Emit the normalized index and then switch based on that
-            if (min != 0) {
-                cg.EmitInt(min);
-                cg.Emit(OpCodes.Sub);
-            }
-            cg.Emit(OpCodes.Switch, jmpLabels);
-            return true;
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            throw new NotImplementedException();
         }
     }
 

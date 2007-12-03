@@ -132,6 +132,7 @@ namespace IronPython.Runtime.Types {
         /// BoundEvent tracks where the event was received from and is used to verify we get
         /// a proper add when dealing w/ statics events.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class BoundEvent {
             private ReflectedEvent _event;
             private object _instance;

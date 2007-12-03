@@ -16,7 +16,7 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class SwitchCase : Node {
+    public sealed class SwitchCase : Node {
         private readonly SourceLocation _header;
         private readonly bool _default;
         private readonly int _value;

@@ -34,6 +34,8 @@ using IronPython.Runtime.Types;
 namespace IronPython.Modules {
     [PythonType("thread")]
     public static class PythonThread {
+        private static int _stackSize;
+
         #region Public API Surface
         public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(Lock));
         public static object error = ExceptionConverter.CreatePythonException("error", "thread");
@@ -45,7 +47,7 @@ namespace IronPython.Modules {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
-            Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, kwDict).Start);
+            Thread t = CreateThread(new ThreadObj((CodeContext)context, function, tupArgs, kwDict).Start);
             t.Start();
 
             return t.ManagedThreadId;
@@ -57,7 +59,7 @@ namespace IronPython.Modules {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
-            Thread t = new Thread(new ThreadObj((CodeContext)context, function, tupArgs, null).Start);
+            Thread t = CreateThread(new ThreadObj((CodeContext)context, function, tupArgs, null).Start);
             t.IsBackground = true;
             t.Start();
 
@@ -84,6 +86,19 @@ namespace IronPython.Modules {
         [PythonName("get_ident")]
         public static object GetIdentity() {
             return Thread.CurrentThread.ManagedThreadId;
+        }
+
+        [PythonName("stack_size")]
+        public static int StackSize() {
+            return _stackSize;
+        }
+
+        [PythonName("stack_size")]
+        public static int StackSize(int size) {
+            if (size < 256 * 1024) throw PythonOps.ValueError("size too small: {0}", size);
+
+            _stackSize = size;
+            return _stackSize;
         }
 
         // deprecated synonyms, wrappers over preferred names...
@@ -165,6 +180,15 @@ namespace IronPython.Modules {
         }
 
         #region Internal Implementation details
+
+        private static Thread CreateThread(ThreadStart start) {
+#if !SILVERLIGHT
+            return (_stackSize != 0) ? new Thread(start, _stackSize) : new Thread(start);
+#else
+            return new Thread(start);
+#endif
+        }
+
         private class ThreadObj {
             object func, kwargs;
             PythonTuple args;

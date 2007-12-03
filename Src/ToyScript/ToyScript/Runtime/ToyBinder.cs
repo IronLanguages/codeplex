@@ -27,6 +27,52 @@ namespace ToyScript.Runtime {
             : base(context)  {
         }
 
+        protected override StandardRule<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
+            StandardRule<T> rule = null; 
+            if (action.Kind == DynamicActionKind.DoOperation) {
+                rule = MakeDoRule<T>((DoOperationAction)action, args);
+            }
+            return rule ?? base.MakeRule<T>(callerContext, action, args);            
+        }
+
+        private StandardRule<T> MakeDoRule<T>(DoOperationAction action, object[] args) {
+            if (action.Operation == Operators.Add &&
+                args[0] is string &&
+                args[1] is string) {
+
+                StandardRule<T> rule = new StandardRule<T>();
+
+                // (arg0 is string && args1 is string)
+                rule.SetTest(
+                    Ast.AndAlso(
+                        Ast.TypeIs(
+                            rule.Parameters[0],
+                            typeof(string)
+                        ),
+                        Ast.TypeIs(
+                            rule.Parameters[1],
+                            typeof(string)
+                        )
+                    )
+                );
+
+                // string.Concat(string str0, string str1);
+                rule.SetTarget(
+                    rule.MakeReturn(this,
+                        Ast.Call(
+                            typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }),
+                            Ast.Convert(rule.Parameters[0], typeof(string)),
+                            Ast.Convert(rule.Parameters[1], typeof(string))
+                        )
+                    )
+                );
+
+                return rule;
+            }
+
+            return null;
+        }
+
         #region ActionBinder overrides
 
         public override bool CanConvertFrom(Type fromType, Type toType, NarrowingLevel level) {

@@ -17,21 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Threading;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
-using IronPython.Compiler;
 using IronPython.Runtime.Types;
-using IronPython.Hosting;
 
 
 namespace IronPython.Runtime.Calls {
@@ -82,7 +75,8 @@ namespace IronPython.Runtime.Calls {
         public object DeclaringClass {
             [PythonName("im_class")]
             get {
-                return PythonOps.ToPythonType((PythonType)_declaringClass);
+                // we could have an OldClass (or any other object) here if the user called the ctor directly
+                return PythonOps.ToPythonType(_declaringClass as PythonType) ?? _declaringClass;
             }
         }
 
@@ -220,7 +214,7 @@ namespace IronPython.Runtime.Calls {
             return true;
         }
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             List ret = new List();
             foreach(SymbolId si in TypeCache.Method.GetMemberNames(context, this)) {
                 ret.AddNoLock(SymbolTable.IdToString(si));
@@ -228,10 +222,10 @@ namespace IronPython.Runtime.Calls {
 
             ret.AddNoLockNoDups(SymbolTable.IdToString(Symbols.Module));
 
-            IAttributesCollection dict = ((PythonFunction)_func).Dictionary;
+            IAttributesCollection dict = ((PythonFunction)_func).func_dict;
             if (dict != null) {
                 // Check the func
-                foreach (KeyValuePair<object, object> kvp in ((PythonFunction)_func).Dictionary) {
+                foreach (KeyValuePair<object, object> kvp in ((PythonFunction)_func).func_dict) {
                     ret.AddNoLockNoDups(kvp.Key);
                 }
             }

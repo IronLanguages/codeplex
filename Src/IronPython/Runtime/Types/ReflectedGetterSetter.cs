@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Types {
         private readonly PropertyInfo _info;
         private NameType _nameType;
 
-        public ReflectedGetterSetter(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
+        protected ReflectedGetterSetter(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
             _info = info;
             _getter = getter;
             _setter = setter;

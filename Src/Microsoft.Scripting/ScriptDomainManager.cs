@@ -56,6 +56,9 @@ namespace Microsoft.Scripting {
         public MissingTypeException() {
         }
 
+        public MissingTypeException(string name) : this(name, null) {
+        }
+
         public MissingTypeException(string name, Exception e) : 
             base(String.Format(Resources.MissingType, name), e) {
         }
@@ -65,6 +68,7 @@ namespace Microsoft.Scripting {
 #endif
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")] // TODO: fix
     public sealed class ScriptDomainManager {
 
         #region Fields and Initialization
@@ -514,7 +518,7 @@ namespace Microsoft.Scripting {
         /// Returns null if a module could not be found.
         /// </summary>
         /// <param name="name">an opaque parameter which has meaning to the host.  Typically a filename without an extension.</param>
-        public ScriptModule UseModule(string name) {
+        public ScriptScope UseModule(string name) {
             Contract.RequiresNotNull(name, "name");
             
             SourceUnit su = _host.ResolveSourceFileUnit(name);
@@ -537,7 +541,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="ArgumentException">no language registered</exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
-        public ScriptModule UseModule(string path, string languageId) {
+        public ScriptScope UseModule(string path, string languageId) {
             Contract.RequiresNotNull(path, "path");
             ScriptEngine engine = GetLanguageProvider(languageId).GetEngine();
 
@@ -552,7 +556,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the ScriptModule that has been published under the given SourceUnit.
         /// </summary>
-        public bool TryGetScriptModule(string publicName, out ScriptModule module) {
+        public bool TryGetScriptModule(string publicName, out ScriptScope module) {
             if (_modules == null) {
                 module = null;
                 return false;
@@ -565,7 +569,7 @@ namespace Microsoft.Scripting {
             return module != null;
         }
 
-        public void PublishModule(ScriptModule module) {
+        public void PublishModule(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             Contract.Requires(module.FileName != null, "module", "Cannot publish module with null file name");
             PublishModule(module, module.FileName);
@@ -574,7 +578,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Sets the ScriptModule that is registered for the given SourceUnit.
         /// </summary>
-        public void PublishModule(ScriptModule module, string publicName) {
+        public void PublishModule(ScriptScope module, string publicName) {
             Contract.RequiresNotNull(module, "module");
             Contract.RequiresNotNull(publicName, "publicName");
 
@@ -588,13 +592,14 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets a list of all ScriptModule's and the associated SourceUnit which generated them.
         /// </summary>
-        public IDictionary<string, ScriptModule> GetPublishedModules() {
-            IDictionary<string, ScriptModule> res = new Dictionary<string, ScriptModule>();
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
+        public IDictionary<string, ScriptScope> GetPublishedModules() {
+            IDictionary<string, ScriptScope> res = new Dictionary<string, ScriptScope>();
             if (_modules != null) {
                 lock (_modules) {
                     foreach (KeyValuePair<string, WeakReference> kvp in _modules) {
                         if (kvp.Value.IsAlive) {
-                            res.Add(kvp.Key, (ScriptModule)kvp.Value.Target);
+                            res.Add(kvp.Key, (ScriptScope)kvp.Value.Target);
                         } else {
                             _modules.Remove(kvp.Key);
                         }
@@ -607,14 +612,14 @@ namespace Microsoft.Scripting {
         private Dictionary<string, LoadInfo> _loading = new Dictionary<string, LoadInfo>();
 
         class LoadInfo {
-            public ScriptModule Module;
+            public ScriptScope Module;
             public Thread Thread;
             public Exception Exception;
             public bool Done;
             public ManualResetEvent Mre;
         }
 
-        private ScriptModule CompileAndPublishModule(string moduleName, SourceUnit su) {
+        private ScriptScope CompileAndPublishModule(string moduleName, SourceUnit su) {
             Assert.NotNull(moduleName, su);
 
             EnsureModules();
@@ -623,15 +628,15 @@ namespace Microsoft.Scripting {
 
             // check if we've already published this SourceUnit
             lock (_modules) {
-                ScriptModule tmp = GetCachedModuleNoLock(key);
+                ScriptScope tmp = GetCachedModuleNoLock(key);
                 if (tmp != null) return tmp;
             }
 
             // compile and initialize the module...
-            ScriptModule mod = CompileModule(moduleName, su);
+            ScriptScope mod = CompileModule(moduleName, su);
             lock (_modules) {
                 // check if someone else compiled it first...
-                ScriptModule tmp = GetCachedModuleNoLock(key);
+                ScriptScope tmp = GetCachedModuleNoLock(key);
                 if (tmp != null) return tmp;
 
                 LoadInfo load;
@@ -695,11 +700,11 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Must be called with _modules lock held
         /// </summary>
-        private ScriptModule GetCachedModuleNoLock(string publicName) {
+        private ScriptScope GetCachedModuleNoLock(string publicName) {
             WeakReference wr;
             if (_modules.TryGetValue(publicName, out wr)) {
                 if (wr.IsAlive) {
-                    return (ScriptModule)wr.Target;
+                    return (ScriptScope)wr.Target;
                 }
 
                 _modules.Remove(publicName);
@@ -715,7 +720,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public ScriptModule CompileModule(string name, SourceUnit sourceUnit) {
+        public ScriptScope CompileModule(string name, SourceUnit sourceUnit) {
             return CompileModule(name, ScriptModuleKind.Default, null, null, null, sourceUnit);
         }
 
@@ -725,7 +730,7 @@ namespace Microsoft.Scripting {
         /// <c>options</c> can be <c>null</c>.
         /// <c>errorSink</c> can be <c>null</c>.
         /// </summary>
-        public ScriptModule CompileModule(string name, ScriptModuleKind kind, Scope scope, CompilerOptions options, ErrorSink errorSink, 
+        public ScriptScope CompileModule(string name, ScriptModuleKind kind, Scope scope, CompilerOptions options, ErrorSink errorSink, 
             params SourceUnit[] sourceUnits) {
 
             Contract.RequiresNotNull(name, "name");
@@ -745,14 +750,14 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Module creation factory. The only way how to create a module.
         /// </summary>
-        public ScriptModule CreateModule(string name, params ScriptCode[] scriptCodes) {
+        public ScriptScope CreateModule(string name, params ScriptCode[] scriptCodes) {
             return CreateModule(name, null, scriptCodes);
         }
 
         /// <summary>
         /// Module creation factory. The only way how to create a module.
         /// </summary>
-        public ScriptModule CreateModule(string name) {
+        public ScriptScope CreateModule(string name) {
             return CreateModule(name, null, ScriptCode.EmptyArray);
         }
         
@@ -760,23 +765,23 @@ namespace Microsoft.Scripting {
         /// Module creation factory. The only way how to create a module.
         /// <c>scope</c> can be <c>null</c>.
         /// </summary>
-        public ScriptModule CreateModule(string name, Scope scope) {
+        public ScriptScope CreateModule(string name, Scope scope) {
             return CreateModule(name, scope, ScriptCode.EmptyArray);
         }
 
-        public ScriptModule CreateModule(string name, Scope scope, params ScriptCode[] scriptCodes) {
+        public ScriptScope CreateModule(string name, Scope scope, params ScriptCode[] scriptCodes) {
             return CreateModule(name, ScriptModuleKind.Default, scope, scriptCodes);
         }
         
         /// <summary>
         /// Module creation factory. The only way how to create a module.
-        /// Modules compiled from a single source file unit get <see cref="ScriptModule.FileName"/> property set to a host 
+        /// Modules compiled from a single source file unit get <see cref="ScriptScope.FileName"/> property set to a host 
         /// normalized full path of that source unit. The property is set to a <c>null</c> reference for other modules.
         /// <c>scope</c> can be <c>null</c>.
         /// 
         /// Ensures creation of module contexts for all languages whose code is assembled into the module.
         /// </summary>
-        public ScriptModule CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
+        public ScriptScope CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNullItems(scriptCodes, "scriptCodes");
 
@@ -795,7 +800,7 @@ namespace Microsoft.Scripting {
                 }
             }
             
-            ScriptModule result = new ScriptModule(name, kind, scope, scriptCodes);
+            ScriptScope result = new ScriptScope(name, kind, scope, scriptCodes);
 
             // single source file unit modules have unique full path:
             if (scriptCodes.Length == 1) {
@@ -828,6 +833,7 @@ namespace Microsoft.Scripting {
         // It will be called with a null argument to indicate that the console session should be terminated.
         // Can be null.
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public CommandDispatcher GetCommandDispatcher() {
             return _commandDispatcher;
         }

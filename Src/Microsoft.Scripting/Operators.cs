@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Microsoft.Scripting {
     /// <summary>
     /// Enum representing different types of operators.
@@ -64,6 +60,30 @@ namespace Microsoft.Scripting {
         /// a non-language specific scenario.
         /// </summary>
         CodeRepresentation,         
+        /// <summary>
+        /// Unary operator.
+        /// 
+        /// Gets the list of members that belong to the current object returned as an IList of string
+        /// </summary>
+        MemberNames,
+        /// <summary>
+        /// Unary operator.
+        /// 
+        /// Gets various documentation about the object returned as a string
+        /// </summary>
+        Documentation,
+        /// <summary>
+        /// Unary operator.
+        /// 
+        /// Gets information about the type of parameters, returned as a string.
+        /// </summary>
+        CallSignatures,
+        /// <summary>
+        /// Unary operator.
+        /// 
+        /// Checks whether the object is callable or not, returns true if it is.
+        /// </summary>
+        IsCallable,
 
         #region Generated Table of Operators
 
@@ -387,6 +407,9 @@ namespace Microsoft.Scripting {
         IsTrue,
         Or,
         And,
+        IntegralDivide,
+        Concatenate,
+        Like,
         Comma,
 
         GetEnumerator,

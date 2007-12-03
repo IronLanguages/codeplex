@@ -124,6 +124,15 @@ namespace IronPython {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to expected an indented block.
+        /// </summary>
+        internal static string ExpectedIndentation {
+            get {
+                return ResourceManager.GetString("ExpectedIndentation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to expected name.
         /// </summary>
         internal static string ExpectedName {
@@ -345,6 +354,24 @@ namespace IronPython {
         internal static string Slot_CantSet {
             get {
                 return ResourceManager.GetString("Slot_CantSet", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to static property &apos;{0}&apos; of &apos;{1}&apos; can only be read through a type, not an instance.
+        /// </summary>
+        internal static string StaticAccessFromInstanceError {
+            get {
+                return ResourceManager.GetString("StaticAccessFromInstanceError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to static property &apos;{0}&apos; of &apos;{1}&apos; can only be assigned to through a type, not an instance.
+        /// </summary>
+        internal static string StaticAssignmentFromInstanceError {
+            get {
+                return ResourceManager.GetString("StaticAssignmentFromInstanceError", resourceCulture);
             }
         }
         

@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Collections;
 
 namespace IronPythonTest {
     /// <summary>
@@ -75,5 +76,21 @@ namespace IronPythonTest {
 
     public class DoubleToFloat {
         public static float ToFloat(double val) { return (float)val; }
+    }
+
+    public class DictConversion {
+        public static IList<int> ToIDictionary(IDictionary dict) {
+            List<int> res = new List<int>();
+            foreach (DictionaryEntry de in dict) {
+                res.Add((int)de.Key);
+            }
+
+            foreach (DictionaryEntry de in dict) {
+                res.Add((int)de.Value);
+            }
+
+            res.Sort();
+            return res;
+        }
     }
 }

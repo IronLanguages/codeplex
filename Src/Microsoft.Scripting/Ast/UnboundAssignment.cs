@@ -14,25 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class UnboundAssignment : Expression {
+    public sealed class UnboundAssignment : Expression {
         private readonly SymbolId _name;
         private readonly Expression /*!*/ _value;
 
         internal UnboundAssignment(SymbolId name, Expression /*!*/ value)
-            : base(AstNodeType.UnboundAssignment) {
+            : base(AstNodeType.UnboundAssignment, typeof(object)) {
             _name = name;
             _value = value;
-        }
-
-        public override Type Type {
-            get {
-                return typeof(object);
-            }
         }
 
         public SymbolId Name {
@@ -41,19 +33,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Value {
             get { return _value; }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object value = _value.Evaluate(context);
-            RuntimeHelpers.SetName(context, _name, value);
-            return value;
-        }
-
-        public override void Emit(CodeGen cg) {
-            _value.EmitAsObject(cg);
-            cg.EmitCodeContext();
-            cg.EmitSymbolId(_name);
-            cg.EmitCall(typeof(RuntimeHelpers), "SetNameReorder");
         }
     }
 

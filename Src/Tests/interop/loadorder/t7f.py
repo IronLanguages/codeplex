@@ -18,8 +18,7 @@ from lib.assert_util import *
 import module
 AreEqual(module.flag, "python")
 
-import clr
-clr.AddReference("loadorder_7c")
+add_clr_assemblies("loadorder_7c")
 
 # namespace module {
 #     public class C {

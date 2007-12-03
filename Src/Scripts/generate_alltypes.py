@@ -168,6 +168,8 @@ public static %(return_type)s %(method_name)s(%(rtype)s x, %(ltype)s y)"""
 simple_body = "return x %(symbol)s y;"
 cast_simple_body = "return (%(type)s)(x %(symbol)s y);"
 
+simple_compare_body = "return x == y ? 0 : x > y ? 1 : -1;"
+
 overflow1_body = """\
 %(bigger_type)s result = (%(bigger_type)s)(((%(bigger_type)s)x) %(symbol)s ((%(bigger_type)s)y));
 if (%(type)s.MinValue <= result && result <= %(type)s.MaxValue) {
@@ -230,9 +232,11 @@ def write_binop_raw(cw, body, name, ty, **kws):
     cw.write(body, **kws1)
     cw.exit_block()
 
-
 def write_binop1(cw, body, name, ty, **kws):
-    write_binop_raw(cw, body, name, ty, **kws)
+    write_binop1_general(write_binop_raw, cw, body, name, ty, **kws)
+    
+def write_binop1_general(func, cw, body, name, ty, **kws):
+    func(cw, body, name, ty, **kws)
     
     if not ty.is_signed:
         oty = ty.get_signed()
@@ -244,12 +248,18 @@ def write_binop1(cw, body, name, ty, **kws):
         
         
         kws['ltype'] = oty.name
-        write_binop_raw(cw, unsigned_signed_body, name, ty, **kws)
+        func(cw, unsigned_signed_body, name, ty, **kws)
         
         kws['ltype'] = ty.name
         kws['rtype'] = oty.name
-        write_binop_raw(cw, unsigned_signed_body, name, ty, **kws)
+        func(cw, unsigned_signed_body, name, ty, **kws)
         
+def write_compare(cw, body, name, ty, **kws):
+    def writer(cw, body, name, ty, **kws):
+        cw.write('[PythonName("__cmp__")]')
+        write_binop_raw(cw, body, name, ty, **kws)
+        
+    write_binop1_general(writer, cw, body, name, ty, **kws)
 
 def gen_binaryops(cw, ty):
     cw.writeline()
@@ -301,10 +311,7 @@ def gen_binaryops(cw, ty):
             
     cw.writeline()
     cw.write("// Binary Operations - Comparisons")
-    for symbol, name in [('<', 'LessThan'), ('<=', 'LessThanOrEqual'),
-                          ('>', 'GreaterThan'), ('>=', 'GreaterThanOrEqual'),
-                          ('==', 'Equals'), ('!=', 'NotEquals')]:
-        write_binop1(cw, simple_body, name, ty, symbol=symbol, return_type='bool')
+    write_compare(cw, simple_compare_body, 'Compare', ty, return_type='int')
     
             
 implicit_conv = """\

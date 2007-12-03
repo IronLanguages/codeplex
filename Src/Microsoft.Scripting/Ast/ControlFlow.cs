@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Microsoft.Scripting.Ast {
     // Singleton objects of this enum type are used as return values from Statement.Execute() to handle control flow.
     internal enum ControlFlow {

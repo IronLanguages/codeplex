@@ -414,4 +414,23 @@ def test_getfqdn():
     '''
     #TODO
 
+def test_cp10825():
+    '''
+    Regression test
+    '''
+    if directory_exists(testpath.lib_testdir):
+        sys.path.append(testpath.lib_testdir)
+    else:
+        print "Need urllib to run test_cp10825"
+        return
+    
+    import urllib
+    temp_url = urllib.urlopen("http://www.microsoft.com")
+    try:
+        AreEqual(temp_url.url, "http://www.microsoft.com/en/us/default.aspx")
+    finally:
+        temp_url.close()
+
+
+
 run_test(__name__)

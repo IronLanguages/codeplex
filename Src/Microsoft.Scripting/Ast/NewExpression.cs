@@ -15,24 +15,20 @@
 
 using System;
 using System.Reflection;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class NewExpression : Expression {
+    public sealed class NewExpression : Expression {
         private readonly ConstructorInfo /*!*/ _constructor;
         private readonly ReadOnlyCollection<Expression> /*!*/ _arguments;
-        private readonly ParameterInfo[] /*!*/ _parameterInfos;
 
-        internal NewExpression(ConstructorInfo /*!*/ constructor, ReadOnlyCollection<Expression> /*!*/ arguments, ParameterInfo[] /*!*/ parameters)
-            : base(AstNodeType.New) {
+        internal NewExpression(ConstructorInfo /*!*/ constructor, ReadOnlyCollection<Expression> /*!*/ arguments)
+            : base(AstNodeType.New, constructor.DeclaringType) {
             _constructor = constructor;
             _arguments = arguments;
-            _parameterInfos = parameters;
         }
 
         public ConstructorInfo Constructor {
@@ -41,31 +37,6 @@ namespace Microsoft.Scripting.Ast {
 
         public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
-        }
-
-        public override Type Type {
-            get {
-                return _constructor.DeclaringType;
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            for (int i = 0; i < _parameterInfos.Length; i++) {
-                _arguments[i].Emit(cg);
-            }
-            cg.EmitNew(_constructor);
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object[] args = new object[_arguments.Count];
-            for (int i = 0; i < _arguments.Count; i++) {
-                args[i] = _arguments[i].Evaluate(context);
-            }
-            try {
-                return _constructor.Invoke(args);
-            } catch (TargetInvocationException e) {
-                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-            }
         }
     }
 
@@ -84,7 +55,7 @@ namespace Microsoft.Scripting.Ast {
             ParameterInfo[] parameters = constructor.GetParameters();
             ValidateCallArguments(parameters, arguments);
 
-            return new NewExpression(constructor, CollectionUtils.ToReadOnlyCollection(arguments), parameters);
+            return new NewExpression(constructor, CollectionUtils.ToReadOnlyCollection(arguments));
         }
 
         public static NewExpression SimpleNewHelper(ConstructorInfo constructor, params Expression[] arguments) {

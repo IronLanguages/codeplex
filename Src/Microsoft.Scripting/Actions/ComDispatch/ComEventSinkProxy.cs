@@ -24,9 +24,9 @@ using System.Runtime.Remoting.Messaging;
 using System.Runtime.InteropServices;
 using System.Globalization;
 using System.Runtime.Remoting;
+using System.Security.Permissions;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-
+namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
     /// ComEventSinkProxy class is responsible for handling QIs for sourceIid 
     /// on instances of ComEventSink.
@@ -47,22 +47,27 @@ namespace IronPython.Runtime.Types.ComDispatch {
     /// "I implement this interface" for event sinks only since the common 
     /// practice is to use IDistpach.Invoke when calling into event sinks). 
     /// </summary>
-    sealed class ComEventSinkProxy : RealProxy {
+    public sealed class ComEventSinkProxy : RealProxy {
         private Guid _sinkIid;
         private ComEventSink _sink;
         private static readonly MethodInfo _methodInfoInvokeMember = typeof(ComEventSink).GetMethod("InvokeMember", BindingFlags.Instance | BindingFlags.Public);
+        
         #region ctors
+
         private ComEventSinkProxy() {
         }
 
-        internal ComEventSinkProxy(ComEventSink sink, Guid sinkIid)
+        public ComEventSinkProxy(ComEventSink sink, Guid sinkIid)
             : base(typeof(ComEventSink)) {
             this._sink = sink;
             this._sinkIid = sinkIid;
         }
+
         #endregion
 
         #region Base Class Overrides
+
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)] // to match the base method
         public override IntPtr SupportsInterface(ref Guid iid) {
             // if the iid is the sink iid, we ask the base class for an rcw to IDispatch
             if (iid == _sinkIid) {
@@ -74,6 +79,8 @@ namespace IronPython.Runtime.Types.ComDispatch {
             return base.SupportsInterface(ref iid);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)] // to match the base method
         public override IMessage Invoke(IMessage msg) {
             if (msg == null) {
                 throw new ArgumentNullException("msg");
@@ -117,6 +124,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
             return RemotingServices.ExecuteMessage(this._sink, methodCallMessage);
         }
+
         #endregion
     }
 }

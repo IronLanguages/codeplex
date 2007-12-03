@@ -74,7 +74,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional", MessageId = "1#")] // TODO: fix
-        public static void PrintTable(TextWriter output, string[,] table) {
+        public static void PrintTable(StringBuilder output, string[,] table) {
             Contract.RequiresNotNull(output, "output");
             Contract.RequiresNotNull(table, "table");
 
@@ -86,14 +86,14 @@ namespace Microsoft.Scripting.Utils {
             }
 
             for (int i = 0; i < table.GetLength(0); i++) {
-                output.Write(" ");
-                output.Write(table[i, 0]);
+                output.Append(" ");
+                output.Append(table[i, 0]);
 
                 for (int j = table[i, 0].Length; j < max_width + 1; j++) {
-                    output.Write(' ');
+                    output.Append(' ');
                 }
 
-                output.WriteLine(table[i, 1]);
+                output.AppendLine(table[i, 1]);
             }
         }
 
@@ -164,6 +164,10 @@ namespace Microsoft.Scripting.Utils {
             System.Array.Resize<T>(ref array, array.Length + 1);
             array[array.Length - 1] = item;
             return array;
+        }
+
+        public static T[] AppendRange<T>(T[] array, IList<T> items) {
+            return AppendRange<T>(array, items, 0);
         }
 
         public static T[] AppendRange<T>(T[] array, IList<T> items, int additionalItemCount) {
@@ -277,6 +281,6 @@ namespace Microsoft.Scripting.Utils {
                 }
             }
             return res;
-        }        
+        }
     }
 }

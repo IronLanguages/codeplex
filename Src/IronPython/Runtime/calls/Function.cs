@@ -18,37 +18,35 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Threading;
 using System.Text;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Operations;
-using IronPython.Compiler;
-using IronPython.Runtime.Types;
 using IronPython.Hosting;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
+
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Calls {
     /// <summary>
     /// Created for a user-defined function.  
     /// </summary>
-    [PythonType("function")]
-    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, ICustomMembers, IDynamicObject {
+    [PythonSystemType("function")]
+    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable  {
         private FunctionCode _code;
         private FunctionAttributes _flags;
         // Given "foo(a, b, c=3, *argList, **argDist), only a, b, and c are considered "normal" parameters
         private int _nparams;
 
         // Is there any FuncDefFlags.ArgList or FuncDefFlags.KwDict?
-        private readonly string _name;
+        private string _name;
         private readonly string[] _argNames;
-        private readonly object[] _defaults;
+        private object[] _defaults;
         private object _module;
 
         private CodeContext _context;
@@ -65,7 +63,14 @@ namespace IronPython.Runtime.Calls {
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
         private static int _CurrentId = 1;
 
-        public PythonFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults, FunctionAttributes flags) {
+        /// <summary>
+        /// Python ctor - maps to function.__new__
+        /// </summary>
+        public PythonFunction(CodeContext context, FunctionCode code, IAttributesCollection globals) {
+            throw new NotImplementedException();
+        }
+
+        internal PythonFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults, FunctionAttributes flags) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(context, "context");
 
@@ -99,21 +104,131 @@ namespace IronPython.Runtime.Calls {
             if (context.Scope.TryLookupName(context.LanguageContext, Symbols.Name, out modName)) {
                 _module = modName;
             }
-            FunctionCode = new FunctionCode(this);
+            func_code = new FunctionCode(this);
         }
 
-        public static PythonFunction MakeFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults,
-            FunctionAttributes attributes, string docString, int lineNumber, string fileName) {
-            PythonFunction ret = new PythonFunction(context, name, target, argNames, defaults, attributes);
-            if (docString != null) ret.Documentation = docString;
-            ret.FunctionCode.SetLineNumber(lineNumber);
-            ret.FunctionCode.SetFilename(fileName);
-            ret.FunctionCode.SetFlags(attributes);
-            return ret;
+        #region Public APIs
+
+        public object func_globals {
+            get {
+                return new GlobalsDictionary(_context.Scope);
+            }
+        }
+
+        public PythonTuple func_defaults {
+            get {
+                if (_defaults.Length == 0) return null;
+
+                return new PythonTuple(_defaults);
+            }
+            set {
+                if (value == null) {
+                    _defaults = ArrayUtils.EmptyObjects;
+                } else {
+                    _defaults = value.ToArray();
+                }
+            }
+        }
+
+        public PythonTuple func_closure {
+            get {
+                Scope curScope = Context.Scope;
+                List<ClosureCell> cells = new List<ClosureCell>();
+                while (curScope != null) {
+                    IFunctionEnvironment funcEnv = curScope.Dict as IFunctionEnvironment;
+                    if (funcEnv != null) {
+                        foreach (SymbolId si in funcEnv.Names) {
+                            cells.Add(new ClosureCell(curScope.Dict[si]));
+                        }
+                    }
+
+                    curScope = curScope.Parent;
+                }
+
+                if (cells.Count != 0) {
+                    return PythonTuple.MakeTuple(cells.ToArray());
+                }
+                return null;
+            }
+            set {
+                throw PythonOps.TypeError("readonly attribute");
+            }
+        }
+
+        public string __name__ {
+            get { return func_name; }
+            set { func_name = value; }
+        }
+
+        public string func_name {
+            get { return _name; }
+            set {
+                if (_name == null) throw PythonOps.TypeError("func_name must be set to a string object");
+                _name = value; 
+            }
+        }
+
+        public IAttributesCollection __dict__ {
+            get { return func_dict; }
+            set { func_dict = value; }
+        }
+
+        public IAttributesCollection func_dict {
+            get { return EnsureDict(); }
+            set {
+                if (value == null) throw PythonOps.TypeError("setting function's dictionary to non-dict");
+
+                _dict = value; 
+            }
+        }
+
+        public object __doc__ {
+            get { return _doc; }
+            set { _doc = value; }
+        }
+
+        public object func_doc {
+            get { return __doc__; }
+            set { __doc__ = value; }
+        }
+
+        public object __module__ {
+            get { return _module; }
+            set { _module = value; }
+        }
+
+        public FunctionCode func_code {
+            get { return _code; }
+            set {
+                if (value == null) throw PythonOps.TypeError("func_code must be set to a code object");
+                _code = value; 
+            }
+        }
+
+        public object __call__(params object[] args) {
+            return PythonCalls.Call(this, args);
+        }
+
+        public object __call__([ParamDictionary]IAttributesCollection dict, params object[] args) {
+            return PythonCalls.CallWithKeywordArgs(this, args, dict);
+        }
+
+        #endregion
+
+        #region Internal APIs
+
+        internal string[] ArgNames {
+            get { return _argNames; }
+        }
+
+        internal CodeContext Context {
+            get {
+                return _context;
+            }
         }
 
         internal string GetSignatureString() {
-            StringBuilder sb = new StringBuilder(Name);
+            StringBuilder sb = new StringBuilder(__name__);
             sb.Append('(');
             for (int i = 0; i < _argNames.Length; i++) {
                 if (i != 0) sb.Append(", ");
@@ -138,162 +253,12 @@ namespace IronPython.Runtime.Calls {
             return sb.ToString();
         }
 
-        #region Public APIs
-
-        public string[] ArgNames {
-            get { return _argNames; }
-        }
-
-        public object FunctionGlobals {
-            [PythonName("func_globals")]
-            get {
-                return new GlobalsDictionary(_context.Scope);
-            }
-        }
-
-        public PythonTuple FunctionDefaults {
-            [PythonName("func_defaults")]
-            get {
-                if (_defaults.Length == 0) return null;
-
-                return new PythonTuple(_defaults);
-            }
-        }
-
-        public PythonTuple FunctionClosure {
-            [PythonName("func_closure")]
-            get {
-                Scope curScope = Context.Scope;
-                List<ClosureCell> cells = new List<ClosureCell>();
-                while (curScope != null) {
-                    IFunctionEnvironment funcEnv = curScope.Dict as IFunctionEnvironment;
-                    if (funcEnv != null) {
-                        foreach (SymbolId si in funcEnv.Names) {
-                            cells.Add(new ClosureCell(curScope.Dict[si]));
-                        }
-                    }
-
-                    curScope = curScope.Parent;
-                }
-
-                if (cells.Count != 0) {
-                    return PythonTuple.MakeTuple(cells.ToArray());
-                }
-                return null;
-            }
-        }
-
-        public string FunctionName {
-            [PythonName("func_name")]
-            get {
-                return _name;
-            }
-        }
-        public string Name {
-            [PythonName("__name__")]
-            get {
-                return _name;
-            }
-        }
-
-        public object FunctionDoc {
-            [PythonName("func_doc")]
-            get {
-                return Documentation;
-            }
-        }
-
-        public IAttributesCollection Dictionary {
-            [PythonName("func_dict")]
-            get {
-                return EnsureDict();
-            }
-            [PythonName("func_dict")]
-            set {
-                _dict = value;
-            }
-        }
-
-        public object Module {
-            [PythonName("__module__")]
-            get {
-                return _module;
-            }
-            [PythonName("__module__")]
-            set {
-                _module = value;
-            }
-        }
-
-        public object Documentation {
-            [PythonName("__doc__")]
-            get {
-                return _doc;
-            }
-            [PythonName("__doc__")]
-            set {
-                _doc = value;
-            }
-        }
-
-        public FunctionCode FunctionCode {
-            [PythonName("func_code")]
-            get {
-                return _code;
-            }
-            [PythonName("func_code")]
-            set {
-                _code = value;
-            }
-        }
-
-        [PythonName("__call__")]
-        public object Call(params object[] args) {
-            return PythonCalls.Call(this, args);
-        }
-
-        [PythonName("__call__")]
-        public object Call([ParamDictionary]IAttributesCollection dict, params object[] args) {
-            return PythonCalls.CallWithKeywordArgs(this, args, dict);
-        }
-
-        /*
-        public object CallInterpreted(CodeContext context, params object[] args) {
-            CodeContext funcContext = new CodeContext(
-                new Microsoft.Scripting.Scope(context.Scope.ModuleScope, new PythonDictionary()),
-                context.LanguageContext,
-                context.ModuleContext);
-
-            int i = 0;
-            for (; i < args.Length; i++) {
-                funcContext.Scope.SetName(_argNames[i], args[i]);
-            }
-
-            int di = i - (_argNames.Length - _defaults.Length);
-
-            while (i < _argNames.Length) {
-                funcContext.Scope.SetName(_argNames[i++], _defaults[di++]);
-            }
-
-            return _body.Execute(funcContext);
-        }*/
-        
-        public CodeContext Context {
-            get {
-                return _context;
-            }
-        }
-
-        public object GetDefaultValue(int index) {
-            return _defaults[index];
-        }
-
         /// <summary>
         /// Captures the # of args and whether we have kw / arg lists.  This
         /// enables us to share sites for simple calls (calls that don't directly
         /// provide named arguments or the list/dict params).
         /// </summary>
-        public int FunctionCompatibility {
+        internal int FunctionCompatibility {
             get {
                 // TODO: Invalidate sites when EnforceRecursion changes instead of 
                 // tracking this info in a compat flag.
@@ -309,7 +274,7 @@ namespace IronPython.Runtime.Calls {
         /// Returns an ID for the function if one has been assigned, or zero if the
         /// function has not yet required the use of an ID.
         /// </summary>
-        public int FunctionID {
+        internal int FunctionID {
             get {
                 return _id;
             }
@@ -376,39 +341,23 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public static void PushFrame() {
-            //HACK ALERT:
-            // In interpreted mode, cap the recursion limit at 200, since our stack grows 30x faster than normal.
-            //TODO: remove this when we switch to a non-recursive interpretation strategy
-            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
-                if (Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
-            }
-
-            if (++Depth > _MaximumDepth)
-                throw PythonOps.RuntimeError("maximum recursion depth exceeded");
-        }
-
-        public static void PopFrame() {
-            --Depth;
-        }
-
-        public Delegate Target { get { return _target; } }
-
-        #endregion
-
-        #region Protected APIs
+        internal Delegate Target { get { return _target; } }
 
         internal object[] Defaults {
             get { return _defaults; }
         }
 
-        public Exception BadArgumentError(int count) {
-            return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(Name, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, false);
+        internal Exception BadArgumentError(int count) {
+            return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(__name__, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, false);
         }
 
-        public Exception BadKeywordArgumentError(int count) {
-            return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(Name, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, true);
+        internal Exception BadKeywordArgumentError(int count) {
+            return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(__name__, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, true);
         }
+
+        #endregion
+
+        #region Private APIs
 
         private int FindParamIndex(string name) {
             for (int i = 0; i < _argNames.Length; i++) {
@@ -425,58 +374,45 @@ namespace IronPython.Runtime.Calls {
 
         #endregion       
 
-        #region ICustomMembers Members
+        #region Custom member lookup operators
 
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundCustomMember(context, name, out value);
+        [SpecialName, PythonHidden]
+        public void SetMemberAfter(CodeContext context, string name, object value) {
+            EnsureDict();
+
+            _dict[SymbolTable.StringToId(name)] = value;
         }
 
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
-            if (name == Symbols.Dict) {
-                value = EnsureDict();
-                return true;
+        [SpecialName, PythonHidden]
+        public object GetBoundMember(CodeContext context, string name) {
+            object value;
+            if (_dict != null && _dict.TryGetValue(SymbolTable.StringToId(name), out value)) {
+                return value;
             }
+            return OperationFailed.Value;
+        }
 
-            if (_dict != null) {
-                if (_dict.TryGetValue(name, out value)) {
+        [SpecialNameAttribute, PythonHidden]
+        public bool DeleteMember(CodeContext context, string name) {
+            switch(name) {
+                case "func_dict":
+                case "__dict__":
+                    throw PythonOps.TypeError("function's dictionary may not be deleted");
+                case "__doc__":
+                case "func_doc":
+                    _doc = null;
                     return true;
-                }
+                case "func_defaults":
+                    _defaults = ArrayUtils.EmptyObjects;
+                    return true;
             }
 
-            return TypeCache.Function.TryGetBoundMember(context, this, name, out value);
+            if (_dict == null) return false;
+
+            return _dict.Remove(SymbolTable.StringToId(name));
         }
 
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
-            if (name == Symbols.Dict) {
-                // our Python Dictionaries implement this explicitly
-                IAttributesCollection d = value as IAttributesCollection;
-                if (d == null) {
-                    throw PythonOps.TypeError("__dict__ must be set to dictionary");
-                }
-                _dict = d;
-            } else if (SymbolTable.IdToString(name) == "func_closure") {
-                throw PythonOps.TypeError("func_closure on function objects is a read-only attribute");
-            } else {
-                EnsureDict()[name] = value;
-            }
-        }
-
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            if (name == Symbols.Dict)
-                throw PythonOps.TypeError(SymbolTable.IdToString(name) + " may not be deleted");
-
-            if (_dict == null || !_dict.ContainsKey(name)) {
-                // We check for Symbols.Module as the user code can modify it
-                if (name == Symbols.Module)
-                    throw PythonOps.TypeError(SymbolTable.IdToString(name) + " may not be deleted");
-
-                throw PythonOps.AttributeError("no attribute {0}", name);
-            }
-
-            return _dict.Remove(name);
-        }
-
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
             List list;
             if (_dict == null) {
                 list = List.Make();
@@ -489,27 +425,6 @@ namespace IronPython.Runtime.Calls {
                 list.AddNoLockNoDups(id.ToString());
             }
             return list;
-        }
-
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-            if (_dict == null) return new PythonDictionary(0);
-            return (IDictionary<object, object>)_dict;
-        }
-
-        #endregion
-
-        #region Object Overrides
-
-        public override string ToString() {
-            return string.Format("<function {0} at {1}>", FunctionName, PythonOps.HexId(this));
-        }
-
-        public override bool Equals(object obj) {
-            return base.Equals(obj);
-        }
-
-        public override int GetHashCode() {
-            return base.GetHashCode();
         }
 
         #endregion
@@ -547,7 +462,7 @@ namespace IronPython.Runtime.Calls {
             return _dict;
         }
 
-        private static int Depth {
+        internal static int Depth {
             get {
                 // ManagedThreadId starts at 1 and increases as we get more threads.
                 // Therefore we keep track of a limited number of threads in an array
@@ -572,6 +487,7 @@ namespace IronPython.Runtime.Calls {
                 Interlocked.CompareExchange(ref _id, Interlocked.Increment(ref _CurrentId), 0);
             }
         }
+
         #endregion
 
         #region PythonTypeSlot Overrides
@@ -592,10 +508,42 @@ namespace IronPython.Runtime.Calls {
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            if (action.Kind != DynamicActionKind.Call)
-                return null;
+            switch(action.Kind) {
+                case DynamicActionKind.Call:
+                    return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
+                case DynamicActionKind.DoOperation:
+                    return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+            }
+            return null;
+        }
 
-            return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch(doOperationAction.Operation) {
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
+                case Operators.CallSignatures:
+                    return MakeCallSignatureRule<T>(context);
+            }
+            return null;
+        }
+
+        private StandardRule<T> MakeCallSignatureRule<T>(CodeContext context) {
+            string data = GetSignatureString();
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(PythonFunction));
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("GetFunctionSignature"),
+                        Ast.ConvertHelper(
+                            rule.Parameters[0],
+                            typeof(PythonFunction)
+                        )
+                    )
+                )
+            );
+            return rule;
         }
 
         /// <summary>
@@ -673,16 +621,17 @@ namespace IronPython.Runtime.Calls {
                     _rule.MakeTypeTestExpression(_func.GetType(), 0),                    
                     Ast.AndAlso(
                         Ast.TypeIs(
-                            Ast.ReadProperty(
-                                Ast.Convert(_rule.Parameters[0], typeof(PythonFunction)),
-                                typeof(PythonFunction).GetProperty("Target")
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("FunctionGetTarget"),
+                                Ast.Convert(_rule.Parameters[0], typeof(PythonFunction))
                             ),
                             _func.Target.GetType()
                         ),
                         Ast.Equal(
-                            Ast.ReadProperty(
-                                GetFunctionParam(),
-                                typeof(PythonFunction).GetProperty("FunctionCompatibility")),
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("FunctionGetCompatibility"),
+                                Ast.Convert(_rule.Parameters[0], typeof(PythonFunction))
+                            ),
                             Ast.Constant(_func.FunctionCompatibility))
                     )
                 );
@@ -699,9 +648,10 @@ namespace IronPython.Runtime.Calls {
                     return Ast.AndAlso(
                         _rule.MakeTypeTestExpression(_func.GetType(), 0),
                         Ast.Equal(
-                            Ast.ReadProperty(
-                                GetFunctionParam(),
-                                typeof(PythonFunction).GetProperty("FunctionID")),
+                            Ast.Call(
+                                typeof(PythonOps).GetMethod("FunctionGetID"),
+                                Ast.Convert(_rule.Parameters[0], typeof(PythonFunction))
+                            ),
                             Ast.Constant(_func.FunctionID))
                     );
                 }
@@ -709,10 +659,12 @@ namespace IronPython.Runtime.Calls {
                 return Ast.AndAlso(
                     MakeSimpleTest(),
                     Ast.TypeIs(
-                        Ast.ReadProperty(
-                            GetFunctionParam(),
-                            _func.GetType().GetProperty("Target")),
-                        _func.Target.GetType())
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("FunctionGetTarget"),
+                            GetFunctionParam()
+                        ),
+                        _func.Target.GetType()
+                    )
                 );
             }
 
@@ -1011,8 +963,8 @@ namespace IronPython.Runtime.Calls {
                 if (_dict == null && _userProvidedParams == null) {
                     // we can pull the default directly
                     return Ast.Call(
+                      typeof(PythonOps).GetMethod("FunctionGetDefaultValue"),
                       Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                      typeof(PythonFunction).GetMethod("GetDefaultValue"),
                       Ast.Constant(dfltIndex)
                   );
                 } else {
@@ -1118,7 +1070,7 @@ namespace IronPython.Runtime.Calls {
             /// Helper function to get the functions CodeContext.
             /// </summary>
             private Expression GetContextExpression() {
-                return Ast.ReadProperty(GetFunctionParam(), _func.GetType().GetProperty("Context"));
+                return Ast.Call(typeof(PythonOps).GetMethod("FunctionGetContext"), GetFunctionParam());
             }
 
             /// <summary>
@@ -1242,9 +1194,10 @@ namespace IronPython.Runtime.Calls {
             private Statement MakeFunctionInvoke(Expression[] invokeArgs) {
                 Expression invoke = Ast.SimpleCallHelper(
                     Ast.Convert(
-                        Ast.ReadProperty(
-                            GetFunctionParam(),
-                            _func.GetType().GetProperty("Target")),
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("FunctionGetTarget"),
+                            GetFunctionParam()
+                        ),
                         _func.Target.GetType()
                     ),
                     _func.Target.GetType().GetMethod("Invoke"),
@@ -1290,12 +1243,12 @@ namespace IronPython.Runtime.Calls {
                 if (EnforceRecursion) {
                     stmt = Ast.Block(
                         Ast.Statement(
-                            Ast.Call(typeof(PythonFunction).GetMethod("PushFrame"))
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame"))
                         ),
                         Ast.TryFinally(
                             stmt,
                             Ast.Statement(
-                                Ast.Call(typeof(PythonFunction).GetMethod("PopFrame"))
+                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
                             )
                         )
                     );
@@ -1324,8 +1277,8 @@ namespace IronPython.Runtime.Calls {
 
                 return _rule.MakeError(
                     Ast.Call(
+                        typeof(PythonOps).GetMethod(Action.Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "FunctionBadArgumentError"),
                         Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                        typeof(PythonFunction).GetMethod(Action.Signature.HasKeywordArgument() ? "BadKeywordArgumentError" : "BadArgumentError"),
                         Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                     )
                 );
@@ -1334,6 +1287,14 @@ namespace IronPython.Runtime.Calls {
             private void EnsureInit() {
                 if (_init == null) _init = new List<Statement>();
             }
+        }
+
+        #endregion
+
+        #region ICodeFormattable Members
+
+        string ICodeFormattable.ToCodeString(CodeContext context) {
+            return string.Format("<function {0} at {1}>", func_name, PythonOps.HexId(this));
         }
 
         #endregion

@@ -626,7 +626,7 @@ def test_error_message():
         a = Thread.__new__.Overloads[(ThreadStart)](System.Threading.Thread, func)
         AssertUnreachable()
     except TypeError, e:
-        Assert(e.msg.find('(expected 0 args, target takes 5)') != -1)        
+        Assert(e.msg.find('(expected 0 args, target takes 5)') != -1, e.msg)
 
 
 called = False

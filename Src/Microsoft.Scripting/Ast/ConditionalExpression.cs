@@ -14,25 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection.Emit;
-using System.Diagnostics;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ConditionalExpression : Expression {
+    public sealed class ConditionalExpression : Expression {
         private readonly Expression/*!*/ _test;
         private readonly Expression/*!*/ _true;
         private readonly Expression/*!*/ _false;
-        private readonly Type/*!*/ _expressionType;
 
         internal ConditionalExpression(Expression/*!*/ test, Expression/*!*/ ifTrue, Expression/*!*/ ifFalse, Type/*!*/ type)
-            : base(AstNodeType.Conditional) {
+            : base(AstNodeType.Conditional, type) {
             _test = test;
             _true = ifTrue;
             _false = ifFalse;
-            _expressionType = type;
         }
 
         public Expression Test {
@@ -45,55 +40,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression IfFalse {
             get { return _false; }
-        }
-
-        public override Type Type {
-            get {
-                return _expressionType;
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object ret = _test.Evaluate(context);
-            if ((bool)ret) {
-                return _true.Evaluate(context);
-            } else {
-                return _false.Evaluate(context);
-            }
-        }
-
-        internal override EvaluationAddress EvaluateAddress(CodeContext context) {
-            object ret = _test.Evaluate(context);
-
-            if ((bool)ret) {
-                return _true.EvaluateAddress(context);
-            } else {
-                return _false.EvaluateAddress(context);
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            Label eoi = cg.DefineLabel();
-            Label next = cg.DefineLabel();
-            _test.Emit(cg);
-            cg.Emit(OpCodes.Brfalse, next);
-            _true.Emit(cg);
-            cg.Emit(OpCodes.Br, eoi);
-            cg.MarkLabel(next);
-            _false.Emit(cg);
-            cg.MarkLabel(eoi);
-        }
-
-        internal override void EmitAddress(CodeGen cg, Type asType) {
-            Label eoi = cg.DefineLabel();
-            Label next = cg.DefineLabel();
-            _test.Emit(cg);
-            cg.Emit(OpCodes.Brfalse, next);
-            _true.EmitAddress(cg, asType);
-            cg.Emit(OpCodes.Br, eoi);
-            cg.MarkLabel(next);
-            _false.EmitAddress(cg, asType);
-            cg.MarkLabel(eoi);
         }
     }
 

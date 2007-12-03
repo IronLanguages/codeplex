@@ -200,6 +200,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
         public object this[object key] {
             get {
                 Debug.Assert(!(key is SymbolId));
@@ -212,8 +213,10 @@ namespace Microsoft.Scripting {
 
                         if (TryGetExtraValue(id, out res) && !(res is Uninitialized)) return res;
 
-                        if (_data == null)
+                        if (_data == null) {
                             throw new KeyNotFoundException(key.ToString());
+                        }
+
                         return _data[id];
                     }
                 }
@@ -448,6 +451,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets the count of object keys.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         protected virtual int GetObjectKeyCount() {
             lock (this) {
                 Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();
@@ -462,6 +466,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Gets an IDictionaryEnumerator for all of the object key/value pairs.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual IDictionaryEnumerator GetObjectItems() {
             lock (this) {
                 Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();

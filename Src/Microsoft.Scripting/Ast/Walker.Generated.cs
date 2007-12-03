@@ -51,10 +51,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(CodeBlockExpression node) { return true; }
         protected internal virtual void PostWalk(CodeBlockExpression node) { }
 
-        // CodeContextExpression
-        protected internal virtual bool Walk(CodeContextExpression node) { return true; }
-        protected internal virtual void PostWalk(CodeContextExpression node) { }
-
         // CommaExpression
         protected internal virtual bool Walk(CommaExpression node) { return true; }
         protected internal virtual void PostWalk(CommaExpression node) { }
@@ -75,9 +71,9 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(DynamicConversionExpression node) { return true; }
         protected internal virtual void PostWalk(DynamicConversionExpression node) { }
 
-        // EnvironmentExpression
-        protected internal virtual bool Walk(EnvironmentExpression node) { return true; }
-        protected internal virtual void PostWalk(EnvironmentExpression node) { }
+        // IntrinsicExpression
+        protected internal virtual bool Walk(IntrinsicExpression node) { return true; }
+        protected internal virtual void PostWalk(IntrinsicExpression node) { }
 
         // MemberAssignment
         protected internal virtual bool Walk(MemberAssignment node) { return true; }
@@ -98,10 +94,6 @@ namespace Microsoft.Scripting.Ast {
         // NewExpression
         protected internal virtual bool Walk(NewExpression node) { return true; }
         protected internal virtual void PostWalk(NewExpression node) { }
-
-        // ParamsExpression
-        protected internal virtual bool Walk(ParamsExpression node) { return true; }
-        protected internal virtual void PostWalk(ParamsExpression node) { }
 
         // ParenthesizedExpression
         protected internal virtual bool Walk(ParenthesizedExpression node) { return true; }

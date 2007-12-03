@@ -286,7 +286,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        protected Expression[] GetICallableParameters(Type t, StandardRule<T> rule) {
+        protected Expression[] GetICallableParameters(Type t, StandardRule rule) {
             List<Expression> plainArgs = new List<Expression>();
             List<KeyValuePair<SymbolId, Expression>> named = new List<KeyValuePair<SymbolId, Expression>>();
             Expression splat = null, kwSplat = null;

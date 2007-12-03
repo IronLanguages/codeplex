@@ -19,6 +19,10 @@
 #TODO:
 # * run the tests against pythonw.exe to ensure compatability
 
+#Emit the line needed to rerun this test
+echo "To re-run this test execute the following line from a PowerShell prompt:"
+echo     $MyInvocation.Line
+echo "---------------------------------------------------------------------"
 if (! (test-path  $env:ROWAN_BIN\ipyw.exe))
 {
     write-error "Must set the ROWAN_BIN environment variable or build ipy.exe!"

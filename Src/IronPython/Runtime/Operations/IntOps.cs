@@ -112,11 +112,25 @@ namespace IronPython.Runtime.Operations {
         public static object Make(PythonType cls, string s, int radix) {
             ValidateType(cls);
 
-            //try {
-                return LiteralParser.ParseIntegerSign(s, radix);
-            /*} catch (ArgumentException e) {
-                throw Runtime.Exceptions.ExceptionConverter.UpdateForRethrow(Ops.ValueError(e.Message));
-            }*/
+            // radix 16 allows a 0x preceding it... We either need a whole new
+            // integer parser, or special case it here.
+            if (radix == 16) {
+                s = TrimRadix(s);
+            }
+
+            return LiteralParser.ParseIntegerSign(s, radix);
+        }
+
+        internal static string TrimRadix(string s) {
+            for (int i = 0; i < s.Length; i++) {
+                if (Char.IsWhiteSpace(s[i])) continue;
+
+                if (s[i] == '0' && i < s.Length - 1 && s[i + 1] == 'x') {
+                    s = s.Substring(i + 2);
+                }
+                break;
+            }
+            return s;
         }
 
         [StaticExtensionMethod("__new__")]
@@ -314,11 +328,7 @@ namespace IronPython.Runtime.Operations {
             return PythonTuple.MakeTuple(Int32Ops.Make(context, TypeCache.Int32, self));
         }
 
-        private static object Compare(int x, int y) {
-            return RuntimeHelpers.Int32ToObject(x == y ? 0 : x < y ? -1 : +1);
-        }
-
-        [PythonName("__cmp__")]
+        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
         public static object Compare(CodeContext context, int self, object obj) {
             if (obj == null) return RuntimeHelpers.Int32ToObject(1);
@@ -364,6 +374,20 @@ namespace IronPython.Runtime.Operations {
             return DivMod(y, x);
         }
 
+        [PythonName("__int__")]
+        public static int __int__(int self) {
+            return self;
+        }
+
+        [SpecialName, PythonName("__coerce__")]
+        public static object Coerce(CodeContext context, int x, object o) {
+            // called via builtin.coerce()
+            int val;
+            if (Converter.TryConvertToInt32(o, out val)) {
+                return PythonTuple.MakeTuple(x, val);
+            }
+            return PythonOps.NotImplemented;
+        }
 
     }
 }

@@ -16,8 +16,10 @@
 using System;
 
 namespace Microsoft.Scripting.Ast {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1064:ExceptionsShouldBePublic")] // TODO: fix
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1032:ImplementStandardExceptionConstructors")] // TODO: fix
     [Serializable]
-    internal class ExpressionReturnException : Exception {
+    internal sealed class ExpressionReturnException : Exception {
         public readonly object Value;
 #if DEBUG
         // used verify that we always handle the exception w/ the correct handler

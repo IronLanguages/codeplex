@@ -228,6 +228,12 @@
   <data name="RemoteInstanceMisused" xml:space="preserve">
     <value>Cannot use a remote instance.</value>
   </data>
+  <data name="StaticAccessFromInstanceError" xml:space="preserve">
+    <value>static property "{0}" of "{1}" can only be read through a type, not an instance</value>
+  </data>
+  <data name="StaticAssignmentFromInstanceError" xml:space="preserve">
+    <value>static property "{0}" of "{1}" can only be assigned to through a type, not an instance</value>
+  </data>
   <data name="TypeMustBeVisible" xml:space="preserve">
     <value>"type must be visible ({0})"</value>
   </data>

@@ -27,6 +27,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         LanguageContext LanguageContext { get; }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")] // TODO: fix
         StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args);
     }
 }

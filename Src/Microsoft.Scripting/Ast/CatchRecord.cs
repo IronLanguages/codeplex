@@ -13,30 +13,24 @@
  *
  * ***************************************************************************/
 
-#if !SILVERLIGHT // ComObject
+using Microsoft.Scripting.Generation;
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
+namespace Microsoft.Scripting.Ast {
+    struct CatchRecord {
+        private Slot _slot;
+        private CatchBlock _block;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-    public class DispIndexer : DispCallable, ICallableWithCodeContext {
-        internal DispIndexer(IDispatch dispatch, ComDispatch.ComMethodDesc methodDesc)
-            : base(dispatch, methodDesc) {
+        public CatchRecord(Slot slot, CatchBlock block) {
+            _slot = slot;
+            _block = block;
         }
 
-        public object this[params object[] args] {
-            get { return base.Call(args); }
+        public Slot Slot {
+            get { return _slot; }
         }
 
-        #region ICallableWithCodeContext Members
-
-        public object Call(CodeContext context, object[] args) {
-            return base.Call(args);
+        public CatchBlock Block {
+            get { return _block; }
         }
-
-        #endregion
     }
 }
-#endif

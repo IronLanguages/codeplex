@@ -17,8 +17,8 @@ from lib.assert_util import *
 
 import module
 
-import clr
-clr.AddReference("loadorder_7a")
+
+add_clr_assemblies("loadorder_7a")
 
 # public class module {
 # }

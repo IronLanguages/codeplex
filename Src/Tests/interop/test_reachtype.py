@@ -13,25 +13,10 @@
 #
 #####################################################################################
     
-import sys, nt
-
-def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
-
-merlin_root = environ_var("MERLIN_ROOT")
-sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
-sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
-
 from lib.assert_util import *
-
 skiptest("silverlight")
 
-import clr
-clr.AddReference("loadtypesample")
-
-# in order to make peverify happy
-from lib.file_util import *
-peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\loadtypesample.dll",]
-copy_dlls_for_peverify(peverify_dependency)
+add_clr_assemblies("loadtypesample")
 
 keywords = ['pass', 'import', 'def', 'exec', 'except']
 bultin_funcs = ['abs', 'type', 'file']
@@ -108,7 +93,7 @@ def test_generic_types():
 
     AreEqual(G1.A, 10)
     AreEqual(G1[int, int].A, 20)
-    #AreEqual(G1[G1, G1].A, 20)             # tracking bug 291326
+    AreEqual(G1[G1, G1].A, 20)             # G1
     
     AssertError(SystemError, lambda: G2.A)
     AreEqual(G2[int].A, 30)
@@ -169,18 +154,18 @@ if '-X:SaveAssemblies' not in System.Environment.GetCommandLineArgs():
         import EmittedNS
         EmittedNS.EmittedType()
     
-def test_type_forwarded():
-    clr.AddReference("typeforwarder")
-    from NSwForwardee import Foo, Bar        #!!!
+def test_type_forward1():
+    add_clr_assemblies("typeforwarder1")
+    from NSwForwardee1 import Foo, Bar        #!!!
     AreEqual(Foo.A, 120)
     AreEqual(Bar.A, -120)
     
-    import NSwForwardee
-    AreEqual(NSwForwardee.Foo.A, 120)
-    AreEqual(NSwForwardee.Bar.A, -120)
+    import NSwForwardee1
+    AreEqual(NSwForwardee1.Foo.A, 120)
+    AreEqual(NSwForwardee1.Bar.A, -120)
 
 def test_type_forward2():    
-    clr.AddReference("typeforwarder2")
+    add_clr_assemblies("typeforwarder2")
     from NSwForwardee2 import *      
     Assert('Foo_SPECIAL' not in dir())      # !!!
     Assert('Bar_SPECIAL' in dir())
@@ -190,12 +175,12 @@ def test_type_forward2():
     AreEqual(NSwForwardee2.Bar_SPECIAL.A, 64)
     
 def test_type_forward3():    
-    clr.AddReference("typeforwarder3")
+    add_clr_assemblies("typeforwarder3")
     #import NSwForwardee3                   # TRACKING BUG: 291692
     #AreEqual(NSwForwardee3.Foo.A, 210)
     
 def test_type_causing_load_exception():
-    clr.AddReference("loadexception")
+    add_clr_assemblies("loadexception")
     from PossibleLoadException import A, C
     AreEqual(A.F, 10)
     AreEqual(C.F, 30)
@@ -215,5 +200,3 @@ def test_type_causing_load_exception():
 
 run_test(__name__)    
 
-# will not succeed in the SaveAssemblies mode
-delete_dlls_for_peverify(peverify_dependency)

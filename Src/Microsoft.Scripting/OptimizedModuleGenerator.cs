@@ -135,7 +135,7 @@ namespace Microsoft.Scripting.Generation {
             return scopes;
         }
 
-        public void BindGeneratedCodeToModule(ScriptModule module) {
+        public void BindGeneratedCodeToModule(ScriptScope module) {
             Assert.NotNull(module);
             foreach (CodeContext codeContext in _codeContexts) {
                 codeContext.ModuleContext = codeContext.LanguageContext.EnsureModuleContext(module);

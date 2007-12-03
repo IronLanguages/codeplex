@@ -14,17 +14,16 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Math;
 
     /// <summary>
     /// BinderHelper for producing rules related to performing conversions.
@@ -64,6 +63,12 @@ namespace Microsoft.Scripting.Actions {
                 return _rule;
             }
 
+            // finally try conversions that aren't based upon the incoming type at all but
+            // are last chance conversions based on the destination type
+            if (TryExtraConversions(toType)) {
+                return _rule;
+            }
+
             // no conversion is available, make an error rule.
             MakeErrorTarget();
             return _rule;
@@ -90,11 +95,14 @@ namespace Microsoft.Scripting.Actions {
         /// Checks if any conversions are available and if so builds the target for that conversion.
         /// </summary>
         private bool TryAllConversions(Type toType, Type knownType) {
-            return TryAssignableConversion(toType, knownType) ||       // known type -> known type
+            return TryAssignableConversion(toType, knownType) ||    // known type -> known type
                 TryExtensibleConversion(toType, knownType) ||       // Extensible<T> -> Extensible<T>.Value
                 TryUserDefinedConversion(toType, knownType) ||      // op_Implicit
                 TryImplicitNumericConversion(toType, knownType) ||  // op_Implicit
-                TryNullableConversion(toType, knownType);// null -> Nullable<T> or T -> Nullable<T>                 
+                TryNullableConversion(toType, knownType) ||         // null -> Nullable<T> or T -> Nullable<T>
+                TryEnumerableConversion(toType, knownType) ||       // IEnumerator -> IEnumerable / IEnumerator<T> -> IEnumerable<T>
+                TryNullConversion(toType, knownType) ||             // null -> reference type
+                TryComConversion(toType, knownType);                // System.__ComObject -> interface
         }
 
         /// <summary>
@@ -242,9 +250,64 @@ namespace Microsoft.Scripting.Actions {
                 } else if (knownType == toType.GetGenericArguments()[0]) {
                     MakeTToNullableOfTTarget(toType, knownType);
                     return true;
+                } else if (Action.ResultKind == ConversionResultKind.ExplicitCast || Action.ResultKind == ConversionResultKind.ExplicitTry) {
+                    if (knownType != typeof(object)) {
+                        // when doing an explicit cast we'll do things like int -> Nullable<float>
+                        MakeConvertingToTToNullableOfTTarget(toType);
+                        return true;
+                    }
                 }
             }
 
+            return false;
+        }
+
+        /// <summary>
+        /// Checks if there's a conversion to IEnumerator or IEnumerator of T via calling GetEnumerator
+        /// </summary>
+        private bool TryEnumerableConversion(Type toType, Type knownType) {
+            if (toType == typeof(IEnumerator)) {
+                return MakeIEnumerableTarget(knownType);
+            } else if (toType.IsInterface && toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(IEnumerator<>)) {
+                return MakeIEnumeratorOfTTarget(toType, knownType);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Checks to see if there's a conversion of null to a reference type
+        /// </summary>
+        private bool TryNullConversion(Type toType, Type knownType) {
+            if (knownType == typeof(None) && !toType.IsValueType) {
+                MakeNullTarget(toType);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Checks to see if there's a conversion of System.__ComObject to an interface type
+        /// </summary>
+        private bool TryComConversion(Type toType, Type knownType) {
+            if (knownType.FullName == "System.__ComObject" && knownType.Assembly == typeof(string).Assembly) {
+                if (toType.IsInterface) {
+                    // COM object to interface is always possible
+                    MakeSimpleConversionTarget(toType);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Checks for any extra conversions which aren't based upon the incoming type of the object.
+        /// </summary>
+        private bool TryExtraConversions(Type toType) {
+            if (typeof(Delegate).IsAssignableFrom(toType) && toType != typeof(Delegate)) {
+                // generate a conversion to delegate
+                MakeDelegateTarget(toType);
+                return true;
+            }
             return false;
         }
 
@@ -341,7 +404,7 @@ namespace Microsoft.Scripting.Actions {
             _rule.SetTarget(
                 _rule.MakeReturn(
                     Binder,
-                    Ast.ConvertHelper(_rule.Parameters[0], toType)
+                    Ast.ConvertHelper(_rule.Parameters[0], CompilerHelpers.GetVisibleType(toType))
                 )
             );
         }
@@ -406,6 +469,52 @@ namespace Microsoft.Scripting.Actions {
         }
 
         /// <summary>
+        /// Helper to produce the rule for converting T to Nullable of T
+        /// </summary>
+        private void MakeConvertingToTToNullableOfTTarget(Type toType) {
+            Type valueType = toType.GetGenericArguments()[0];
+            
+            // ConvertSelfToT -> Nullable<T>
+            if (Action.ResultKind == ConversionResultKind.ExplicitCast) {
+                Expression conversion = Ast.Action.ConvertTo(ConvertToAction.Make(valueType, Action.ResultKind), _rule.Parameters[0]);
+                // if the conversion to T fails we just throw
+                _rule.SetTarget(
+                    _rule.MakeReturn(
+                        Binder,
+                        Ast.New(
+                            toType.GetConstructor(new Type[] { valueType }),
+                            conversion
+                        )
+                    )
+                );
+            } else {
+                // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
+                Expression conversion = Ast.Action.ConvertTo(valueType, Action.ResultKind, _rule.Parameters[0], typeof(object));
+                Variable tmp = _rule.GetTemporary(typeof(object), "tmp");
+                _rule.SetTarget(
+                    Ast.If(
+                        Ast.NotEqual(
+                            Ast.Assign(tmp, conversion),
+                            Ast.Constant(null)
+                        ),
+                        _rule.MakeReturn(
+                            Binder,
+                            Ast.New(
+                                toType.GetConstructor(new Type[] { valueType }),
+                                Ast.Convert(
+                                    Ast.Read(tmp),
+                                    valueType
+                                )
+                            )
+                        )
+                    ).Else(
+                        CompilerHelpers.GetTryConvertReturnValue(Context, _rule)
+                    )
+                );
+            }
+        }
+
+        /// <summary>
         /// Helper to extract the Value of an Extensible of T from the
         /// expression being converted.
         /// </summary>
@@ -435,7 +544,69 @@ namespace Microsoft.Scripting.Actions {
             } while (curType != null);
             return fromType;
         }
-        
+
+        /// <summary>
+        /// Makes a conversion target which converts IEnumerable -> IEnumerator
+        /// </summary>
+        private bool MakeIEnumerableTarget(Type knownType) {
+            if (typeof(IEnumerable).IsAssignableFrom(knownType)) {
+                _rule.SetTarget(
+                    _rule.MakeReturn(Binder,
+                        Ast.Call(
+                            Ast.ConvertHelper(_rule.Parameters[0], typeof(IEnumerable)),
+                            typeof(IEnumerable).GetMethod("GetEnumerator")
+                        )
+                    )
+                );
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Makes a conversion target which converts IEnumerable of T to IEnumerator of T
+        /// </summary>
+        private bool MakeIEnumeratorOfTTarget(Type toType, Type knownType) {
+            Type enumType = typeof(IEnumerable<>).MakeGenericType(toType.GetGenericArguments()[0]);
+            if (enumType.IsAssignableFrom(knownType)) {
+                _rule.SetTarget(
+                    _rule.MakeReturn(Binder,
+                        Ast.Call(
+                            Ast.ConvertHelper(_rule.Parameters[0], enumType),
+                            toType.GetMethod("GetEnumerator")
+                        )
+                    )
+                );
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Creates a target which returns null for a reference type.
+        /// </summary>
+        /// <param name="toType"></param>
+        private void MakeNullTarget(Type toType) {
+            _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Convert(Ast.Null(), toType)));
+        }
+
+        /// <summary>
+        /// Creates a target which creates a new dynamic method which contains a single
+        /// dynamic site that invokes the callable object.
+        /// </summary>
+        private void MakeDelegateTarget(Type toType) {
+            _rule.SetTarget(
+                _rule.MakeReturn(
+                    Binder,
+                    Ast.Call(
+                        typeof(RuntimeHelpers).GetMethod("GetDelegate"),
+                        _rule.Parameters[0],
+                        Ast.Constant(toType)
+                    )
+                )
+            );
+        }
+
         #endregion
     }
 }

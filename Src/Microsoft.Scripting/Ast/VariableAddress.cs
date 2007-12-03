@@ -13,35 +13,20 @@
  *
  * ***************************************************************************/
 
-using System;
-
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Ast {
-    public class CodeContextExpression : Expression {
-
-        internal CodeContextExpression()
-            : base(AstNodeType.CodeContextExpression) {
+    sealed class VariableAddress : EvaluationAddress {
+        public VariableAddress(Expression expr)
+            : base(expr) {
         }
 
-        public override Type Type {
-            get {
-                return typeof(CodeContext);
+        public override object GetValue(CodeContext context, bool outParam) {
+            if (outParam) {
+                return null;
             }
-        }
 
-        protected override object DoEvaluate(CodeContext context) {
-            return context;
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitCodeContext();
-        }
-    }
-
-    public static partial class Ast {
-        public static CodeContextExpression CodeContext() {
-            return new CodeContextExpression();
+            return base.GetValue(context, outParam);
         }
     }
 }

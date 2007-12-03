@@ -127,9 +127,9 @@ namespace IronPython.Hosting {
             }
         }
 
-        private ScriptModule CreateMainModule() {
+        private ScriptScope CreateMainModule() {
             ModuleOptions trueDiv = (Engine.Options.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            ScriptModule module = Engine.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
+            ScriptScope module = Engine.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
             module.Scope.SetName(Symbols.Doc, null);
 
             // TODO: 
@@ -139,7 +139,7 @@ namespace IronPython.Hosting {
 
         
         private void InitializePath() {
-            Engine.AddToPath(ScriptDomainManager.CurrentManager.PAL.GetCurrentDirectory());
+            Engine.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -152,9 +152,15 @@ namespace IronPython.Hosting {
                 }
             }
 
-            string site = Assembly.GetEntryAssembly().Location;
-            site = Path.Combine(Path.GetDirectoryName(site), "Lib");
+            string entry = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            string site = Path.Combine(entry, "Lib");
             Engine.AddToPath(site);
+
+            // add DLLs directory if it exists            
+            string dlls = Path.Combine(entry, "DLLs");
+            if (Directory.Exists(dlls)) {
+                Engine.AddToPath(dlls);
+            }
 #endif
         }
 
@@ -266,7 +272,11 @@ namespace IronPython.Hosting {
 
             if (Options.HandleExceptions) {
                 try {
-                    Engine.ExecuteCommand(command);
+                    ScriptScope module = CreateMainModule();
+                    if (Options.Introspection)
+                        Module = module;
+
+                    Engine.Execute(command, module);
                     result = 0;
                 } catch (PythonSystemExitException pythonSystemExit) {
                     result = GetEffectiveExitCode(pythonSystemExit);
@@ -321,7 +331,7 @@ namespace IronPython.Hosting {
                 // TODO: move to compiler options
                 ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Generation.AssemblyGenAttributes.EmitDebugInfo;
                 
-                ScriptModule engineModule = Engine.CreateOptimizedModule(fileName, "__main__", true, 
+                ScriptScope engineModule = Engine.CreateOptimizedModule(fileName, "__main__", true, 
                     Engine.Options.SkipFirstSourceLine);
 
                 if (Options.Introspection)

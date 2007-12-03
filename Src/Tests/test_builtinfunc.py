@@ -20,6 +20,9 @@ for stuff in [bool, True, False]:
 
 from lib.assert_util import *
 
+AssertError(NameError, lambda: __new__)
+
+
 def test_callable():
     class C: x=1
 
@@ -251,7 +254,6 @@ def test_len():
     
     AssertError(TypeError, len, foo())
 
-@disabled("CodePlex 4197")
 def test_int_ctor():
     AreEqual(int('0x10', 16), 16)
     AreEqual(long('0x10', 16), 16L)
@@ -319,6 +321,9 @@ def test_compile():
         AreEqual(out.data, ['2', '\n'])  
     finally:
         sys.stdout = sys.__stdout__
+        
+    for code in ["abc" + chr(0) + "def", chr(0) + "def", "def" + chr(0)]:        
+        AssertError(TypeError, compile, code, 'f', 'exec')
 
 def test_str_none():
     class foo(object):
@@ -333,7 +338,22 @@ def test_not_in_globals():
     AssertError(NameError, lambda: __module__)
     AssertError(NameError, lambda: __class__)
     AssertError(NameError, lambda: __init__)
+
+# Regress bug 319126: __int__ on long should return long, not overflow
+def test_long_int():
+  l=long(1.23e300)
+  i = l.__int__()
+  Assert(type(l) == type(i))
+  Assert(i == l)
     
+def test_int_ctor():
+    AreEqual(int('0x10', 16), 16)
+    AreEqual(long('0x10', 16), 16L)
+
+def test_round():
+    AreEqual(round(number=3.4), 3.0)
+    AreEqual(round(number=3.125, ndigits=3), 3.125)
+    AreEqual(round(number=3.125, ndigits=0), 3)
 
 run_test(__name__)
 

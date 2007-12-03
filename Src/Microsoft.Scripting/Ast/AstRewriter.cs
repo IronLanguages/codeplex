@@ -349,7 +349,7 @@ namespace Microsoft.Scripting.Ast {
                     return Rewrite((CodeBlockExpression)node);
 
                 case AstNodeType.CodeContextExpression:
-                    return Rewrite((CodeContextExpression)node);
+                    return Rewrite((IntrinsicExpression)node);
 
                 case AstNodeType.CommaExpression:
                     return Rewrite((CommaExpression)node);
@@ -361,7 +361,7 @@ namespace Microsoft.Scripting.Ast {
                     return Rewrite((DynamicConversionExpression)node);
 
                 case AstNodeType.EnvironmentExpression:
-                    return Rewrite((EnvironmentExpression)node);
+                    return Rewrite((IntrinsicExpression)node);
 
                 case AstNodeType.MemberAssignment:
                     return Rewrite((MemberAssignment)node);
@@ -373,7 +373,7 @@ namespace Microsoft.Scripting.Ast {
                     return Rewrite((NewArrayExpression)node);
 
                 case AstNodeType.ParamsExpression:
-                    return Rewrite((ParamsExpression)node);
+                    return Rewrite((IntrinsicExpression)node);
 
                 case AstNodeType.ParenthesizedExpression:
                     return Rewrite((ParenthesizedExpression)node);
@@ -469,7 +469,7 @@ namespace Microsoft.Scripting.Ast {
 
             if (((object)left != (object)node.Left) ||
                 ((object)right != (object)node.Right)) {
-                return new BinaryExpression(node.NodeType, left, right);
+                return new BinaryExpression(node.NodeType, left, right, node.Type, node.Method);
             } else {
                 return node;
             }
@@ -490,7 +490,7 @@ namespace Microsoft.Scripting.Ast {
                 return Ast.Comma(
                     saveLeft,
                     saveRight,
-                    new BinaryExpression(node.NodeType, left, right)
+                    new BinaryExpression(node.NodeType, left, right, node.Type, node.Method)
                 );
             } else {
                 return node;
@@ -515,12 +515,6 @@ namespace Microsoft.Scripting.Ast {
 
         // CodeBlockExpression
         private Expression Rewrite(CodeBlockExpression node) {
-            // No action necessary
-            return node;
-        }
-
-        // CodeContextExpression
-        private Expression Rewrite(CodeContextExpression node) {
             // No action necessary
             return node;
         }
@@ -610,8 +604,8 @@ namespace Microsoft.Scripting.Ast {
             return node;
         }
 
-        // EnvironmentExpression
-        private Expression Rewrite(EnvironmentExpression node) {
+        // IntrinsicExpression
+        private Expression Rewrite(IntrinsicExpression node) {
             // No action necessary
             return node;
         }
@@ -647,7 +641,7 @@ namespace Microsoft.Scripting.Ast {
         private Expression Rewrite(MemberExpression node) {
             Expression expression = RewriteExpression(node.Expression);
             if ((object)expression != (object)node.Expression) {
-                return new MemberExpression(node.Member, expression);
+                return new MemberExpression(node.Member, expression, node.Type);
             } else {
                 return node;
             }
@@ -725,12 +719,6 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 return node;
             }
-        }
-
-        // ParamsExpression
-        private Expression Rewrite(ParamsExpression node) {
-            // No action necessary
-            return node;
         }
 
         // ParenthesizedExpression

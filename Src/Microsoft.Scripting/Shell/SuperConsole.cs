@@ -14,13 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections;
-using System.Threading;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+
 using Microsoft.Scripting.Hosting;
-using System.IO;
 
 namespace Microsoft.Scripting.Shell {
 #if !SILVERLIGHT // SuperConsole (ConsoleColor)
@@ -254,7 +253,7 @@ namespace Microsoft.Scripting.Shell {
 
                 try {
                     object value = _engine.Evaluate(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr), _commandLine.Module);
-                    IEnumerable<string> result = _engine.GetObjectMemberNames(value);
+                    IEnumerable<string> result = _engine.Operations.GetMemberNames(value);
                     _options.Root = root;
                     foreach (string option in result) {
                         if (option.StartsWith(pref, StringComparison.CurrentCultureIgnoreCase)) {

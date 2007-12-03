@@ -12,13 +12,13 @@
  *
  *
  * ***************************************************************************/
+
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class TryStatementBuilder {
+    public sealed class TryStatementBuilder {
         private Statement _tryStatement;
         private List<CatchBlock> _catchBlocks;
         private Statement _finallyStatement;

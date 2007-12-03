@@ -116,7 +116,7 @@ namespace Microsoft.Scripting {
             return _simpleTarget(codeContext);
         }
 
-        public object Run(ScriptModule module) {
+        public object Run(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
 
             ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);

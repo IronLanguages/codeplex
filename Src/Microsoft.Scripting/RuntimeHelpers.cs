@@ -14,17 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using System.Threading;
-using System.Reflection;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Text;
+using System.Threading;
 
-using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
+using System.CodeDom.Compiler;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -121,7 +121,7 @@ namespace Microsoft.Scripting {
                     formalCount = minFormalNormalArgumentCount - defaultArgumentCount;
                 } else {
                     formalCountQualifier = "at most";
-                    formalCount = minFormalNormalArgumentCount;
+                    formalCount = maxFormalNormalArgumentCount;
                 }
             } else {
                 formalCountQualifier = "exactly";
@@ -154,6 +154,7 @@ namespace Microsoft.Scripting {
             return new ArgumentTypeException(message);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
         public static Exception CannotConvertError(Type toType, object value) {
             return SimpleTypeError(String.Format("Cannot convert {0}({1}) to {2}", CompilerHelpers.GetType(value).Name, value, toType.Name));
         }
@@ -223,6 +224,7 @@ namespace Microsoft.Scripting {
             context.LanguageContext.RemoveName(moduleScopedContext, name);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")] // TODO: fix
         public static void InitializeModuleField(CodeContext context, SymbolId name, ref ModuleGlobalWrapper wrapper) {
             ModuleGlobalCache mgc = context.LanguageContext.GetModuleCache(name);
 
@@ -239,52 +241,69 @@ namespace Microsoft.Scripting {
             return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context.ModuleContext);
         }
 
+        // TODO: hack for Ruby, will be improved later
+        public static CodeContext CreateCodeContext(CodeContext parent) {
+            return new CodeContext(parent);
+        }
+
         #region Dynamic Sites Construction Helpers // TODO: generate this
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, R> CreateSimpleCallSite<T0, R>() {
             return new DynamicSite<T0, R>(CallAction.Make(0));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>() {
             return new DynamicSite<T0, T1, R>(CallAction.Make(1));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>() {
             return new DynamicSite<T0, T1, T2, R>(CallAction.Make(2));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>() {
             return new DynamicSite<T0, T1, T2, T3, R>(CallAction.Make(3));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>() {
             return new DynamicSite<T0, T1, T2, T3, T4, R>(CallAction.Make(4));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, R> CreateSimpleCallSite<T0, R>(CodeContext context) {
             return new FastDynamicSite<T0, R>(context, CallAction.Make(0));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(CodeContext context) {
             return new FastDynamicSite<T0, T1, R>(context, CallAction.Make(1));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(CodeContext context) {
             return new FastDynamicSite<T0, T1, T2, R>(context, CallAction.Make(2));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(CodeContext context) {
             return new FastDynamicSite<T0, T1, T2, T3, R>(context, CallAction.Make(3));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(CodeContext context) {
             return new FastDynamicSite<T0, T1, T2, T3, T4, R>(context, CallAction.Make(4));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, T3, T4, T5, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, R>(CodeContext context) {
             return new FastDynamicSite<T0, T1, T2, T3, T4, T5, R>(context, CallAction.Make(5));
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, R> CreateSimpleCallSite<T0, R>(ref DynamicSite<T0, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<DynamicSite<T0, R>>(ref site, CreateSimpleCallSite<T0, R>(), null);
@@ -292,6 +311,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(ref DynamicSite<T0, T1, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<DynamicSite<T0, T1, R>>(ref site, CreateSimpleCallSite<T0, T1, R>(), null);
@@ -299,6 +319,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(ref DynamicSite<T0, T1, T2, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<DynamicSite<T0, T1, T2, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, R>(), null);
@@ -306,6 +327,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(ref DynamicSite<T0, T1, T2, T3, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<DynamicSite<T0, T1, T2, T3, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, R>(), null);
@@ -313,6 +335,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(ref DynamicSite<T0, T1, T2, T3, T4, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<DynamicSite<T0, T1, T2, T3, T4, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(), null);
@@ -320,6 +343,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, R> CreateSimpleCallSite<T0, R>(CodeContext context, ref FastDynamicSite<T0, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<FastDynamicSite<T0, R>>(ref site, CreateSimpleCallSite<T0, R>(context), null);
@@ -327,6 +351,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, R> CreateSimpleCallSite<T0, T1, R>(CodeContext context, ref FastDynamicSite<T0, T1, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<FastDynamicSite<T0, T1, R>>(ref site, CreateSimpleCallSite<T0, T1, R>(context), null);
@@ -334,6 +359,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, R> CreateSimpleCallSite<T0, T1, T2, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, R>(context), null);
@@ -341,6 +367,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, T3, R> CreateSimpleCallSite<T0, T1, T2, T3, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, T3, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, T3, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, R>(context), null);
@@ -348,6 +375,7 @@ namespace Microsoft.Scripting {
             return site;
         }
 
+        [GeneratedCode("DLR", "2.0")]
         public static FastDynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(CodeContext context, ref FastDynamicSite<T0, T1, T2, T3, T4, R> site) {
             if (site == null) {
                 Interlocked.CompareExchange<FastDynamicSite<T0, T1, T2, T3, T4, R>>(ref site, CreateSimpleCallSite<T0, T1, T2, T3, T4, R>(context), null);
@@ -426,9 +454,9 @@ namespace Microsoft.Scripting {
                 IList<StackTrace> otherTraces = ExceptionHelpers.GetExceptionStackTraces(e) ?? new List<StackTrace>();
                 List<StackFrame> clrFrames = new List<StackFrame>();
                 foreach (StackTrace trace in otherTraces) {
-                    clrFrames.AddRange(trace.GetFrames());
+                    clrFrames.AddRange(trace.GetFrames() ?? new StackFrame[0]); // rare, sometimes GetFrames returns null
                 }
-                clrFrames.AddRange(outermostTrace.GetFrames());
+                clrFrames.AddRange(outermostTrace.GetFrames() ?? new StackFrame[0]);    // rare, sometimes GetFrames returns null
 
                 int lastFound = 0;
                 foreach (StackFrame clrFrame in clrFrames) {
@@ -528,7 +556,7 @@ namespace Microsoft.Scripting {
         public static void RegisterAssembly(Assembly assembly) {
             object[] attrs = assembly.GetCustomAttributes(typeof(ExtensionTypeAttribute), false);
             foreach (ExtensionTypeAttribute et in attrs) {
-                RegisterOneExtension(et.Extends, et.Type);
+                RegisterOneExtension(et.Extends, et.ExtensionType);
             }
         }
 
@@ -553,6 +581,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class TypeExtendedEventArgs : EventArgs {
             public TypeExtendedEventArgs(Type extending, Type extension) {
                 Extending = extending;
@@ -601,6 +630,28 @@ namespace Microsoft.Scripting {
             }
 
             return ArrayUtils.EmptyTypes;
+        }
+
+        /// <summary>
+        /// EventInfo.EventHandlerType getter is marked SecuritySafeCritical in CoreCLR
+        /// This method is to get to the property without using Reflection
+        /// </summary>
+        /// <param name="eventInfo"></param>
+        /// <returns></returns>
+        public static Type GetEventHandlerType(EventInfo eventInfo) {
+            Contract.RequiresNotNull(eventInfo, "eventInfo");
+            return eventInfo.EventHandlerType;
+        }
+
+        public static IList<string> GetStringMembers(IList<object> members) {
+            List<string> res = new List<string>();
+            foreach (object o in members) {
+                string str = o as string;
+                if (str != null) {
+                    res.Add(str);
+                }
+            }
+            return res;
         }
     }
 }

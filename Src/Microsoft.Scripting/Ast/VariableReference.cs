@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Ast {
     /// It is used to resolve closures and create actual slots for the code generation using
     /// the information stored in the Binding.
     /// </summary>
-    internal class VariableReference {
+    internal sealed class VariableReference {
         private readonly Variable _variable;
         private Slot _slot;
 

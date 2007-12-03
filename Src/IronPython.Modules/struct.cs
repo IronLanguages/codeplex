@@ -102,20 +102,20 @@ namespace IronPython.Modules {
                     case '\t':
                         break;
                     case '=': // native
-                        if (i != 0) Error("unexpected byte order");
+                        if (i != 0) throw Error("unexpected byte order");
                         fStandardized = true;
                         break;
                     case '@': // native
-                        if (i != 0) Error("unexpected byte order");
+                        if (i != 0) throw Error("unexpected byte order");
                         break;
                     case '<': // little endian
-                        if (i != 0) Error("unexpected byte order");
+                        if (i != 0) throw Error("unexpected byte order");
                         fLittleEndian = true;
                         fStandardized = true;
                         break;
                     case '>': // big endian
                     case '!': // big endian
-                        if (i != 0) Error("unexpected byte order");
+                        if (i != 0) throw Error("unexpected byte order");
                         fLittleEndian = false;
                         fStandardized = true;
                         break;
@@ -488,13 +488,12 @@ namespace IronPython.Modules {
         #endregion
 
         #region Data getter helpers
+
         internal static char GetCharValue(int index, object[] args) {
-            object val = GetValue(index, args);
-            char res;
-            if (Converter.TryConvertToChar(val, out res)) {
-                return res;
-            }
-            throw Error("expected character value");
+            string val = GetValue(index, args) as string;
+            if (val == null || val.Length != 1) throw Error("char format requires string of length 1");
+
+            return val[0];
         }
 
         internal static sbyte GetSByteValue(int index, object[] args) {

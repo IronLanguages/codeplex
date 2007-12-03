@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting {
-    public class MissingParameter {
+    public sealed class MissingParameter {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly MissingParameter Value = new MissingParameter();
 

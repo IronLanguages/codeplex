@@ -15,17 +15,15 @@
 
 #if !SILVERLIGHT
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
-using Microsoft.Scripting.Hosting;
 using System.Runtime.Remoting;
+
+using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting {
 
-    internal sealed class RemoteScriptModule : RemoteWrapper, IScriptModule {
-        private readonly ScriptModule _module;
+    internal sealed class RemoteScriptModule : RemoteWrapper, IScriptScope {
+        private readonly ScriptScope _module;
 
         public override ILocalObject LocalObject {
             get { return _module; }
@@ -42,7 +40,7 @@ namespace Microsoft.Scripting {
 
         #region Construction
 
-        internal RemoteScriptModule(ScriptModule module) {
+        internal RemoteScriptModule(ScriptScope module) {
             Debug.Assert(module != null);
             _module = module;
         }
@@ -85,7 +83,7 @@ namespace Microsoft.Scripting {
             _module.SetVariable(name, value);
         }
         
-        public IObjectHandle LookupVariableAndWrap(string name) {
+        public ObjectHandle LookupVariableAndWrap(string name) {
             return _module.LookupVariableAndWrap(name);
         }
 

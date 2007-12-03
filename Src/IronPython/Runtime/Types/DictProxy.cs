@@ -28,7 +28,7 @@ using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
     [PythonType("dictproxy")]
-    public class DictProxy : IMapping, IEnumerable {
+    public class DictProxy : IDictionary, IEnumerable {
         private PythonType _dt;
         
         public DictProxy(PythonType dt) {
@@ -68,7 +68,7 @@ namespace IronPython.Runtime.Types {
             return ~_dt.GetHashCode();
         }
 
-        #region IMapping Members
+        #region IDictionary Members
 
         public object GetValue(object key) {
             return GetIndex(DefaultContext.Default, key);
@@ -114,23 +114,19 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("cannot delete from dictproxy");
         }
 
-        #endregion
-
-        #region IPythonContainer Members
-
         public int GetLength() {
             return _dt.GetMemberNames(DefaultContext.Default).Count;
         }
 
         [PythonName("__contains__")]
         public bool ContainsValue(object value) {
-            return ContainsKey(value);
+            return Contains(value);
         }
 
         #endregion
 
         [PythonName("has_key")]
-        public bool ContainsKey(object key) {
+        public bool Contains(object key) {
             object dummy;
             return TryGetValue(key, out dummy);
         }
@@ -161,6 +157,62 @@ namespace IronPython.Runtime.Types {
         [PythonName("__iter__")]
         public System.Collections.IEnumerator GetEnumerator() {
             return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
+        }
+
+        #endregion
+
+        #region IDictionary Members
+
+        public void Add(object key, object value) {
+            this[key] = value;
+        }
+
+        public void Clear() {
+            throw new InvalidOperationException();
+        }
+
+        IDictionaryEnumerator IDictionary.GetEnumerator() {
+            throw new NotImplementedException();
+        }
+
+        public bool IsFixedSize {
+            get { return true; }
+        }
+
+        public bool IsReadOnly {
+            get { return true; }
+        }
+
+        public ICollection Keys {
+            get { throw new NotImplementedException(); }
+        }
+
+        public void Remove(object key) {
+            throw new InvalidOperationException();
+        }
+
+        public ICollection Values {
+            get { throw new NotImplementedException(); }
+        }
+
+        #endregion
+
+        #region ICollection Members
+
+        public void CopyTo(Array array, int index) {
+            throw new NotImplementedException();
+        }
+
+        public int Count {
+            get { return GetLength();  }
+        }
+
+        public bool IsSynchronized {
+            get { return false; }
+        }
+
+        public object SyncRoot {
+            get { return this; }
         }
 
         #endregion

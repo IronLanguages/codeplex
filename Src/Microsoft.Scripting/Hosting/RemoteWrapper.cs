@@ -20,6 +20,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     public interface IRemotable {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         Type GetType();
     }
 

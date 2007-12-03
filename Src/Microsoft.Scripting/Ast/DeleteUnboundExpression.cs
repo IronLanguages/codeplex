@@ -13,32 +13,19 @@
  *
  * ***************************************************************************/
 
-using System;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class DeleteUnboundExpression : Expression {
+    public sealed class DeleteUnboundExpression : Expression {
         private SymbolId _name;
 
         internal DeleteUnboundExpression(SymbolId name)
-            : base(AstNodeType.DeleteUnboundExpression) {
+            : base(AstNodeType.DeleteUnboundExpression, typeof(object)) {
             _name = name;
         }
 
         public SymbolId Name {
             get { return _name; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            // RuntimeHelpers.RemoveName(CodeContext, name)
-            cg.EmitCodeContext();
-            cg.EmitSymbolId(_name);
-            cg.EmitCall(typeof(RuntimeHelpers), "RemoveName");
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return RuntimeHelpers.RemoveName(context, _name);
         }
     }
 

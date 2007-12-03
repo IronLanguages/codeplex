@@ -12,27 +12,11 @@
 #
 #
 #####################################################################################
-    
-import sys, nt
-
-def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
-
-merlin_root = environ_var("MERLIN_ROOT")
-sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
-sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
 
 from lib.assert_util import *
 skiptest("silverlight")
 
-import clr
-clr.AddReference("operators", "typesamples")
-
-from lib.file_util import *
-peverify_dependency = [ 
-    merlin_root + r"\Test\ClrAssembly\bin\operators.dll", 
-    merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll"
-]
-copy_dlls_for_peverify(peverify_dependency)
+add_clr_assemblies("operators", "typesamples")
 
 from Merlin.Testing import *
 from Merlin.Testing.Call import *
@@ -160,7 +144,7 @@ def test_explicitly_call():
 def test_negative_scenario():
     x = InstanceOp()
     y = InstanceOp()
-    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for DoOperation Add: 'InstanceOp' and 'InstanceOp'", lambda: x + y)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'InstanceOp' and 'InstanceOp'", lambda: x + y)
     
     x = UnaryWithWrongParamOp()
     AssertErrorWithMessage(TypeError, "unsupported operand type for DoOperation Negate: 'UnaryWithWrongParamOp'", lambda: -x)
@@ -169,9 +153,9 @@ def test_negative_scenario():
     
     x = BinaryWithWrongParamOp()
     y = BinaryWithWrongParamOp()
-    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for DoOperation Subtract: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x - y)
-    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for DoOperation Add: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x + y)
-    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for DoOperation Divide: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x / y)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for -: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x - y)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x + y)
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for /: 'BinaryWithWrongParamOp' and 'BinaryWithWrongParamOp'", lambda: x / y)
     
     AssertErrorWithMessage(TypeError, "unsupported operand type for DoOperation Positive: 'BinaryWithWrongParamOp'", lambda: +x)
 
@@ -300,4 +284,3 @@ def test_python_style():
     
 run_test(__name__)
 
-delete_dlls_for_peverify(peverify_dependency)

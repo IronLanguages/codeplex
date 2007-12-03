@@ -13,20 +13,10 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Generation;
-
 namespace Microsoft.Scripting.Ast {
-    public class EmptyStatement : Statement {
+    public sealed class EmptyStatement : Statement {
         internal EmptyStatement(SourceSpan span)
             : base(AstNodeType.EmptyStatement, span) {
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            return NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
         }
     }
 

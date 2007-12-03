@@ -62,17 +62,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static CodeContext CreateDefaultContext(PythonEngine engine) {
-            ScriptModule globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
+            ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
             return new CodeContext(globalMod.Scope, new PythonContext(engine, false), new PythonModuleContext(globalMod));
         }
 
         private static CodeContext CreateTrueDivisionContext(PythonEngine engine) {
-            ScriptModule globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
+            ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
             return new CodeContext(globalMod.Scope, new PythonContext(engine, true), new PythonModuleContext(globalMod));
         }
 
         private static CodeContext CreateDefaultCLSContext(PythonEngine engine) {
-            ScriptModule globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
+            ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
 
             PythonModuleContext moduleContext = new PythonModuleContext(globalMod);
             moduleContext.ShowCls = true;

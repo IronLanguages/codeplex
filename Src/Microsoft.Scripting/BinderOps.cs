@@ -69,6 +69,7 @@ namespace Microsoft.Scripting {
             return res;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "2#")] // TODO: fix
         public static object[] GetCombinedKeywordParameters(object[] initialArgs, IAttributesCollection additionalArgs, ref string[] extraNames) {
             List<object> args = new List<object>(initialArgs);
             List<string> newNames = extraNames == null ? new List<string>(additionalArgs.Count) : new List<string>(extraNames);
@@ -115,6 +116,7 @@ namespace Microsoft.Scripting {
 
         #region Event support
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
         public static void SetEvent(EventTracker eventTracker, object value) {
             EventTracker et = value as EventTracker;
             if(et != null){
@@ -174,5 +176,10 @@ namespace Microsoft.Scripting {
         }
         
         #endregion
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
+        public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
+            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
+        }
     }
 }

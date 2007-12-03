@@ -35,6 +35,12 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
+        public static IEnumerable<T> ToEnumerable<T>(IEnumerable enumerable) {
+            foreach (T item in enumerable) {
+                yield return item;
+            }
+        }
+
         public static IEnumerator<S> ToCovariant<T, S>(IEnumerator<T> enumerator)
             where T : S {
 

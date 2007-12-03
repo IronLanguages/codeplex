@@ -15,8 +15,7 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_3")
+add_clr_assemblies("loadorder_3")
 
 # namespace First {
 #     public class Generic1<K, V> {
@@ -26,7 +25,7 @@ clr.AddReference("loadorder_3")
 
 import First
 
-clr.AddReference("loadorder_3b")
+add_clr_assemblies("loadorder_3b")
 
 # namespace Second {
 #     public class Generic2 {

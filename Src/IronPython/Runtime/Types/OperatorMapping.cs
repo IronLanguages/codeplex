@@ -43,6 +43,7 @@ namespace IronPython.Runtime.Types {
             IsReversible = isReversable;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public OperatorMapping GetReversed() {
             Debug.Assert(IsReversible);
 

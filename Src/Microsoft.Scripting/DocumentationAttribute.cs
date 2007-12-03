@@ -14,34 +14,24 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using Microsoft.Scripting.Generation;
 
-namespace Microsoft.Scripting.Ast {
-    public class ParamsExpression : Expression {
-
-        internal ParamsExpression()
-            : base(AstNodeType.ParamsExpression) {
-        }
-
-        public override Type Type {
-            get {
-                return typeof(object[]);
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            Debug.Assert(cg.ParamsSlot != null);
-            cg.ParamsSlot.EmitGet(cg);
-        }
-    }
-
+namespace Microsoft.Scripting {
     /// <summary>
-    /// Factory methods.
+    /// Provides a mechanism for providing documentation stored in an assembly as metadata.  
+    /// 
+    /// Applying this attribute will enable documentation to be provided to the user at run-time
+    /// even if XML Docuementation files are unavailable.
     /// </summary>
-    public static partial class Ast {
-        public static ParamsExpression Params() {
-            return new ParamsExpression();
+    [AttributeUsage(AttributeTargets.All)]
+    public sealed class DocumentationAttribute : Attribute {
+        private readonly string _doc;
+
+        public DocumentationAttribute(string documentation) {
+            _doc = documentation;
+        }
+
+        public string Documentation {
+            get { return _doc; }
         }
     }
 }

@@ -24,6 +24,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
@@ -188,7 +189,7 @@ Currently returns the string unmodified")]
                 locale = locale.Replace('_', '-');
 
                 try {
-                    return CultureInfo.GetCultureInfo(locale);
+                    return StringUtils.GetCultureInfo(locale);
                 } catch (ArgumentException) {
                     throw ExceptionConverter.CreateThrowable(Error, String.Format("unknown locale: {0}", locale));
                 }

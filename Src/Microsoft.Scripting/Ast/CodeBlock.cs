@@ -15,18 +15,14 @@
 
 using System;
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
-using System.IO;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -486,6 +482,7 @@ namespace Microsoft.Scripting.Ast {
             _generatorTemps += count;
         }
 
+        // TODO: Move to Interpreter
         private object DoExecute(CodeContext context) {
             object ret;
 
@@ -493,15 +490,15 @@ namespace Microsoft.Scripting.Ast {
             if (!IsGlobal) {
                 foreach (Variable v in _variables) {
                     if (v.Kind == Variable.VariableKind.Local && v.Uninitialized && v.Block == this) {
-                        BoundAssignment.EvaluateAssign(context, v, Uninitialized.Instance);
+                        Interpreter.EvaluateAssignVariable(context, v, Uninitialized.Instance);
                     }
                 }
             }
 
             context.Scope.SourceLocation = Span.Start;
-            ret = Body.Execute(context);
+            ret = Interpreter.ExecuteStatement(context, Body);
 
-            if (ret == Statement.NextStatement) {
+            if (ret == Interpreter.NextStatement) {
                 return null;
             } else {
                 Debug.Assert(!(ret is ControlFlow));
@@ -509,6 +506,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        // TODO: Move to Interpreter
         public object Execute(CodeContext context) {
             try {
                 return DoExecute(context);
@@ -538,8 +536,9 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        protected bool NeedsWrapperMethod(bool stronglyTyped) {
-            return _parameters.Count > (stronglyTyped ? ReflectionUtils.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
+        protected bool NeedsWrapperMethod(bool hasContextParameter, bool stronglyTyped) {
+            return _parameters.Count + (hasContextParameter ? 1 : 0) >
+                (stronglyTyped ? ReflectionUtils.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
         }
 
         private bool HasThis() {
@@ -565,6 +564,7 @@ namespace Microsoft.Scripting.Ast {
             return _callCount++ > _maxInterpretedCalls;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class CodeBlockInvoker {
             private CodeBlock _block;
             private CodeContext _context;
@@ -737,7 +737,7 @@ namespace Microsoft.Scripting.Ast {
 
         protected Delegate GetCompiledDelegate(CompilerContext context, Type delegateType, bool forceWrapperMethod) {
 
-            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(false);
+            bool createWrapperMethod = _parameterArray ? false : forceWrapperMethod || NeedsWrapperMethod(true, false);
             bool hasThis = HasThis();
 
             CodeGen cg = CreateInterprettedMethod(context, delegateType, hasThis);
@@ -768,15 +768,12 @@ namespace Microsoft.Scripting.Ast {
         internal void EmitDelegateConstruction(CodeGen cg, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
             FlowChecker.Check(this);
 
-            // TODO: explicit delegate type may be wrapped...
-            bool createWrapperMethod = _parameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(stronglyTyped));
-
-            bool hasContextParameter = _explicitCodeContextExpression == null && 
-                (createWrapperMethod ||
-                IsClosure ||
-                !(cg.ContextSlot is StaticFieldSlot) ||
-                _parameterArray);
-
+            bool hasContextParameter = _explicitCodeContextExpression == null &&
+                (IsClosure ||
+                !(cg.ContextSlot is StaticFieldSlot));
+            
+            bool createWrapperMethod = _parameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(hasContextParameter, stronglyTyped));
+            
             bool hasThis = HasThis();
 
             cg.EmitSequencePointNone();
@@ -792,13 +789,13 @@ namespace Microsoft.Scripting.Ast {
                 wrapper.Finish();
                 
                 if (delegateType == null) {
-                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
+                    delegateType = GetWrapperDelegateType(hasThis, hasContextParameter);
                 }
 
                 cg.EmitDelegateConstruction(wrapper, delegateType);
             } else if (_parameterArray) {
                 if (delegateType == null) {
-                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
+                    delegateType = GetWrapperDelegateType(hasThis, hasContextParameter);
                 }
                 cg.EmitDelegateConstruction(impl, delegateType);
             } else {
@@ -810,6 +807,14 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
                 cg.EmitDelegateConstruction(impl, delegateType);
+            }
+        }
+
+        private Type GetWrapperDelegateType(bool hasThis, bool hasContextParameter) {
+            if (hasContextParameter) {
+                return hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
+            } else {
+                return hasThis ? typeof(CallTargetWithThisN) : typeof(CallTargetN);
             }
         }
 
@@ -826,7 +831,7 @@ namespace Microsoft.Scripting.Ast {
             return result;
         }
 
-        protected int ComputeSignature(bool hasContextParameter, bool hasThis, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
+        internal int ComputeSignature(bool hasContextParameter, bool hasThis, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
 
             paramTypes = new List<Type>();
             paramNames = new List<SymbolId>();
@@ -904,7 +909,7 @@ namespace Microsoft.Scripting.Ast {
                 Slot localContextSlot = impl.GetLocalTmp(typeof(CodeContext));
                 
                 // cannot access code context slot during emit:
-                _explicitCodeContextExpression.Emit(impl);
+                Compiler.Emit(impl, _explicitCodeContextExpression);
 
                 localContextSlot.EmitSet(impl);
                 impl.ContextSlot = localContextSlot;
@@ -961,13 +966,25 @@ namespace Microsoft.Scripting.Ast {
             return impl;
         }
 
-        private CodeGen CreateWrapperCodeGen(CodeGen outer, string implName, List<Type> paramTypes, ConstantPool staticData) {
+        private CodeGen CreateWrapperCodeGen(CodeGen outer, string implName, bool hasContextParameter, bool hasThisParameter, ConstantPool staticData) {
+            CodeGen result;
+
+            List<Type> paramTypes = new List<Type>(3);
+            if (hasContextParameter) paramTypes.Add(typeof(CodeContext));
+            if (hasThisParameter) paramTypes.Add(typeof(object));
+            paramTypes.Add(typeof(object[]));
+            
             if (outer == null) {
-                return CompilerHelpers.CreateDynamicCodeGenerator(implName, typeof(object), paramTypes, staticData);
+                result = CompilerHelpers.CreateDynamicCodeGenerator(implName, typeof(object), paramTypes, staticData);
             } else {
-                return outer.DefineMethod(implName, typeof(object), paramTypes.ToArray(), null, staticData);
+                result = outer.DefineMethod(implName, typeof(object), paramTypes.ToArray(), null, staticData);
             }
+
+            // DynamicMethod doesn't allow to define params-attribute on the last param. We need to check delegate type in call site.
+            
+            return result;
         }
+
         /// <summary>
         /// Creates a wrapper method for the user-defined function.  This allows us to use the CallTargetN
         /// delegate against the function when we don't have a CallTarget# which is large enough.
@@ -988,19 +1005,14 @@ namespace Microsoft.Scripting.Ast {
 
             string implName = impl.MethodBase.Name;
 
-            List<Type> paramTypes = new List<Type>();
+            wrapper = CreateWrapperCodeGen(outer, implName, hasContextParameter, hasThis, staticData);
+
             if (hasContextParameter) {
-                paramTypes.Add(typeof(CodeContext));
                 if (hasThis) {
-                    paramTypes.Add(typeof(object));
-                    paramTypes.Add(typeof(object[]));
-                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
                     thisSlot = wrapper.GetArgumentSlot(1);
                     argSlot = wrapper.GetArgumentSlot(2);
                 } else {
-                    paramTypes.Add(typeof(object[]));
-                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     contextSlot = wrapper.GetArgumentSlot(0);
                     argSlot = wrapper.GetArgumentSlot(1);
                 }
@@ -1009,14 +1021,9 @@ namespace Microsoft.Scripting.Ast {
                 // have a TypeGen we'll create a DynamicMethod but we won't flow context w/ it.
                 Debug.Assert(outer == null || outer.TypeGen != null);
                 if (hasThis) {
-                    paramTypes.Add(typeof(object));
-                    paramTypes.Add(typeof(object[]));
-                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     thisSlot = wrapper.GetArgumentSlot(0);
                     argSlot = wrapper.GetArgumentSlot(1);
                 } else {
-                    paramTypes.Add(typeof(object[]));
-                    wrapper = CreateWrapperCodeGen(outer, implName, paramTypes, staticData);
                     argSlot = wrapper.GetArgumentSlot(0);
                 }
             }
@@ -1076,11 +1083,21 @@ namespace Microsoft.Scripting.Ast {
 
             EmitStartPosition(cg);
 
-            Body.Emit(cg);
+            Compiler.Emit(cg, Body);
 
             EmitEndPosition(cg);
 
-            cg.EmitReturn(null); //TODO skip if Body is guaranteed to return
+            //TODO skip if Body is guaranteed to return
+            if (ReturnType == typeof(void)) {
+                cg.EmitReturn();
+            } else {
+                if (TypeUtils.CanAssign(typeof(object), ReturnType)) {
+                    cg.EmitReturn(null);
+                } else {
+                    cg.EmitMissingValue(ReturnType);
+                    cg.EmitReturn();
+                }
+            }
         }
 
         private void EmitStartPosition(CodeGen cg) {

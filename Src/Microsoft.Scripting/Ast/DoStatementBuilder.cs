@@ -12,13 +12,11 @@
  *
  *
  * ***************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Text;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class DoStatementBuilder {
+    public sealed class DoStatementBuilder {
         private readonly Statement _body;
         private readonly SourceLocation _doLocation;
         private readonly SourceSpan _statementSpan;

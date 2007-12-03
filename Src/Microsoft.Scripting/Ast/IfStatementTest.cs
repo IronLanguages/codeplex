@@ -13,10 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
 using Microsoft.Scripting.Utils;
+
 namespace Microsoft.Scripting.Ast {
-    public class IfStatementTest : Node {
+    public sealed class IfStatementTest : Node {
         private readonly SourceLocation _start;
         private readonly SourceLocation _header;
         private readonly SourceLocation _end;

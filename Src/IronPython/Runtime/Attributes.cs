@@ -14,14 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting;
 
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
@@ -214,21 +213,4 @@ namespace IronPython.Runtime {
         }
     }
     
-    /// <summary>
-    /// This is to specify the doc string for builtin types and methods.
-    /// Many common methods dont need a doc string since ReflectionUtil.GetDefaultDocumentation
-    /// has many of the common doc strings.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.All)]
-    public sealed class DocumentationAttribute : Attribute {
-        private readonly string doc;
-
-        public DocumentationAttribute(string documentation) {
-            doc = documentation;
-        }
-
-        public string Documentation {
-            get { return doc; }
-        }
-    }
 }

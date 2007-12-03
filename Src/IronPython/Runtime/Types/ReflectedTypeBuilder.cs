@@ -216,6 +216,7 @@ namespace IronPython.Runtime.Types {
             Builder.Finish(!_type.IsDefined(typeof(MutableTypeAttribute), true));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class PythonTypeDelegateCallSlot : PythonTypeSlot {
             private BuiltinFunction _invoker;
 
@@ -233,6 +234,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class DelegateInvoker : ICallableWithCodeContext {
             private BuiltinFunction _invoker;
             private object _instance;
@@ -698,6 +700,10 @@ namespace IronPython.Runtime.Types {
                 yield break;
             }
 
+            if (!IncludeOperatorMethod(mi.DeclaringType, method)) {
+                yield break;
+            }
+
             bool instance = !mi.IsStatic;
 
             ParameterInfo[] parms = mi.GetParameters();
@@ -732,6 +738,22 @@ namespace IronPython.Runtime.Types {
                     }
                 }
             }
+        }
+
+        internal static bool IncludeOperatorMethod(Type t, OperatorMapping method) {
+            // numeric types in python don't define equality, just __cmp__
+            if (Converter.IsNumeric(t) && t != typeof(Complex64)) {
+                switch (method.Operator) {
+                    case Operators.Equals:
+                    case Operators.NotEquals:
+                    case Operators.GreaterThan:
+                    case Operators.LessThan:
+                    case Operators.GreaterThanOrEqual:
+                    case Operators.LessThanOrEqual:
+                        return false;
+                }
+            }
+            return true;
         }
 
         private bool ReversedComparison(ParameterInfo[] parms, int ctxOffset, bool reverse) {

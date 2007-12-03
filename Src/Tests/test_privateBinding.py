@@ -89,6 +89,10 @@ else:
         internalClsPart._InternalClsPart__Event -= Negate
         AreEqual(internalClsPart._InternalClsPart__Method(1), -1)
         
+        
+    def test_PrivateStaticMethod():
+        AreEqual(ClsPart.privateStaticMethod(), 100)
+        
         # !!! AreEqual("_InternalClsPart__privateField" in dir(IronPythonTest.InternalClsPart), True)
         # !!! AreEqual("_InternalClsPart__privateProperty" in dir(InternalClsPart), True)
         # !!! AreEqual("_InternalClsPart__privateEvent" in dir(InternalClsPart), True)

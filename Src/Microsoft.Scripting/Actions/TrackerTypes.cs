@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting.Actions {
+    [Flags]
     public enum TrackerTypes {
         None = 0x00,
         /// <summary> Specifies that the member is a constructor, representing a ConstructorTracker </summary>

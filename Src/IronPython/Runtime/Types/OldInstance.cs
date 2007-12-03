@@ -16,19 +16,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Diagnostics;
 using System.ComponentModel;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+using System.Diagnostics;
+using System.Runtime.Serialization;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -168,9 +169,104 @@ namespace IronPython.Runtime.Types {
                 return MakeConvertComplexRuleForCall<T>(context, convertToAction);
             } else if (toType == typeof(bool)) {
                 return MakeBoolConvertRuleForCall<T>(context, convertToAction);
+            } else if (toType == typeof(IEnumerable)) {
+                return MakeConvertToIEnumerable<T>(context, convertToAction);
+            } else if (toType == typeof(IEnumerator)) {
+                return MakeConvertToIEnumerator<T>(context, convertToAction);
+            } else if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(IEnumerable<>)) {
+                return MakeConvertToIEnumerator<T>(context, convertToAction);
             }
 
             return null;
+        }
+
+        private static StandardRule<T> MakeConvertToIEnumerator<T>(CodeContext context, ConvertToAction convertToAction) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+            Variable tmp = rule.GetTemporary(typeof(object), "tmp");
+            // build up:
+            // if(hasattr(this, '__iter__')) { 
+            //    return PythonEnumerator.Create(this)
+            // } else { 
+            //    if(hasattr(this, '__getitem__')) return ItemEnumerator.Create(this)
+            // }
+            // return or throw errorValue
+            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+
+            Expression call = Ast.Call(
+                typeof(ItemEnumerator).GetMethod("Create"),
+                rule.Parameters[0]
+            );
+
+            call = WrapGenericEnumerator<T>(convertToAction, rule, call);
+
+            Statement body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
+            call = Ast.Call(
+                typeof(PythonEnumerator).GetMethod("Create"),
+                rule.Parameters[0]
+            );
+
+            call = WrapGenericEnumerator<T>(convertToAction, rule, call);
+
+            Statement body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
+            rule.SetTarget(body1);
+            return rule;
+        }
+
+        private static Expression WrapGenericEnumerator<T>(ConvertToAction convertToAction, StandardRule<T> rule, Expression call) {
+            if (convertToAction.ToType != typeof(IEnumerator)) {
+                // generic enumerator
+                Debug.Assert(convertToAction.ToType.IsGenericType && 
+                    convertToAction.ToType.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+                call = Ast.New(
+                    typeof(IEnumerableOfTWrapper<>).MakeGenericType(convertToAction.ToType.GetGenericArguments()[0]).GetConstructor(new Type[] { typeof(IEnumerable) }),
+                    Ast.Action.ConvertTo(typeof(IEnumerable), rule.Parameters[0])
+                );
+            }
+            return call;
+        }
+
+        private static StandardRule<T> MakeConvertToIEnumerable<T>(CodeContext context, ConvertToAction convertToAction) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(typeof(OldInstance));
+            Variable tmp = rule.GetTemporary(typeof(object), "tmp");
+            // build up:
+            // if(hasattr(this, '__iter__')) { 
+            //    return PythonEnumerable.Create(this)
+            // } else { 
+            //    if(hasattr(this, '__getitem__')) return ItemEnumerable.Create(this)
+            // }
+            // return or throw errorValue
+            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+
+            Expression call = Ast.Call(
+                typeof(ItemEnumerable).GetMethod("Create"),
+                rule.Parameters[0]
+            );
+
+            Statement body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
+            call = Ast.Call(
+                typeof(PythonEnumerable).GetMethod("Create"),
+                rule.Parameters[0]
+            );
+
+            Statement body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
+            rule.SetTarget(body1);
+            return rule;
+        }
+
+        private static Statement MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, Variable tmp, Statement @else, Expression call) {
+            return Ast.IfThenElse(
+                Ast.Call(
+                    Ast.Convert(res.Parameters[0], typeof(OldInstance)),
+                    typeof(OldInstance).GetMethod("TryGetBoundCustomMember"),
+                    Ast.CodeContext(),
+                    Ast.Constant(symbolId),
+                    Ast.Read(tmp)
+                ),
+                res.MakeReturn(context.LanguageContext.Binder, call),
+                @else
+            );
         }
 
         private static StandardRule<T> MakeConvertComplexRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
@@ -276,7 +372,7 @@ namespace IronPython.Runtime.Types {
                             Ast.Read(tmp)
                         ),
                         rule.MakeReturn(context.LanguageContext.Binder,
-                            PythonBinderHelper.GetConvertByLengthBody(convertToAction, tmp)
+                            PythonBinderHelper.GetConvertByLengthBody(tmp)
                         ),
                         error
                     )
@@ -1097,7 +1193,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICustomAttributes Members
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             SymbolDictionary attrs = new SymbolDictionary(__dict__);
             OldClass.RecurseAttrHierarchy(this.__class__, attrs);
             return List.Make(attrs);

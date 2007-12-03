@@ -99,8 +99,9 @@ namespace IronPython.Runtime {
             return true;
         }
 
+        [SpecialName, PythonName("__str__")]
         public override string ToString() {
-            return PythonOps.GetIndex(_object, GetSlice()).ToString();
+            return GetSelectedRange().ToString();
         }
 
         private object GetSlice() {
@@ -114,13 +115,7 @@ namespace IronPython.Runtime {
         public object this[object s] {
             [SpecialName]
             get {
-                if (_isarray) {
-                    IPythonArray arr = _object as IPythonArray;
-                    if (arr != null) {
-                        return PythonOps.GetIndex(arr.ConvertToString(), s);
-                    }
-                }
-                return PythonOps.GetIndex(PythonOps.GetIndex(_object, GetSlice()), s);
+                return PythonOps.GetIndex(GetSelectedRange(), s);
             }
             [SpecialName]
             set {
@@ -128,8 +123,22 @@ namespace IronPython.Runtime {
             }
         }
 
+        private object GetSelectedRange() {
+            if (_isarray) {
+                IPythonArray arr = _object as IPythonArray;
+                if (arr != null) {
+                    return arr.ConvertToString();
+                }
+            }
+            return PythonOps.GetIndex(_object, GetSlice());
+        }
+
         public static object operator +(PythonBuffer a, PythonBuffer b) {
             return PythonSites.Add(PythonOps.GetIndex(a._object, a.GetSlice()), PythonOps.GetIndex(b._object, b.GetSlice()));
+        }
+
+        public static object operator +(PythonBuffer a, string b) {
+            return a.ToString() + b;
         }
 
         public static object operator *(PythonBuffer b, int n) {
@@ -142,7 +151,7 @@ namespace IronPython.Runtime {
 
         public static bool operator ==(PythonBuffer a, PythonBuffer b) {
             if (Object.ReferenceEquals(a, b)) return true;
-            if (a == null || b == null) return false;
+            if (Object.ReferenceEquals(a, null) || Object.ReferenceEquals(b, null)) return false;
 
             return a._object.Equals(b._object) &&
                 a._offset == b._offset &&
@@ -189,7 +198,7 @@ namespace IronPython.Runtime {
     /// <summary>
     /// A marker interface so we can recognize and access sequence members on our array objects.
     /// </summary>
-    internal interface IPythonArray : ISequence, IPythonContainer {
+    internal interface IPythonArray : ISequence {
         string ConvertToString();
     }
 }

@@ -598,4 +598,22 @@ def test_sanity():
 def test_contains():
     AreEqual(operator.__contains__("abc", "c"), True)
 
+def test_py25_operator():
+    ops = ['iadd', 'isub', 'idiv', 'ilshift', 'imod', 'imul', 'ior', 'ipow', 'irshift', 'isub', 'itruediv', 'ifloordiv', 'ixor']
+   
+    class foo(object):
+        for x in ops:
+            exec 'def __%s__(self, other): return "%s", other' % (x, x)
+
+    for x in ops:
+        AreEqual(getattr(operator, x)(foo(), 42), (x, 42))
+        AreEqual(getattr(operator, '__' + x + '__')(foo(), 42), (x, 42))
+
+def test_concat_repeat():
+    AssertError(TypeError, operator.concat, 2, 3)
+    AssertError(TypeError, operator.repeat, 2, 3)
+
+def test_addition_error():
+    AssertErrorWithMessage(TypeError, "unsupported operand type(s) for +: 'int' and 'str'", lambda : 2 + 'abc')
+        
 run_test(__name__)

@@ -1392,9 +1392,20 @@ def test_windows_forms():
     x = System.Windows.Forms.Form()
     try:
     	font = x.DefaultFont
-    except TypeError, e:
-    	Assert(e.msg.find('takes exactly 0 arguments (0 given)') != -1)
+    except AttributeError, e:
+    	Assert(e.msg.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
     else: AssertUnreachable()
 
+@skip("silverlight") #no AssertErrorWithMessage
+def test_array_error_message():
+    import clr
+    
+    x = BinderTest.CNoOverloads()
+    AssertErrorWithMessage(TypeError, 'expected Array[int], got Array[Byte]', x.M500, System.Array[System.Byte]([1,2,3]))
+
+@skip("silverlight") #no AssertErrorWithMessage
+def test_max_args():
+    """verify the correct number of max args are reported, this may need to be updated if file ever takes more args"""
+    AssertErrorWithMatch(TypeError, '.*takes at most 5 arguments.*', file, 2, 3, 4, 5, 6, 7, 8, 9)
 
 run_test(__name__)

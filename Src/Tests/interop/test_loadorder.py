@@ -13,43 +13,30 @@
 #
 #####################################################################################
     
-import sys, nt
-
-def environ_var(key):
-    return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
-
-merlin_root = environ_var("MERLIN_ROOT")
-sys.path.append(merlin_root + r"\Languages\IronPython\Tests")
-
 from lib.assert_util import *
 from lib.process_util import *
 
 skiptest("silverlight")
 
-saved = environ_var('IRONPYTHONPATH')
-nt.environ['IRONPYTHONPATH'] = merlin_root + r"\Test\ClrAssembly\bin;" + merlin_root + r"\Languages\IronPython\Tests"
+directory = testpath.public_testdir + r"\interop\loadorder"
 
-try:
-    directory = testpath.public_testdir + r"\interop\loadorder"
-    count = 0
-    for x in nt.listdir(directory):
-        if not x.startswith("t") or not x.endswith(".py"):
-            continue
-        
-        # skip list
-        if x in [ 't6.py' ]:
-            continue
-        
-        # running ipy with parent's switches
-        result = launch_ironpython_changing_extensions(directory + "\\" + x)
-        
-        if result == 0: 
-            print "%s: pass" % x
-        else:
-            count += 1 
-            print "%s: fail" % x
+count = 0
+for x in nt.listdir(directory):
+    if not x.startswith("t") or not x.endswith(".py"):
+        continue
+    
+    # skip list
+    if x in [ 't6.py' ]:
+        continue
+    
+    # running ipy with parent's switches
+    result = launch_ironpython_changing_extensions(directory + "\\" + x)
+    
+    if result == 0: 
+        print "%s: pass" % x
+    else:
+        count += 1 
+        print "%s: fail" % x
 
-    if count != 0:
-        sys.exit(1)
-finally: 
-    nt.environ['IRONPYTHONPATH'] = saved
+if count != 0:
+    Fail("there are %s failures" % count)

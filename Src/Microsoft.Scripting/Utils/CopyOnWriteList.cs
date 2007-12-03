@@ -40,6 +40,7 @@ namespace Microsoft.Scripting.Utils {
         /// to be thread-safe.
         /// </summary>
         /// <returns>The returned copy should not be modified by the caller.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public List<T> GetCopyForRead() {
             // Just return the underlying list
             return _list;

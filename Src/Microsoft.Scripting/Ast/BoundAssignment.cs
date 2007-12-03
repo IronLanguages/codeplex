@@ -15,14 +15,12 @@
 
 using System;
 using System.Diagnostics;
-using System.Reflection.Emit;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Actions;
 using System.Reflection;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class BoundAssignment : Expression {
+    public sealed class BoundAssignment : Expression {
         private readonly Variable /*!*/ _variable;
         private readonly Expression /*!*/ _value;
         private bool _defined;
@@ -31,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
         private VariableReference _vr;
 
         internal BoundAssignment(Variable /*!*/ variable, Expression /*!*/ value)
-            : base(AstNodeType.BoundAssignment) {
+            : base(AstNodeType.BoundAssignment, variable.Type) {
             _variable = variable;
             _value = value;
         }
@@ -57,50 +55,6 @@ namespace Microsoft.Scripting.Ast {
         internal bool IsDefined {
             get { return _defined; }
             set { _defined = value; }
-        }
-
-        public override Type Type {
-            get {
-                return _variable.Type;
-            }
-        }
-
-        internal override void EmitAddress(CodeGen cg, Type asType) {
-            _value.Emit(cg);
-            _vr.Slot.EmitSet(cg);
-            _vr.Slot.EmitGetAddr(cg);
-        }
-
-        public override void Emit(CodeGen cg) {
-            _value.Emit(cg);
-            cg.Emit(OpCodes.Dup);
-            _vr.Slot.EmitSet(cg);
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object value = _value.Evaluate(context);
-            EvaluateAssign(context, _variable, value);
-            return value;
-        }
-
-        internal override object EvaluateAssign(CodeContext context, object value) {
-            return EvaluateAssign(context, Variable, value);
-        }
-
-        internal static object EvaluateAssign(CodeContext context, Variable var, object value) {
-            switch (var.Kind) {
-                case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
-                    context.Scope.TemporaryStorage[var] = value;
-                    break;
-                case Variable.VariableKind.Global:
-                    RuntimeHelpers.SetGlobalName(context, var.Name, value);
-                    break;
-                default:
-                    RuntimeHelpers.SetName(context, var.Name, value);
-                    break;
-            }
-            return value;
         }
     }
 

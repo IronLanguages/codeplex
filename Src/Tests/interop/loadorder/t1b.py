@@ -15,8 +15,7 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_1a")
+add_clr_assemblies("loadorder_1a")
 
 # namespace NamespaceOrType {
 #     public class C {
@@ -26,7 +25,7 @@ clr.AddReference("loadorder_1a")
 
 import NamespaceOrType
 
-clr.AddReference("loadorder_1c")
+add_clr_assemblies("loadorder_1c")
 
 # public class NamespaceOrType<T> {
 #     public static string Flag = typeof(NamespaceOrType<>).FullName;

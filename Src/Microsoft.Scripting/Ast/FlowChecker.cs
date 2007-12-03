@@ -13,12 +13,9 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-
-using Microsoft.Scripting.Generation;
 
 /*
  * The data flow.

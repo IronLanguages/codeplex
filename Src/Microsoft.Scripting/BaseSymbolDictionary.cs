@@ -118,5 +118,9 @@ namespace Microsoft.Scripting {
             if (o == _nullObject) return null;
             return o;
         }
+
+        public static bool IsNullObject(object o) {
+            return o == _nullObject;
+        }
     }
 }

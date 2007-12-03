@@ -46,6 +46,7 @@ namespace Microsoft.Scripting.Actions {
         internal List<Variable> _temps;
         internal VariableReference[] _references;
         internal List<object> _templateData;
+        private bool _canInterpretTarget = true;
 
         private bool _error;
 
@@ -135,6 +136,28 @@ namespace Microsoft.Scripting.Actions {
             _target = target;
         }
 
+        /// <summary>
+        /// The ActionBinder might prefer to interpret the target in some case. This property controls whether
+        /// interpreting the target is OK, or if it needs to be compiled. 
+        /// 
+        /// If it needs to be compiled, the compiled target will be executed in an empty context, and so it will 
+        /// not be able to view any variables set by the test. The caller who sets CanInterpretTarget=false is 
+        /// responsible for ensuring that the test does not set any variables that the target depends on. 
+        /// 
+        /// The test should be such that it does not become invalid immediately. Otherwise, ActionBinder.UpdateSiteAndExecute 
+        /// can potentially loop infinitely.
+        /// 
+        /// This should go away once the interpreter can support all the features required by the generated 
+        /// target statements
+        /// </summary>
+        internal bool CanInterpretTarget {
+            get { return _canInterpretTarget; }
+            set {
+                // InterpretedMode has not yet been updated to deal with CanInterpretTarget=false
+                // Debug.Assert(value = true || !EngineOptions.InterpretedMode);
+                _canInterpretTarget = value;
+            }
+        }
         public void AddValidator(Validator validator) {
             if (_validators == null) _validators = new List<Validator>();
             _validators.Add(validator);
@@ -340,7 +363,42 @@ namespace Microsoft.Scripting.Actions {
                 return _ruleSet;
             }
         }
-        
+
+        /// <summary>
+        /// Execute the target of the rule (in either interpreted or compiled mode)
+        /// </summary>
+        internal object ExecuteTarget(object site, CodeContext context, object [] args) {
+            if (CanInterpretTarget) {
+                // Interpret the target in the common case
+                return Interpreter.ExecuteStatement(context, Target);
+            }
+
+            // The target cannot be interpreted. We will execute the compiled rule. However, this will
+            // include the test as well. The caller who sets CanInterpretTarget=false is responsible
+            // for ensuring that the test is (mostly) idempotent.
+
+            // Caller should have packaged up arguments for BigTarget
+            Debug.Assert(!DynamicSiteHelpers.IsBigTarget(typeof(T)) || (args[0] is Tuple));
+
+            T targetDelegate = MonomorphicRuleSet.GetOrMakeTarget(context);
+
+            object[] prefixArgs;
+            if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
+                prefixArgs = new object[] { site };
+            } else {
+                prefixArgs = new object[] { site, context };
+            }
+
+            args = ArrayUtils.AppendRange(prefixArgs, args);
+
+            try {
+                return typeof(T).GetMethod("Invoke").Invoke(targetDelegate, args);
+            } catch (TargetInvocationException e) {
+                // Unwrap the real (inner) exception and raise it
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
+        }
+
         public void Emit(CodeGen cg, Label ifFalse) {
             Assert.NotNull(_test, _target);
 
@@ -358,11 +416,11 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 if (_test != null) {
-                    _test.EmitBranchFalse(cg, ifFalse);
+                    Compiler.EmitBranchFalse(cg, _test, ifFalse);
                 }
 
                 // Now do the generation
-                _target.Emit(cg);
+                Compiler.Emit(cg, _target);
 
                 // free any temps now that we're done generating
                 // TODO: Keep temp slots aside sot that they can be freed
@@ -422,6 +480,8 @@ namespace Microsoft.Scripting.Actions {
         }        
 
         #region Factory Methods
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params Type[] types) {
             StandardRule<T> ret = new StandardRule<T>();
             MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, types);
@@ -439,6 +499,7 @@ namespace Microsoft.Scripting.Actions {
         /// for more information.
         /// </summary>
         /// <returns></returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public TemplatedRuleBuilder<T> GetTemplateBuilder() {
             if (_test == null || _target == null) throw new InvalidOperationException();
             if (_templateData == null) throw new InvalidOperationException("no template arguments created");

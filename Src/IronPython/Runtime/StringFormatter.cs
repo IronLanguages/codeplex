@@ -22,6 +22,7 @@ using Microsoft.Scripting.Math;
 
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using System.Collections.Generic;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -36,7 +37,7 @@ namespace IronPython.Runtime {
         private static NumberFormatInfo nfi {
             get {
                 if (NumberFormatInfoForThread == null) {
-                    NumberFormatInfo numberFormatInfo = new CultureInfo("en-US", false).NumberFormat;
+                    NumberFormatInfo numberFormatInfo = new CultureInfo("en-US").NumberFormat;
                     // The CLI formats as "Infinity", but CPython formats differently
                     numberFormatInfo.PositiveInfinitySymbol = "1.#INF";
                     numberFormatInfo.NegativeInfinitySymbol = "-1.#INF";
@@ -99,6 +100,9 @@ namespace IronPython.Runtime {
             if (_index == _str.Length)
                 throw PythonOps.ValueError("incomplete format, expected format character at index {0}", _index);
 
+            // Index is placed right after the %.
+            Debug.Assert(_str[_index - 1] == '%');
+
             _curCh = _str[_index++];
 
             if (_curCh == '%') {
@@ -131,16 +135,72 @@ namespace IronPython.Runtime {
             WriteConversion();
         }
 
+
+        /// <summary>
+        /// Read a possible mapping key for %(key)s. 
+        /// </summary>
+        /// <returns>The key name enclosed between the '%(key)s', 
+        /// or null if there are no paranthesis such as '%s'.</returns>
         private string ReadMappingKey() {
-            string key = null;
-            if (_curCh == '(') {
-                int start = _index;
-                int end = _str.IndexOf(')', start);
-                key = _str.Substring(start, end - start);
-                _index = end + 1;
-                _curCh = _str[_index++];
+            // Caller has set _curCh to the character past the %, and
+            // _index to 2 characters past the original '%'.
+            Debug.Assert(_curCh == _str[_index - 1]);
+            Debug.Assert(_str[_index - 2] == '%');
+
+            
+            if (_curCh != '(') {
+                // No parenthesized key.
+                return null;
             }
-            return key;
+
+
+            // CPython supports nested parenthesis (See "S3.6.2:String Formatting Operations"). 
+            // Keywords inbetween %(...)s can contain parenthesis.
+            //
+            // For example, here are the keys returned for various format strings:
+            // %(key)s        - return 'key'
+            // %((key))s      - return '(key)'
+            // %()s           - return ''
+            // %((((key))))s  - return '(((key)))'
+            // %((%)s)s       - return '(%)s'
+            // %((%s))s       - return (%s)
+            // %(a(b)c)s      - return a(b)c
+            // %((a)s)s       - return (a)s
+            // %(((a)s))s     - return ((a)s)
+
+
+            // Use a counter rule. 
+            int nested = 1; // already passed the 1st '('
+            int start = _index; // character index after 1st opening '('
+            int end = start;
+
+            while (end < _str.Length) {
+                if (_str[end] == '(') {
+                    nested++;
+                } else if (_str[end] == ')') {
+                    nested--;
+                }
+
+                if (nested == 0) {
+                    // Found final matching closing parent
+                    string key = _str.Substring(_index, end - start);
+
+                    // Update fields
+                    _index = end + 1;
+                    if (_index == _str.Length) {
+                        // This error could happen with a format string like '%((key))'
+                        throw PythonOps.ValueError("incomplete format");
+                    }
+                    _curCh = _str[_index++];
+                    return key;
+                }
+
+                end++;
+            }
+
+            // Error: missing closing ')'.
+            // This could happen with '%((key)s'
+            throw PythonOps.ValueError("incomplete format key");
         }
 
         private void ReadConversionFlags() {
@@ -259,7 +319,7 @@ namespace IronPython.Runtime {
         }
 
         private object GetKey(string key) {
-            IMapping map = _data as IMapping;
+            IDictionary<object, object> map = _data as IDictionary<object, object>;
             if (map == null) {
                 IAttributesCollection iac = _data as IAttributesCollection;
                 if (iac == null) throw PythonOps.TypeError("format requires a mapping");
@@ -267,8 +327,10 @@ namespace IronPython.Runtime {
                 object res;
                 if (iac.TryGetValue(SymbolTable.StringToId(key), out res)) return res;
             } else {
-                object res = map.GetValue(key, this);
-                if (res != this) return res;
+                object res;
+                if (map.TryGetValue(key, out res)) {
+                    return res;
+                }
             }
 
             throw PythonOps.KeyError(key);
@@ -309,7 +371,7 @@ namespace IronPython.Runtime {
         }
 
         private void CheckDataUsed() {
-            if (!(_data is IMapping) && !(_data is IAttributesCollection)) {
+            if (!(_data is IDictionary) && !(_data is IAttributesCollection)) {
                 if ((!(_data is PythonTuple) && _dataIndex != 1) ||
                     (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).Count)) {
                     throw PythonOps.TypeError("not all arguments converted during string formatting");

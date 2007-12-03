@@ -23,11 +23,13 @@ MaxSiteArity = 6
 site = """/// <summary>
 /// Dynamic site delegate type with CodeContext passed in - arity %(arity)s
 /// </summary>
+[GeneratedCode("DLR", "2.0")]
 public delegate Tret %(prefix)sDynamicSiteTarget<%(ts)s>(%(prefix)sDynamicSite<%(ts)s> site, CodeContext context, %(tparams)s) %(constraints)s;
 
 /// <summary>
 /// Dynamic site using CodeContext passed into the Invoke method - arity %(arity)s
 /// </summary>
+[GeneratedCode("DLR", "2.0")]
 public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
     private %(prefix)sDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sDynamicSiteTarget<%(ts)s>> _rules;
@@ -62,11 +64,13 @@ public class %(prefix)sDynamicSite<%(ts)s> : DynamicSite %(constraints)s {
 /// <summary>
 /// Dynamic site delegate type using cached CodeContext - arity %(arity)s
 /// </summary>
+[GeneratedCode("DLR", "2.0")]
 public delegate Tret %(prefix)sFastDynamicSiteTarget<%(ts)s>(%(prefix)sFastDynamicSite<%(ts)s> site, %(tparams)s) %(constraints)s;
 
 /// <summary>
 /// Dynamic site using cached CodeContext - arity %(arity)s
 /// </summary>
+[GeneratedCode("DLR", "2.0")]
 public class %(prefix)sFastDynamicSite<%(ts)s> : FastDynamicSite %(constraints)s {
     private %(prefix)sFastDynamicSiteTarget<%(ts)s> _target;
     private RuleSet<%(prefix)sFastDynamicSiteTarget<%(ts)s>> _rules;
@@ -160,60 +164,29 @@ def gen_uninitialized_type(cw):
     cw.exit_block()
 
 
-executor = """return binder.ExecuteRule<DynamicSiteTarget<%(typeargs)s>>(context, action, args); """
+executor = """MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
 
-big_executor = '''\
-//TODO: use CompilerHelpers.GetTypes(args) instead?
-Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
-Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
-Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
-MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
-while(true) {
-    object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
-    Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
-    Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
-    Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
-        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
-    Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
-        BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
-
-
-    Tuple t = Tuple.MakeTuple(tupleType, args);
-    object[] tupArg = new object[] {t};
-    CodeContext tmpCtx = context.Scope.GetTemporaryVariableContext(context, paramVars, tupArg);
-    try {    
-        bool result = (bool)test.Evaluate(tmpCtx);
-        if (!result) {
-            // The test may evaluate as false if:
-            // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
-            //    generating invalid rules.
-            // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
-            //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
-            //    side-effects are visible to Execute below.
-            // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
-            // the interpreter and the language binders are flushed out
-            Debug.Assert(result);
-            continue;
-        }
-
-        return target.Execute(tmpCtx);
-    } finally {
-        tmpCtx.Scope.TemporaryStorage.Clear();
-    }
-}'''
+try {
+    return target.Invoke(binder, new object[] { context, action, args });
+} catch (TargetInvocationException ex) {
+    throw ExceptionHelpers.UpdateForRethrow(ex.InnerException);
+}"""
 
 def gen_execute(cw):
-    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, params object[] args)")
+    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, Type[] types, object[] args)")
+    cw.write('Type siteType;')
+    cw.write('')
     cw.enter_block("switch (args.Length)")
     for i in range(MaxSiteArity):
-        cw.case_label("case %d:" % (i+1))
-        typeargs = ", ".join(['object'] * (i+2))
-        cw.write(executor % dict(typeargs=typeargs,k=i+1))
+        cw.case_label("case %d: siteType = typeof(DynamicSiteTarget<%s>).MakeGenericType(types); break;" % (i+1, ','*(i+1)))
         cw.dedent()
     cw.case_label("default:")
-    cw.write(big_executor)
+    cw.write('Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));')
+    cw.write('siteType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, types[types.Length - 1]);')
+    cw.write('break;')
     cw.dedent()
     cw.exit_block()
+    cw.write(executor)
     cw.exit_block()
     cw.write('')
 

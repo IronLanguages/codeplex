@@ -43,16 +43,18 @@ namespace Microsoft.Scripting.Hosting {
         ILanguageProvider GetLanguageProviderByFileExtension(string extension);
         
         // modules:
-        IScriptModule CreateModule(string name, params ICompiledCode[] compiledCodes);
-        IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes);
+        IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes);
+        IScriptScope CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes);
 
-        IScriptModule CompileModule(string name, params SourceUnit[] sourceUnits);
-        IScriptModule CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits);
+        IScriptScope CompileModule(string name, params SourceUnit[] sourceUnits);
+        IScriptScope CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits);
         
 
-        void PublishModule(IScriptModule module);
-        void PublishModule(IScriptModule module, string publicName);
-        IDictionary<string, IScriptModule> GetPublishedModules();
+        void PublishModule(IScriptScope module);
+        void PublishModule(IScriptScope module, string publicName);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
+        IDictionary<string, IScriptScope> GetPublishedModules();
         
         Delegate GetDelegate(object callableObject, Type delegateType);
         
@@ -154,7 +156,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Compilation, Module Creation
 
-        public IScriptModule CreateModule(string name, params ICompiledCode[] compiledCodes) {
+        public IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes) {
             return CreateModule(name, ScriptModuleKind.Default, null, compiledCodes);
         }
 
@@ -163,7 +165,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <c>dictionary</c> can be <c>null</c>
         /// </summary>
         /// <returns></returns>
-        public IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
+        public IScriptScope CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
             Contract.RequiresNotNullItems(compiledCodes, "compiledCodes");
 
             ScriptCode[] script_codes = new ScriptCode[compiledCodes.Length];
@@ -177,7 +179,7 @@ namespace Microsoft.Scripting.Hosting {
             return _manager.CreateModule(name, kind, new Scope(dictionary), script_codes);
         }
 
-        public IScriptModule CompileModule(string name, params SourceUnit[] sourceUnits) {
+        public IScriptScope CompileModule(string name, params SourceUnit[] sourceUnits) {
             return CompileModule(name, ScriptModuleKind.Default, null, null, null, sourceUnits);
         }
 
@@ -187,25 +189,25 @@ namespace Microsoft.Scripting.Hosting {
         /// <c>errroSink</c> can be <c>null</c>
         /// <c>dictionary</c> can be <c>null</c>
         /// </summary>
-        public IScriptModule CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, 
+        public IScriptScope CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, 
             IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
 
             return _manager.CompileModule(name, kind, new Scope(dictionary), options, errorSink, sourceUnits);
         }
 
-        public void PublishModule(IScriptModule module) {
-            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module"));
+        public void PublishModule(IScriptScope module) {
+            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module"));
         }
 
-        public void PublishModule(IScriptModule module, string publicName) {
-            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module"), publicName);
+        public void PublishModule(IScriptScope module, string publicName) {
+            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module"), publicName);
         }
 
-        public IDictionary<string, IScriptModule> GetPublishedModules() {
-            IDictionary<string, ScriptModule> local_modules = _manager.GetPublishedModules();
+        public IDictionary<string, IScriptScope> GetPublishedModules() {
+            IDictionary<string, ScriptScope> local_modules = _manager.GetPublishedModules();
 
-            IDictionary<string, IScriptModule> result = new Dictionary<string, IScriptModule>(local_modules.Count);
-            foreach (KeyValuePair<string, ScriptModule> local_module in local_modules) {
+            IDictionary<string, IScriptScope> result = new Dictionary<string, IScriptScope>(local_modules.Count);
+            foreach (KeyValuePair<string, ScriptScope> local_module in local_modules) {
                 result.Add(local_module.Key, local_module.Value);
             }
 

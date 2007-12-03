@@ -25,6 +25,7 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("tuple")]
@@ -167,6 +168,18 @@ namespace IronPython.Runtime {
                 return data[PythonOps.FixIndex(index, data.Length)];
             }
         }
+        
+        public virtual object this[double index] {
+            get {
+                throw PythonOps.TypeError("tuple indices must be integers");
+            }
+        }
+
+        public virtual object this[BigInteger index] {
+            get {
+                return this[index.ToInt32()];
+            }
+        }
 
         [PythonName("__getslice__")]
         public virtual object GetSlice(int start, int stop) {
@@ -220,7 +233,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return data.Length; }
+            get { return GetLength(); }
         }
 
         public void CopyTo(Array array, int index) {
@@ -384,7 +397,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection<object>.Count {
-            get { return this.Count; }
+            get { return GetLength(); }
         }
 
         bool ICollection<object>.IsReadOnly {

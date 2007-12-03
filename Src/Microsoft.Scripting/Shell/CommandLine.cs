@@ -14,16 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.IO;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading;
 
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
@@ -33,12 +28,12 @@ namespace Microsoft.Scripting.Shell {
         private IConsole _console;
         private IScriptEngine _engine;
         private ConsoleOptions _options;
-        private ScriptModule _module;
+        private ScriptScope _module;
 
         protected IConsole Console { get { return _console; } }
         protected IScriptEngine Engine { get { return _engine; } }
         protected ConsoleOptions Options { get { return _options; } }
-        protected internal ScriptModule Module { get { return _module; } set { _module = value; } }
+        protected internal ScriptScope Module { get { return _module; } set { _module = value; } }
 
         protected virtual string Prompt { get { return Resources.ConsolePrompt; } }
         protected virtual string PromptContinuation { get { return Resources.ConsoleContinuePrompt; } } 
@@ -105,6 +100,7 @@ namespace Microsoft.Scripting.Shell {
             return result;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected virtual void Shutdown(IScriptEngine engine) {
             try {
                 engine.Shutdown();
@@ -141,6 +137,7 @@ namespace Microsoft.Scripting.Shell {
         ///
         /// TODO minimize code duplication in overriding classes
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected virtual int RunFile(string filename) {
             int result = 1;
             if (Options.HandleExceptions) {
@@ -163,6 +160,7 @@ namespace Microsoft.Scripting.Shell {
         /// 
         /// TODO minimize code duplication in overriding classes
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected virtual int RunCommand(string command) {
             int result = 1;
 

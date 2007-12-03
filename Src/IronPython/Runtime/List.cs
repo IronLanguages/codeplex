@@ -31,6 +31,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime {
 
@@ -942,6 +943,24 @@ namespace IronPython.Runtime {
             }
         }
 
+        public virtual object this[BigInteger index] {
+            get {
+                return this[index.ToInt32()];
+            }
+            set {
+                this[index.ToInt32()] = value;
+            }
+        }
+
+        public virtual object this[double index] {
+            get {
+                throw PythonOps.TypeError("list indices must be integers");
+            }
+            set {
+                throw PythonOps.TypeError("list indices must be integers");
+            }
+        }
+
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private object[] GetData() {
             return _data;
@@ -996,7 +1015,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return _size; }
+            get { return GetLength(); }
         }
 
         public void CopyTo(Array array, int index) {
@@ -1165,7 +1184,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection<object>.Count {
-            get { return this.Count; }
+            get { return GetLength(); }
         }
 
         bool ICollection<object>.IsReadOnly {

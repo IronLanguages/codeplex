@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
@@ -91,10 +89,14 @@ namespace IronPython.Runtime.Types {
             return Value.DeleteCustomMember(context, name);
         }
 
-        IList<object> IMembersList.GetCustomMemberNames(CodeContext context) {
-            IList<object> res = Value.GetCustomMemberNames(context);
-            foreach (object x in TypeCache.PythonType.GetCustomMemberNames(context)){
-                res.Add(x);
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
+            List<object> res = new List<object>();
+            foreach (SymbolId si in base.GetMemberNames(context)) {
+                res.Add(SymbolTable.IdToString(si));
+            }
+
+            foreach (SymbolId x in TypeCache.PythonType.GetMemberNames(context)){
+                res.Add(SymbolTable.IdToString(x));
             }
             return res;
         }

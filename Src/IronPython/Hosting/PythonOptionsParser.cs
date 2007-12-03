@@ -112,7 +112,10 @@ namespace IronPython.Hosting {
                     break;
 
                 case "-X:PreferComDispatch": _engineOptions.PreferComDispatchOverTypeInfo = true; break;
-
+                case "-":
+                    PushArgBack();
+                    _engineOptions.Arguments = PopRemainingArgs();
+                    break;
                 default:
                     base.ParseArgument(arg);
 

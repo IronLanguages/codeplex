@@ -72,12 +72,12 @@ namespace Microsoft.Scripting {
 
         #region Module Context
 
-        public ModuleContext GetModuleContext(ScriptModule module) {
+        public ModuleContext GetModuleContext(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             return module.GetModuleContext(ContextId);
         }
         
-        public ModuleContext EnsureModuleContext(ScriptModule module) {
+        public ModuleContext EnsureModuleContext(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             ModuleContext context = module.GetModuleContext(ContextId);
             
@@ -106,7 +106,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <param name="module">The module the context will be associated with.</param>
         /// <returns>Non-<c>null</c> module context instance.</returns>
-        public virtual ModuleContext CreateModuleContext(ScriptModule module) {
+        public virtual ModuleContext CreateModuleContext(ScriptScope module) {
             return new ModuleContext(module);
         }
 
@@ -195,7 +195,7 @@ namespace Microsoft.Scripting {
         }
 #endif
 
-        public virtual ScriptCode Reload(ScriptCode original, ScriptModule module) {
+        public virtual ScriptCode Reload(ScriptCode original, ScriptScope module) {
             original.SourceUnit.Reload();
             return CompileSourceCode(original.SourceUnit, Engine.GetModuleCompilerOptions(module));
         }
@@ -205,6 +205,7 @@ namespace Microsoft.Scripting {
         /// language should flow any relevant options from the LanguageContext to the 
         /// newly created CompilerContext.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual CompilerOptions GetCompilerOptions() {
             return Engine.GetDefaultCompilerOptions();
         }

@@ -23,6 +23,7 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Generation {
     public static class StubGenerator {
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public enum CallType {
             None = 0,
             ArgumentList = 1,

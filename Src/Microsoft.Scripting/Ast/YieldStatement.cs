@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class YieldStatement : Statement {
+    public sealed class YieldStatement : Statement {
         private readonly Expression /*!*/ _expr;
         private YieldTarget _target;
 
@@ -31,14 +29,11 @@ namespace Microsoft.Scripting.Ast {
             get { return _expr; }
         }
 
+
+        // TODO: Remove !!!
         internal YieldTarget Target {
             get { return _target; }
             set { _target = value; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-            cg.EmitYield(_expr, _target);
         }
     }
 

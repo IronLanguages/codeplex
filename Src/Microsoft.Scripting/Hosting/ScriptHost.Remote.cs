@@ -91,7 +91,7 @@ namespace Microsoft.Scripting.Hosting {
             _host.EngineCreated(engine);
         }
 
-        public void ModuleCreated(IScriptModule module) {
+        public void ModuleCreated(IScriptScope module) {
             _host.ModuleCreated(module);
         }
 
@@ -111,9 +111,9 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Modules
 
-        public IScriptModule DefaultModule {
+        public IScriptScope DefaultModule {
             get {
-                return RemoteWrapper.WrapRemotable<IScriptModule>(_host.DefaultModule);
+                return RemoteWrapper.WrapRemotable<IScriptScope>(_host.DefaultModule);
             }
         }
 

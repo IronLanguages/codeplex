@@ -14,14 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Text;
+using System.Reflection;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 
 #if DEBUG
@@ -380,7 +378,7 @@ namespace Microsoft.Scripting.Ast {
                     Dump((CodeBlockExpression)node);
                     break;
                 case AstNodeType.CodeContextExpression:
-                    Dump((CodeContextExpression)node);
+                    Out(".context");
                     break;
                 case AstNodeType.CommaExpression:
                     Dump((CommaExpression)node);
@@ -407,7 +405,7 @@ namespace Microsoft.Scripting.Ast {
                     Dump((EmptyStatement)node);
                     break;
                 case AstNodeType.EnvironmentExpression:
-                    Dump((EnvironmentExpression)node);
+                    Out(".env");
                     break;
                 case AstNodeType.ExpressionStatement:
                     Dump((ExpressionStatement)node);
@@ -434,7 +432,7 @@ namespace Microsoft.Scripting.Ast {
                     Dump((NewArrayExpression)node);
                     break;
                 case AstNodeType.ParamsExpression:
-                    Dump((ParamsExpression)node);
+                    Out(".params");
                     break;
                 case AstNodeType.ParenthesizedExpression:
                     Dump((ParenthesizedExpression)node);
@@ -506,6 +504,11 @@ namespace Microsoft.Scripting.Ast {
         // ActionExpression
         private void Dump(ActionExpression node) {
             Out(".action", Flow.Space);
+            
+            Out("(");
+            Out(node.Type.Name);
+            Out(")", Flow.Space);
+
             Out(FormatAction(node.Action));
             Out("(");
             Indent();
@@ -591,11 +594,6 @@ namespace Microsoft.Scripting.Ast {
             Out(nl ? Flow.NewLine : Flow.None, ")");
         }
 
-        // CodeContextExpression
-        private void Dump(CodeContextExpression node) {
-            Out(".context");
-        }
-
         // CommaExpression
         private void Dump(CommaExpression node) {
             Out(String.Format(".comma ({0}) {{", node.ValueIndex), Flow.NewLine);
@@ -663,25 +661,27 @@ namespace Microsoft.Scripting.Ast {
             Out(")");
         }
 
-        // EnvironmentExpression
-        private void Dump(EnvironmentExpression node) {
-            Out(".env");
+        // Prints ".instanceField" or "declaringType.staticField"
+        private void OutMember(Expression instance, MemberInfo member) {
+            if (instance != null) {
+                WalkNode(instance);
+                Out("." + member.Name);
+            } else {
+                // For static members, include the type name
+                Out(member.DeclaringType.Name + "." + member.Name);
+            }
         }
 
         // MemberAssignment
         private void Dump(MemberAssignment node) {
-            WalkNode(node.Expression);
-            Out(".");
-            Out(node.Member.Name);
+            OutMember(node.Expression, node.Member);
             Out(" = ");
             WalkNode(node.Value);
         }
 
         // MemberExpression
         private void Dump(MemberExpression node) {
-            WalkNode(node.Expression);
-            Out(".");
-            Out(node.Member.Name);
+            OutMember(node.Expression, node.Member);
         }
 
         // MethodCallExpression
@@ -729,11 +729,6 @@ namespace Microsoft.Scripting.Ast {
                 Dedent();
             }
             Out(")");
-        }
-
-        // ParamsExpression
-        private void Dump(ParamsExpression node) {
-            Out(".params");
         }
 
         // ParenthesizedExpression

@@ -19,7 +19,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class SwitchStatementBuilder {
+    public sealed class SwitchStatementBuilder {
         private readonly SourceSpan _span;
         private readonly SourceLocation _header;
         private Expression _test;

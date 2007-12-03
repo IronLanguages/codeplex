@@ -130,38 +130,38 @@ namespace Microsoft.Scripting.Hosting {
             _manager.Environment.RedirectIO(input, output, errorOutput);
         }
 
-        public IScriptModule CreateModule(string name, params ICompiledCode[] compiledCodes) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CreateModule(name, compiledCodes));
+        public IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.CreateModule(name, compiledCodes));
         }
 
-        public IScriptModule CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CreateModule(name, kind, dictionary, compiledCodes));
+        public IScriptScope CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.CreateModule(name, kind, dictionary, compiledCodes));
         }
 
-        public IScriptModule CompileModule(string name, params SourceUnit[] sourceUnits) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, sourceUnits));
+        public IScriptScope CompileModule(string name, params SourceUnit[] sourceUnits) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.CompileModule(name, sourceUnits));
         }
 
-        public IScriptModule CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_manager.Environment.CompileModule(name, kind, options, errorSink, dictionary, sourceUnits));
+        public IScriptScope CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.CompileModule(name, kind, options, errorSink, dictionary, sourceUnits));
         }
 
-        public void PublishModule(IScriptModule module) {
+        public void PublishModule(IScriptScope module) {
             _manager.Environment.PublishModule(module);
         }
 
-        public void PublishModule(IScriptModule module, string publicName) {
+        public void PublishModule(IScriptScope module, string publicName) {
             _manager.Environment.PublishModule(module, publicName);
         }
 
-        public IDictionary<string, IScriptModule> GetPublishedModules() {
-            IDictionary<string, IScriptModule> result = _manager.Environment.GetPublishedModules();
+        public IDictionary<string, IScriptScope> GetPublishedModules() {
+            IDictionary<string, IScriptScope> result = _manager.Environment.GetPublishedModules();
 
             string[] keys = new string[result.Count];
             result.Keys.CopyTo(keys, 0);
 
             foreach (string key in keys) {
-                result[key] = RemoteWrapper.WrapRemotable<IScriptModule>(result[key]);
+                result[key] = RemoteWrapper.WrapRemotable<IScriptScope>(result[key]);
             }
 
             return result;

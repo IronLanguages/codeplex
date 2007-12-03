@@ -68,12 +68,21 @@ namespace IronPython.Runtime.Types {
             customizer.AddPythonProtocolMethods();
             customizer.AddRichEqualityProtocols();
             customizer.AddToStringProtocols();
+            customizer.AddModule();
             if (ScriptDomainManager.Options.PrivateBinding) {
                 customizer.AddPrivateMembers();
             }
 
             if (_sysTypes.ContainsKey(dt.UnderlyingSystemType)) {
                 customizer.HideMembers();
+            }
+        }
+
+        private void AddModule() {
+            string name;
+            if (PythonExtensionTypeAttribute._sysState != null && 
+                PythonExtensionTypeAttribute._sysState.BuiltinModuleNames.TryGetValue(Builder.UnfinishedType.UnderlyingSystemType, out name)) {
+                Builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(name));
             }
         }
 
@@ -162,13 +171,17 @@ namespace IronPython.Runtime.Types {
                 } else if (mi.Name == "set_Item") {
                     AddTupleExpansionSetItem(mi);
                     continue;
+                } else if (mi.Name == "op_Equality" || mi.Name == "op_Inequality" || mi.Name == "Equals") {
+                    if (mi.DeclaringType == typeof(BigInteger) || mi.DeclaringType == typeof(int)) {
+                        continue;
+                    }
                 }
 
                 bool forward, reverse;
                 OperatorMapping opmap = PythonExtensionTypeAttribute.GetRegularReverse(Builder.UnfinishedType.UnderlyingSystemType, mi, out forward, out reverse);
                 FunctionType ft = FunctionType.Method | FunctionType.AlwaysVisible;
 
-                if (opmap != null) {
+                if (opmap != null && ReflectedTypeBuilder.IncludeOperatorMethod(mi.DeclaringType, opmap)) {
                     switch (opmap.Operator) {
                         case Operators.DeleteItem: AddTupleExpansionGetOrDeleteItem(Symbols.DelItem, mi); break;
                         default:
@@ -332,14 +345,16 @@ namespace IronPython.Runtime.Types {
                     }
                 }
             } else {
-                MethodInfo equalsMethod = sysType.GetMethod("Equals", new Type[] { typeof(object) });
-                // we wrap this in an indirect helper call because the type might not be public
-                if (equalsMethod != null && 
-                    equalsMethod.DeclaringType == sysType && 
-                    (equalsMethod.Attributes & MethodAttributes.NewSlot)==0) {  
-                  
-                    AddProtocolMethod(Symbols.OperatorEquals, "EqualsMethod");
-                    AddProtocolMethod(Symbols.OperatorNotEquals, "NotEqualsMethod");
+                if (!Converter.IsNumeric(sysType) && sysType != typeof(ValueType)) {    // numeric types in Python do NOT define __eq__, only __cmp__
+                    MethodInfo equalsMethod = sysType.GetMethod("Equals", new Type[] { typeof(object) });
+                    // we wrap this in an indirect helper call because the type might not be public
+                    if (equalsMethod != null &&
+                        equalsMethod.DeclaringType == sysType &&
+                        (equalsMethod.Attributes & MethodAttributes.NewSlot) == 0) {
+
+                        AddProtocolMethod(Symbols.OperatorEquals, "EqualsMethod");
+                        AddProtocolMethod(Symbols.OperatorNotEquals, "NotEqualsMethod");
+                    }
                 }
 
                 MethodInfo getHashCode = sysType.GetMethod("GetHashCode", new Type[] {});
@@ -605,7 +620,7 @@ namespace IronPython.Runtime.Types {
             res[typeof(BigInteger)] = "long";
             res[typeof(Complex64)] = "complex";
             res[typeof(PythonType)] = "type";
-            res[typeof(ScriptModule)] = "module";
+            res[typeof(ScriptScope)] = "module";
             res[typeof(SymbolDictionary)] = "dict";
             res[typeof(CustomSymbolDictionary)] = "dict";
             res[typeof(BaseSymbolDictionary)] = "dict";

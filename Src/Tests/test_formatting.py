@@ -230,3 +230,46 @@ AreEqual("%5s" % 'abc', '  abc')
 AreEqual("%+5s" % 'abc', '  abc')
 AreEqual("%-5s" % 'abc', 'abc  ')
  
+
+#
+# Test named inputs with nested () 
+#
+
+# Success cases
+s = '_%((key))s_' % {'(key)':10}
+AreEqual(s, '_10_')
+
+s = '_%((((key))))s_' % {'(((key)))':20}
+AreEqual(s, '_20_')
+
+s = '%((%s))s' % { '(%s)' : 30 }
+AreEqual(s, '30')
+
+s = '%()s' % { '': 40 }
+AreEqual(s,'40')
+
+s = '%(a(b)c)s' % { 'a(b)c' : 50 }
+AreEqual(s,'50')
+
+s = '%(a)s)s' % { 'a' : 60 }
+AreEqual(s,'60)s')
+
+s = '%(((a)s))s' % {'((a)s)': 70, 'abc': 'efg'}
+AreEqual(s, '70')
+
+# Error cases
+
+# ensure we properly count number of expected closing ')'
+def Error1():   
+  return '%(a))s' % { 'a' : 10, 'a)' : 20 }
+
+AssertError(ValueError, Error1)
+
+# Incomplete format key, not enough closing ')'
+def Error2():   
+  return '%((a)s' % { 'a' : 10, '(a' : 20 }
+
+AssertError(ValueError, Error2)
+
+
+

@@ -34,6 +34,7 @@ namespace Microsoft.Scripting {
     public sealed class ClrModule {
         private static ClrModule _module;
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public static ClrModule GetInstance() {
             if (_module == null) {
                 Interlocked.CompareExchange<ClrModule>(ref _module, new ClrModule(), null);
@@ -121,15 +122,15 @@ namespace Microsoft.Scripting {
             return ScriptDomainManager.CurrentManager.PAL.LoadAssembly(name);
         }
 
-        public ScriptModule Use(string name) {
-            ScriptModule res = ScriptDomainManager.CurrentManager.UseModule(name);
+        public ScriptScope Use(string name) {
+            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(name);
             if (res == null) throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
 
             return res;
         }
 
-        public ScriptModule Use(string path, string language) {
-            ScriptModule res = ScriptDomainManager.CurrentManager.UseModule(path, language);
+        public ScriptScope Use(string path, string language) {
+            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(path, language);
             if (res == null) throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
 
             return res;
@@ -168,6 +169,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
         private void AddReference(string name) {
             if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
 
@@ -234,6 +236,7 @@ namespace Microsoft.Scripting {
 
         #endregion       
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class ReferencesList : List<Assembly> {
         }
     }

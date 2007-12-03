@@ -21,12 +21,12 @@ namespace Microsoft.Scripting.Ast {
             _expr = expression;
         }
 
-        public virtual object GetValue(CodeContext context, bool outParam) {            
-            return _expr.Evaluate(context);            
+        public virtual object GetValue(CodeContext context, bool outParam) {
+            return Interpreter.EvaluateExpression(context, _expr);
         }
 
         public virtual object AssignValue(CodeContext context, object value) {
-            return _expr.EvaluateAssign(context, value);
+            return Interpreter.EvaluateAssign(context, _expr, value);
         }
 
         protected Expression Expression {
@@ -34,5 +34,5 @@ namespace Microsoft.Scripting.Ast {
                 return _expr;
             }
         }
-    }   
+    }
 }

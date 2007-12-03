@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Hosting {
 
         // notifications:
         void EngineCreated(IScriptEngine engine);
-        void ModuleCreated(IScriptModule module);
+        void ModuleCreated(IScriptScope module);
 
         // environment variables:
         bool TrySetVariable(IScriptEngine engine, SymbolId name, object value);
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The default module should be created lazily as the environment is not prepared for module creation at the time the 
         /// host tis created (the host is created prior module creation so that it could be notified about the creation).
         /// </summary>
-        IScriptModule DefaultModule { get; } // throws InvalidOperationException if no default module is available
+        IScriptScope DefaultModule { get; } // throws InvalidOperationException if no default module is available
 
         /// <summary>
         /// Provides the host with a mechanism for catching exceptions thrown by
@@ -65,12 +65,12 @@ namespace Microsoft.Scripting.Hosting {
         /// The environment the host is attached to.
         /// </summary>
         private IScriptEnvironment _environment;
-        private ScriptModule _defaultModule;
+        private ScriptScope _defaultModule;
 
         /// <summary>
         /// Default module for convenience. Lazily init'd.
         /// </summary>
-        public virtual IScriptModule DefaultModule {
+        public virtual IScriptScope DefaultModule {
             get {
                 if (_defaultModule == null) {
                     if (Utilities.IsRemote(_environment)) 
@@ -102,11 +102,11 @@ namespace Microsoft.Scripting.Hosting {
             return new RemoteScriptHost(this);
         }
 #endif
-        static internal void CreateDefaultModule(ref ScriptModule defaultModule) {
+        static internal void CreateDefaultModule(ref ScriptScope defaultModule) {
            // create a module and throw it away if there is already one:
-            ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule("<default>", null, ScriptCode.EmptyArray);
+            ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule("<default>", null, ScriptCode.EmptyArray);
             Utilities.MemoryBarrier();
-            Interlocked.CompareExchange<ScriptModule>(ref defaultModule, module, null);
+            Interlocked.CompareExchange<ScriptScope>(ref defaultModule, module, null);
         }
 
         public virtual Action<Exception> EventExceptionHandler {
@@ -195,7 +195,7 @@ namespace Microsoft.Scripting.Hosting {
                             continue;    
                         }
 
-                        result = SourceUnit.CreateFileUnit(provider.GetEngine(), NormalizePath(fullPath), Encoding.Default);
+                        result = SourceUnit.CreateFileUnit(provider.GetEngine(), NormalizePath(fullPath), StringUtils.DefaultEncoding);
                         finalPath = fullPath;
                     }
                 }
@@ -212,7 +212,7 @@ namespace Microsoft.Scripting.Hosting {
             // nop
         }
 
-        public virtual void ModuleCreated(IScriptModule module) {
+        public virtual void ModuleCreated(IScriptScope module) {
             // nop
         }
 

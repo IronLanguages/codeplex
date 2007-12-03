@@ -63,6 +63,7 @@ namespace Microsoft.Scripting {
             return _id;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public int GetCaseInsensitiveHashCode() {
             return (_id & 0x00FFFFFF);
         }

@@ -14,23 +14,18 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-
-using System.Reflection;
-using System.Reflection.Emit;
-
-using System.Resources;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
-using System.IO;
 using System.Globalization;
-
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
+using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
@@ -263,6 +258,7 @@ namespace Microsoft.Scripting.Generation {
             _targets.Pop();
         }
 
+        // TODO: Cleanup, hacky!!!
         public void CheckAndPushTargets(Statement statement) {
             for (int i = _targets.Count - 1; i >= 0; i--) {
                 if (_targets[i].statement == statement) {
@@ -598,7 +594,7 @@ namespace Microsoft.Scripting.Generation {
                     EmitNull();
                     EmitReturnFromObject();
                 } else {
-                    expr.EmitAs(this, CompilerHelpers.GetReturnType(_methodInfo));
+                    Compiler.EmitAs(this, expr, CompilerHelpers.GetReturnType(_methodInfo));
                     EmitReturn();
                 }
             }
@@ -639,7 +635,7 @@ namespace Microsoft.Scripting.Generation {
 
         private void EmitSetGeneratorReturnValue(Expression expr) {
             ArgumentSlots[1].EmitGet(this);
-            EmitExprAsObjectOrNull(expr);
+            Compiler.EmitExpressionAsObjectOrNull(this, expr);
             Emit(OpCodes.Stind_Ref);
         }
 
@@ -910,14 +906,6 @@ namespace Microsoft.Scripting.Generation {
             if (_methodInfo.IsStatic) throw new InvalidOperationException(Resources.InvalidOperation_ThisInStaticMethod);
             //!!! want to confirm this doesn't have a constant pool too
             Emit(OpCodes.Ldarg_0);
-        }
-
-        public void EmitExprAsObjectOrNull(Expression e) {
-            if (e == null) {
-                Emit(OpCodes.Ldnull);
-            } else {
-                e.EmitAsObject(this);
-            }
         }
 
         /// <summary>

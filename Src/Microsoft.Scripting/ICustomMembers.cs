@@ -13,9 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Scripting {
 
@@ -27,7 +25,7 @@ namespace Microsoft.Scripting {
     ///     obj.__dict__[100] = someOtherObject
     /// </summary>
     public interface IMembersList {
-        IList<object> GetCustomMemberNames(CodeContext context);
+        IList<object> GetMemberNames(CodeContext context);
     }
 
     /// <summary>
@@ -36,6 +34,7 @@ namespace Microsoft.Scripting {
     public interface ICustomMembers : IMembersList {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryGetCustomMember(CodeContext context, SymbolId name, out object value);
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value);
         void SetCustomMember(CodeContext context, SymbolId name, object value);
         bool DeleteCustomMember(CodeContext context, SymbolId name);

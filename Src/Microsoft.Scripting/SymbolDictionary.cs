@@ -173,6 +173,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
         public object this[object key] {
             get {
                 Debug.Assert(!(key is SymbolId));
