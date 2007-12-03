@@ -339,7 +339,75 @@ def test_get_exception_message():
 def test_publishmodule():
     AssertError(TypeError, pe.PublishModule, None)
 
-  
+
+
+def a():
+    raise System.Exception()
+
+def b():
+    try:
+        a()
+    except System.Exception, e:
+        raise System.Exception("second", e)
+
+def c():
+    try:
+        b()
+    except System.Exception, e:
+        x = System.Exception("first", e)
+    return x
+
+@skip("silverlight")
+def test_formatexception():
+    try:
+        AssertError(TypeError, pe.FormatException, None)
+    
+        exc_string = pe.FormatException(System.Exception("first", 
+                                                        System.Exception("second", 
+                                                                         System.Exception())))
+        AreEqual(exc_string, 'Traceback (most recent call last):\r\nException: first\r\n')
+        exc_string = pe.FormatException(c())
+        AreEqual(exc_string.count(" File "), 4)
+        AreEqual(exc_string.count(" line "), 4)
+    finally:
+        pass
+
+@skip("silverlight")
+def test_formatexception_showclrexceptions():
+    try:
+        pe.Options.ShowClrExceptions = True
+    
+        exc_string = pe.FormatException(System.Exception("first", 
+                                                        System.Exception("second", 
+                                                                         System.Exception())))
+        AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+        exc_string = pe.FormatException(c())
+        AreEqual(exc_string.count(" File "), 6)
+        AreEqual(exc_string.count(" line "), 6)
+        Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
+    
+    finally:
+        pe.Options.ShowClrExceptions = False
+
+@disabled("CodePlex 6710")
+def test_formatexception_exceptiondetail():       
+    '''
+    Expected return values need to be updated before this test can be re-enabled.
+    ''' 
+    try:
+        pe.Options.ExceptionDetail = True
+    
+        #CodePlex Work Item 6710
+        exc_string = pe.FormatException(System.Exception("first", System.Exception("second", System.Exception())))
+        AreEqual(exc_string, "Traceback (most recent call last):\r\nException: first\r\nCLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n")
+        exc_string = pe.FormatException(c())
+        AreEqual(exc_string.count(" File "), 6)
+        AreEqual(exc_string.count(" line "), 4)
+        Assert(exc_string.endswith("CLR Exception: \r\n    Exception\r\n: \r\nfirst\r\n    Exception\r\n: \r\nsecond\r\n    Exception\r\n: \r\nException of type 'System.Exception' was thrown.\r\n"))
+    
+    finally:
+        pe.Options.ExceptionDetail = False
+    
 
 run_test(__name__)
 

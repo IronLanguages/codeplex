@@ -15,14 +15,14 @@
 
 using System;
 using System.Reflection;
-using System.Diagnostics;
+
+using Microsoft.Scripting.Utils;
 using System.Collections.Generic;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-
 namespace Microsoft.Scripting.Actions {
-    public static partial class DynamicSiteHelpers {        
+    public static partial class DynamicSiteHelpers {
+        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
+
         #region Generated DynamicSiteHelpers
 
         // *** BEGIN GENERATED CODE ***
@@ -61,60 +61,38 @@ namespace Microsoft.Scripting.Actions {
             return genType.MakeGenericType(types);
         }
 
-        public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, params object[] args) {
-            switch (args.Length) {
-                case 1:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object>>(context, action, args); 
-                case 2:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object, object>>(context, action, args); 
-                case 3:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object, object, object>>(context, action, args); 
-                case 4:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object, object, object, object>>(context, action, args); 
-                case 5:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object, object, object, object, object>>(context, action, args); 
-                case 6:
-                    return binder.ExecuteRule<DynamicSiteTarget<object, object, object, object, object, object, object>>(context, action, args); 
-                default:
-                    //TODO: use CompilerHelpers.GetTypes(args) instead?
-                    Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), args.Length));
-                    Type targetType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, typeof(object));
-                    Type ruleType = typeof(StandardRule<>).MakeGenericType(targetType);
-                    MethodInfo getRule = typeof(ActionBinder).GetMethod("GetRule").MakeGenericMethod(targetType);
-                    while(true) {
-                        object ruleN = getRule.Invoke(binder, new object[] { context, action, args });
-                        Ast.Expression test = (Ast.Expression)ruleType.GetProperty("Test").GetValue(ruleN, null);
-                        Ast.Statement target = (Ast.Statement)ruleType.GetProperty("Target").GetValue(ruleN, null);
-                        Ast.Variable[] paramVars = (Ast.Variable[]) ruleType.GetProperty("ParamVariables",
-                            BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
-                        Ast.Variable[] tempVars = (Ast.Variable[])ruleType.GetProperty("TemporaryVariables",
-                            BindingFlags.Instance | BindingFlags.NonPublic).GetValue(ruleN, null);
+        public static object Execute(CodeContext/*!*/ context, ActionBinder/*!*/ binder, DynamicAction/*!*/ action, Type/*!*/[]/*!*/ types, object[]/*!*/ args) {
+            Contract.RequiresNotNull(types, "types");
+            Contract.RequiresNotNull(args, "args");
+            Contract.RequiresNotNull(context, "context");
+            Contract.RequiresNotNull(binder, "binder");
+            Contract.RequiresNotNull(action, "action");
 
+            ReflectedCaller rc;
 
-                        Tuple t = Tuple.MakeTuple(tupleType, args);
-                        object[] tupArg = new object[] {t};
-                        CodeContext tmpCtx = context.Scope.GetTemporaryVariableContext(context, paramVars, tupArg);
-                        try {    
-                            bool result = (bool)test.Evaluate(tmpCtx);
-                            if (!result) {
-                                // The test may evaluate as false if:
-                                // 1. The rule was generated as invalid. In this case, the language binder should be fixed to avoid 
-                                //    generating invalid rules.
-                                // 2. The rule was invalidated in the small window between calling GetRule and Evaluate. This is a 
-                                //    valid scenario. In such a case, we need to call Evaluate again to ensure that all expected
-                                //    side-effects are visible to Execute below.
-                                // This assert is not valid in the face to #2 above. However, it is left here until all issues in 
-                                // the interpreter and the language binders are flushed out
-                                Debug.Assert(result);
-                                continue;
-                            }
+            lock (_executeSites) {
+                ValueArray<Type> array = new ValueArray<Type>(types);
+                if (!_executeSites.TryGetValue(array, out rc)) {
+                    Type siteType;
 
-                            return target.Execute(tmpCtx);
-                        } finally {
-                            tmpCtx.Scope.TemporaryStorage.Clear();
-                        }
+                    switch (args.Length) {
+                        case 1: siteType = typeof(DynamicSiteTarget<,>).MakeGenericType(types); break;
+                        case 2: siteType = typeof(DynamicSiteTarget<,,>).MakeGenericType(types); break;
+                        case 3: siteType = typeof(DynamicSiteTarget<,,,>).MakeGenericType(types); break;
+                        case 4: siteType = typeof(DynamicSiteTarget<,,,,>).MakeGenericType(types); break;
+                        case 5: siteType = typeof(DynamicSiteTarget<,,,,,>).MakeGenericType(types); break;
+                        case 6: siteType = typeof(DynamicSiteTarget<,,,,,,>).MakeGenericType(types); break;
+                        default:
+                            Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));
+                            siteType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, types[types.Length - 1]);
+                            break;
                     }
+                    MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
+                    _executeSites[array] = rc = ReflectedCaller.Create(target);
+                }
             }
+
+            return rc.Invoke(binder, context, action, args);
         }
 
         private class UninitializedTargetHelper<T0, T1, T2, T3, T4, T5, Tret> {

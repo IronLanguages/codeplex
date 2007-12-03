@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Actions {
         #region Internal expression builders
 
         internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
-            if (instance == null) {
+            if (instance != null && IsStatic) {
                 return null;
             }
 
@@ -133,18 +133,14 @@ namespace Microsoft.Scripting.Actions {
                 return binder.MakeGenericAccessError(this);
             }
 
-            if (instance == null) {
-                return binder.MakeInvalidParametersError(Name, 0);
+            if (IsStatic) {
+                return binder.MakeStaticPropertyInstanceAccessError(this, false, instance);
             }
 
             throw new InvalidOperationException();
         }
 
         internal override MemberTracker BindToInstance(Expression instance) {
-            if (IsStatic) {
-                return new BoundMemberTracker(this, null);
-            }
-
             return new BoundMemberTracker(this, instance);
         }
 
@@ -166,6 +162,6 @@ namespace Microsoft.Scripting.Actions {
             return CompilerHelpers.GetCallableMethod(getter);
         }
 
-        #endregion
+        #endregion        
     }
 }

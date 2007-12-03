@@ -78,7 +78,7 @@ namespace Microsoft.Scripting.Actions {
 
                 CodeContext tmpCtx = context.Scope.GetTemporaryVariableContext(context, rule.ParamVariables, args);
                 try {
-                    if ((bool)rule.Test.Evaluate(tmpCtx)) {
+                    if ((bool)Interpreter.EvaluateExpression(tmpCtx, rule.Test)) {
                         return rule;
                     }
                 } finally {

@@ -14,16 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-using Microsoft.Scripting;
-
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     /* 
@@ -202,6 +200,16 @@ namespace IronPython.Runtime {
         public static bool TryCreate(object baseEnumerator, out IEnumerator enumerator) {
             object iter;
 
+            if (baseEnumerator is IEnumerator) {
+                enumerator = (IEnumerator)baseEnumerator;
+                return true;
+            }
+
+            if (baseEnumerator is IEnumerable) {
+                enumerator = ((IEnumerable)baseEnumerator).GetEnumerator();
+                return true;
+            }
+
             if (PythonOps.TryGetBoundAttr(baseEnumerator, Symbols.Iterator, out iter)) {
                 object iterator = PythonCalls.Call(iter);
                 // don't re-wrap if we don't need to (common case is PythonGenerator).
@@ -216,6 +224,14 @@ namespace IronPython.Runtime {
                 enumerator = null;
                 return false;
             }
+        }
+
+        public static IEnumerator Create(object baseObject) {
+            IEnumerator res;
+            if (!TryCreate(baseObject, out res)) {
+                throw PythonOps.TypeError("cannot convert {0} to IEnumerator", PythonTypeOps.GetName(baseObject));
+            }
+            return res;
         }
 
         public PythonEnumerator(object iter) {
@@ -264,17 +280,30 @@ namespace IronPython.Runtime {
     public class PythonEnumerable : IEnumerable {
         object iterator;
 
-        public static bool TryCreate(object baseEnumerator, out PythonEnumerable enumerator) {
+        public static bool TryCreate(object baseEnumerator, out IEnumerable enumerator) {
+            Debug.Assert(!(baseEnumerator is IEnumerable) || baseEnumerator is IPythonObject);   // we shouldn't re-wrap things that don't need it
             object iter;
 
             if (PythonOps.TryGetBoundAttr(baseEnumerator, Symbols.Iterator, out iter)) {
                 object iterator = PythonCalls.Call(iter);
-                enumerator = new PythonEnumerable(iterator);
+                if (iterator is IEnumerable) {
+                    enumerator = (IEnumerable)iterator;
+                } else {
+                    enumerator = new PythonEnumerable(iterator);
+                }
                 return true;
             } else {
                 enumerator = null;
                 return false;
             }
+        }
+
+        public static IEnumerable Create(object baseObject) {
+            IEnumerable res;
+            if (!TryCreate(baseObject, out res)) {
+                throw PythonOps.TypeError("cannot convert {0} to IEnumerable", PythonTypeOps.GetName(baseObject));
+            }
+            return res;
         }
 
         private PythonEnumerable(object iterator) {
@@ -292,7 +321,7 @@ namespace IronPython.Runtime {
     }
 
     [PythonType("item-enumerator")]
-    internal class ItemEnumerator : IEnumerator {
+    public class ItemEnumerator : IEnumerator {
         private readonly object getItemMethod;
         private object current = null;
         private int index = 0;
@@ -307,6 +336,14 @@ namespace IronPython.Runtime {
                 enumerator = null;
                 return false;
             }
+        }
+
+        public static IEnumerator Create(object baseObject) {
+            IEnumerator res;
+            if (!TryCreate(baseObject, out res)) {
+                throw PythonOps.TypeError("cannot convert {0} to IEnumerator", PythonTypeOps.GetName(baseObject));
+            }
+            return res;
         }
 
         internal ItemEnumerator(object getItemMethod) {
@@ -363,6 +400,14 @@ namespace IronPython.Runtime {
                 ie = null;
                 return false;
             }
+        }
+
+        public static ItemEnumerable Create(object baseObject) {
+            ItemEnumerable res;
+            if (!TryCreate(baseObject, out res)) {
+                throw PythonOps.TypeError("cannot convert {0} to IEnumerable", PythonTypeOps.GetName(baseObject));
+            }
+            return res;
         }
 
         private ItemEnumerable(object getitem) {

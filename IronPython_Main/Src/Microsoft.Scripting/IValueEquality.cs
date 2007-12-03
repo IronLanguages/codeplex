@@ -27,13 +27,16 @@ namespace Microsoft.Scripting {
         /// </summary>
         /// <returns>A hash code</returns>
         /// <exception cref="Microsoft.Scripting.ArgumentTypeException">The type is mutable and cannot be hashed by value</exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         int GetValueHashCode();
+
         /// <summary>
         /// Determines if two values are equal
         /// </summary>
         /// <param name="other">The object to compare the current object against.</param>
         /// <returns>Returns true if the objects are equal, false if they are not.</returns>        
         bool ValueEquals(object other);
+
         /// <summary>
         /// Determines if two values are not equal
         /// </summary>

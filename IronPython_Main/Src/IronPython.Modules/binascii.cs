@@ -60,6 +60,9 @@ namespace IronPython.Modules {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length == 0) return String.Empty;
 
+            // remove all newline and carriage feeds before processing...
+            data = RemoveWhiteSpace(data);
+
             StringBuilder res = DecodeWorker(data, '=', delegate(char val) {
                 if (val >= 'A' && val <= 'Z') return val - 'A';
                 if (val >= 'a' && val <= 'z') return val - 'a' + 26;
@@ -71,6 +74,21 @@ namespace IronPython.Modules {
             });
 
             return res.ToString();
+        }
+
+        private static string RemoveWhiteSpace(string data) {
+            StringBuilder str = null;
+            for (int i = 0; i < data.Length; i++) {
+                if (data[i] == '\r' || data[i] == '\n' || data[i] == ' ') {
+                    if (str == null) {
+                        str = new StringBuilder(data, 0, i, data.Length);
+                    }                    
+                } else if (str != null) {
+                    str.Append(data[i]);
+                }
+            }
+            if (str != null) data = str.ToString();
+            return data;
         }
 
         [PythonName("b2a_base64")]

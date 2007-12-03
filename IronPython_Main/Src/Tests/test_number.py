@@ -340,7 +340,7 @@ def test_operators():
     
     def test_div(a,b,c):
         if b != 0:
-            Assert(a / b == c)
+            Assert(a / b == c, '%s == %s' % (a/b, c))
             Assert(((c * b) + (a % b)) == a)
     
     def operator_mod(a, b) :
@@ -409,8 +409,9 @@ def test_operators():
                     z = op(x, y)
                     try:
                         test(x,y,z)
-                    except:
+                    except __builtins__.Exception, e:
                         print x, " ", sym, " ", y, " ", z, "Failed"
+                        print e
                         raise
     
     test_it_all(bignums)
@@ -2174,5 +2175,21 @@ def test_override_eq():
         AreEqual(F() != 'def', True)
         AreEqual(F() == 'qwe', False)
         AreEqual(F() != 'qwe', False)
+
+def bad_float_to_long():
+    AssertError(OverflowError, long, 1.0e340)           # Positive Infinity
+    AssertError(OverflowError, long, -1.0e340)          # Negative Infinity
+    AssertError(OverflowError, long, 1.0e340-1.0e340)   # NAN
+
+def test_int___int__():
+    x = 3
+    AreEqual(x.__int__(), x)
+
+def test_long_conv():
+    class Foo(long):
+        def __long__(self):
+            return 42L
+
+    AreEqual(long(Foo()), 42L)
 
 run_test(__name__)

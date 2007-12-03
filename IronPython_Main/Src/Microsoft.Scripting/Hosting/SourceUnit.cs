@@ -138,7 +138,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(engine, "engine");
             Contract.RequiresNotNull(path, "path");
 
-            SourceContentProvider provider = new SourceFileContentProvider(path, encoding ?? Encoding.Default, engine);
+            SourceContentProvider provider = new SourceFileContentProvider(path, encoding ?? StringUtils.DefaultEncoding, engine);
             SourceUnit result = new SourceUnit(engine, provider, path, SourceCodeKind.File);
             result.IsVisibleToDebugger = true;
             return result;
@@ -162,6 +162,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public SourceUnitReader GetReader() {
             return new SourceUnitReader(this, _contentProvider.GetReader());
         }
@@ -207,11 +208,13 @@ namespace Microsoft.Scripting.Hosting {
             return result.ToArray();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCodeLine(int line) {
             string[] lines = GetCodeLines(line, 1);
             return (lines.Length > 0) ? lines[0] : null;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public string GetCode() {
             using (SourceUnitReader reader = GetReader()) {
                 return reader.ReadToEnd();

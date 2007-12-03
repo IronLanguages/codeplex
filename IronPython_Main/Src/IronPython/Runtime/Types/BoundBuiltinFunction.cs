@@ -14,22 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Threading;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -77,12 +72,23 @@ namespace IronPython.Runtime.Types {
         #region IDynamicObject Members
 
         LanguageContext IDynamicObject.LanguageContext {
-            get { throw new NotImplementedException(); }
+            get { return DefaultContext.Default.LanguageContext; }
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            if (action.Kind == DynamicActionKind.Call) {
-                return MakeCallRule<T>((CallAction)action, context, args);
+            switch(action.Kind) {
+                case DynamicActionKind.Call: return MakeCallRule<T>((CallAction)action, context, args);
+                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+            }
+            return null;
+        }
+
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch(doOperationAction.Operation) {
+                case Operators.CallSignatures:
+                    return DoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Target.Targets, DynamicHelpers.GetPythonType(args[0]));
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
             }
             return null;
         }

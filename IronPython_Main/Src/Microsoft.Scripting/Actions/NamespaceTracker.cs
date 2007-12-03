@@ -16,15 +16,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class AssemblyLoadedEventArgs : EventArgs {
@@ -304,6 +301,7 @@ namespace Microsoft.Scripting.Actions {
             return TryGetValue(name, out dummy);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
         public object this[SymbolId name] {
             get {
                 object res;
@@ -564,7 +562,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region IMembersList Members
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             return (IList<object>)Keys;
         }
 

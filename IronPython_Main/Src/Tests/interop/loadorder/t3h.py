@@ -15,8 +15,8 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_3")
+
+add_clr_assemblies("loadorder_3")
 
 # namespace First {
 #     public class Generic1<K, V> {
@@ -29,7 +29,7 @@ from First import *
 
 AreEqual(First.Generic1[str, str].Flag, "First.Generic1`2")      
 
-clr.AddReference("loadorder_3h")
+add_clr_assemblies("loadorder_3h")
 
 # namespace First {
 #     public class Generic1<T> {

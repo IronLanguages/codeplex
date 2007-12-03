@@ -14,18 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
+using System.Text;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Diagnostics;
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;                                     // arguments we were created with
@@ -229,25 +228,111 @@ namespace Microsoft.Scripting.Actions {
                 }
                 _rule.SetTarget(_rule.MakeReturn(Binder, expr));
                 return _rule;
-            } else if(_types.Length == 1) {
-                if (info.Operator == Operators.Negate && TypeUtils.IsArithmetic(_types[0])) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Negate(Param0)));
-                    return _rule;
-                } else if (info.Operator == Operators.Not && TypeUtils.IsIntegerOrBool(_types[0])) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(Param0)));
-                    return _rule;
-                }
+            } else if(_types.Length == 1 && TryMakeDefaultUnaryRule(info)) {
+                return _rule;
             }
             
-            if (info.Operator == Operators.IsTrue) {
-                if (_types[0] == typeof(bool)) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Param0));
-                    return _rule;
-                }
-            }
-
             SetErrorTarget(info);
             return _rule;
+        }
+
+        private bool TryMakeDefaultUnaryRule(OperatorInfo info) {
+            switch (info.Operator) {
+                case Operators.IsTrue:
+                    if (_types[0] == typeof(bool)) {
+                        _rule.SetTarget(_rule.MakeReturn(Binder, Param0));
+                        return true;
+                    }
+                    break;
+                case Operators.Negate:
+                    if (TypeUtils.IsArithmetic(_types[0])) {
+                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Negate(Param0)));
+                        return true;
+                    }
+                    break;
+                case Operators.Not:
+                    if (TypeUtils.IsIntegerOrBool(_types[0])) {
+                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(Param0)));
+                        return true;
+                    }
+                    break;                
+                case Operators.Documentation:
+                    object[] attrs = _types[0].GetCustomAttributes(typeof(DocumentationAttribute), true);
+                    if (attrs.Length > 0) {
+                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Constant(((DocumentationAttribute)attrs[0]).Documentation)));
+                        return true;
+                    }
+                    break;
+                case Operators.MemberNames:
+                    if (typeof(IMembersList).IsAssignableFrom(_types[0])) {
+                        MakeIMembersListRule();
+                        return true;
+                    }
+
+                    MemberInfo[] members = _types[0].GetMembers();
+                    Dictionary<string, string> mems = new Dictionary<string, string>();
+                    foreach (MemberInfo mi in members) {
+                        mems[mi.Name] = mi.Name;
+                    }
+
+                    string[] res = new string[mems.Count];
+                    mems.Keys.CopyTo(res, 0);
+                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.RuntimeConstant(res)));
+                    return true;
+                case Operators.CallSignatures:
+                    MakeCallSignatureResult(CompilerHelpers.GetMethodTargets(_args[0]));
+                    break;
+                case Operators.IsCallable:
+                    bool callable = false;
+                    if (typeof(Delegate).IsAssignableFrom(_types[0]) ||
+                        typeof(MethodGroup).IsAssignableFrom(_types[0])) {
+                        callable = true;
+                    }
+
+                    _rule.SetTarget(
+                        _rule.MakeReturn(
+                            Context.LanguageContext.Binder,
+                            Ast.Constant(callable)
+                        )
+                    );
+                    return true;
+            }
+            return false;
+        }
+
+        private void MakeIMembersListRule() {
+            _rule.SetTarget(
+                _rule.MakeReturn(
+                    Binder, 
+                    Ast.Call(
+                        typeof(RuntimeHelpers).GetMethod("GetStringMembers"),
+                        Ast.Call(
+                            Ast.ConvertHelper(_rule.Parameters[0], typeof(IMembersList)),
+                            typeof(IMembersList).GetMethod("GetMemberNames")
+                        )
+                    )
+                )
+            );
+        }
+
+        private void MakeCallSignatureResult(MethodBase[] methods) {
+            List<string> arrres = new List<string>();
+            foreach (MethodBase mb in methods) {
+                StringBuilder res = new StringBuilder();
+                string comma = "";
+                foreach (ParameterInfo param in mb.GetParameters()) {
+                    if (param.ParameterType == typeof(CodeContext)) continue;
+
+                    res.Append(comma);
+                    res.Append(param.ParameterType.Name);
+                    res.Append(" ");
+                    res.Append(param.Name);
+                    comma = ", ";
+                }
+                arrres.Add(res.ToString());
+            }
+
+            _rule.SetTarget(_rule.MakeReturn(Binder, Ast.RuntimeConstant(arrres.ToArray())));
         }
 
         #endregion
@@ -440,24 +525,78 @@ namespace Microsoft.Scripting.Actions {
             if (t == typeof(EventTracker)) {
                 EventTracker et = ((EventTracker)_args[0]);
                 if (info.Operator == Operators.InPlaceAdd) {
+                    AddFallbackMemberTest(t, et);
                     return new MethodInfo[] { typeof(BinderOps).GetMethod("EventTrackerInPlaceAdd").MakeGenericMethod(et.Event.EventHandlerType) };
                 } else if (info.Operator == Operators.InPlaceSubtract) {
+                    AddFallbackMemberTest(t, et);
                     return new MethodInfo[] { typeof(BinderOps).GetMethod("EventTrackerInPlaceRemove").MakeGenericMethod(et.Event.EventHandlerType) };
                 }
             } else if (t == typeof(BoundMemberTracker)) {
                 BoundMemberTracker bmt = ((BoundMemberTracker)_args[0]);
                 if (bmt.BoundTo.MemberType == TrackerTypes.Event) {
                     EventTracker et = ((EventTracker)bmt.BoundTo);
-
+                    
                     if (info.Operator == Operators.InPlaceAdd) {
+                        AddFallbackMemberTest(t, et);
                         return new MethodInfo[] { typeof(BinderOps).GetMethod("BoundEventTrackerInPlaceAdd").MakeGenericMethod(et.Event.EventHandlerType) };
                     } else if (info.Operator == Operators.InPlaceSubtract) {
+                        AddFallbackMemberTest(t, et);
                         return new MethodInfo[] { typeof(BinderOps).GetMethod("BoundEventTrackerInPlaceRemove").MakeGenericMethod(et.Event.EventHandlerType) };
                     }
                 }
             }
 
             return new MethodInfo[0];
+        }
+
+        private void AddFallbackMemberTest(Type t, EventTracker et) {
+            if(t == typeof(EventTracker)){
+                //
+                // Test Generated:
+                //   RuntimeHelpers.GetEventHandlerType(((EventTracker)args[0]).Event) == et.Event.EventHandlerType
+                //
+                _rule.AddTest(
+                    Ast.Equal(
+                        Ast.Call(
+                            typeof(RuntimeHelpers).GetMethod("GetEventHandlerType"),
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    _rule.Parameters[0],
+                                    typeof(EventTracker)
+                                ),
+                                typeof(EventTracker).GetProperty("Event")
+                            )
+                        ),
+                        Ast.Constant(et.Event.EventHandlerType)
+                    )
+                );
+            } else if( t == typeof(BoundMemberTracker)){
+                //
+                // Test Generated:
+                //   RuntimeHelpers.GetEventHandlerType(((EventTracker)((BoundMemberTracker)args[0]).BountTo).Event) == et.Event.EventHandlerType
+                //
+                _rule.AddTest(
+                    Ast.Equal(
+                        Ast.Call(
+                            typeof(RuntimeHelpers).GetMethod("GetEventHandlerType"),
+                            Ast.ReadProperty(
+                                Ast.Convert(
+                                    Ast.ReadProperty(
+                                        Ast.Convert(
+                                            _rule.Parameters[0],
+                                            typeof(BoundMemberTracker)
+                                        ),
+                                        typeof(BoundMemberTracker).GetProperty("BoundTo")
+                                    ),
+                                    typeof(EventTracker)
+                                ),
+                                typeof(EventTracker).GetProperty("Event")
+                            )
+                        ),
+                        Ast.Constant(et.Event.EventHandlerType)
+                    )
+                );
+            }
         }
 
         private static MethodInfo[] FilterNonMethods(Type t, MemberGroup members) {
@@ -550,6 +689,13 @@ namespace Microsoft.Scripting.Actions {
 
             res.Add(new OperatorInfo(Operators.GetEnumerator,       "GetEnumerator",                null));
             res.Add(new OperatorInfo(Operators.Dispose,             "Dispose",                      null));
+
+            res.Add(new OperatorInfo(Operators.MemberNames,         "GetMemberNames",               null));
+            res.Add(new OperatorInfo(Operators.CodeRepresentation,  "ToCodeString",                 null));
+            res.Add(new OperatorInfo(Operators.CallSignatures,      "GetCallSignatures",            null));
+            res.Add(new OperatorInfo(Operators.Documentation,       "GetDocumentation",             null));
+            res.Add(new OperatorInfo(Operators.IsCallable,          "IsCallable",                   null));
+
 
 
             return res.ToArray();

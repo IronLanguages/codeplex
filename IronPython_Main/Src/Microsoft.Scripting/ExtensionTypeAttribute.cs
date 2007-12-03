@@ -41,7 +41,7 @@ namespace Microsoft.Scripting {
             _extensionType = extensionType;
         }
 
-        public Type Type {
+        public Type ExtensionType {
             get {
                 return _extensionType;
             }

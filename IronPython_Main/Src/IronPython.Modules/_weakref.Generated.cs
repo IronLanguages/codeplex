@@ -23,6 +23,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 
+#if !SILVERLIGHT
 namespace IronPython.Modules {
     partial class ProxyPythonTypeBuilder : OpsReflectedTypeBuilder {
 
@@ -116,3 +117,4 @@ namespace IronPython.Modules {
         }
     }
 }
+#endif

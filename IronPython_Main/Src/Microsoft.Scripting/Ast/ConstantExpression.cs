@@ -18,41 +18,20 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class ConstantExpression : Expression {
+    public sealed class ConstantExpression : Expression {
         private readonly object _value;
-        private readonly Type /*!*/ _type;
 
         internal ConstantExpression(object value, Type /*!*/ type)
-            : base(AstNodeType.Constant) {
+            : base(AstNodeType.Constant, type) {
             _value = value;
-            _type = type;
         }
 
         public object Value {
             get { return _value; }
         }
 
-        public override Type Type {
-            get {
-                return _type;
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            CompilerConstant cc = _value as CompilerConstant;
-            if (cc != null) {
-                return cc.Create(); // TODO: Only create once?
-            }
-
-            return _value;
-        }
-
         public override AbstractValue AbstractEvaluate(AbstractContext context) {
             return AbstractValue.Constant(_value, this);
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitConstant(_value);
         }
 
         public override bool IsConstant(object value) {

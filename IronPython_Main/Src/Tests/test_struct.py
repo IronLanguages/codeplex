@@ -89,9 +89,9 @@ def test_negative():
     # BUG: 1033
     # such chars should be in the leading position only
     
-    #for x in '=@<>!':
-    #    AssertError(struct.error, struct.pack, 'h'+x+'h', 1, 2)   
+    for x in '=@<>!':
+        AssertError(struct.error, struct.pack, 'h'+x+'h', 1, 2)   
 
-    #AssertError(struct.error, struct.pack, 'c', 300) 
+    AssertError(struct.error, struct.pack, 'c', 300) 
     
 run_test(__name__)

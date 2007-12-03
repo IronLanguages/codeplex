@@ -55,10 +55,22 @@ namespace IronPython.Modules {
 
 #if !SILVERLIGHT // GC.Collect
         [PythonName("collect")]
+        public static int Collect(int generation) {
+            if (generation > GC.MaxGeneration || generation < 0) throw PythonOps.ValueError("invalid generation {0}", generation);
+
+            long start = GC.GetTotalMemory(false);
+            GC.Collect(generation);
+            GC.WaitForPendingFinalizers();
+            
+            return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
+        }
+
+        [PythonName("collect")]
         public static int Collect() {
+            long start = GC.GetTotalMemory(false);
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
-            return 0;
+            return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
         }
 #endif
 

@@ -181,8 +181,7 @@ namespace IronPython.Modules {
                 else if (fs.CanWrite) mode2 = "w";
                 else mode2 = "r";
 
-                PythonFile pf = new PythonFile(fs, SystemState.Instance.DefaultEncoding, filename, mode2, false);
-                return PythonFileManager.AddToStrongMapping(pf);
+                return PythonFileManager.AddToStrongMapping(PythonFile.Create(fs, filename, mode2, false));
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -202,6 +201,7 @@ namespace IronPython.Modules {
         public static PythonFile OpenPipedCommand(CodeContext context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "r";
             ProcessStartInfo psi = GetProcessInfo(command);
+            psi.CreateNoWindow = true;  // ipyw shouldn't create a new console window
             Process p;
             PythonFile res;
 
@@ -249,6 +249,7 @@ namespace IronPython.Modules {
                 ProcessStartInfo psi = GetProcessInfo(command);
                 psi.RedirectStandardInput = true;
                 psi.RedirectStandardOutput = true;
+                psi.CreateNoWindow = true; // ipyw shouldn't create a new console window
                 Process p = Process.Start(psi);
 
                 return PythonTuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
@@ -279,6 +280,7 @@ namespace IronPython.Modules {
                 psi.RedirectStandardInput = true;
                 psi.RedirectStandardOutput = true;
                 psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true; // ipyw shouldn't create a new console window
                 Process p = Process.Start(psi);
 
                 return PythonTuple.MakeTuple(new POpenFile(context, command, p, p.StandardInput.BaseStream, "w" + mode),
@@ -701,7 +703,7 @@ namespace IronPython.Modules {
                 if (dir == null) dir = Path.GetTempPath();
                 else dir = Path.GetDirectoryName(dir);
 
-                return Path.Combine(dir, prefix) + Path.GetRandomFileName();
+                return Path.GetFullPath(Path.Combine(dir, prefix ?? String.Empty) + Path.GetRandomFileName());
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -723,7 +725,8 @@ namespace IronPython.Modules {
             try {
                 FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
-                return new PythonFile(sw, SystemState.Instance.DefaultEncoding, "w+b");
+                PythonFile res = PythonFile.Create(sw, sw.Name, "w+b");
+                return res;
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -877,8 +880,8 @@ namespace IronPython.Modules {
                 return new POpenFile(context, command, process, stream, mode);
             }
 
-            internal POpenFile(CodeContext context, string command, Process process, Stream stream, string mode)
-                : base(stream, SystemState.Instance.DefaultEncoding, command, mode) {
+            internal POpenFile(CodeContext context, string command, Process process, Stream stream, string mode) {
+                Initialize(stream, SystemState.Instance.DefaultEncoding, command, mode);
                 this._process = process;
             }
 

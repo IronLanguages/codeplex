@@ -61,7 +61,7 @@ namespace IronPython.Runtime.Calls {
             InitAdapter initAdapter;
 
             if (TooManyArgsForDefaultNew(creating, ai.Expressions.Length > 0)) {
-                return MakeIncorrectArgumentsRule(ai);
+                return MakeIncorrectArgumentsRule(ai, creating);
             }
 
             GetAdapters(creating, ai, out newAdapter, out initAdapter);
@@ -566,15 +566,27 @@ namespace IronPython.Runtime.Calls {
 
         #region Misc. Helpers
 
-        private StandardRule<T> MakeIncorrectArgumentsRule(ArgumentValues ai) {
-            Rule.SetTarget(
-                Rule.MakeError(
-                    Ast.New(
-                        typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
-                        Ast.Constant("default __new__ does not take parameters")
+        private StandardRule<T> MakeIncorrectArgumentsRule(ArgumentValues ai, PythonType creating) {
+            if (creating.IsSystemType && creating.UnderlyingSystemType.GetConstructors().Length == 0) {
+                // this is a type we can't create ANY instances of, give the user a half-way decent error message
+                Rule.SetTarget(
+                    Rule.MakeError(
+                        Ast.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            Ast.Constant("cannot create instances of " + PythonTypeOps.GetName(creating))
+                        )
                     )
-                )
-            );
+                );
+            } else {
+                Rule.SetTarget(
+                    Rule.MakeError(
+                        Ast.New(
+                            typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                            Ast.Constant("default __new__ does not take parameters")
+                        )
+                    )
+                );
+            }
             MakeErrorTests(ai);
             return Rule;
         }

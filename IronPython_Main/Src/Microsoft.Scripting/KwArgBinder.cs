@@ -146,19 +146,21 @@ namespace Microsoft.Scripting {
         /// Gets the error that caused the bind to fail, or null
         /// if no errors occured during the binding process.
         /// </summary>
-        public Exception GetError() {
-            return (_error);
+        public Exception Error {
+            get {
+                return _error;
+            }
         }
 
         public bool AllowUnboundArgs {
             get {
-                return (_fAllowUnboundArgs);
+                return _fAllowUnboundArgs;
             }
         }
 
         public List<UnboundArgument> UnboundArgs {
             get {
-                return (_unboundArgs);
+                return _unboundArgs;
             }
         }
 

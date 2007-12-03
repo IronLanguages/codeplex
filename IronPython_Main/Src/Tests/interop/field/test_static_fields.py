@@ -13,23 +13,10 @@
 #
 #####################################################################################
     
-import sys, nt
-
-def environ_var(key): return [nt.environ[x] for x in nt.environ.keys() if x.lower() == key.lower()][0]
-
-merlin_root = environ_var("MERLIN_ROOT")
-sys.path.insert(0, merlin_root + r"\Languages\IronPython\Tests")
-sys.path.insert(0, merlin_root + r"\Test\ClrAssembly\bin")
-
 from lib.assert_util import *
 skiptest("silverlight")
 
-import clr
-clr.AddReference("fieldtests", "typesamples")
-
-from lib.file_util import *
-peverify_dependency = [merlin_root + r"\Test\ClrAssembly\bin\typesamples.dll", merlin_root + r"\Test\ClrAssembly\bin\fieldtests.dll"]
-copy_dlls_for_peverify(peverify_dependency)
+add_clr_assemblies("fieldtests", "typesamples")
 
 from Merlin.Testing.FieldTest import *
 from Merlin.Testing.TypeSample import *
@@ -480,5 +467,3 @@ def test_access_from_derived_types():
 
 
 run_test(__name__)
-
-delete_dlls_for_peverify(peverify_dependency)

@@ -29,11 +29,12 @@ namespace Microsoft.Scripting {
 
     [Serializable]
     public class InvalidOptionException : Exception {
-        public InvalidOptionException(string message) : base(message) {
-        }
+        public InvalidOptionException() { }
+        public InvalidOptionException(string message) : base(message) { }
+        public InvalidOptionException(string message, Exception inner) : base(message, inner) { }
 
 #if !SILVERLIGHT // SerializationInfo
-        public InvalidOptionException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+        protected InvalidOptionException(SerializationInfo info, StreamingContext context) : base(info, context) { }
 #endif
     }
 
@@ -72,10 +73,12 @@ namespace Microsoft.Scripting {
             } 
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public virtual ConsoleOptions GetDefaultConsoleOptions() {
             return new ConsoleOptions();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public virtual EngineOptions GetDefaultEngineOptions() {
             return new EngineOptions();
         }
@@ -175,6 +178,10 @@ namespace Microsoft.Scripting {
 #endif
                     break;
 
+                case "-X:CachePointersInApartment":
+                    GlobalOptions.CachePointersInApartment = true;
+                    break;
+
                 default:
                     ConsoleOptions.FileName = arg;
                     // The language-specific parsers may want to do something like this to pass arguments to the script
@@ -217,49 +224,50 @@ namespace Microsoft.Scripting {
             return new InvalidOptionException(String.Format(Resources.InvalidOptionValue, value, option));
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional", MessageId = "Body")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional")] // TODO: fix
         public virtual void GetHelp(out string commandLine, out string[,] options, out string[,] environmentVariables, out string comments) {
 
             commandLine = "[options] [file|- [arguments]]";
 
             options = new string[,] {
-                { "-c cmd",                 "Program passed in as string (terminates option list)" },
-                { "-h",                     "Display usage" },
-#if !IRONPYTHON_WINDOW
-                { "-i",                     "Inspect interactively after running script" },
+                { "-c cmd",                      "Program passed in as string (terminates option list)" },
+                { "-h",                          "Display usage" },
+#if !IRONPYTHON_WINDOW                      
+                { "-i",                          "Inspect interactively after running script" },
+#endif                                      
+                { "-V",                          "Print the version number and exit" },
+                { "-O",                          "Enable optimizations" },
+#if DEBUG                                   
+                { "-D",                          "EngineDebug mode" },
+#endif                                      
+                { "-OO",                         "Remove doc-strings in addition to the -O optimizations" },
+                                            
+                                            
+                { "-X:AutoIndent",               "" },
+                { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
+#if !SILVERLIGHT                            
+                { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
 #endif
-                { "-V",                     "Print the version number and exit" },
-                { "-O",                     "Enable optimizations" },
-#if DEBUG
-                { "-D",                     "EngineDebug mode" },
-#endif
-                { "-OO",                    "Remove doc-strings in addition to the -O optimizations" },
-    
-               
-                { "-X:AutoIndent",          "" },
-                { "-X:AssembliesDir",       "Set the directory for saving generated assemblies" },
+                { "-X:ExceptionDetail",          "Enable ExceptionDetail mode" },
+                { "-X:Interpret",                "Enable interpreted mode" },
+                { "-X:Frames",                   "Generate custom frames" },
+                { "-X:GenerateAsSnippets",       "Generate code to run in snippet mode" },
+                { "-X:ILDebug",                  "Output generated IL code to a text file for debugging" },
+                { "-X:MaxRecursion",             "Set the maximum recursion level" },
+                { "-X:NoOptimize",               "Disable JIT optimization in generated code" },
+                { "-X:NoTraceback",              "Do not emit traceback code" },
+                { "-X:PassExceptions",           "Do not catch exceptions that are unhandled by script code" },
+                { "-X:PrivateBinding",           "Enable binding to private members" },
+                { "-X:SaveAssemblies",           "Save generated assemblies" },
+                { "-X:ShowClrExceptions",        "Display CLS Exception information" },
+                { "-X:SlowOps",                  "Enable fast ops" },
+                { "-X:StaticMethods",            "Generate static methods only" },
 #if !SILVERLIGHT
-                { "-X:ColorfulConsole",     "Enable ColorfulConsole" },
-#endif
-                { "-X:ExceptionDetail",     "Enable ExceptionDetail mode" },
-                { "-X:Interpret",           "Enable interpreted mode" },
-                { "-X:Frames",              "Generate custom frames" },
-                { "-X:GenerateAsSnippets",  "Generate code to run in snippet mode" },
-                { "-X:ILDebug",             "Output generated IL code to a text file for debugging" },
-                { "-X:MaxRecursion",        "Set the maximum recursion level" },
-                { "-X:NoOptimize",          "Disable JIT optimization in generated code" },
-                { "-X:NoTraceback",         "Do not emit traceback code" },
-                { "-X:PassExceptions",      "Do not catch exceptions that are unhandled by script code" },
-                { "-X:PrivateBinding",      "Enable binding to private members" },
-                { "-X:SaveAssemblies",      "Save generated assemblies" },
-                { "-X:ShowClrExceptions",   "Display CLS Exception information" },
-                { "-X:SlowOps",             "Enable fast ops" },
-                { "-X:StaticMethods",       "Generate static methods only" },
-#if !SILVERLIGHT
-                { "-X:TabCompletion",       "Enable TabCompletion mode" },
+                { "-X:TabCompletion",            "Enable TabCompletion mode" },
 #endif
 #if DEBUG
-                { "-X:TrackPerformance",    "Track performance sensitive areas" },
+                { "-X:TrackPerformance",         "Track performance sensitive areas" },
+                { "-X:CachePointersInApartment", "Cache COM pointers per apartment (prototype)" },
 #endif
            };
 

@@ -8,6 +8,10 @@ namespace Microsoft.Scripting.Actions {
             : base(name) {
         }
 
+        public static DeleteMemberAction Make(string name) {
+            return new DeleteMemberAction(SymbolTable.StringToId(name));
+        }
+
         public static DeleteMemberAction Make(SymbolId name) {
             return new DeleteMemberAction(name);
         }

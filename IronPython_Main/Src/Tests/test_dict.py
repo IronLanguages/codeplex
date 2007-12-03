@@ -448,6 +448,13 @@ if is_cli:
 	repeat_on_class(C1, C2) 
 
 
+    def test_dict_to_idict():
+        """verify dicts can be converted to IDictionaries"""
+        import clr
+        clr.AddReference('IronPythonTest')
+        from IronPythonTest import DictConversion
+        AreEqual(list(DictConversion.ToIDictionary({1:100, 2:200, 3:300, 4:400})), [1,2,3,4,100,200,300,400])
+
 #####################################################################
 ## coverage for FieldIdDict
 
@@ -809,14 +816,8 @@ def test_stdtypes_dict():
     
     for temp_type in temp_types:
         for temp_key in temp_keys:
-            try:
-                temp_type.__dict__[temp_key] = 0
-                raise "Should have been an exception for " + str(temp_type)
-            except TypeError, e:
-                pass
-            except Exception, e:
-                print "Failed on", temp_type, "type using", temp_key, "as the key:", e
-                raise e
+            def tFunc(): temp_type.__dict__[temp_key] = 0
+            AssertError(TypeError, tFunc)
     
 
 @skip("silverlight")

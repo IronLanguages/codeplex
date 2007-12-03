@@ -14,39 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     // TODO: Remove! Use ActionExpression instead.
-    public class DynamicConversionExpression : Expression {
+    public sealed class DynamicConversionExpression : Expression {
         private readonly Expression /*!*/ _expression;
-        private readonly Type /*!*/ _conversion;
 
         internal DynamicConversionExpression(Expression /*!*/ expression, Type /*!*/ conversion)
-            : base(AstNodeType.DynamicConversionExpression) {
+            : base(AstNodeType.DynamicConversionExpression, conversion) {
             _expression = expression;
-            _conversion = conversion;
-        }
-
-        public override Type Type {
-            get {
-                return _conversion;
-            }
         }
 
         public Expression Expression {
             get { return _expression; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            _expression.Emit(cg);
-            cg.EmitConvert(_expression.Type, _conversion);
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object value = _expression.Evaluate(context);
-            return context.LanguageContext.Binder.Convert(value, _conversion);
         }
     }
 

@@ -16,25 +16,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
-using System.Reflection;
+using System.Diagnostics;
 using System.Globalization;
-using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime;
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
-using IronPython.Compiler;
+using IronPython.Runtime.Types;
 
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonExtensionType(typeof(string), typeof(StringOps), DerivationType=typeof(ExtensibleString))]
 namespace IronPython.Runtime.Operations {
@@ -1107,9 +1102,13 @@ namespace IronPython.Runtime.Operations {
         [ExplicitConversionMethod]
         public static char ConvertToChar(string s) {
             if (s.Length == 1) return s[0];
-            throw Converter.CannotConvertTo("char", s);
+            throw PythonOps.TypeErrorForTypeMismatch("char", s);
         }
 
+        [ImplicitConversionMethod]
+        public static IEnumerator ConvertToIEnumerator(string s) {
+            return StringOps.GetEnumerator(s);
+        }
 
         [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
@@ -1478,37 +1477,45 @@ namespace IronPython.Runtime.Operations {
                 // else we'll store as lower case w/ _                
                 switch (normalizedName) {
                     case "us_ascii":
-                        d["cp" + encs[i].CodePage.ToString()] = d[normalizedName] = d["us"] = d["ascii"] = d["646"] = new AsciiEncodingInfoWrapper();
+                        d["cp" + encs[i].CodePage.ToString()] = d[normalizedName] = d["us"] = d["ascii"] = d["646"] = d["us_ascii"] = new AsciiEncodingInfoWrapper();
                         continue;
                     case "iso_8859_1":
-                        d["latin_1"] = encs[i];
-                        d["latin1"] = encs[i];
+                        d["8859"] = d["latin_1"] = d["latin1"] = d["iso 8859_1"] = d["iso8859_1"] = d["cp819"] = d["819"] = d["latin"] = d["latin1"] = d["l1"] = encs[i];
                         break;
                     case "utf_7":
-                        d["U7"] = d["unicode-1-1-utf-7"] = encs[i];
+                        d["u7"] = d["unicode-1-1-utf-7"] = encs[i];
                         break;
                     case "utf_8":
                         d["utf_8_sig"] = encs[i];
-                        d["utf_8"] = d["utf8"] = d["U8"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                        d["utf_8"] = d["utf8"] = d["u8"] = new EncodingInfoWrapper(encs[i], new byte[0]);
                         continue;
                     case "utf_16":
-                        d["utf_16_le"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                        d["utf_16_le"] = d["utf_16le"] = new EncodingInfoWrapper(encs[i], new byte[0]);
                         break;                        
                     case "unicodefffe": // big endian unicode                    
                         // strip off the pre-amble, CPython doesn't include it.
-                        d["utf_16_be"] = d["utf-16-be"] = d["UTF-16BE"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                        d["utf_16_be"] = d["utf_16be"] = new EncodingInfoWrapper(encs[i], new byte[0]);
                         break;
                 }                
 
+                // publish under normalized name (all lower cases, -s replaced with _s)
                 d[normalizedName] = encs[i];
-
+                // publish under Windows code page as well...                
+                d["windows-" + encs[i].GetEncoding().WindowsCodePage.ToString()] = encs[i];
                 // publish under code page number as well...
-                d["cp" + encs[i].CodePage.ToString()] = encs[i];
+                d["cp" + encs[i].CodePage.ToString()] = d[encs[i].CodePage.ToString()] = encs[i];
             }
 
             d["raw_unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(true));
             d["unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(false));
             codecs = d;
+
+#if DEBUG
+            // all codecs should be stored in lowercase because we only look up from lowercase strings
+            foreach (KeyValuePair<string, EncodingInfoWrapper> kvp in codecs) {
+                Debug.Assert(kvp.Key.ToLower() == kvp.Key);
+            }
+#endif
         }
 
         class EncodingInfoWrapper {
@@ -1564,33 +1571,45 @@ namespace IronPython.Runtime.Operations {
                 _encoding = encoding;
             }
 
-            public override int GetByteCount(char[] chars, int index, int count) {
+            private void SetEncoderFallback() {
+#if !SILVERLIGHT
                 _encoding.EncoderFallback = EncoderFallback;
+#endif
+            }
+
+            private void SetDecoderFallback() {
+#if !SILVERLIGHT
+                _encoding.DecoderFallback = DecoderFallback;
+#endif
+            }
+
+            public override int GetByteCount(char[] chars, int index, int count) {
+                SetEncoderFallback();
                 return _encoding.GetByteCount(chars, index, count);
             }
 
             public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex) {
-                _encoding.EncoderFallback = EncoderFallback;
+                SetEncoderFallback();
                 return _encoding.GetBytes(chars, charIndex, charCount, bytes, byteIndex);
             }
 
             public override int GetCharCount(byte[] bytes, int index, int count) {
-                _encoding.DecoderFallback = DecoderFallback;
+                SetDecoderFallback();
                 return _encoding.GetCharCount(bytes, index, count);
             }
 
             public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex) {
-                _encoding.DecoderFallback = DecoderFallback;
+                SetDecoderFallback();
                 return _encoding.GetChars(bytes, byteIndex, byteCount, chars, charIndex);
             }
 
             public override int GetMaxByteCount(int charCount) {
-                _encoding.EncoderFallback = EncoderFallback;
+                SetEncoderFallback();
                 return _encoding.GetMaxByteCount(charCount);
             }
 
             public override int GetMaxCharCount(int byteCount) {
-                _encoding.DecoderFallback = DecoderFallback;
+                SetDecoderFallback();
                 return _encoding.GetMaxCharCount(byteCount);
             }
 

@@ -30,8 +30,11 @@ namespace Microsoft.Scripting.Math {
         private const int BitsPerDigit = 32;
         private const ulong Base = 0x100000000;
 
+        // -1 if negative, +1 if positive, 0 if zero.
         private readonly short sign;
-        private readonly uint[] data;
+
+        // Non-null. data[0] is the least significant 32 bits.
+        private readonly uint[] /*!*/ data;
 
         [SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly BigInteger Zero = new BigInteger(0, new uint[0]);
@@ -165,6 +168,10 @@ namespace Microsoft.Scripting.Math {
 
         private static int bias = 1075;
         public static BigInteger Create(double v) {
+            if (Double.IsNaN(v) || Double.IsInfinity(v)) {
+                throw new OverflowException();
+            }
+
             byte[] bytes = System.BitConverter.GetBytes(v);
             ulong mantissa = Mantissa(bytes);
             if (mantissa == 0) {
@@ -228,6 +235,7 @@ namespace Microsoft.Scripting.Math {
             return Create(i);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public static implicit operator double(BigInteger i) {
             if (object.ReferenceEquals(i, null)) {
                 throw new ArgumentNullException("i");
@@ -316,6 +324,10 @@ namespace Microsoft.Scripting.Math {
                 return res;
             }
             throw new OverflowException();
+        }
+
+        public static explicit operator BigInteger(double self) {
+            return Create(self);
         }
 
         public BigInteger(BigInteger copy) {
@@ -625,6 +637,7 @@ namespace Microsoft.Scripting.Math {
             return !(x == y);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public static bool operator ==(BigInteger x, double y) {
             if (object.ReferenceEquals(x, null)) {
                 throw new ArgumentNullException("x");
@@ -1412,12 +1425,32 @@ namespace Microsoft.Scripting.Math {
         }
 
         public override int GetHashCode() {
-            if (data.Length == 0) return 0;
-            // HashCode must be same as int for values in the range of a single int
-            if (IsNegative())
-                return -(int)data[0];
+            // The Object.GetHashCode function needs to be consistent with the Object.Equals function.
+            // Languages that build on top of this may have a more flexible equality function and 
+            // so may not be able to use this hash function directly.
+            // For example, Python allows BigInteger(10) == int32(10), so hashing a BigInt over the Int32
+            // domain should return the same value as a hash of the Int32.
 
-            return (int)data[0];
+            // If this is in the int32 range, this hash function returns the integer.
+            if (data.Length == 0) {
+                return 0;
+            }
+            
+            // Add up all uints. We want to incorporate all bits to get good hash distribution. 
+            uint total = 0;
+            foreach (uint x in data) {
+                total = unchecked(total + x);
+            }
+            
+            int hash = unchecked((int)total);
+
+            // The sign is not part of the data array, so explicitly incorporate that.
+            // This is also needed to ensure that hash(-x) == -x for int32.
+            if (IsNegative()) {
+                return -hash;
+            } else {
+                return hash;
+            }
         }
 
         public override bool Equals(object obj) {

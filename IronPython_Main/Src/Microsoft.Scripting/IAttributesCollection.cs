@@ -28,11 +28,17 @@ namespace Microsoft.Scripting {
         /// Access using SymbolId keys
         ///
         void Add(SymbolId name, object value);
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         bool TryGetValue(SymbolId name, out object value);
+
         bool Remove(SymbolId name);
+
         bool ContainsKey(SymbolId name);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
         object this[SymbolId name] { get; set; }
+
         // This returns just the attributes that are keyed using SymbolIds. It will ignore any object-keyed attributes
         IDictionary<SymbolId, object> SymbolAttributes { get; }
 

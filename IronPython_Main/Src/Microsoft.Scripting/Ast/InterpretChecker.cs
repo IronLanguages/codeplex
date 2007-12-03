@@ -34,6 +34,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
         public static bool CanEvaluate(CodeBlock node, bool useHeuristics) {
             InterpretChecker walker = new InterpretChecker();
             walker.WalkNode(node);
@@ -46,13 +47,13 @@ namespace Microsoft.Scripting.Ast {
         // Rather than adding to this category, consider implementing Evaluate() on the node!
         //
 
-        protected internal override bool Walk(ParamsExpression node) {
-            _hasUnsupportedNodes = true;
-            return false;
-        }
-
-        protected internal override bool Walk(EnvironmentExpression node) {
-            _hasUnsupportedNodes = true;
+        protected internal override bool Walk(IntrinsicExpression node) {
+            switch (node.NodeType) {
+                case AstNodeType.ParamsExpression:
+                case AstNodeType.EnvironmentExpression:
+                    _hasUnsupportedNodes = true;
+                    break;
+            }
             return false;
         }
 

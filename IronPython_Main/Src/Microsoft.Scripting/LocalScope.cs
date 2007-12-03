@@ -13,22 +13,19 @@
  *
  * ***************************************************************************/
 
-#if !SILVERLIGHT // ComObject
-
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Microsoft.Scripting;
+using System.Threading;
+using System.Diagnostics;
+using System.Reflection;
+using Microsoft.Scripting.Ast;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-    class DispMethod : DispCallable, ICallableWithCodeContext {
-        internal DispMethod(IDispatch dispatch, ComDispatch.ComMethodDesc methodDesc) 
-            : base(dispatch, methodDesc) {
-        }
+namespace Microsoft.Scripting {
 
-        public object Call(CodeContext context, object[] args) {
-            return base.Call(args);
+    // TODO:
+    public class LocalScope {
+        public LocalScope() {
         }
     }
 }
-#endif

@@ -14,10 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class BreakStatement : Statement {
+    public sealed class BreakStatement : Statement {
         private Statement _statement;
 
         internal BreakStatement(SourceSpan span, Statement statement)
@@ -28,24 +27,6 @@ namespace Microsoft.Scripting.Ast {
         public Statement Statement {
             get { return _statement; }
             set { _statement = value; }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-
-            if (_statement != null) {
-                cg.CheckAndPushTargets(_statement);
-            }
-
-            cg.EmitBreak();
-
-            if (_statement != null) {
-                cg.PopTargets();
-            }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            return Statement.Break;
         }
     }
 

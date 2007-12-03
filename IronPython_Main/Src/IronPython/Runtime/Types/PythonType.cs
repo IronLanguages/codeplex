@@ -15,17 +15,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Globalization;
-using System.Threading;
 using System.Reflection;
+using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -2071,8 +2070,8 @@ namespace IronPython.Runtime.Types {
                     return true;
             }
 
-            if (IsImmutable) {                
-                throw new MissingMemberException(String.Format("'{0}' object has no attribute '{1}'", Name, SymbolTable.IdToString(name)));
+            if (IsImmutable) {
+                throw new MissingMemberException(String.Format("can't delete attributes of built-in/extension type '{0}'", Name, SymbolTable.IdToString(name)));
             }
 
             EventHandler<PythonTypeChangedEventArgs> dtc = OnChange;
@@ -2098,7 +2097,7 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
             List<object> res = new List<object>();
             foreach(SymbolId x in GetMemberNames(context)){
                 res.Add(x.ToString());

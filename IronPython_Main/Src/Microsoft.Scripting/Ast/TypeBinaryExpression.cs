@@ -14,18 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class TypeBinaryExpression : Expression {
+    public sealed class TypeBinaryExpression : Expression {
         private readonly Expression /*!*/ _expression;
         private readonly Type /*!*/ _typeOperand;
 
         internal TypeBinaryExpression(AstNodeType nodeType, Expression /*!*/ expression, Type /*!*/ typeOperand)
-            : base(nodeType) {
+            : base(nodeType, typeof(bool)) {
             _expression = expression;
             _typeOperand = typeOperand;
         }
@@ -38,36 +35,12 @@ namespace Microsoft.Scripting.Ast {
             get { return _typeOperand; }
         }
 
-        public override Type Type {
-            get {
-                return typeof(bool);
-            }
-        }
-
         public override bool IsConstant(object value) {
             // allow constant TypeIs expressions to be optimized away
             if (value is bool && ((bool)value) == true) {
                 return _typeOperand.IsAssignableFrom(_expression.Type);
             }
             return false;
-        }
-
-        public override void Emit(CodeGen cg) {
-            if (_typeOperand.IsAssignableFrom(_expression.Type)) {
-                // if its always true just emit the bool
-                cg.EmitConstant(true);
-                return;
-            }
-
-            _expression.EmitAsObject(cg);
-            cg.Emit(OpCodes.Isinst, _typeOperand);
-            cg.Emit(OpCodes.Ldnull);
-            cg.Emit(OpCodes.Cgt_Un);
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return RuntimeHelpers.BooleanToObject(
-                _typeOperand.IsInstanceOfType(_expression.Evaluate(context)));
         }
     }
 

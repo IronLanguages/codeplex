@@ -97,7 +97,9 @@ namespace Microsoft.Scripting.Ast {
                     DefaultWalk((CodeBlockExpression)node);
                     break;
                 case AstNodeType.CodeContextExpression:
-                    DefaultWalk((CodeContextExpression)node);
+                case AstNodeType.EnvironmentExpression:
+                case AstNodeType.ParamsExpression:
+                    DefaultWalk((IntrinsicExpression)node);
                     break;
                 case AstNodeType.CommaExpression:
                     DefaultWalk((CommaExpression)node);
@@ -122,9 +124,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.EmptyStatement:
                     DefaultWalk((EmptyStatement)node);
-                    break;
-                case AstNodeType.EnvironmentExpression:
-                    DefaultWalk((EnvironmentExpression)node);
                     break;
                 case AstNodeType.ExpressionStatement:
                     DefaultWalk((ExpressionStatement)node);
@@ -152,9 +151,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.NewArrayExpression:
                     DefaultWalk((NewArrayExpression)node);
-                    break;
-                case AstNodeType.ParamsExpression:
-                    DefaultWalk((ParamsExpression)node);
                     break;
                 case AstNodeType.ParenthesizedExpression:
                     DefaultWalk((ParenthesizedExpression)node);
@@ -252,12 +248,6 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // CodeContextExpression
-        private void DefaultWalk(CodeContextExpression node) {
-            Walk(node);
-            PostWalk(node);
-        }
-
         // CommaExpression
         private void DefaultWalk(CommaExpression node) {
             if (Walk(node)) {
@@ -298,8 +288,8 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // EnvironmentExpression
-        private void DefaultWalk(EnvironmentExpression node) {
+        // IntrinsicExpression
+        private void DefaultWalk(IntrinsicExpression node) {
             Walk(node);
             PostWalk(node);
         }
@@ -355,12 +345,6 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
             }
-            PostWalk(node);
-        }
-
-        // ParamsExpression
-        private void DefaultWalk(ParamsExpression node) {
-            Walk(node);
             PostWalk(node);
         }
 

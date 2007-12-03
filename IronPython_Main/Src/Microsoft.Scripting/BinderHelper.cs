@@ -55,16 +55,18 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _context.LanguageContext.Binder;
             }
-        }        
-               
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static UnaryExpression GetParamsList(StandardRule<T> rule) {
             return Ast.Convert(
                 rule.Parameters[rule.ParameterCount - 1],
                 typeof(IList<object>)
             );
         }
-      
-        public static Expression MakeParamsTest(StandardRule<T> rule, object paramArg, Expression listArg) {
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
+        public static Expression MakeParamsTest(StandardRule rule, object paramArg, Expression listArg) {
             return Ast.AndAlso(
                 Ast.TypeIs(listArg, typeof(ICollection<object>)),
                 Ast.Equal(
@@ -77,6 +79,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static Type[] GetArgumentTypes(CallAction action, object[] args) {
             List<Type> res = new List<Type>();
             for (int i = 1; i < args.Length; i++) {
@@ -147,7 +150,8 @@ namespace Microsoft.Scripting.Actions {
             }
             return null;
         }
-       
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {            
             Expression typeTest = Ast.Constant(true);
             if (necessaryTests.Count > 0) {

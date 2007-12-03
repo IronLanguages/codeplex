@@ -20,23 +20,22 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-
+namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
     /// ComEventSinksContainer is just a regular list with a finalizer.
     /// This list is usually attached as a custom data for RCW object and 
     /// is finalized whenever RCW is finalized.
     /// </summary>
-    class ComEventSinksContainer : List<ComEventSink>, IDisposable {
-
+    public class ComEventSinksContainer : List<ComEventSink>, IDisposable {
         private static readonly object _ComObjectEventSinksKey = (object)2;
 
-        internal static ComEventSinksContainer FromRCW(object rcw, bool createIfNotFound) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
+        public static ComEventSinksContainer FromRCW(object rcw, bool createIfNotFound) {
             // !!! Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
             // a full demand. We need to avoid this by making this method SecurityCritical
             object data = Marshal.GetComObjectData(rcw, _ComObjectEventSinksKey);
             if (data != null || createIfNotFound == false) {
-                return (ComEventSinksContainer )data;
+                return (ComEventSinksContainer)data;
             }
 
             lock (_ComObjectEventSinksKey) {
@@ -63,9 +62,11 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
         #endregion
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "disposing")]
         private void Dispose(bool disposing) {
-            foreach (ComEventSink sink in this)
+            foreach (ComEventSink sink in this) {
                 sink.Dispose();
+            }
         }
 
         ~ComEventSinksContainer() {

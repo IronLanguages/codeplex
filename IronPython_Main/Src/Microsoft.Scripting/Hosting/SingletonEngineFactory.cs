@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public sealed class SingletonEngineFactory<EngineType, EngineOptionsType, LanguageProviderType>
         where EngineType : ScriptEngine
         where EngineOptionsType : EngineOptions

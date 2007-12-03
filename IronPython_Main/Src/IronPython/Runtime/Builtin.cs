@@ -14,29 +14,26 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Reflection;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Exceptions;
-using IronPython.Runtime.Calls;
 using IronPython.Compiler;
-using IronPython.Compiler.Generation;
-using IronPython.Runtime.Operations;
 using IronPython.Hosting;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
@@ -88,7 +85,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
 
-            ScriptModule mod = ret as ScriptModule;
+            ScriptScope mod = ret as ScriptScope;
             if (mod != null && from != null) {
                 string strAttrName;
                 object attrValue;
@@ -201,23 +198,12 @@ namespace IronPython.Runtime {
                 return PythonTuple.MakeTuple(null, null);
             }
 
-            if (x != null) {
-                if (Converter.TryConvert(y, x.GetType(), out converted)) {
-                    return PythonTuple.MakeTuple(x, converted);
-                }
-            }
-            if (y != null) {
-                if (Converter.TryConvert(x, y.GetType(), out converted)) {
-                    return PythonTuple.MakeTuple(converted, y);
-                }
-            }
-
             converted = TryCoerce(context, x, y);
-            if (converted != null) {
+            if (converted != null && converted != PythonOps.NotImplemented) {
                 return converted;
             }
             converted = TryCoerce(context, y, x);
-            if (converted != null) {
+            if (converted != null && converted != PythonOps.NotImplemented) {
                 return PythonTuple.Make(reversed(converted));
             }
 
@@ -226,6 +212,10 @@ namespace IronPython.Runtime {
 
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
         public static object compile(CodeContext context, string source, string filename, string kind, object flags, object dontInherit) {
+            if (source.IndexOf('\0') != -1) {
+                throw PythonOps.TypeError("compile() expected string without null bytes");
+            }
+
             bool inheritContext = GetCompilerInheritance(dontInherit);
             CompileFlags cflags = GetCompilerFlags(flags);
             PythonContext lc = GetCompilerLanguageContext(context, inheritContext, cflags);
@@ -526,11 +516,12 @@ namespace IronPython.Runtime {
         private static void help(CodeContext context, List<object> doced, StringBuilder doc, int indent, object o) {
             PythonType dt;
             BuiltinFunction bf;
+            BoundBuiltinFunction bbf;
             PythonFunction pf;
             BuiltinMethodDescriptor methodDesc;
             Method m;
             string strVal;
-            ScriptModule sm;
+            ScriptScope sm;
             OldClass oc;
 
             if (doced.Contains(o)) return;  // document things only once
@@ -614,6 +605,14 @@ namespace IronPython.Runtime {
                 doc.Append("(...)\n");
 
                 AppendMultiLine(doc, methodDesc.__doc__, indent + 1);
+            } else if ((bbf = o as BoundBuiltinFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bbf.Target.__name__);
+
+                AppendIndent(doc, indent);
+                doc.Append(bbf.Target.__name__);
+                doc.Append("(...)\n");
+
+                AppendMultiLine(doc, bbf.Target.__doc__, indent + 1);
             } else if ((bf = o as BuiltinFunction) != null) {
                 if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bf.Name);
                 AppendIndent(doc, indent);
@@ -622,16 +621,16 @@ namespace IronPython.Runtime {
 
                 AppendMultiLine(doc, bf.__doc__, indent + 1);
             } else if ((pf = o as PythonFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", pf.Name, pf.Module);
+                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", pf.__name__, pf.__module__);
 
                 AppendIndent(doc, indent);
                 doc.Append(pf.GetSignatureString());
-                string pfDoc = Converter.ConvertToString(pf.Documentation);
+                string pfDoc = Converter.ConvertToString(pf.__doc__);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
             } else if ((m = o as Method) != null && ((pf = m.Function as PythonFunction) != null)) {
-                if (indent == 0) doc.AppendFormat("Help on method {0} in module {1}:\n\n", pf.Name, pf.Module);
+                if (indent == 0) doc.AppendFormat("Help on method {0} in module {1}:\n\n", pf.__name__, pf.__module__);
 
                 AppendIndent(doc, indent);
                 doc.Append(pf.GetSignatureString());
@@ -640,11 +639,11 @@ namespace IronPython.Runtime {
                 } else {
                     doc.AppendFormat(" method of {0} instance\n", PythonOps.ToString(m.DeclaringClass));
                 }
-                string pfDoc = Converter.ConvertToString(pf.Documentation);
+                string pfDoc = Converter.ConvertToString(pf.__doc__);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
-            } else if ((sm = o as ScriptModule) != null) {
+            } else if ((sm = o as ScriptScope) != null) {
                 foreach (SymbolId si in sm.Scope.Keys) {
                     if (si == Symbols.Class || si == Symbols.Builtins) continue;
 
@@ -665,7 +664,7 @@ namespace IronPython.Runtime {
                     doc.AppendLine();
                 }
 
-                IList<object> names = oc.GetCustomMemberNames(context);
+                IList<object> names = oc.GetMemberNames(context);
                 List sortNames = new List(names);
                 sortNames.Sort();
                 names = sortNames;
@@ -1190,7 +1189,7 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static object reload(CodeContext context, ScriptModule module) {
+        public static object reload(CodeContext context, ScriptScope module) {
             ((PythonContext)DefaultContext.Default.LanguageContext).CheckReloadable(module);
             module.Reload();
             return module;
@@ -1224,11 +1223,7 @@ namespace IronPython.Runtime {
             object getitem;
             object len;
 
-            // OldClass check: we currently are in a strange state where we partially support
-            // descriptors on old-style classes, although we're not supposed to.  We special
-            // case it here until that's fixed.
-            if (o is OldClass ||
-                !PythonOps.TryGetBoundAttr(o, Symbols.GetItem, out getitem) ||
+            if (!PythonOps.TryGetBoundAttr(o, Symbols.GetItem, out getitem) ||
                 !PythonOps.TryGetBoundAttr(o, Symbols.Length, out len) ||
                 o is PythonDictionary) {
                 throw PythonOps.TypeError("argument to reversed() must be a sequence");
@@ -1241,12 +1236,12 @@ namespace IronPython.Runtime {
             return new ReversedEnumerator((int)length, getitem);
         }
 
-        public static double round(double x) {
-            return MathUtils.RoundAwayFromZero(x);
+        public static double round(double number) {
+            return MathUtils.RoundAwayFromZero(number);
         }
 
-        public static double round(double x, int n) {
-            return MathUtils.RoundAwayFromZero(x, n);
+        public static double round(double number, int ndigits) {
+            return MathUtils.RoundAwayFromZero(number, ndigits);
         }
 
         public static void setattr(CodeContext context, object o, string name, object val) {

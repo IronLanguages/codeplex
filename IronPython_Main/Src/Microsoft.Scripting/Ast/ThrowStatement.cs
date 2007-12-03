@@ -14,14 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection.Emit;
-using System.Diagnostics;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ThrowStatement : Statement {
+    public sealed class ThrowStatement : Statement {
         private readonly Expression _val;
 
         internal ThrowStatement(SourceSpan span, Expression value)
@@ -32,24 +29,6 @@ namespace Microsoft.Scripting.Ast {
         public Expression Value {
             get {
                 return _val;
-            }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            if (_val == null) {
-                throw TryStatement.LastEvalException;
-            } else {
-                throw (Exception)_val.Evaluate(context);
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-            if (_val == null) {
-                cg.Emit(OpCodes.Rethrow);
-            } else {
-                _val.Emit(cg);
-                cg.Emit(OpCodes.Throw);
             }
         }
 

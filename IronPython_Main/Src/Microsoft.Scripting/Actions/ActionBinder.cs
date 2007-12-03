@@ -14,14 +14,13 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
-using System.Collections;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -78,7 +77,7 @@ namespace Microsoft.Scripting.Actions {
             return rule;
         }
 
-        internal object ExecuteRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
+        public object ExecuteRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
             T target = default(T);
             RuleSet<T> rules = null;
             
@@ -128,14 +127,14 @@ namespace Microsoft.Scripting.Actions {
 
                 CodeContext tmpCtx = callerContext.Scope.GetTemporaryVariableContext(callerContext, rule.ParamVariables, callArgs);
                 try {
-                    if ((bool)rule.Test.Evaluate(tmpCtx)) {
+                    if ((bool)Interpreter.EvaluateExpression(tmpCtx, rule.Test)) {
                         if (site != null) {
                             DynamicSiteHelpers.UpdateSite<T>(callerContext, site, ref target, ref rules, rule);
                         }
 
                         _ruleCache.AddRule(action, args, rule);
 
-                        return rule.Target.Execute(tmpCtx);
+                        return rule.ExecuteTarget(site, tmpCtx, callArgs);
                     }
                 } finally {
                     tmpCtx.Scope.TemporaryStorage.Clear();
@@ -151,8 +150,8 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets a rule for the provided action and arguments and executes it without compiling.
         /// </summary>
-        public object Execute(CodeContext cc, DynamicAction action, object[] args) {
-            return DynamicSiteHelpers.Execute(cc, this, action, args);
+        public object Execute(CodeContext cc, DynamicAction action, Type[] types, object[] args) {
+            return DynamicSiteHelpers.Execute(cc, this, action, types, args);
         }
 
         public virtual AbstractValue AbstractExecute(DynamicAction action, IList<AbstractValue> args) {
@@ -250,7 +249,26 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Converts the provided expression to the given type.  The expression is safe to evaluate multiple times.
         /// </summary>
-        public abstract Expression ConvertExpression(Expression expr, Type toType);
+        public virtual Expression ConvertExpression(Expression expr, Type toType) {
+            Type exprType = expr.Type;
+
+            if (toType == typeof(object)) {
+                if (exprType.IsValueType) {
+                    return Ast.Ast.Convert(expr, toType);
+                } else {
+                    return expr;
+                }
+            }
+
+            if (toType.IsAssignableFrom(exprType)) {
+                return expr;
+            }
+
+            Type visType = CompilerHelpers.GetVisibleType(toType);
+            return Ast.Ast.Action.ConvertTo(
+                ConvertToAction.Make(visType, ConversionResultKind.ExplicitCast),
+                expr);
+        }
 
         /// <summary>
         /// Returns an expression which checks to see if the provided expression can be converted to the provided type.
@@ -375,6 +393,31 @@ namespace Microsoft.Scripting.Actions {
                 Ast.Ast.New(
                     typeof(MemberAccessException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Ast.Constant(info.Name)
+                )
+            );
+        }
+
+        /// <summary>
+        /// Creates an ErrorInfo object when a static property is accessed from an instance member.  The default behavior is throw
+        /// an exception indicating that static members properties be accessed via an instance.  Languages can override this to 
+        /// customize the exception, message, or to produce an ErrorInfo object which reads or writes to the property being accessed.
+        /// </summary>
+        /// <param name="tracker">The static property being accessed through an instance</param>
+        /// <param name="isAssignment">True if the user is assigning to the property, false if the user is reading from the property</param>
+        /// <param name="parameters">The parameters being used to access the property.  This includes the instance as the first entry, any index parameters, and the
+        /// value being assigned as the last entry if isAssignment is true.</param>
+        /// <returns></returns>
+        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression/*!*/[]/*!*/ parameters) {
+            Contract.RequiresNotNull(tracker, "tracker");
+            Contract.Requires(tracker.IsStatic, "expected only static property");
+            Contract.RequiresNotNull(parameters, "parameters");
+            Contract.RequiresNotNullItems(parameters, "parameters");
+
+            return ErrorInfo.FromException(
+                Ast.Ast.Call(
+                    typeof(BinderOps).GetMethod("StaticAssignmentFromInstanceError"),
+                    Ast.Ast.RuntimeConstant(tracker),
+                    Ast.Ast.Constant(isAssignment)
                 )
             );
         }

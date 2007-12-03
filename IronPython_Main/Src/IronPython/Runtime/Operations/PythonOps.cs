@@ -14,30 +14,26 @@
  * ***************************************************************************/
 
 using System;
-using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Diagnostics;
+using System.Text;
+using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime;
-using IronPython.Runtime.Types;
+using IronPython.Hosting;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
-using IronPython.Compiler;
-using IronPython.Compiler.Generation;
-using IronPython.Hosting;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Operations {
 
@@ -71,7 +67,8 @@ namespace IronPython.Runtime.Operations {
         private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
         private static FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
         private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();               
+        private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+        private static Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();               
 
 
         #endregion
@@ -637,6 +634,9 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
+            if (count is double || count is float || count is Extensible<double> || count is Extensible<float>) {
+                throw TypeError("can't multiply sequence by non-int of type 'float'");
+            }
             int icount = Converter.ConvertToInt32(count);
             if (icount < 0) icount = 0;
             return multiplier(sequence, icount);
@@ -792,7 +792,7 @@ namespace IronPython.Runtime.Operations {
                 if (val < 0) return -1;
                 return 0;
             }
-            throw PythonOps.TypeErrorForBadInstance("unable to compare type {0} with 0 ", value);
+            throw PythonOps.TypeErrorForBadInstance("an integer is required (got {0})", value);
         }
 
         public static int CompareArrays(object[] data0, int size0, object[] data1, int size1) {
@@ -837,8 +837,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static IEnumerator GetEnumerator(object o) {
-            IEnumerator ie;
-            if (!Converter.TryConvertToIEnumerator(o, out ie)) {
+            IEnumerator ie = Converter.ConvertToIEnumerator(o);
+            if (ie == null) {
                 throw PythonOps.TypeError("{0} is not enumerable", StringRepr(o));
             }
             return ie;
@@ -860,25 +860,150 @@ namespace IronPython.Runtime.Operations {
         public static string HexId(object o) {
             return string.Format("0x{0:X16}", Id(o));
         }
+        
+        #region Hash operations
+        // For hash operators, it's essential that:
+        //  Cmp(x,y)==0 implies hash(x) == hash(y)
+        //
+        // Equality is a language semantic determined by the Python's numerical Compare() ops 
+        // in IronPython.Runtime.Operations namespaces.
+        // For example, the CLR compares float(1.0) and int32(1) as different, but Python
+        // compares them as equal. So Hash(1.0f) and Hash(1) must be equal.
+        //
+        // Python allows an equality relationship between int, double, BigInteger, and complex.
+        // So each of these hash functions must be aware of their possible equality relationships
+        // and hash appropriately.
+        //
+        // So we have hashing in the following layers:
+        //   CommonHash(object) - initial entry for arbitrary System.Object
+        //   Hash* - entry for a given type, checks for equality relationships. 
+        //           Within this layer, calls flow from: Complex --> Double --> BigInt --> Int.
+        //   DisjointHash* - hashes a given type that is disjoint from other types and so does not
+        //                   need to deal with equality relationships..
+        //   Object.GetHashCode() - DLR / CLR general hashing functions. These do not respect language-
+        //       specific equality conventions.
+        //
+        // Layers should not call back up to a higher layer.
+        
+
+        static int HashInt(int i) {
+            // Doubles and BigInts may overlap with ints. Those other hash functions will check
+            // their domain and map to ours.
+            return DisjointHashInt(i);
+        }
+
+        static int HashDouble(double d) {
+            // Python allows equality between floats, ints, and big ints.
+            if ((d % 1) == 0) {
+                // This double represents an integer number, so it must hash like an integer number.
+                if (Int32.MinValue <= d && d <= Int32.MaxValue) {
+                    return HashInt((int) d);
+                }
+                // Big integer
+                BigInteger b = BigInteger.Create(d);
+                return HashBigInt(b);
+            }
+            return DisjointHashDouble(d);
+        }
+
+        static int HashBigInt(BigInteger b) {
+            // Call the DLR's BigInteger hash function, which will return an int32 representation of
+            // b if b is within the int32 range. We use that as an optimization for hashing, and 
+            // assert the assumption below.
+            int hash = b.GetHashCode();
+#if DEBUG
+            int i;
+            if (b.AsInt32(out i)) {
+                Debug.Assert(DisjointHashInt(i) == hash, "input:" + i);
+            }
+#endif
+            return hash;
+        }
+
+        static int HashComplex(Complex64 c) {
+            if (c.Imag == 0) {
+                return HashDouble(c.Real);
+            }
+            return DisjointHashComplex(c);
+        }
+
+        #region Raw Hash functions for disjoint regions        
+        // Bottom level of hashing. 
+        // Callers have already done equality comparisons. At this point, we can use any hash technique we want,
+        // including calling into Framework or DLR implementations of Object.GetHashCode.
+        // Beware that those hash functions can change between releases of thoses libraries.               
+
+        static int DisjointHashInt(int i) {
+            return i;
+        }
+
+        static int DisjointHashDouble(double d) {
+            Debug.Assert((d % 1) != 0); // If this was an int, caller should have delegated to DisjointHashInt()
+            return d.GetHashCode();
+        }
+
+        static int DisjointHashComplex(Complex64 c) {
+            Debug.Assert(c.Imag != 0); // if this was float, caller should have delegated to DisjointHashDouble()
+            return c.GetHashCode();
+        }
+        #endregion // Raw Hash functions for disjoint regions
+
+        /// <summary>
+        /// Attempt to hash common known object values. This is shared by both SimpleHash() and Hash(). 
+        /// </summary>
+        /// <param name="o">the object to hash </param>
+        /// <param name="hashvalue">the hash value, only valid if this function returns true.</param>
+        /// <returns>true if this can hash the object, else false</returns>
+        static bool CommonHash(object o, out int hashvalue) {
+            if (o is int) {
+                hashvalue = HashInt((int)o);
+                return true;
+            }
+            if (o is string) {
+                // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
+                hashvalue = o.GetHashCode(); 
+                return true;
+            }
+            if (o is double) {
+                hashvalue = HashDouble((double)o);
+                return true;
+            }
+            if (o == null) {
+                hashvalue = NoneTypeOps.HashCode;
+                return true;
+            }
+            if (o is char) {
+                hashvalue = new String((char)o, 1).GetHashCode();
+                return true;
+            }
+            if (o is BigInteger) {
+                hashvalue = HashBigInt((BigInteger)o);
+                return true;
+            }
+            if (o is Complex64) {
+                hashvalue = HashComplex((Complex64)o);
+                return true;
+            }
+
+            // Need to use another technique to hash.
+            hashvalue = 0;
+            return false;
+        }
 
         public static int SimpleHash(object o) {
-            // must stay in sync w/ Ops.Hash!  This is just the version w/o RichEquality checks
-            if (o is int) return (int)o;
-            if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
-            if (o is double) return (int)(double)o;
-            if (o == null) return NoneTypeOps.HashCode;
-            if (o is char) return new String((char)o, 1).GetHashCode();
+            int hash;
+            if (CommonHash(o, out hash)) {
+                return hash;
+            }
 
             return o.GetHashCode();
         }
 
         public static int Hash(object o) {
-            // must stay in sync w/ Ops.SimpleHash!  This is just the version w/ RichEquality checks
-            if (o is int) return (int)o;
-            if (o is string) return o.GetHashCode();    // avoid lookups on strings - A) We can stack overflow w/ Dict B) they don't define __hash__
-            if (o is double) return (int)(double)o;
-            if (o == null) return NoneTypeOps.HashCode;
-            if (o is char) return new String((char)o, 1).GetHashCode();
+            int hash;
+            if (CommonHash(o, out hash)) {
+                return hash;
+            }
 
             IValueEquality ipe = o as IValueEquality;
             if (ipe != null) {
@@ -889,12 +1014,25 @@ namespace IronPython.Runtime.Operations {
                     o,
                     out ret);
                 if (ret != PythonOps.NotImplemented) {
+                    BigInteger bi = ret as BigInteger;
+                    if (!Object.ReferenceEquals(bi, null)) {
+                        // big int's wrap around in hashing when they overflow on CPython, so
+                        // we'll do it too...
+                        int res;
+                        if (bi.AsInt32(out res)) {
+                            return res;
+                        }
+
+                        return BigIntegerOps.Mod(bi, Int32.MaxValue).ToInt32();
+                    }
                     return Converter.ConvertToInt32(ret);
                 }
             }
 
             return o.GetHashCode();
         }
+
+        #endregion // Hash operations
 
         public static object Hex(object o) {
             if (o is int) return Int32Ops.Hex((int)o);
@@ -936,9 +1074,6 @@ namespace IronPython.Runtime.Operations {
         public static int Length(object o) {
             string s = o as String;
             if (s != null) return s.Length;
-
-            IPythonContainer seq = o as IPythonContainer;
-            if (seq != null) return seq.GetLength();
 
             ICollection ic = o as ICollection;
             if (ic != null) return ic.Count;
@@ -1102,10 +1237,6 @@ namespace IronPython.Runtime.Operations {
                 //???
             }
 
-            IMapping map = o as IMapping;
-            if (map != null) {
-                return map[index];
-            }
             return SlowGetIndex(o, index);
         }
 
@@ -1198,12 +1329,6 @@ namespace IronPython.Runtime.Operations {
                 //???
             }
 
-            IMapping map = o as IMapping;
-            if (map != null) {
-                map[index] = value;
-                return;
-            }
-
             SlowSetIndex(o, index, value);
         }
 
@@ -1261,9 +1386,11 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            IMapping map = o as IMapping;
-            if (map != null) {
-                map.DeleteItem(index);
+            IDictionary<object, object> dict = o as IDictionary<object, object>;
+            if (dict != null) {
+                if (!dict.Remove(index)) {
+                    throw PythonOps.KeyError(index);
+                }                
                 return;
             }
 
@@ -1305,7 +1432,19 @@ namespace IronPython.Runtime.Operations {
                 return _type.GetHashCode() ^ _name.GetHashCode();
             }
         }
-        
+
+        public static void SetAttr(CodeContext context, object o, SymbolId name, object value) {
+            DynamicSite<object, object, object> site;
+            lock (_setAttrSites) {
+                AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
+                if (!_setAttrSites.TryGetValue(key, out site)) {
+                    _setAttrSites[key] = site = DynamicSite<object, object, object>.Create(SetMemberAction.Make(name));
+                }
+            }
+
+            site.Invoke(context, o, value);
+        }
+
         public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
             DynamicSite<object, object> site;
             lock (_tryGetMemSites) {
@@ -1411,22 +1550,6 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static void SetAttr(CodeContext context, object o, SymbolId name, object value) {
-            ICustomMembers ids = o as ICustomMembers;
-
-            if (ids != null) {
-                try {
-                    ids.SetCustomMember(context, name, value);
-                } catch (InvalidOperationException) {
-                    throw AttributeErrorForMissingAttribute(o, name);
-                }
-                return;
-            }
-
-            if (!DynamicHelpers.GetPythonType(o).TrySetMember(context, o, name, value))
-                throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
-        }
-
         public static Exception AttributeErrorForMissingOrReadonly(CodeContext context, PythonType dt, SymbolId name) {
             PythonTypeSlot dts;
             if (dt.TryResolveSlot(context, name, out dts)) {
@@ -1450,7 +1573,7 @@ namespace IronPython.Runtime.Operations {
 
             if (memList != null) {
 
-                return memList.GetCustomMemberNames(context);
+                return memList.GetMemberNames(context);
             }
 
             List res = new List();
@@ -1590,7 +1713,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object IsMappingType(CodeContext context, object o) {
-            if (o is IMapping || o is PythonDictionary || o is IDictionary<object, object> || o is IAttributesCollection) {
+            if (o is IDictionary || o is PythonDictionary || o is IDictionary<object, object> || o is IAttributesCollection) {
                 return RuntimeHelpers.True;
             }
             object getitem;
@@ -1806,8 +1929,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception InvalidType(object o, RuntimeTypeHandle handle) {
-            Type type = Type.GetTypeFromHandle(handle);
-            return TypeError("Object {0} is not of type {1}", o == null ? "None" : o, type);
+            return PythonOps.TypeErrorForTypeMismatch(PythonTypeOps.GetName(Type.GetTypeFromHandle(handle)), o);
         }
 
         public static Exception ZeroDivisionError() {
@@ -2085,7 +2207,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="stop">End of the slice.</param>
         /// <param name="step">Step of the slice.</param>
         /// <returns>Slice</returns>
-        public static object MakeSlice(object start, object stop, object step) {
+        public static Slice MakeSlice(object start, object stop, object step) {
             return new Slice(start, stop, step);
         }
 
@@ -2264,7 +2386,7 @@ namespace IronPython.Runtime.Operations {
         public static void ImportStar(CodeContext context, string fullName) {
             object newmod = PythonEngine.CurrentEngine.Importer.Import(context, fullName, PythonTuple.MakeTuple("*"));
 
-            ScriptModule pnew = newmod as ScriptModule;
+            ScriptScope pnew = newmod as ScriptScope;
             if (pnew != null) {
                 object all;
                 if (pnew.Scope.TryGetName(context.LanguageContext, Symbols.All, out all)) {
@@ -2472,7 +2594,6 @@ namespace IronPython.Runtime.Operations {
 
         private static TraceBack CreateTraceBack(Exception e) {
             // user provided trace back
-            object result;
             if (e.Data.Contains(typeof(TraceBack))) {
                 return (TraceBack)e.Data[typeof(TraceBack)];
             }
@@ -2487,10 +2608,10 @@ namespace IronPython.Runtime.Operations {
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),
                     new LocalsDictionary(frame.CodeContext.Scope),
-                    fx.FunctionCode);
+                    fx.func_code);
 
-                fx.FunctionCode.SetFilename(frame.GetFileName());
-                fx.FunctionCode.SetLineNumber(frame.GetFileLineNumber());
+                fx.func_code.SetFilename(frame.GetFileName());
+                fx.func_code.SetLineNumber(frame.GetFileLineNumber());
                 tb = new TraceBack(tb, tbf);
                 tb.SetLine(frame.GetFileLineNumber());
             }
@@ -2595,10 +2716,14 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
+        public static string[] GetFunctionSignature(PythonFunction function) {
+            return new string[] { function.GetSignatureString() };
+        }
+
         public static PythonDictionary CopyAndVerifyDictionary(PythonFunction function, IDictionary dict) {
             foreach (object o in dict.Keys) {
                 if (!(o is string)) {
-                    throw TypeError("{0}() keywords most be strings", function.Name);
+                    throw TypeError("{0}() keywords most be strings", function.__name__);
                 }
             }
             return new PythonDictionary(dict);
@@ -2612,14 +2737,14 @@ namespace IronPython.Runtime.Operations {
             }
 
             throw PythonOps.TypeError("{0}() takes exactly {1} non-keyword arguments ({2} given)", 
-                function.Name, 
+                function.__name__, 
                 function.NormalArgumentCount,
                 argCnt);
         }
 
         public static void AddDictionaryArgument(PythonFunction function, string name, object value, IAttributesCollection dict) {
             if (dict.ContainsObjectKey(name)) {
-                throw TypeError("{0}() got multiple values for keyword argument '{1}'", function.Name, name);
+                throw TypeError("{0}() got multiple values for keyword argument '{1}'", function.__name__, name);
             }
 
             dict.AddObjectKey(name, value);
@@ -2685,7 +2810,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             throw RuntimeHelpers.TypeErrorForIncorrectArgumentCount(
-                function.Name,
+                function.__name__,
                 function.NormalArgumentCount,
                 function.Defaults.Length,
                 argCnt,
@@ -2698,7 +2823,7 @@ namespace IronPython.Runtime.Operations {
                 return extraArgs.Pop(0);
             }
 
-            return function.GetDefaultValue(index);
+            return function.Defaults[index];
         }
 
         public static object GetFunctionParameterValue(PythonFunction function, int index, string name, List extraArgs, IAttributesCollection dict) {
@@ -2712,7 +2837,7 @@ namespace IronPython.Runtime.Operations {
                 return val;
             }
 
-            return function.GetDefaultValue(index);
+            return function.Defaults[index];
         }
 
         public static void CheckParamsZero(PythonFunction function, List extraArgs) {
@@ -2738,7 +2863,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception UnexpectedKeywordArgumentError(PythonFunction function, string name) {
-            return TypeError("{0}() got an unexpected keyword argument '{1}'", function.Name, name);
+            return TypeError("{0}() got an unexpected keyword argument '{1}'", function.__name__, name);
         }
 
         public static object InitializeUserTypeSlots(Type type) {
@@ -2797,9 +2922,9 @@ namespace IronPython.Runtime.Operations {
 
         internal static void ExtendOneType(PythonExtensionTypeAttribute et, PythonType dt) {
             // new-style extensions:
-            ExtensionTypeAttribute.RegisterType(et.Extends, et.Type);
+            ExtensionTypeAttribute.RegisterType(et.Extends, et.ExtensionType);
 
-            PythonTypeExtender.ExtendType(dt, et.Type, et.Transformer);
+            PythonTypeExtender.ExtendType(dt, et.ExtensionType, et.Transformer);
 
             if (et.EnableDerivation) {
                 PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(et.Extends)).SetIsExtensible();
@@ -2956,10 +3081,6 @@ namespace IronPython.Runtime.Operations {
             return ((IPythonObject)o).PythonType.AlternateVersion == version;
         }
 
-        public static Exception CannotConvertError(Type toType, object value) {
-            return Converter.CannotConvertTo(PythonTypeOps.GetName(toType), value);
-        }
-
         #region Conversion helpers 
         
         internal static MethodInfo GetConversionHelper(string name, ConversionResultKind resultKind) {
@@ -3107,6 +3228,89 @@ namespace IronPython.Runtime.Operations {
 
         public static bool TryResolveTypeSlot(CodeContext context, PythonType type, SymbolId name, out PythonTypeSlot slot) {
             return type.TryResolveSlot(context, name, out slot);
+        }
+
+        public static T[] ConvertTupleToArray<T>(PythonTuple tuple) {
+            T[] res = new T[tuple.Count];
+            for (int i = 0; i < tuple.Count; i++) {
+                try {
+                    res[i] = (T)tuple[i];
+                } catch (InvalidCastException) {
+                    res[i] = Converter.Convert<T>(tuple[i]);
+                }
+            }
+            return res;
+        }
+
+        public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
+            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
+        }
+
+        #region Function helpers
+
+        public static PythonFunction MakeFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults,
+            FunctionAttributes attributes, string docString, int lineNumber, string fileName) {
+            PythonFunction ret = new PythonFunction(context, name, target, argNames, defaults, attributes);
+            if (docString != null) ret.__doc__ = docString;
+            ret.func_code.SetLineNumber(lineNumber);
+            ret.func_code.SetFilename(fileName);
+            ret.func_code.SetFlags(attributes);
+            return ret;
+        }
+
+        public static CodeContext FunctionGetContext(PythonFunction func) {
+            return func.Context;
+        }
+
+        public static object FunctionGetDefaultValue(PythonFunction func, int index) {
+            return func.Defaults[index];
+        }
+
+        public static int FunctionGetCompatibility(PythonFunction func) {
+            return func.FunctionCompatibility;
+        }
+
+        public static int FunctionGetID(PythonFunction func) {
+            return func.FunctionID;
+        }
+
+        public static Delegate FunctionGetTarget(PythonFunction func) {
+            return func.Target;
+        }
+
+        public static Exception FunctionBadArgumentError(PythonFunction func, int count) {
+            return func.BadArgumentError(count);
+        }
+
+        public static Exception BadKeywordArgumentError(PythonFunction func, int count) {
+            return func.BadKeywordArgumentError(count);
+        }
+
+        public static void FunctionPushFrame() {
+            //HACK ALERT:
+            // In interpreted mode, cap the recursion limit at 200, since our stack grows 30x faster than normal.
+            //TODO: remove this when we switch to a non-recursive interpretation strategy
+            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
+                if (PythonFunction.Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
+            }
+
+            if (++PythonFunction.Depth > PythonFunction._MaximumDepth)
+                throw PythonOps.RuntimeError("maximum recursion depth exceeded");
+        }
+
+        public static void FunctionPopFrame() {
+            --PythonFunction.Depth;
+        }
+
+
+
+        #endregion
+        public static object ReturnConversionResult(object value) {
+            PythonTuple pt = value as PythonTuple;
+            if (pt != null) {
+                return pt[0];
+            }
+            return NotImplemented;
         }
     }
 }

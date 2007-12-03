@@ -55,20 +55,6 @@ namespace System {
         public class WarningException : SystemException {
             public WarningException(string message) : base(message) { }
         }
-
-        public enum EditorBrowsableState {
-            Advanced
-        }
-
-        public class EditorBrowsableAttribute : Attribute {
-            public EditorBrowsableAttribute(EditorBrowsableState state) { }
-        }
-    }
-
-    namespace CodeDom.Compiler {
-        public class GeneratedCodeAttribute : Attribute {
-            public GeneratedCodeAttribute(string tool, string version) { }
-        }
     }
 
     public class SerializableAttribute : Attribute {

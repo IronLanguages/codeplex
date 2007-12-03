@@ -16,34 +16,19 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class ParenthesizedExpression : Expression {
+    public sealed class ParenthesizedExpression : Expression {
         private readonly Expression /*!*/ _expression;
 
         internal ParenthesizedExpression(Expression /*!*/ expression)
-            : base(AstNodeType.ParenthesizedExpression) {
+            : base(AstNodeType.ParenthesizedExpression, expression.Type) {
             Debug.Assert(expression != null);
             _expression = expression;
         }
 
         public Expression Expression {
             get { return _expression; }
-        }
-
-        public override Type Type {
-            get {
-                return _expression.Type;
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return _expression.Evaluate(context);
-        }
-
-        public override void Emit(CodeGen cg) {
-            _expression.Emit(cg);
         }
     }
 

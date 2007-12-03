@@ -14,28 +14,23 @@
  * ***************************************************************************/
 
 using System;
+using System.Reflection;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-using System.Reflection;
-using System.Reflection.Emit;
-
-using System.Diagnostics;
-
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class MethodCallExpression : Expression {
+    public sealed class MethodCallExpression : Expression {
         private readonly MethodInfo _method;
         private readonly Expression _instance;
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly ParameterInfo[] _parameterInfos;
 
-        private ReflectedCaller _caller;
-
         internal MethodCallExpression(MethodInfo /*!*/ method, Expression instance, ReadOnlyCollection<Expression> /*!*/ arguments, ParameterInfo[] /*!*/ parameters)
-            : base(AstNodeType.Call) {
+            : base(AstNodeType.Call, method.ReturnType) {
             _method = method;
             _instance = instance;
             _arguments = arguments;
@@ -54,131 +49,9 @@ namespace Microsoft.Scripting.Ast {
             get { return _arguments; }
         }
 
-        public override Type Type {
-            get {
-                return _method.ReturnType;
-            }
-        }
-
-        private object EvaluateInstance(CodeContext context) {
-            object res = _instance.Evaluate(context);
-
-            // box "this" if it is a value type (in case _method tries to modify it)
-            // -- this keeps the same semantics as Emit().
-            if (_method.DeclaringType != null && _method.DeclaringType.IsValueType) {
-                res = System.Runtime.CompilerServices.RuntimeHelpers.GetObjectValue(res);
-            }
-            return res;
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object instance = null;
-            // Evaluate the instance first (if the method is non-static)
-            if (!Method.IsStatic) {
-                instance = EvaluateInstance(context);
-            }
-
-            object[] parameters = new object[_parameterInfos.Length];
-            EvaluationAddress[] paramAddrs = new EvaluationAddress[_parameterInfos.Length];
-            if (_parameterInfos.Length > 0) {
-                int last = parameters.Length;
-                for (int i = 0; i < last; i++) {
-                    ParameterInfo pi = _parameterInfos[i];
-
-                    if (pi.ParameterType.IsByRef) {
-                        paramAddrs[i] = _arguments[i].EvaluateAddress(context);
-
-                        object value = paramAddrs[i].GetValue(context, !IsInputParameter(i));
-                        if (IsInputParameter(i)) {
-                            parameters[i] = context.LanguageContext.Binder.Convert(
-                                value,
-                                _parameterInfos[i].ParameterType.GetElementType()
-                            );
-                        }
-                    } else if (IsInputParameter(i)) {
-                        Expression arg = _arguments[i];
-                        parameters[i] = arg != null ? arg.Evaluate(context) : null;
-                    }
-                }
-            }
-
-            try {
-                object res;
-                try {
-                    // Call the method
-                    res = InvokeMethod(instance, parameters);
-
-                    // Return the singleton True or False object
-                    if (Type == typeof(Boolean)) {
-                        res = RuntimeHelpers.BooleanToObject((bool)res);
-                    }
-                } finally {
-                    // expose by-ref args
-                    for (int i = 0; i < _parameterInfos.Length; i++) {
-                        if (_parameterInfos[i].ParameterType.IsByRef) {
-                            paramAddrs[i].AssignValue(context, parameters[i]);
-                        }
-                    }
-                }
-
-                // back propagate instance on value types if the instance supports it.
-                if (_method.DeclaringType != null && _method.DeclaringType.IsValueType && !_method.IsStatic) {
-                    _instance.EvaluateAssign(context, instance);
-                }
-
-                return res;
-            } catch (TargetInvocationException e) {                
-                // Unwrap the real (inner) exception and raise it
-                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-            }
-        }
-
-        private bool IsInputParameter(int i) {
-            return !_parameterInfos[i].IsOut || (_parameterInfos[i].Attributes & ParameterAttributes.In) != 0;
-        }
-
-        private object InvokeMethod(object instance, object[] parameters) {
-            if (_caller == null) {
-                _caller = ReflectedCaller.Create(_method);
-            }
-            if (instance == null) {
-                return _caller.Invoke(parameters);
-            } else {
-                return _caller.InvokeInstance(instance, parameters);
-            }
-
-        }
-
-        public override void Emit(CodeGen cg) {
-            // Emit instance, if calling an instance method
-            if (!_method.IsStatic) {
-                Type type = _method.DeclaringType;
-
-                if (type.IsValueType) {
-                    _instance.EmitAddress(cg, type);
-                } else {
-                    _instance.Emit(cg);
-                }
-            }
-
-            // Emit arguments
-            Debug.Assert(_arguments.Count == _parameterInfos.Length);
-            for (int arg = 0; arg < _parameterInfos.Length; arg++) {
-                Expression argument = _arguments[arg];
-                Type type = _parameterInfos[arg].ParameterType;
-                EmitArgument(cg, argument, type);
-            }
-
-            // Emit the actual call
-            cg.EmitCall(_method);
-        }
-
-        private static void EmitArgument(CodeGen cg, Expression argument, Type type) {
-            if (type.IsByRef) {
-                argument.EmitAddress(cg, type.GetElementType());
-            } else {
-                argument.Emit(cg);
-            }
+        // TODO: Remove !!!
+        internal ParameterInfo[] ParameterInfos {
+            get { return _parameterInfos; }
         }
     }
 
@@ -265,6 +138,7 @@ namespace Microsoft.Scripting.Ast {
         /// The helper to create the AST method call node. Will add conversions (Ast.Convert())
         /// to parameters and instance if necessary.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static MethodCallExpression SimpleCallHelper(Expression instance, MethodInfo method, params Expression[] arguments) {
             Contract.RequiresNotNull(method, "method");
             Contract.Requires(instance != null ^ method.IsStatic, "instance");
@@ -332,6 +206,70 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        public static Expression/*!*/ ComplexCallHelper(Delegate/*!*/ method, Expression[]/*!*/ arguments) {
+            return ComplexCallHelper(method, arguments, CodeContext());
+        }
+
+        // TODO: codeContextExpression shouldn't be necessary as soon as we get Scope statement rigt
+        public static Expression/*!*/ ComplexCallHelper(Delegate/*!*/ method, Expression[]/*!*/ arguments,
+            Expression/*!*/ codeContextExpression) {
+
+            Contract.RequiresNotNull(method, "method");
+            Contract.RequiresNotNullItems(arguments, "arguments");
+            Contract.RequiresNotNull(codeContextExpression, "codeContextExpression");
+            
+            // We prefer to peek inside the delegate and call the target method directly. However, we need to
+            // exclude DynamicMethods since Delegate.Method returns a dummy MethodInfo, and we cannot emit a call to it.
+            bool inlineDelegateCall = true;
+            if (method.Method.DeclaringType == null) {
+                Debug.Assert(method.Method.GetType().FullName == "System.Reflection.Emit.DynamicMethod+RTDynamicMethod");
+                inlineDelegateCall = false;
+            }
+
+            Expression instanceForCall = (method.Target == null) ? null : RuntimeConstant(method.Target);
+
+            ParameterInfo[] parameters = method.Method.GetParameters();
+            if (parameters.Length > 0) {
+                List<Expression> realArgs = new List<Expression>(arguments.Length);
+
+                int paramIndex = 0;
+                if (method.Target != null && method.Method.IsStatic) {
+                    // This is a closed-instance delegate. ie. The target method is a static method with
+                    // a first argument of, say, type T. And the delegate closes over an instance of T.
+                    // In such a case, we have to pass the delegate target as an actual argument
+                    Debug.Assert(parameters[paramIndex].ParameterType.IsAssignableFrom(method.Target.GetType()));
+
+                    if (inlineDelegateCall) {
+                        realArgs.Add(instanceForCall);
+                        instanceForCall = null;
+                    } 
+                    
+                    paramIndex++;
+                }
+
+                // Does the target method expect a CodeContext?
+                if (parameters[paramIndex].ParameterType == typeof(CodeContext)) {
+                    realArgs.Add(codeContextExpression);
+                    paramIndex++;
+                }
+
+                realArgs.AddRange(arguments);
+                arguments = realArgs.ToArray();
+            }
+
+            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]) 
+                || method is CallTargetN || method is CallTargetWithContextN;
+
+            if (inlineDelegateCall) {
+                // Call the target method directly
+                return ComplexCallHelperInternal(instanceForCall, method.Method, parameters, hasParamArray, arguments);
+            } else {
+                // Invoke the delegate object
+                MethodInfo invokeMethod = method.GetType().GetMethod("Invoke");
+                return ComplexCallHelperInternal(RuntimeConstant(method), invokeMethod, invokeMethod.GetParameters(), hasParamArray, arguments);
+            }
+        }
+
         /// <summary>
         /// The complex call helper to create the AST method call node.
         /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
@@ -342,20 +280,28 @@ namespace Microsoft.Scripting.Ast {
             return ComplexCallHelper(null, method, arguments);
         }
 
-        /// <summary>
-        /// The complex call helper to create the AST method call node.
-        /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
-        /// </summary>
         public static Expression ComplexCallHelper(Expression instance, MethodInfo method, params Expression[] arguments) {
             Contract.RequiresNotNull(method, "method");
             Contract.RequiresNotNullItems(arguments, "arguments");
             Contract.Requires(instance != null ^ method.IsStatic, "instance");
+            
+            ParameterInfo[] parameters = method.GetParameters();
+            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]);
+            return ComplexCallHelperInternal(instance, method, parameters, hasParamArray, arguments);
+        }
+        
+        /// <summary>
+        /// The complex call helper to create the AST method call node.
+        /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
+        /// </summary>
+        private static Expression ComplexCallHelperInternal(Expression instance, MethodInfo method, ParameterInfo[] parameters, bool hasParamArray,
+            params Expression[] arguments) {
+            Assert.NotNullItems(parameters);
 
             if (instance != null) {
                 instance = ConvertHelper(instance, method.DeclaringType);
             }
 
-            ParameterInfo[] parameters = method.GetParameters();
             Expression[] clone = null;
 
             int current = 0;    // current parameter being populated
@@ -367,7 +313,7 @@ namespace Microsoft.Scripting.Ast {
                 Expression argument;
 
                 // last parameter ... params array?
-                if ((current == parameters.Length - 1) && (CompilerHelpers.IsParamArray(parameter))) {
+                if ((current == parameters.Length - 1) && hasParamArray) {
                     // do we have any arguments to pass in?
                     if (consumed < arguments.Length) {
                         // Exactly one argument? If it is array of the right type, it goes directly

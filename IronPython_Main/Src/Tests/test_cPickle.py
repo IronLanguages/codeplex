@@ -772,4 +772,9 @@ def test_pers_load():
         except Exception, e:
             pass
     
+    
+def test_unpickling_error():
+    if cPickle.__name__ == "cPickle":   # pickle vs. cPickle report different exceptions, even on Cpy
+        AssertError(cPickle.UnpicklingError, cPickle.loads, '\x02')
+    
 run_test(__name__)

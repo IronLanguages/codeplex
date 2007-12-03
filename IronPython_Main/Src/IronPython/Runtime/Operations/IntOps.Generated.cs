@@ -201,29 +201,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(SByte x, SByte y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(SByte x, SByte y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(SByte x, SByte y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(SByte x, SByte y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(SByte x, SByte y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(SByte x, SByte y) {
-            return x != y;
+        public static int Compare(SByte x, SByte y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators
@@ -505,77 +486,20 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Byte x, Byte y) {
-            return x < y;
+        public static int Compare(Byte x, Byte y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Byte x, SByte y) {
-            return Int16Ops.LessThan((Int16)x, (Int16)y);
+        public static int Compare(Byte x, SByte y) {
+            return Int16Ops.Compare((Int16)x, (Int16)y);
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(SByte x, Byte y) {
-            return Int16Ops.LessThan((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Byte x, Byte y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Byte x, SByte y) {
-            return Int16Ops.LessThanOrEqual((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(SByte x, Byte y) {
-            return Int16Ops.LessThanOrEqual((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(Byte x, Byte y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Byte x, SByte y) {
-            return Int16Ops.GreaterThan((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(SByte x, Byte y) {
-            return Int16Ops.GreaterThan((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Byte x, Byte y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Byte x, SByte y) {
-            return Int16Ops.GreaterThanOrEqual((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(SByte x, Byte y) {
-            return Int16Ops.GreaterThanOrEqual((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool Equals(Byte x, Byte y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool Equals(Byte x, SByte y) {
-            return Int16Ops.Equals((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool Equals(SByte x, Byte y) {
-            return Int16Ops.Equals((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(Byte x, Byte y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Byte x, SByte y) {
-            return Int16Ops.NotEquals((Int16)x, (Int16)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(SByte x, Byte y) {
-            return Int16Ops.NotEquals((Int16)x, (Int16)y);
+        public static int Compare(SByte x, Byte y) {
+            return Int16Ops.Compare((Int16)x, (Int16)y);
         }
 
         // Conversion operators
@@ -770,29 +694,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int16 x, Int16 y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int16 x, Int16 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int16 x, Int16 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int16 x, Int16 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(Int16 x, Int16 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Int16 x, Int16 y) {
-            return x != y;
+        public static int Compare(Int16 x, Int16 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators
@@ -1077,77 +982,20 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt16 x, UInt16 y) {
-            return x < y;
+        public static int Compare(UInt16 x, UInt16 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt16 x, Int16 y) {
-            return Int32Ops.LessThan((Int32)x, (Int32)y);
+        public static int Compare(UInt16 x, Int16 y) {
+            return Int32Ops.Compare((Int32)x, (Int32)y);
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int16 x, UInt16 y) {
-            return Int32Ops.LessThan((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt16 x, UInt16 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt16 x, Int16 y) {
-            return Int32Ops.LessThanOrEqual((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int16 x, UInt16 y) {
-            return Int32Ops.LessThanOrEqual((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt16 x, UInt16 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt16 x, Int16 y) {
-            return Int32Ops.GreaterThan((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int16 x, UInt16 y) {
-            return Int32Ops.GreaterThan((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt16 x, UInt16 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt16 x, Int16 y) {
-            return Int32Ops.GreaterThanOrEqual((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int16 x, UInt16 y) {
-            return Int32Ops.GreaterThanOrEqual((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool Equals(UInt16 x, UInt16 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool Equals(UInt16 x, Int16 y) {
-            return Int32Ops.Equals((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool Equals(Int16 x, UInt16 y) {
-            return Int32Ops.Equals((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt16 x, UInt16 y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt16 x, Int16 y) {
-            return Int32Ops.NotEquals((Int32)x, (Int32)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(Int16 x, UInt16 y) {
-            return Int32Ops.NotEquals((Int32)x, (Int32)y);
+        public static int Compare(Int16 x, UInt16 y) {
+            return Int32Ops.Compare((Int32)x, (Int32)y);
         }
 
         // Conversion operators
@@ -1288,29 +1136,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int32 x, Int32 y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int32 x, Int32 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int32 x, Int32 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int32 x, Int32 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(Int32 x, Int32 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Int32 x, Int32 y) {
-            return x != y;
+        public static int Compare(Int32 x, Int32 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators
@@ -1590,77 +1419,20 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt32 x, UInt32 y) {
-            return x < y;
+        public static int Compare(UInt32 x, UInt32 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt32 x, Int32 y) {
-            return Int64Ops.LessThan((Int64)x, (Int64)y);
+        public static int Compare(UInt32 x, Int32 y) {
+            return Int64Ops.Compare((Int64)x, (Int64)y);
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int32 x, UInt32 y) {
-            return Int64Ops.LessThan((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt32 x, UInt32 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt32 x, Int32 y) {
-            return Int64Ops.LessThanOrEqual((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int32 x, UInt32 y) {
-            return Int64Ops.LessThanOrEqual((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt32 x, UInt32 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt32 x, Int32 y) {
-            return Int64Ops.GreaterThan((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int32 x, UInt32 y) {
-            return Int64Ops.GreaterThan((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt32 x, UInt32 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt32 x, Int32 y) {
-            return Int64Ops.GreaterThanOrEqual((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int32 x, UInt32 y) {
-            return Int64Ops.GreaterThanOrEqual((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool Equals(UInt32 x, UInt32 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool Equals(UInt32 x, Int32 y) {
-            return Int64Ops.Equals((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool Equals(Int32 x, UInt32 y) {
-            return Int64Ops.Equals((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt32 x, UInt32 y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt32 x, Int32 y) {
-            return Int64Ops.NotEquals((Int64)x, (Int64)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(Int32 x, UInt32 y) {
-            return Int64Ops.NotEquals((Int64)x, (Int64)y);
+        public static int Compare(Int32 x, UInt32 y) {
+            return Int64Ops.Compare((Int64)x, (Int64)y);
         }
 
         // Conversion operators
@@ -1856,29 +1628,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int64 x, Int64 y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int64 x, Int64 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int64 x, Int64 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int64 x, Int64 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(Int64 x, Int64 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Int64 x, Int64 y) {
-            return x != y;
+        public static int Compare(Int64 x, Int64 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators
@@ -2158,77 +1911,20 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt64 x, UInt64 y) {
-            return x < y;
+        public static int Compare(UInt64 x, UInt64 y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(UInt64 x, Int64 y) {
-            return BigIntegerOps.LessThan((BigInteger)x, (BigInteger)y);
+        public static int Compare(UInt64 x, Int64 y) {
+            return BigIntegerOps.Compare((BigInteger)x, (BigInteger)y);
         }
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Int64 x, UInt64 y) {
-            return BigIntegerOps.LessThan((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt64 x, UInt64 y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(UInt64 x, Int64 y) {
-            return BigIntegerOps.LessThanOrEqual((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Int64 x, UInt64 y) {
-            return BigIntegerOps.LessThanOrEqual((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt64 x, UInt64 y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(UInt64 x, Int64 y) {
-            return BigIntegerOps.GreaterThan((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool GreaterThan(Int64 x, UInt64 y) {
-            return BigIntegerOps.GreaterThan((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt64 x, UInt64 y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(UInt64 x, Int64 y) {
-            return BigIntegerOps.GreaterThanOrEqual((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Int64 x, UInt64 y) {
-            return BigIntegerOps.GreaterThanOrEqual((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool Equals(UInt64 x, UInt64 y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool Equals(UInt64 x, Int64 y) {
-            return BigIntegerOps.Equals((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool Equals(Int64 x, UInt64 y) {
-            return BigIntegerOps.Equals((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt64 x, UInt64 y) {
-            return x != y;
-        }
-        [SpecialName]
-        public static bool NotEquals(UInt64 x, Int64 y) {
-            return BigIntegerOps.NotEquals((BigInteger)x, (BigInteger)y);
-        }
-        [SpecialName]
-        public static bool NotEquals(Int64 x, UInt64 y) {
-            return BigIntegerOps.NotEquals((BigInteger)x, (BigInteger)y);
+        public static int Compare(Int64 x, UInt64 y) {
+            return BigIntegerOps.Compare((BigInteger)x, (BigInteger)y);
         }
 
         // Conversion operators
@@ -2377,29 +2073,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Single x, Single y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Single x, Single y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Single x, Single y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Single x, Single y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(Single x, Single y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Single x, Single y) {
-            return x != y;
+        public static int Compare(Single x, Single y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators
@@ -2515,29 +2192,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Binary Operations - Comparisons
+        [PythonName("__cmp__")]
         [SpecialName]
-        public static bool LessThan(Double x, Double y) {
-            return x < y;
-        }
-        [SpecialName]
-        public static bool LessThanOrEqual(Double x, Double y) {
-            return x <= y;
-        }
-        [SpecialName]
-        public static bool GreaterThan(Double x, Double y) {
-            return x > y;
-        }
-        [SpecialName]
-        public static bool GreaterThanOrEqual(Double x, Double y) {
-            return x >= y;
-        }
-        [SpecialName]
-        public static bool Equals(Double x, Double y) {
-            return x == y;
-        }
-        [SpecialName]
-        public static bool NotEquals(Double x, Double y) {
-            return x != y;
+        public static int Compare(Double x, Double y) {
+            return x == y ? 0 : x > y ? 1 : -1;
         }
 
         // Conversion operators

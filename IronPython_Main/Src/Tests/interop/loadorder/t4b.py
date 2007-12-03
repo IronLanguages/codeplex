@@ -15,8 +15,8 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_4")
+
+add_clr_assemblies("loadorder_4")
 
 # namespace NS {
 #     public class Target {
@@ -31,7 +31,7 @@ clr.AddReference("loadorder_4")
 import NS
 AreEqual(dir(NS), ['Target'])
 
-clr.AddReference("loadorder_4b")
+add_clr_assemblies("loadorder_4b")
 
 # namespace NS {
 #     public class Target<T> {

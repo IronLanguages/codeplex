@@ -221,21 +221,21 @@ def test_W():
 TestCommandLine(("-X:NoOptimize", "-c", "from System import Console; Console.WriteLine('System')"), "System\n")
 
 # Test -X:FastEval
-TestCommandLine(("-X:Interpret", "-c", "2+2"), "4\n")
-TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "4\n")
-TestCommandLine(("-X:Interpret", "-c", "x = 3; eval('x+2')"), "5\n")
+TestCommandLine(("-X:Interpret", "-c", "2+2"), "")
+TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "")
+TestCommandLine(("-X:Interpret", "-c", "x = 3; eval('x+2')"), "")
 
 # Test -X:TrackPerformance
-TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "4\n")
+TestCommandLine(("-X:TrackPerformance", "-c", "2+2"), "")
 
 # Test -X:Frames
-TestCommandLine(("-X:Frames", "-c", "2+2"), "4\n")
+TestCommandLine(("-X:Frames", "-c", "2+2"), "")
 
 # Test -u (Unbuffered stdout & stderr): only test this can be passed in 
 TestCommandLine(('-u', '-c', 'print 2+2'), "4\n")
 
 # Test -X:MaxRecursion
-TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "4\n")
+TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
 TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
 TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
 
@@ -261,14 +261,14 @@ TestCommandLine(("nonexistent.py",), "File nonexistent.py does not exist.\n", 1)
 
 # Test -Q
 def test_Q():
-    TestCommandLine(("-Qnew", "-c", "3/2"), "1.5\n")
-    TestCommandLine(("-Qold", "-c", "3/2"), "1\n")
-    TestCommandLine(("-Qwarn", "-c", "3/2"), "1\n")
-    TestCommandLine(("-Qwarnall", "-c", "3/2"), "1\n")
-    TestCommandLine(("-Q", "new", "-c", "3/2"), "1.5\n")
-    TestCommandLine(("-Q", "old", "-c", "3/2"), "1\n")
-    TestCommandLine(("-Q", "warn", "-c", "3/2"), "1\n")
-    TestCommandLine(("-Q", "warnall", "-c", "3/2"), "1\n")
+    TestCommandLine(("-Qnew", "-c", "print 3/2"), "1.5\n")
+    TestCommandLine(("-Qold", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Qwarn", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Qwarnall", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Q", "new", "-c", "print 3/2"), "1.5\n")
+    TestCommandLine(("-Q", "old", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "1\n")
+    TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "1\n")
 
 @disabled("CodePlex Work Item 12965")
 def test_doc():

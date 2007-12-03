@@ -85,6 +85,14 @@ def test_interactive_mode():
     AreEqual(exitCode, 0)
     ipi.End()
     
+    # interactive + -c
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -i -c x=2")
+    AreEqual(ipi.Start(), True)
+    ipi.EnsureInteractive()
+    Assert(ipi.ExecuteLine("x", True).find("2") != -1)
+    ipi.End()
+
+    
 ###############################################################################
 # Test sys.exitfunc
 
@@ -200,7 +208,70 @@ def test_partial_lists():
     response = ipi.ExecuteLine("]")
     Assert("[1, 2]" in response)
     ipi.End()
+
+@disabled("CodePlex Work Item 5904")    
+def test_partial_lists_broken():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecutePartialLine("[")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine("")
+    response = ipi.ExecuteLine("]")
+    Assert("[]" in response)
+    ipi.End()    
     
+##########################################################
+# Support partial tuples
+def test_partial_tuples():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecutePartialLine("(2")
+    ipi.ExecutePartialLine("  ,")
+    ipi.ExecutePartialLine("    3")
+    response = ipi.ExecuteLine(")")
+    Assert("(2, 3)" in response)
+    
+    ipi.ExecutePartialLine("(")
+    response = ipi.ExecuteLine(")")
+    Assert("()" in response)
+    
+    ipi.ExecutePartialLine("'abc %s %s %s %s %s' % (")
+    ipi.ExecutePartialLine("    'def'")
+    ipi.ExecutePartialLine("    ,'qrt',")
+    ipi.ExecutePartialLine("    'jkl'")
+    ipi.ExecutePartialLine(",'jkl'")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine(",")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine("'123'")
+    response = ipi.ExecuteLine(")")
+    Assert("'abc def qrt jkl jkl 123'" in response)
+    
+    ipi.ExecutePartialLine("a = (")
+    ipi.ExecutePartialLine("    1")
+    ipi.ExecutePartialLine(" , ")
+    ipi.ExecuteLine(")")
+    response = ipi.ExecuteLine("a")
+    Assert("(1,)" in response)
+    
+    ipi.ExecutePartialLine("(")
+    ipi.ExecutePartialLine("'joe'")
+    ipi.ExecutePartialLine(" ")
+    ipi.ExecutePartialLine("       #")
+    ipi.ExecutePartialLine(",")
+    ipi.ExecutePartialLine("2")
+    response = ipi.ExecuteLine(")")
+    Assert("('joe', 2)" in response)
+    
+    ipi.ExecutePartialLine("(")
+    ipi.ExecutePartialLine("")
+    ipi.ExecutePartialLine("")
+    response = ipi.ExecuteLine(")")
+    Assert("()" in response)
+    
+    ipi.End()
+
 ##########################################################
 # Support partial dicts
 def test_partial_dicts():
@@ -323,6 +394,24 @@ def test_global_values():
     #CodePlex Work Item #6704
     #d = eval(ipi.ExecuteLine("globals().fromkeys(['a', 'b'], 'c')"))
     #AreEqual(d, {'a':'c', 'b':'c'})
+    
+def test_globals8961():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    response = ipi.ExecuteLine("print globals().keys()")
+    AreEqual(response, "['__builtins__', '__name__', '__doc__']")
+    
+    ipi.ExecuteLine("a = None")
+    response = ipi.ExecuteLine("print globals().keys()")
+    AreEqual(response, "['__builtins__', '__name__', '__doc__', 'a']")
+    response = ipi.ExecuteLine("print globals().values()")
+    AreEqual(response, "[<module '__builtin__' (built-in), '__main__', None, None]")
+    
+    ipi.ExecuteLine("b = None")
+    response = ipi.ExecuteLine("print globals().values()")
+    AreEqual(response, "[<module '__builtin__' (built-in), '__main__', None, None, None]")
+    
 
 def test_console_input_output():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
@@ -456,8 +545,29 @@ def test_ipy_dash_m():
         AreEqual(exit, 1)   # should have returned 0
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
-        AreEqual(lines[0], 'hello')               
+        AreEqual(lines[0], 'hello')
+                 
     finally:
         nt.unlink(filename)
+        
+@disabled("CodePlex Work Item 10925")        
+def test_ipy_dash_m_negative():
+    # builtin modules should not work
+    for modname in [ "sys", "datetime" ]:
+        ipi = IronPythonInstance(executable, exec_prefix, 
+                                 extraArgs + " -m " + modname)
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(exit, 1)
+        AreEqual(output, "")
+        Assert("ImportError" in err)
     
+def test_ipy_dash_c():
+    """verify ipy -c cmd doesn't print expression statements"""
+    ipi = IronPythonInstance(executable, exec_prefix, "-c True;False")
+    res = ipi.StartAndRunToCompletion()
+    AreEqual(res[0], True)  # should have started
+    AreEqual(res[1], '')    # no std out
+    AreEqual(res[2], '')    # no std err
+    AreEqual(res[3], 0)     # should return 0
+
 run_test(__name__)

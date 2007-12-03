@@ -130,6 +130,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// This will throw an exception if all the colliding types are generic
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public Type NonGenericType {
             get {
                 Type nonGenericType;

@@ -15,10 +15,9 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
-
-using Microsoft.Scripting;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -172,7 +171,7 @@ namespace IronPython.Modules {
         public static object InputType = DynamicHelpers.GetPythonType(typeof(StringI));
         public static object OutputType = DynamicHelpers.GetPythonType(typeof(StringO));
 
-        public class StringI {
+        public class StringI : IEnumerable<string>, IEnumerable {
             private StringStream _sr;
 
             internal StringI(string data) {
@@ -290,9 +289,29 @@ namespace IronPython.Modules {
                     throw PythonOps.ValueError("I/O operation on closed file");
                 }
             }
+
+            #region IEnumerable Members
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                while (!_sr.EOF) {
+                    yield return readline();
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable<string> Members
+
+            IEnumerator<string> IEnumerable<string>.GetEnumerator() {
+                while (!_sr.EOF) {
+                    yield return readline();
+                }
+            }
+
+            #endregion
         }
 
-        public class StringO {
+        public class StringO : IEnumerable<string>, IEnumerable {
             private StringWriter _sw = new StringWriter();
             private StringStream _sr = new StringStream("");
             private int _softspace;
@@ -456,6 +475,26 @@ namespace IronPython.Modules {
                     throw PythonOps.ValueError("I/O operation on closed file");
                 }
             }
+
+            #region IEnumerable Members
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                while (!_sr.EOF) {
+                    yield return readline();
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable<string> Members
+
+            IEnumerator<string> IEnumerable<string>.GetEnumerator() {
+                while (!_sr.EOF) {
+                    yield return readline();
+                }
+            }
+
+            #endregion
         }
 
         public static object StringIO() {

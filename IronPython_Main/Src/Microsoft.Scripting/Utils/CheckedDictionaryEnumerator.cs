@@ -94,10 +94,16 @@ namespace Microsoft.Scripting.Utils {
         #endregion
 
         #region Methods that a sub-type needs to implement
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         protected abstract object GetKey();
+        
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         protected abstract object GetValue();
+
         protected abstract bool DoMoveNext();
         protected abstract void DoReset();
+
         #endregion
 
         private enum EnumeratorState {

@@ -14,9 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using ToyScript.Parser.Ast;
+using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
+using ToyScript.Runtime;
+using ToyScript.Parser.Ast;
 
 namespace ToyScript.Parser {
     class ToyGenerator {

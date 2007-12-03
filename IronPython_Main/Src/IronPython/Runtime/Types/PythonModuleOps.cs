@@ -32,7 +32,7 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
-[assembly: PythonExtensionTypeAttribute(typeof(ScriptModule), typeof(PythonModuleOps))]
+[assembly: PythonExtensionTypeAttribute(typeof(ScriptScope), typeof(PythonModuleOps))]
 namespace IronPython.Runtime.Types {
     /// <summary>
     /// Represents functionality that is exposed on PythonModule's but not exposed on the common ScriptModule
@@ -44,9 +44,9 @@ namespace IronPython.Runtime.Types {
         #region Public Python API Surface
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptModule MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
+        public static ScriptScope MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
-                ScriptModule module = PythonEngine.CurrentEngine.MakePythonModule("?");
+                ScriptScope module = PythonEngine.CurrentEngine.MakePythonModule("?");
                 
                 // TODO: should be null
                 module.Scope.Clear();
@@ -59,17 +59,17 @@ namespace IronPython.Runtime.Types {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptModule MakeModule(CodeContext context, PythonType cls, [ParamDictionary] PythonDictionary kwDict\u00F8, params object[] args\u00F8) {
+        public static ScriptScope MakeModule(CodeContext context, PythonType cls, [ParamDictionary] PythonDictionary kwDict\u00F8, params object[] args\u00F8) {
             return MakeModule(context, cls, args\u00F8);
         }
 
         [PythonName("__init__")]
-        public static void Initialize(ScriptModule module, string name) {
+        public static void Initialize(ScriptScope module, string name) {
             Initialize(module, name, null);
         }
 
         [PythonName("__init__")]
-        public static void Initialize(ScriptModule module, string name, string documentation) {
+        public static void Initialize(ScriptScope module, string name, string documentation) {
             module.ModuleName = name;
 
             if (documentation != null) {
@@ -79,13 +79,13 @@ namespace IronPython.Runtime.Types {
 
         [PythonName("__repr__")]
         [SpecialName]
-        public static string ToCodeString(ScriptModule module) {
+        public static string ToCodeString(ScriptScope module) {
             return ToString(module);
         }
 
         [PythonName("__str__")]
         [SpecialName]
-        public static string ToString(ScriptModule module) {
+        public static string ToString(ScriptScope module) {
             if (Get__file__(module) == null) {
                 return String.Format("<module '{0}' (built-in)>", module.ModuleName);
             }
@@ -93,7 +93,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static object Get__name__(ScriptModule module) {
+        public static object Get__name__(ScriptScope module) {
             object res;
             if (module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.Name, out res)) {
                 return res;
@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static void Set__name__(ScriptModule module, object value) {
+        public static void Set__name__(ScriptScope module, object value) {
             module.Scope.SetName(Symbols.Name, value);
 
             string strVal = value as string;
@@ -113,22 +113,22 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Get__dict__(ScriptModule module) {
+        public static IAttributesCollection Get__dict__(ScriptScope module) {
             return new GlobalsDictionary(module.Scope);
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Set__dict__(ScriptModule module, object value) {
+        public static IAttributesCollection Set__dict__(ScriptScope module, object value) {
             throw PythonOps.TypeError("readonly attribute");
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Delete__dict__(ScriptModule module) {
+        public static IAttributesCollection Delete__dict__(ScriptScope module) {
             throw PythonOps.TypeError("can't set attributes of built-in/extension type 'module'");
         }
         
         [PropertyMethod, PythonName("__file__")]
-        public static string Get__file__(ScriptModule module) {
+        public static string Get__file__(ScriptScope module) {
             object res;
             if (!module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.File, out res)) {
                 return module.FileName;
@@ -137,11 +137,11 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod, PythonName("__file__")]
-        public static void Set__file__(ScriptModule module, string value) {
+        public static void Set__file__(ScriptScope module, string value) {
             module.Scope.SetName(Symbols.File, module.FileName = value);
         }
 
-        public static void SetPythonCreated(ScriptModule module) {
+        public static void SetPythonCreated(ScriptScope module) {
             PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
             moduleContext.IsPythonCreatedModule = true;
         }
@@ -160,7 +160,7 @@ namespace IronPython.Runtime.Types {
         /// 
         /// Used for __builtins__ and the built-in modules (e.g. nt, re, etc...)
         /// </summary>
-        internal static ScriptModule MakePythonModule(string name, Type type) {
+        internal static ScriptScope MakePythonModule(string name, Type type) {
             Contract.RequiresNotNull(type, "type");
 
             // TODO: hack to enable __builtin__ reloading:
@@ -173,7 +173,7 @@ namespace IronPython.Runtime.Types {
 
             // creates an empty module:
             
-            ScriptModule module = ScriptDomainManager.CurrentManager.CompileModule(name, 
+            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(name, 
                 ScriptModuleKind.Default,
                 new Scope(MakeModuleDictionary(type)), 
                 null, 

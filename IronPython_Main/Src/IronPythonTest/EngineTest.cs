@@ -85,7 +85,7 @@ namespace IronPythonTest {
             else
                 return -1;
         }
-        private int privateStaticMethod() {
+        private static int privateStaticMethod() {
             return 100;
         }
     }
@@ -126,10 +126,10 @@ namespace IronPythonTest {
 
         static readonly string clspartName = "clsPart";
 
-        private static ScriptModule DefaultModule {
+        private static ScriptScope DefaultModule {
             get {
                 // TODO: should Python engine work with IScriptModule?
-                return (ScriptModule)ScriptDomainManager.CurrentManager.Host.DefaultModule;
+                return (ScriptScope)ScriptDomainManager.CurrentManager.Host.DefaultModule;
             }
         }
 
@@ -158,7 +158,7 @@ namespace IronPythonTest {
         // Execute
         public void ScenarioExecute() {
             ClsPart clsPart = new ClsPart();
-            IScriptModule default_module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
+            IScriptScope default_module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
 
             DefaultModule.SetVariable(clspartName, clsPart);
 
@@ -210,15 +210,15 @@ namespace IronPythonTest {
                 pe.Execute(su, null, null);
             });
 
-            ScriptModule sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
+            ScriptScope sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
                 pe.Execute((SourceUnit)null, sm, null);
             });
         }
 
         public void ScenarioEvaluateInAnonymousEngineModule() {
-            ScriptModule anonymousModule = pe.CreateModule("", ModuleOptions.None);
-            ScriptModule anotherAnonymousModule = pe.CreateModule("", ModuleOptions.None);
+            ScriptScope anonymousModule = pe.CreateModule("", ModuleOptions.None);
+            ScriptScope anotherAnonymousModule = pe.CreateModule("", ModuleOptions.None);
             pe.Execute("x = 0");
             pe.Execute("x = 1", anonymousModule);
 
@@ -236,7 +236,7 @@ namespace IronPythonTest {
         }
 
         public void ScenarioEvaluateInPublishedEngineModule() {
-            ScriptModule publishedModule = pe.CreateModule("published_context_test", ModuleOptions.PublishModule);
+            ScriptScope publishedModule = pe.CreateModule("published_context_test", ModuleOptions.PublishModule);
             pe.Execute("x = 0");
             pe.Execute("x = 1", publishedModule);
             // Ensure that the default EngineModule is not affected
@@ -365,7 +365,7 @@ namespace IronPythonTest {
 
         public void ScenarioCustomDictionary() {
             CustomDictionary customGlobals = new CustomDictionary();
-            ScriptModule customModule = pe.CreateModule("customContext", customGlobals, ModuleOptions.PublishModule);
+            ScriptScope customModule = pe.CreateModule("customContext", customGlobals, ModuleOptions.PublishModule);
             PythonContext customContext = new PythonContext(pe, false);
 
             // Evaluate
@@ -465,13 +465,13 @@ global_variable = 300", DefaultModule, locals);
 #if !SILVERLIGHT
         void CreateModules() {
             for (int contextCount = 0; contextCount < 100; contextCount++) {
-                ScriptModule module = pe.CreateModule(scenarioGCModuleName, ModuleOptions.PublishModule);
+                ScriptScope module = pe.CreateModule(scenarioGCModuleName, ModuleOptions.PublishModule);
                 module.SetVariable("x", "Hello");
                 pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module);
                 AreEqual(pe.EvaluateAs<int>("x", module), 1);
             }
 
-            ScriptModule module2 = pe.CreateModule(scenarioGCModuleName);
+            ScriptScope module2 = pe.CreateModule(scenarioGCModuleName);
             module2.SetVariable("x", "Hello");
             pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module2);
             AreEqual(pe.EvaluateAs<int>("x", module2), 1);
@@ -722,7 +722,7 @@ global_variable = 300", DefaultModule, locals);
         }
 
         public void ScenarioExecuteFileOptimized() {
-            ScriptModule module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", false);
+            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", false);
             module.Execute();
 
             AreEqual(1, pe.EvaluateAs<int>("x", module));
@@ -746,7 +746,7 @@ global_variable = 300", DefaultModule, locals);
         }
 
         public void ScenarioOptimizedModuleBeforeExecutingGlobalCode() {
-            ScriptModule module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\uninitializedGlobal.py", "__main__", true);
+            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\uninitializedGlobal.py", "__main__", true);
 
             AreEqual(module.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("x")), false);
             AreEqual(module.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("y")), false);
@@ -762,7 +762,7 @@ global_variable = 300", DefaultModule, locals);
 
         public void ScenarioCreateOptimizedModule_ScriptThrows() {
             // We should be able to use the EngineModule even if an exception is thrown by the script
-            ScriptModule module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\raise.py", "__main__", true);
+            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\raise.py", "__main__", true);
 
             try {
                 module.Execute();
@@ -921,10 +921,11 @@ global_variable = 300", DefaultModule, locals);
         }
 #endif
 
-        private static void ExecuteAndVerify(PythonEngine pe, ScriptModule module, IDictionary<string, object> locals, string text, string expectedText) {
+        private static void ExecuteAndVerify(PythonEngine pe, ScriptScope module, IDictionary<string, object> locals, string text, string expectedText) {
             MemoryStream stream = new MemoryStream();
             object old_out = SystemState.Instance.stdout;
-            PythonFile pf = new PythonFile(stream, Encoding.Default, "<stdout>", "w");
+            PythonFile pf = new PythonFile();
+            pf.Initialize(stream, StringUtils.DefaultEncoding, "<stdout>", "w");
             pf.IsConsole = true;
             SystemState.Instance.stdout = pf;
             try {
@@ -934,14 +935,14 @@ global_variable = 300", DefaultModule, locals);
             }
 
             byte[] array = stream.ToArray();
-            AreEqual(Encoding.Default.GetString(array, 0, array.Length), expectedText);
+            AreEqual(StringUtils.DefaultEncoding.GetString(array, 0, array.Length), expectedText);
         }
 
 #if !SILVERLIGHT
         public void ScenarioVariableScoping() {
             Dictionary<string, object> globals = new Dictionary<string, object>();
             Dictionary<string, object> locals = new Dictionary<string, object>();
-            ScriptModule module1 = pe.CreateModule("module1", globals, ModuleOptions.PublishModule);
+            ScriptScope module1 = pe.CreateModule("module1", globals, ModuleOptions.PublishModule);
 
             //Set variables in each context
             globals["x"] = 1;
@@ -1042,13 +1043,13 @@ if r.sum != 110:
 
         public void ScenarioTrueDivision1() {
             TestOldDivision(pe, DefaultModule);
-            ScriptModule module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
+            ScriptScope module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
             TestNewDivision(pe, module);
         }
 
         public void ScenarioTrueDivision2() {
             TestOldDivision(pe, DefaultModule);
-            ScriptModule module = pe.CreateModule("__future__", ModuleOptions.PublishModule);
+            ScriptScope module = pe.CreateModule("__future__", ModuleOptions.PublishModule);
             module.SetVariable("division", 1);
             pe.Execute("from __future__ import division", module);
             TestNewDivision(pe, module);
@@ -1056,9 +1057,9 @@ if r.sum != 110:
 
         public void ScenarioTrueDivision3() {
             TestOldDivision(pe, DefaultModule);
-            ScriptModule future = pe.CreateModule("__future__", ModuleOptions.PublishModule);
+            ScriptScope future = pe.CreateModule("__future__", ModuleOptions.PublishModule);
             future.SetVariable("division", 1);
-            ScriptModule td = pe.CreateModule("truediv", ModuleOptions.None);
+            ScriptScope td = pe.CreateModule("truediv", ModuleOptions.None);
             ScriptCode cc = ScriptCode.FromCompiledCode((CompiledCode)pe.CompileCode("from __future__ import division"));
             cc.Run(td);
             TestNewDivision(pe, td);  // we've polluted the DefaultModule by executing the code
@@ -1075,7 +1076,7 @@ if r.sum != 110:
 
             try {
                 PythonEngine.CurrentEngine.Options.DivisionOptions = PythonDivisionOptions.Old;
-                ScriptModule module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
+                ScriptScope module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
                 pe.Execute("import " + modName, module);
                 int res = pe.EvaluateAs<int>(modName + ".result", module);
                 AreEqual(res, 0);
@@ -1099,7 +1100,7 @@ if r.sum != 110:
             System.IO.File.WriteAllText(file, "from __future__ import division; result = 1/2");
 
             try {
-                ScriptModule module = ScriptDomainManager.CurrentManager.CreateModule(modName);
+                ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule(modName);
                 pe.Execute("import " + modName, module);
                 double res = pe.EvaluateAs<double>(modName + ".result", module);
                 AreEqual(res, 0.5);
@@ -1111,7 +1112,7 @@ if r.sum != 110:
             }
         }
 #endif
-        private static void TestOldDivision(ScriptEngine pe, ScriptModule module) {
+        private static void TestOldDivision(ScriptEngine pe, ScriptScope module) {
             pe.Execute("result = 1/2", module);
             AreEqual((int)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 0);
             AreEqual(pe.EvaluateAs<int>("1/2", module), 0);
@@ -1120,7 +1121,7 @@ if r.sum != 110:
             AreEqual(pe.EvaluateAs<int>("eval('3/2')", module), 1);
         }
 
-        private static void TestNewDivision(ScriptEngine pe, ScriptModule module) {
+        private static void TestNewDivision(ScriptEngine pe, ScriptScope module) {
             pe.Execute("result = 1/2", module);
             AreEqual((double)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 0.5);
             AreEqual(pe.EvaluateAs<double>("1/2", module), 0.5);

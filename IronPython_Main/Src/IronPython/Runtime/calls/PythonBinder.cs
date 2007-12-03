@@ -16,25 +16,23 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using System.Diagnostics;
+using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Utils;
 
-using TypeCache = IronPython.Runtime.Types.TypeCache;
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Threading;
-    using IronPython.Runtime.Operations;
-    using IronPython.Runtime.Types;
-    using Microsoft.Scripting.Utils;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
@@ -78,8 +76,28 @@ namespace IronPython.Runtime.Calls {
         protected override StandardRule<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
         }
-
+        
         public override Expression ConvertExpression(Expression expr, Type toType) {
+#if FALSE
+            Type exprType = expr.Type;
+
+            if (toType == typeof(object)) {
+                if (exprType.IsValueType) {
+                    return Ast.Convert(expr, toType);
+                } else {
+                    return expr;
+                }
+            }
+
+            if (toType.IsAssignableFrom(exprType)) {
+                return expr;
+            }
+
+            Type visType = CompilerHelpers.GetVisibleType(toType);
+            return Ast.Action.ConvertTo(
+                ConvertToAction.Make(visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : ConversionResultKind.ExplicitCast),
+                expr);
+#else
             Type exprType = expr.Type;
 
             if (toType == typeof(object)) {
@@ -146,6 +164,7 @@ namespace IronPython.Runtime.Calls {
                     visType
                 )
             );
+#endif
         }
 
         public override Expression CheckExpression(Expression expr, Type toType) {
@@ -267,10 +286,24 @@ namespace IronPython.Runtime.Calls {
         public override ErrorInfo MakeConversionError(Type toType, Expression value) {
             return ErrorInfo.FromException(
                 Ast.Call(
-                    typeof(PythonOps).GetMethod("CannotConvertError"),
-                    Ast.RuntimeConstant(toType),
-                    value
+                    typeof(PythonOps).GetMethod("TypeErrorForTypeMismatch"),
+                    Ast.Constant(PythonTypeOps.GetName(toType)),
+                    Ast.ConvertHelper(value, typeof(object))
                )
+            );
+        }
+
+        public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, Expression/*!*/[]/*!*/ parameters) {
+            Contract.RequiresNotNull(tracker, "tracker");
+            Contract.RequiresNotNull(parameters, "parameters");
+            Contract.RequiresNotNullItems(parameters, "parameters");
+
+            return ErrorInfo.FromException(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("StaticAssignmentFromInstanceError"),
+                    Ast.RuntimeConstant(tracker),
+                    Ast.Constant(isAssignment)
+                )
             );
         }
 
@@ -508,6 +541,10 @@ namespace IronPython.Runtime.Calls {
         #endregion
 
         protected override IList<Type> GetExtensionTypes(Type t) {
+            // Ensure that the type is initialized. If ReflectedTypeBuilder.RegisterAlternateBuilder was used,
+            // the alternate builder will get a chance to initialize the type.
+            DynamicHelpers.GetPythonTypeFromType(t);
+
             Type res;
             if (_extTypes.TryGetValue(t, out res)) {
                 List<Type> list = new List<Type>();

@@ -18,10 +18,14 @@ using System;
 namespace Microsoft.Scripting.Ast {
     static class TypeUtils {
         internal static Type GetNonNullableType(Type type) {
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+            if (IsNullableType(type)) {
                 return type.GetGenericArguments()[0];
             }
             return type;
+        }
+
+        internal static bool IsNullableType(Type type) {
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
         internal static bool IsBool(Type type) {
@@ -166,6 +170,31 @@ namespace Microsoft.Scripting.Ast {
 
         internal static bool IsImplicitlyConvertible(int fromX, int fromY, int toX, int toY) {
             return fromX <= toX && fromY <= toY;
+        }
+
+        internal static bool HasBuiltinEquality(Type left, Type right) {
+            // Reference type can be compared to interfaces
+            if (left.IsInterface && !right.IsValueType ||
+                right.IsInterface && !left.IsValueType) {
+                return true;
+            }
+
+            // Reference types compare if they are assignable
+            if (!left.IsValueType && !right.IsValueType) {
+                if (CanAssign(left, right) || CanAssign(right, left)) {
+                    return true;
+                }
+            }
+
+            if (left != right) {
+                return false;
+            }
+
+            if (left == typeof(bool) || IsNumeric(left) || left.IsEnum) {
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -13,13 +13,8 @@
  *
  * ***************************************************************************/
 
-using System.Reflection.Emit;
-using Microsoft.Scripting.Generation;
-using System;
-using Microsoft.Scripting.Utils;
-
 namespace Microsoft.Scripting.Ast {
-    public class DoStatement : Statement {
+    public sealed class DoStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression /*!*/ _test;
         private readonly Statement /*!*/ _body;
@@ -45,40 +40,5 @@ namespace Microsoft.Scripting.Ast {
         public Statement Body {
             get { return _body; }
         }                
-
-        protected override object DoExecute(CodeContext context) {
-            object ret = NextStatement;
-            
-            do {
-                ret = _body.Execute(context);
-                if (ret == Statement.Break) {
-                    break;
-                } else if (!(ret is ControlFlow)) {
-                    return ret;
-                }
-            } while (context.LanguageContext.IsTrue(_test.Evaluate(context)));
-
-            return NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            Label startTarget = cg.DefineLabel();
-            Label breakTarget = cg.DefineLabel();
-            Label continueTarget = cg.DefineLabel();
-
-            cg.MarkLabel(startTarget);                        
-            cg.PushTargets(breakTarget, continueTarget, this);
-            _body.Emit(cg);
-
-            cg.MarkLabel(continueTarget);
-            // TODO: Check if we need to emit position somewhere else also.
-            cg.EmitPosition(Start, _header);
-
-            _test.Emit(cg);
-            cg.Emit(OpCodes.Brtrue, startTarget);
-
-            cg.PopTargets();            
-            cg.MarkLabel(breakTarget);
-        }
     }
 }

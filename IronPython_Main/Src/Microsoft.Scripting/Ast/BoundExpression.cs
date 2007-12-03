@@ -15,11 +15,11 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class BoundExpression : Expression {
+    public sealed class BoundExpression : Expression {
         private readonly Variable /*!*/ _variable;
         private bool _defined;
 
@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
         private VariableReference _vr;
 
         internal BoundExpression(Variable /*!*/ variable)
-            : base(AstNodeType.BoundExpression) {
+            : base(AstNodeType.BoundExpression, variable.Type) {
             _variable = variable;
         }
 
@@ -54,84 +54,12 @@ namespace Microsoft.Scripting.Ast {
             internal set { _defined = value; }
         }
 
-        public override Type Type {
-            get { return _variable.Type; }
-        }
-
         public override string ToString() {
             return "BoundExpression : " + SymbolTable.IdToString(Name);
         }
 
-        protected override object DoEvaluate(CodeContext context) {
-            object ret;
-            switch (_variable.Kind) {
-                case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
-                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret)) {
-                        throw context.LanguageContext.MissingName(_variable.Name);
-                    } else {
-                        return ret;
-                    }
-                case Variable.VariableKind.Parameter:
-                    // This is sort of ugly: parameter variables can be stored either as locals or as temporaries (in case of $argn).
-                    if (!context.Scope.TemporaryStorage.TryGetValue(_variable, out ret) || ret == Uninitialized.Instance) {
-                        return RuntimeHelpers.LookupName(context, _variable.Name);
-                    } else {
-                        return ret;
-                    }
-                case Variable.VariableKind.Global:
-                    return RuntimeHelpers.LookupGlobalName(context, _variable.Name);
-                default:
-                    if (!context.LanguageContext.TryLookupName(context, _variable.Name, out ret)) {
-                        throw context.LanguageContext.MissingName(_variable.Name);
-                    } else if (ret == Uninitialized.Instance) {
-                        RuntimeHelpers.ThrowUnboundLocalError(_variable.Name);
-                        return null;
-                    } else {
-                        return ret;
-                    }
-            }
-        }
-
-        class VariableAddress : EvaluationAddress {
-            public VariableAddress(Expression expr)
-                : base(expr) {
-            }
-
-            public override object GetValue(CodeContext context, bool outParam) {
-                if (outParam) {
-                    return null;
-                }
-
-                return base.GetValue(context, outParam);
-            }
-        }
-
-        internal override EvaluationAddress EvaluateAddress(CodeContext context) {
-            return new VariableAddress(this);
-        }
-
-        internal override object EvaluateAssign(CodeContext context, object value) {
-            return BoundAssignment.EvaluateAssign(context, Variable, value);
-        }
-
         public override AbstractValue AbstractEvaluate(AbstractContext context) {
             return context.Lookup(_variable);
-        }
-
-        internal override void EmitAddress(CodeGen cg, Type asType) {
-            if (asType == Type) {
-                _vr.Slot.EmitGetAddr(cg);
-            } else {
-                base.EmitAddress(cg, asType);
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            // Do not emit CheckInitialized for variables that are defined, or for temp variables.
-            // Only emit CheckInitialized for variables of type object
-            bool check = !_defined && !_variable.IsTemporary && _variable.Type == typeof(object);
-            cg.EmitGet(_vr.Slot, Name, check);
         }
     }
 

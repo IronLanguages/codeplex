@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Hosting {
         
         // implementors shouldn't have access to the host; they should call the base implementation for forwarding
         private RemoteScriptHost _remoteHost;
-        private ScriptModule _defaultModule;
+        private ScriptScope _defaultModule;
 
         public LocalScriptHost() {
         }
@@ -71,10 +71,10 @@ namespace Microsoft.Scripting.Hosting {
             _remoteHost.EngineCreated(RemoteWrapper.WrapRemotable<IScriptEngine>(engine));
         }
 
-        public virtual void ModuleCreated(IScriptModule module) {
+        public virtual void ModuleCreated(IScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             Debug.Assert(_remoteHost != null);
-            _remoteHost.ModuleCreated(RemoteWrapper.WrapRemotable<IScriptModule>(module));
+            _remoteHost.ModuleCreated(RemoteWrapper.WrapRemotable<IScriptScope>(module));
         }
 
         // throws SerializationException 
@@ -89,7 +89,7 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.TryGetVariable(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), name, out value);
         }
 
-        public virtual IScriptModule DefaultModule {
+        public virtual IScriptScope DefaultModule {
             get {
                 if (_defaultModule == null) {
                     ScriptHost.CreateDefaultModule(ref _defaultModule);

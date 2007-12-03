@@ -41,7 +41,7 @@ namespace ToyScript {
             get { return _binder; }
         }
 
-        protected override LanguageContext GetLanguageContext(ScriptModule module) {
+        protected override LanguageContext GetLanguageContext(ScriptScope module) {
             return LanguageContext;
         }
 

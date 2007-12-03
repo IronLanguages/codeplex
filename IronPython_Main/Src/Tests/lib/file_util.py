@@ -42,7 +42,7 @@ def directory_exists(path):
 
 def file_exists(file):
     if sys.platform=="win32":
-        return nt.access(path, nt.F_OK)
+        return nt.access(file, nt.F_OK)
     else:
         try:    
             nt.stat(file)
@@ -180,18 +180,3 @@ def delete_all_f(module_name):
                 try:    nt.unlink(fn)
                 except: pass
                 
-
-def copy_dlls_for_peverify(dlls):
-    import System
-    if "-X:SaveAssemblies" not in System.Environment.GetCommandLineArgs(): 
-        return 
-                
-    for x in dlls:
-        try:
-            filecopy(x, sys.exec_prefix + "\\" + System.IO.Path.GetFileName(x))
-        except: 
-            print "Warning: copying %s failed" % x
-
-def delete_dlls_for_peverify(dlls):
-    import System
-    delete_files([sys.exec_prefix + "\\" + System.IO.Path.GetFileName(x) for x in dlls])

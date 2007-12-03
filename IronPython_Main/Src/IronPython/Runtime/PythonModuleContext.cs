@@ -39,7 +39,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public PythonModuleContext(ScriptModule module)
+        public PythonModuleContext(ScriptScope module)
             : base(module) {
         }
 

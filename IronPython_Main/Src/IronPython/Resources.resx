@@ -138,6 +138,9 @@
   <data name="EolInSingleQuotedString" xml:space="preserve">
     <value>EOL while scanning single-quoted string</value>
   </data>
+  <data name="ExpectedIndentation" xml:space="preserve">
+    <value>expected an indented block</value>
+  </data>
   <data name="ExpectedName" xml:space="preserve">
     <value>expected name</value>
   </data>
@@ -212,6 +215,12 @@
   </data>
   <data name="Slot_CantSet" xml:space="preserve">
     <value>cannot set slot</value>
+  </data>
+  <data name="StaticAccessFromInstanceError" xml:space="preserve">
+    <value>static property '{0}' of '{1}' can only be read through a type, not an instance</value>
+  </data>
+  <data name="StaticAssignmentFromInstanceError" xml:space="preserve">
+    <value>static property '{0}' of '{1}' can only be assigned to through a type, not an instance</value>
   </data>
   <data name="TokenHasNoValue" xml:space="preserve">
     <value>no value for this token</value>

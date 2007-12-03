@@ -101,16 +101,16 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "x"), SpecialName, PythonName("__coerce__")]
-        public static double Coerce(CodeContext context, double x, object o) {
-            // REVIEW: How is this used?
+        [SpecialName, PythonName("__coerce__")]
+        public static PythonTuple Coerce(CodeContext context, double x, object o) {
+            // called via builtin.coerce()
             double d = (double)Make(context, TypeCache.Double, o);
 
             if (Double.IsInfinity(d)) {
                 throw PythonOps.OverflowError("number too big");
             }
 
-            return d;
+            return PythonTuple.MakeTuple(x, d);
         }
         
         internal static object DivMod(double x, double y) {
@@ -204,6 +204,12 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static int Compare(BigInteger x, double y) {
+            if (y == Double.PositiveInfinity) {
+                return -1;
+            } else if (y == Double.NegativeInfinity) {
+                return 1;
+            }
+
             // BigInts can hold doubles, but doubles can't hold BigInts, so
             // if we're comparing against a BigInt then we should convert ourself
             // to a long and then compare.

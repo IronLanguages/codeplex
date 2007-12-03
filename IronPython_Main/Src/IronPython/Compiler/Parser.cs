@@ -296,8 +296,14 @@ namespace IronPython.Compiler {
                 errorCode |= ErrorCodes.IncompleteStatement;
             }
 
+            string msg;
+            switch(errorCode) {
+                case ErrorCodes.IndentationError: msg = Resources.ExpectedIndentation; break;
+                default: msg = Resources.UnexpectedToken; break;
+            }
+
             ReportSyntaxError(start, end, String.Format(System.Globalization.CultureInfo.InvariantCulture,
-                Resources.UnexpectedToken, t.Image), errorCode);
+                msg, t.Image), errorCode);
         }
 
         private void ReportSyntaxError(string message) {
@@ -2110,7 +2116,14 @@ namespace IronPython.Compiler {
             List<Expression> l = ParseTestList(out trailingComma);
             //  the case when no expression was parsed e.g. when we have an empty test list
             if (!allowEmptyExpr && l.Count == 0 && !trailingComma) {
-                ReportSyntaxError("invalid syntax");
+                if (MaybeEat(TokenKind.Indent)) {
+                    // the error is on the next token which has a useful location, unlike the indent - note we don't have an
+                    // indent if we're at an EOF.  It'a also an indentation error instead of a syntax error.
+                    Token next = NextToken();
+                    ReportSyntaxError(GetStart(), GetEnd(), "unexpected indent", ErrorCodes.IndentationError);
+                } else {
+                    ReportSyntaxError("invalid syntax");
+                }
             }
             return MakeTupleOrExpr(l, trailingComma);
         }
@@ -2152,18 +2165,25 @@ namespace IronPython.Compiler {
                 ret = MakeTupleOrExpr(new List<Expression>(), false);
                 hasRightParenthesis = true;
             } else {
-                Expression test = ParseTest();
-                if (MaybeEat(TokenKind.Comma)) {
-                    // "(" test "," ...
-                    ret = FinishTestListAsExpr(test);
-                } else if (PeekToken(Tokens.KeywordForToken)) {
-                    // "(" test "for" ...
-                    ret = ParseGeneratorExpression(test);
-                } else {
-                    // "(" test ")"
-                    ret = test is ParenthesisExpression ? test : new ParenthesisExpression(test);
+                bool prevAllow = _allowIncomplete;
+                try {
+                    _allowIncomplete = true;
+
+                    Expression test = ParseTest();
+                    if (MaybeEat(TokenKind.Comma)) {
+                        // "(" test "," ...
+                        ret = FinishTestListAsExpr(test);
+                    } else if (PeekToken(Tokens.KeywordForToken)) {
+                        // "(" test "for" ...
+                        ret = ParseGeneratorExpression(test);
+                    } else {
+                        // "(" test ")"
+                        ret = test is ParenthesisExpression ? test : new ParenthesisExpression(test);
+                    }
+                    hasRightParenthesis = Eat(TokenKind.RightParenthesis);
+                } finally {
+                    _allowIncomplete = prevAllow;
                 }
-                hasRightParenthesis = Eat(TokenKind.RightParenthesis);
             }
 
             SourceLocation rStart = GetStart();

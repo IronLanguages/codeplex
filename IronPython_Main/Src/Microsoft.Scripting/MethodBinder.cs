@@ -265,7 +265,7 @@ namespace Microsoft.Scripting {
                     // method multiple times.  This also happens w/ non-contigious default values, e.g. foo(a, b=3, c) where we don't want
                     // to generate a default candidate for just c which matches the normal method.
                     if (defaultBuilders[defaultBuilders.Count - defaultsUsed] != null) {
-                        AddTarget(MakeDefaultCandidate(
+                        AddSimpleTarget(MakeDefaultCandidate(
                             method, 
                             parameters, 
                             instanceBuilder, 
@@ -499,7 +499,7 @@ namespace Microsoft.Scripting {
             this._count = count;
             _targets = new List<MethodCandidate>();
         }
-       
+
         public MethodCandidate MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names, out Type[] argTests) {
             List<MethodCandidate> targets = SelectTargets(callType, types, names);
 

@@ -418,7 +418,21 @@ namespace IronPython.Runtime {
         }
 
         private static double ParseFloatNoCatch(string text) {
-            return double.Parse(text, System.Globalization.CultureInfo.InvariantCulture.NumberFormat); //??? is this fully Python compatible
+            return double.Parse(ReplaceUnicodeDigits(text), System.Globalization.CultureInfo.CurrentCulture.NumberFormat); //??? is this fully Python compatible
+        }
+
+        private static string ReplaceUnicodeDigits(string text) {
+            StringBuilder replacement = null;
+            for (int i = 0; i < text.Length; i++) {
+                if (text[i] >= '\x660' && text[i] <= '\x669') {
+                    if (replacement == null) replacement = new StringBuilder(text);
+                    replacement[i] = (char)(text[i] - '\x660' + '0');
+                }
+            }
+            if (replacement != null) {
+                text = replacement.ToString();
+            }
+            return text;
         }
 
         public static Complex64 ParseComplex64(string text) {

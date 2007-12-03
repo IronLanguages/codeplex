@@ -178,7 +178,11 @@ namespace IronPython.Runtime.Operations {
         [SpecialName, PythonName("__repr__")]
         public static string ToCodeRepresentation(Complex64 x) {
             if (x.Real != 0) {
-                return "(" + x.Real.ToString("G") + "+" + x.Imag.ToString("G") + "j)";
+                if (x.Imag >= 0) {
+                    return "(" + x.Real.ToString("G") + "+" + x.Imag.ToString("G") + "j)";
+                } else {
+                    return "(" + x.Real.ToString("G") + x.Imag.ToString("G") + "j)";
+                }
             }
 
             return x.Imag.ToString("G") + "j";

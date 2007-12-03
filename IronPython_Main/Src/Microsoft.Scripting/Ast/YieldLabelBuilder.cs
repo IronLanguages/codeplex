@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    class YieldLabelBuilder : CodeBlockWalker {
+    sealed class YieldLabelBuilder : CodeBlockWalker {
         sealed class ExceptionBlock {
             public enum TryStatementState {
                 Try,

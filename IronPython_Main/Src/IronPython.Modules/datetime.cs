@@ -26,6 +26,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -584,30 +585,61 @@ namespace IronPython.Modules {
             #region Rich Comparison Members
 
             protected virtual int CompareTo(object other) {
-                if (other == null)
-                    throw PythonOps.TypeError("can't compare datetime.date to NoneType");
-
-                if (other.GetType() != typeof(PythonDate))
-                    throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));
-
                 PythonDate date = other as PythonDate;
                 return this._dateTime.CompareTo(date._dateTime);
             }
 
-            public static bool operator >(PythonDate self, object other) {
-                return self.CompareTo(other) > 0;
+            /// <summary>
+            /// Used to check the type to see if we can do a comparison.  Returns true if we can
+            /// or false if we should return NotImplemented.  May throw if the type's really wrong.
+            /// </summary>
+            protected bool CheckType(object other) {
+                if (other == null)
+                    throw PythonOps.TypeError("can't compare datetime.date to NoneType");
+
+                if (other.GetType() != GetType()) {
+                    // if timetuple is defined on the other object go ahead and let it try the compare,
+                    // but only if it's a user-defined object
+                    if (!(GetType() == typeof(PythonDate) && other.GetType() == typeof(PythonDateTimeCombo) ||
+                        GetType() == typeof(PythonDateTimeCombo) & other.GetType() == typeof(PythonDate))) {
+
+                        if (PythonOps.HasAttr(DefaultContext.Default, other, SymbolTable.StringToId("timetuple"))) {
+                            return false;
+                        }
+                    }
+                    
+                    throw PythonOps.TypeError("can't compare datetime.date to {0}", PythonTypeOps.GetName(other));                    
+                }
+
+                return true;
             }
 
-            public static bool operator <(PythonDate self, object other) {
-                return self.CompareTo(other) < 0;
+            [return: MaybeNotImplemented]
+            public static object operator >(PythonDate self, object other) {
+                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+
+                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
-            public static bool operator >=(PythonDate self, object other) {
-                return self.CompareTo(other) >= 0;
+            [return: MaybeNotImplemented]
+            public static object operator <(PythonDate self, object other) {
+                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+
+                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
-            public static bool operator <=(PythonDate self, object other) {
-                return self.CompareTo(other) <= 0;
+            [return: MaybeNotImplemented]
+            public static object operator >=(PythonDate self, object other) {
+                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+
+                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
+            }
+
+            [return: MaybeNotImplemented]
+            public static object operator <=(PythonDate self, object other) {
+                if (!self.CheckType(other)) return PythonOps.NotImplemented;
+
+                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
             [SpecialName, PythonName("__eq__")]
@@ -787,10 +819,18 @@ namespace IronPython.Modules {
 
             // supported operations
             public static PythonDateTimeCombo operator +([NotNull]PythonDateTimeCombo date, [NotNull]PythonTimeDelta delta) {
-                return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                try {
+                    return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                } catch (ArgumentException) {
+                    throw new OverflowException("date value out of range");
+                }
             }
             public static PythonDateTimeCombo operator +([NotNull]PythonTimeDelta delta, [NotNull]PythonDateTimeCombo date) {
-                return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                try {
+                    return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                } catch (ArgumentException) {
+                    throw new OverflowException("date value out of range");
+                }
             }
             [SpecialName, PythonName("__radd__")]
             public new PythonDateTimeCombo ReverseAdd(PythonTimeDelta delta) { return this + delta; }

@@ -274,17 +274,29 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Used for conversions to bool
         /// </summary>
-        internal static Expression GetConvertByLengthBody(ConvertToAction convertToAction, Variable tmp) {
+        internal static Expression GetConvertByLengthBody(Variable tmp) {
             return Ast.NotEqual(
                 Ast.Action.ConvertTo(
                     typeof(int),
                     Ast.Action.Call(
-                        convertToAction.ToType,
+                        typeof(object),
                         Ast.Read(tmp)
                     )
                 ),
                 Ast.Constant(0)
             );
+        }
+
+        internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(CompilerHelpers.GetType(self));
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Constant(isCallable)
+                )
+            );
+            return rule;
         }
     }
 }

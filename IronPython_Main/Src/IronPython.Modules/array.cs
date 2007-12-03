@@ -37,7 +37,7 @@ namespace IronPython.Modules {
         public static object array = ArrayType;
 
         [PythonType("array")]
-        public class PythonArray : IPythonArray, IValueEquality, IEnumerable, IWeakReferenceable {
+        public class PythonArray : IPythonArray, IValueEquality, IEnumerable, IWeakReferenceable, ICollection {
             private ArrayData data;
             private char typeCode;
             private WeakRefTracker tracker;
@@ -823,6 +823,26 @@ namespace IronPython.Modules {
 
             public object GetSlice(int start, int stop) {
                 return this[new Slice(start, stop)];
+            }
+
+            #endregion
+
+            #region ICollection Members
+
+            public void CopyTo(Array array, int index) {
+                throw new NotImplementedException();
+            }
+
+            int ICollection.Count {
+                get { return GetLength(); }
+            }
+
+            public bool IsSynchronized {
+                get { return false; }
+            }
+
+            public object SyncRoot {
+                get { return this; }
             }
 
             #endregion

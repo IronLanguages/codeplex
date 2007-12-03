@@ -15,8 +15,8 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_2")
+
+add_clr_assemblies("loadorder_2")
 
 # namespace First {
 #     public class Nongeneric1 {
@@ -31,7 +31,7 @@ from First import *
 AreEqual(First.Nongeneric1.Flag, "First.Nongeneric1")
 AreEqual(Nongeneric1.Flag, "First.Nongeneric1")
 
-clr.AddReference("loadorder_2c")
+add_clr_assemblies("loadorder_2c")
 
 # // non-generic type, which has same namespace, same name from First.Nongeneric1
 # namespace First {

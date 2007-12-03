@@ -27,10 +27,6 @@ import clr
 #------------------------------------------------------------------------------
 #--Globals
 
-SNAP = 0
-if get_environ_variable("THISISSNAP")!=None: 
-    SNAP = 1
-
 #if this is a debug build and the assemblies are being saved...peverify is run.
 #for the test to pass, Maui assemblies must be in the AssembliesDir
 if is_peverify_run:
@@ -94,7 +90,7 @@ try:
     clr.AddReference('Maui.Core.dll')
 except:
     print "test_superconsole.py failed: cannot load Maui.Core assembly"
-    sys.exit(SNAP)
+    sys.exit(int(is_snap))
 
 from Maui.Core import App
 proc = Process()
@@ -111,7 +107,6 @@ try:
 except:
     print "test_superconsole.py failed: cannot initialize App object (probably running as service, or in minimized remote window"
     proc.Kill()
-    #sys.exit(SNAP)
     sys.exit(0)
     
 superConsole.SendKeys('from pretest import *{ENTER}')

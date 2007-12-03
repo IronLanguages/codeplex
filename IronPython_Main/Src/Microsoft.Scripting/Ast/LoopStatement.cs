@@ -13,13 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Reflection.Emit;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class LoopStatement : Statement {
+    public sealed class LoopStatement : Statement {
         private readonly SourceLocation _header;
         private readonly Expression _test;
         private readonly Expression _increment;
@@ -56,67 +53,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Statement ElseStatement {
             get { return _else; }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            object ret = NextStatement;
-            while (_test == null || (bool)_test.Evaluate(context)) {
-                ret = _body.Execute(context);
-                if (ret == Statement.Break) {
-                    return NextStatement;
-                } else if (!(ret is ControlFlow)) {
-                    return ret;
-                }
-                if (_increment != null) {
-                    _increment.Evaluate(context);
-                }
-            }
-            if (_else != null) {
-                return _else.Execute(context);
-            }
-            return NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            Nullable<Label> firstTime = null;
-            Label eol = cg.DefineLabel();
-            Label breakTarget = cg.DefineLabel();
-            Label continueTarget = cg.DefineLabel();
-
-            if (_increment != null) {
-                firstTime = cg.DefineLabel();
-                cg.Emit(OpCodes.Br, firstTime.Value);
-            }
-
-            if (_header.IsValid) {
-                cg.EmitPosition(Start, _header);
-            }
-            cg.MarkLabel(continueTarget);
-
-            if (_increment != null) {
-                _increment.EmitAs(cg, typeof(void));
-                cg.MarkLabel(firstTime.Value);
-            }
-
-            if (_test != null) {
-                _test.Emit(cg);
-                cg.Emit(OpCodes.Brfalse, eol);
-            }
-
-            cg.PushTargets(breakTarget, continueTarget, this);
-
-            _body.Emit(cg);
-            
-            
-            cg.Emit(OpCodes.Br, continueTarget);
-
-            cg.PopTargets();
-
-            cg.MarkLabel(eol);
-            if (_else != null) {
-                _else.Emit(cg);
-            }
-            cg.MarkLabel(breakTarget);
         }
     }
 

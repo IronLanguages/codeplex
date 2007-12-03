@@ -328,7 +328,8 @@ def test_c2cs():
     AreEqual(x.Test(), 'Foo<T>')
     
     
-Assert(sys.modules.has_key("__main__"))
+if not is_silverlight:
+    Assert(sys.modules.has_key("__main__"))
 
 #########################################################################################
 if not is_silverlight:

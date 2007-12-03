@@ -14,62 +14,32 @@
  * ***************************************************************************/
 
 using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class NewArrayExpression : Expression {
+    public sealed class NewArrayExpression : Expression {
         private ReadOnlyCollection<Expression> _expressions;
-        private Type _type;
-        private System.Reflection.ConstructorInfo _constructor;
+
+        // TODO: Remove!!!
+        private readonly ConstructorInfo _constructor;
 
         internal NewArrayExpression(Type type, ReadOnlyCollection<Expression> expressions)
-            : base(AstNodeType.NewArrayExpression) {
-            _type = type;
+            : base(AstNodeType.NewArrayExpression, type) {
             _expressions = expressions;
-            _constructor = _type.GetConstructor(new Type[] { typeof(int) });
+            _constructor = type.GetConstructor(new Type[] { typeof(int) });
         }
 
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
 
-        public override Type Type {
-            get {
-                return _type;
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitArray(
-                _type.GetElementType(),
-                _expressions.Count,
-                delegate(int index) {
-                    _expressions[index].Emit(cg);
-                }
-            );
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            if (_type.GetElementType().IsValueType) {
-                // value arrays cannot be cast to object arrays
-                object contents = (object)_constructor.Invoke(new object[] { _expressions.Count });
-                System.Reflection.MethodInfo setter = _type.GetMethod("Set");
-                for (int i = 0; i < _expressions.Count; i++) {
-                    setter.Invoke(contents, new object[] { i, _expressions[i].Evaluate(context) });
-                }
-                return contents;
-            } else {
-                object[] contents = (object[])_constructor.Invoke(new object[] { _expressions.Count });
-                for (int i = 0; i < _expressions.Count; i++) {
-                    contents[i] = _expressions[i].Evaluate(context);
-                }
-                return contents;
-            }
-        }
+        internal ConstructorInfo Constructor {
+            get { return _constructor; }
+        } 
     }
 
     /// <summary>
@@ -127,7 +97,10 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            return NewArray(type, clone ?? initializers);
+            if (clone != null) {
+                initializers = clone;
+            }
+            return NewArray(type, initializers);
         }
     }
 }

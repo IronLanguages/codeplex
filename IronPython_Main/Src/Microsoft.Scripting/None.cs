@@ -26,7 +26,7 @@ namespace Microsoft.Scripting {
     /// 
     /// TODO Should be renamed to Null to reflect the standard .NET name rather than Python name
     /// </summary>
-    public class None {
+    public sealed class None {
         public static readonly Type Type = typeof(None);
 
         /// <summary>

@@ -21,17 +21,19 @@ using System.Threading;
 
 namespace Microsoft.Scripting {
     public static class SymbolTable {
-        private static object _lockObj = new object();
+        private static readonly object _lockObj = new object();
 
-        private static Dictionary<string, int> _idDict = new Dictionary<string, int>(InitialTableSize);
+        private static readonly Dictionary<string, int> _idDict = new Dictionary<string, int>(InitialTableSize);
 
         private const int InitialTableSize = 256;
-        private static Dictionary<int, string> _fieldDict = new Dictionary<int, string>(InitialTableSize);
+        private static readonly Dictionary<int, string> _fieldDict = CreateFieldDictionary();
 
         private static int _nextCaseInsensitiveId = 1;
 
-        static SymbolTable() {
-            _fieldDict[0] = null;   // initialize the null string
+        private static Dictionary<int, string>  CreateFieldDictionary() {
+            Dictionary<int, string> result = new Dictionary<int, string>(InitialTableSize);
+            result[0] = null;   // initialize the null string
+            return result;
         }
 
         public static SymbolId StringToId(string field) {

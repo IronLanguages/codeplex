@@ -14,26 +14,18 @@
  * ***************************************************************************/
 
 using System;
+using System.IO;
+using System.Runtime.Remoting;
 using System.Threading;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
-
-using System.IO;
-using System.Text;
-using System.Runtime.Remoting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
-    public delegate T ModuleBinder<T>(ScriptModule scope);
+    public delegate T ModuleBinder<T>(ScriptScope scope);
 
-    public interface IScriptEngine : IRemotable, ILanguageService {
+    public interface IScriptEngine : IRemotable {
         ILanguageProvider LanguageProvider { get; }
 
         Guid LanguageGuid { get; }
@@ -48,86 +40,70 @@ namespace Microsoft.Scripting.Hosting {
 
         // configuration:
         void SetSourceUnitSearchPaths(string[] paths);
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         CompilerOptions GetDefaultCompilerOptions();
+
         SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind);
         SourceCodeProperties GetCodeProperties(string code, SourceCodeKind kind, ErrorSink errorSink);
         
         int ExecuteProgram(SourceUnit sourceUnit);
-        void PublishModule(IScriptModule module);
+        void PublishModule(IScriptScope module);
         void Shutdown();
 
         // convenience API:
         void Execute(string code);
-        void Execute(string code, IScriptModule module);
+        void Execute(string code, IScriptScope module);
         void ExecuteFile(string path);
         void ExecuteFileContent(string path);
-        void ExecuteFileContent(string path, IScriptModule module);
+        void ExecuteFileContent(string path, IScriptScope module);
         void ExecuteCommand(string code);
-        void ExecuteCommand(string code, IScriptModule module);
+        void ExecuteCommand(string code, IScriptScope module);
         void ExecuteInteractiveCode(string code);
-        void ExecuteInteractiveCode(string code, IScriptModule module);
-        void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module);
+        void ExecuteInteractiveCode(string code, IScriptScope module);
+        void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptScope module);
 
         object Evaluate(string expression);
-        object Evaluate(string expression, IScriptModule module);
-        object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module);
+        object Evaluate(string expression, IScriptScope module);
+        object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptScope module);
+
+        ObjectOperations Operations {
+            get;
+        }
+
+        ObjectOperations CreateOperations();
 
         // code sense:
-        bool TryGetVariable(string name, IScriptModule module, out object obj);
-        bool TryGetObjectMemberValue(object obj, string name, out object value);
-        bool TryGetObjectMemberValue(object obj, string name, IScriptModule module, out object value);
-        string[] GetObjectMemberNames(object obj);
-        string[] GetObjectMemberNames(object obj, IScriptModule module);
-        string[] GetObjectCallSignatures(object obj);
-        string GetObjectDocumentation(object obj);
-        
-        // object operations:
-        bool IsObjectCallable(object obj);
-        bool IsObjectCallable(object obj, IScriptModule module);
-        object CallObject(object obj, params object[] args);
-        object CallObject(object obj, IScriptModule module, params object[] args);
+        bool TryGetVariable(string name, IScriptScope module, out object obj);
 
-        IScriptModule CompileFile(string path, string moduleName);
+        IScriptScope CompileFile(string path, string moduleName);
         ICompiledCode CompileFileContent(string path);
-        ICompiledCode CompileFileContent(string path, IScriptModule module);
+        ICompiledCode CompileFileContent(string path, IScriptScope module);
         ICompiledCode CompileCode(string code);
-        ICompiledCode CompileCode(string code, IScriptModule module);
-        ICompiledCode CompileExpression(string expression, IScriptModule module);
-        ICompiledCode CompileStatements(string statement, IScriptModule module);
+        ICompiledCode CompileCode(string code, IScriptScope module);
+        ICompiledCode CompileExpression(string expression, IScriptScope module);
+        ICompiledCode CompileStatements(string statement, IScriptScope module);
         ICompiledCode CompileInteractiveCode(string code);
-        ICompiledCode CompileInteractiveCode(string code, IScriptModule module);
-        ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module);
+        ICompiledCode CompileInteractiveCode(string code, IScriptScope module);
+        ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptScope module);
         ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink);
 
 #if !SILVERLIGHT
 
         // sourcePath and module can be null
-        ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptModule module);
+        ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptScope module);
 
-        IObjectHandle EvaluateAndWrap(string expression);
-        IObjectHandle EvaluateAndWrap(string expression, IScriptModule module);
+        ObjectHandle EvaluateAndWrap(string expression);
+        ObjectHandle EvaluateAndWrap(string expression, IScriptScope module);
 
         // code sense:
-        bool TryGetVariableAndWrap(string name, IScriptModule module, out IObjectHandle obj);
-        bool TryGetObjectMemberValue(IObjectHandle obj, string name, out IObjectHandle value);
-        bool TryGetObjectMemberValue(IObjectHandle obj, string name, IScriptModule module, out IObjectHandle value);
-        string[] GetObjectMemberNames(IObjectHandle obj);
-        string[] GetObjectMemberNames(IObjectHandle obj, IScriptModule module);
-        
-        string[] GetObjectCallSignatures(IObjectHandle obj);
-        string GetObjectDocumentation(IObjectHandle obj);
-
-        // object operations:
-        bool IsObjectCallable(IObjectHandle obj);
-        bool IsObjectCallable(IObjectHandle obj, IScriptModule module);
-        IObjectHandle CallObject(IObjectHandle obj, params object[] args);
-        IObjectHandle CallObject(IObjectHandle obj, IScriptModule module, params object[] args);
+        bool TryGetVariableAndWrap(string name, IScriptScope module, out ObjectHandle obj);
 
 #endif
 
                 
         // TODO: (internal)
-        CompilerOptions GetModuleCompilerOptions(ScriptModule module);
+        CompilerOptions GetModuleCompilerOptions(ScriptScope module);
 
         // TODO: output
         TextWriter GetOutputWriter(bool isErrorOutput);
@@ -136,6 +112,7 @@ namespace Microsoft.Scripting.Hosting {
         ActionBinder DefaultBinder { get; }
         
         // TODO:
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         ErrorSink GetCompilerErrorSink();
     }
 
@@ -143,6 +120,7 @@ namespace Microsoft.Scripting.Hosting {
         private readonly LanguageProvider _provider;
         private readonly EngineOptions _options;
         private readonly LanguageContext _languageContext;
+        private ObjectOperations _operations;
 
         #region Properties
 
@@ -220,7 +198,7 @@ namespace Microsoft.Scripting.Hosting {
             get { return LanguageProvider; }
         }
 
-        public virtual void ModuleCreated(ScriptModule module) {
+        public virtual void ModuleCreated(ScriptScope module) {
             // nop
         }
 
@@ -228,80 +206,29 @@ namespace Microsoft.Scripting.Hosting {
             // nop
         }
 
-        #endregion
-
-        #region Runtime Code Sense
-
-        protected virtual string[] FormatObjectMemberNames(IList<object> names) {
-            // the engine doesn't see any members of the specified object:
-            return null;
-        }
-
-        public string[] GetObjectMemberNames(object obj) {
-            return GetObjectMemberNames(obj, null);
-        }
-        
-        public string[] GetObjectMemberNames(object obj, IScriptModule module) {
-            Contract.RequiresNotNull(obj, "obj");
-            return FormatObjectMemberNames(Ops_GetAttrNames(GetCodeContext(module), obj));
-        }
-
-        public virtual string[] GetObjectCallSignatures(object obj) {
-            // not callable:
-            return null;
-        }
-
-        public virtual string GetObjectDocumentation(object obj) {
-            // the engine doesn't see any documentation for the specified object:
-            return null;
-        }
-
-        #endregion
+        #endregion        
 
         #region Object Operations
 
-        public bool TryGetVariable(string name, IScriptModule module, out object obj) {
+        public ObjectOperations Operations {
+            get {
+                if (_operations == null) {
+                    Interlocked.CompareExchange(ref _operations, CreateOperations(), null);
+                }
+
+                return _operations;
+            }
+        }
+
+        public ObjectOperations CreateOperations() {
+            return new ObjectOperations(GetCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultModule));
+        }
+
+        public bool TryGetVariable(string name, IScriptScope module, out object obj) {
             CodeContext context = GetCodeContext(module);
             return context.LanguageContext.TryLookupName(context, SymbolTable.StringToId(name), out obj);
         }
         
-        public bool TryGetObjectMemberValue(object obj, string name, out object value) {
-            return TryGetObjectMemberValue(obj, name, null, out value);
-        }
-
-        public bool TryGetObjectMemberValue(object obj, string name, IScriptModule module, out object value) {
-            Contract.RequiresNotNull(obj, "obj");
-            return Ops_TryGetAttr(GetCodeContext(module), obj, SymbolTable.StringToId(name), out value);
-        }
-
-        public bool IsObjectCallable(object obj) {
-            return IsObjectCallable(obj, null);
-        }
-
-        public bool IsObjectCallable(object obj, IScriptModule module) {
-            Contract.RequiresNotNull(obj, "obj");
-
-            return Ops_IsCallable(GetCodeContext(module), obj);
-        }
-
-        public object CallObject(object obj, params object[] args) {
-            return CallObject(obj, null, args);
-        }
-
-        public object CallObject(object obj, IScriptModule module, params object[] args) {
-            Contract.RequiresNotNull(obj, "obj");
-            Contract.RequiresNotNull(args, "args");
-
-            return Ops_Call(GetCodeContext(module), obj, args);
-        }
-
-        /// <summary>
-        /// Performs a conversion of object to type T using the engines semantics.
-        /// </summary>
-        public virtual T ConvertObject<T>(object obj) {
-            return (T)System.Convert.ChangeType(obj, typeof(T), null);
-        }
-
         #endregion
 
         #region Evaluation
@@ -314,12 +241,12 @@ namespace Microsoft.Scripting.Hosting {
             return Evaluate(expression, null);
         }
 
-        public object Evaluate(string expression, IScriptModule module) {
+        public object Evaluate(string expression, IScriptScope module) {
             Contract.RequiresNotNull(expression, "expression");
             return CompileExpression(expression, module).Evaluate(module);      
         }
 
-        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
             return CompileSourceUnit(sourceUnit, module).Evaluate(module);
         }
@@ -330,8 +257,8 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public T EvaluateAs<T>(string expression, ScriptModule module) {
-            return ConvertObject<T>(Evaluate(expression, module));
+        public T EvaluateAs<T>(string expression, IScriptScope module) {
+            return Operations.ConvertTo<T>(Evaluate(expression, module));
         }
 
         #endregion
@@ -372,7 +299,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Creates compiler options initialized by the options associated with the module.
         /// </summary>
-        public virtual CompilerOptions GetModuleCompilerOptions(ScriptModule module) { // TODO: internal protected
+        public virtual CompilerOptions GetModuleCompilerOptions(ScriptScope module) { // TODO: internal protected
             return GetDefaultCompilerOptions();
         }
 
@@ -394,7 +321,8 @@ namespace Microsoft.Scripting.Hosting {
             ExecuteCommand(code, null);
         }
 
-        public void ExecuteCommand(string code, IScriptModule module) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        public void ExecuteCommand(string code, IScriptScope module) {
             CommandDispatcher dispatcher = ScriptDomainManager.CurrentManager.GetCommandDispatcher();
 
             if (dispatcher != null) {
@@ -438,7 +366,7 @@ namespace Microsoft.Scripting.Hosting {
             CompileFileContent(path).Execute();
         }
 
-        public void ExecuteFileContent(string path, IScriptModule module) {
+        public void ExecuteFileContent(string path, IScriptScope module) {
             CompileFileContent(path, module).Execute(module);
         }
         
@@ -446,7 +374,7 @@ namespace Microsoft.Scripting.Hosting {
             ExecuteInteractiveCode(code, null);
         }
 
-        public void ExecuteInteractiveCode(string code, IScriptModule module) {
+        public void ExecuteInteractiveCode(string code, IScriptScope module) {
             ICompiledCode cc = CompileInteractiveCode(code, module);
             if (cc != null) {
                 PrintInteractiveCodeResult(cc.Evaluate(module));
@@ -460,17 +388,17 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Execute a snippet of code within the scope of the specified module. Convenience API.
         /// </summary>
-        public void Execute(string code, IScriptModule module) {
+        public void Execute(string code, IScriptScope module) {
             Contract.RequiresNotNull(code, "code");
             ExecuteSourceUnit(SourceUnit.CreateSnippet(this, code), module);
         }
 
-        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
             CompileSourceUnit(sourceUnit, module).Execute(module);
         }
 
-        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
             CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
             return new CompiledCode(_languageContext.CompileSourceCode(sourceUnit, options));
@@ -491,7 +419,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Convenience hosting API.
         /// </summary>
-        public ICompiledCode CompileCode(string code, IScriptModule module) {
+        public ICompiledCode CompileCode(string code, IScriptScope module) {
             Contract.RequiresNotNull(code, "code");
             return CompileSourceUnit(SourceUnit.CreateSnippet(this, code), module);
         }
@@ -499,7 +427,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Comvenience hosting API.
         /// </summary>
-        public ICompiledCode CompileExpression(string expression, IScriptModule module) {
+        public ICompiledCode CompileExpression(string expression, IScriptScope module) {
             Contract.RequiresNotNull(expression, "expression");
             
             // TODO: remove TrimStart
@@ -509,7 +437,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Comvenience hosting API.
         /// </summary>
-        public ICompiledCode CompileStatements(string statement, IScriptModule module) {
+        public ICompiledCode CompileStatements(string statement, IScriptScope module) {
             Contract.RequiresNotNull(statement, "statement");
             return CompileSourceUnit(SourceUnit.CreateSnippet(this, statement, SourceCodeKind.Statements), module);
         }
@@ -517,14 +445,14 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Convenience hosting API.
         /// </summary>
-        public IScriptModule CompileFile(string path, string moduleName) {
+        public IScriptScope CompileFile(string path, string moduleName) {
             Contract.RequiresNotNull(path, "path");
             
             if (moduleName == null) {
                 moduleName = Path.GetFileNameWithoutExtension(path);
             }
 
-            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, Encoding.Default);
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, StringUtils.DefaultEncoding);
             if (sourceUnit == null) {
                 throw new FileNotFoundException();
             }
@@ -536,10 +464,10 @@ namespace Microsoft.Scripting.Hosting {
             return CompileFileContent(path, null);
         }
         
-        public ICompiledCode CompileFileContent(string path, IScriptModule module) {
+        public ICompiledCode CompileFileContent(string path, IScriptScope module) {
             Contract.RequiresNotNull(path, "path");
-            
-            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, Encoding.Default);
+
+            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(this, path, StringUtils.DefaultEncoding);
             if (sourceUnit == null) {
                 throw new FileNotFoundException();
             }
@@ -551,13 +479,13 @@ namespace Microsoft.Scripting.Hosting {
             return CompileInteractiveCode(code, null);
         }
 
-        public ICompiledCode CompileInteractiveCode(string code, IScriptModule module) {
+        public ICompiledCode CompileInteractiveCode(string code, IScriptScope module) {
             Contract.RequiresNotNull(code, "code");
             return CompileSourceUnit(SourceUnit.CreateSnippet(this, code, SourceCodeKind.InteractiveCode), module);
         }
 
 #if !SILVERLIGHT
-        public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptModule module) {
+        public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptScope module) {
             Contract.RequiresNotNull(code, "code");
 
             CompilerOptions options = (module != null) ? module.GetCompilerOptions(this) : GetDefaultCompilerOptions();
@@ -570,7 +498,7 @@ namespace Microsoft.Scripting.Hosting {
         #region ObjectHandle Wrappings
 #if !SILVERLIGHT
 
-        public bool TryGetVariableAndWrap(string name, IScriptModule module, out IObjectHandle obj) {
+        public bool TryGetVariableAndWrap(string name, IScriptScope module, out ObjectHandle obj) {
             object local_obj;
             bool result = TryGetVariable(name, module, out local_obj);
             obj = new ObjectHandle(local_obj);
@@ -580,146 +508,10 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public string[] GetObjectCallSignatures(IObjectHandle obj) {
-            Contract.RequiresNotNull(obj, "obj");
-            return GetObjectCallSignatures(obj.Unwrap());
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public string[] GetObjectMemberNames(IObjectHandle obj) {
-            return GetObjectMemberNames(obj, null);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="module"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"><paramref name="obj"/></exception>
-        public string[] GetObjectMemberNames(IObjectHandle obj, IScriptModule module) {
-            Contract.RequiresNotNull(obj, "obj");
-            return GetObjectMemberNames(obj.Unwrap(), module);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public string GetObjectDocumentation(IObjectHandle obj) {
-            Contract.RequiresNotNull(obj, "obj");
-            return GetObjectDocumentation(obj.Unwrap());
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="name"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"><paramref name="obj"/>, <paramref name="name"/></exception>
-        public bool TryGetObjectMemberValue(IObjectHandle obj, string name, out IObjectHandle value) {
-            return TryGetObjectMemberValue(obj, name, null, out value);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="name"></param>
-        /// <param name="module">Can be <c>null</c>.</param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"><paramref name="obj"/>, <paramref name="name"/></exception>
-        public bool TryGetObjectMemberValue(IObjectHandle obj, string name, IScriptModule module, out IObjectHandle value) {
-            Contract.RequiresNotNull(obj, "obj");
-            object v;
-            return Utilities.MakeHandle(TryGetObjectMemberValue(obj.Unwrap(), name, module, out v), v, out value);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public bool IsObjectCallable(IObjectHandle obj) {
-            return IsObjectCallable(obj, null);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="module"></param>
-        /// <returns></returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public bool IsObjectCallable(IObjectHandle obj, IScriptModule module) {
-            Contract.RequiresNotNull(obj, "obj");
-            return IsObjectCallable(obj.Unwrap(), module);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj">Handle to an object to call. The object must be local w.r.t. this engine.</param>
-        /// <param name="args">Array of arguments. Arguments of type <see cref="IObjectHandle"/> are unwrapped.</param>
-        /// <returns>Wrapped result of the call.</returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException">obj, args[i]</exception>
-        /// <exception cref="ArgumentNullException">obj, args</exception>
-        public IObjectHandle CallObject(IObjectHandle obj, params object[] args) {
-            return CallObject(obj, null, args);
-        }
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="obj">Handle to an object to call. The object must be local w.r.t. this engine.</param>
-        /// <param name="module">The module in whose context to make the call. A <c>null</c> reference means the default module.</param>
-        /// <param name="args">Array of arguments. Arguments of type <see cref="IObjectHandle"/> are unwrapped.</param>
-        /// <returns>Wrapped result of the call.</returns>
-        /// <exception cref="System.Runtime.Serialization.SerializationException">obj, args[i]</exception>
-        /// <exception cref="ArgumentNullException">obj, args</exception>
-        public IObjectHandle CallObject(IObjectHandle obj, IScriptModule module, params object[] args) {
-            Contract.RequiresNotNull(obj, "obj");
-            Contract.RequiresNotNull(args, "args");
-
-            object local_obj = obj.Unwrap();
-            object[] local_args = new object[args.Length];
-            for (int i = 0; i < args.Length; i++) {
-                IObjectHandle handle = args[i] as IObjectHandle;
-                local_args[i] = (handle != null) ? handle.Unwrap() : args[i];
-            }
-            
-            return new ObjectHandle(CallObject(local_obj, module, local_args));
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
         /// <param name="expression"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"><paramref name="expression"/></exception>
-        public IObjectHandle EvaluateAndWrap(string expression) {
+        public ObjectHandle EvaluateAndWrap(string expression) {
             return new ObjectHandle(Evaluate(expression));
         }
 
@@ -730,7 +522,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <param name="module">Can be <c>null</c>.</param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException"><paramref name="expression"/></exception>
-        public IObjectHandle EvaluateAndWrap(string expression, IScriptModule module) {
+        public ObjectHandle EvaluateAndWrap(string expression, IScriptScope module) {
             return new ObjectHandle(Evaluate(expression, module));
         }
 
@@ -742,19 +534,19 @@ namespace Microsoft.Scripting.Hosting {
 
         // Gets a LanguageContext for the specified module that captures the current state 
         // of the module which will be used for compilation and execution of the next piece of code against the module.
-        private CodeContext GetCodeContext(IScriptModule module) {
-            return GetCodeContext(RemoteWrapper.GetLocalArgument<ScriptModule>(module ?? 
+        private CodeContext GetCodeContext(IScriptScope module) {
+            return GetCodeContext(RemoteWrapper.GetLocalArgument<ScriptScope>(module ?? 
                 ScriptDomainManager.CurrentManager.Host.DefaultModule, "module"));
         }
 
-        internal protected CodeContext GetCodeContext(ScriptModule module) {
+        internal protected CodeContext GetCodeContext(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             LanguageContext languageContext = GetLanguageContext(module);
             ModuleContext moduleContext = languageContext.EnsureModuleContext(module);
             return new CodeContext(module.Scope, languageContext, moduleContext);
         }
 
-        internal protected virtual LanguageContext GetLanguageContext(ScriptModule module) {
+        internal protected virtual LanguageContext GetLanguageContext(ScriptScope module) {
             Contract.RequiresNotNull(module, "module");
             return GetLanguageContext(module.GetCompilerOptions(this));
         }
@@ -765,7 +557,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
-        public virtual void PublishModule(IScriptModule module) {
+        public virtual void PublishModule(IScriptScope module) {
             // nop
         }
 
@@ -805,27 +597,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         #region // TODO: Microsoft.Scripting.Vestigial Workarounds (used from MSV instead of PythonEngine)
-
-        // Ops.GetAttrNames
-        protected virtual IList<object> Ops_GetAttrNames(CodeContext context, object obj) {
-            throw new NotSupportedException();
-        }
-
-        // Ops.TryGetAttr
-        protected virtual bool Ops_TryGetAttr(CodeContext context, object obj, SymbolId id, out object value) {
-            throw new NotSupportedException();
-        }
-
-        // Ops.IsCallable
-        protected virtual bool Ops_IsCallable(CodeContext context, object obj) {
-            throw new NotSupportedException();
-        }
-
-        // Ops.Call
-        protected virtual object Ops_Call(CodeContext context, object obj, object[] args) {
-            throw new NotSupportedException();
-        }
-
+        
         #endregion
 
     }

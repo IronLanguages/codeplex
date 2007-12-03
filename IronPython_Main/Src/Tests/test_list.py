@@ -329,5 +329,22 @@ def test_inplace_addition():
             AssertUnreachable()
         except TypeError, e:
             pass
+            
+def test_indexing():
+    l = [2,3,4]
+    def set(x, i, v): x[i] = v
+    AssertError(TypeError, lambda : l[2.0])
+    AssertError(TypeError, lambda : set(l, 2.0, 1))
+    
+    class mylist(list):
+        def __getitem__(self, index):
+            return list.__getitem__(self, int(index))
+        def __setitem__(self, index, value):
+            return list.__setitem__(self, int(index), value)
+
+    l = mylist(l)
+    AreEqual(l[2.0], 4)
+    l[2.0] = 1
+    AreEqual(l[2], 1)
 
 run_test(__name__)

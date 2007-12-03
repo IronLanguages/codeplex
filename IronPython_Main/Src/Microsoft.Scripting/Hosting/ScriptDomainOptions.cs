@@ -17,6 +17,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics;
+
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Hosting {
@@ -25,7 +27,7 @@ namespace Microsoft.Scripting.Hosting {
         private bool _debugMode = true;
         private bool _engineDebug;
         private bool _verbose;
-        private bool _traceBackSupport = (IntPtr.Size == 4);  // currently only enabled on 32-bit
+        private bool _traceBackSupport = true;
         private bool _debugCodeGen = true;
         private bool _trackPerformance;
         private bool _optimizeEnvironments = true;
@@ -38,6 +40,7 @@ namespace Microsoft.Scripting.Hosting {
         private bool _showASTs = false;
         private bool _dumpASTs = false;
         private bool _showRules = false;
+        private bool _cachePointersInApartment = false;
         
         public ScriptDomainOptions() {
         }
@@ -184,6 +187,21 @@ namespace Microsoft.Scripting.Hosting {
         public bool ShowRules {
             get { return _showRules; }
             set { _showRules = value; }
+        }
+
+        /// <summary>
+        /// An RCW object represents a COM object which could potentially be in another apartment. So access
+        /// to the COM interface pointer needs to be done in an apartment-safe way. Marshal.GetIDispatchForObject
+        /// gives out the the appropriate interface pointer (and doing marshalling of the COM object to the current
+        /// aparment if necessary). However, this is expensive and we would like to cache the returned interface pointer.
+        /// This is a prototype of the caching optimization. It is not ready for primte-time use. Currently, it will
+        /// leak COM objects as it does not call Marshal.Release when it should.
+        /// </summary>
+        public bool CachePointersInApartment {
+            get { return _cachePointersInApartment; }
+            set { 
+                _cachePointersInApartment = value; 
+            }
         }
 
         #endregion

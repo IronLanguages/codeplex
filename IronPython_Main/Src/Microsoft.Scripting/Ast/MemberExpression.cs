@@ -15,9 +15,7 @@
 
 using System;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -26,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
     /// property or field access, both static and instance.
     /// For instance property/field, Expression must be != null.
     /// </summary>
-    public class MemberExpression : Expression {
+    public sealed class MemberExpression : Expression {
         private readonly MemberInfo /*!*/ _member;
         private readonly Expression _expression;
 
@@ -38,98 +36,10 @@ namespace Microsoft.Scripting.Ast {
             get { return _expression; }
         }
 
-        public override Type Type {
-            get {
-                switch (_member.MemberType) {
-                    case MemberTypes.Field:
-                        return ((FieldInfo)_member).FieldType;
-                    case MemberTypes.Property:
-                        return ((PropertyInfo)_member).PropertyType;
-                    default:
-                        Debug.Assert(false, "Invalid member type");
-                        return null;
-                }
-            }
-        }
-
-        internal MemberExpression(MemberInfo /*!*/ member, Expression expression)
-            : base(AstNodeType.MemberExpression) {
+        internal MemberExpression(MemberInfo /*!*/ member, Expression expression, Type type)
+            : base(AstNodeType.MemberExpression, type) {
             _member = member;
             _expression = expression;
-        }
-
-        internal override void EmitAddress(CodeGen cg, Type asType) {
-            if (asType != Type || _member.MemberType != MemberTypes.Field) {
-                base.EmitAddress(cg, asType);
-            } else {
-                EmitInstance(cg);
-                cg.EmitFieldAddress((FieldInfo)_member);
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            // emit "this", if any
-            EmitInstance(cg);
-
-            switch (_member.MemberType) {
-                case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)_member;
-                    cg.EmitFieldGet(field);
-                    break;                    
-                case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)_member;
-                    cg.EmitPropertyGet(property);
-                    break;
-                default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
-            }
-        }
-
-        private void EmitInstance(CodeGen cg) {
-            if (_expression != null) {
-                if (_member.DeclaringType.IsValueType) {
-                    _expression.EmitAddress(cg, _member.DeclaringType);
-                } else {
-                    _expression.Emit(cg);
-                }
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            object self = _expression != null ? _expression.Evaluate(context) : null;
-            switch (_member.MemberType) {
-                case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)_member;
-                    return field.GetValue(self);
-                case MemberTypes.Property:                    
-                    PropertyInfo property = (PropertyInfo)_member;
-                    return property.GetValue(self, Utils.ArrayUtils.EmptyObjects);
-                default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
-            }
-
-            throw new InvalidOperationException();
-        }
-
-        internal override object EvaluateAssign(CodeContext context, object value) {
-            object self = _expression != null ? _expression.Evaluate(context) : null;
-            switch (_member.MemberType) {
-                case MemberTypes.Field:
-                    FieldInfo field = (FieldInfo)_member;
-                    field.SetValue(self, value);
-                    return value;
-                case MemberTypes.Property:
-                    PropertyInfo property = (PropertyInfo)_member;
-                    property.SetValue(self, value, ArrayUtils.EmptyObjects);
-                    return value;
-                default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
-            }
-
-            throw new InvalidOperationException();
         }
     }
 
@@ -141,7 +51,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(info, "field");
             Contract.Requires((instance == null) == info.IsStatic, "expression",
                 "Static field requires null expression, non-static field requires non-null expression.");
-            Contract.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
+            Contract.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the field");
             Contract.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", "Incorrect value type for the field");
         }
 
@@ -189,7 +99,7 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New instance of Member expression</returns>
         public static MemberExpression ReadField(Expression expression, FieldInfo field) {
             CheckField(field, expression, null);
-            return new MemberExpression(field, expression);
+            return new MemberExpression(field, expression, field.FieldType);
         }
 
         public static MemberExpression ReadProperty(Expression expression, Type type, string property) {
@@ -206,7 +116,7 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New instance of the MemberExpression.</returns>
         public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
             CheckProperty(property, expression, null);
-            return new MemberExpression(property, expression);
+            return new MemberExpression(property, expression, property.PropertyType);
         }
     }
 }

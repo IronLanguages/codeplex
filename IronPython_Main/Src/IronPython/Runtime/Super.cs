@@ -13,15 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Microsoft.Scripting;
 
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
     [PythonType("super")]
@@ -193,7 +191,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             List res = new List();
             foreach (SymbolId si in PythonType.GetMemberNames(context, this)) {
                 res.AddNoLock(si.ToString());

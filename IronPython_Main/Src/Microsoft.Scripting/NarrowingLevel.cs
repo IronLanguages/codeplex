@@ -17,10 +17,37 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting {
+    /// <summary>
+    /// Narrowing conversions are conversions that cannot be proved to always succeed, conversions that are 
+    /// known to possibly lose information, and conversions across domains of types sufficiently different 
+    /// to merit narrowing notation like casts. 
+    /// Its upto every language to define the levels for conversions. The narrowling levels can be used by
+    /// for method overload resolution, where the overload is based on the parameter types (and not the number 
+    /// of parameters).
+    /// </summary>
     public enum NarrowingLevel {
+        /// <summary>
+        /// Conversions at this level do not do any narrowing. Typically, this will include
+        /// implicit numeric conversions, Type.IsAssignableFrom, StringBuilder to string, etc.
+        /// </summary>
         None,
+
+        /// <summary>
+        /// Preferred narrowing conversion
+        /// IList[object] to IList[T], IEnumerator[object] to IEnumerator[T]
+        /// </summary>
         Preferred,
+
+        /// <summary>
+        /// This is used by BinderType.BinaryOperator
+        /// </summary>
         Operator,
+
+        /// <summary>
+        /// A somewhat meaningful conversion is possible, but it will quite likely be lossy.
+        /// For eg. BigInteger to an Int32, Boolean to Int32, one-char string to a char,
+        /// larger number type to a smaller numeric type (where there is no overflow), etc
+        /// </summary>
         All
     }
 }

@@ -117,7 +117,12 @@ namespace Microsoft.Scripting.Shell {
                 // delay when shutting down the process via ctrl-z, but it's
                 // not really perceptible.  In the ctrl-C case we will return
                 // as soon as the event is signaled.
-                if (_ctrlCEvent != null && _ctrlCEvent.WaitOne(100, false)) {
+#if SILVERLIGHT
+                if (_ctrlCEvent != null && _ctrlCEvent.WaitOne(100))
+#else
+                if (_ctrlCEvent != null && _ctrlCEvent.WaitOne(100, false))
+#endif
+                {
                     // received ctrl-C
                     return "";
                 } else {

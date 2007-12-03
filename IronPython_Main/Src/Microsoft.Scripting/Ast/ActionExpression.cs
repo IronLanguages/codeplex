@@ -14,26 +14,21 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ActionExpression : Expression {
+    public sealed class ActionExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _arguments;
         private readonly DynamicAction _action;
-        private readonly Type _result;
 
         internal ActionExpression(DynamicAction /*!*/ action, ReadOnlyCollection<Expression> /*!*/ arguments, Type /*!*/ result)
-            : base(AstNodeType.ActionExpression) {
+            : base(AstNodeType.ActionExpression, result) {
             _action = action;
             _arguments = arguments;
-            _result = result;
         }
 
         public DynamicAction Action {
@@ -44,16 +39,6 @@ namespace Microsoft.Scripting.Ast {
             get { return _arguments; }
         }
 
-        public override Type Type {
-            get {
-                return _result;
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            return context.LanguageContext.Binder.Execute(context, _action, Evaluate(_arguments, context));
-        }
-
         public override AbstractValue AbstractEvaluate(AbstractContext context) {
             List<AbstractValue> values = new List<AbstractValue>();
             foreach (Expression arg in _arguments) {
@@ -62,62 +47,10 @@ namespace Microsoft.Scripting.Ast {
 
             return context.Binder.AbstractExecute(_action, values);
         }
-
-        private Type[] GetSiteTypes() {
-            Type[] ret = new Type[_arguments.Count + 1];
-            for (int i = 0; i < _arguments.Count; i++) {
-                ret[i] = _arguments[i].Type;
-            }
-            ret[_arguments.Count] = _result;
-            return ret;
-        }
-
-        // Action expression is different in that it mutates its
-        // Type based on the need of the outer codegen.
-        // Therefore, unless asked explicitly, it will emit itself as object.
-        public override void Emit(CodeGen cg) {
-            bool fast;
-            Slot site = cg.CreateDynamicSite(_action, GetSiteTypes(), out fast);
-            MethodInfo method = site.Type.GetMethod("Invoke");
-
-            Debug.Assert(!method.IsStatic);
-
-            // Emit "this" - the site
-            site.EmitGet(cg);
-            ParameterInfo[] parameters = method.GetParameters();
-
-            int first = 0;
-
-            // Emit code context for unoptimized sites only
-            if (!fast) {
-                Debug.Assert(parameters[0].ParameterType == typeof(CodeContext));
-
-                cg.EmitCodeContext();
-
-                // skip the CodeContext parameter
-                first = 1;
-            }
-
-            if (parameters.Length < _arguments.Count + first) {
-                // tuple parameters
-                Debug.Assert(parameters.Length == first + 1);
-
-                cg.EmitTuple(site.Type.GetGenericArguments()[0], _arguments.Count, delegate(int index) { _arguments[index].Emit(cg); });
-            } else {
-                // Emit the arguments
-                for (int arg = 0; arg < _arguments.Count; arg++) {
-                    Debug.Assert(parameters[arg + first].ParameterType == _arguments[arg].Type);
-                    _arguments[arg].Emit(cg);
-                }
-            }
-
-
-            // Emit the site invoke
-            cg.EmitCall(site.Type, "Invoke");
-        }
     }
 
     public static partial class Ast {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public static class Action {
             /// <summary>
             /// Creates ActionExpression representing DoOperationAction.
@@ -186,6 +119,7 @@ namespace Microsoft.Scripting.Ast {
             /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
             /// <param name="arguments">Array of arguments for the action expression</param>
             /// <returns>New instance of the ActionExpression</returns>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
             public static ActionExpression Call(CallAction action, Type result, params Expression[] arguments) {
                 return ActionExpression(action, arguments, result);
             }
@@ -197,6 +131,7 @@ namespace Microsoft.Scripting.Ast {
             /// <param name="result">Type of the result desired (The ActionExpression is strongly typed)</param>
             /// <param name="arguments">Array of arguments for the action expression</param>
             /// <returns>New instance of the ActionExpression</returns>
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
             public static ActionExpression Create(CreateInstanceAction action, Type result, params Expression[] arguments) {
                 return ActionExpression(action, arguments, result);
             }
@@ -205,6 +140,9 @@ namespace Microsoft.Scripting.Ast {
                 return ActionExpression(CreateInstanceAction.Make(arguments.Length - 1), arguments, result);
             }
 
+            /// <summary>
+            /// Creates a new ActionExpression which performs a conversion.
+            /// </summary>
             public static ActionExpression ConvertTo(ConvertToAction action, Expression argument, Type type) {
                 Utils.Contract.RequiresNotNull(action, "action");
                 Utils.Contract.RequiresNotNull(argument, "argument");
@@ -213,26 +151,54 @@ namespace Microsoft.Scripting.Ast {
                 return ActionExpression(action, new Expression[] { argument }, type);
             }
 
+            /// <summary>
+            /// Creates a new ActionExpression which performs the specified conversion and returns the strongly typed result.
+            /// </summary>
             public static ActionExpression ConvertTo(ConvertToAction action, Expression argument) {
                 return ConvertTo(action, argument, action.ToType);
             }
 
+            /// <summary>
+            /// Creates a new ActionExpression which performs the specified conversion to the type.  The ActionExpression
+            /// is strongly typed to the provided type.
+            /// </summary>
             public static ActionExpression ConvertTo(Type toType, Expression argument) {
                 Utils.Contract.RequiresNotNull(toType, "toType");
 
                 return ConvertTo(ConvertToAction.Make(toType), argument);
             }
 
+            /// <summary>
+            /// Creates a new ActionExpressoin which performs the specified conversion to the type.  The ActionExpress
+            /// is strongly typed to the converted type.
+            /// </summary>
             public static ActionExpression ConvertTo(Type toType, ConversionResultKind kind, Expression argument) {
                 Utils.Contract.RequiresNotNull(toType, "toType");
 
                 return ConvertTo(ConvertToAction.Make(toType, kind), argument);
             }
 
+            /// <summary>
+            /// Creates a new ActionExpression which performs the conversion to the specified type with the 
+            /// specified conversion kind.  The ActionExpression is strongly typed to the provided
+            /// actionExpressionType.
+            /// </summary>
+            /// <param name="toType">The type to convert to</param>
+            /// <param name="actionExpressionType">The return type for the ActionExpression (should be assignable from the toType)</param>
+            /// <param name="kind">The kind of conversion to preform</param>
+            /// <param name="argument">The argument to be converted</param>
+            public static ActionExpression ConvertTo(Type toType, ConversionResultKind kind, Expression argument, Type actionExpressionType) {
+                Utils.Contract.RequiresNotNull(toType, "toType");
+
+                return ConvertTo(ConvertToAction.Make(toType, kind), argument, actionExpressionType);
+            }
+
+
             internal static ActionExpression ActionExpression(DynamicAction action, IList<Expression> arguments, Type result) {
                 Contract.RequiresNotNull(action, "action");
                 Contract.RequiresNotNullItems(arguments, "arguments");
                 Contract.RequiresNotNull(result, "result");
+                Contract.Requires(result.IsVisible, "result", String.Format(Resources.TypeMustBeVisible, result.FullName));
 
                 ValidateAction(action, arguments);
 

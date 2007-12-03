@@ -22,6 +22,7 @@ namespace Microsoft.Scripting.Hosting {
 
     [Serializable]
     public abstract class SourceContentProvider {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public abstract TextReader GetReader();
 
         /// <summary>

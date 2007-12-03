@@ -15,7 +15,6 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -23,7 +22,8 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Definition represents actual memory/dictionary location in the generated code.
     /// </summary>
-    public class Variable {
+    public sealed class Variable {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public enum VariableKind {
             Local,
             Parameter,
@@ -156,7 +156,7 @@ namespace Microsoft.Scripting.Ast {
                         _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
                         if (_defaultValue != null) {
                             Slot slot = CreateSlotForVariable(cg);
-                            _defaultValue.Emit(cg);
+                            Compiler.Emit(cg, _defaultValue);
                             slot.EmitSet(cg);
                         } 
                     } else {
@@ -175,7 +175,7 @@ namespace Microsoft.Scripting.Ast {
                         if (_uninitialized || _defaultValue != null) {
                             // Emit initialization (environments will be initialized all at once)
                             if (_defaultValue != null) {                                
-                                _defaultValue.Emit(cg);
+                                Compiler.Emit(cg, _defaultValue);
                                 slot.EmitSet(cg);
                             } else if (_type == typeof(object)) {
                                 // Only set variables of type object to "Uninitialized"

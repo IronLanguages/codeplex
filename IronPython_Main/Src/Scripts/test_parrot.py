@@ -21,6 +21,18 @@
 from time import clock
 import sys, nt
 sys.path.append([nt.environ[x] for x in nt.environ.keys() if x.lower() == "merlin_root"][0] + "\\Languages\\IronPython\\External\\parrotbench")
+if sys.platform=="cli":
+    import clr
+    clr.AddReference("IronPython")
+    import IronPython
+    is_interpret = IronPython.Hosting.PythonEngine.CurrentEngine.Options.InterpretedMode
+    import System
+    is_cli64 = System.IntPtr.Size == 8
+    
+    if is_interpret and is_cli64:
+        print "Merlin Work Item 312906"
+        sys.exit(0)
+
 
 def test_main(type="short"):
     oldRecursionDepth = sys.getrecursionlimit()

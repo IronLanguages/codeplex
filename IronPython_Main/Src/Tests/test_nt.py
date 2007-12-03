@@ -340,16 +340,19 @@ def test_utime():
     AreEqual(x[8], y[8])
     nt.unlink('temp_file_does_not_exist.txt')
     
+@disabled("CodePlex Work Item 13953")
+def test_tempnam_broken_prefixes():
+    '''
+    '''
+    for prefix in ["pre", None]:
+        AreEqual(type(nt.tempnam("", prefix)), str)
 
-#Merlin Work Item 153306
-def xtest_tempnam():
+def test_tempnam():
     '''
     '''
     #sanity checks
     AreEqual(type(nt.tempnam()), str)
     AreEqual(type(nt.tempnam("garbage name should still work")), str)
-    #BUG - "" does not work
-    #AreEqual(type(nt.tempnam("", "pre")), str)
     
     #Very basic case
     joe = nt.tempnam()
@@ -706,7 +709,6 @@ def test_flags():
               
 try:
     run_test(__name__)
-
 finally:
     #test cleanup - the test functions create the following directories and if any of them
     #fail, the directories may not necessarily be removed.  for this reason we try to remove

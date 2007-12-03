@@ -22,8 +22,6 @@ from lib.cominterop_util import *
 import clr
 from System import Type, Activator
 
-
-scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
 if not file_exists(scriptpw_path):
     from sys import exit
     print "Cannot test scriptpw.dll when it doesn't exist."

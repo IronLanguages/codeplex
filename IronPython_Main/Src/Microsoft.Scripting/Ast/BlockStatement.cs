@@ -15,11 +15,11 @@
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Microsoft.Scripting.Generation;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class BlockStatement : Statement {
+    public sealed class BlockStatement : Statement {
         private readonly ReadOnlyCollection<Statement> /*!*/ _statements;
 
         public ReadOnlyCollection<Statement> /*!*/ Statements {
@@ -29,25 +29,6 @@ namespace Microsoft.Scripting.Ast {
         internal BlockStatement(SourceSpan span, ReadOnlyCollection<Statement> /*!*/ statements)
             : base(AstNodeType.BlockStatement, span) {
             _statements = statements;
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            object ret = Statement.NextStatement;
-            foreach (Statement stmt in _statements) {
-                ret = stmt.Execute(context);
-                if (ret != Statement.NextStatement) {
-                    break;
-                }
-            }
-            return ret;
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Span.Start, Span.End);
-            // Should emit nop for the colon?
-            foreach (Statement stmt in _statements) {
-                stmt.Emit(cg);
-            }
         }
     }
 

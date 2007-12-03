@@ -17,8 +17,6 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-using Microsoft.Scripting.Generation;
-
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Ths ClosureBinder takes as an input a bound AST tree in which each Reference is initialized with respective Definition.

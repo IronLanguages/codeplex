@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region IMembersList Members
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             Dictionary<string, string> members = new Dictionary<string, string>();
             foreach (MemberInfo mi in Type.GetMembers()) {
                 if (mi.MemberType != MemberTypes.Constructor) {
@@ -55,9 +55,19 @@ namespace Microsoft.Scripting.Actions {
 
         /// <summary>
         /// Enables implicit Type to TypeTracker conversions accross dynamic languages.
+        /// 
+        /// TODO: Should be explicit, but that breaks a JS test
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]
         public static implicit operator Type(TypeTracker tracker) {
+            TypeGroup tg = tracker as TypeGroup;
+            if (tg != null) {
+                Type res;
+                if (!tg.TryGetNonGenericType(out res)) {
+                    throw RuntimeHelpers.SimpleTypeError("expected non-generic type, got generic-only type");
+                }
+                return res;
+            }
             return tracker.Type;
         }
     }

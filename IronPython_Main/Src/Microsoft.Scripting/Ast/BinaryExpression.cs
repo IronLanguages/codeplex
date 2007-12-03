@@ -14,22 +14,25 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Utils;
+
+// TODO: Remove dependency
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class BinaryExpression : Expression {
+    public sealed class BinaryExpression : Expression {
         private readonly Expression /*!*/ _left;
         private readonly Expression /*!*/ _right;
+        private readonly MethodInfo _method;
 
-        internal BinaryExpression(AstNodeType nodeType, Expression /*!*/ left, Expression /*!*/ right)
-            : base(nodeType) {
+        internal BinaryExpression(AstNodeType nodeType, Expression /*!*/ left, Expression /*!*/ right, Type /*!*/ type, MethodInfo method)
+            : base(nodeType, type) {
             _left = left;
             _right = right;
+            _method = method;
         }
 
         public Expression Right {
@@ -40,35 +43,9 @@ namespace Microsoft.Scripting.Ast {
             get { return _left; }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")] // TODO: Fix by holding onto the type directly
-        public override Type Type {
+        public MethodInfo Method {
             get {
-                switch (NodeType) {
-                    case AstNodeType.Equal:
-                    case AstNodeType.NotEqual:
-                    case AstNodeType.GreaterThan:
-                    case AstNodeType.LessThan:
-                    case AstNodeType.LessThanOrEqual:
-                    case AstNodeType.GreaterThanOrEqual:
-                    case AstNodeType.AndAlso:
-                    case AstNodeType.OrElse:
-                        return typeof(bool);
-
-                    case AstNodeType.Add:
-                    case AstNodeType.Multiply:
-                    case AstNodeType.Subtract:
-                    case AstNodeType.Modulo:
-                    case AstNodeType.Divide:
-                    case AstNodeType.And:
-                    case AstNodeType.Or:
-                    case AstNodeType.ExclusiveOr:
-                    case AstNodeType.LeftShift:
-                    case AstNodeType.RightShift:
-                        return _left.Type;
-
-                    default:
-                        throw new InvalidOperationException();
-                }
+                return _method;
             }
         }
 
@@ -97,387 +74,87 @@ namespace Microsoft.Scripting.Ast {
             }
             return false;
         }
-
-        private bool EmitBranchTrue(CodeGen cg, AstNodeType nodeType, Label label) {
-            switch (nodeType) {
-                case AstNodeType.Equal:
-                    if (_left.IsConstant(null)) {
-                        _right.EmitAsObject(cg);
-                        cg.Emit(OpCodes.Brfalse, label);
-                    } else if (_right.IsConstant(null)) {
-                        _left.EmitAsObject(cg);
-                        cg.Emit(OpCodes.Brfalse, label);
-                    } else {
-                        _left.EmitAs(cg, GetEmitType());
-                        _right.EmitAs(cg, GetEmitType());
-                        cg.Emit(OpCodes.Beq, label);
-                    }
-                    return true;
-
-                case AstNodeType.NotEqual:
-                    if (_left.IsConstant(null)) {
-                        _right.EmitAsObject(cg);
-                        cg.Emit(OpCodes.Brtrue, label);
-                    } else if (_right.IsConstant(null)) {
-                        _left.EmitAsObject(cg);
-                        cg.Emit(OpCodes.Brtrue, label);
-                    } else {
-                        _left.EmitAs(cg, GetEmitType());
-                        _right.EmitAs(cg, GetEmitType());
-                        cg.Emit(OpCodes.Ceq);
-                        cg.Emit(OpCodes.Brfalse, label);
-                    }
-                    return true;
-
-                case AstNodeType.AndAlso:
-                    // if (left AND right) branch label
-
-                    // if (left) then 
-                    //   if (right) branch label
-                    // endif
-                    Label endif = cg.DefineLabel();
-                    _left.EmitBranchFalse(cg, endif);
-                    _right.EmitBranchTrue(cg, label);
-                    cg.MarkLabel(endif);
-                    return true;
-
-                case AstNodeType.OrElse:
-                    // if (left OR right) branch label
-
-                    // if (left) then branch label endif
-                    // if (right) then branch label endif
-                    _left.EmitBranchTrue(cg, label);
-                    _right.EmitBranchTrue(cg, label);
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private Type GetEmitType() {
-            return _left.Type == _right.Type ? _left.Type : typeof(object);
-        }
-
-        public override void EmitBranchFalse(CodeGen cg, Label label) {
-            switch (NodeType) {
-                case AstNodeType.Equal:
-                    EmitBranchTrue(cg, AstNodeType.NotEqual, label);
-                    break;
-
-                case AstNodeType.NotEqual:
-                    EmitBranchTrue(cg, AstNodeType.Equal, label);
-                    break;
-
-                case AstNodeType.AndAlso:
-                    // if NOT (left AND right) branch label
-
-                    if (_left.IsConstant(false)) {
-                        cg.Emit(OpCodes.Br, label);
-                    } else {
-                        if (!_left.IsConstant(true)) {
-                            _left.EmitBranchFalse(cg, label);
-                        }
-
-                        if (_right.IsConstant(false)) {
-                            cg.Emit(OpCodes.Br, label);
-                        } else if (!_right.IsConstant(true)) {
-                            _right.EmitBranchFalse(cg, label);
-                        }
-                    }
-                    break;
-
-                case AstNodeType.OrElse:
-                    // if NOT left AND NOT right branch label
-
-                    if (!_left.IsConstant(true) && !_right.IsConstant(true)) {
-                        if (_left.IsConstant(false)) {
-                            _right.EmitBranchFalse(cg, label);
-                        } else if (_right.IsConstant(false)) {
-                            _left.EmitBranchFalse(cg, label);
-                        } else {
-                            // if (NOT left) then 
-                            //   if (NOT right) branch label
-                            // endif
-
-                            Label endif = cg.DefineLabel();
-                            _left.EmitBranchTrue(cg, endif);
-                            _right.EmitBranchFalse(cg, label);
-                            cg.MarkLabel(endif);
-                        }
-                    }
-                    break;
-
-                default:
-                    base.EmitBranchFalse(cg, label);
-                    break;
-            }
-        }
-
-        public override void EmitBranchTrue(CodeGen cg, Label label) {
-            if (!EmitBranchTrue(cg, NodeType, label)) {
-                base.EmitBranchTrue(cg, label);
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public override void Emit(CodeGen cg) {
-
-            // TODO: code gen will be suboptimal for chained AndAlsos and AndAlso inside If
-            if (NodeType == AstNodeType.AndAlso || NodeType == AstNodeType.OrElse) {
-                EmitBooleanOperator(cg, NodeType == AstNodeType.AndAlso);
-                return;
-            }
-
-            _left.EmitAs(cg, GetEmitType());
-            _right.EmitAs(cg, GetEmitType());
-
-            switch (NodeType) {
-                case AstNodeType.Equal:
-                    cg.Emit(OpCodes.Ceq);
-                    break;
-
-                case AstNodeType.NotEqual:
-                    cg.Emit(OpCodes.Ceq);
-                    cg.EmitInt(0);
-                    cg.Emit(OpCodes.Ceq);
-                    break;
-
-                case AstNodeType.GreaterThan:
-                    cg.Emit(OpCodes.Cgt);
-                    break;
-
-                case AstNodeType.LessThan:
-                    cg.Emit(OpCodes.Clt);
-                    break;
-
-                case AstNodeType.GreaterThanOrEqual:
-                    cg.Emit(OpCodes.Clt);
-                    cg.EmitInt(0);
-                    cg.Emit(OpCodes.Ceq);
-                    break;
-
-                case AstNodeType.LessThanOrEqual:
-                    cg.Emit(OpCodes.Cgt);
-                    cg.EmitInt(0);
-                    cg.Emit(OpCodes.Ceq);
-                    break;
-                case AstNodeType.Multiply:
-                    cg.Emit(OpCodes.Mul);
-                    break;
-                case AstNodeType.Modulo:
-                    cg.Emit(OpCodes.Rem);
-                    break;
-                case AstNodeType.Add:
-                    cg.Emit(OpCodes.Add);
-                    break;
-                case AstNodeType.Subtract:
-                    cg.Emit(OpCodes.Sub);
-                    break;
-                case AstNodeType.Divide:
-                    cg.Emit(OpCodes.Div);
-                    break;
-                case AstNodeType.LeftShift:
-                    cg.Emit(OpCodes.Shl);
-                    break;
-                case AstNodeType.RightShift:
-                    cg.Emit(OpCodes.Shr);
-                    break;
-                case AstNodeType.And:
-                    cg.Emit(OpCodes.And);
-                    break;
-                case AstNodeType.Or:
-                    cg.Emit(OpCodes.Or);
-                    break;
-                case AstNodeType.ExclusiveOr:
-                    cg.Emit(OpCodes.Xor);
-                    break;
-                default:
-                    throw new InvalidOperationException(NodeType.ToString());
-            }
-        }
-
-        private void EmitBooleanOperator(CodeGen cg, bool isAnd) {
-            Label otherwise = cg.DefineLabel();
-            Label endif = cg.DefineLabel();
-
-            // if (_left) 
-            _left.EmitBranchFalse(cg, otherwise);
-            // then
-
-            if (isAnd) {
-                _right.EmitAs(cg, typeof(bool));
-            } else {
-                cg.EmitInt(1);
-            }
-
-            cg.Emit(OpCodes.Br, endif);
-            // otherwise
-            cg.MarkLabel(otherwise);
-
-            if (isAnd) {
-                cg.EmitInt(0);
-            } else {
-                _right.EmitAs(cg, typeof(bool));
-            }
-
-            // endif
-            cg.MarkLabel(endif);
-            return;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        protected override object DoEvaluate(CodeContext context) {
-            if (NodeType == AstNodeType.AndAlso) {
-                object ret = _left.Evaluate(context);
-                return ((bool)ret) ? _right.Evaluate(context) : ret;
-            } else if (NodeType == AstNodeType.OrElse) {
-                object ret = _left.Evaluate(context);
-                return ((bool)ret) ? ret : _right.Evaluate(context);
-            }
-
-            object l = _left.Evaluate(context);
-            object r = _right.Evaluate(context);
-
-            switch (NodeType) {
-                case AstNodeType.GreaterThan:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) > 0);
-                case AstNodeType.LessThan:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) < 0);
-                case AstNodeType.GreaterThanOrEqual:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) >= 0);
-                case AstNodeType.LessThanOrEqual:
-                    return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) <= 0);
-                case AstNodeType.Equal:
-                    return RuntimeHelpers.BooleanToObject(TestEquals(l, r));
-
-                case AstNodeType.NotEqual:
-                    return RuntimeHelpers.BooleanToObject(!TestEquals(l, r));
-
-                case AstNodeType.Multiply: return EvalMultiply(l, r);
-                case AstNodeType.Add: return EvalAdd(l, r);
-                case AstNodeType.Subtract: return EvalSub(l, r);
-                case AstNodeType.Divide: return EvalDiv(l, r);
-                case AstNodeType.Modulo: return EvalMod(l, r);
-                case AstNodeType.And: return EvalAnd(l, r);
-                case AstNodeType.Or: return EvalOr(l, r);
-                case AstNodeType.ExclusiveOr: return EvalXor(l, r);
-                default:
-                    throw new NotImplementedException(NodeType.ToString());
-            }
-        }
-
-        private static object EvalMultiply(object l, object r) {
-            if (l is int) return (int)l * (int)r;
-            if (l is uint) return (uint)l * (uint)r;
-            if (l is short) return (short)((short)l * (short)r);
-            if (l is ushort) return (ushort)((ushort)l * (ushort)r);
-            if (l is long) return (long)l * (long)r;
-            if (l is ulong) return (ulong)l * (ulong)r;
-            if (l is float) return (float)l * (float)r;
-            if (l is double) return (double)l * (double)r;
-            throw new InvalidOperationException("multiply: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalAdd(object l, object r) {
-            if (l is int) return (int)l + (int)r;
-            if (l is uint) return (uint)l + (uint)r;
-            if (l is short) return (short)((short)l + (short)r);
-            if (l is ushort) return (ushort)((ushort)l + (ushort)r);
-            if (l is long) return (long)l + (long)r;
-            if (l is ulong) return (ulong)l + (ulong)r;
-            if (l is float) return (float)l + (float)r;
-            if (l is double) return (double)l + (double)r;
-            throw new InvalidOperationException("add: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalSub(object l, object r) {
-            if (l is int) return (int)l - (int)r;
-            if (l is uint) return (uint)l - (uint)r;
-            if (l is short) return (short)((short)l - (short)r);
-            if (l is ushort) return (ushort)((ushort)l - (ushort)r);
-            if (l is long) return (long)l - (long)r;
-            if (l is ulong) return (ulong)l - (ulong)r;
-            if (l is float) return (float)l - (float)r;
-            if (l is double) return (double)l - (double)r;
-            throw new InvalidOperationException("sub: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalMod(object l, object r) {
-            if (l is int) return (int)l % (int)r;
-            if (l is uint) return (uint)l % (uint)r;
-            if (l is short) return (short)((short)l % (short)r);
-            if (l is ushort) return (ushort)((ushort)l % (ushort)r);
-            if (l is long) return (long)l % (long)r;
-            if (l is ulong) return (ulong)l % (ulong)r;
-            if (l is float) return (float)l % (float)r;
-            if (l is double) return (double)l % (double)r;
-            throw new InvalidOperationException("mod: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalDiv(object l, object r) {
-            if (l is int) return (int)l / (int)r;
-            if (l is uint) return (uint)l / (uint)r;
-            if (l is short) return (short)((short)l / (short)r);
-            if (l is ushort) return (ushort)((ushort)l / (ushort)r);
-            if (l is long) return (long)l / (long)r;
-            if (l is ulong) return (ulong)l / (ulong)r;
-            if (l is float) return (float)l / (float)r;
-            if (l is double) return (double)l / (double)r;
-            throw new InvalidOperationException("div: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalAnd(object l, object r) {
-            if (l is int) return (int)l & (int)r;
-            if (l is uint) return (uint)l & (uint)r;
-            if (l is short) return (short)((short)l & (short)r);
-            if (l is ushort) return (ushort)((ushort)l & (ushort)r);
-            if (l is long) return (long)l & (long)r;
-            if (l is ulong) return (ulong)l & (ulong)r;
-            throw new InvalidOperationException("and: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalOr(object l, object r) {
-            if (l is int) return (int)l | (int)r;
-            if (l is uint) return (uint)l | (uint)r;
-            if (l is short) return (short)((short)l | (short)r);
-            if (l is ushort) return (ushort)((ushort)l | (ushort)r);
-            if (l is long) return (long)l | (long)r;
-            if (l is ulong) return (ulong)l | (ulong)r;
-            throw new InvalidOperationException("or: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private static object EvalXor(object l, object r) {
-            if (l is int) return (int)l ^ (int)r;
-            if (l is uint) return (uint)l ^ (uint)r;
-            if (l is short) return (short)((short)l ^ (short)r);
-            if (l is ushort) return (ushort)((ushort)l ^ (ushort)r);
-            if (l is long) return (long)l ^ (long)r;
-            if (l is ulong) return (ulong)l ^ (ulong)r;
-            throw new InvalidOperationException("xor: {0} " + CompilerHelpers.GetType(l).Name);
-        }
-
-        private bool TestEquals(object l, object r) {
-            // We don't need to go through the same type checks as the emit case,
-            // since we know we're always dealing with boxed objects.
-
-            return Object.Equals(l, r);
-        }
     }
 
     public static partial class Ast {
         public static BinaryExpression Equal(Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
-
-            return new BinaryExpression(AstNodeType.Equal, left, right);
+            return Equality(AstNodeType.Equal, "op_Equality", left, right);
         }
 
         public static BinaryExpression NotEqual(Expression left, Expression right) {
+            return Equality(AstNodeType.NotEqual, "op_Inequality", left, right);
+        }
+
+        private static BinaryExpression Equality(AstNodeType nodeType, string opName, Expression left, Expression right) {
+            Debug.Assert(nodeType == AstNodeType.Equal || nodeType == AstNodeType.NotEqual);
+
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(right, "right");
 
-            return new BinaryExpression(AstNodeType.NotEqual, left, right);
+            // Numeric types and objects are easy
+            if (left.Type == right.Type && (TypeUtils.IsNumeric(left.Type) || left.Type == typeof(object))) {
+                return new BinaryExpression(nodeType, left, right, typeof(bool), null);
+            }
+
+            BinaryExpression be = UserDefinedBinaryOperator(nodeType, opName, typeof(bool), left, right);
+            if (be != null) {
+                return be;
+            }
+
+            if (TypeUtils.HasBuiltinEquality(left.Type, right.Type)) {
+                return new BinaryExpression(nodeType, left, right, typeof(bool), null);
+            }
+
+            if (IsNullableComparison(left, right)) {
+                return new BinaryExpression(nodeType, left, right, typeof(bool), null);
+            }
+
+            throw new ArgumentException(String.Format("Equality operation not defined for {0} and {1}", left.Type.Name, right.Type.Name));
+        }
+
+        private static BinaryExpression UserDefinedBinaryOperator(AstNodeType nodeType, string opName, Expression left, Expression right) {
+            MethodInfo method = GetUserDefinedBinaryOperator(opName, left.Type, right.Type);
+            if (method != null) {
+                return new BinaryExpression(nodeType, left, right, method.ReturnType, method);
+            }
+            return null;
+        }
+
+        private static BinaryExpression UserDefinedBinaryOperator(AstNodeType nodeType, string opName, Type result, Expression left, Expression right) {
+            MethodInfo method = GetUserDefinedBinaryOperator(opName, left.Type, right.Type, result);
+            if (method != null) {
+                return new BinaryExpression(nodeType, left, right, method.ReturnType, method);
+            }
+            return null;
+        }
+
+        private static MethodInfo GetUserDefinedBinaryOperator(string opName, Type left, Type right, Type result) {
+            MethodInfo method = GetUserDefinedBinaryOperator(opName, left, right);
+            if (method != null && TypeUtils.CanAssign(method.ReturnType, result)) {
+                return method;
+            } else {
+                return null;
+            }
+        }
+
+        private static MethodInfo GetUserDefinedBinaryOperator(string opName, Type left, Type right) {
+            BindingFlags bf = BindingFlags.Public | BindingFlags.Static;
+            Type[] types = new Type[] { left, right };
+            MethodInfo method = left.GetMethod(opName, bf, null, types, null);
+            if (method == null) {
+                method = right.GetMethod(opName, bf, null, types, null);
+            }
+            return method;
+        }
+
+        private static bool IsNullableComparison(Expression left, Expression right) {
+            if (left.IsConstant(null) && !right.IsConstant(null) && TypeUtils.IsNullableType(right.Type)) {
+                return true;
+            }
+            if (right.IsConstant(null) && !left.IsConstant(null) && TypeUtils.IsNullableType(left.Type)) {
+                return true;
+            }
+            return false;
         }
 
         public static BinaryExpression GreaterThan(Expression left, Expression right) {
@@ -513,7 +190,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(TypeUtils.IsBool(right.Type), "right");
             Contract.Requires(left.Type == right.Type);
 
-            return new BinaryExpression(nodeType, left, right);
+            return new BinaryExpression(nodeType, left, right, typeof(bool), null);
         }
 
         #endregion
@@ -665,17 +342,18 @@ namespace Microsoft.Scripting.Ast {
                 throw new NotSupportedException(String.Format("{0} only supports identical arithmetic types, got {1} {2}", nodeType, left.Type.Name, right.Type.Name));
             }
 
-            return new BinaryExpression(nodeType, left, right);
+            return new BinaryExpression(nodeType, left, right, left.Type, null);
         }
 
         private static BinaryExpression MakeBinaryComparisonExpression(AstNodeType nodeType, Expression left, Expression right) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(left, "right");
+
             if (left.Type != right.Type || !TypeUtils.IsNumeric(left.Type)) {
                 throw new NotSupportedException(String.Format("{0} only supports identical numeric types, got {1} {2}", nodeType, left.Type.Name, right.Type.Name));
             }
 
-            return new BinaryExpression(nodeType, left, right);
+            return new BinaryExpression(nodeType, left, right, typeof(bool), null);
         }
     }
 }

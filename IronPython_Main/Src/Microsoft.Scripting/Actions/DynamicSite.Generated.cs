@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using System.CodeDom.Compiler;
 
 namespace Microsoft.Scripting.Actions { 
     #region Generated DynamicSites
@@ -27,11 +28,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 1
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, Tret>(DynamicSite<T0, Tret> site, CodeContext context, T0 arg0) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 1
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, Tret>> _rules;
@@ -66,11 +69,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 1
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, Tret>(FastDynamicSite<T0, Tret> site, T0 arg0) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 1
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, Tret>> _rules;
@@ -105,11 +110,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 2
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, T1, Tret>(DynamicSite<T0, T1, Tret> site, CodeContext context, T0 arg0, T1 arg1) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 2
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, T1, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, Tret>> _rules;
@@ -144,11 +151,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 2
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, T1, Tret>(FastDynamicSite<T0, T1, Tret> site, T0 arg0, T1 arg1) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 2
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, T1, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, T1, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, Tret>> _rules;
@@ -183,11 +192,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 3
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, T1, T2, Tret>(DynamicSite<T0, T1, T2, Tret> site, CodeContext context, T0 arg0, T1 arg1, T2 arg2) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 3
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, T1, T2, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, Tret>> _rules;
@@ -222,11 +233,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 3
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, T1, T2, Tret>(FastDynamicSite<T0, T1, T2, Tret> site, T0 arg0, T1 arg1, T2 arg2) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 3
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, T1, T2, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, T1, T2, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, Tret>> _rules;
@@ -261,11 +274,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 4
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, T1, T2, T3, Tret>(DynamicSite<T0, T1, T2, T3, Tret> site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 4
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, T1, T2, T3, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
@@ -300,11 +315,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 4
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, T1, T2, T3, Tret>(FastDynamicSite<T0, T1, T2, T3, Tret> site, T0 arg0, T1 arg1, T2 arg2, T3 arg3) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 4
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, T1, T2, T3, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, T1, T2, T3, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, Tret>> _rules;
@@ -339,11 +356,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 5
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>(DynamicSite<T0, T1, T2, T3, T4, Tret> site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 5
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, T1, T2, T3, T4, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
@@ -378,11 +397,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 5
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>(FastDynamicSite<T0, T1, T2, T3, T4, Tret> site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 5
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, T1, T2, T3, T4, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, Tret>> _rules;
@@ -417,11 +438,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity 6
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>(DynamicSite<T0, T1, T2, T3, T4, T5, Tret> site, CodeContext context, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) ;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity 6
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class DynamicSite<T0, T1, T2, T3, T4, T5, Tret> : DynamicSite  {
         private DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<DynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
@@ -456,11 +479,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity 6
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>(FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret> site, T0 arg0, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) ;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity 6
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class FastDynamicSite<T0, T1, T2, T3, T4, T5, Tret> : FastDynamicSite  {
         private FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret> _target;
         private RuleSet<FastDynamicSiteTarget<T0, T1, T2, T3, T4, T5, Tret>> _rules;
@@ -495,11 +520,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type with CodeContext passed in - arity variable based on Tuple size
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret BigDynamicSiteTarget<T0, Tret>(BigDynamicSite<T0, Tret> site, CodeContext context, T0 arg0) where T0 : Tuple;
 
     /// <summary>
     /// Dynamic site using CodeContext passed into the Invoke method - arity variable based on Tuple size
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class BigDynamicSite<T0, Tret> : DynamicSite where T0 : Tuple {
         private BigDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigDynamicSiteTarget<T0, Tret>> _rules;
@@ -534,11 +561,13 @@ namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Dynamic site delegate type using cached CodeContext - arity variable based on Tuple size
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public delegate Tret BigFastDynamicSiteTarget<T0, Tret>(BigFastDynamicSite<T0, Tret> site, T0 arg0) where T0 : Tuple;
 
     /// <summary>
     /// Dynamic site using cached CodeContext - arity variable based on Tuple size
     /// </summary>
+    [GeneratedCode("DLR", "2.0")]
     public class BigFastDynamicSite<T0, Tret> : FastDynamicSite where T0 : Tuple {
         private BigFastDynamicSiteTarget<T0, Tret> _target;
         private RuleSet<BigFastDynamicSiteTarget<T0, Tret>> _rules;

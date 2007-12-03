@@ -12,13 +12,12 @@
  *
  *
  * ***************************************************************************/
-using System;
+
 using System.Collections.Generic;
-using System.Text;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class IfStatementBuilder {
+    public sealed class IfStatementBuilder {
         private readonly List<IfStatementTest> _clauses = new List<IfStatementTest>();
         private SourceSpan _statementSpan;
 

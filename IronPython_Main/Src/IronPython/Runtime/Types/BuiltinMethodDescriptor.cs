@@ -14,19 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Threading;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
 
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
@@ -121,6 +116,18 @@ namespace IronPython.Runtime.Types {
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             if (action.Kind == DynamicActionKind.Call) {
                 return MakeCallRule<T>((CallAction)action, context, args);
+            } else if (action.Kind == DynamicActionKind.DoOperation) {
+                return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+            }
+            return null;
+        }
+
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch (doOperationAction.Operation) {
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
+                case Operators.CallSignatures:
+                    return IronPython.Runtime.Calls.DoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Template.Targets, DynamicHelpers.GetPythonType(args[0]));
             }
             return null;
         }

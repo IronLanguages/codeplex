@@ -35,7 +35,7 @@ namespace ToyScript {
         }
 
         public override CommandLine GetCommandLine() {
-            return new CommandLine();
+            return new ToyCommandLine();
         }
 
         public override ScriptEngine GetEngine(EngineOptions options) {

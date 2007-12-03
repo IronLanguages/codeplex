@@ -147,8 +147,7 @@ def test_isenabled():
 @skip("silverlight")
 def test_collect():
     if is_cli:
-        i = gc.collect()
-        AreEqual(i,0)
+        i = gc.collect() # returns # of bytes collected, could be anything
     else:
         for debug in debug_list:
             gc.set_debug(debug)

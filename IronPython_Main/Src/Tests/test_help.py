@@ -77,7 +77,8 @@ def test_splat():
     x = sys.stdout.text
     sys.stdout = sys.__stdout__
     Assert(x.find('foo(*args)') != -1)
-    Assert(x.find('Help on function foo in module __main__:') != -1)
+    if not is_silverlight:
+        Assert(x.find('Help on function foo in module __main__:') != -1)
     
     def foo(**kwargs): pass
     sys.stdout = stdout_reader()
@@ -393,5 +394,13 @@ def test_bound_user_method():
 
     if is_silverlight==False:
         Assert(out.find('method of __main__.x instance') != -1)
+
+def test_bound_builtin_func():
+    x = []
+    
+    out = run_help(x.append)
+    Assert(out.find('Help on built-in function append') != -1)
+    if is_cli:   # Cpython and IronPython display different help
+        Assert(out.find('append(self, ') != -1)
 
 run_test(__name__)

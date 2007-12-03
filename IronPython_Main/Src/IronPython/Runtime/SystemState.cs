@@ -14,30 +14,25 @@
  * ***************************************************************************/
 
 using System;
-using System.IO;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Shell;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Hosting;
-using IronPython.Compiler;
-using IronPython.Runtime.Operations;
-using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
-    [PythonType(typeof(ScriptModule))]
+    [PythonType(typeof(ScriptScope))]
     public class SystemState : ICustomMembers {
         private Encoding _defaultEncoding;
         private IAttributesCollection _dict;
@@ -48,7 +43,7 @@ namespace IronPython.Runtime {
         private Dictionary<string, Type> _builtinsDict = new Dictionary<string, Type>();
         private Dictionary<Type, string> _builtinModuleNames = new Dictionary<Type, string>();
 
-        private ScriptModule _builtins;
+        private ScriptScope _builtins;
 
         internal SystemState() {
             InitializeBuiltins();
@@ -63,12 +58,12 @@ namespace IronPython.Runtime {
         /// <summary>
         /// TODO: Remove me, or stop caching built-ins.  This is broken if the user changes __builtin__
         /// </summary>
-        public ScriptModule BuiltinModuleInstance {
+        public ScriptScope BuiltinModuleInstance {
             get {
                 lock (this) {
-                    ScriptModule res = _builtins;
+                    ScriptScope res = _builtins;
                     if (res == null) {
-                        res = _builtins = (ScriptModule)modules["__builtin__"];
+                        res = _builtins = (ScriptScope)modules["__builtin__"];
                         _builtins.ModuleChanged += new EventHandler<ModuleChangeEventArgs>(BuiltinsChanged);
                     }
                     return res;
@@ -358,8 +353,14 @@ namespace IronPython.Runtime {
         [PythonName("platform")]
         public object platform;
 
+        // default to location of IronPython.dll, host can override by calling PythonEngine.InitializeModules
+        // In Silverlight the 1 host always sets this
         [PythonName("prefix")]
+#if SILVERLIGHT
         public string prefix;
+#else
+        public string prefix = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);       
+#endif
 
         [PythonName("ps1")]
         public object ps1;
@@ -398,11 +399,6 @@ namespace IronPython.Runtime {
             return PythonFunction._MaximumDepth;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), PythonName("getrefcount")]
-        public int GetReferenceCount(object o) {
-            throw PythonOps.NotImplementedError("IronPython uses mark and sweep garbage collector, getrefcount is not supported");
-        }
-
         #region IO
 
         [PythonName("stdin")]
@@ -434,7 +430,7 @@ namespace IronPython.Runtime {
         }
 
         private static PythonFile MakeConsoleIo(ConsoleStream stream, Encoding encoding, string name) {
-            PythonFile res = new PythonFile(stream, encoding, name, "w");
+            PythonFile res = PythonFile.Create(stream, encoding, name, "w");
             res.IsConsole = true;
             return res;
         }
@@ -495,7 +491,7 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        public IList<object> GetCustomMemberNames(CodeContext context) {
+        public IList<object> GetMemberNames(CodeContext context) {
             List ret = new List(((IDictionary<object, object>)_dict).Keys);
             foreach (SymbolId id in TypeCache.SystemState.GetMemberNames(context, this))
                 ret.AddNoLock(id.ToString());

@@ -19,7 +19,6 @@ from lib.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
 
-agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 if not file_exists(agentsvr_path):
     from sys import exit
     print "Cannot test AgentServerObjects.dll when it doesn't exist."
@@ -35,6 +34,9 @@ else:
     Assert(file_exists("AgentServerObjects.dll"))
     clr.AddReference("AgentServerObjects.dll")
     from AgentServerObjects import * 
+#------------------------------------------------------------------------------
+#--GLOBALS
+com_obj = AgentServerClass()
 
 #------------------------------------------------------------------------------
 #--TESTS
@@ -43,14 +45,17 @@ def test_merlin():
     
     a = AgentServerClass()    
     Assert('Equals' in dir(a))
-    cid = a.Load('Merlin.acs')[0]
+    cid = com_obj.Load('Merlin.acs')[0]
 
-    c = a.GetCharacter(cid)
+    c = com_obj.GetCharacter(cid)
     sleep(1)
-    c.Show(0)
-    sleep(1)
-    while c.GetVisible()==0:
+    
+    if is_snap or testpath.basePyDir.lower()=='src':
+        c.Show(0)
         sleep(1)
+        while c.GetVisible()==0:
+            sleep(1)
+            
     c.Think('IronPython...')
     c.Play('Read')
     c.GestureAt(True, False)
@@ -63,7 +68,7 @@ def test_merlin():
     c.StopAll(0)
     c.Hide(0)
     sleep(1)
-    a.Unload(cid)
+    com_obj.Unload(cid)
         
     delete_files("AgentServerObjects.dll")
     

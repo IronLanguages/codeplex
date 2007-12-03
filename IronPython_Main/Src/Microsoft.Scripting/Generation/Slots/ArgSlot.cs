@@ -26,6 +26,7 @@ namespace Microsoft.Scripting.Generation {
     public class ArgSlot : Slot {
         private Type _argType;
         private int _index;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
         private CodeGen _codeGen;
 
         public ArgSlot(int index, Type type, CodeGen codeGen) {
@@ -33,11 +34,6 @@ namespace Microsoft.Scripting.Generation {
             this._argType = type;
             this._codeGen = codeGen;
         }
-
-        public void SetName(string name) {
-            _codeGen.DefineParameter(_index, ParameterAttributes.None, name);
-        }
-
 
         public override void EmitGet(CodeGen cg) {
             Contract.RequiresNotNull(cg, "cg");

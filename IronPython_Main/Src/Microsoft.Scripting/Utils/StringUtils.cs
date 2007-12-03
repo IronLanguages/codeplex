@@ -19,7 +19,18 @@ using System.Text;
 using System.Globalization;
 
 namespace Microsoft.Scripting.Utils {
-    public static class StringUtils {       
+    public static class StringUtils {
+
+        public static Encoding DefaultEncoding {
+            get {
+#if !SILVERLIGHT
+                return Encoding.Default;
+#else
+                return Encoding.UTF8;
+#endif
+            }
+        }
+
         public static string GetSuffix(string str, char separator, bool includeSeparator) {
             Contract.RequiresNotNull(str, "str");
             int last = str.LastIndexOf(separator);
@@ -203,7 +214,7 @@ namespace Microsoft.Scripting.Utils {
             return result.ToString();
         }
 
-        public static bool TryParseDouble(string s, NumberStyles style, NumberFormatInfo provider, out double result) {
+        public static bool TryParseDouble(string s, NumberStyles style, IFormatProvider provider, out double result) {
 #if SILVERLIGHT // Double.TryParse
             try {
                 result = Double.Parse(s, style, provider);
@@ -231,7 +242,7 @@ namespace Microsoft.Scripting.Utils {
 #endif
         }
 
-        public static bool TryParseDateTimeExact(string s, string format, DateTimeFormatInfo provider, DateTimeStyles style, out DateTime result) {
+        public static bool TryParseDateTimeExact(string s, string format, IFormatProvider provider, DateTimeStyles style, out DateTime result) {
 #if SILVERLIGHT // DateTime.ParseExact
             try {
                 result = DateTime.ParseExact(s, format, provider, style);
@@ -259,5 +270,35 @@ namespace Microsoft.Scripting.Utils {
 #endif
         }
 
+#if SILVERLIGHT
+        private static Dictionary<string, CultureInfo> _cultureInfoCache = new Dictionary<string, CultureInfo>();
+#endif
+
+        // Aims to be equivalent to Culture.GetCultureInfo for Silverlight
+        public static CultureInfo GetCultureInfo(string name) {
+#if SILVERLIGHT
+            lock (_cultureInfoCache) {
+                CultureInfo result;
+                if (_cultureInfoCache.TryGetValue(name, out result)) {
+                    return result;
+                }
+                _cultureInfoCache[name] = result = new CultureInfo(name);
+                return result;
+            }
+#else
+            return CultureInfo.GetCultureInfo(name);
+#endif
+        }
+
+        // Like string.Split, but enumerates
+        public static IEnumerable<string> Split(string str, string sep) {
+            int start = 0, end;
+            while ((end = str.IndexOf(sep, start)) != -1) {
+                yield return str.Substring(start, end - start);
+
+                start = end + sep.Length;
+            }
+            yield return str.Substring(start);
+        }
     }
 }

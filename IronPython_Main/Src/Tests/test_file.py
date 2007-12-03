@@ -548,4 +548,48 @@ def test_overwrite_readonly():
         AssertUnreachable() # should throw
     #any other exceptions fail
 
+def test_inheritance_kwarg_override():
+    class TEST(file):
+        def __init__(self,fname,VERBOSITY=0):
+            file.__init__(self,fname,"w",1)
+            self.VERBOSITY = VERBOSITY
+    
+    f=TEST(r'sometext.txt',VERBOSITY=1)
+    AreEqual(f.VERBOSITY, 1)
+    f.close()
+    import nt
+    nt.unlink('sometext.txt')
+
+# file newline handling test
+def test_newline():
+    def test_newline(norm, mode):
+        f = file("testfile.tmp", mode)
+        Assert(f.read() == norm)
+        for x in xrange(len(norm)):
+            f.seek(0)
+            a = f.read(x)
+            b = f.read(1)
+            c = f.read()
+            Assert(a+b+c == norm)
+        f.close()
+    
+    AssertError(TypeError, file, None) # arg must be string
+    AssertError(TypeError, file, [])
+    AssertError(TypeError, file, 1)
+    
+    norm   = "Hi\nHello\nHey\nBye\nAhoy\n"
+    unnorm = "Hi\r\nHello\r\nHey\r\nBye\r\nAhoy\r\n"
+    f = file("testfile.tmp", "wb")
+    f.write(unnorm)
+    f.close()
+    
+    test_newline(norm, "r")
+    test_newline(unnorm, "rb")
+
+def test_creation():
+    f = file.__new__(file, None)
+    Assert(repr(f).startswith("<closed file '<uninitialized file>', mode '<uninitialized file>' at"))
+    
+    AssertError(TypeError, file, None)
+
 run_test(__name__)

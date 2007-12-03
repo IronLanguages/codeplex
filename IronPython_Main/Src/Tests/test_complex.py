@@ -61,4 +61,16 @@ def test_inherit():
     AreEqual(a.imag, 1)
 
 
+def test_repr():
+    AreEqual(repr(1-6j), '(1-6j)')
+    
+
+@disabled("CodePlex 13860")    
+def test_infinite():
+    #SL cannot even parse this
+    #AreEqual(repr(1.0e340j),  '1.#INFj')
+    #AreEqual(repr(-1.0e340j),'-1.#INFj')
+    pass
+        
+
 run_test(__name__)

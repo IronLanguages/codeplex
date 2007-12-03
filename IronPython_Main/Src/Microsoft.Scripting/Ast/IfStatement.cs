@@ -13,13 +13,11 @@
  *
  * ***************************************************************************/
 
-using System.Reflection.Emit;
 using System.Collections.ObjectModel;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
 
-    public class IfStatement : Statement {
+    public sealed class IfStatement : Statement {
         private readonly ReadOnlyCollection<IfStatementTest> _tests;
         private readonly Statement _else;
 
@@ -35,39 +33,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Statement ElseStatement {
             get { return _else; }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            foreach (IfStatementTest t in _tests) {
-                object val = t.Test.Evaluate(context);
-                if (context.LanguageContext.IsTrue(val)) {
-                    return t.Body.Execute(context);
-                }
-            }
-            if (_else != null) {
-                return _else.Execute(context);
-            }
-            return NextStatement;
-        }
-
-        public override void Emit(CodeGen cg) {
-            Label eoi = cg.DefineLabel();
-            foreach (IfStatementTest t in _tests) {
-                Label next = cg.DefineLabel();
-                cg.EmitPosition(t.Start, t.Header);
-
-                t.Test.EmitBranchFalse(cg, next);
-
-                t.Body.Emit(cg);
-                // optimize no else case                
-                cg.EmitSequencePointNone();     // hide compiler generated branch.
-                cg.Emit(OpCodes.Br, eoi);
-                cg.MarkLabel(next);
-            }
-            if (_else != null) {
-                _else.Emit(cg);
-            }
-            cg.MarkLabel(eoi);
         }
     }
 }

@@ -100,7 +100,7 @@ namespace Microsoft.Scripting {
                 return _parent;
             }
         }
-
+        
         /// <summary>
         /// Gets if the context is visible at this scope.  Visibility is a per-language feature that enables
         /// languages to include members in the Scope chain but hide them when directly exposed to the user.

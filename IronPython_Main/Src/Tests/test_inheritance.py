@@ -959,7 +959,7 @@ def test_inherit_returntypes():
         AreEqual(used.Use_RtDelegate().Invoke(100), 100)
         AreEqual(used.Use_RtStruct().F, 20)
         AreEqual(used.Use_RtClass().F, 30)
-        AssertError(TypeError, used.Use_IEnumerator)
+        AreEqual(list(used.Use_IEnumerator()), [1, 2, 3, 4, 5])
         AreEqual(reduce(add, used.Use_IEnumerable()), 66)
     
 if is_silverlight or is_cli:    
@@ -1150,20 +1150,20 @@ if is_silverlight or is_cli:
         
         ## IEnumerator
         DReturnTypes.M_IEnumerator = lambda self: (2, 20, 200, 2000)
-        AssertError(TypeError, used.Use_IEnumerator)
+        AreEqual(tuple(used.Use_IEnumerator()), (2, 20, 200, 2000))
         
         ## IEnumerable
         DReturnTypes.M_IEnumerable = lambda self: (2, 20, 200, 2000)
         AreEqual(reduce(add, used.Use_IEnumerable()), 2222)
         
         DReturnTypes.M_IEnumerator = lambda self: { 1 : "one", 10: "two", 100: "three"}
-        AssertError(TypeError, used.Use_IEnumerator)
+        AreEqual(set(used.Use_IEnumerator()), set([1, 10, 100]))
         
         DReturnTypes.M_IEnumerable = lambda self: { 1 : "one", 10: "two", 100: "three"}
         AreEqual(reduce(add, used.Use_IEnumerable()), 111)
         
         DReturnTypes.M_IEnumerator = lambda self: System.Array[int](range(10))
-        AssertError(TypeError, used.Use_IEnumerator)
+        AreEqual(list(used.Use_IEnumerator()), range(10))
         
         DReturnTypes.M_IEnumerable = lambda self: System.Array[int](range(10))
         AreEqual(reduce(add, used.Use_IEnumerable()), 45)
@@ -1254,7 +1254,7 @@ if is_silverlight or is_cli:
             AreEqual(used.Use_RtDelegate().Invoke(100), 100 * 5)
             AreEqual(used.Use_RtStruct().F, 20)
             AreEqual(used.Use_RtClass().F, 30)
-            AssertError(TypeError, used.Use_IEnumerator)
+            AreEqual(list(used.Use_IEnumerator()), [1, 2, 3, 4, 5])
             AreEqual(reduce(add, used.Use_IEnumerable()), 45)
         
         test_returntype(IReturnTypes, UseIReturnTypes)

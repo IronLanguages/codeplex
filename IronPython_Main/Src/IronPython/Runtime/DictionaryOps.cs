@@ -37,8 +37,6 @@ namespace IronPython.Runtime {
     /// </summary>
     [PythonType("dict")]
     public static class DictionaryOps {
-        static object nullObject = new object();
-
         #region Dictionary Public API Surface
 
         [SpecialName]
@@ -162,7 +160,7 @@ namespace IronPython.Runtime {
                 if (first) first = false;
                 else buf.Append(", ");
 
-                if (kv.Key == nullObject)
+                if (BaseSymbolDictionary.IsNullObject(kv.Key))
                     buf.Append("None");
                 else
                     buf.Append(PythonOps.StringRepr(kv.Key));
@@ -226,8 +224,8 @@ namespace IronPython.Runtime {
         public static List keys(IDictionary<object, object> self) {
             List l = List.Make(self.Keys);
             for (int i = 0; i < l.Count; i++) {
-                if (l[i] == nullObject) {
-                    l[i] = DictionaryOps.ObjToNull(l[i]);
+                if (BaseSymbolDictionary.IsNullObject(l[i])) {
+                    l[i] = BaseSymbolDictionary.ObjToNull(l[i]);
                     break;
                 }
             }
@@ -291,13 +289,13 @@ namespace IronPython.Runtime {
             if (dict != null) {
                 IDictionaryEnumerator e = dict.GetEnumerator();
                 while (e.MoveNext()) {
-                    self[DictionaryOps.NullToObj(e.Key)] = e.Value;
+                    self[BaseSymbolDictionary.NullToObj(e.Key)] = e.Value;
                 }
             } else if (PythonOps.TryGetBoundAttr(b, Symbols.Keys, out keysFunc)) {
                 // user defined dictionary
                 IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(keysFunc));
                 while (i.MoveNext()) {
-                    self[DictionaryOps.NullToObj(i.Current)] = PythonOps.GetIndex(b, i.Current);
+                    self[BaseSymbolDictionary.NullToObj(i.Current)] = PythonOps.GetIndex(b, i.Current);
                 }
             } else {
                 // list of lists (key/value pairs), list of tuples,
@@ -317,7 +315,7 @@ namespace IronPython.Runtime {
 
         #region Dictionary Helper APIs
 
-        internal static bool TryGetValueVirtual(CodeContext context, IMapping self, object key, ref object DefaultGetItem, out object value) {
+        internal static bool TryGetValueVirtual(CodeContext context, PythonDictionary self, object key, ref object DefaultGetItem, out object value) {
             IPythonObject sdo = self as IPythonObject;
             if (sdo != null) {
                 Debug.Assert(sdo != null);
@@ -368,17 +366,7 @@ namespace IronPython.Runtime {
             }
             return false;
         }
-
-        internal static object NullToObj(object o) {
-            if (o == null) return nullObject;
-            return o;
-        }
-
-        internal static object ObjToNull(object o) {
-            if (o == nullObject) return null;
-            return o;
-        }
-
+       
         internal static int CompareTo(IDictionary<object, object> left, IDictionary<object, object> right) {
             int lcnt = left.Count;
             int rcnt = right.Count;

@@ -18,6 +18,7 @@
 ##
 
 from lib.assert_util import *
+from lib.misc_util import ip_supported_encodings
 import sys
  
 def test_none():
@@ -124,7 +125,7 @@ def test_codecs():
         encodings = [ 'ascii', 'utf-8', 'utf-16-le', 'raw-unicode-escape']
     else:
         print "CodePlex Work Item 12990"
-        encodings = [ 'cp1252','ascii', 'utf-8', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape'] #'utf-16']
+        encodings = [ x for x in ip_supported_encodings if x.lower() != 'utf-16']
 	    
     for encoding in encodings: Assert('abc'.encode(encoding).decode(encoding)=='abc', encoding + " failed!")
     
@@ -176,10 +177,14 @@ def test_encoding_xmlcharrefreplace():
         AreEqual(test[1].encode(test[0], 'xmlcharrefreplace'), test[2])
 
 def test_encode_decode():
-    #AssertError(TypeError, 'abc'.encode, None) #INCOMPAT
-    #AssertError(TypeError, 'abc'.decode, None)
     AreEqual('abc'.encode(), 'abc')
     AreEqual('abc'.decode(), 'abc')
+
+@disabled("CodePlex Work Item 2290")
+def test_encode_decode():
+    AssertError(TypeError, 'abc'.encode, None)
+    AssertError(TypeError, 'abc'.decode, None)
+      
     
 def test_string_escape_trailing_slash():
     ok = False

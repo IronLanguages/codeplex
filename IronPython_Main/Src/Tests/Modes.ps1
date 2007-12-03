@@ -20,6 +20,10 @@
 # * nonsense modes
 # * negative modes
 
+#Emit the line needed to rerun this test
+echo "To re-run this test execute the following line from a PowerShell prompt:"
+echo     $MyInvocation.Line
+
 #Total number of errors encountered
 $global:ERRORS = 0
 
@@ -151,9 +155,11 @@ function test-pymodes($pyexe)
 	## -c
 	echo "Testing -c ..."
 	
-	echo "CodePlex Work Item 11103"
 	$stuff = pyexe -c "True"
-	#if ($stuff -ne "") { write-error "Failed: $stuff"; $global:ERRORS++ }
+	if ($stuff -ne $null) { write-error "Failed: $stuff"; $global:ERRORS++ }
+	
+	$stuff = pyexe -c "print True"
+	if ($stuff -ne "True") { write-error "Failed: $stuff"; $global:ERRORS++ }
 	
 	#------------------------------------------------------------------------------
 	## -h

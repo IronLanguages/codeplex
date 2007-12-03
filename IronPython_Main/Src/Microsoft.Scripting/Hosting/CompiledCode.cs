@@ -13,27 +13,25 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 using System.Runtime.Remoting;
+
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
     public interface ICompiledCode : IRemotable {
-        IScriptModule MakeModule(string name);
+        IScriptScope MakeModule(string name);
         
         void Execute();
-        void Execute(IScriptModule module);
+        void Execute(IScriptScope module);
 
         object Evaluate();
-        object Evaluate(IScriptModule module);
+        object Evaluate(IScriptScope module);
      
 #if !SILVERLIGHT
-        IObjectHandle EvaluateAndWrap();
-        IObjectHandle EvaluateAndWrap(IScriptModule module);
+        ObjectHandle EvaluateAndWrap();
+        ObjectHandle EvaluateAndWrap(IScriptScope module);
 #endif
     }
 
@@ -51,7 +49,7 @@ namespace Microsoft.Scripting.Hosting {
             _code = code;
         }
 
-        public IScriptModule MakeModule(string name) {
+        public IScriptScope MakeModule(string name) {
             Contract.RequiresNotNull(name, "name");
             return ScriptDomainManager.CurrentManager.CreateModule(name, _code);
         }
@@ -67,7 +65,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute code within a given module context. 
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public void Execute(IScriptModule module) {
+        public void Execute(IScriptScope module) {
             Evaluate(module);
         }
 
@@ -82,13 +80,13 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute code within a given module context and returns the result.
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public object Evaluate(IScriptModule module) {
-            ScriptModule localModule;
+        public object Evaluate(IScriptScope module) {
+            ScriptScope localModule;
 
             if (module == null) {
-                localModule = RemoteWrapper.TryGetLocal<ScriptModule>(ScriptDomainManager.CurrentManager.Host.DefaultModule);
+                localModule = RemoteWrapper.TryGetLocal<ScriptScope>(ScriptDomainManager.CurrentManager.Host.DefaultModule);
             } else {
-                localModule = RemoteWrapper.GetLocalArgument<ScriptModule>(module, "module");
+                localModule = RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module");
             }
 
             return _code.Run(localModule);
@@ -96,11 +94,11 @@ namespace Microsoft.Scripting.Hosting {
 
 #if !SILVERLIGHT
 
-        public IObjectHandle EvaluateAndWrap() {
+        public ObjectHandle EvaluateAndWrap() {
             return new ObjectHandle(Evaluate());
         }
 
-        public IObjectHandle EvaluateAndWrap(IScriptModule module) {
+        public ObjectHandle EvaluateAndWrap(IScriptScope module) {
             return new ObjectHandle(Evaluate(module));
         }
 

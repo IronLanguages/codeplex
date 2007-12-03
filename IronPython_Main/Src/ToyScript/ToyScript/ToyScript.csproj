@@ -101,6 +101,7 @@
     <Compile Include="Parser\Token.cs" />
     <Compile Include="Parser\ToyTokenizer.cs" />
     <Compile Include="Runtime\ToyBinder.cs" />
+    <Compile Include="ToyCommandLine.cs" />
     <Compile Include="ToyEngineOptions.cs" />
     <Compile Include="ToyLanguageContext.cs" />
     <Compile Include="Parser\ToyParser.cs" />
@@ -111,7 +112,7 @@
     <Compile Include="ToyLanguageProvider.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>

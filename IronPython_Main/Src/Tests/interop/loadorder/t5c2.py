@@ -15,8 +15,8 @@
     
 from lib.assert_util import *
 
-import clr
-clr.AddReference("loadorder_5")
+
+add_clr_assemblies("loadorder_5")
 
 # namespace NS {
 #     public class Target<T> {
@@ -31,7 +31,7 @@ clr.AddReference("loadorder_5")
 import NS
 from NS import Target               # Different line from t5c1.py
 
-clr.AddReference("loadorder_5c")
+add_clr_assemblies("loadorder_5c")
 
 # namespace NS {
 #     public class Target<T1> { // different generic parameter name

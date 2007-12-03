@@ -18,7 +18,7 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    internal class TargetLabel {
+    internal sealed class TargetLabel {
         private Label _label;
         private bool _initialized;
 

@@ -22,14 +22,11 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using System.Runtime.InteropServices;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-
+namespace Microsoft.Scripting.Actions.ComDispatch {
     public class BoundDispEvent {
-
         object _rcw;
         Guid _sourceIid;
         int _dispid;
-        
 
         public BoundDispEvent(object rcw, Guid sourceIid, int dispid) {
             this._rcw = rcw;
@@ -37,7 +34,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
             this._dispid = dispid;
         }
 
-        [SpecialName]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates"), SpecialName] // TODO: fix
         public object op_AdditionAssignment(CodeContext context, object func) {
             return InPlaceAdd(context, func);
         }
@@ -50,7 +47,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
             return this;
         }
 
-        [SpecialName]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), SpecialName]
         public object InPlaceSubtract(CodeContext context, object func) {
             ComEventSink comEventSink = ComEventSink.FromRCW(this._rcw, this._sourceIid, false);
             if (comEventSink == null) {

@@ -372,7 +372,7 @@ namespace IronPython.Modules {
                     throw MakeException(e);
                 }
                 string data = StringOps.FromByteArray(buffer, bytesRead);
-                PythonTuple remoteAddress = EndPointToTuple(remoteIPEP);
+                PythonTuple remoteAddress = EndPointToTuple((IPEndPoint)remoteEP);
                 return PythonTuple.MakeTuple(data, remoteAddress);
             }
 
@@ -1330,6 +1330,7 @@ namespace IronPython.Modules {
             if (exception is SocketException) {
                 SocketException se = (SocketException)exception;
                 switch (se.SocketErrorCode) {
+                    case SocketError.NotConnected:  // CPython times out when the socket isn't connected.
                     case SocketError.TimedOut:
                         return MakeException(timeout, se.ErrorCode, se.Message);
                     default:
@@ -1670,8 +1671,8 @@ namespace IronPython.Modules {
                 : this(socket, mode, -1) {
             }
 
-            public FileObject(SocketObj socket, string mode, int bufsize)
-                : base(new NetworkStream(socket.socket), System.Text.Encoding.Default, mode) {                
+            public FileObject(SocketObj socket, string mode, int bufsize) {
+                Initialize(new NetworkStream(socket.socket), System.Text.Encoding.Default, mode);
                 socket.socket.SendBufferSize = socket.socket.ReceiveBufferSize = GetBufferSize(bufsize);
             }
 
@@ -1683,8 +1684,8 @@ namespace IronPython.Modules {
                 : this(socket, mode, -1) {
             }
 
-            public FileObject(object socket, string mode, int bufsize)
-                : base(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), System.Text.Encoding.Default, mode) {
+            public FileObject(object socket, string mode, int bufsize) {
+                Initialize(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), System.Text.Encoding.Default, mode);
             }
 
             private static int GetBufferSize(int size) {

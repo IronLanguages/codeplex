@@ -18,49 +18,68 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// Encapsulates information about the result that should be produced when 
-    /// a DynamicAction cannot be performed.  The ErrorInfo either holds an 
-    /// expression which creates an Exception to be thrown or an expression which 
-    /// produces a value which should be returned directly to the user.
+    /// a DynamicAction cannot be performed.  The ErrorInfo can hold one of:
+    ///     an expression which creates an Exception to be thrown 
+    ///     an expression which produces a value which should be returned 
+    ///         directly to the user and represents an error has occured (for
+    ///         example undefined in JavaScript)
+    ///     an expression which produces a value which should be returned
+    ///         directly to the user but does not actually represent an error.
     /// 
-    /// ErrorInfo's are produced by the ActionBinder in response to a failed
+    /// ErrorInfo's are produced by an ActionBinder in response to a failed
     /// binding.  
     /// </summary>
     public sealed class ErrorInfo {
-        private readonly Expression _exception;
-        private readonly Expression _value;
+        private readonly Expression/*!*/ _value;
+        private readonly ErrorInfoKind _kind;       
 
         /// <summary>
         /// Private constructor - consumers must use static From* factories
         /// to create ErrorInfo objects.
         /// </summary>
-        private ErrorInfo(Expression exception, Expression value) {
-            _exception = exception;
+        private ErrorInfo(Expression/*!*/ value, ErrorInfoKind kind) {
+            Debug.Assert(value != null);
+
             _value = value;
+            _kind = kind;
         }
 
         /// <summary>
         /// Creates a new ErrorInfo which represents an exception that should
         /// be thrown.
         /// </summary>
-        public static ErrorInfo FromException(Expression exceptionValue) {
+        public static ErrorInfo FromException(Expression/*!*/ exceptionValue) {
             Contract.RequiresNotNull(exceptionValue, "exceptionValue");
             Contract.Requires(typeof(Exception).IsAssignableFrom(exceptionValue.Type), "exceptionValue", "must by an Exception instance");
 
-            return new ErrorInfo(exceptionValue, null);
+            return new ErrorInfo(exceptionValue, ErrorInfoKind.Exception);
         }
 
         /// <summary>
         /// Creates a new ErrorInfo which represents a value which should be
         /// returned to the user.
         /// </summary>
-        public static ErrorInfo FromValue(Expression resultValue) {
+        public static ErrorInfo FromValue(Expression/*!*/ resultValue) {
             Contract.RequiresNotNull(resultValue, "resultValue");
 
-            return new ErrorInfo(null, resultValue);
+            return new ErrorInfo(resultValue, ErrorInfoKind.Error);
+        }
+
+        /// <summary>
+        /// Crates a new ErrorInfo which represents a value which should be returned
+        /// to the user but does not represent an error.
+        /// </summary>
+        /// <param name="resultValue"></param>
+        /// <returns></returns>
+        public static ErrorInfo FromValueNoError(Expression/*!*/ resultValue) {
+            Contract.RequiresNotNull(resultValue, "resultValue");
+
+            return new ErrorInfo(resultValue, ErrorInfoKind.Success);
         }
 
         /// <summary>
@@ -68,12 +87,31 @@ namespace Microsoft.Scripting.Actions {
         /// the error into a rule.
         /// </summary>
         public Statement MakeErrorForRule(StandardRule rule, ActionBinder binder) {
-            if (_value != null) {
-                rule.IsError = true;
-                return rule.MakeReturn(binder, _value);
+            switch(_kind) {
+                case ErrorInfoKind.Error:
+                    rule.IsError = true;
+                    return rule.MakeReturn(binder, _value);
+                case ErrorInfoKind.Success:
+                    return rule.MakeReturn(binder, _value);
+                case ErrorInfoKind.Exception:
+                    return rule.MakeError(_value);
+                default: throw new InvalidOperationException();
             }
+        }
 
-            return rule.MakeError(_exception);
+        enum ErrorInfoKind {
+            /// <summary>
+            /// The ErrorInfo expression produces an exception
+            /// </summary>
+            Exception,
+            /// <summary>
+            /// The ErrorInfo expression produces a value which represents the error (e.g. undefined)
+            /// </summary>
+            Error,
+            /// <summary>
+            /// The ErrorInfo expression produces a value which is not an error
+            /// </summary>
+            Success
         }
     }
 }

@@ -82,8 +82,8 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static string GetName(MethodInfo mi)
-        {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        public static string GetName(MethodInfo mi) {
             return mi.Name.Substring(3);
         }
     }

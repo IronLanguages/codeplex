@@ -14,25 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
-
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
+using System.Globalization;
 
 namespace Microsoft.Scripting.Ast {
     public abstract class Statement : Node {
         private SourceLocation _start;
         private SourceLocation _end;
-
-        // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary boxing
-        internal static readonly object NextStatement = ControlFlow.NextStatement;
-        internal static readonly object Break = ControlFlow.Break;
-        internal static readonly object Continue = ControlFlow.Continue;
 
         protected Statement(AstNodeType nodeType, SourceSpan span)
             : base(nodeType) {
@@ -58,33 +46,5 @@ namespace Microsoft.Scripting.Ast {
             _start = span.Start;
             _end = span.End;
         }
-
-        public object Execute(CodeContext context) {
-            context.Scope.SourceLocation = Start;
-
-            try {
-                try {
-#if DEBUG
-                    ExpressionReturnException.CurrentDepth++;
-#endif
-                    return DoExecute(context);
-                } catch (ExpressionReturnException ex) {
-#if DEBUG
-                    Debug.Assert(ex.Depth == ExpressionReturnException.CurrentDepth);
-#endif
-                    return ex.Value;
-                }
-            } finally {
-#if DEBUG
-                ExpressionReturnException.CurrentDepth--;
-#endif
-            }
-        }
-
-        protected virtual object DoExecute(CodeContext context) {
-            throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_Execute, this));
-        }
-
-        public abstract void Emit(CodeGen cg);
     }
 }

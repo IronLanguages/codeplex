@@ -26,8 +26,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-
+namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
     /// This class implements an event sink for a particular RCW.
     /// Unlike the implementation of events in TlbImp'd assemblies,
@@ -43,18 +42,19 @@ namespace IronPython.Runtime.Types.ComDispatch {
     /// ComEventSinksContainer finalizer. Notice that lifetime of ComEventSinksContainer
     /// is bound to the lifetime of the RCW. 
     /// </summary>
-    internal class ComEventSink : MarshalByRefObject, IReflect, IDisposable 
-    {
+    public class ComEventSink : MarshalByRefObject, IReflect, IDisposable {
         #region private fields
 
         private Guid _sourceIid;
         private ComTypes.IConnectionPoint _connectionPoint;
         private int _adviseCookie;
         private List<ComEventSinkMethod> _comEventSinkMethods;
+        private object _lockObject = new object(); // We cannot lock on ComEventSink since it causes a DoNotLockOnObjectsWithWeakIdentity warning
 
-        #endregion        
+        #endregion
 
         #region private classes
+
         /// <summary>
         /// Contains a methods DISPID (in a string formatted of "[DISPID=N]"
         /// and a chained list of delegates to invoke
@@ -79,18 +79,20 @@ namespace IronPython.Runtime.Types.ComDispatch {
                 return _context.LanguageContext.Call(_context, _func, args);
             }
         }
+
         #endregion
 
         private const int CONNECT_E_NOCONNECTION = unchecked((int)0x80040200);
 
         #region ctor
+
         private ComEventSink(object rcw, Guid sourceIid) {
             Initialize(rcw, sourceIid);
         }
+
         #endregion
 
-        private void Initialize(object rcw, Guid sourceIid)
-        {
+        private void Initialize(object rcw, Guid sourceIid) {
             this._sourceIid = sourceIid;
             this._adviseCookie = -1;
 
@@ -110,7 +112,8 @@ namespace IronPython.Runtime.Types.ComDispatch {
         }
 
         #region static methods
-        internal static ComEventSink FromRCW(object rcw, Guid sourceIid, bool createIfNotFound) {
+
+        public static ComEventSink FromRCW(object rcw, Guid sourceIid, bool createIfNotFound) {
             List<ComEventSink> comEventSinks = ComEventSinksContainer.FromRCW(rcw, createIfNotFound);
             ComEventSink comEventSink = null;
 
@@ -139,20 +142,21 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
         #endregion
 
-        internal void AddHandler(int dispid, CodeContext context, object func) {
+        public void AddHandler(int dispid, CodeContext context, object func) {
 
             string name = String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", dispid);
             ComEventCallContext callContext = new ComEventCallContext(context, func);
             Delegate handler = Delegate.CreateDelegate(typeof(ComEventCallHandler), callContext, typeof(ComEventCallContext).GetMethod("Call"));
 
-            lock (this) {
+            lock (_lockObject) {
 
                 ComEventSinkMethod sinkMethod;
                 sinkMethod = FindSinkMethod(name);
 
                 if (sinkMethod == null) {
-                    if (_comEventSinkMethods == null)
+                    if (_comEventSinkMethods == null) {
                         _comEventSinkMethods = new List<ComEventSinkMethod>();
+                    }
 
                     sinkMethod = new ComEventSinkMethod();
                     sinkMethod._name = name;
@@ -163,11 +167,11 @@ namespace IronPython.Runtime.Types.ComDispatch {
             }
         }
 
-        internal void RemoveHandler(int dispid, object func) {
+        public void RemoveHandler(int dispid, object func) {
 
             string name = String.Format(CultureInfo.InvariantCulture, "[DISPID={0}]", dispid);
 
-            lock (this) {
+            lock (_lockObject) {
 
                 ComEventSinkMethod sinkEntry = FindSinkMethod(name);
                 if (sinkEntry == null)
@@ -200,11 +204,11 @@ namespace IronPython.Runtime.Types.ComDispatch {
                     // ComEventSinkEntry from the list, we will re-use this data structure
                     // if a new handler needs to be attached.
                     this.Dispose();
-                    }
+                }
             }
         }
 
-        internal object ExecuteHandler(string name, object[] args, ParameterModifier[] modifiers) {
+        public object ExecuteHandler(string name, object[] args) {
             ComEventSinkMethod site;
             site = FindSinkMethod(name);
 
@@ -219,8 +223,9 @@ namespace IronPython.Runtime.Types.ComDispatch {
         }
 
         #region IReflect
-        
+
         #region Unimplemented members
+
         public FieldInfo GetField(string name, BindingFlags bindingFlags) {
             return null;
         }
@@ -260,6 +265,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
         public PropertyInfo[] GetProperties(BindingFlags bindingFlags) {
             return new PropertyInfo[0];
         }
+
         #endregion
 
         public Type UnderlyingSystemType {
@@ -268,10 +274,19 @@ namespace IronPython.Runtime.Types.ComDispatch {
             }
         }
 
-        public object InvokeMember(string name, BindingFlags bindingFlags, Binder binder, object target, object[] args, ParameterModifier[] modifiers, CultureInfo culture, string[] namedParameters) {
-            return this.ExecuteHandler(name, args, modifiers);
+        public object InvokeMember(
+            string name, 
+            BindingFlags bindingFlags, 
+            Binder binder, 
+            object target, 
+            object[] args, 
+            ParameterModifier[] modifiers, 
+            CultureInfo culture, 
+            string[] namedParameters) {
+
+            return this.ExecuteHandler(name, args);
         }
-        
+
         #endregion
 
         #region IDisposable
@@ -283,16 +298,19 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
         #endregion
 
-        ~ComEventSink()
-        {
+        ~ComEventSink() {
             this.Dispose(false);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "disposing")]
         private void Dispose(bool disposing) {
-            if (_connectionPoint == null)
+            if (_connectionPoint == null) {
                 return;
-            if (_adviseCookie == -1)
+            }
+
+            if (_adviseCookie == -1) {
                 return;
+            }
 
             try {
                 _connectionPoint.Unadvise(_adviseCookie);
@@ -308,8 +326,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
                 // the Unadvise is going to throw.  In this case, since we're going away anyway,
                 // we'll ignore the failure and quietly go on our merry way.
                 COMException exCOM = ex as COMException;
-                if (exCOM != null && exCOM.ErrorCode == CONNECT_E_NOCONNECTION)
-                {
+                if (exCOM != null && exCOM.ErrorCode == CONNECT_E_NOCONNECTION) {
                     Debug.Assert(false, "IConnectionPoint::Unadvise returned CONNECT_E_NOCONNECTION.");
                     throw;
                 }
@@ -326,8 +343,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
 
             ComEventSinkMethod site;
             site = _comEventSinkMethods.Find(
-                delegate(ComEventSinkMethod element)
-                { return element._name == name; } );
+                delegate(ComEventSinkMethod element) { return element._name == name; });
 
             return site;
         }

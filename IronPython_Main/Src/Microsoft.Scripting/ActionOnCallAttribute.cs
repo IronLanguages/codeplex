@@ -28,9 +28,10 @@ namespace Microsoft.Scripting {
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class ActionOnCallAttribute : Attribute {
-        public ActionOnCallAttribute() {
+        protected ActionOnCallAttribute() {
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public abstract StandardRule<T> GetRule<T>(CodeContext callerContext, object[] args);
     }
 }

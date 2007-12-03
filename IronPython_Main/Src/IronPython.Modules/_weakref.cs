@@ -15,21 +15,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
+using IronPython.Runtime.Types;
+
+#if !SILVERLIGHT // finalizers not supported
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
@@ -436,7 +435,7 @@ namespace IronPython.Modules {
                 return true;
             }
 
-            public IList<object> GetCustomMemberNames(CodeContext context) {
+            public IList<object> GetMemberNames(CodeContext context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
@@ -672,7 +671,7 @@ namespace IronPython.Modules {
                 return true;
             }
 
-            public IList<object> GetCustomMemberNames(CodeContext context) {
+            public IList<object> GetMemberNames(CodeContext context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
@@ -835,3 +834,5 @@ namespace IronPython.Modules {
         #endregion
     }
 }
+
+#endif

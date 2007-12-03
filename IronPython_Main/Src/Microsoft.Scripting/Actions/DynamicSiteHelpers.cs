@@ -31,10 +31,12 @@ namespace Microsoft.Scripting.Actions {
         /// does not include a CodeContext in its parameter list but is able to retrieve
         /// such a delegate from it's DynamicSite if needed.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static bool IsFastTarget(Type type) {
             return type.Name.StartsWith("Fast") || type.Name.StartsWith("BigFast");
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static bool IsBigTarget(Type type) {
             return type.Name.StartsWith("Big");
         }

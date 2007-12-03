@@ -50,6 +50,7 @@ def foo(): pass
 AreEqual(foo.func_code.co_filename.lower().endswith('test_function.py'), True)
 AreEqual(foo.func_code.co_firstlineno, 48)  # if you added lines to the top of this file you need to update this number.
 
+
 # Cannot inherit from a function
 def CreateSubType(t):
     class SubType(t): pass
@@ -252,7 +253,7 @@ except TypeError:
     pass
 
 if is_cli or is_silverlight:
-    import System
+    import System    
     
     # Test Hashtable and Dictionary on desktop, and just Dictionary in Silverlight
     # (Hashtable is not available)
@@ -412,9 +413,9 @@ AssertErrorWithMessage(TypeError, "this constructor takes no arguments", apply, 
 # accepts / returns runtype type checking tests
 
 if is_cli or is_silverlight:
-    from clr import *
-
-    @accepts(object)
+    import clr
+    
+    @clr.accepts(object)
     def foo(x): 
         return x
 
@@ -425,7 +426,7 @@ if is_cli or is_silverlight:
     AreEqual(foo(True), True)
 
 
-    @accepts(str)
+    @clr.accepts(str)
     def foo(x):
         return x
         
@@ -435,7 +436,7 @@ if is_cli or is_silverlight:
     AssertError(AssertionError, foo, 2.0)
     AssertError(AssertionError, foo, True)
 
-    @accepts(str, bool)
+    @clr.accepts(str, bool)
     def foo(x, y):
         return x, y
 
@@ -446,7 +447,7 @@ if is_cli or is_silverlight:
 
 
     class bar:  
-        @accepts(Self(), str)
+        @clr.accepts(clr.Self(), str)
         def foo(self, x):
             return x
 
@@ -458,7 +459,7 @@ if is_cli or is_silverlight:
     AssertError(AssertionError, a.foo, 2.0)
     AssertError(AssertionError, a.foo, True)
 
-    @returns(str)
+    @clr.returns(str)
     def foo(x):
         return x
 
@@ -469,8 +470,8 @@ if is_cli or is_silverlight:
     AssertError(AssertionError, foo, 2.0)
     AssertError(AssertionError, foo, True)
 
-    @accepts(bool)
-    @returns(str)
+    @clr.accepts(bool)
+    @clr.returns(str)
     def foo(x):
         if x: return str(x)
         else: return 0
@@ -481,7 +482,7 @@ if is_cli or is_silverlight:
     AssertError(AssertionError, foo, 2)
     AssertError(AssertionError, foo, False)
 
-    @returns(None)
+    @clr.returns(None)
     def foo(): pass
 
     AreEqual(foo(), None)
@@ -749,8 +750,7 @@ def test_func_flags():
     AreEqual(foo5.func_code.co_flags & 12, 4)
     AreEqual(foo6.func_code.co_flags & 12, 8)
     AreEqual(foo7.func_code.co_flags & 12, 12)
-    #CodePlex WorkItem #6805
-    #AreEqual(foo8.func_code.co_flags & 12, 0)
+    AreEqual(foo8.func_code.co_flags & 12, 0)
     AreEqual(foo9.func_code.co_flags & 12, 0)
     
 def test_big_calls():
@@ -786,7 +786,6 @@ def test_filename():
     c = compile("x = 2", "test", "exec")
     AreEqual(c.co_filename, 'test')
     
-@disabled("Codeplex Work Item #6142")
 def test_name():
     def f(): pass
     
@@ -798,7 +797,6 @@ def test_name():
     AreEqual(f.__name__, 'x')
     Assert(repr(f).startswith('<function x'))
 
-@disabled("Codeplex Work Item #6805")
 def test_argcount():
     def foo0(): pass
     def foo1(*args): pass
@@ -997,5 +995,63 @@ def test_function_closure():
     # <cell at 45: int object at 44>
     Assert(repr(f().func_closure[0]).startswith('<cell at '))
     Assert(repr(f().func_closure[0]).find(': int object at ') != -1)
+    
+    
+def test_func_code():
+    def foo(): pass
+    def assign(): foo.func_code = None
+    AssertError(TypeError, assign)
+    
+def def_func_doc():
+    foo.func_doc = 'abc'
+    AreEqual(foo.__doc__, 'abc')
+    foo.__doc__ = 'def'
+    AreEqual(foo.func_doc, 'def')
+    foo.func_doc = None
+    AreEqual(foo.__doc__, None)
+    AreEqual(foo.func_doc, None)
+
+def test_func_defaults():
+    def f(a, b): return (a, b)
+
+    f.func_defaults = (1,2)
+    AreEqual(f(), (1,2))
+    
+    f.func_defaults = (1,2,3,4)
+    AreEqual(f(), (3,4))
+
+    f.func_defaults = None
+    AssertError(TypeError, f)
+
+    f.func_defaults = (1,2)
+    AreEqual(f.func_defaults, (1,2))
+    
+    del f.func_defaults
+    AreEqual(f.func_defaults, None)
+    del f.func_defaults
+    AreEqual(f.func_defaults, None)
+    
+def test_func_dict():
+    def f(): pass
+    
+    f.abc = 123
+    AreEqual(f.func_dict, {'abc': 123})
+    f.func_dict = {'def': 'def'}
+    AreEqual(hasattr(f, 'def'), True)
+    AreEqual(getattr(f, 'def'), 'def')
+    f.func_dict = {}
+    AreEqual(hasattr(f, 'abc'), False)
+    AreEqual(hasattr(f, 'def'), False)
+        
+    AssertError(TypeError, lambda : delattr(f, 'func_dict'))
+    AssertError(TypeError, lambda : delattr(f, '__dict__'))
+    
+def test_method():
+    class C:
+        def method(self): pass
+    
+    method = type(C.method)(id, None, 'abc')
+    AreEqual(method.im_class, 'abc')
+    
     
 run_test(__name__)

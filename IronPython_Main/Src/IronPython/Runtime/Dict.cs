@@ -32,7 +32,7 @@ using Microsoft.Scripting.Actions;
 namespace IronPython.Runtime {
 
     [PythonType("dict")]
-    public class PythonDictionary : IMapping, IDictionary<object, object>, IValueEquality,
+    public class PythonDictionary : IDictionary<object, object>, IValueEquality,
         IDictionary, ICodeFormattable, IAttributesCollection
 #if !SILVERLIGHT
         , ICloneable
@@ -112,20 +112,16 @@ namespace IronPython.Runtime {
         }
 
         public bool Remove(object key) {
-            lock (this) return data.Remove(BaseSymbolDictionary.NullToObj(key));
+            try {
+                DeleteItem(key);
+                return true;
+            } catch (KeyNotFoundException) {
+                return false;
+            }
         }
 
         public bool TryGetValue(object key, out object value) {
             lock (this) return data.TryGetValue(BaseSymbolDictionary.NullToObj(key), out value);
-        }
-
-        bool IMapping.TryGetValue(object key, out object value) {
-            if (DictionaryOps.TryGetValueVirtual(DefaultContext.Default, this, key, ref DefaultGetItem, out value)) {
-                return true;
-            }
-
-            // call Dict.TryGetValue to get the real value.
-            return this.TryGetValue(key, out value);
         }
 
         public ICollection<object> Values {
@@ -159,7 +155,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return data.Count; }
+            get { return GetLength(); }
         }
 
         public bool IsReadOnly {
@@ -167,7 +163,7 @@ namespace IronPython.Runtime {
         }
 
         public bool Remove(KeyValuePair<object, object> item) {
-            lock (this) return data.Remove(BaseSymbolDictionary.NullToObj(item.Key));
+            return Remove(BaseSymbolDictionary.NullToObj(item.Key));
         }
 
         #endregion
@@ -207,7 +203,7 @@ namespace IronPython.Runtime {
 
                 if (key.Length == 0) {
                     throw PythonOps.TypeError("__getitem__() takes exactly one argument (0 given)");
-                }                
+                }
 
                 return this[PythonTuple.MakeTuple(key)];
             }
@@ -226,7 +222,6 @@ namespace IronPython.Runtime {
         }
 
         public virtual object this[object key] {
-            [PythonName("__getitem__")]
             get {
                 object realKey = BaseSymbolDictionary.NullToObj(key);
                 object ret;
@@ -244,16 +239,19 @@ namespace IronPython.Runtime {
 
                 throw PythonOps.KeyError(key);
             }
-            [PythonName("__setitem__")]
             set {
                 lock (this) data[BaseSymbolDictionary.NullToObj(key)] = value;
             }
         }
 
+
         [PythonName("__delitem__")]
-        public virtual bool DeleteItem(object key) {
-            DictionaryOps.__delitem__(this, key);
-            return true;
+        public virtual void DeleteItem(object key) {
+            lock (this) {
+                if (!data.Remove(BaseSymbolDictionary.NullToObj(key))) {
+                    throw PythonOps.KeyError(key);
+                }
+            }
         }
 
         #endregion
@@ -262,7 +260,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__len__")]
         public virtual int GetLength() {
-            return DictionaryOps.__len__(this);
+            return data.Count;
         }
 
         public bool ContainsValue(object value) {
@@ -494,7 +492,7 @@ namespace IronPython.Runtime {
         }
 
         IDictionaryEnumerator IDictionary.GetEnumerator() {
-            return data.GetEnumerator();
+            return ((IDictionary)data).GetEnumerator();
         }
 
         bool IDictionary.IsFixedSize {
@@ -510,7 +508,7 @@ namespace IronPython.Runtime {
         }
 
         void IDictionary.Remove(object key) {
-            data.Remove(key);
+            Remove(key);
         }
 
         ICollection IDictionary.Values {
@@ -519,10 +517,10 @@ namespace IronPython.Runtime {
 
         object IDictionary.this[object key] {
             get {
-                return data[key];
+                return data[BaseSymbolDictionary.NullToObj(key)];
             }
             set {
-                data[key] = value;
+                data[BaseSymbolDictionary.NullToObj(key)] = value;
             }
         }
 
@@ -535,7 +533,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection.Count {
-            get { return data.Count; }
+            get { return GetLength(); }
         }
 
         bool ICollection.IsSynchronized {
@@ -581,7 +579,12 @@ namespace IronPython.Runtime {
         }
 
         bool IAttributesCollection.TryGetValue(SymbolId name, out object value) {
-            return ((IMapping)this).TryGetValue(SymbolTable.IdToString(name), out value);
+            if (DictionaryOps.TryGetValueVirtual(DefaultContext.Default, this, SymbolTable.IdToString(name), ref DefaultGetItem, out value)) {
+                return true;
+            }
+
+            // call Dict.TryGetValue to get the real value.
+            return this.TryGetValue(SymbolTable.IdToString(name), out value);
         }
 
         object IAttributesCollection.this[SymbolId name] {
@@ -663,14 +666,12 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__delitem__")]
-        public override bool DeleteItem(object key) {
-            bool isDeleted = base.DeleteItem(key);
+        public override void DeleteItem(object key) {            
+            base.DeleteItem(key);
 
             string s = key as string;
             if (s != null)
                 Environment.SetEnvironmentVariable(s, string.Empty);
-
-            return isDeleted;
         }
     }
 #endif

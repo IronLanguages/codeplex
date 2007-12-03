@@ -15,13 +15,10 @@
 #if !SILVERLIGHT
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using Microsoft.Scripting.Actions;
 using System.IO;
-using System.Reflection;
 using System.Runtime.Remoting;
+
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
@@ -73,87 +70,17 @@ namespace Microsoft.Scripting.Hosting {
             get { return _engine.DefaultBinder; }
         }
 
-        public string[] GetObjectCallSignatures(object obj) {
-            return _engine.GetObjectCallSignatures(obj);
+        public ObjectOperations Operations {
+            get {
+                return _engine.Operations;
+            }
         }
 
-        public string[] GetObjectMemberNames(object obj) {
-            return _engine.GetObjectMemberNames(obj);
-        }
-        
-        public string[] GetObjectMemberNames(object obj, IScriptModule module) {
-            return _engine.GetObjectMemberNames(obj, module);
+        public ObjectOperations CreateOperations() {
+            return _engine.CreateOperations();
         }
 
-        public string GetObjectDocumentation(object obj) {
-            return _engine.GetObjectDocumentation(obj);
-        }
-
-        public bool IsObjectCallable(object obj) {
-            return _engine.IsObjectCallable(obj);
-        }
-
-        public bool IsObjectCallable(object obj, IScriptModule module) {
-            return _engine.IsObjectCallable(obj, module);
-        }
-
-        public object CallObject(object obj, params object[] args) {
-            return _engine.CallObject(obj, args);
-        }
-
-        public object CallObject(object obj, IScriptModule module, params object[] args) {
-            return _engine.CallObject(obj, module, args);
-        }
-
-        public bool TryGetObjectMemberValue(object obj, string name, out object value) {
-            return _engine.TryGetObjectMemberValue(obj, name, out value);
-        }
-
-        public bool TryGetObjectMemberValue(object obj, string name, IScriptModule module, out object value) {
-            return _engine.TryGetObjectMemberValue(obj, name, module, out value);
-        }
-        
-        public string[] GetObjectCallSignatures(IObjectHandle obj) {
-            return _engine.GetObjectCallSignatures(obj);
-        }
-
-        public string[] GetObjectMemberNames(IObjectHandle obj) {
-            return _engine.GetObjectMemberNames(obj);
-        }
-
-        public string[] GetObjectMemberNames(IObjectHandle obj, IScriptModule module) {
-            return _engine.GetObjectMemberNames(obj, module);
-        }
-
-        public bool TryGetObjectMemberValue(IObjectHandle obj, string name, out IObjectHandle value) {
-            return _engine.TryGetObjectMemberValue(obj, name, out value);
-        }
-
-        public bool TryGetObjectMemberValue(IObjectHandle obj, string name, IScriptModule module, out IObjectHandle value) {
-            return _engine.TryGetObjectMemberValue(obj, name, module, out value);
-        }
-
-        public string GetObjectDocumentation(IObjectHandle obj) {
-            return _engine.GetObjectDocumentation(obj);
-        }
-
-        public bool IsObjectCallable(IObjectHandle obj) {
-            return _engine.IsObjectCallable(obj);
-        }
-
-        public bool IsObjectCallable(IObjectHandle obj, IScriptModule module) {
-            return _engine.IsObjectCallable(obj, module);
-        }
-
-        public IObjectHandle CallObject(IObjectHandle obj, params object[] args) {
-            return _engine.CallObject(obj, args);
-        }
-        
-        public IObjectHandle CallObject(IObjectHandle obj, IScriptModule module, params object[] args) {
-            return _engine.CallObject(obj, module, args);
-        }
-
-        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public void ExecuteSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             _engine.ExecuteSourceUnit(sourceUnit, module);
         }
         
@@ -165,7 +92,7 @@ namespace Microsoft.Scripting.Hosting {
             _engine.ExecuteFileContent(code);
         }
 
-        public void ExecuteFileContent(string code, IScriptModule module) {
+        public void ExecuteFileContent(string code, IScriptScope module) {
             _engine.ExecuteFileContent(code, module);
         }
         
@@ -173,7 +100,7 @@ namespace Microsoft.Scripting.Hosting {
             _engine.Execute(code);
         }
         
-        public void Execute(string code, IScriptModule module) {
+        public void Execute(string code, IScriptScope module) {
             _engine.Execute(code, module);
         }
 
@@ -181,7 +108,7 @@ namespace Microsoft.Scripting.Hosting {
             _engine.ExecuteInteractiveCode(code);
         }
 
-        public void ExecuteInteractiveCode(string code, IScriptModule module) {
+        public void ExecuteInteractiveCode(string code, IScriptScope module) {
             _engine.ExecuteInteractiveCode(code, module);
         }
 
@@ -189,7 +116,7 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileInteractiveCode(code));
         }
 
-        public ICompiledCode CompileInteractiveCode(string code, IScriptModule module) {
+        public ICompiledCode CompileInteractiveCode(string code, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileInteractiveCode(code, module));
         }
 
@@ -202,7 +129,7 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // throws SerializationException 
-        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public object EvaluateSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             return _engine.EvaluateSourceUnit(sourceUnit, module);
         }
 
@@ -212,36 +139,36 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // throws SerializationException 
-        public object Evaluate(string expression, IScriptModule module) {
+        public object Evaluate(string expression, IScriptScope module) {
             return _engine.Evaluate(expression, module);
         }
 
         // throws SerializationException
-        public bool TryGetVariable(string name, IScriptModule module, out object obj) {
+        public bool TryGetVariable(string name, IScriptScope module, out object obj) {
             return _engine.TryGetVariable(name, module, out obj);
         }
 
-        public bool TryGetVariableAndWrap(string name, IScriptModule module, out IObjectHandle obj) {
+        public bool TryGetVariableAndWrap(string name, IScriptScope module, out ObjectHandle obj) {
             return _engine.TryGetVariableAndWrap(name, module, out obj);
         }
 
-        public IObjectHandle EvaluateAndWrap(string expression) {
+        public ObjectHandle EvaluateAndWrap(string expression) {
             return _engine.EvaluateAndWrap(expression);
         }
 
-        public IObjectHandle EvaluateAndWrap(string expression, IScriptModule module) {
+        public ObjectHandle EvaluateAndWrap(string expression, IScriptScope module) {
             return _engine.EvaluateAndWrap(expression, module);
         }
 
-        public IScriptModule CompileFile(string path, string moduleName) {
-            return RemoteWrapper.WrapRemotable<IScriptModule>(_engine.CompileFile(path, moduleName));
+        public IScriptScope CompileFile(string path, string moduleName) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_engine.CompileFile(path, moduleName));
         }
 
         public ICompiledCode CompileFileContent(string path) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileFileContent(path));
         }
 
-        public ICompiledCode CompileFileContent(string path, IScriptModule module) {
+        public ICompiledCode CompileFileContent(string path, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileFileContent(path, module));
         }
         
@@ -249,23 +176,23 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileCode(code));
         }
         
-        public ICompiledCode CompileCode(string code, IScriptModule module) {
+        public ICompiledCode CompileCode(string code, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileCode(code, module));
         }
 
-        public ICompiledCode CompileExpression(string expression, IScriptModule module) {
+        public ICompiledCode CompileExpression(string expression, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileExpression(expression, module));
         }
 
-        public ICompiledCode CompileStatements(string statement, IScriptModule module) {
+        public ICompiledCode CompileStatements(string statement, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileStatements(statement, module));
         }
 
-        public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptModule module) {
+        public ICompiledCode CompileCodeDom(System.CodeDom.CodeMemberMethod code, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileCodeDom(code, module));
         }
 
-        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptModule module) {
+        public ICompiledCode CompileSourceUnit(SourceUnit sourceUnit, IScriptScope module) {
             return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.CompileSourceUnit(sourceUnit, module));
         }
 
@@ -281,7 +208,7 @@ namespace Microsoft.Scripting.Hosting {
             _engine.ExecuteCommand(code);
         }
 
-        public void ExecuteCommand(string code, IScriptModule module) {
+        public void ExecuteCommand(string code, IScriptScope module) {
             _engine.ExecuteCommand(code, module);
         }
 
@@ -305,7 +232,7 @@ namespace Microsoft.Scripting.Hosting {
             _engine.GetExceptionMessage(exception, out message, out typeName);
         }
 
-        public void PublishModule(IScriptModule module) {
+        public void PublishModule(IScriptScope module) {
             _engine.PublishModule(module);
         }
 
@@ -313,7 +240,7 @@ namespace Microsoft.Scripting.Hosting {
             return _engine.GetDefaultCompilerOptions();
         }
 
-        public CompilerOptions GetModuleCompilerOptions(ScriptModule module) {
+        public CompilerOptions GetModuleCompilerOptions(ScriptScope module) {
             throw new NotSupportedException();
         }
     }

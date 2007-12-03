@@ -125,34 +125,6 @@ def test_redirect():
     Assert(l == ["1\n", "2\n", "2\n", "3\n", "4\n", "5\n", "6\n", "7\n", "8\n", "9\n", "0\n"])
     f.close()
 
-# file newline handling test
-@skip("silverlight")
-def test_newline():
-    def test_newline(norm, mode):
-        f = file("testfile.tmp", mode)
-        Assert(f.read() == norm)
-        for x in xrange(len(norm)):
-            f.seek(0)
-            a = f.read(x)
-            b = f.read(1)
-            c = f.read()
-            Assert(a+b+c == norm)
-        f.close()
-    
-    AssertError(TypeError, file, None) # arg must be string
-    AssertError(TypeError, file, [])
-    AssertError(TypeError, file, 1)
-    
-    norm   = "Hi\nHello\nHey\nBye\nAhoy\n"
-    unnorm = "Hi\r\nHello\r\nHey\r\nBye\r\nAhoy\r\n"
-    f = file("testfile.tmp", "wb")
-    f.write(unnorm)
-    f.close()
-    
-    test_newline(norm, "r")
-    test_newline(unnorm, "rb")
-
-
 def test_conversions():
     success=False
     try:
@@ -682,7 +654,7 @@ def test_oldclass_compare():
 # check that unhashable types cannot be hashed by Python
 # However, they should be hashable using System.Object.GetHashCode
 
-@skip('win32')
+@skip('win32', 'silverlight') # TODO: _weakref support in SL
 def test_unhashable_types():
 	import System
 	class OldUserClass:

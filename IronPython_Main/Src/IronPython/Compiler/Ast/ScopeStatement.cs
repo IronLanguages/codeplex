@@ -134,7 +134,7 @@ namespace IronPython.Compiler.Ast {
                         binder.ReportSyntaxError(
                             String.Format(
                                 System.Globalization.CultureInfo.InvariantCulture,
-                                "can not delete variable '{0}' referenced in nested context",
+                                "can not delete variable '{0}' referenced in nested scope",
                                 SymbolTable.IdToString(kv.Key)
                                 ),
                             this);

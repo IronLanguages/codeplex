@@ -84,6 +84,7 @@ namespace Microsoft.Scripting {
 #endif
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         internal static Type[] LoadTypesFromAssembly(Assembly asm) {
             if (ScriptDomainManager.Options.PrivateBinding) {
                 return GetAllTypesFromAssembly(asm);

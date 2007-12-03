@@ -130,8 +130,7 @@ namespace Microsoft.Scripting.Actions {
                 setter = CompilerHelpers.GetCallableMethod(setter);
 
                 if (info.IsStatic != _isStatic) {
-                    // TODO: Too python specific
-                    AddToBody(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
+                    AddToBody(Binder.MakeStaticPropertyInstanceAccessError(info, true, Rule.Parameters).MakeErrorForRule(Rule, Binder));
                 } else if (setter.ContainsGenericParameters) {
                     AddToBody(Rule.MakeError(MakeGenericPropertyExpression()));
                 } else if (setter.IsPublic && !setter.DeclaringType.IsValueType) {

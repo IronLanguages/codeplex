@@ -14,15 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 
 using Microsoft.Scripting;
-
-using IronPython.Runtime.Types;
-using IronPython.Runtime.Calls;
-using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Utils;
+
+using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
@@ -848,49 +850,50 @@ namespace IronPython.Runtime {
     }
 
     [PythonType("file")]
-    public class PythonFile : IDisposable, ICodeFormattable {
+    public class PythonFile : IDisposable, ICodeFormattable, IEnumerable<string>, IEnumerable, IWeakReferenceable {
         private bool _isConsole;
+        private Stream stream;
+        private string mode;
+        private string name;
 
-        // Enumeration of each stream mode.
-        private enum PythonFileMode {
-            Binary,
-            TextCrLf,
-            TextCr,
-            TextLf,
-            UniversalNewline
+        private PythonStreamReader reader;
+        private PythonStreamWriter writer;
+        private bool isopen;
+        private Nullable<long> reseekPosition;
+        private WeakRefTracker _weakref;
+
+        public bool softspace;
+
+        public PythonFile() {
         }
 
-        // Map a python mode string into a PythonFileMode.
-        private static PythonFileMode MapFileMode(String mode) {
-            // Assume "mode" is in reasonable good shape, since we checked it in "Make"
-            if (mode.Contains("b"))
-                return PythonFileMode.Binary;
-
-            if (mode.Contains("U"))
-                return PythonFileMode.UniversalNewline;
-
-            // Must be platform specific text mode. Work out which line termination the platform
-            // supports based on the value of Environment.NewLine.
-            switch (Environment.NewLine) {
-                case "\r\n":
-                    return PythonFileMode.TextCrLf;
-                case "\r":
-                    return PythonFileMode.TextCr;
-                case "\n":
-                    return PythonFileMode.TextLf;
-                default:
-                    throw new NotImplementedException("Unsupported Environment.NewLine value");
-            }
+        internal static PythonFile Create(Stream stream, string name, string mode) {
+            return Create(stream, SystemState.Instance.DefaultEncoding, name, mode);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, PythonType cls, string name) {
-            return Make(context, cls, name, "r", -1);
+        internal static PythonFile Create(Stream stream, Encoding encoding, string name, string mode) {
+            PythonFile res = new PythonFile();
+            res.Initialize(stream, encoding, name, mode);
+            return res;
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, PythonType cls, string name, string mode) {
-            return Make(context, cls, name, mode, -1);
+        internal static PythonFile Create(Stream stream, string name, string mode, bool weakMapping) {
+            PythonFile res = new PythonFile();
+            res.InternalInitialize(stream, SystemState.Instance.DefaultEncoding, name, mode, weakMapping);
+            return res;
+        }
+
+#if !SILVERLIGHT // finalizers not supported
+        ~PythonFile() {
+            Dispose(false);
+        }
+#endif
+
+        #region Python initialization
+
+        [PythonName("__init__")]
+        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
+            Initialize(name, mode, bufsize, null);
         }
 
         //
@@ -899,8 +902,8 @@ namespace IronPython.Runtime {
         // 
         // Seems C-Python allows "b|t" at the beginning too.
         // 
-        [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, PythonType cls, string name, string mode, int bufsize) {
+        [PythonName("__init__")]
+        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize, [ParamDictionary]IAttributesCollection dict) {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
@@ -917,7 +920,6 @@ namespace IronPython.Runtime {
             if (mode == string.Empty) {
                 throw PythonOps.ValueError("empty mode string");
             }
-
 
             bool seekEnd = false;
      
@@ -961,57 +963,47 @@ namespace IronPython.Runtime {
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
-                if (cls == TypeCache.PythonFile) return new PythonFile(stream, SystemState.Instance.DefaultEncoding, name, inMode);
-
-                return cls.CreateInstance(context, stream, SystemState.Instance.DefaultEncoding, name, inMode) as PythonFile;
+                Initialize(stream, SystemState.Instance.DefaultEncoding, name, inMode);
+                this.isopen = true;
             } catch (UnauthorizedAccessException e) {
                 throw new IOException(e.Message, e);
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, PythonType cls, Stream stream) {
+        [PythonName("__init__")]
+        public void Initialize([NotNull]Stream/*!*/ stream) {
+            Contract.RequiresNotNull(stream, "stream");
+
             string mode;
             if (stream.CanRead && stream.CanWrite) mode = "w+";
             else if (stream.CanWrite) mode = "w";
             else mode = "r";
 
-            if (cls == TypeCache.PythonFile) return new PythonFile(stream, SystemState.Instance.DefaultEncoding, mode);
-
-            return cls.CreateInstance(context, stream, SystemState.Instance.DefaultEncoding, mode) as PythonFile;
+            Initialize(stream, SystemState.Instance.DefaultEncoding, mode);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonFile Make(CodeContext context, PythonType cls, Stream stream, string mode) {
-            if (cls == TypeCache.PythonFile) return new PythonFile(stream, SystemState.Instance.DefaultEncoding, mode);
-
-            return cls.CreateInstance(context, stream, SystemState.Instance.DefaultEncoding, mode) as PythonFile;
+        [PythonName("__init__")]
+        public void Initialize([NotNull]Stream/*!*/ stream, string mode) {
+            Initialize(stream, SystemState.Instance.DefaultEncoding, mode);
         }
 
-        private readonly Stream stream;
-        private readonly string mode;
-        private readonly string name;
-
-        private readonly PythonStreamReader reader;
-        private readonly PythonStreamWriter writer;
-        private bool isclosed;
-        private Nullable<long> reseekPosition;
-
-        public bool softspace;
-
-        public Encoding Encoding {
-            get {
-                return (reader != null) ? reader.Encoding : (writer != null) ? writer.Encoding : null;
-            }
-        }
-        
-        public PythonFile(Stream stream, Encoding encoding, string mode)
-            : this(stream, encoding, mode, true) {
+        [PythonName("__init__")]
+        public void Initialize([NotNull]Stream/*!*/ stream, Encoding encoding, string mode) {
+            InternalInitialize(stream, encoding, mode, true);
         }
 
-        internal PythonFile(Stream stream, Encoding encoding, string mode, bool weakMapping) {
+        [PythonName("__init__")]
+        public void Initialize([NotNull]Stream/*!*/ stream, [NotNull]Encoding/*!*/ encoding, string name, string mode) {
+            Contract.RequiresNotNull(stream, "stream");
+            Contract.RequiresNotNull(encoding, "encoding");
+
+            InternalInitialize(stream, encoding, name, mode, true);
+        }
+
+        internal void InternalInitialize(Stream stream, Encoding encoding, string mode, bool weakMapping) {
             this.stream = stream;
             this.mode = mode;
+            this.isopen = true;
 
             PythonFileMode filemode = MapFileMode(mode);
 
@@ -1066,18 +1058,50 @@ namespace IronPython.Runtime {
                 PythonFileManager.AddToWeakMapping(this);
         }
 
-        public PythonFile(Stream stream, Encoding encoding, string name, string mode)
-            : this(stream, encoding, name, mode, true) {
-        }
-
-        internal PythonFile(Stream stream, Encoding encoding, string name, string mode, bool weakMapping)
-            : this(stream, encoding, mode, weakMapping) {
+        internal void InternalInitialize(Stream stream, Encoding encoding, string name, string mode, bool weakMapping) {
+            InternalInitialize(stream, encoding, mode, weakMapping);
             this.name = name;
         }
 
-        ~PythonFile() {
-            Dispose(false);
+        #endregion
+
+        // Enumeration of each stream mode.
+        private enum PythonFileMode {
+            Binary,
+            TextCrLf,
+            TextCr,
+            TextLf,
+            UniversalNewline
         }
+
+        // Map a python mode string into a PythonFileMode.
+        private static PythonFileMode MapFileMode(String mode) {
+            // Assume "mode" is in reasonable good shape, since we checked it in "Make"
+            if (mode.Contains("b"))
+                return PythonFileMode.Binary;
+
+            if (mode.Contains("U"))
+                return PythonFileMode.UniversalNewline;
+
+            // Must be platform specific text mode. Work out which line termination the platform
+            // supports based on the value of Environment.NewLine.
+            switch (Environment.NewLine) {
+                case "\r\n":
+                    return PythonFileMode.TextCrLf;
+                case "\r":
+                    return PythonFileMode.TextCr;
+                case "\n":
+                    return PythonFileMode.TextLf;
+                default:
+                    throw new NotImplementedException("Unsupported Environment.NewLine value");
+            }
+        }
+
+        public Encoding Encoding {
+            get {
+                return (reader != null) ? reader.Encoding : (writer != null) ? writer.Encoding : null;
+            }
+        }            
 
         public void Dispose() {
             Dispose(true);
@@ -1085,14 +1109,14 @@ namespace IronPython.Runtime {
         }
 
         protected virtual void Dispose(bool disposing) {
-            if (isclosed) return;
+            if (!isopen) return;
 
             if (disposing) {
                 Flush();
                 stream.Close();
             }
 
-            isclosed = true;
+            isopen = false;
             PythonFileManager.Remove(this);
         }
 
@@ -1107,12 +1131,12 @@ namespace IronPython.Runtime {
         public bool IsClosed {
             [PythonName("closed")]
             get {
-                return isclosed;
+                return !isopen;
             }
         }
 
         void ThrowIfClosed() {
-            if (isclosed)
+            if (!isopen)
                 throw PythonOps.ValueError("I/O operation on closed file");
         }
 
@@ -1346,6 +1370,17 @@ namespace IronPython.Runtime {
             return _isConsole;
         }
 
+        [PythonName("__enter__")]
+        public object Enter() {
+            ThrowIfClosed();
+            return this;
+        }
+
+        [PythonName("__exit__")]
+        public void Exit(params object[] excinfo) {
+            Close();
+        }
+
         public bool IsConsole {
             get {
                 return _isConsole;
@@ -1357,9 +1392,9 @@ namespace IronPython.Runtime {
 
         public override string ToString() {
             return string.Format("<{0} file '{1}', mode '{2}' at 0x{3:X8}>",
-                isclosed ? "closed" : "open",
-                name,
-                mode,
+                isopen ? "open" : "closed",
+                name ?? "<uninitialized file>",
+                mode ?? "<uninitialized file>",
                 this.GetHashCode()
                 );
         }
@@ -1368,6 +1403,47 @@ namespace IronPython.Runtime {
 
         public string ToCodeString(CodeContext context) {
             return ToString();
+        }
+
+        #endregion
+
+        #region IEnumerable<string> Members
+
+        IEnumerator<string> IEnumerable<string>.GetEnumerator() {
+            for (; ; ) {
+                string line = ReadLine();
+                if (line == "") yield break;
+                yield return line;
+            }
+        }
+
+        #endregion
+
+        #region IEnumerable Members
+
+        IEnumerator IEnumerable.GetEnumerator() {
+            for (; ; ) {
+                string line = ReadLine();
+                if (line == "") yield break;
+                yield return line;
+            }
+        }
+
+        #endregion
+
+        #region IWeakReferenceable Members
+
+        public WeakRefTracker GetWeakRef() {
+            return _weakref;
+        }
+
+        public bool SetWeakRef(WeakRefTracker value) {
+            _weakref = value;
+            return true;
+        }
+
+        public void SetFinalizer(WeakRefTracker value) {
+            SetWeakRef(value);
         }
 
         #endregion

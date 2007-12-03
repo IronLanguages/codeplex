@@ -437,6 +437,7 @@ namespace IronPython.Runtime.Types {
         }
         #endregion
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         protected BuiltinFunction GetConstructors() {
             BuiltinFunction reflectedCtors = null;
             bool hasDefaultConstructor = false;
@@ -460,6 +461,7 @@ namespace IronPython.Runtime.Types {
             return reflectedCtors;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         protected static object ExtendMethod(MethodInfo mi, FunctionType ft, object existingMember) {
             BuiltinFunction rm = null;
             BuiltinMethodDescriptor bimd = existingMember as BuiltinMethodDescriptor;
@@ -475,22 +477,6 @@ namespace IronPython.Runtime.Types {
                 return bimd ?? rm.GetDescriptor();
             }
             return null;
-        }
-
-
-        public class OperatorMethod {
-            public string method;
-            public string rmethod;
-            public int args;
-            public int maxArgs;
-
-            public OperatorMethod(string method, string rmethod, int args) : this(method, rmethod, args, args) { }
-            public OperatorMethod(string method, string rmethod, int args, int maxArgs) {
-                this.method = method;
-                this.rmethod = rmethod;
-                this.args = args;
-                this.maxArgs = maxArgs;
-            }
         }
 
         protected PythonTypeBuilder Builder {
@@ -511,7 +497,7 @@ namespace IronPython.Runtime.Types {
             private ContextId _context;
             //private bool _showCls = true;
 
-            private static ScriptModule SimpleModule = ScriptDomainManager.CurrentManager.CreateModule("<empty>");
+            private static ScriptScope SimpleModule = ScriptDomainManager.CurrentManager.CreateModule("<empty>");
 
             public static CodeContext Create(ContextId contextId) {
                 SimpleContext context = new SimpleContext(contextId);

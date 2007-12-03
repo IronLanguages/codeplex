@@ -114,5 +114,16 @@ def test_sort():
     AreEqual(sorted(s),t)
     AreEqual(t,[(1,1),(1,2),(3,0)])
 
+def test_indexing():
+    t = (2,3,4)
+    AssertError(TypeError, lambda : t[2.0])
+    
+    class mytuple(tuple):
+        def __getitem__(self, index):
+            return tuple.__getitem__(self, int(index))
+
+    t = mytuple(t)
+    AreEqual(t[2.0], 4)
+
 run_test(__name__)
 

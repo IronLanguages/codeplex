@@ -29,6 +29,7 @@ namespace Microsoft.Scripting {
     /// standard performance counter architecture.
     /// </summary>
     public static class PerfTrack {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public enum Categories {
             /// <summary>
             /// temporary categories for quick investigation, use a custom key if you

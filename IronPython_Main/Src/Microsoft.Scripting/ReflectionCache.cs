@@ -28,9 +28,13 @@ namespace Microsoft.Scripting {
     /// Provides a cache of reflection members.  Only one set of values is ever handed out per a 
     /// specific request.
     /// </summary>
-    public class ReflectionCache {
+    public static class ReflectionCache {
         private static Dictionary<MethodBaseCache, MethodGroup> _functions = new Dictionary<MethodBaseCache, MethodGroup>();
         private static Dictionary<Type, TypeTracker> _typeCache = new Dictionary<Type, TypeTracker>();
+
+        public static MethodGroup GetMethodGroup(Type type, string name) {
+            return GetMethodGroup(type, name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod, null);
+        }
 
         /// <summary>
         /// Gets a singleton method group from the provided type.
@@ -39,13 +43,13 @@ namespace Microsoft.Scripting {
         /// combination.  In other words calling GetMethodGroup on a base type and a derived type that introduces
         /// no new methods under a given name will result in the same method group for both types.
         /// </summary>
-        public static MethodGroup GetMethodGroup(Type type, string name) {
+        public static MethodGroup GetMethodGroup(Type type, string name, BindingFlags bindingFlags, MemberFilter filter) {
             Contract.RequiresNotNull(type, "type");
             Contract.RequiresNotNull(name, "name");
 
             MemberInfo[] mems = type.FindMembers(MemberTypes.Method,
-                BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod,
-                delegate(MemberInfo mem, object filterCritera) {
+                bindingFlags,
+                filter ?? delegate(MemberInfo mem, object filterCritera) {
                     return mem.Name == name;
                 },
                 null);
@@ -116,6 +120,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// TODO: Make me private again
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public class MethodBaseCache {
             private MethodBase[] _members;
             private string _name;

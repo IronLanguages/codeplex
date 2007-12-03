@@ -15,32 +15,27 @@
 
 using System;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public class EnvironmentExpression : Expression {
-        private readonly Type /*!*/ _expressionType;
-
-        internal EnvironmentExpression(Type /*!*/ expressionType)
-            : base(AstNodeType.EnvironmentExpression) {
-            _expressionType = expressionType;
-        }
-
-        public override Type Type {
-            get { 
-                return _expressionType;
-            }
-        }
-        
-        public override void Emit(CodeGen cg) {
-            cg.EmitEnvironmentOrNull();
+    public sealed class IntrinsicExpression : Expression {
+        internal IntrinsicExpression(AstNodeType nodeType, Type type)
+            : base(nodeType, type) {
         }
     }
 
     public static partial class Ast {
-        public static EnvironmentExpression Environment(Type type) {
+        public static Expression Environment(Type type) {
             Contract.RequiresNotNull(type, "type");
-            return new EnvironmentExpression(type);
+            return new IntrinsicExpression(AstNodeType.EnvironmentExpression, type);
+        }
+
+        public static Expression CodeContext() {
+            return new IntrinsicExpression(AstNodeType.CodeContextExpression, typeof(CodeContext));
+        }
+
+
+        public static Expression Params() {
+            return new IntrinsicExpression(AstNodeType.ParamsExpression, typeof(object[]));
         }
     }
 }

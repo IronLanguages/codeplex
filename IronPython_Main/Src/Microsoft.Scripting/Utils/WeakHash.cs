@@ -70,8 +70,12 @@ namespace Microsoft.Scripting.Utils {
             return dict.ContainsKey(key);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public ICollection<TKey> Keys {
-            get { throw new NotImplementedException(); }
+            get { 
+                // TODO:
+                throw new NotImplementedException(); 
+            }
         }
 
         public bool Remove(TKey key) {
@@ -82,6 +86,7 @@ namespace Microsoft.Scripting.Utils {
             return dict.TryGetValue(key, out value);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public ICollection<TValue> Values {
             get { 
                 // TODO:
@@ -191,6 +196,7 @@ namespace Microsoft.Scripting.Utils {
             throw new NotImplementedException();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public int Count {
             get { 
                 // TODO:
@@ -198,6 +204,7 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public bool IsReadOnly {
             get {
                 // TODO:
@@ -343,12 +350,15 @@ namespace Microsoft.Scripting.Utils {
             return -1;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1030:UseEventsWhereAppropriate")] // TODO: fix (rename?)
         public void RemoveOnId(int id) {
             lock (synchObject) {
                 dict.Remove(id);
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1030:UseEventsWhereAppropriate")] // TODO: fix (rename?)
         public void RemoveOnObject(T value) {
             try {
                 int id = GetIdFromObject(value);

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.20831</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -23,7 +23,7 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RunCodeAnalysis>true</RunCodeAnalysis>
-    <CodeAnalysisRules>-Microsoft.Usage#CA2209;-!Microsoft.Design#CA1012;-!Microsoft.Design#CA2210;-!Microsoft.Design#CA1040;-!Microsoft.Design#CA1005;-!Microsoft.Design#CA1020;-!Microsoft.Design#CA1021;-!Microsoft.Design#CA1010;-!Microsoft.Design#CA1011;-!Microsoft.Design#CA1009;-!Microsoft.Design#CA1050;-!Microsoft.Design#CA1026;-!Microsoft.Design#CA1019;-!Microsoft.Design#CA1031;-!Microsoft.Design#CA1047;-!Microsoft.Design#CA1000;-!Microsoft.Design#CA1048;-!Microsoft.Design#CA1051;-!Microsoft.Design#CA1002;-!Microsoft.Design#CA1061;-!Microsoft.Design#CA1006;-!Microsoft.Design#CA1046;-!Microsoft.Design#CA1045;-!Microsoft.Design#CA1065;-!Microsoft.Design#CA1038;-!Microsoft.Design#CA1008;-!Microsoft.Design#CA1028;-!Microsoft.Design#CA1064;-!Microsoft.Design#CA1004;-!Microsoft.Design#CA1035;-!Microsoft.Design#CA1063;-!Microsoft.Design#CA1032;-!Microsoft.Design#CA1023;-!Microsoft.Design#CA1033;-!Microsoft.Design#CA1039;-!Microsoft.Design#CA1016;-!Microsoft.Design#CA1014;-!Microsoft.Design#CA1017;-!Microsoft.Design#CA1018;-!Microsoft.Design#CA1027;-!Microsoft.Design#CA1059;-!Microsoft.Design#CA1060;-!Microsoft.Design#CA1034;-!Microsoft.Design#CA1013;-!Microsoft.Design#CA1036;-!Microsoft.Design#CA1044;-!Microsoft.Design#CA1041;-!Microsoft.Design#CA1025;-!Microsoft.Design#CA1052;-!Microsoft.Design#CA1053;-!Microsoft.Design#CA1057;-!Microsoft.Design#CA1058;-!Microsoft.Design#CA1001;-!Microsoft.Design#CA1049;-!Microsoft.Design#CA1054;-!Microsoft.Design#CA1056;-!Microsoft.Design#CA1055;-!Microsoft.Design#CA1030;-!Microsoft.Design#CA1003;-!Microsoft.Design#CA1007;-!Microsoft.Design#CA1043;-!Microsoft.Design#CA1024;+!Microsoft.Globalization#CA1301;+!Microsoft.Globalization#CA1302;-!Microsoft.Globalization#CA1308;+!Microsoft.Globalization#CA1306;+!Microsoft.Globalization#CA1304;-!Microsoft.Globalization#CA1305;+!Microsoft.Globalization#CA2101;+!Microsoft.Globalization#CA1300;-!Microsoft.Globalization#CA1307;+!Microsoft.Globalization#CA1309;+!Microsoft.Interoperability#CA1403;+!Microsoft.Interoperability#CA1406;+!Microsoft.Interoperability#CA1413;+!Microsoft.Interoperability#CA1402;+!Microsoft.Interoperability#CA1407;+!Microsoft.Interoperability#CA1404;+!Microsoft.Interoperability#CA1410;+!Microsoft.Interoperability#CA1411;+!Microsoft.Interoperability#CA1405;+!Microsoft.Interoperability#CA1409;+!Microsoft.Interoperability#CA1415;+!Microsoft.Interoperability#CA1408;+!Microsoft.Interoperability#CA1414;+!Microsoft.Interoperability#CA1412;+!Microsoft.Interoperability#CA1400;+!Microsoft.Interoperability#CA1401;+!Microsoft.Maintainability#CA1506;+!Microsoft.Maintainability#CA1502;+!Microsoft.Maintainability#CA1501;+!Microsoft.Maintainability#CA1505;+!Microsoft.Maintainability#CA1504;+!Microsoft.Maintainability#CA1500;+!Microsoft.Mobility#CA1600;+!Microsoft.Mobility#CA1601;-Microsoft.Naming#CA1702;-Microsoft.Naming#CA1700;-Microsoft.Naming#CA1712;-Microsoft.Naming#CA1713;-Microsoft.Naming#CA1714;-Microsoft.Naming#CA1709;-Microsoft.Naming#CA1704;-Microsoft.Naming#CA1708;-Microsoft.Naming#CA1715;-Microsoft.Naming#CA1710;-Microsoft.Naming#CA1720;-Microsoft.Naming#CA1707;-Microsoft.Naming#CA1722;-Microsoft.Naming#CA1711;-Microsoft.Naming#CA1716;-Microsoft.Naming#CA1717;-Microsoft.Naming#CA1725;-Microsoft.Naming#CA1719;-Microsoft.Naming#CA1721;-Microsoft.Naming#CA1701;-Microsoft.Naming#CA1703;-Microsoft.Naming#CA1724;-Microsoft.Naming#CA1726;+!Microsoft.Performance#CA1809;-!Microsoft.Performance#CA1811;+!Microsoft.Performance#CA1812;+!Microsoft.Performance#CA1813;+!Microsoft.Performance#CA1823;+!Microsoft.Performance#CA1800;-!Microsoft.Performance#CA1805;+!Microsoft.Performance#CA1810;+!Microsoft.Performance#CA1824;-!Microsoft.Performance#CA1822;+!Microsoft.Performance#CA1815;+!Microsoft.Performance#CA1814;+!Microsoft.Performance#CA1819;+!Microsoft.Performance#CA1821;+!Microsoft.Performance#CA1804;+!Microsoft.Performance#CA1820;+!Microsoft.Performance#CA1802;+!Microsoft.Portability#CA1901;+!Microsoft.Portability#CA1900;+!Microsoft.Reliability#CA2001;+!Microsoft.Reliability#CA2002;+!Microsoft.Reliability#CA2003;+!Microsoft.Reliability#CA2004;+!Microsoft.Reliability#CA2006;+!Microsoft.Security#CA2116;+!Microsoft.Security#CA2117;+!Microsoft.Security#CA2105;+!Microsoft.Security#CA2115;+!Microsoft.Security#CA2102;+!Microsoft.Security#CA2104;+!Microsoft.Security#CA2122;+!Microsoft.Security#CA2114;+!Microsoft.Security#CA2123;+!Microsoft.Security#CA2111;+!Microsoft.Security#CA2108;+!Microsoft.Security#CA2107;+!Microsoft.Security#CA2103;+!Microsoft.Security#CA2118;+!Microsoft.Security#CA2109;+!Microsoft.Security#CA2119;+!Microsoft.Security#CA2106;+!Microsoft.Security#CA2112;+!Microsoft.Security#CA2120;+!Microsoft.Security#CA2121;+!Microsoft.Security#CA2126;+!Microsoft.Security#CA2124;+!Microsoft.Security#CA2127;+!Microsoft.Security#CA2128;+!Microsoft.Security#CA2129;+!Microsoft.Usage#CA2243;+!Microsoft.Usage#CA2236;+!Microsoft.Usage#CA1816;+!Microsoft.Usage#CA2227;+!Microsoft.Usage#CA2213;+!Microsoft.Usage#CA2216;+!Microsoft.Usage#CA2214;+!Microsoft.Usage#CA2222;+!Microsoft.Usage#CA1806;+!Microsoft.Usage#CA2217;+!Microsoft.Usage#CA2212;+!Microsoft.Usage#CA2219;+!Microsoft.Usage#CA2201;+!Microsoft.Usage#CA2228;+!Microsoft.Usage#CA2221;+!Microsoft.Usage#CA2220;+!Microsoft.Usage#CA2240;+!Microsoft.Usage#CA2229;+!Microsoft.Usage#CA2238;+!Microsoft.Usage#CA2207;+!Microsoft.Usage#CA2208;+!Microsoft.Usage#CA2235;+!Microsoft.Usage#CA2237;+!Microsoft.Usage#CA2232;+!Microsoft.Usage#CA2223;+!Microsoft.Usage#CA2211;+!Microsoft.Usage#CA2233;+!Microsoft.Usage#CA2225;+!Microsoft.Usage#CA2226;+!Microsoft.Usage#CA2231;+!Microsoft.Usage#CA2224;+!Microsoft.Usage#CA2218;+!Microsoft.Usage#CA2234;+!Microsoft.Usage#CA2239;+!Microsoft.Usage#CA2200;+!Microsoft.Usage#CA1801;+!Microsoft.Usage#CA2242;+!Microsoft.Usage#CA2205;+!Microsoft.Usage#CA2230</CodeAnalysisRules>
+    <CodeAnalysisRules>-Microsoft.Usage#CA2209;+!Microsoft.Design#CA1012;-!Microsoft.Design#CA2210;+!Microsoft.Design#CA1040;+!Microsoft.Design#CA1005;+!Microsoft.Design#CA1020;-!Microsoft.Design#CA1021;+!Microsoft.Design#CA1010;+!Microsoft.Design#CA1011;+!Microsoft.Design#CA1009;+!Microsoft.Design#CA1050;+!Microsoft.Design#CA1026;+!Microsoft.Design#CA1019;+!Microsoft.Design#CA1031;+!Microsoft.Design#CA1047;+!Microsoft.Design#CA1000;+!Microsoft.Design#CA1048;-!Microsoft.Design#CA1051;-!Microsoft.Design#CA1002;+!Microsoft.Design#CA1061;-!Microsoft.Design#CA1006;+!Microsoft.Design#CA1046;+!Microsoft.Design#CA1045;+!Microsoft.Design#CA1065;+!Microsoft.Design#CA1038;+!Microsoft.Design#CA1008;+!Microsoft.Design#CA1028;+!Microsoft.Design#CA1064;-!Microsoft.Design#CA1004;+!Microsoft.Design#CA1035;-!Microsoft.Design#CA1063;+!Microsoft.Design#CA1032;+!Microsoft.Design#CA1023;-!Microsoft.Design#CA1033;+!Microsoft.Design#CA1039;+!Microsoft.Design#CA1016;+!Microsoft.Design#CA1014;+!Microsoft.Design#CA1017;+!Microsoft.Design#CA1018;+!Microsoft.Design#CA1027;+!Microsoft.Design#CA1059;+!Microsoft.Design#CA1060;+!Microsoft.Design#CA1034;+!Microsoft.Design#CA1013;+!Microsoft.Design#CA1036;+!Microsoft.Design#CA1044;+!Microsoft.Design#CA1041;+!Microsoft.Design#CA1025;+!Microsoft.Design#CA1052;+!Microsoft.Design#CA1053;+!Microsoft.Design#CA1057;+!Microsoft.Design#CA1058;+!Microsoft.Design#CA1001;+!Microsoft.Design#CA1049;+!Microsoft.Design#CA1054;+!Microsoft.Design#CA1056;+!Microsoft.Design#CA1055;+!Microsoft.Design#CA1030;+!Microsoft.Design#CA1003;-!Microsoft.Design#CA1007;+!Microsoft.Design#CA1043;+!Microsoft.Design#CA1024;+!Microsoft.Globalization#CA1301;+!Microsoft.Globalization#CA1302;-!Microsoft.Globalization#CA1308;+!Microsoft.Globalization#CA1306;+!Microsoft.Globalization#CA1304;-!Microsoft.Globalization#CA1305;+!Microsoft.Globalization#CA2101;+!Microsoft.Globalization#CA1300;-!Microsoft.Globalization#CA1307;+!Microsoft.Globalization#CA1309;+!Microsoft.Interoperability#CA1403;+!Microsoft.Interoperability#CA1406;+!Microsoft.Interoperability#CA1413;+!Microsoft.Interoperability#CA1402;+!Microsoft.Interoperability#CA1407;+!Microsoft.Interoperability#CA1404;+!Microsoft.Interoperability#CA1410;+!Microsoft.Interoperability#CA1411;+!Microsoft.Interoperability#CA1405;+!Microsoft.Interoperability#CA1409;+!Microsoft.Interoperability#CA1415;+!Microsoft.Interoperability#CA1408;+!Microsoft.Interoperability#CA1414;+!Microsoft.Interoperability#CA1412;+!Microsoft.Interoperability#CA1400;+!Microsoft.Interoperability#CA1401;+!Microsoft.Maintainability#CA1506;+!Microsoft.Maintainability#CA1502;+!Microsoft.Maintainability#CA1501;+!Microsoft.Maintainability#CA1505;+!Microsoft.Maintainability#CA1504;+!Microsoft.Maintainability#CA1500;+!Microsoft.Mobility#CA1600;+!Microsoft.Mobility#CA1601;-Microsoft.Naming#CA1702;-Microsoft.Naming#CA1700;-Microsoft.Naming#CA1712;-Microsoft.Naming#CA1713;-Microsoft.Naming#CA1714;-Microsoft.Naming#CA1709;-Microsoft.Naming#CA1704;-Microsoft.Naming#CA1708;-Microsoft.Naming#CA1715;-Microsoft.Naming#CA1710;-Microsoft.Naming#CA1720;-Microsoft.Naming#CA1707;-Microsoft.Naming#CA1722;-Microsoft.Naming#CA1711;-Microsoft.Naming#CA1716;-Microsoft.Naming#CA1717;-Microsoft.Naming#CA1725;-Microsoft.Naming#CA1719;-Microsoft.Naming#CA1721;-Microsoft.Naming#CA1701;-Microsoft.Naming#CA1703;-Microsoft.Naming#CA1724;-Microsoft.Naming#CA1726;+!Microsoft.Performance#CA1809;-!Microsoft.Performance#CA1811;+!Microsoft.Performance#CA1812;+!Microsoft.Performance#CA1813;+!Microsoft.Performance#CA1823;+!Microsoft.Performance#CA1800;-!Microsoft.Performance#CA1805;+!Microsoft.Performance#CA1810;+!Microsoft.Performance#CA1824;-!Microsoft.Performance#CA1822;+!Microsoft.Performance#CA1815;+!Microsoft.Performance#CA1814;+!Microsoft.Performance#CA1819;+!Microsoft.Performance#CA1821;+!Microsoft.Performance#CA1804;+!Microsoft.Performance#CA1820;+!Microsoft.Performance#CA1802;+!Microsoft.Portability#CA1901;+!Microsoft.Portability#CA1900;+!Microsoft.Reliability#CA2001;+!Microsoft.Reliability#CA2002;+!Microsoft.Reliability#CA2003;+!Microsoft.Reliability#CA2004;+!Microsoft.Reliability#CA2006;+!Microsoft.Security#CA2116;+!Microsoft.Security#CA2117;+!Microsoft.Security#CA2105;+!Microsoft.Security#CA2115;+!Microsoft.Security#CA2102;+!Microsoft.Security#CA2104;+!Microsoft.Security#CA2122;+!Microsoft.Security#CA2114;+!Microsoft.Security#CA2123;+!Microsoft.Security#CA2111;+!Microsoft.Security#CA2108;+!Microsoft.Security#CA2107;+!Microsoft.Security#CA2103;+!Microsoft.Security#CA2118;+!Microsoft.Security#CA2109;+!Microsoft.Security#CA2119;+!Microsoft.Security#CA2106;+!Microsoft.Security#CA2112;+!Microsoft.Security#CA2120;+!Microsoft.Security#CA2121;+!Microsoft.Security#CA2126;+!Microsoft.Security#CA2124;+!Microsoft.Security#CA2127;+!Microsoft.Security#CA2128;+!Microsoft.Security#CA2129;+!Microsoft.Usage#CA2243;+!Microsoft.Usage#CA2236;+!Microsoft.Usage#CA1816;+!Microsoft.Usage#CA2227;+!Microsoft.Usage#CA2213;+!Microsoft.Usage#CA2216;+!Microsoft.Usage#CA2214;+!Microsoft.Usage#CA2222;+!Microsoft.Usage#CA1806;+!Microsoft.Usage#CA2217;+!Microsoft.Usage#CA2212;+!Microsoft.Usage#CA2219;+!Microsoft.Usage#CA2201;+!Microsoft.Usage#CA2228;+!Microsoft.Usage#CA2221;+!Microsoft.Usage#CA2220;+!Microsoft.Usage#CA2240;+!Microsoft.Usage#CA2229;+!Microsoft.Usage#CA2238;+!Microsoft.Usage#CA2207;+!Microsoft.Usage#CA2208;+!Microsoft.Usage#CA2235;+!Microsoft.Usage#CA2237;+!Microsoft.Usage#CA2232;+!Microsoft.Usage#CA2223;+!Microsoft.Usage#CA2211;+!Microsoft.Usage#CA2233;+!Microsoft.Usage#CA2225;+!Microsoft.Usage#CA2226;+!Microsoft.Usage#CA2231;+!Microsoft.Usage#CA2224;+!Microsoft.Usage#CA2218;+!Microsoft.Usage#CA2234;+!Microsoft.Usage#CA2239;+!Microsoft.Usage#CA2200;+!Microsoft.Usage#CA1801;+!Microsoft.Usage#CA2242;+!Microsoft.Usage#CA2205;+!Microsoft.Usage#CA2230</CodeAnalysisRules>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'SpecSharp|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -34,7 +34,6 @@
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>1591</NoWarn>
-    <SpecSharpVerify>true</SpecSharpVerify>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -99,6 +98,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
@@ -108,6 +109,23 @@
     <Compile Include="Actions\AbstractObject.cs" />
     <Compile Include="Actions\ArgumentInfo.cs" />
     <Compile Include="Actions\CallSignature.cs" />
+    <Compile Include="Actions\ComDispatch\BoundDispEvent.cs" />
+    <Compile Include="Actions\ComDispatch\ComEventDesc.cs" />
+    <Compile Include="Actions\ComDispatch\ComEventSink.cs" />
+    <Compile Include="Actions\ComDispatch\ComEventSinkProxy.cs" />
+    <Compile Include="Actions\ComDispatch\ComEventSinksContainer.cs" />
+    <Compile Include="Actions\ComDispatch\ComInterop.cs" />
+    <Compile Include="Actions\ComDispatch\ComMethodDesc.cs" />
+    <Compile Include="Actions\ComDispatch\ComParamDesc.cs" />
+    <Compile Include="Actions\ComDispatch\ComRuntimeHelpers.cs" />
+    <Compile Include="Actions\ComDispatch\ComTypeDesc.cs" />
+    <Compile Include="Actions\ComDispatch\DispCallable.cs" />
+    <Compile Include="Actions\ComDispatch\DispIndexer.cs" />
+    <Compile Include="Actions\ComDispatch\DispMethod.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchCallBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchObject.cs" />
+    <Compile Include="Actions\ComDispatch\VarEnumSelector.cs" />
+    <Compile Include="Actions\ComDispatch\Variant.cs" />
     <Compile Include="Actions\ConvertToBinderHelper.cs" />
     <Compile Include="Actions\InvokeBinderHelper.cs" />
     <Compile Include="Actions\DynamicAction.cs" />
@@ -159,10 +177,19 @@
     <Compile Include="Ast\AstWriter.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\CatchBlock.cs" />
+    <Compile Include="Ast\CatchRecord.cs" />
     <Compile Include="Ast\CodeBlockWalker.cs" />
+    <Compile Include="Ast\CommaAddress.cs" />
+    <Compile Include="Ast\Compiler.Address.cs" />
+    <Compile Include="Ast\Compiler.cs" />
+    <Compile Include="Ast\Compiler.Expressions.cs" />
+    <Compile Include="Ast\Compiler.Logical.cs" />
+    <Compile Include="Ast\Compiler.Statements.cs" />
     <Compile Include="Ast\ControlFlow.cs" />
     <Compile Include="Ast\AstRewriter.cs" />
     <Compile Include="Ast\ForestRewriter.cs" />
+    <Compile Include="Ast\Interpreter.cs" />
+    <Compile Include="Ast\IntrinsicExpression.cs" />
     <Compile Include="Ast\Walker.cs" />
     <Compile Include="Ast\DynamicConversionExpression.cs" />
     <Compile Include="Ast\AbstractValue.cs" />
@@ -182,6 +209,7 @@
     <Compile Include="Cast.Generated.cs" />
     <Compile Include="DefaultLanguageContext.cs" />
     <Compile Include="CallType.cs" />
+    <Compile Include="DocumentationAttribute.cs" />
     <Compile Include="Generation\FrameStorageAllocator.cs" />
     <Compile Include="Generation\KeywordArgBuilder.cs" />
     <Compile Include="Generation\KeywordConstructorReturnBuilder.cs" />
@@ -209,7 +237,6 @@
     <Compile Include="Ast\BoundAssignment.cs" />
     <Compile Include="Ast\BoundExpression.cs" />
     <Compile Include="Ast\BreakStatement.cs" />
-    <Compile Include="Ast\CodeContextExpression.cs" />
     <Compile Include="Ast\CommaExpression.cs" />
     <Compile Include="Actions\DynamicSite.cs" />
     <Compile Include="Actions\DynamicSite.Generated.cs" />
@@ -220,7 +247,6 @@
     <Compile Include="Ast\NewExpression.cs" />
     <Compile Include="Ast\DoStatement.cs" />
     <Compile Include="Ast\EmptyStatement.cs" />
-    <Compile Include="Ast\EnvironmentExpression.cs" />
     <Compile Include="Ast\ExpressionStatement.cs" />
     <Compile Include="Ast\IfStatement.cs" />
     <Compile Include="Ast\IfStatementTest.cs" />
@@ -231,7 +257,6 @@
     <Compile Include="Ast\Expression.cs" />
     <Compile Include="Ast\MethodCallExpression.cs" />
     <Compile Include="Ast\Node.cs" />
-    <Compile Include="Ast\ParamsExpression.cs" />
     <Compile Include="Ast\ParenthesizedExpression.cs" />
     <Compile Include="Ast\ReturnStatement.cs" />
     <Compile Include="Ast\ScopeStatment.cs" />
@@ -252,6 +277,8 @@
     <Compile Include="Ast\YieldTarget.cs" />
     <Compile Include="BinderHelper.cs" />
     <Compile Include="BinderType.cs" />
+    <Compile Include="Ast\TreeCompiler.cs" />
+    <Compile Include="Hosting\ObjectOperations.cs" />
     <Compile Include="Hosting\SourceCodeKind.cs" />
     <Compile Include="Hosting\SourceCodeProperties.cs" />
     <Compile Include="Hosting\SourceContentProvider.cs" />
@@ -259,6 +286,8 @@
     <Compile Include="Hosting\SourceStringContentProvider.cs" />
     <Compile Include="Hosting\SourceUnit.cs" />
     <Compile Include="Hosting\SourceUnitReader.cs" />
+    <Compile Include="Ast\VariableAddress.cs" />
+    <Compile Include="LocalScope.cs" />
     <Compile Include="MissingParameter.cs" />
     <Compile Include="Generation\ByRefReturnBuilder.cs" />
     <Compile Include="Actions\CallBinderHelper.cs" />
@@ -422,7 +451,7 @@
     <Compile Include="ISlice.cs" />
     <Compile Include="ContextId.cs" />
     <Compile Include="PropertyMethodAttribute.cs" />
-    <Compile Include="ScriptModule.cs" />
+    <Compile Include="ScriptScope.cs" />
     <Compile Include="CodeContext.cs" />
     <Compile Include="Shell\CommandLine.cs" />
     <Compile Include="Shell\ConsoleOptions.cs" />
@@ -454,6 +483,7 @@
     <Compile Include="Utils\StrongBox.cs" />
     <Compile Include="Utils\TextStream.cs" />
     <Compile Include="Utils\Utilities.cs" />
+    <Compile Include="Utils\ValueArray.cs" />
     <Compile Include="Utils\WeakHandle.cs" />
     <Compile Include="Utils\WeakHash.cs" />
     <Compile Include="Math\MathResources.Designer.cs">

@@ -93,7 +93,6 @@ SLOW_LIST = [
 EXCLUDE_LIST = [
                 "test_traceback.py", #has a bug
                 "test_dllsite.py", #disabled for 2.0 branch
-                "test_time.py", #broken WRT DST
                 ]
 
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.

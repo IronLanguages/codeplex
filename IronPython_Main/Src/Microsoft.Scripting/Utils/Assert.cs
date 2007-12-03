@@ -47,6 +47,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [Conditional("DEBUG")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1025:ReplaceRepetitiveArgumentsWithParamsArray")]
         public static void NotNull(object var1, object var2, object var3, object var4) {
             Debug.Assert(var1 != null && var2 != null && var3 != null && var4 != null);
         }

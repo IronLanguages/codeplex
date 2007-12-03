@@ -74,7 +74,6 @@ def test_thread():
     sys.stdout = so
     sys.stderr = se
 
-@disabled("CodePlex Work Item #7827")
 def test_stack_size():
     import sys
     if is_cli or (sys.version_info[0] == 2 and sys.version_info[1] > 4) or sys.version_info[0] > 2:
@@ -90,7 +89,7 @@ def test_stack_size():
         good_size_list = [4096*10, 4096*100, 4096*1000, 4096*10000]
         for good_size in good_size_list:
             #CodePlex Work Item 7827
-            if is_cli and good_size<=50000: print "Ignoring", good_size, "for CLI"; continue
+            if (is_cli or is_silverlight) and good_size<=50000: print "Ignoring", good_size, "for CLI"; continue
             temp = thread.stack_size(good_size)
             Assert(temp>=32768 or temp==0)
         

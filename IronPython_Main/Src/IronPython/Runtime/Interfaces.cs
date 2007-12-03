@@ -29,20 +29,11 @@ namespace IronPython.Runtime {
         string ToCodeString(CodeContext context);
     }
 
-    public interface IPythonContainer {
+    public interface ISequence {
         [SpecialName, PythonName("__len__")]
         int GetLength();
         [PythonName("__contains__")]
         bool ContainsValue(object value);
-        //???object __iter__(); //??? this vs. IEnumerable
-    }
-
-
-    public interface ISequence : IPythonContainer {
-        //[PythonName("__add__")]
-        //object AddSequence(object other);  //??? require that other be ISequence
-        //[PythonName("__mul__")]
-        //object MultiplySequence(object count);
 
         object this[int index] {
             get;
@@ -76,23 +67,6 @@ namespace IronPython.Runtime {
         void SetSlice(int start, int stop, object value);
         [PythonName("__delslice__")]
         void DeleteSlice(int start, int stop);
-    }
-
-    public interface IMapping : IPythonContainer {
-        [PythonName("get")]
-        object GetValue(object key);
-        [PythonName("get")]
-        object GetValue(object key, object defaultValue);
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        bool TryGetValue(object key, out object value);
-
-        object this[object key] {
-            get;
-            set;
-        }
-        [PythonName("__delitem__")]
-        bool DeleteItem(object key);
     }
 
     /// <summary>

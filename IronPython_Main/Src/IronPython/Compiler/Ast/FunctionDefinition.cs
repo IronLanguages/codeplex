@@ -14,20 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Hosting;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using Microsoft.Scripting.Actions;
+using IronPython.Runtime.Operations;
+
+using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Hosting;
 
     public class FunctionDefinition : ScopeStatement {
         protected Statement _body;
@@ -259,7 +259,7 @@ namespace IronPython.Compiler.Ast {
             FunctionAttributes flags = ComputeFlags(_parameters);
 
             MSAst.Expression ret = Ast.Call(
-                typeof(PythonFunction).GetMethod("MakeFunction"),                               // method
+                typeof(PythonOps).GetMethod("MakeFunction"),                               // method
                 Ast.CodeContext(),                                                              // 1. Emit CodeContext
                 Ast.Constant(SymbolTable.IdToString(_name)),                                    // 2. FunctionName
                 Ast.CodeBlockExpression(code, flags != FunctionAttributes.None),                // 3. delegate

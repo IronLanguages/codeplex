@@ -394,6 +394,24 @@ namespace Microsoft.Scripting {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to static property &quot;{0}&quot; of &quot;{1}&quot; can only be read through a type, not an instance.
+        /// </summary>
+        internal static string StaticAccessFromInstanceError {
+            get {
+                return ResourceManager.GetString("StaticAccessFromInstanceError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to static property &quot;{0}&quot; of &quot;{1}&quot; can only be assigned to through a type, not an instance.
+        /// </summary>
+        internal static string StaticAssignmentFromInstanceError {
+            get {
+                return ResourceManager.GetString("StaticAssignmentFromInstanceError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &quot;type must be visible ({0})&quot;.
         /// </summary>
         internal static string TypeMustBeVisible {

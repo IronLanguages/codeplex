@@ -14,22 +14,18 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public class ArrayIndexExpression : Expression {
+    public sealed class ArrayIndexExpression : Expression {
         private readonly Expression /*!*/ _array;
         private readonly Expression /*!*/ _index;
-        private readonly Type /*!*/ _elementType;
 
         internal ArrayIndexExpression(Expression /*!*/ array, Expression /*!*/ index)
-            : base(AstNodeType.ArrayIndexExpression) {
+            : base(AstNodeType.ArrayIndexExpression, array.Type.GetElementType()) {
             _array = array;
             _index = index;
-            _elementType = array.Type.GetElementType();
         }
 
         public Expression Array {
@@ -38,27 +34,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Index {
             get { return _index; }
-        }
-
-        public override Type Type {
-            get {
-                return _elementType;
-            }
-        }
-
-        protected override object DoEvaluate(CodeContext context) {
-            Array array = (Array)_array.Evaluate(context);
-            int index = (int)_index.Evaluate(context);
-            return array.GetValue(index);
-        }
-
-        public override void Emit(CodeGen cg) {
-            // Emit the array reference
-            _array.Emit(cg);
-            // Emit the index
-            _index.Emit(cg);
-            // Load the array element
-            cg.EmitLoadElement(_elementType);
         }
     }
 

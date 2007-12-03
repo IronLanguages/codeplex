@@ -19,8 +19,8 @@ import module
 
 AreEqual(module.flag, "python")
 
-import clr
-clr.AddReference("loadorder_7b")
+
+add_clr_assemblies("loadorder_7b")
 
 # public class module<T> {
 # }

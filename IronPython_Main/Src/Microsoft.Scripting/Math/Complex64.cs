@@ -118,6 +118,7 @@ namespace Microsoft.Scripting.Math {
             return MakeReal(d);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
         public static implicit operator Complex64(BigInteger i) {
             if (object.ReferenceEquals(i, null)) {
                 throw new ArgumentException(MathResources.InvalidArgument, "i");
@@ -275,6 +276,13 @@ namespace Microsoft.Scripting.Math {
         }
 
         public override int GetHashCode() {
+            // The Object.GetHashCode function needs to be consistent with the Object.Equals function.
+            // Languages that build on top of this may have a more flexible equality function and 
+            // so may not be able to use this hash function directly.
+            // For example, Python allows that c=Complex64(1.5, 0), f = 1.5f,  c==f.
+            // so then the hash(f) == hash(c). Since the python (and other languages) can define an arbitrary
+            // hash(float) function, the language may need to define a matching hash(complex) function for
+            // the cases where the float and complex numbers overlap.
             return (int)real + (int)imag * 1000003;
         }
 

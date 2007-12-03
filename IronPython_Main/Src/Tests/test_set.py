@@ -158,6 +158,36 @@ def test_cmp():
     AreEqual(cmp(a,bbig), -1)
     AreEqual(cmp(abig,b), 1)
 
+def test_deque():
+    import collections
+    x = collections.deque([2,3,4,5,6])
+    x.remove(2)
+    AreEqual(x, collections.deque([3,4,5,6]))
+    x.remove(6)
+    AreEqual(x, collections.deque([3,4,5]))
+    x.remove(4)
+    AreEqual(x, collections.deque([3,5]))
+    
+    # get a deque w/ head/tail backwards...
+    x = collections.deque([1,2,3,4,5,6,7,8])
+    x.popleft()
+    x.popleft()
+    x.popleft()
+    x.popleft()
+    x.append(1)
+    x.append(2)
+    x.append(3)
+    x.append(4)
+    AreEqual(x, collections.deque([5,6,7,8, 1, 2, 3, 4]))
+    x.remove(5)
+    AreEqual(x, collections.deque([6,7,8, 1, 2, 3, 4]))
+    x.remove(4)
+    AreEqual(x, collections.deque([6,7,8, 1, 2, 3]))
+    x.remove(8)
+    AreEqual(x, collections.deque([6,7,1, 2, 3]))
+    x.remove(2)
+    AreEqual(x, collections.deque([6,7,1, 3]))
+
 if isPython25:
     def test_singleton():
         """Verify that an empty frozenset is a singleton"""

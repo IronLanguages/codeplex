@@ -16,20 +16,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using IronPython.Runtime.Operations;
 
     class PythonConvertToBinderHelper<T> : BinderHelper<T, ConvertToAction> {
         private object _argument;
@@ -46,12 +45,68 @@ namespace IronPython.Runtime.Calls {
 
         public StandardRule<T> MakeRule() {
             StandardRule<T> rule = null;
+
             if (Action.ToType == typeof(bool)) {
                 rule = MakeBoolRule();
             } else if (Action.ToType == typeof(char)) {
                 rule = MakeCharRule();
+            } else if (Action.ToType.IsArray && _argument is PythonTuple && Action.ToType.GetArrayRank() == 1) {
+                rule = MakeArrayRule();
+            } else if (Action.ToType.IsGenericType && !Action.ToType.IsAssignableFrom(CompilerHelpers.GetType(_argument))) {
+                Type genTo = Action.ToType.GetGenericTypeDefinition();
+
+                // Interface conversion helpers...
+                if (genTo == typeof(IList<>)) {
+                    rule = MakeGenericWrapperRule(typeof(IList<object>), typeof(ListGenericWrapper<>));
+                } else if (genTo == typeof(IDictionary<,>)) {
+                    rule = MakeGenericWrapperRule(typeof(IDictionary<object, object>), typeof(DictionaryGenericWrapper<,>));
+                } else if (genTo == typeof(IEnumerable<>)) {
+                    rule = MakeGenericWrapperRule(typeof(IEnumerable), typeof(IEnumerableOfTWrapper<>));
+                }
             }
 
+            return rule;
+        }
+
+        private StandardRule<T> MakeGenericWrapperRule(Type fromType, Type wrapperType) {
+            StandardRule<T> rule = null;
+
+            if (fromType.IsAssignableFrom(CompilerHelpers.GetType(_argument))) {
+                Type making = wrapperType.MakeGenericType(Action.ToType.GetGenericArguments());
+                
+                rule = new StandardRule<T>();
+                rule.MakeTest(CompilerHelpers.GetType(_argument));
+                rule.SetTarget(
+                    rule.MakeReturn(
+                        Binder,
+                        Ast.New(
+                            making.GetConstructor(new Type[] { fromType }),
+                            Ast.ConvertHelper(
+                                rule.Parameters[0],
+                                fromType
+                            )
+                        )
+                    )
+                );
+            }
+            return rule;
+        }
+
+        private StandardRule<T> MakeArrayRule() {
+            StandardRule<T> rule = new StandardRule<T>();
+            PythonBinderHelper.MakeTest(rule, DynamicHelpers.GetPythonType(_argument));
+            rule.SetTarget(
+                rule.MakeReturn(
+                    Binder,
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("ConvertTupleToArray").MakeGenericMethod(Action.ToType.GetElementType()),
+                        Ast.Convert(
+                            rule.Parameters[0],
+                            typeof(PythonTuple)
+                        )
+                    )
+                )
+            );
             return rule;
         }
 
@@ -132,9 +187,6 @@ namespace IronPython.Runtime.Calls {
             } else if (_argument is ICollection) {
                 // collections are true if not empty
                 MakeNonZeroPropertyRule(rule, typeof(ICollection), "Count");
-            } else if (_argument is IPythonContainer) {
-                // collections are true if not empty
-                MakeIPythonContainerRule(rule);
             } else if (_argument is IStrongBox) {
                 // Explictly block conversion of References to bool
                 MakeStrongBoxRule(rule);
@@ -225,7 +277,7 @@ namespace IronPython.Runtime.Calls {
                             rule.Parameters[0],
                             enumStorageType
                         ),
-                        Ast.Constant(enumStorageType)
+                        Ast.Constant(zeroVal)
                     )
                 )
             );
@@ -257,24 +309,6 @@ namespace IronPython.Runtime.Calls {
                                 collectionType
                             ),
                             collectionType.GetProperty(propertyName)
-                        ),
-                        Ast.Constant(0)
-                    )
-                )
-            );
-        }
-
-        private void MakeIPythonContainerRule(StandardRule<T> rule) {
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.NotEqual(
-                        Ast.Call(
-                            typeof(IPythonContainer).GetMethod("GetLength"),
-                            Ast.ConvertHelper(
-                                rule.Parameters[0],
-                                typeof(ICollection)
-                            )                            
                         ),
                         Ast.Constant(0)
                     )

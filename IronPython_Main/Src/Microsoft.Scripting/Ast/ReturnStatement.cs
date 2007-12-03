@@ -13,10 +13,8 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Generation;
-
 namespace Microsoft.Scripting.Ast {
-    public class ReturnStatement : Statement {
+    public sealed class ReturnStatement : Statement {
         private readonly Expression _expr;
 
         internal ReturnStatement(SourceSpan span, Expression expression)
@@ -26,19 +24,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Expression {
             get { return _expr; }
-        }
-
-        protected override object DoExecute(CodeContext context) {
-            if (_expr != null) {
-                return _expr.Evaluate(context);
-            } else {
-                return null;
-            }
-        }
-
-        public override void Emit(CodeGen cg) {
-            cg.EmitPosition(Start, End);
-            cg.EmitReturn(_expr);
         }
     }
 

@@ -16,8 +16,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.CodeDom.Compiler;
 
 namespace Microsoft.Scripting {
+    [GeneratedCode("DLR", "2.0")]
     public static class CallTargets {
         #region Generated MaximumCallArgs
 

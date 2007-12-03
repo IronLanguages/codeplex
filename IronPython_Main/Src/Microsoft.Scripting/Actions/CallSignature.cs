@@ -241,6 +241,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets the number of positional arguments the user provided at the call site.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public int GetProvidedPositionalArgumentCount() {
             int result = _argumentCount;
 

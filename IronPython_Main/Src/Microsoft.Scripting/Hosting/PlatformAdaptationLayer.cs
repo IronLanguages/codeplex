@@ -174,12 +174,14 @@ namespace Microsoft.Scripting.Hosting {
 #endif
         }
 
-        public virtual string GetCurrentDirectory() {
+        public virtual string CurrentDirectory {
+            get {
 #if !SILVERLIGHT
-            return Environment.CurrentDirectory;
+                return Environment.CurrentDirectory;
 #else
-            throw new NotImplementedException();
+                throw new NotImplementedException();
 #endif
+            }
         }
 
     }

@@ -21,22 +21,24 @@ using System.Text;
 using Microsoft.Scripting;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-namespace IronPython.Runtime.Types.ComDispatch {
-    internal class ComTypeDesc {
+namespace Microsoft.Scripting.Actions.ComDispatch {
+    public class ComTypeDesc {
         private string _typeName;
         private Guid _guid;
-        private Dictionary<SymbolId, IronPython.Runtime.Types.ComDispatch.ComMethodDesc> _funcs;
+        private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
         private Dictionary<SymbolId, ComEventDesc> _events;
 
         public ComTypeDesc(ComTypes.ITypeInfo typeInfo) {
             this._typeName = GetNameOfType(typeInfo);
         }
 
-        public Dictionary<SymbolId, IronPython.Runtime.Types.ComDispatch.ComMethodDesc> Funcs {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
+        public Dictionary<SymbolId, ComDispatch.ComMethodDesc> Funcs {
             get { return _funcs; }
             set { _funcs = value; }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
         public Dictionary<SymbolId, ComEventDesc> Events {
             get { return _events; }
             set { _events = value; }
@@ -51,7 +53,7 @@ namespace IronPython.Runtime.Types.ComDispatch {
             set { _guid = value; }
         }
 
-        internal static string GetNameOfType(ComTypes.ITypeInfo typeInfo) {
+        public static string GetNameOfType(ComTypes.ITypeInfo typeInfo) {
             string name;
             string strDocString;
             int dwHelpContext;

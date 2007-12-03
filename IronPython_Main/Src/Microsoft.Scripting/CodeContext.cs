@@ -43,9 +43,12 @@ namespace Microsoft.Scripting {
         private readonly Scope _scope;
         private readonly LanguageContext _languageContext;
         private ModuleContext _moduleContext; // internally mutable, optional (shouldn't be used when not set)
+        private LocalScope _localScope;
+        private CodeContext _parent; // TODO: Ruby hack, move to local scope
 
-        public CodeContext(CodeContext parent, IAttributesCollection locals) 
-            : this(new Scope(parent.Scope, locals), parent.LanguageContext, parent.ModuleContext) {            
+        public CodeContext(CodeContext parent)
+            : this(parent.Scope, parent.LanguageContext, parent.ModuleContext) {
+            _parent = parent;
         }
 
         public CodeContext(Scope scope, LanguageContext languageContext, ModuleContext moduleContext) {
@@ -69,6 +72,15 @@ namespace Microsoft.Scripting {
 
         #region Public API Surface
 
+        public LocalScope LocalScope {
+            get { return _localScope; }
+            set { _localScope = value; }
+        }
+
+        public CodeContext Parent {
+            get { return _parent; }
+        }
+
         public Scope Scope {
             get {
                 return _scope;
@@ -91,6 +103,7 @@ namespace Microsoft.Scripting {
                 _moduleContext = value;
             }
         }
+
 
         #endregion
     }   

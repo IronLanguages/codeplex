@@ -13,10 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
-using Microsoft.Scripting.Generation;
-
 namespace Microsoft.Scripting.Ast {
     public abstract class Node {
         private readonly AstNodeType _nodeType;

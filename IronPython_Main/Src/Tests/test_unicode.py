@@ -14,11 +14,14 @@
 #####################################################################################
 
 from lib.assert_util import *
+from lib.misc_util import ip_supported_encodings
 
 def test_raw_unicode_escape():
     s = unicode('\u0663\u0661\u0664 ','raw-unicode-escape')
     AreEqual(len(s), 4)
     AreEqual(int(s), 314)
+    s = unicode('\u0663.\u0661\u0664 ','raw-unicode-escape')
+    AreEqual(float(s), 3.14)
 
 def test_raw_unicode_escape_noescape_lowchars():
     for i in range(0x100):
@@ -44,10 +47,8 @@ def test_unicode_error():
         AreEqual(ex.object, u'\uac00')
         return (u"", ex.end)
     register_error("test_unicode_error", handler)
-    
-    supported_modes = [ 'cp1252','ascii', 'utf-8', 'utf-16', 'latin-1', 'iso-8859-1', 'utf-16-le', 'utf-16-be', 'unicode-escape', 'raw-unicode-escape']
                         
-    for mode in supported_modes:  unichr(0xac00).encode(mode, "test_unicode_error")
+    for mode in ip_supported_encodings:  unichr(0xac00).encode(mode, "test_unicode_error")
 
 
 
