@@ -42,9 +42,8 @@ def test_float_long():
 
 # Test with complex + float + int
 def test_complex_float():
-  c=0j+3.5
-  f = 3.5
-  check(c,f)
+  for (c, f) in [ (0j+3.5, 3.5), (3e-6 + 0j, 3.0e-6), (4.5e+300 + 0j, 4.5e+300)]:
+    check(c,f)
 
 # Test with complex and BigInts
 # Bug 320650

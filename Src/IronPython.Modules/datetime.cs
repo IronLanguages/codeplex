@@ -30,7 +30,6 @@ using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
-    [PythonType("datetime")]
     public class PythonDateTime {
         public static object MAXYEAR = DateTime.MaxValue.Year;
         public static object MINYEAR = DateTime.MinValue.Year;

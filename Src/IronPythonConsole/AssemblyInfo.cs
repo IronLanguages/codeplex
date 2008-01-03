@@ -29,7 +29,7 @@ using System.Security;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("")]
-[assembly: AssemblyCopyright("? Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("� Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -62,7 +62,7 @@ using System.Security;
 [assembly: SecurityTransparent]
 [assembly: CLSCompliant(false)]
 [assembly: ComVisible(false)]
-[assembly: AssemblyFileVersion("2.0.0.00")]
+[assembly: AssemblyFileVersion("2.0.11217.01")]
 
 
 // hack in order to pass AssemblyInfoTask 

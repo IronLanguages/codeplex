@@ -14,13 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Collections.Generic;
-using System.Diagnostics;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public class ModuleGlobalFactory : SlotFactory {
@@ -40,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void PrepareForEmit(CodeGen cg) {
+        public override void PrepareForEmit(Compiler cg) {
             _storage.PrepareForEmit(cg);
         }
 

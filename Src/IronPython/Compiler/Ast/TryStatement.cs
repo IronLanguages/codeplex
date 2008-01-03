@@ -25,10 +25,25 @@ namespace IronPython.Compiler.Ast {
 
     public class TryStatement : Statement {
         private SourceLocation _header;
+
+        /// <summary>
+        /// The statements under the try-block.
+        /// </summary>
         private Statement _body;
+
+        /// <summary>
+        /// Array of except (catch) blocks associated with this try. NULL if there are no except blocks.
+        /// </summary>
         private readonly TryStatementHandler[] _handlers;
 
+        /// <summary>
+        /// The body of the optional Else block for this try. NULL if there is no Else block.
+        /// </summary>
         private Statement _else;
+
+        /// <summary>
+        /// The body of the optional finally associated with this try. NULL if there is no finally block.
+        /// </summary>
         private Statement _finally;
 
         public TryStatement(Statement body, TryStatementHandler[] handlers, Statement else_, Statement finally_) {
@@ -58,6 +73,7 @@ namespace IronPython.Compiler.Ast {
             get { return _handlers; }
         }
 
+
         internal override MSAst.Statement Transform(AstGenerator ag) {
             MSAst.Statement body = ag.Transform(_body);
             MSAst.Statement @else = ag.Transform(_else);
@@ -70,7 +86,7 @@ namespace IronPython.Compiler.Ast {
             if (@else != null) {
                 Debug.Assert(@catch != null);
 
-                MSAst.BoundExpression runElse = ag.MakeGeneratorTempExpression("run_else", typeof(bool));
+                MSAst.BoundExpression runElse = ag.MakeTempExpression("run_else", typeof(bool));
 
                 //  run_else = true;
                 //  try {
@@ -126,6 +142,12 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
+        /// <summary>
+        /// Transform multiple python except handlers for a try block into a single catch body.
+        /// </summary>
+        /// <param name="ag"></param>
+        /// <param name="variable">The variable for the exception in the catch block.</param>
+        /// <returns>Null if there are no except handlers. Else the statement to go inside the catch handler</returns>
         private MSAst.Statement TransformHandlers(AstGenerator ag, out MSAst.Variable variable) {
             if (_handlers == null || _handlers.Length == 0) {
                 variable = null;
@@ -302,6 +324,7 @@ namespace IronPython.Compiler.Ast {
         }
     }
 
+    // A handler corresponds to the except block.
     public class TryStatementHandler : Node {
         private SourceLocation _header;
         private readonly Expression _test, _target;

@@ -28,7 +28,6 @@ using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
-    [PythonType("_locale")]
     public static class PythonLocale {
         internal static LocaleInfo currentLocale = new LocaleInfo();
 

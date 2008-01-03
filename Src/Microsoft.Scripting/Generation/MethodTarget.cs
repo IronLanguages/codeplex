@@ -185,7 +185,7 @@ namespace Microsoft.Scripting.Generation {
                 ret = Ast.Comma(0, updates.ToArray());
             }
 
-            if (!check.IsConstant(true)) {
+            if (!ConstantCheck.IsConstant(check, true)) {
                 ret = Ast.Condition(
                     check,
                     Ast.ConvertHelper(ret, typeof(object)),

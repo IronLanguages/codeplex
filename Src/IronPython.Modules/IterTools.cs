@@ -30,7 +30,6 @@ using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {
-    [PythonType("itertools")]
     public static class PythonIterTools {
         
         [PythonName("tee")]

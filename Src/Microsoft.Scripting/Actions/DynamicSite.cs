@@ -87,7 +87,7 @@ namespace Microsoft.Scripting.Actions {
         protected void Validate(CodeContext context) {
 #if DEBUG
             System.Threading.Interlocked.CompareExchange<LanguageContext>(ref _lc, context.LanguageContext, null);
-            Debug.Assert(_lc.Engine == null || (_lc.GetType() == context.LanguageContext.GetType()));
+            Debug.Assert(_lc.GetType() == context.LanguageContext.GetType());
 #endif
         }
     }

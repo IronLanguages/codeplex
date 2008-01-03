@@ -59,10 +59,6 @@ namespace Microsoft.Scripting {
             _module.Reload();
         }
 
-        public CompilerOptions GetCompilerOptions(IScriptEngine engine) {
-            return _module.GetCompilerOptions(engine);
-        }
-
         // throws SerializationException 
         public bool TryLookupVariable(string name, out object value) {
             return _module.TryLookupVariable(name, out value);

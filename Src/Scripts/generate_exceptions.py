@@ -17,6 +17,11 @@ import generate
 reload(generate)
 from generate import CodeGenerator, CodeWriter
 
+# This script generates source files for new python exceptions.
+# For usage notes, see comment in IronPython\IronPython.Modules\Exceptions.cs
+
+# This reads exceptions from the currently running instance of Python 
+# Therefore, this script must be run with IPY and not Cpython.
 import exceptions
 
 def collect_excs():

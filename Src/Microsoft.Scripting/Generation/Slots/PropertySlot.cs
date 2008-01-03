@@ -17,6 +17,7 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -33,7 +34,7 @@ namespace Microsoft.Scripting.Generation {
             this._property = property;
         }
 
-        public override void EmitSet(CodeGen cg, Slot val) {
+        public override void EmitSet(Compiler cg, Slot val) {
             Contract.RequiresNotNull(cg, "cg");
             Contract.RequiresNotNull(val, "val");
 
@@ -54,7 +55,7 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(method);
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             MethodInfo method = _property.GetGetMethod();
@@ -71,7 +72,7 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(method);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             throw new NotImplementedException(Resources.NotImplemented);

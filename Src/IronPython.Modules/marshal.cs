@@ -28,7 +28,6 @@ using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {
-    [PythonType("marshal")]
     public static class PythonMarshal {
 
         #region Public marshal APIs

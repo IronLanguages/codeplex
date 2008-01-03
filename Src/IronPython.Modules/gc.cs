@@ -26,7 +26,6 @@ using IronPython.Runtime.Types;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
-    [PythonType("gc")]
     public static class PythonGC {
         public static object gc = DynamicHelpers.GetPythonTypeFromType(typeof(PythonGC));
         public const int DEBUG_STATS = 1;

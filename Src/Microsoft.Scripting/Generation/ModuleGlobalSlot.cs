@@ -14,11 +14,9 @@
  * ***************************************************************************/
 
 using System;
-
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Collections.Generic;
 using System.Diagnostics;
+
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public class ModuleGlobalSlot : Slot {
@@ -31,12 +29,12 @@ namespace Microsoft.Scripting.Generation {
             _wrapper = builtinWrapper;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "CurrentValue");
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             Slot val = cg.GetLocalTmp(Type);
             val.EmitSet(cg);
 
@@ -47,30 +45,30 @@ namespace Microsoft.Scripting.Generation {
             cg.FreeLocalTmp(val);
         }
 
-        public override void EmitSet(CodeGen cg, Slot val) {
+        public override void EmitSet(Compiler cg, Slot val) {
             _wrapper.EmitGet(cg);
             val.EmitGet(cg);
             cg.EmitPropertySet(typeof(ModuleGlobalWrapper), "CurrentValue");
         }
 
-        public void EmitGetRaw(CodeGen cg) {
+        public void EmitGetRaw(Compiler cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "RawValue");
         }
 
-        public override void EmitCheck(CodeGen cg, SymbolId name) {
+        public override void EmitCheck(Compiler cg, SymbolId name) {
             // checks are handled in the get_CurrentValue
         }
 
-        public void EmitWrapperAddr(CodeGen cg) {
+        public void EmitWrapperAddr(Compiler cg) {
             _wrapper.EmitGetAddr(cg);
         }
 
-        public void EmitWrapper(CodeGen cg) {
+        public void EmitWrapper(Compiler cg) {
             _wrapper.EmitGet(cg);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             throw new NotSupportedException("Can't get address of module global.");
         }
 

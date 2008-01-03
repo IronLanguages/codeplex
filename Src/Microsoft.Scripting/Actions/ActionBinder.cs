@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Emits the code to convert an arbitrary object to the specified type.
         /// </summary>
-        public virtual void EmitConvertFromObject(CodeGen cg, Type paramType) {
+        public virtual void EmitConvertFromObject(Compiler cg, Type paramType) {
             cg.EmitCast(typeof(object), paramType);
         }
 

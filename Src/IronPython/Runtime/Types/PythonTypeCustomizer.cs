@@ -89,11 +89,11 @@ namespace IronPython.Runtime.Types {
         private void HideMembers() {
             Type sysType = Builder.UnfinishedType.UnderlyingSystemType;
             foreach (FieldInfo fi in sysType.GetFields()) {
-                SetValue(SymbolTable.StringToId(fi.Name), PythonContext.Id, new ReflectedField(fi, NameType.Field));
+                SetValue(SymbolTable.StringToId(fi.Name), DefaultContext.Id, new ReflectedField(fi, NameType.Field));
             }
 
             foreach (PropertyInfo pi in sysType.GetProperties()) {
-                SetValue(SymbolTable.StringToId(pi.Name), PythonContext.Id, new ReflectedProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.Property));
+                SetValue(SymbolTable.StringToId(pi.Name), DefaultContext.Id, new ReflectedProperty(pi, pi.GetGetMethod(), pi.GetSetMethod(), NameType.Property));
             }
         }
 
@@ -105,7 +105,7 @@ namespace IronPython.Runtime.Types {
 
             // __new__
             object newFunc;
-            if (TryGetValue(Symbols.NewInst, PythonContext.Id, out newFunc)) {
+            if (TryGetValue(Symbols.NewInst, DefaultContext.Id, out newFunc)) {
                 // user provided a __new__ method, first argument should be PythonType
                 // We will set our allocator to be a bound-method that passes our type
                 // through, and we'll leave __new__ unchanged, other than making sure
@@ -121,15 +121,15 @@ namespace IronPython.Runtime.Types {
             }
 
             // __init__
-            if (!TryGetValue(Symbols.Init, PythonContext.Id, out newFunc)) {
-                SetValue(Symbols.Init, PythonContext.Id, InstanceOps.Init);
+            if (!TryGetValue(Symbols.Init, DefaultContext.Id, out newFunc)) {
+                SetValue(Symbols.Init, DefaultContext.Id, InstanceOps.Init);
             }
         }
 
         private void AddDocumentation() {
             object val;
-            if (!TryGetValue(Symbols.Doc, PythonContext.Id, out val)) {
-                SetValue(Symbols.Doc, PythonContext.Id, _docDescr);
+            if (!TryGetValue(Symbols.Doc, DefaultContext.Id, out val)) {
+                SetValue(Symbols.Doc, DefaultContext.Id, _docDescr);
             }
         }
 
@@ -146,9 +146,9 @@ namespace IronPython.Runtime.Types {
                     // we want to store a context sensitive version for system types (object, int, etc...)
                     // so that we hide the non-context sensitive version.
                     if (mi.IsStatic) {
-                        StoreMethod(mi.Name, PythonContext.Id, mi, FunctionType.Function);
+                        StoreMethod(mi.Name, DefaultContext.Id, mi, FunctionType.Function);
                     } else {
-                        StoreMethod(mi.Name, PythonContext.Id, mi, FunctionType.Method);
+                        StoreMethod(mi.Name, DefaultContext.Id, mi, FunctionType.Method);
                     }
                 }
 
@@ -156,8 +156,8 @@ namespace IronPython.Runtime.Types {
                     string name;
                     NameType nt = NameConverter.TryGetName(Builder.UnfinishedType, mi, out name);
                     object dummy;
-                    if (nt != NameType.None && !TryGetValue(SymbolTable.StringToId(name), PythonContext.Id, out dummy)) {
-                        StoreMethodNoConflicts(name, PythonContext.Id, mi, FunctionType.Method | FunctionType.AlwaysVisible);
+                    if (nt != NameType.None && !TryGetValue(SymbolTable.StringToId(name), DefaultContext.Id, out dummy)) {
+                        StoreMethodNoConflicts(name, DefaultContext.Id, mi, FunctionType.Method | FunctionType.AlwaysVisible);
                     }
                 }
 
@@ -192,7 +192,7 @@ namespace IronPython.Runtime.Types {
                                 PythonTypeSlot slot;
                                 if (PythonExtensionTypeAttribute.ReverseOperatorTable.TryGetValue(opmap, out name)) {
                                     slot = StoreMethodNoConflicts(SymbolTable.IdToString(name),
-                                        PythonContext.Id,
+                                        DefaultContext.Id,
                                         mi,
                                         ft);
                                 } else {
@@ -210,7 +210,7 @@ namespace IronPython.Runtime.Types {
                                 if (opmap.IsBinary) ft |= FunctionType.ReversedOperator;
 
                                 PythonTypeSlot slot = StoreMethodNoConflicts(SymbolTable.IdToString(revName),
-                                    PythonContext.Id,
+                                    DefaultContext.Id,
                                     mi,
                                     ft);
 
@@ -231,7 +231,7 @@ namespace IronPython.Runtime.Types {
                 NameType nt = NameConverter.TryGetName(Builder.UnfinishedType, fi, out name); 
                 if(nt != NameType.None) {
                     SetValue(SymbolTable.StringToId(name), 
-                        PythonContext.Id, 
+                        DefaultContext.Id, 
                         new ReflectedField(fi, nt));
                 }
             }
@@ -252,7 +252,7 @@ namespace IronPython.Runtime.Types {
 
                 if (gnt != NameType.None || snt != NameType.None) {
                     SetValue(SymbolTable.StringToId(getName ?? setName), 
-                        PythonContext.Id, 
+                        DefaultContext.Id, 
                         new ReflectedProperty(pi, get, set, NameType.PythonProperty));
                 }
             }
@@ -274,7 +274,7 @@ namespace IronPython.Runtime.Types {
 
                 if (ant != NameType.None || rnt != NameType.None) {
                     SetValue(SymbolTable.StringToId(aname ?? rname), 
-                        PythonContext.Id, 
+                        DefaultContext.Id, 
                         new ReflectedEvent(ei, false));
                 }
                 
@@ -444,7 +444,7 @@ namespace IronPython.Runtime.Types {
                     newVal = new ConstructorFunction(InstanceOps.NonDefaultNewInst, reflectedCtors.Targets);
                 }
 
-                SetValue(Symbols.NewInst, PythonContext.Id, newVal);
+                SetValue(Symbols.NewInst, DefaultContext.Id, newVal);
             }
         }
 
@@ -518,7 +518,7 @@ namespace IronPython.Runtime.Types {
 
         private void AddProtocolMethod(SymbolId symbol, FunctionType functionType, params MethodInfo[] methodInfos) {
             object tmp;
-            if (TryGetValue(symbol, PythonContext.Id, out tmp)) {
+            if (TryGetValue(symbol, DefaultContext.Id, out tmp)) {
                 // type has specified PythonName to provide this protocol method explicitly
                 // w/ the desired behavior
                 return;
@@ -530,26 +530,26 @@ namespace IronPython.Runtime.Types {
 
             foreach(MethodInfo mi in methodInfos) {
                 method = StoreMethod(SymbolTable.IdToString(symbol),
-                    PythonContext.Id,
+                    DefaultContext.Id,
                     mi,
                     functionType | FunctionType.Method | FunctionType.AlwaysVisible);
             }
 
             OperatorMapping opMap;
             if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(symbol, out opMap)) {
-                AddOperator(PythonContext.Id, method, opMap);
+                AddOperator(DefaultContext.Id, method, opMap);
             }
         }
 
         private void AddTupleExpansionGetOrDeleteItem(SymbolId op, MethodInfo mi) {
             PythonTypeSlot callable = StoreMethodNoConflicts(SymbolTable.IdToString(op), 
-                PythonContext.Id, 
+                DefaultContext.Id, 
                 mi, 
                 FunctionType.Method | FunctionType.AlwaysVisible);
 
             if (callable == null) return;
 
-            Builder.AddOperator(PythonContext.Id,
+            Builder.AddOperator(DefaultContext.Id,
                 PythonExtensionTypeAttribute._pythonOperatorTable[op].Operator,
                 delegate(CodeContext context, object self, object other, out object ret) {
                     object func;
@@ -574,13 +574,13 @@ namespace IronPython.Runtime.Types {
 
         private void AddTupleExpansionSetItem(MethodInfo mi) {
             PythonTypeSlot callable = StoreMethodNoConflicts("__setitem__",
-                PythonContext.Id,
+                DefaultContext.Id,
                 mi,
                 FunctionType.Method | FunctionType.AlwaysVisible);
 
             if (callable == null) return;
 
-            Builder.AddOperator(PythonContext.Id, 
+            Builder.AddOperator(DefaultContext.Id, 
                 Operators.SetItem,
                 delegate(CodeContext context, object self, object value1, object value2, out object ret) {
                     object func;

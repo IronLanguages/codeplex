@@ -197,22 +197,13 @@ if is_cli:
 
 AreEqual(float(repr(2.5)), 2.5)
 
-# empty expression after yield
+# empty expression after yield are added in 2.5 with Pep 342.
 #CodePlex Work Item 10642
 #Once this gets fixed, this test will fail and must be updated.  In short,
 #the following should not throw a SyntaxError:
-if not sys.platform=="win32":
-    AssertError(SyntaxError, compile, """
 def foo(n=0):
     while True:
         yield
-""", "Error", "exec")
-    
-    AssertError(SyntaxError, compile, """
-def foo(n=0):
-    while True:
-        yield
-""", "Error", "eval")
 
 AreEqual(eval("1, 2, 3,"), (1, 2, 3))
 

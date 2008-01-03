@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
@@ -108,7 +107,7 @@ namespace Microsoft.Scripting.Actions {
             PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "GenerateRule");
 
             MethodInfo mi = typeof(T).GetMethod("Invoke");
-            CodeGen cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+            Compiler cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
                 StubName,
                 mi.ReturnType,
                 ReflectionUtils.GetParameterTypes(mi.GetParameters()),
@@ -135,14 +134,14 @@ namespace Microsoft.Scripting.Actions {
                 this == _rules[0].MonomorphicRuleSet &&
                 _rules[0].TemplateParameterCount > 0 &&
                 cg.IsDynamicMethod) {
-                _monomorphicTemplate = (DynamicMethod)cg.MethodInfo;
+                _monomorphicTemplate = (DynamicMethod)cg.Method;
             }
 
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
 
 
-        private void EmitNoMatch(CodeGen cg) {
+        private void EmitNoMatch(Compiler cg) {
             for (int i = 0; i < cg.ArgumentSlots.Count; i++) {
                 cg.ArgumentSlots[i].EmitGet(cg);
             }

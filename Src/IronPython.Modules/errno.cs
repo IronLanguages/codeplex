@@ -21,7 +21,6 @@ using IronPython.Runtime;
 
 [assembly: PythonModule("errno", typeof(IronPython.Modules.PythonErrorNumber))]
 namespace IronPython.Modules {
-    [PythonType("errno")]
     public static class PythonErrorNumber {
         static PythonErrorNumber() {
             errorcode = new PythonDictionary();

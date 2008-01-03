@@ -33,6 +33,12 @@ namespace IronPython.Runtime.Calls {
         public static CodeContext _defaultCLS;
         public static CodeContext _defaultTrueDivision;
         
+        public static ContextId Id {
+            get {
+                return Default.LanguageContext.ContextId;
+            }
+        }
+        
         public static CodeContext Default {
             get {
                 Debug.Assert(_default != null);
@@ -47,37 +53,23 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-
-        public static CodeContext DefaultTrueDivision {
-            get {
-                Debug.Assert(_defaultTrueDivision != null);
-                return _defaultTrueDivision;
-            }
+        internal static void CreateContexts(LanguageContext context) {
+            _default = CreateDefaultContext(context);
+            _defaultCLS = CreateDefaultCLSContext(context);
         }
 
-        internal static void CreateContexts(PythonEngine engine) {
-            _default = CreateDefaultContext(engine);
-            _defaultCLS = CreateDefaultCLSContext(engine);
-            _defaultTrueDivision = CreateTrueDivisionContext(engine);
-        }
-
-        private static CodeContext CreateDefaultContext(PythonEngine engine) {
+        private static CodeContext CreateDefaultContext(LanguageContext context) {
             ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
-            return new CodeContext(globalMod.Scope, new PythonContext(engine, false), new PythonModuleContext(globalMod));
+            return new CodeContext(globalMod.Scope, context, new PythonModuleContext(globalMod));
         }
 
-        private static CodeContext CreateTrueDivisionContext(PythonEngine engine) {
-            ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
-            return new CodeContext(globalMod.Scope, new PythonContext(engine, true), new PythonModuleContext(globalMod));
-        }
-
-        private static CodeContext CreateDefaultCLSContext(PythonEngine engine) {
+        private static CodeContext CreateDefaultCLSContext(LanguageContext context) {
             ScriptScope globalMod = ScriptDomainManager.CurrentManager.CreateModule("__builtin__", new Scope(new SymbolDictionary()));
 
             PythonModuleContext moduleContext = new PythonModuleContext(globalMod);
             moduleContext.ShowCls = true;
 
-            return new CodeContext(globalMod.Scope, new PythonContext(engine, false), moduleContext);
+            return new CodeContext(globalMod.Scope, context, moduleContext);
         }
     }
 }

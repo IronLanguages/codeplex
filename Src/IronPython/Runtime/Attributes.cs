@@ -21,6 +21,7 @@ using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
 
@@ -46,7 +47,7 @@ namespace IronPython.Runtime {
 
         public override ContextId Context {
             get {
-                return PythonContext.Id;
+                return DefaultContext.Id;
             }
         }
      

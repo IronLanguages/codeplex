@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -44,11 +45,11 @@ namespace Microsoft.Scripting.Generation {
         protected abstract Slot CreateSlot(SymbolId name, Type type);
 
         /// <summary>
-        /// Called before emitting code into the specified CodeGen.  Provides an opportunity to setup any
+        /// Called before emitting code into the specified Compiler.  Provides an opportunity to setup any
         /// method-local state for the slot factory.
         /// </summary>
         /// <param name="cg"></param>
-        public virtual void PrepareForEmit(CodeGen cg) {
+        public virtual void PrepareForEmit(Compiler cg) {
         }
 
         /// <summary>

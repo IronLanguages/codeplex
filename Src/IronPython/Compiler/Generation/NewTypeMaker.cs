@@ -17,20 +17,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using System.IO;
 using System.ComponentModel;
-using System.Threading;
 
-using System.Resources;
 using System.Diagnostics;
-using System.Diagnostics.SymbolStore;
 
 using System.Reflection;
 using System.Reflection.Emit;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
@@ -39,9 +33,9 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using IronPython.Hosting;
 
 namespace IronPython.Compiler.Generation {
+    using Compiler = Microsoft.Scripting.Ast.Compiler;
     /// <summary>
     /// Python class hierarchy is represented using the __class__ field in the object. It does not 
     /// use the CLI type system for pure Python types. However, Python types which inherit from a 
@@ -347,7 +341,7 @@ namespace IronPython.Compiler.Generation {
 
             string name = GetName();
             _tg = ag.DefinePublicType(TypePrefix + name, _baseType);
-            _tg.Binder = PythonEngine.CurrentEngine.DefaultBinder;
+            _tg.Binder = PythonBinder.Instance;
 
             ImplementInterfaces();
 
@@ -522,7 +516,7 @@ namespace IronPython.Compiler.Generation {
                 }
             }
 
-            CodeGen cg = _tg.CreateCodeGen(cb, cb.GetILGenerator(), argTypes);
+            Compiler cg = _tg.CreateCodeGen(cb, cb.GetILGenerator(), argTypes);
 
             // <typeField> = <arg0>
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
@@ -538,7 +532,7 @@ namespace IronPython.Compiler.Generation {
 
                 cg.EmitType(_tupleType);
                 cg.EmitCall(init);
-                cg.Emit(OpCodes.Unbox_Any, _tupleType);
+                cg.EmitUnbox(_tupleType);
                 _slotsField.EmitSet(cg);
             }
 
@@ -565,7 +559,7 @@ namespace IronPython.Compiler.Generation {
             return i - (overrideParams.Length - pis.Length);
         }
 
-        private static void CallBaseConstructor(ConstructorInfo parentConstructor, ParameterInfo[] pis, ParameterInfo[] overrideParams, CodeGen cg) {
+        private static void CallBaseConstructor(ConstructorInfo parentConstructor, ParameterInfo[] pis, ParameterInfo[] overrideParams, Compiler cg) {
             cg.EmitThis();
 #if DEBUG
             int lastIndex = -1;
@@ -595,7 +589,7 @@ namespace IronPython.Compiler.Generation {
 
             Slot namesField = _tg.AddStaticField(typeof(string[]), VtableNamesField);
 
-            CodeGen cg = _tg.TypeInitializer;
+            Compiler cg = _tg.TypeInitializer;
             cg.EmitArray(names);
             namesField.EmitSet(cg);
         }
@@ -610,7 +604,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void ImplementCTDOverride(MethodInfo m) {
-            CodeGen cg = _tg.DefineExplicitInterfaceImplementation(m);
+            Compiler cg = _tg.DefineExplicitInterfaceImplementation(m);
             cg.EmitThis();
 
             ParameterInfo[] pis = m.GetParameters();
@@ -644,9 +638,9 @@ namespace IronPython.Compiler.Generation {
         private void ImplementDynamicObject() {
             _tg.TypeBuilder.AddInterfaceImplementation(typeof(IDynamicObject));
 
-            CodeGen getRuleMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("GetRule"));
+            Compiler getRuleMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("GetRule"));
             MethodInfo mi = typeof(UserTypeOps).GetMethod("GetRuleHelper");
-            GenericTypeParameterBuilder[] types = ((MethodBuilder)getRuleMethod.MethodInfo).DefineGenericParameters("T");
+            GenericTypeParameterBuilder[] types = ((MethodBuilder)getRuleMethod.Method).DefineGenericParameters("T");
 
             for (int i = 0; i < 3; i++) getRuleMethod.EmitArgGet(i);
 
@@ -654,14 +648,14 @@ namespace IronPython.Compiler.Generation {
             getRuleMethod.EmitReturn();
             getRuleMethod.Finish();
 
-            CodeGen getContextMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("get_LanguageContext"));
+            Compiler getContextMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("get_LanguageContext"));
             getContextMethod.EmitCall(typeof(PythonOps), "GetLanguageContext");
             getContextMethod.EmitReturn();
             getContextMethod.Finish();
         }
 
         private void ImplementSuperDynamicObject() {
-            CodeGen cg;
+            Compiler cg;
 
             _tg.TypeBuilder.AddInterfaceImplementation(typeof(IPythonObject));
 
@@ -741,7 +735,7 @@ namespace IronPython.Compiler.Generation {
 
             foreach (MethodInfo mi in mis) {
 
-                CodeGen cg = fExplicit ? _tg.DefineExplicitInterfaceImplementation(mi) : _tg.DefineMethodOverride(mi);
+                Compiler cg = fExplicit ? _tg.DefineExplicitInterfaceImplementation(mi) : _tg.DefineMethodOverride(mi);
                 ParameterInfo[] pis = mi.GetParameters();
 
                 MethodInfo helperMethod = typeof(UserTypeOps).GetMethod(mi.Name + "Helper");
@@ -821,7 +815,7 @@ namespace IronPython.Compiler.Generation {
 
             _tg.TypeBuilder.AddInterfaceImplementation(typeof(IWeakReferenceable));
 
-            CodeGen cg = _tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetWeakRef"));
+            Compiler cg = _tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetWeakRef"));
             if (!isWeakRefAble) {
                 cg.EmitBoolean(false);
                 cg.EmitReturn();
@@ -853,7 +847,7 @@ namespace IronPython.Compiler.Generation {
 
                 PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0]);
 
-                CodeGen getter = _tg.DefineMethod(MethodAttributes.Public,
+                Compiler getter = _tg.DefineMethod(MethodAttributes.Public,
                         "get_$SlotValues",
                         tbp[0],
                         ArrayUtils.EmptyTypes,
@@ -863,7 +857,7 @@ namespace IronPython.Compiler.Generation {
                 getter.EmitReturn();
                 getter.Finish();
 
-                pb.SetGetMethod(getter.MethodInfo as MethodBuilder);
+                pb.SetGetMethod(getter.Method as MethodBuilder);
             }
         }
 
@@ -876,7 +870,7 @@ namespace IronPython.Compiler.Generation {
             foreach (FieldInfo fi in fields) {
                 if (!fi.IsFamily) continue;
 
-                CodeGen cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
+                Compiler cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
                                              FieldGetterPrefix + fi.Name, fi.FieldType, ArrayUtils.EmptyTypes, ArrayUtils.EmptyStrings);
 
                 cg.EmitThis();
@@ -1000,7 +994,7 @@ namespace IronPython.Compiler.Generation {
         /// Loads all the incoming arguments of cg and forwards them to mi which
         /// has the same signature and then returns the result
         /// </summary>
-        private static void EmitBaseMethodDispatch(MethodInfo mi, CodeGen cg) {
+        private static void EmitBaseMethodDispatch(MethodInfo mi, Compiler cg) {
             if (!mi.IsAbstract) {
                 cg.EmitThis();
                 foreach (Slot argSlot in cg.ArgumentSlots) argSlot.EmitGet(cg);
@@ -1052,7 +1046,7 @@ namespace IronPython.Compiler.Generation {
             return ret;
         }
 
-        private static void EmitBadCallThrow(CodeGen cg, MethodInfo mi, string reason) {
+        private static void EmitBadCallThrow(Compiler cg, MethodInfo mi, string reason) {
             cg.EmitString("Cannot override method from IronPython {0} because " + reason);
             cg.EmitInt(1);
             cg.Emit(OpCodes.Newarr, typeof(object));
@@ -1075,7 +1069,7 @@ namespace IronPython.Compiler.Generation {
         ///     def SomeVirtualFunction(self, ...):
         /// 
         /// </summary>
-        internal Slot EmitBaseClassCallCheckForProperties(CodeGen cg, MethodInfo baseMethod, VTableEntry methField) {
+        internal Slot EmitBaseClassCallCheckForProperties(Compiler cg, MethodInfo baseMethod, VTableEntry methField) {
             Label instanceCall = cg.DefineLabel();
             Slot callTarget = cg.GetLocalTmp(typeof(object));
 
@@ -1095,7 +1089,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void CreateVTableGetterOverride(MethodInfo mi, VTableEntry methField) {
-            CodeGen cg = _tg.DefineMethodOverride(mi);
+            Compiler cg = _tg.DefineMethodOverride(mi);
             Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
             callTarget.EmitGet(cg);
@@ -1108,7 +1102,7 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void CreateVTableSetterOverride(MethodInfo mi, VTableEntry methField) {
-            CodeGen cg = _tg.DefineMethodOverride(mi);
+            Compiler cg = _tg.DefineMethodOverride(mi);
             Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
             callTarget.EmitGet(cg);  // property
@@ -1124,7 +1118,7 @@ namespace IronPython.Compiler.Generation {
 
         private void CreateVTableEventOverride(MethodInfo mi, VTableEntry methField) {
             // override the add/remove method            
-            CodeGen cg = _tg.DefineMethodOverride(mi);
+            Compiler cg = _tg.DefineMethodOverride(mi);
 
             Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
 
@@ -1142,7 +1136,7 @@ namespace IronPython.Compiler.Generation {
 
         private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
             ParameterInfo[] parameters = mi.GetParameters();
-            CodeGen cg = (mi.IsVirtual && !mi.IsFinal) ? _tg.DefineMethodOverride(mi) : _tg.DefineMethod(
+            Compiler cg = (mi.IsVirtual && !mi.IsFinal) ? _tg.DefineMethodOverride(mi) : _tg.DefineMethod(
                 mi.IsVirtual ? (mi.Attributes | MethodAttributes.NewSlot) : mi.Attributes,
                     mi.Name,
                     mi.ReturnType,
@@ -1189,7 +1183,7 @@ namespace IronPython.Compiler.Generation {
             cg.Finish();
         }
 
-        public static CodeGen CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
+        public static Compiler CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
             ParameterInfo[] parms = mi.GetParameters();
             Type[] types = ReflectionUtils.GetParameterTypes(parms);
             string[] paramNames = new string[parms.Length];
@@ -1200,7 +1194,7 @@ namespace IronPython.Compiler.Generation {
                     types[i] = tg.TypeBuilder;
                 }
             }
-            CodeGen cg = tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
+            Compiler cg = tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
                                          BaseMethodPrefix + mi.Name, mi.ReturnType, types, paramNames);
 
             EmitBaseMethodDispatch(mi, cg);
@@ -1208,7 +1202,7 @@ namespace IronPython.Compiler.Generation {
             return cg;
         }
 
-        private static void EmitSymbolId(CodeGen cg, string name) {
+        private static void EmitSymbolId(Compiler cg, string name) {
             Debug.Assert(name != null);
             cg.EmitSymbolId(SymbolTable.StringToId(name));
         }

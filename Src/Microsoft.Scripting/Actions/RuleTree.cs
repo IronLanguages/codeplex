@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// 1.	It needs to be thread-safe and atomic.  This means the iteration over the list 
         ///     needs to happen w/o releasing a lock, and the tests also get run under lock 
-        ///     (they?re simple operations and therefore are safe to do this).  But the target 
+        ///     (they’re simple operations and therefore are safe to do this).  But the target 
         ///     is not safe to run under a lock because it may block and cause a deadlock.  Therefore 
         ///     we need to release the lock before running the target.  
         /// 2.	The code for doing the evaluation is a little complex, and the threading issues makes 
@@ -62,13 +62,13 @@ namespace Microsoft.Scripting.Actions {
         ///     or result in a reasonable duplication of code which may be error prone to maintain.
         /// 3.	The updates of the sites needs to happen before the execution of the rule.  This 
         ///     is due to both stack overflow and performance issues.  If a function goes recursive and we 
-        ///     haven?t updated the recursive-call site before then we?ll repeatedly generate and evaluate 
-        ///     rules until we stack overflow, and if we don?t stack overflow our perf will 
+        ///     haven’t updated the recursive-call site before then we’ll repeatedly generate and evaluate 
+        ///     rules until we stack overflow, and if we don’t stack overflow our perf will 
         ///     suck until the method unwinds once.
         /// 
         /// For those reasons we get the one big method  which takes 7 parameters to handle both updating 
         /// and executing.  One of those parameters is the bool flag to indicate that we should execute 
-        /// the rule (that?s how that decision is made).  3 more are the result of the execution and the 
+        /// the rule (that’s how that decision is made).  3 more are the result of the execution and the 
         /// target/rule list to update for the caller.  One more is the site object which we need to lock 
         /// on to make the update to the site atomic.  And finally we get the CodeContext which now flows 
         /// in instead of having RuleTree hold onto a LanguageContext.  This is because we need

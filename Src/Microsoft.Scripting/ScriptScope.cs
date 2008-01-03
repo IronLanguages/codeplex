@@ -49,9 +49,6 @@ namespace Microsoft.Scripting {
         bool RemoveVariable(string name);
         void ClearVariables();
 
-        // compiler options:
-        CompilerOptions GetCompilerOptions(IScriptEngine engine);
-
 #if !SILVERLIGHT
         ObjectHandle LookupVariableAndWrap(string name);
         // TODO: void SetVariable(string name, ObjectHandle value);
@@ -66,7 +63,11 @@ namespace Microsoft.Scripting {
     /// ScriptModule is not thread safe. Host should either lock when multiple threads could 
     /// access the same module or should make a copy for each thread.
     /// </summary>
-    public sealed class ScriptScope : IScriptScope, IMembersList, ILocalObject {
+    public sealed class ScriptScope : 
+#if !SILVERLIGHT
+        MarshalByRefObject, 
+#endif
+        IScriptScope, IMembersList, ILocalObject {
         private readonly Scope _scope;
         private ScriptCode[] _codeBlocks;
         private ModuleContext[] _moduleContexts; // resizable
@@ -252,23 +253,18 @@ namespace Microsoft.Scripting {
         }
 #endif
 
-        public CompilerOptions GetCompilerOptions(IScriptEngine engine) {
-            Contract.RequiresNotNull(engine, "engine");
-            return engine.GetModuleCompilerOptions(this);
-        }
-
         /// <summary>
         /// Trys to lookup the provided name in the current scope.
         /// </summary>
         public bool TryGetVariable(string name, out object value) {
-            return _scope.TryGetName(InvariantContext.Instance, SymbolTable.StringToId(name), out value);
+            return _scope.TryGetName(SymbolTable.StringToId(name), out value);
         }
 
         /// <summary>
         /// Attempts to lookup the provided name in this scope or any outer scope.   
         /// </summary>
         public bool TryLookupVariable(string name, out object value) {
-            return _scope.TryLookupName(InvariantContext.Instance, SymbolTable.StringToId(name), out value);
+            return _scope.TryLookupName(SymbolTable.StringToId(name), out value);
         }
 
         /// <summary>
@@ -276,7 +272,7 @@ namespace Microsoft.Scripting {
         /// name is not defined MissingMemberException is thrown.
         /// </summary>
         public object LookupVariable(string name) {
-            return _scope.LookupName(InvariantContext.Instance, SymbolTable.StringToId(name));
+            return _scope.LookupName(SymbolTable.StringToId(name));
         }
 
         /// <summary>
@@ -290,14 +286,14 @@ namespace Microsoft.Scripting {
         /// Determines if this context or any outer scope contains the defined name.
         /// </summary>
         public bool VariableExists(string name) {
-            return _scope.ContainsName(InvariantContext.Instance, SymbolTable.StringToId(name));
+            return _scope.ContainsName(SymbolTable.StringToId(name));
         }
 
         /// <summary>
         /// Attemps to remove the provided name from this scope
         /// </summary> 
         public bool RemoveVariable(string name) {
-            return _scope.TryRemoveName(InvariantContext.Instance, SymbolTable.StringToId(name));
+            return _scope.TryRemoveName(SymbolTable.StringToId(name));
         }
 
         /// <summary>

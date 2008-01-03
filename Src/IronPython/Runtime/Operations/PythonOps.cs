@@ -1962,6 +1962,13 @@ namespace IronPython.Runtime.Operations {
             return TypeError(message);
         }
 
+        // When a generator first starts, before it gets to the first yield point, you can't call generator.Send(x) where x != null.
+        // See Pep342 for details.
+        public static Exception TypeErrorForIllegalSend() {
+            string message = "can't send non-None value to a just-started generator";
+            return TypeError(message);
+        }
+
         // If a method is called with an incorrect number of arguments
         // You should use TypeErrorForUnboundMethodCall() for unbound methods called with 0 arguments
         public static Exception TypeErrorForArgumentCountMismatch(string methodName, int expectedArgCount, int actualArgCount) {
@@ -2332,7 +2339,7 @@ namespace IronPython.Runtime.Operations {
         /// import spam.eggs
         /// </summary>
         public static object ImportTop(CodeContext context, string fullName) {
-            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, null);
+            return PythonContext.GetImporter(context).Import(context, fullName, null);
         }
 
         /// <summary>
@@ -2344,7 +2351,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="fullName"></param>
         /// <returns></returns>
         public static object ImportBottom(CodeContext context, string fullName) {
-            object module = PythonEngine.CurrentEngine.Importer.Import(context, fullName, null);
+            object module = PythonContext.GetImporter(context).Import(context, fullName, null);
 
             if (fullName.IndexOf('.') >= 0) {
                 // Extract bottom from the imported module chain
@@ -2363,7 +2370,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import eggs1, eggs2 
         /// </summary>
         public static object ImportWithNames(CodeContext context, string fullName, string[] names) {
-            return PythonEngine.CurrentEngine.Importer.Import(context, fullName, PythonTuple.MakeTuple(names));
+            return PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple(names));
         }
 
 
@@ -2375,7 +2382,7 @@ namespace IronPython.Runtime.Operations {
         /// Called repeatedly for all elements being imported (a, b, c, d above)
         /// </summary>
         public static object ImportFrom(CodeContext context, object module, string name) {
-            return PythonEngine.CurrentEngine.Importer.ImportFrom(context, module, name);
+            return PythonContext.GetImporter(context).ImportFrom(context, module, name);
         }
 
         /// <summary>
@@ -2384,7 +2391,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import *
         /// </summary>
         public static void ImportStar(CodeContext context, string fullName) {
-            object newmod = PythonEngine.CurrentEngine.Importer.Import(context, fullName, PythonTuple.MakeTuple("*"));
+            object newmod = PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple("*"));
 
             ScriptScope pnew = newmod as ScriptScope;
             if (pnew != null) {
@@ -2487,12 +2494,12 @@ namespace IronPython.Runtime.Operations {
             string str_code = code as string;
 
             if (str_code != null) {
-                ScriptEngine engine = PythonEngine.CurrentEngine;
-                SourceUnit code_unit = SourceUnit.CreateSnippet(engine, str_code);
+                SourceUnit code_unit = context.LanguageContext.CreateSnippet(str_code);                
                 // in accordance to CPython semantics:
                 code_unit.DisableLineFeedLineSeparator = line_feed;
 
-                ScriptCode sc = PythonModuleOps.CompileFlowTrueDivision(code_unit, context.LanguageContext);
+
+                ScriptCode sc = context.LanguageContext.CompileSourceCode(code_unit, Builtin.GetDefaultCompilerOptions(context, true, 0));
                 code = new FunctionCode(sc);
                 tryEvaluate = true; // do interpretation only on strings -- not on files, streams, or code objects
             }
@@ -2514,10 +2521,10 @@ namespace IronPython.Runtime.Operations {
             }
 
             IAttributesCollection attrLocals = Builtin.GetAttrLocals(context, locals);
-
+            
             Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(new Microsoft.Scripting.Scope(globals), attrLocals);
 
-            fc.Call(context, scope, tryEvaluate);
+            fc.Call(new CodeContext(scope, context.LanguageContext, ((PythonModuleContext)context.ModuleContext).Clone()), scope, tryEvaluate);
         }
 
         #endregion        
@@ -2657,9 +2664,19 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
+        /// Create at TypeError exception for when Raise() can't create the exception requested.  
+        /// </summary>
+        /// <param name="type">original type of exception requested</param>
+        /// <returns>a TypeEror exception</returns>
+        internal static Exception MakeExceptionTypeError(object type) {
+            Exception throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
+            return throwable;
+        }
+
+        /// <summary>
         /// helper function for non-re-raise exceptions.
         /// 
-        /// type is the type of exception to throwo or an instance.  If it 
+        /// type is the type of exception to throw or an instance.  If it 
         /// is an instance then value should be null.  
         /// 
         /// If type is a type then value can either be an instance of type,
@@ -2678,7 +2695,7 @@ namespace IronPython.Runtime.Operations {
 
             if (type is Exception) {
                 throwable = type as Exception;
-            } else if (PythonOps.IsInstance(type, PythonEngine.CurrentEngine._exceptionType)) {
+            } else if (PythonOps.IsInstance(type, PythonContext._exceptionType)) {
                 throwable = ExceptionConverter.ToClr(type);
             } else if (type is string) {
                 throwable = new StringException(type.ToString(), value);
@@ -2691,7 +2708,7 @@ namespace IronPython.Runtime.Operations {
             } else if (type is OldInstance) {
                 throwable = ExceptionConverter.ToClr(type);
             } else {
-                throwable = PythonOps.TypeError("exceptions must be classes, instances, or strings (deprecated), not {0}", DynamicHelpers.GetPythonType(type));
+                throwable = MakeExceptionTypeError(type);
             }
 
             IDictionary dict = throwable.Data;
@@ -3290,7 +3307,7 @@ namespace IronPython.Runtime.Operations {
             //HACK ALERT:
             // In interpreted mode, cap the recursion limit at 200, since our stack grows 30x faster than normal.
             //TODO: remove this when we switch to a non-recursive interpretation strategy
-            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
+            if (PythonContext.GetPythonOptions(null).InterpretedMode) {
                 if (PythonFunction.Depth > 200) throw PythonOps.RuntimeError("maximum recursion depth exceeded");
             }
 

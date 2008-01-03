@@ -607,10 +607,11 @@ namespace Microsoft.Scripting.Actions {
             if (_binaryOperator) return BinderType.BinaryOperator;
 
             foreach (MethodBase mb in targets) {
-                if (mb.IsConstructor) {
+                if (CompilerHelpers.IsConstructor(mb)) {
                     return BinderType.Constructor;
-                }
+                } 
             }
+
             return BinderType.Normal;
         }
 

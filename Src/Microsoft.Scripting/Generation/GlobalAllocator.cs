@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     sealed class GlobalNamedStorage : Storage {
@@ -71,7 +72,7 @@ namespace Microsoft.Scripting.Generation {
             get { return _slotFactory; }
         }
 
-        public override void PrepareForEmit(CodeGen cg) {
+        public override void PrepareForEmit(Compiler cg) {
             _slotFactory.PrepareForEmit(cg);
         }
 

@@ -14,10 +14,10 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -27,27 +27,27 @@ namespace Microsoft.Scripting.Generation {
         private Type _argType;
         private int _index;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
-        private CodeGen _codeGen;
+        private Compiler _codeGen;
 
-        public ArgSlot(int index, Type type, CodeGen codeGen) {
+        public ArgSlot(int index, Type type, Compiler codeGen) {
             this._index = index;
             this._argType = type;
             this._codeGen = codeGen;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
             cg.EmitTrueArgGet(_index);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
             cg.EmitArgAddr(_index);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
             cg.Emit(OpCodes.Starg, _index);

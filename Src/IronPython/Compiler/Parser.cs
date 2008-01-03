@@ -689,7 +689,7 @@ namespace IronPython.Compiler {
                 case TokenKind.KeywordDel:
                     return ParseDelStmt();
                 case TokenKind.KeywordYield:
-                    return ParseYieldStmt();
+                    return ParseYieldStmt(); 
                 default:
                     return ParseExprStmt();
             }
@@ -725,26 +725,89 @@ namespace IronPython.Compiler {
             return stmt;
         }
 
+        
         private Statement ParseYieldStmt() {
-            NextToken();
-            SourceLocation start = GetStart();
+            // For yield statements, continue to enforce that it's currently in a function. 
+            // This gives us better syntax error reporting for yield-statements than for yield-expressions.
             FunctionDefinition current = CurrentFunction;
             if (current == null) {
                 ReportSyntaxError(IronPython.Resources.MisplacedYield);
-            } else {
+            }
+
+            // See Pep 342: a yield statement is now just an expression statement around a yield expression.
+            Expression e = MaybeParseYieldExpression();
+            Debug.Assert(e != null); // caller already verified we have a yield.
+
+            Statement s = new ExpressionStatement(e);
+            s.SetLoc(e.Span);
+            return s;
+        }
+
+
+        /// <summary>
+        /// Peek if the next token is a 'yield' and parse a yield expression. Else return null.
+        /// </summary>
+        /// <returns>A yield expression if present, else null. </returns>
+        private Expression MaybeParseYieldExpression() {
+            if (!MaybeEat(TokenKind.KeywordYield)) {
+                return null;
+            }
+
+            // We have a yield expression.
+            // Yield expression normally requires parenthesis except when:
+            // - used as a statement (see ParseYieldStmt)
+            // - used in RHS of top-level assignment.
+
+
+            
+            // Mark that this function is actually a generator.
+            // If we're in a generator expression, then we don't have a function yet.
+            //    g=((yield i) for i in range(5))
+            // In that acse, the genexp will mark IsGenerator. 
+            FunctionDefinition current = CurrentFunction;
+            if (current != null) {
                 current.IsGenerator = true;
             }
-            Expression e = ParseTestListAsExpr(false);
-            YieldStatement ret = new YieldStatement(e);
-            ret.SetLoc(start, GetEnd());
-            return ret;
+
+            SourceLocation start = GetStart();
+            
+            // Parse expression list after yield. This can be:
+            // 1) empty, in which case it becomes 'yield None'
+            // 2) a single expression
+            // 3) multiple expression, in which case it's wrapped in a tuple.
+            const bool allowEmptyExpr = true;
+            Expression yieldResult = ParseTestListAsExpr(allowEmptyExpr);
+            
+            // Check empty expression and convert to 'none'
+            TupleExpression t = yieldResult as TupleExpression;
+            if (t != null) {
+                if (t.Items.Length == 0) {
+                    yieldResult = new ConstantExpression(null); 
+                }
+            }
+
+            Expression yieldExpression = new YieldExpression(yieldResult);
+
+            yieldExpression.SetLoc(start, GetEnd());
+            return yieldExpression;
+            
         }
+
+
 
         private Statement FinishAssignments(Expression right) {
             List<Expression> left = new List<Expression>();
 
             while (MaybeEat(TokenKind.Assign)) {
                 left.Add(right);
+
+                // Check for top-level yield assignment. This is special because it doesn't require parenthesis.
+                //    x = yield
+                //    x = yield 5
+                right = MaybeParseYieldExpression();
+                if (right != null) {
+                    break;
+                }
                 right = ParseTestListAsExpr(false);
             }
 
@@ -765,7 +828,15 @@ namespace IronPython.Compiler {
                 PythonOperator op = GetAssignOperator(PeekToken());
                 if (op != PythonOperator.None) {
                     NextToken();
-                    Expression rhs = ParseTestListAsExpr(false);
+                    Expression rhs;
+
+                    // Check for top-level yield assignment. 
+                    //   x += yield 5
+                    rhs = MaybeParseYieldExpression();
+                    if (rhs == null) {
+                        // Not a yield expression, try regular expression.
+                        rhs = ParseTestListAsExpr(false);
+                    }
                     AugmentedAssignStatement aug = new AugmentedAssignStatement(op, ret, rhs);
                     aug.SetLoc(ret.Start, GetEnd());
                     return aug;
@@ -1323,39 +1394,62 @@ namespace IronPython.Compiler {
         //Python2.5 -> old_lambdef: 'lambda' [varargslist] ':' old_test
         private int oldLambdaCount;
         private Expression FinishOldLambdef() {
-            SourceLocation start = GetStart();
-            Parameter[] parameters;
-            parameters = ParseVarArgsList(TokenKind.Colon);
-            SourceLocation mid = GetEnd();
-
+            FunctionDefinition func = ParseLambdaHelperStart(SymbolTable.StringToId("<lambda$" + (oldLambdaCount++) + ">"));
             Expression expr = ParseOldTest();
-            Statement body = new ReturnStatement(expr);
-            body.SetLoc(expr.Start, expr.End);
-            FunctionDefinition func = new FunctionDefinition(SymbolTable.StringToId("<lambda$" + (oldLambdaCount++) + ">"), parameters, body, _sourceUnit);
-            func.SetLoc(start, GetEnd());
-            func.Header = mid;
-            LambdaExpression ret = new LambdaExpression(func);
-            ret.SetLoc(start, GetEnd());
-            return ret;
+            return ParseLambdaHelperEnd(func, expr);
         }
-
 
         //lambdef: 'lambda' [varargslist] ':' test
         private int lambdaCount;
         private Expression FinishLambdef() {
+            FunctionDefinition func = ParseLambdaHelperStart(SymbolTable.StringToId("<lambda$" + (lambdaCount++) + ">"));
+            Expression expr = ParseTest();
+            return ParseLambdaHelperEnd(func, expr);
+        }
+
+
+        // Helpers for parsing lambda expressions. 
+        // Usage
+        //   FunctionDefinition f = ParseLambdaHelperStart(symbolId);
+        //   Expression expr = ParseXYZ();
+        //   return ParseLambdaHelperEnd(f, expr);
+        FunctionDefinition ParseLambdaHelperStart(SymbolId name) {
             SourceLocation start = GetStart();
             Parameter[] parameters;
             parameters = ParseVarArgsList(TokenKind.Colon);
             SourceLocation mid = GetEnd();
 
-            Expression expr = ParseTest();
-            Statement body = new ReturnStatement(expr);
-            body.SetLoc(expr.Start, expr.End);
-            FunctionDefinition func = new FunctionDefinition(SymbolTable.StringToId("<lambda$" + (lambdaCount++) + ">"), parameters, body, _sourceUnit);
-            func.SetLoc(start, GetEnd());
+            FunctionDefinition func = new FunctionDefinition(name, parameters, _sourceUnit);
             func.Header = mid;
+            func.Start = start;
+
+            // Push the lambda function on the stack so that it's available for any yield expressions to mark it as a generator.
+            PushFunction(func);
+
+            return func;
+        }
+
+        Expression ParseLambdaHelperEnd(FunctionDefinition func, Expression expr) {
+            // Pep 342 in Python 2.5 allows Yield Expressions, which can occur inside a Lambda body. 
+            // In this case, the lambda is a generator and will yield it's final result instead of just return it.
+            Statement body;
+            if (func.IsGenerator) {
+                YieldExpression y = new YieldExpression(expr);
+                y.SetLoc(expr.Span);
+                body = new ExpressionStatement(y);
+            } else {
+                body = new ReturnStatement(expr);
+            }
+            body.SetLoc(expr.Start, expr.End);
+
+            FunctionDefinition func2 = PopFunction();
+            System.Diagnostics.Debug.Assert(func == func2);
+
+            func.Body = body;
+            func.End = GetEnd();
+
             LambdaExpression ret = new LambdaExpression(func);
-            ret.SetLoc(start, GetEnd());
+            ret.SetLoc(func.Span);
             return ret;
         }
 
@@ -2164,10 +2258,20 @@ namespace IronPython.Compiler {
             if (MaybeEat(TokenKind.RightParenthesis)) {
                 ret = MakeTupleOrExpr(new List<Expression>(), false);
                 hasRightParenthesis = true;
+            } else if (PeekToken(TokenKind.KeywordYield)) {
+                // Support for yield expressions. See Pep 342.
+                Expression yieldResult = MaybeParseYieldExpression();
+                Debug.Assert(yieldResult != null); // we already verified we should get a yield expression.
+                hasRightParenthesis = Eat(TokenKind.RightParenthesis);
+                ret = yieldResult;
+                
             } else {
                 bool prevAllow = _allowIncomplete;
                 try {
                     _allowIncomplete = true;
+
+                    
+
 
                     Expression test = ParseTest();
                     if (MaybeEat(TokenKind.Comma)) {
@@ -2212,8 +2316,14 @@ namespace IronPython.Compiler {
                 } else if (PeekToken(Tokens.KeywordIfToken)) {
                     current = NestGenExpr(current, ParseGenExprIf());
                 } else {
-                    YieldStatement ys = new YieldStatement(test);
-                    ys.SetLoc(test.Start, test.End);
+                    // Generator Expressions have an implicit function definition and yield around their expression.
+                    //  (x for i in R)
+                    // becomes:
+                    //   def f(): 
+                    //     for i in R: yield (x)
+                    ExpressionStatement ys = new ExpressionStatement(new YieldExpression(test));
+                    ys.Expression.SetLoc(test.Span);
+                    ys.SetLoc(test.Span);
                     NestGenExpr(current, ys);
                     break;
                 }

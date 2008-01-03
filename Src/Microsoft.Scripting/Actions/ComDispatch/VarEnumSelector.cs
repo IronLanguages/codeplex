@@ -131,9 +131,16 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 case VarEnum.VT_NULL:
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
+                case VarEnum.VT_VARIANT:
                     return typeof(Object);
+
+                case VarEnum.VT_ERROR:
+                    return typeof(ErrorWrapper);
+                case VarEnum.VT_CY:
+                    return typeof(CurrencyWrapper);
+
                 default:
-                    throw new NotImplementedException("Unexpected VarEnum " + varEnum);
+                    throw new NotImplementedException("GetManagedMarshalType got unexpected VarEnum " + varEnum);
             }
         }
 

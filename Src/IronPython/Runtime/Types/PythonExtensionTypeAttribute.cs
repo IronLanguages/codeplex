@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Types {
         internal static Dictionary<SymbolId, OperatorMapping> _pythonOperatorTable;
         private static Dictionary<OperatorMapping, SymbolId> _reverseOperatorTable;
 
-        private static ContextId _Context = PythonContext.Id;
+        private static ContextId _Context = DefaultContext.Id;
         internal static SystemState _sysState;  // HACK: we need access to SystemState before it's done initing to get module names
 
         static PythonExtensionTypeAttribute() {
@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Types {
 
             PythonTypeContext ctx = new PythonTypeContext();
             ctx.IsPythonType = true;
-            _type.SetContextTag(PythonContext.Id, ctx);
+            _type.SetContextTag(DefaultContext.Id, ctx);
             _extension = true;
         }
 
@@ -73,7 +73,7 @@ namespace IronPython.Runtime.Types {
 
             PythonTypeContext ctx = new PythonTypeContext();
             ctx.IsPythonType = true;
-            _type.SetContextTag(PythonContext.Id, ctx);
+            _type.SetContextTag(DefaultContext.Id, ctx);
 
             string name;
             PythonTypeBuilder.GetBuilder(_type).AddInitializer(delegate(PythonTypeBuilder builder) {
@@ -143,7 +143,7 @@ namespace IronPython.Runtime.Types {
             string name;
             NameType nt = NameConverter.TryGetName(_type, fi, out name);
             if (nt != NameType.None) {
-                yield return new TransformedName(name, PythonContext.Id);
+                yield return new TransformedName(name, DefaultContext.Id);
             }
         }
 

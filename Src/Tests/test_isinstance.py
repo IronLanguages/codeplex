@@ -144,8 +144,7 @@ def test_conversions():
     AreEqual(unicode(), u"")
     
     AreEqual(oct(long(0)), "0L")
-    #CodePlex Work Item #10581
-    AreEqual(hex(12297829382473034410).lower(), "0xAAAAAAAAAAAAAAAAL".lower())
+    AreEqual(hex(12297829382473034410), "0xaaaaaaaaaaaaaaaaL") #10581
     AreEqual(hex(-1L), "-0x1L")
     AreEqual(long("-01L"), -1L)
     AreEqual(int(" 1 "), 1)
@@ -287,7 +286,7 @@ def test_getattr():
             else:
                 raise AttributeError, attrname
     
-    def test_getattr(t):
+    def getattrhelper(t):
         o = t()
         AreEqual(getattr(o, "field"), C1)
         AreEqual(getattr(o, "method")(), "method")
@@ -303,8 +302,8 @@ def test_getattr():
         for attrname in ("myassert", "anything", "else"): 
             AreEqual(hasattr(o,attrname), False)
     
-    test_getattr(C1)
-    test_getattr(C2)
+    getattrhelper(C1)
+    getattrhelper(C2)
 
 ## derived from python native type, and create instance of them without arg
 

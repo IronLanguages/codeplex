@@ -52,9 +52,9 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.GetSourceFileNames(mask, searchPattern);
         }
 
-        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
             Debug.Assert(_remoteHost != null);
-            return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, encoding);
+            return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, encoding, kind);
         }
 
         public virtual SourceUnit ResolveSourceFileUnit(string name) {
@@ -78,15 +78,15 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // throws SerializationException 
-        public virtual bool TrySetVariable(IScriptEngine engine, SymbolId name, object value) {
+        public virtual bool TrySetVariable(SymbolId name, object value) {
             Debug.Assert(_remoteHost != null);
-            return _remoteHost.TrySetVariable(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), name, value);
+            return _remoteHost.TrySetVariable(name, value);
         }
 
         // throws SerializationException 
-        public virtual bool TryGetVariable(IScriptEngine engine, SymbolId name, out object value) {
+        public virtual bool TryGetVariable(SymbolId name, out object value) {
             Debug.Assert(_remoteHost != null);
-            return _remoteHost.TryGetVariable(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), name, out value);
+            return _remoteHost.TryGetVariable(name, out value);
         }
 
         public virtual IScriptScope DefaultModule {

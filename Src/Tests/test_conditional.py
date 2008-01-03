@@ -21,12 +21,12 @@ def test_simple():
     Assert(100 if 1 else 200 == 100)
 
     # Simple conditional false case
-    Assert(100 if 0 else 200 == 200)
+    Assert(0 if 0 else 200 == 200)
 
 def test_multiple_assignment():
     # Conditional multiple assignment 
     x, y, z, w, u  = 1 if 0 else 2, 2 if 1 else 3, 3 if 10 else 4, 1 & 0 if 0 and 3 or 4 else 100, 1 and 0 if 0 and 3 or 4 & 0 else 100
-    assert(x,y,z,w,u == 2,2,3,0,100)
+    AreEqual((x,y,z,w,u), (2,2,3,0,100))
 
 def test_in_expressions():
     # combination of operators and conditional
@@ -101,6 +101,29 @@ def test_conditional_in_lambda():
         list = [f for f in 1, (lambda x: x if x >= 0 else -1)]
     except e:
         Assert(False, e.msg)
+
+def test_conditional_return_types():
+    '''
+    11491
+    '''
+    class OldK: pass
+    
+    class NewK(object): pass
+    
+    for x in [  
+                -2, -1, 0, 1, 2, 2**16,
+                -2L, -1L, 0L, 1L, 2L, 2**32,
+                3.14,
+                2j,
+                "", "abc",
+                {}, {'a':'b'}, {'a':'b', 'c':'d'},
+                [], [1], [1, 2],
+                xrange(0), xrange(1), xrange(2),
+                OldK, NewK, OldK(), NewK(),
+                None, str, object, 
+                ]:
+        temp = 0 if 0 else x
+        AreEqual(temp, x)
 
 def test_conversions():
     AreEqual(1 if False else "Hello", "Hello")

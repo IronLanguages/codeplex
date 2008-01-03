@@ -13,30 +13,45 @@
  *
  * ***************************************************************************/
 
+using System;
+using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class DebugStatement : Statement {
-        private readonly string /*!*/ _marker;
-
-        internal DebugStatement(string /*!*/ marker)
-            : base(AstNodeType.DebugStatement, SourceSpan.None) {
-            _marker = marker;
-        }
-
-        public string Marker {
-            get { return _marker; }
-        }
-    }
-
     public static partial class Ast {
-        public static DebugStatement DebugMarker(string marker) {
+        public static Statement DebugMarker(string marker) {
             Contract.RequiresNotNull(marker, "marker");
-            return new DebugStatement(marker);
+#if DEBUG
+            return Statement(
+                CallDebugWriteLine(marker)
+            );
+#else
+            return Empty();
+#endif
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "marker")]
         public static Expression DebugMark(Expression expression, string marker) {
-            return Comma(Ast.Void(DebugMarker(marker)), expression);
+            Contract.RequiresNotNull(expression, "expression");
+            Contract.RequiresNotNull(marker, "marker");
+
+#if DEBUG
+            return Comma(
+                CallDebugWriteLine(marker),
+                expression
+            );
+#else
+            return expression;
+#endif
         }
+
+#if DEBUG
+        private static MethodCallExpression CallDebugWriteLine(string marker) {
+            return Call(
+                typeof(Debug).GetMethod("WriteLine", new Type[] { typeof(string) }),
+                Constant(marker)
+            );
+        }
+#endif
     }
 }

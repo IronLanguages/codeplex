@@ -114,18 +114,18 @@ namespace Microsoft.Scripting.Hosting {
             return _manager.GetRegisteredLanguageIdentifiers();
         }
 
-        public ILanguageProvider GetLanguageProvider(string languageId) {
-            return new RemoteLanguageProvider(_manager.GetLanguageProvider(languageId));
+        public IScriptEngine GetEngine(string languageId) {
+            return new RemoteScriptEngine(_manager.GetEngine(languageId));
         }
 
-        public ILanguageProvider GetLanguageProvider(Type type) {
-            return new RemoteLanguageProvider(_manager.GetLanguageProvider(type));
+        public IScriptEngine GetEngineByFileExtension(string extension) {
+            return new RemoteScriptEngine(_manager.GetEngineByFileExtension(extension));
         }
 
-        public ILanguageProvider GetLanguageProviderByFileExtension(string extension) {
-            return new RemoteLanguageProvider(_manager.GetLanguageProviderByFileExtension(extension));
+        public IScriptEngine GetEngine(Type languageContextType) {
+            return new RemoteScriptEngine(_manager.GetEngine(languageContextType));
         }
-        
+
         public void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput) {
             _manager.Environment.RedirectIO(input, output, errorOutput);
         }

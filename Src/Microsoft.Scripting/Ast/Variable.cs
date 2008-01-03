@@ -146,7 +146,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void Allocate(CodeGen cg) {
+        internal void Allocate(Compiler cg) {
             Debug.Assert(cg.Allocator.Block == Block);
 
             switch (_kind) {
@@ -156,7 +156,7 @@ namespace Microsoft.Scripting.Ast {
                         _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
                         if (_defaultValue != null) {
                             Slot slot = CreateSlotForVariable(cg);
-                            Compiler.Emit(cg, _defaultValue);
+                            cg.EmitExpression(_defaultValue);
                             slot.EmitSet(cg);
                         } 
                     } else {
@@ -175,7 +175,7 @@ namespace Microsoft.Scripting.Ast {
                         if (_uninitialized || _defaultValue != null) {
                             // Emit initialization (environments will be initialized all at once)
                             if (_defaultValue != null) {                                
-                                Compiler.Emit(cg, _defaultValue);
+                                cg.EmitExpression(_defaultValue);
                                 slot.EmitSet(cg);
                             } else if (_type == typeof(object)) {
                                 // Only set variables of type object to "Uninitialized"
@@ -213,7 +213,7 @@ namespace Microsoft.Scripting.Ast {
         /// Will allocate the storage in the environment and return slot to access
         /// the variable in the current scope (so that it can be initialized)
         /// </summary>
-        private Slot AllocInEnv(CodeGen cg) {
+        private Slot AllocInEnv(Compiler cg) {
             Debug.Assert(_storage == null);
             Debug.Assert(_block.EnvironmentFactory != null, "Allocating in environment without environment factory.\nIs HasEnvironment set?");
             _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
@@ -226,7 +226,7 @@ namespace Microsoft.Scripting.Ast {
             return slot;
         }
 
-        internal Slot CreateSlot(CodeGen cg) {
+        internal Slot CreateSlot(Compiler cg) {
             switch (_kind) {
                 case VariableKind.Local:
                     if (_storage == null) {
@@ -280,7 +280,7 @@ namespace Microsoft.Scripting.Ast {
             return null;
         }
 
-        private Slot GetArgumentSlot(CodeGen cg) {
+        private Slot GetArgumentSlot(Compiler cg) {
             Slot arg;
             if (_block != null && _block.ParameterArray) {
                 // If not part of parameter array, get the normal parameter slot
@@ -300,7 +300,7 @@ namespace Microsoft.Scripting.Ast {
             return arg;
         }
 
-        private Slot CreateSlotForVariable(CodeGen cg) {
+        private Slot CreateSlotForVariable(Compiler cg) {
             Debug.Assert(_storage != null);
             Slot access = null;
             if (_storage.RequireAccessSlot) {

@@ -32,6 +32,10 @@ namespace Microsoft.Scripting {
 
         public static readonly ContextId Empty = new ContextId();
 
+        internal ContextId(int id) {
+            _id = id;
+        }
+
         /// <summary>
         /// Registers a language within the system with the specified name.
         /// </summary>

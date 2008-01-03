@@ -28,6 +28,7 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.Add:
                 case AstNodeType.And:
                 case AstNodeType.AndAlso:
+                case AstNodeType.ArrayIndex:
                 case AstNodeType.Divide:
                 case AstNodeType.Equal:
                 case AstNodeType.ExclusiveOr:
@@ -72,9 +73,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ArrayIndexAssignment:
                     DefaultWalk((ArrayIndexAssignment)node);
                     break;
-                case AstNodeType.ArrayIndexExpression:
-                    DefaultWalk((ArrayIndexExpression)node);
-                    break;
                 case AstNodeType.BlockStatement:
                     DefaultWalk((BlockStatement)node);
                     break;
@@ -99,6 +97,7 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.CodeContextExpression:
                 case AstNodeType.EnvironmentExpression:
                 case AstNodeType.ParamsExpression:
+                case AstNodeType.GeneratorIntrinsic:
                     DefaultWalk((IntrinsicExpression)node);
                     break;
                 case AstNodeType.CommaExpression:
@@ -106,9 +105,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.ContinueStatement:
                     DefaultWalk((ContinueStatement)node);
-                    break;
-                case AstNodeType.DebugStatement:
-                    DefaultWalk((DebugStatement)node);
                     break;
                 case AstNodeType.DeleteStatement:
                     DefaultWalk((DeleteStatement)node);
@@ -151,9 +147,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.NewArrayExpression:
                     DefaultWalk((NewArrayExpression)node);
-                    break;
-                case AstNodeType.ParenthesizedExpression:
-                    DefaultWalk((ParenthesizedExpression)node);
                     break;
                 case AstNodeType.ReturnStatement:
                     DefaultWalk((ReturnStatement)node);
@@ -204,15 +197,6 @@ namespace Microsoft.Scripting.Ast {
                 WalkNode(node.Array);
                 WalkNode(node.Index);
                 WalkNode(node.Value);
-            }
-            PostWalk(node);
-        }
-
-        // ArrayIndexExpression
-        private void DefaultWalk(ArrayIndexExpression node) {
-            if (Walk(node)) {
-                WalkNode(node.Array);
-                WalkNode(node.Index);
             }
             PostWalk(node);
         }
@@ -348,14 +332,6 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // ParenthesizedExpression
-        private void DefaultWalk(ParenthesizedExpression node) {
-            if (Walk(node)) {
-                WalkNode(node.Expression);
-            }
-            PostWalk(node);
-        }
-
         // TypeBinaryExpression
         private void DefaultWalk(TypeBinaryExpression node) {
             if (Walk(node)) {
@@ -412,12 +388,6 @@ namespace Microsoft.Scripting.Ast {
 
         // ContinueStatement
         private void DefaultWalk(ContinueStatement node) {
-            Walk(node);
-            PostWalk(node);
-        }
-
-        // DebugStatement
-        private void DefaultWalk(DebugStatement node) {
             Walk(node);
             PostWalk(node);
         }

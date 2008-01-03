@@ -38,18 +38,18 @@ namespace Microsoft.Scripting.Hosting {
         private readonly List<string> _ignoredArgs = new List<string>();
         private readonly List<string> _files = new List<string>();
         private string[] _sourceUnitSearchPaths = ArrayUtils.EmptyStrings;
-        private Action _action = Action.None;
-        private ILanguageProvider _languageProvider = null;
+        private Action _action;
         private bool _displayLogo = true;
-        private bool _isMTA = false;
-        private readonly List<string> _environmentVars = new List<string>(); 
+        private bool _isMTA;
+        private readonly List<string> _environmentVars = new List<string>();
+        private IScriptEngine _scriptEngine;
 
         public List<string> IgnoredArgs { get { return _ignoredArgs; } }
         public List<string> Files { get { return _files; } }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
         public string[] SourceUnitSearchPaths { get { return _sourceUnitSearchPaths; } set { _sourceUnitSearchPaths = value; } }
         public Action RunAction { get { return _action; } set { _action = value; } }
-        public ILanguageProvider LanguageProvider { get { return _languageProvider; } set { _languageProvider = value; } }
+        public IScriptEngine ScriptEngine { get { return _scriptEngine; } set { _scriptEngine = value; } }
         public bool DisplayLogo { get { return _displayLogo; } set { _displayLogo = value; } }
         public bool IsMTA { get { return _isMTA; } set { _isMTA = value; } }
         public List<string> EnvironmentVars { get { return _environmentVars; } }
@@ -117,7 +117,7 @@ namespace Microsoft.Scripting.Hosting {
                     
                     case "lang":
                         OptionValueRequired(name, value);
-                        _options.LanguageProvider = GetLanguageProvider(value);
+                        _options.ScriptEngine = GetScriptEngine(value);
                         break;
 
                     case "path":
@@ -176,8 +176,8 @@ namespace Microsoft.Scripting.Hosting {
                     if (_options.Files.Count == 0)
                         throw new InvalidOptionException("No file to run.");
 
-                    if (_options.LanguageProvider == null)
-                        _options.LanguageProvider = GetLanguageProvider(StringUtils.GetSuffix(_options.Files[0], '.', false));
+                    if (_options.ScriptEngine == null)
+                        _options.ScriptEngine = GetScriptEngine(StringUtils.GetSuffix(_options.Files[0], '.', false));
 
                     break;
 
@@ -185,8 +185,8 @@ namespace Microsoft.Scripting.Hosting {
                     break;
 
                 case ConsoleHostOptions.Action.RunConsole:
-                    if (_options.LanguageProvider == null)
-                        _options.LanguageProvider = GetLanguageProvider("py");
+                    if (_options.ScriptEngine == null)
+                        _options.ScriptEngine = GetScriptEngine("py");
                     break;
 
                 case ConsoleHostOptions.Action.None:
@@ -236,11 +236,11 @@ namespace Microsoft.Scripting.Hosting {
             throw new InvalidOptionException(String.Format("Option '{0}' is not available on Silverlight.", optionName));
         }
 
-        private static LanguageProvider GetLanguageProvider(string languageId) {
+        private static IScriptEngine GetScriptEngine(string languageId) {
             Debug.Assert(languageId != null);
 
             try {
-                return ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId);
+                return ScriptDomainManager.CurrentManager.GetEngine(languageId);
             } catch (Exception e) {
                 throw new InvalidOperationException(String.Format("Cannot create language provider corresponding to the language id '{0}'.", languageId), e);
             }

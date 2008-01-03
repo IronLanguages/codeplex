@@ -13,19 +13,13 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting.Ast;
-using System.Globalization;
-
-using System.Collections.Generic;
-using System.Diagnostics;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
 
     /// <summary>
-    /// Represents the context that is flowed for doing CodeGen.  Languages can derive
+    /// Represents the context that is flowed for doing Compiler.  Languages can derive
     /// from this class to provide additional contextual information.
     /// </summary>
     public sealed class CompilerContext {
@@ -85,8 +79,8 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _sourceUnit = sourceUnit;
-            _options = options ?? sourceUnit.Engine.GetDefaultCompilerOptions();
-            _errors = errorSink ?? sourceUnit.Engine.GetCompilerErrorSink();
+            _options = options ?? sourceUnit.LanguageContext.GetDefaultCompilerOptions();
+            _errors = errorSink ?? sourceUnit.LanguageContext.GetCompilerErrorSink();
             _parserSink = parserSink ?? ParserSink.Null;
         }
 

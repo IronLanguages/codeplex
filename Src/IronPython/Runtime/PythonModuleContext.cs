@@ -56,5 +56,9 @@ namespace IronPython.Runtime {
             base.ModuleReloading();
             _trueDivision = false;
         }
+
+        internal PythonModuleContext Clone() {
+            return (PythonModuleContext)this.MemberwiseClone();
+        }
     }
 }

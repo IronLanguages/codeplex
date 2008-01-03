@@ -26,6 +26,7 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
+        public static object GeneratorExit = ExceptionConverter.GetPythonException("GeneratorExit");
         public static object ValueError = ExceptionConverter.GetPythonException("ValueError");
         public static object ImportError = ExceptionConverter.GetPythonException("ImportError");
         public static object RuntimeError = ExceptionConverter.GetPythonException("RuntimeError");

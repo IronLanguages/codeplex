@@ -22,6 +22,7 @@ namespace IronPython.Hosting {
 
         private bool _ignoreEnvironmentVariables;
         private bool _skipImportSite;
+        private bool _skipFistSourceLine;
         private string _runAsModule;
 
         public bool IgnoreEnvironmentVariables {
@@ -38,6 +39,19 @@ namespace IronPython.Hosting {
             get { return _runAsModule; }
             set { _runAsModule = value; }
         }
+
+        /// <summary>
+        /// Skip the first line of the code to execute. This is useful for executing Unix scripts which
+        /// have the command to execute specified in the first line.
+        /// This only apply to the script code executed by the ScriptEngine APIs, but not for other script code 
+        /// that happens to get called as a result of the execution.
+        /// </summary>
+        public bool SkipFirstSourceLine {
+            get { return _skipFistSourceLine; }
+            set { _skipFistSourceLine = value; }
+        }
+
+
     }
 }
 

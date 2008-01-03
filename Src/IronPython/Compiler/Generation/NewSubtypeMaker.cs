@@ -15,11 +15,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
@@ -27,6 +23,8 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Generation {
+    using Compiler = Microsoft.Scripting.Ast.Compiler;
+
     /// <summary>
     /// Creates sub-types of new-types.  Sub-types of new types are created when
     /// the new-type is created with slots, and therefore has a concrete object
@@ -63,7 +61,7 @@ namespace IronPython.Compiler.Generation {
             if (NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
-                CodeGen cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_Dict"));
+                Compiler cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_Dict"));
                 _dictField.EmitGet(cg);
                 cg.EmitReturn();
                 cg.Finish();

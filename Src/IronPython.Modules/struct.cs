@@ -24,7 +24,6 @@ using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("struct", typeof(IronPython.Modules.PythonStruct))]
 namespace IronPython.Modules {
-    [PythonType("struct")]
     public static class PythonStruct {
 
         #region Public API Surface

@@ -75,8 +75,8 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Source Units
 
-        public SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
-            return _host.TryGetSourceFileUnit(engine, path, encoding);
+        public SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
+            return _host.TryGetSourceFileUnit(engine, path, encoding, kind);
         }
 
         public SourceUnit ResolveSourceFileUnit(string name) {
@@ -99,12 +99,12 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Environment Variables
 
-        public bool TrySetVariable(IScriptEngine engine, SymbolId name, object value) {
-            return _host.TrySetVariable(engine, name, value);
+        public bool TrySetVariable(SymbolId name, object value) {
+            return _host.TrySetVariable(name, value);
         }
 
-        public bool TryGetVariable(IScriptEngine engine, SymbolId name, out object value) {
-            return _host.TryGetVariable(engine, name, out value);
+        public bool TryGetVariable(SymbolId name, out object value) {
+            return _host.TryGetVariable(name, out value);
         }
 
         #endregion

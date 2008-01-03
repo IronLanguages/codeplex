@@ -290,15 +290,10 @@ if is_cli:
             try:
                 nd = newDict()
             except TypeError, e:
-                
-                # bug 1137: we currently cannot derive from NamespaceDictionary but should be able to
-                #if sys.platform == 'cli':
-                #	import clr
-                #	if clr.GetClrType(dictType).ToString() == 'IronPython.Runtime.Types.NamespaceDictionary':
-                #		Fail("Error! Threw TypeError when creating newDict deriving from NamespaceDictionary")
-                
-                # can't construct an instance of this dictionary
-                pass
+                if sys.platform == 'cli':
+                    import clr
+                    if clr.GetClrType(dictType).ToString() == 'IronPython.Runtime.Types.NamespaceDictionary':
+                        Fail("Error! Threw TypeError when creating newDict deriving from NamespaceDictionary")
             else:
                 AreEqual(eval('abc', {}, nd), 'def')
         
@@ -736,9 +731,7 @@ def test_module_dict():
     AreEqual(operator.isMappingType(moduleDict), True)
     AreEqual(moduleDict.__contains__("test_module_dict"), True)
     AreEqual(moduleDict["test_module_dict"], test_module_dict)
-    # !!! 
-    if not is_cli:
-        AreEqual(moduleDict.keys().__contains__("test_module_dict"), True)
+    AreEqual(moduleDict.keys().__contains__("test_module_dict"), True)
 
 def test_eval_locals_simple():
     class Locals(dict):
@@ -834,9 +827,51 @@ def test_main_dict():
         AreEqual(t_list, g_list)
     
 
+@disabled("CodePlex 3117")
 def test_update():
-    x = {}
-    x.update(k='v')
-    AreEqual(x, {'k':'v'})
+    test_cases = (
+        #N changes with an empty dict
+        ({}, (), {}, {}),
+        ({}, ({'k':'v'},), {}, {'k':'v'}),
+        ({}, (), {'k':'v'}, {'k':'v'}),
+        ({}, ({'k':'v', 'x':'y'},), {}, {'k':'v', 'x':'y'}),
+        ({}, (), {'k':'v', 'x':'y'}, {'k':'v', 'x':'y'}),
+        ({}, ({'k':'v'},), {'x':'y'}, {'k':'v', 'x':'y'}),
+
+        #N changes with one pre-existing dict element    
+        ({'a':'b'}, (), {}, {'a':'b'}),            
+        ({'a':'b'}, ({'k':'v'},), {}, {'a':'b', 'k':'v'}),
+        ({'a':'b'}, (), {'k':'v'}, {'a':'b', 'k':'v'}),
+        ({'a':'b'}, ({'k':'v', 'x':'y'},), {}, {'a':'b', 'k':'v', 'x':'y'}),
+        ({'a':'b'}, (), {'k':'v', 'x':'y'}, {'a':'b', 'k':'v', 'x':'y'}),
+        ({'a':'b'}, ({'k':'v'},), {'x':'y'}, {'a':'b', 'k':'v', 'x':'y'}),
+    
+        #N changes with one pre-existing dict element    
+        ({'a':'b', 'c':'d'}, (), {}, {'a':'b', 'c':'d'}),            
+        ({'a':'b', 'c':'d'}, ({'k':'v'},), {}, {'a':'b', 'c':'d', 'k':'v'}),
+        ({'a':'b', 'c':'d'}, (), {'k':'v'}, {'a':'b', 'c':'d', 'k':'v'}),
+        ({'a':'b', 'c':'d'}, ({'k':'v', 'x':'y'},), {}, {'a':'b', 'c':'d', 'k':'v', 'x':'y'}),
+        ({'a':'b', 'c':'d'}, (), {'k':'v', 'x':'y'}, {'a':'b', 'c':'d', 'k':'v', 'x':'y'}),
+        ({'a':'b', 'c':'d'}, ({'k':'v'},), {'x':'y'}, {'a':'b', 'c':'d', 'k':'v', 'x':'y'}),
+    )
+    
+    for start_dict, dict_param, kw_params, expected in test_cases:
+        try:
+            start_dict.update(*dict_param, **kw_params)
+        except Exception, e:
+            print "ERROR:", start_dict, ".update(*", dict_param, ", **", kw_params, ") failed!"
+            raise e
+        
+        AreEqual(start_dict, expected)
+        
+def test_keys_not_as_property():
+    def f():
+        mapping = { 10: 10}
+        for k in mapping.keys: pass
+
+    AssertErrorWithMessages(TypeError, 
+            "iteration over non-sequence of type <type 'builtin_function_or_method'>", 
+            "'builtin_function_or_method' object is not iterable",
+            f)
 
 run_test(__name__)

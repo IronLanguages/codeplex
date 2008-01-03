@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public sealed class ReturnFixer {
@@ -29,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
             this._argSlot = argSlot;
         }
 
-        public static ReturnFixer EmitArgument(CodeGen cg, Slot argSlot) {
+        public static ReturnFixer EmitArgument(Compiler cg, Slot argSlot) {
             argSlot.EmitGet(cg);
             if (argSlot.Type.IsByRef) {
                 Type elementType = argSlot.Type.GetElementType();
@@ -46,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public void FixReturn(CodeGen cg) {
+        public void FixReturn(Compiler cg) {
             _argSlot.EmitGet(cg);
             _refSlot.EmitGet(cg);
             cg.EmitCall(typeof(BinderOps).GetMethod("GetBox").MakeGenericMethod(_argSlot.Type.GetElementType()));

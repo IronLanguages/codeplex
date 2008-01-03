@@ -198,5 +198,19 @@ def test_type_causing_load_exception():
     AreEqual(PossibleLoadException.C.F, 30)
     AreEqual(B, 10)
 
+def test_digits_in_ns8074():
+    import NSWithDigitsCase1
+    AreEqual(str(NSWithDigitsCase1.Z), "<type 'Z'>")
+    AreEqual(NSWithDigitsCase1.Z.A, 10)
+    AreEqual(str(NSWithDigitsCase1.Z0), "<type 'Z0'>")
+    AreEqual(NSWithDigitsCase1.Z0.A, 0)
+    
+    import NSWithDigits.Case2
+    AreEqual(str(NSWithDigits.Case2.Z), "<type 'Z'>")
+    AreEqual(NSWithDigits.Case2.Z.A, 10)
+    AreEqual(str(NSWithDigits.Case2.Z0), "<type 'Z0'>")
+    AreEqual(NSWithDigits.Case2.Z0.A, 0)
+    
+    
 run_test(__name__)    
 

@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
     // TODO: Make internal, don't allow direct callers
     public partial class Compiler {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private void EmitStatement(Statement node) {
+        public void EmitStatement(Statement node) {
             Debug.Assert(node != null);
 
             switch (node.NodeType) {
@@ -38,10 +38,6 @@ namespace Microsoft.Scripting.Ast {
 
                 case AstNodeType.ContinueStatement:
                     Emit((ContinueStatement)node);
-                    break;
-
-                case AstNodeType.DebugStatement:
-                    Emit((DebugStatement)node);
                     break;
 
                 case AstNodeType.DeleteStatement:
@@ -102,7 +98,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(BlockStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
 
             foreach (Statement stmt in node.Statements) {
                 EmitStatement(stmt);
@@ -110,93 +106,88 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(BreakStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
 
             if (node.Statement != null) {
-                _cg.CheckAndPushTargets(node.Statement);
+                CheckAndPushTargets(node.Statement);
             }
 
-            _cg.EmitBreak();
+            EmitBreak();
 
             if (node.Statement != null) {
-                _cg.PopTargets();
+                PopTargets();
             }
         }
 
         private void Emit(ContinueStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
 
             if (node.Statement != null) {
-                _cg.CheckAndPushTargets(node.Statement);
+                CheckAndPushTargets(node.Statement);
             }
 
-            _cg.EmitContinue();
+            EmitContinue();
 
             if (node.Statement != null) {
-                _cg.PopTargets();
+                PopTargets();
             }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "node")]
-        private void Emit(DebugStatement node) {
-            _cg.EmitDebugMarker(node.Marker);
         }
 
         private void Emit(DeleteStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
-            node.Ref.Slot.EmitDelete(_cg, node.Variable.Name, !node.IsDefined);
+            EmitPosition(node.Start, node.End);
+            node.Ref.Slot.EmitDelete(this, node.Variable.Name, !node.IsDefined);
         }
 
         private void Emit(DoStatement node) {
-            Label startTarget = _cg.DefineLabel();
-            Label breakTarget = _cg.DefineLabel();
-            Label continueTarget = _cg.DefineLabel();
+            Label startTarget = DefineLabel();
+            Label breakTarget = DefineLabel();
+            Label continueTarget = DefineLabel();
 
-            _cg.MarkLabel(startTarget);
-            _cg.PushTargets(breakTarget, continueTarget, node);
+            MarkLabel(startTarget);
+            PushTargets(breakTarget, continueTarget, node);
 
             EmitStatement(node.Body);
 
-            _cg.MarkLabel(continueTarget);
+            MarkLabel(continueTarget);
             // TODO: Check if we need to emit position somewhere else also.
-            _cg.EmitPosition(node.Start, node.Header);
+            EmitPosition(node.Start, node.Header);
 
             EmitExpression(node.Test);
 
-            _cg.Emit(OpCodes.Brtrue, startTarget);
+            Emit(OpCodes.Brtrue, startTarget);
 
-            _cg.PopTargets();
-            _cg.MarkLabel(breakTarget);
+            PopTargets();
+            MarkLabel(breakTarget);
         }
 
         private void Emit(EmptyStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
         }
 
         private void Emit(ExpressionStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
             EmitExpressionAndPop(node.Expression);
         }
 
         private void Emit(IfStatement node) {
-            Label eoi = _cg.DefineLabel();
+            Label eoi = DefineLabel();
             foreach (IfStatementTest t in node.Tests) {
-                Label next = _cg.DefineLabel();
-                _cg.EmitPosition(t.Start, t.Header);
+                Label next = DefineLabel();
+                EmitPosition(t.Start, t.Header);
 
                 EmitBranchFalse(t.Test, next);
 
                 EmitStatement(t.Body);
 
                 // optimize no else case                
-                _cg.EmitSequencePointNone();     // hide compiler generated branch.
-                _cg.Emit(OpCodes.Br, eoi);
-                _cg.MarkLabel(next);
+                EmitSequencePointNone();     // hide compiler generated branch.
+                Emit(OpCodes.Br, eoi);
+                MarkLabel(next);
             }
             if (node.ElseStatement != null) {
                 EmitStatement(node.ElseStatement);
             }
-            _cg.MarkLabel(eoi);
+            MarkLabel(eoi);
         }
 
         private void Emit(LabeledStatement node) {
@@ -205,97 +196,97 @@ namespace Microsoft.Scripting.Ast {
                 throw new InvalidOperationException("Incomplete LabelStatement");
             }
 
-            Label label = _cg.DefineLabel();
-            _cg.PushTargets(label, label, node);
+            Label label = DefineLabel();
+            PushTargets(label, label, node);
 
             EmitStatement(node.Statement);
 
-            _cg.MarkLabel(label);
-            _cg.PopTargets();
+            MarkLabel(label);
+            PopTargets();
         }
 
         private void Emit(LoopStatement node) {
             Nullable<Label> firstTime = null;
-            Label eol = _cg.DefineLabel();
-            Label breakTarget = _cg.DefineLabel();
-            Label continueTarget = _cg.DefineLabel();
+            Label eol = DefineLabel();
+            Label breakTarget = DefineLabel();
+            Label continueTarget = DefineLabel();
 
             if (node.Increment != null) {
-                firstTime = _cg.DefineLabel();
-                _cg.Emit(OpCodes.Br, firstTime.Value);
+                firstTime = DefineLabel();
+                Emit(OpCodes.Br, firstTime.Value);
             }
 
             if (node.Header.IsValid) {
-                _cg.EmitPosition(node.Start, node.Header);
+                EmitPosition(node.Start, node.Header);
             }
-            _cg.MarkLabel(continueTarget);
+            MarkLabel(continueTarget);
 
             if (node.Increment != null) {
                 EmitExpressionAndPop(node.Increment);
-                _cg.MarkLabel(firstTime.Value);
+                MarkLabel(firstTime.Value);
             }
 
             if (node.Test != null) {
                 EmitExpression(node.Test);
-                _cg.Emit(OpCodes.Brfalse, eol);
+                Emit(OpCodes.Brfalse, eol);
             }
 
-            _cg.PushTargets(breakTarget, continueTarget, node);
+            PushTargets(breakTarget, continueTarget, node);
 
             EmitStatement(node.Body);
 
-            _cg.Emit(OpCodes.Br, continueTarget);
+            Emit(OpCodes.Br, continueTarget);
 
-            _cg.PopTargets();
+            PopTargets();
 
-            _cg.MarkLabel(eol);
+            MarkLabel(eol);
             if (node.ElseStatement != null) {
                 EmitStatement(node.ElseStatement);
             }
-            _cg.MarkLabel(breakTarget);
+            MarkLabel(breakTarget);
         }
 
         private void Emit(ReturnStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
-            _cg.EmitReturn(node.Expression);
+            EmitPosition(node.Start, node.End);
+            EmitReturn(node.Expression);
         }
 
         private void Emit(ScopeStatement node) {
-            Slot tempContext = _cg.ContextSlot;
-            Slot newContext = _cg.GetLocalTmp(typeof(CodeContext));
+            Slot tempContext = ContextSlot;
+            Slot newContext = GetLocalTmp(typeof(CodeContext));
 
             // TODO: should work with LocalScope
             if (node.Scope != null) {
                 EmitExpression(node.Scope);  //Locals dictionary
-                _cg.EmitCodeContext();       //CodeContext
-                _cg.EmitBoolean(true);       //Visible = true
-                _cg.EmitCall(typeof(RuntimeHelpers), "CreateNestedCodeContext");
+                EmitCodeContext();       //CodeContext
+                EmitBoolean(true);       //Visible = true
+                EmitCall(typeof(RuntimeHelpers), "CreateNestedCodeContext");
             } else {
-                _cg.EmitCodeContext();
-                _cg.EmitCall(typeof(RuntimeHelpers), "CreateCodeContext");
+                EmitCodeContext();
+                EmitCall(typeof(RuntimeHelpers), "CreateCodeContext");
             }
 
-            newContext.EmitSet(_cg);
+            newContext.EmitSet(this);
 
-            _cg.ContextSlot = newContext;
+            ContextSlot = newContext;
 
             EmitStatement(node.Body);
 
-            _cg.ContextSlot = tempContext;
+            ContextSlot = tempContext;
         }
 
         #region SwitchStatement
 
         private void Emit(SwitchStatement node) {
-            _cg.EmitPosition(node.Start, node.Header);
+            EmitPosition(node.Start, node.Header);
 
-            Label breakTarget = _cg.DefineLabel();
+            Label breakTarget = DefineLabel();
             Label defaultTarget = breakTarget;
             Label[] labels = new Label[node.Cases.Count];
 
             // Create all labels
             for (int i = 0; i < node.Cases.Count; i++) {
-                labels[i] = _cg.DefineLabel();
+                labels[i] = DefineLabel();
 
                 // Default case.
                 if (node.Cases[i].IsDefault) {
@@ -315,20 +306,20 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // If "default" present, execute default code, else exit the switch            
-            _cg.Emit(OpCodes.Br, defaultTarget);
+            Emit(OpCodes.Br, defaultTarget);
 
-            _cg.PushTargets(breakTarget, _cg.BlockContinueLabel, node);
+            PushTargets(breakTarget, BlockContinueLabel, node);
 
             // Emit the bodies
             for (int i = 0; i < node.Cases.Count; i++) {
                 // First put the corresponding labels
-                _cg.MarkLabel(labels[i]);
+                MarkLabel(labels[i]);
                 // And then emit the Body!!
                 EmitStatement(node.Cases[i].Body);
             }
 
-            _cg.PopTargets();
-            _cg.MarkLabel(breakTarget);
+            PopTargets();
+            MarkLabel(breakTarget);
         }
 
         private const int MaxJumpTableSize = 65536;
@@ -336,17 +327,17 @@ namespace Microsoft.Scripting.Ast {
 
         // Emits the switch as if stmts
         private void EmitConditionalBranches(SwitchStatement node, Label[] labels) {
-            Slot testValueSlot = _cg.GetNamedLocal(typeof(int), "switchTestValue");
-            testValueSlot.EmitSet(_cg);
+            Slot testValueSlot = GetNamedLocal(typeof(int), "switchTestValue");
+            testValueSlot.EmitSet(this);
 
             // For all the "cases" create their conditional branches
             for (int i = 0; i < node.Cases.Count; i++) {
                 // Not default case emit the condition
                 if (!node.Cases[i].IsDefault) {
                     // Test for equality of case value and the test expression
-                    _cg.EmitInt(node.Cases[i].Value);
-                    testValueSlot.EmitGet(_cg);
-                    _cg.Emit(OpCodes.Beq, labels[i]);
+                    EmitInt(node.Cases[i].Value);
+                    testValueSlot.EmitGet(this);
+                    Emit(OpCodes.Beq, labels[i]);
                 }
             }
         }
@@ -399,22 +390,22 @@ namespace Microsoft.Scripting.Ast {
 
             // Emit the normalized index and then switch based on that
             if (min != 0) {
-                _cg.EmitInt(min);
-                _cg.Emit(OpCodes.Sub);
+                EmitInt(min);
+                Emit(OpCodes.Sub);
             }
-            _cg.Emit(OpCodes.Switch, jmpLabels);
+            Emit(OpCodes.Switch, jmpLabels);
             return true;
         }
 
         #endregion
 
         private void Emit(ThrowStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
+            EmitPosition(node.Start, node.End);
             if (node.Value == null) {
-                _cg.Emit(OpCodes.Rethrow);
+                Emit(OpCodes.Rethrow);
             } else {
                 EmitExpression(node.Value);
-                _cg.Emit(OpCodes.Throw);
+                Emit(OpCodes.Throw);
             }
         }
 
@@ -425,7 +416,7 @@ namespace Microsoft.Scripting.Ast {
             // (break/continue) or return/yield statement in finally clause
             TryFlowResult flow = TryFlowAnalyzer.Analyze(node.FinallyStatement);
 
-            _cg.EmitPosition(node.Start, node.Header);
+            EmitPosition(node.Start, node.Header);
 
             // If there's a yield anywhere, go for a complex codegen
             if (YieldInBlock(node.TryYields) || node.YieldInCatch || YieldInBlock(node.FinallyYields)) {
@@ -446,16 +437,16 @@ namespace Microsoft.Scripting.Ast {
             Slot flowControlFlag = null;
 
             if (flow.Any) {
-                flowControlFlag = _cg.GetLocalTmp(typeof(int));
-                _cg.EmitInt(CodeGen.FinallyExitsNormally);
-                flowControlFlag.EmitSet(_cg);
+                flowControlFlag = GetLocalTmp(typeof(int));
+                EmitInt(Compiler.FinallyExitsNormally);
+                flowControlFlag.EmitSet(this);
             }
 
             Slot exception = null;
             if (node.FinallyStatement != null) {
-                exception = _cg.GetTemporarySlot(typeof(Exception));
-                _cg.EmitNull();
-                exception.EmitSet(_cg);
+                exception = GetTemporarySlot(typeof(Exception));
+                EmitNull();
+                exception.EmitSet(this);
             }
 
             //******************************************************************
@@ -463,7 +454,7 @@ namespace Microsoft.Scripting.Ast {
             //******************************************************************
 
             if (node.Target != null) {
-                _cg.MarkLabel(node.Target.EnsureLabel(_cg));
+                MarkLabel(node.Target.EnsureLabel(this));
             }
 
             //******************************************************************
@@ -472,23 +463,23 @@ namespace Microsoft.Scripting.Ast {
             //******************************************************************
             Label endFinallyBlock = new Label();
             if (node.FinallyStatement != null) {
-                _cg.PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                _cg.BeginExceptionBlock();
-                endFinallyBlock = _cg.DefineLabel();
+                PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
+                BeginExceptionBlock();
+                endFinallyBlock = DefineLabel();
 
                 //**************************************************************
                 // If there is a yield in any catch, that catch will be hoisted
                 // and we need to dispatch to it from here
                 //**************************************************************
                 if (node.YieldInCatch) {
-                    EmitYieldDispatch(node.CatchYields, _cg);
+                    EmitYieldDispatch(node.CatchYields);
                 }
 
                 if (YieldInBlock(node.FinallyYields)) {
                     foreach (YieldTarget yt in node.FinallyYields) {
-                        _cg.GotoRouter.EmitGet(_cg);
-                        _cg.EmitInt(yt.Index);
-                        _cg.Emit(OpCodes.Beq, endFinallyBlock);
+                        GotoRouter.EmitGet(this);
+                        EmitInt(yt.Index);
+                        Emit(OpCodes.Beq, endFinallyBlock);
                     }
                 }
             }
@@ -499,8 +490,8 @@ namespace Microsoft.Scripting.Ast {
 
             Label endCatchBlock = new Label();
             if (HaveHandlers(node)) {
-                _cg.PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                endCatchBlock = _cg.BeginExceptionBlock();
+                PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
+                endCatchBlock = BeginExceptionBlock();
             }
 
             //******************************************************************
@@ -508,11 +499,11 @@ namespace Microsoft.Scripting.Ast {
             //******************************************************************
 
             // First, emit the dispatch within the try block
-            EmitYieldDispatch(node.TryYields, _cg);
+            EmitYieldDispatch(node.TryYields);
 
             // Then, emit the actual body
             EmitStatement(node.Body);
-            _cg.EmitSequencePointNone();
+            EmitSequencePointNone();
 
             //******************************************************************
             // Emit the catch blocks
@@ -520,46 +511,46 @@ namespace Microsoft.Scripting.Ast {
 
             if (HaveHandlers(node)) {
                 List<CatchRecord> catches = new List<CatchRecord>();
-                _cg.PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
+                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
 
                 foreach (CatchBlock cb in node.Handlers) {
-                    _cg.BeginCatchBlock(cb.Test);
+                    BeginCatchBlock(cb.Test);
 
                     if (cb.Yield) {
                         // The catch block body contains yield, therefore
                         // delay the body emit till after the try block.
-                        Slot slot = _cg.GetLocalTmp(cb.Test);
-                        slot.EmitSet(_cg);
+                        Slot slot = GetLocalTmp(cb.Test);
+                        slot.EmitSet(this);
                         catches.Add(new CatchRecord(slot, cb));
                     } else {
                         // Save the exception (if the catch block asked for it) or pop
-                        EmitSaveExceptionOrPop(_cg, cb);
+                        EmitSaveExceptionOrPop(cb);
                         // Emit the body right now, since it doesn't contain yield
                         EmitStatement(cb.Body);
                     }
                 }
 
-                _cg.PopTargets(TargetBlockType.Catch);
-                _cg.EndExceptionBlock();
-                _cg.PopTargets(TargetBlockType.Try);
+                PopTargets(TargetBlockType.Catch);
+                EndExceptionBlock();
+                PopTargets(TargetBlockType.Try);
 
                 //******************************************************************
                 // Emit the postponed catch block bodies (with yield in them)
                 //******************************************************************
                 foreach (CatchRecord cr in catches) {
-                    Label next = _cg.DefineLabel();
-                    cr.Slot.EmitGet(_cg);
-                    _cg.EmitNull();
-                    _cg.Emit(OpCodes.Beq, next);
+                    Label next = DefineLabel();
+                    cr.Slot.EmitGet(this);
+                    EmitNull();
+                    Emit(OpCodes.Beq, next);
 
                     if (cr.Block.Slot != null) {
-                        cr.Block.Slot.EmitSet(_cg, cr.Slot);
+                        cr.Block.Slot.EmitSet(this, cr.Slot);
                     }
 
-                    _cg.FreeLocalTmp(cr.Slot);
+                    FreeLocalTmp(cr.Slot);
                     EmitStatement(cr.Block.Body);
-                    _cg.MarkLabel(next);
-                    _cg.EmitSequencePointNone();
+                    MarkLabel(next);
+                    EmitSequencePointNone();
                 }
             }
 
@@ -568,24 +559,24 @@ namespace Microsoft.Scripting.Ast {
             //******************************************************************
 
             if (node.FinallyStatement != null) {
-                _cg.MarkLabel(endFinallyBlock);
-                _cg.PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
-                _cg.BeginCatchBlock(typeof(Exception));
-                exception.EmitSet(_cg);
+                MarkLabel(endFinallyBlock);
+                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
+                BeginCatchBlock(typeof(Exception));
+                exception.EmitSet(this);
 
-                _cg.PopTargets(TargetBlockType.Catch);
+                PopTargets(TargetBlockType.Catch);
 
-                _cg.PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
-                _cg.BeginFinallyBlock();
+                PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
+                BeginFinallyBlock();
 
-                Label noExit = _cg.DefineLabel();
-                _cg.GotoRouter.EmitGet(_cg);
-                _cg.EmitInt(CodeGen.GotoRouterYielding);
-                _cg.Emit(OpCodes.Bne_Un_S, noExit);
-                _cg.Emit(OpCodes.Endfinally);
-                _cg.MarkLabel(noExit);
+                Label noExit = DefineLabel();
+                GotoRouter.EmitGet(this);
+                EmitInt(Compiler.GotoRouterYielding);
+                Emit(OpCodes.Bne_Un_S, noExit);
+                Emit(OpCodes.Endfinally);
+                MarkLabel(noExit);
 
-                EmitYieldDispatch(node.FinallyYields, _cg);
+                EmitYieldDispatch(node.FinallyYields);
 
                 // Emit the finally body
 
@@ -593,25 +584,25 @@ namespace Microsoft.Scripting.Ast {
 
                 // Rethrow the exception, if any
 
-                Label noThrow = _cg.DefineLabel();
-                exception.EmitGet(_cg);
-                _cg.EmitNull();
-                _cg.Emit(OpCodes.Beq, noThrow);
-                exception.EmitGet(_cg);
-                _cg.Emit(OpCodes.Throw);
-                _cg.MarkLabel(noThrow);
-                _cg.FreeLocalTmp(exception);
+                Label noThrow = DefineLabel();
+                exception.EmitGet(this);
+                EmitNull();
+                Emit(OpCodes.Beq, noThrow);
+                exception.EmitGet(this);
+                Emit(OpCodes.Throw);
+                MarkLabel(noThrow);
+                FreeLocalTmp(exception);
 
-                _cg.EndExceptionBlock();
-                _cg.PopTargets(TargetBlockType.Finally);
-                _cg.PopTargets(TargetBlockType.Try);
+                EndExceptionBlock();
+                PopTargets(TargetBlockType.Finally);
+                PopTargets(TargetBlockType.Try);
 
                 //
                 // Emit the flow control for finally, if there was any.
                 //
-                EmitFinallyFlowControl(_cg, flow, flowControlFlag);
+                EmitFinallyFlowControl(flow, flowControlFlag);
 
-                _cg.EmitSequencePointNone();
+                EmitSequencePointNone();
             }
 
             // Clear the target labels
@@ -637,27 +628,27 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static void EmitSaveExceptionOrPop(CodeGen cg, CatchBlock cb) {
+        private void EmitSaveExceptionOrPop(CatchBlock cb) {
             if (cb.Variable != null) {
                 Debug.Assert(cb.Slot != null);
                 // If the variable is present, store the exception
                 // in the variable.
-                cb.Slot.EmitSet(cg);
+                cb.Slot.EmitSet(this);
             } else {
                 // Otherwise, pop it off the stack.
-                cg.Emit(OpCodes.Pop);
+                Emit(OpCodes.Pop);
             }
         }
 
-        private static void EmitYieldDispatch(List<YieldTarget> targets, CodeGen _cg) {
+        private void EmitYieldDispatch(List<YieldTarget> targets) {
             if (YieldInBlock(targets)) {
-                Debug.Assert(_cg.GotoRouter != null);
+                Debug.Assert(GotoRouter != null);
 
                 // TODO: Emit as switch!
                 foreach (YieldTarget yt in targets) {
-                    _cg.GotoRouter.EmitGet(_cg);
-                    _cg.EmitInt(yt.Index);
-                    _cg.Emit(OpCodes.Beq, yt.EnsureLabel(_cg));
+                    GotoRouter.EmitGet(this);
+                    EmitInt(yt.Index);
+                    Emit(OpCodes.Beq, yt.EnsureLabel(this));
                 }
             }
         }
@@ -666,50 +657,50 @@ namespace Microsoft.Scripting.Ast {
         /// If the finally statement contains break, continue, return or yield, we need to
         /// handle the control flow statement after we exit out of finally via OpCodes.Endfinally.
         /// </summary>
-        private static void EmitFinallyFlowControl(CodeGen cg, TryFlowResult flow, Slot flag) {
+        private void EmitFinallyFlowControl(TryFlowResult flow, Slot flag) {
             if (flow.Return || flow.Yield) {
                 Debug.Assert(flag != null);
 
-                Label noReturn = cg.DefineLabel();
+                Label noReturn = DefineLabel();
 
-                flag.EmitGet(cg);
-                cg.EmitInt(CodeGen.BranchForReturn);
-                cg.Emit(OpCodes.Bne_Un, noReturn);
+                flag.EmitGet(this);
+                EmitInt(Compiler.BranchForReturn);
+                Emit(OpCodes.Bne_Un, noReturn);
 
-                if (cg.IsGenerator) {
+                if (IsGenerator) {
                     // return true from the generator method
-                    cg.Emit(OpCodes.Ldc_I4_1);
-                    cg.EmitReturn();
+                    Emit(OpCodes.Ldc_I4_1);
+                    EmitReturn();
                 } else if (flow.Any) {
                     // return the actual value
-                    cg.EmitReturnValue();
-                    cg.EmitReturn();
+                    EmitReturnValue();
+                    EmitReturn();
                 }
-                cg.MarkLabel(noReturn);
+                MarkLabel(noReturn);
             }
 
             // Only emit break handling if it is actually needed
             if (flow.Break) {
                 Debug.Assert(flag != null);
 
-                Label noReturn = cg.DefineLabel();
-                flag.EmitGet(cg);
-                cg.EmitInt(CodeGen.BranchForBreak);
-                cg.Emit(OpCodes.Bne_Un, noReturn);
-                cg.EmitBreak();
-                cg.MarkLabel(noReturn);
+                Label noReturn = DefineLabel();
+                flag.EmitGet(this);
+                EmitInt(Compiler.BranchForBreak);
+                Emit(OpCodes.Bne_Un, noReturn);
+                EmitBreak();
+                MarkLabel(noReturn);
             }
 
             // Only emit continue handling if it if actually needed
             if (flow.Continue) {
                 Debug.Assert(flag != null);
 
-                Label noReturn = cg.DefineLabel();
-                flag.EmitGet(cg);
-                cg.EmitInt(CodeGen.BranchForContinue);
-                cg.Emit(OpCodes.Bne_Un, noReturn);
-                cg.EmitContinue();
-                cg.MarkLabel(noReturn);
+                Label noReturn = DefineLabel();
+                flag.EmitGet(this);
+                EmitInt(Compiler.BranchForContinue);
+                Emit(OpCodes.Bne_Un, noReturn);
+                EmitContinue();
+                MarkLabel(noReturn);
             }
         }
 
@@ -721,9 +712,9 @@ namespace Microsoft.Scripting.Ast {
             if (flow.Any) {
                 Debug.Assert(node.FinallyStatement != null);
 
-                flowControlFlag = _cg.GetLocalTmp(typeof(int));
-                _cg.EmitInt(CodeGen.FinallyExitsNormally);
-                flowControlFlag.EmitSet(_cg);
+                flowControlFlag = GetLocalTmp(typeof(int));
+                EmitInt(Compiler.FinallyExitsNormally);
+                flowControlFlag.EmitSet(this);
 
                 //  If there is a control flow in finally, emit outer:
                 //  try {
@@ -738,8 +729,8 @@ namespace Microsoft.Scripting.Ast {
                 //  }
 
                 if (HaveHandlers(node)) {
-                    _cg.PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-                    _cg.BeginExceptionBlock();
+                    PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
+                    BeginExceptionBlock();
                 }
             }
 
@@ -747,29 +738,29 @@ namespace Microsoft.Scripting.Ast {
             // 1. ENTERING TRY
             //******************************************************************
 
-            _cg.PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
-            _cg.BeginExceptionBlock();
+            PushExceptionBlock(TargetBlockType.Try, flowControlFlag);
+            BeginExceptionBlock();
 
             //******************************************************************
             // 2. Emit the try statement body
             //******************************************************************
 
             EmitStatement(node.Body);
-            _cg.EmitSequencePointNone();
+            EmitSequencePointNone();
 
             //******************************************************************
             // 3. Emit the catch blocks
             //******************************************************************
 
             if (HaveHandlers(node)) {
-                _cg.PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
+                PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
 
                 foreach (CatchBlock cb in node.Handlers) {
                     // Begin the strongly typed exception block
-                    _cg.BeginCatchBlock(cb.Test);
+                    BeginCatchBlock(cb.Test);
 
                     // Save the exception (if the catch block asked for it) or pop
-                    EmitSaveExceptionOrPop(_cg, cb);
+                    EmitSaveExceptionOrPop(cb);
 
                     //
                     // Emit the catch block body
@@ -777,7 +768,7 @@ namespace Microsoft.Scripting.Ast {
                     EmitStatement(cb.Body);
                 }
 
-                _cg.PopTargets(TargetBlockType.Catch);
+                PopTargets(TargetBlockType.Catch);
             }
 
             //******************************************************************
@@ -792,21 +783,21 @@ namespace Microsoft.Scripting.Ast {
                     // with rethrow at the end.
 
                     if (HaveHandlers(node)) {
-                        _cg.EndExceptionBlock();
-                        _cg.PopTargets(TargetBlockType.Try);
+                        EndExceptionBlock();
+                        PopTargets(TargetBlockType.Try);
                     }
 
-                    _cg.PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
-                    _cg.BeginCatchBlock(typeof(Exception));
+                    PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
+                    BeginCatchBlock(typeof(Exception));
 
-                    rethrow = _cg.GetLocalTmp(typeof(Exception));
-                    rethrow.EmitSet(_cg);
+                    rethrow = GetLocalTmp(typeof(Exception));
+                    rethrow.EmitSet(this);
 
-                    _cg.PopTargets(TargetBlockType.Catch);
+                    PopTargets(TargetBlockType.Catch);
                 }
 
-                _cg.PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
-                _cg.BeginFinallyBlock();
+                PushExceptionBlock(TargetBlockType.Finally, flowControlFlag);
+                BeginFinallyBlock();
 
                 //
                 // Emit the finally block body
@@ -815,37 +806,37 @@ namespace Microsoft.Scripting.Ast {
 
                 if (flow.Any) {
                     Debug.Assert(rethrow != null);
-                    Label noRethrow = _cg.DefineLabel();
+                    Label noRethrow = DefineLabel();
 
-                    rethrow.EmitGet(_cg);
-                    _cg.EmitNull();
-                    _cg.Emit(OpCodes.Beq, noRethrow);
-                    rethrow.EmitGet(_cg);
-                    _cg.Emit(OpCodes.Throw);
-                    _cg.MarkLabel(noRethrow);
+                    rethrow.EmitGet(this);
+                    EmitNull();
+                    Emit(OpCodes.Beq, noRethrow);
+                    rethrow.EmitGet(this);
+                    Emit(OpCodes.Throw);
+                    MarkLabel(noRethrow);
                 }
 
-                _cg.EndExceptionBlock();
-                _cg.PopTargets(TargetBlockType.Finally);
+                EndExceptionBlock();
+                PopTargets(TargetBlockType.Finally);
             } else {
-                _cg.EndExceptionBlock();
+                EndExceptionBlock();
             }
 
-            _cg.PopTargets(TargetBlockType.Try);
+            PopTargets(TargetBlockType.Try);
 
             //
             // Emit the flow control for finally, if there was any.
             //
-            EmitFinallyFlowControl(_cg, flow, flowControlFlag);
+            EmitFinallyFlowControl(flow, flowControlFlag);
 
-            _cg.FreeLocalTmp(flowControlFlag);
+            FreeLocalTmp(flowControlFlag);
         }
 
         #endregion
 
         private void Emit(YieldStatement node) {
-            _cg.EmitPosition(node.Start, node.End);
-            _cg.EmitYield(node.Expression, node.Target);
+            EmitPosition(node.Start, node.End);
+            EmitYield(node.Expression, node.Target);
         }
     }
 }

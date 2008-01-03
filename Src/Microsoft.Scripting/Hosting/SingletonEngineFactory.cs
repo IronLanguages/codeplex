@@ -21,20 +21,20 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
-    public sealed class SingletonEngineFactory<EngineType, EngineOptionsType, LanguageProviderType>
+    public sealed class SingletonEngineFactory<EngineType, EngineOptionsType, LanguageContextType>
         where EngineType : ScriptEngine
         where EngineOptionsType : EngineOptions
-        where LanguageProviderType : LanguageProvider {
+        where LanguageContextType : LanguageContext {
 
         private readonly object _singletonLock = new object();
         private bool _initializing = false;
         private EngineType _singleton;
 
-        private Function<LanguageProviderType, EngineOptionsType, EngineType> _createEngine;
+        private Function<LanguageContextType, EngineOptionsType, EngineType> _createEngine;
         private Function<EngineOptionsType> _getSetupInformation;
 
         public SingletonEngineFactory(
-            Function<LanguageProviderType, EngineOptionsType, EngineType> createEngine, 
+            Function<LanguageContextType, EngineOptionsType, EngineType> createEngine, 
             Function<EngineOptionsType> getSetupInformation) {
 
             _createEngine = createEngine;
@@ -43,12 +43,12 @@ namespace Microsoft.Scripting.Hosting {
 
         public EngineType GetInstance() {
             if (_singleton == null) {
-                GetInstance((LanguageProviderType)ScriptDomainManager.CurrentManager.GetLanguageProvider(typeof(LanguageProviderType)), null);
+                GetInstance((LanguageContextType)ScriptDomainManager.CurrentManager.GetLanguageContext(typeof(LanguageContextType)), null);
             }
             return _singleton;
         }
 
-        public EngineType GetInstance(LanguageProviderType provider, EngineOptionsType options) {
+        public EngineType GetInstance(LanguageContextType provider, EngineOptionsType options) {
             Contract.RequiresNotNull(provider, "provider");
 
             if (_singleton == null) {
@@ -67,9 +67,6 @@ namespace Microsoft.Scripting.Hosting {
                         _initializing = true;
 
                         EngineType singleton = _createEngine(provider, options);
-
-                        // notifies the host:
-                        provider.Manager.Host.EngineCreated(singleton);
 
                         Utilities.MemoryBarrier();
 

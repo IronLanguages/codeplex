@@ -15,7 +15,8 @@
 
 using System;
 using System.Reflection;
-using System.Reflection.Emit;
+
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
@@ -30,19 +31,19 @@ namespace Microsoft.Scripting.Generation {
 
             this._field = field;
         }
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldGet(_field);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldAddress(_field);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldSet(_field);

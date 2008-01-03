@@ -27,8 +27,11 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+    using Ast = Microsoft.Scripting.Ast.Ast;
+
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>
@@ -168,11 +171,41 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             get { throw new NotImplementedException(); }
         }
 
-        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            if (action.Kind == DynamicActionKind.Call) {
-                return MakeCallRule<T>((CallAction)action, context, args);
+        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+            switch (action.Kind) {
+                case DynamicActionKind.Call: return MakeCallRule<T>((CallAction)action, context, args);
+                case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
             }
             return null;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")] // TODO: fix
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args")] // TODO: fix
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch (doOperationAction.Operation) {
+                case Operators.CallSignatures:
+                case Operators.Documentation:
+                    return MakeDocumentationRule<T>(context);
+
+                case Operators.IsCallable:
+                    return BinderHelper.MakeIsCallableRule<T>(context, this, true);
+            }
+            return null;
+        }
+
+        private StandardRule<T> MakeDocumentationRule<T>(CodeContext context) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(CompilerHelpers.GetType(this));
+            // return this.ComMethodDesc.Signature
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.ReadProperty(
+                        Ast.ReadProperty(
+                            Ast.ConvertHelper(rule.Parameters[0], typeof(DispCallable)),
+                            typeof(DispCallable).GetProperty("ComMethodDesc")),
+                        typeof(ComMethodDesc).GetProperty("Signature"))));
+            return rule;
         }
 
         private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] currentInstanceAndArgs) {

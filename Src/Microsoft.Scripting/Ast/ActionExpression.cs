@@ -38,15 +38,6 @@ namespace Microsoft.Scripting.Ast {
         public ReadOnlyCollection<Expression> Arguments {
             get { return _arguments; }
         }
-
-        public override AbstractValue AbstractEvaluate(AbstractContext context) {
-            List<AbstractValue> values = new List<AbstractValue>();
-            foreach (Expression arg in _arguments) {
-                values.Add(arg.AbstractEvaluate(context));
-            }
-
-            return context.Binder.AbstractExecute(_action, values);
-        }
     }
 
     public static partial class Ast {

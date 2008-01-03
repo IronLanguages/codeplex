@@ -60,10 +60,23 @@ namespace Microsoft.Scripting.Utils {
             }
 
             // create it 
-            if (argCnt < MaxArgs) {
-                res = FastCreate(info, pis);
-            } else {
-                res = SlowCreate(info, pis);
+            try {
+                if (argCnt < MaxArgs) {
+                    res = FastCreate(info, pis);
+                } else {
+                    res = SlowCreate(info, pis);
+                }
+            } catch (TargetInvocationException tie) {
+                if (!(tie.InnerException is NotSupportedException)) {
+                    throw;
+                }
+
+                res = new SlowReflectedCaller(info);
+            } catch (NotSupportedException) {
+                // if Delegate.CreateDelegate can't handle the method fallback to 
+                // the slow reflection version.  For example this can happen w/ 
+                // a generic method defined on an interface and implemented on a class.
+                res = new SlowReflectedCaller(info);
             }
 
             // cache it for future users if it's a reasonable method to cache

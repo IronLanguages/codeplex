@@ -14,6 +14,12 @@
 #####################################################################################
 
 from exceptions import SystemExit
+from lib.assert_util import testpath
+
+if testpath.basePyDir.lower()=='src':
+    import sys
+    print "Skipping DLR COM Lib tests..."
+    sys.exit(0)
 
 for test_module in ["dlrcomserver", "paramsinretval"]:
     print "--------------------------------------------------------------------"

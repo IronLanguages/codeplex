@@ -22,7 +22,7 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Hosting {
 
     [Serializable]
-    public class SourceStringContentProvider : SourceContentProvider {
+    public class SourceStringContentProvider : TextContentProvider {
         private readonly string _code;
 
         public SourceStringContentProvider(string code) {

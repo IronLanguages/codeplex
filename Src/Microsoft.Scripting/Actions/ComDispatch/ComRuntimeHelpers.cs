@@ -16,18 +16,33 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+
     public static class ComRuntimeHelpers {
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#"), CLSCompliant(false)]
+        public static void CheckThrowException(int hresult, ref ExcepInfo excepInfo, uint argErr, DispCallable dispCallable) {
+            if (ComHresults.IsSuccess(hresult)) {
+                return;
+            }
+
+            if (hresult == ComHresults.DISP_E_EXCEPTION) {
+                throw excepInfo.GetException();
+            } else if (hresult == ComHresults.DISP_E_TYPEMISMATCH) {
+                string message = String.Format("Could not convert argument {0} for call to function {1}", argErr, dispCallable.ComMethodDesc.Name);
+                throw new COMException("DISP_E_TYPEMISMATCH", new InvalidCastException(message));
+            }
+
+            Marshal.ThrowExceptionForHR(hresult);
+        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
         public static class UnsafeNativeMethods {
@@ -35,6 +50,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1060:MovePInvokesToNativeMethodsClass")] // TODO: fix
             [DllImport("oleaut32.dll", PreserveSig = false)]
             public static extern void VariantClear(IntPtr variant);
+
         }
 
         /// <summary>
@@ -75,7 +91,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 ComTypes.INVOKEKIND flags,
                 ref ComTypes.DISPPARAMS dispParams,
                 out Variant result,
-                out ComTypes.EXCEPINFO excepInfo,
+                out ExcepInfo excepInfo,
                 out uint argErr) {
 
                 return _IDispatchInvoke(
@@ -111,7 +127,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
                 TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$ConvertByrefToPtr", typeof(object));
                 Type[] paramTypes = new Type[] { typeof(Variant).MakeByRefType() };
-                CodeGen method = type.DefineMethod("ConvertByrefToPtr", typeof(IntPtr), paramTypes, null, null);
+                Compiler method = type.DefineMethod("ConvertByrefToPtr", typeof(IntPtr), paramTypes, null, null);
 
                 method.Emit(OpCodes.Ldarg_0);
                 method.Emit(OpCodes.Conv_I);
@@ -131,7 +147,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             private static IUnknownReleaseDelegate Create_IUnknownRelease() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
                 TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$IUnknownRelease", typeof(object));
-                CodeGen method = type.DefineMethod("IUnknownRelease", typeof(int), new Type[] { typeof(IntPtr) }, null, null);
+                Compiler method = type.DefineMethod("IUnknownRelease", typeof(int), new Type[] { typeof(IntPtr) }, null, null);
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 
@@ -183,7 +199,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 ComTypes.INVOKEKIND flags,
                 ref ComTypes.DISPPARAMS dispParams,
                 out Variant result,
-                out ComTypes.EXCEPINFO excepInfo,
+                out ExcepInfo excepInfo,
                 out uint argErr);
 
             private static IDispatchInvokeDelegate _IDispatchInvoke = Create_IDispatchInvoke();
@@ -204,12 +220,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 paramTypes[flagsIndex] = typeof(ComTypes.INVOKEKIND);
                 paramTypes[dispParamsIndex] = typeof(ComTypes.DISPPARAMS).MakeByRefType();
                 paramTypes[resultIndex] = typeof(Variant).MakeByRefType();
-                paramTypes[exceptInfoIndex] = typeof(ComTypes.EXCEPINFO).MakeByRefType();
+                paramTypes[exceptInfoIndex] = typeof(ExcepInfo).MakeByRefType();
                 paramTypes[argErrIndex] = typeof(uint).MakeByRefType();
 
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
                 TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$IDispatchInvoke", typeof(object));
-                CodeGen method = type.DefineMethod("IDispatchInvoke", typeof(int), paramTypes, null, null);
+                Compiler method = type.DefineMethod("IDispatchInvoke", typeof(int), paramTypes, null, null);
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 

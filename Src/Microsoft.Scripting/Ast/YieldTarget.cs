@@ -15,7 +15,6 @@
 
 using System.Diagnostics;
 using System.Reflection.Emit;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     internal sealed class TargetLabel {
@@ -25,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
         internal TargetLabel() {
         }
 
-        internal Label EnsureLabel(CodeGen cg) {
+        internal Label EnsureLabel(Compiler cg) {
             if (!_initialized) {
                 _label = cg.DefineLabel();
                 _initialized = true;
@@ -55,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _target; }
         }
 
-        public Label EnsureLabel(CodeGen cg) {
+        public Label EnsureLabel(Compiler cg) {
             Debug.Assert(_target != null);
             return _target.EnsureLabel(cg);
         }

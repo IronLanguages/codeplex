@@ -16,15 +16,17 @@
 using System;
 using System.Reflection.Emit;
 
+using Microsoft.Scripting.Ast;
+
 namespace Microsoft.Scripting.Generation {
 
     /// <summary>
     /// Creates slots that are backed by local variables.
     /// </summary>
     public class LocalSlotFactory : SlotFactory {
-        private CodeGen _codeGen;
+        private Compiler _codeGen;
 
-        public LocalSlotFactory(CodeGen codeGen) {
+        public LocalSlotFactory(Compiler codeGen) {
             this._codeGen = codeGen;
         }
 

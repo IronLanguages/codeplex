@@ -32,7 +32,6 @@ using IronPython.Runtime.Operations;
 [assembly: PythonModule("md5", typeof(IronPython.Modules.PythonMD5))]
 namespace IronPython.Modules {
     [Documentation("MD5 hash algorithm")]
-    [PythonType("md5")]
     public static class PythonMD5 {
         private static readonly MD5CryptoServiceProvider hasher = new MD5CryptoServiceProvider();
         private static readonly int digestSize = hasher.HashSize / 8;

@@ -35,7 +35,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             // 1. Create temp for the result
             MSAst.BoundExpression dictionary = null;
-            dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary));
+            dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary)); 
 
             // 2. Array for the comma expression parts:
             //    - dictionary creation
@@ -59,12 +59,19 @@ namespace IronPython.Compiler.Ast {
             int index;
             for (index = 0; index < _items.Length; index++) {
                 SliceExpression slice = _items[index];
-                parts[index + 1] = Ast.Call(
-                    dictionary,
-                    setter,
-                    ag.TransformOrConstantNull(slice.SliceStart, typeof(object)),
-                    ag.TransformOrConstantNull(slice.SliceStop, typeof(object))
-                );
+                // Eval order should be:
+                //   { 2 : 1, 4 : 3, 6 :5 }
+                // This is backwards from parameter list eval, so create temporaries to swap ordering.
+                MSAst.BoundExpression key   = ag.MakeTempExpression("key", typeof(object));
+                MSAst.BoundExpression value = ag.MakeTempExpression("value", typeof(object));
+                
+                parts[index + 1] = Ast.Comma(
+                    Ast.Assign(value.Variable, ag.TransformOrConstantNull(slice.SliceStop, typeof(object))),
+                    Ast.Assign(key.Variable, ag.TransformOrConstantNull(slice.SliceStart, typeof(object))),
+                    Ast.Call(dictionary, setter, key, value)
+                    );
+                ag.FreeTemp(value);
+                ag.FreeTemp(key);
             }
 
             // SILVERLIGHT WORKAROUND:

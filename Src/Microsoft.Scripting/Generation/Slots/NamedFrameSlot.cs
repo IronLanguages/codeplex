@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -32,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
             this._name = name;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             //
             // Emit: RuntimeHelpers.LookupGlobalName(context, name)
             //
@@ -41,12 +42,12 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(typeof(RuntimeHelpers), "LookupGlobalName");
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             //???how bad is it that we can't do this???
             throw new NotImplementedException("address of frame slot");
         }
 
-        public override void EmitSet(CodeGen cg, Slot val) {
+        public override void EmitSet(Compiler cg, Slot val) {
             //
             // Emit: RuntimeHelpers.SetGlobalName(context, name, value)
             //
@@ -56,10 +57,10 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(typeof(RuntimeHelpers), "SetGlobalName");
         }
 
-        public override void EmitSetUninitialized(CodeGen cg) {
+        public override void EmitSetUninitialized(Compiler cg) {
         }
 
-        public override void EmitDelete(CodeGen cg, SymbolId name, bool check) {
+        public override void EmitDelete(Compiler cg, SymbolId name, bool check) {
             //
             // RuntimeHelpers.DeleteGlobalName(context, name)
             //

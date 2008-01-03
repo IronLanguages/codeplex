@@ -28,8 +28,24 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
         private Dictionary<SymbolId, ComEventDesc> _events;
 
+        private static Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
+
+        private ComTypeDesc() {
+            _funcs = new Dictionary<SymbolId, ComMethodDesc>();
+            _events = _EmptyEventsDict;
+        }
+
         public ComTypeDesc(ComTypes.ITypeInfo typeInfo) {
             this._typeName = GetNameOfType(typeInfo);
+        }
+
+        public static ComTypeDesc CreateEmptyTypeDesc() {
+            return new ComTypeDesc();
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
+        public static Dictionary<SymbolId, ComEventDesc> EmptyEvents {
+            get { return _EmptyEventsDict; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR

@@ -926,5 +926,13 @@ def test_generic_getitem():
     AreEqual(type.__getitem__(System.Collections.Generic.List, int), System.Collections.Generic.List[int])
     
     
+def test_struct_no_ctor_kw_args():
+    s = Structure(a=3)
+    AreEqual(s.a, 3)
+
+def test_nullable_new():
+    from System import Nullable
+    AreEqual(clr.GetClrType(Nullable[()]).IsGenericType, False)
+
 run_test(__name__)
 

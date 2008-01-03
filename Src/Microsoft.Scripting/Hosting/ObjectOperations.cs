@@ -63,15 +63,6 @@ namespace Microsoft.Scripting.Hosting {
             _context = context;
         }
 
-        /// <summary>
-        /// Gets the ScriptEngine which all operations will be performed against
-        /// </summary>
-        public ScriptEngine LanguageEngine {
-            get {
-                return _context.LanguageContext.Engine;
-            }
-        }
-
         #region Local Operations
 
         /// <summary>

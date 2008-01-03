@@ -399,7 +399,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void Emit(CodeGen cg, Label ifFalse) {
+        public void Emit(Compiler cg, Label ifFalse) {
             Assert.NotNull(_test, _target);
 
             // Need to make sure we aren't generating into two different CodeGens at the same time
@@ -416,11 +416,11 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 if (_test != null) {
-                    Compiler.EmitBranchFalse(cg, _test, ifFalse);
+                    cg.EmitBranchFalse(_test, ifFalse);
                 }
 
                 // Now do the generation
-                Compiler.Emit(cg, _target);
+                cg.EmitStatement(_target);
 
                 // free any temps now that we're done generating
                 // TODO: Keep temp slots aside sot that they can be freed
@@ -451,9 +451,9 @@ namespace Microsoft.Scripting.Actions {
             Expression test = MakeTypeTest(types[index], index);
             if (index < types.Length - 1) {
                 Expression nextTests = MakeTestForTypes(types, index + 1);
-                if (test.IsConstant(true)) {
+                if (ConstantCheck.IsConstant(test, true)) {
                     return nextTests;
-                } else if (nextTests.IsConstant(true)) {
+                } else if (ConstantCheck.IsConstant(nextTests, true)) {
                     return test;
                 } else {
                     return Ast.AndAlso(test, nextTests);

@@ -14,21 +14,21 @@
  * ***************************************************************************/
 
 using System;
-using System.Resources;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.SymbolStore;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.IO;
+using System.Resources;
 using System.Security;
-using System.Security.Policy;
-using System.Security.Permissions;
 using System.Threading;
-using System.Globalization;
-using System.Collections.Generic;
 
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using System.Text;
 
 namespace Microsoft.Scripting.Generation {
     public class AssemblyGen {
@@ -135,8 +135,8 @@ namespace Microsoft.Scripting.Generation {
                 Debug.Assert(sourceUnit.IsVisibleToDebugger);
                 _symbolWriter = _myModule.DefineDocument(
                     sourceUnit.Id,
-                    sourceUnit.Engine.LanguageGuid,
-                    sourceUnit.Engine.VendorGuid,
+                    sourceUnit.LanguageContext.LanguageGuid,
+                    sourceUnit.LanguageContext.VendorGuid,
                     SymbolGuids.DocumentType_Text);
 			}
 		}
@@ -353,7 +353,13 @@ namespace Microsoft.Scripting.Generation {
         public TypeGen DefinePublicType(string name, Type parent) {
             TypeAttributes attrs = TypeAttributes.Public;
             if (BeforeFieldInit) attrs |= TypeAttributes.BeforeFieldInit;
-            TypeBuilder tb = _myModule.DefineType(name.Replace('+', '_'), attrs);
+            
+            // There is a bug in Reflection.Emit that leads to 
+            // Unhandled Exception: System.Runtime.InteropServices.COMException (0x80131130): Record not found on lookup.
+            // if there is any of the characters []*&+,\ in the type name and a method defined on the type is called.
+            name = new StringBuilder(name).Replace('+', '_').Replace('[', '_').Replace(']', '_').Replace('*', '_').Replace('&', '_').Replace(',', '_').Replace('\\', '_').ToString();
+            TypeBuilder tb = _myModule.DefineType(name, attrs);
+
             tb.SetParent(parent);
             return new TypeGen(this, tb);
         }
@@ -362,8 +368,8 @@ namespace Microsoft.Scripting.Generation {
         static readonly Type[] anonHostedDynamicMethodCtorSig = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
         static readonly ConstructorInfo anonHostedDynamicMethodCtor = typeof(DynamicMethod).GetConstructor(anonHostedDynamicMethodCtorSig);
 
-        public CodeGen DefineMethod(string methodName, Type returnType, IList<Type> paramTypes, ConstantPool constantPool) {
-            CodeGen cg;
+        public Compiler DefineMethod(string methodName, Type returnType, IList<Type> paramTypes, ConstantPool constantPool) {
+            Compiler cg;
             if (GenerateStaticMethods) {
                 int index = Interlocked.Increment(ref _index);
                 TypeGen tg = DefinePublicType("Type$" + methodName + "$" + index, typeof(object));
@@ -383,7 +389,7 @@ namespace Microsoft.Scripting.Generation {
                     target = new DynamicMethod(dynamicMethodName, returnType, parameterTypes, _myModule);
                 }
 #endif
-                cg = new CodeGen(null, this, target, target.GetILGenerator(), parameterTypes, constantPool);
+                cg = new Compiler(null, this, target, target.GetILGenerator(), parameterTypes, constantPool);
             }
             return cg;
         }

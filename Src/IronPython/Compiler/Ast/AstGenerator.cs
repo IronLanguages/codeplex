@@ -93,9 +93,6 @@ namespace IronPython.Compiler.Ast {
             return _block.CreateTemporaryVariable(name, type);
         }
 
-        public MSAst.Variable MakeGeneratorTemp(string name, Type type) {
-            return _block.CreateGeneratorTempVariable(SymbolTable.StringToId(name), type);
-        }
 
         public MSAst.BoundExpression MakeTempExpression(string name) {
             return MakeTempExpression(name, typeof(object));
@@ -105,19 +102,14 @@ namespace IronPython.Compiler.Ast {
             return Ast.Read(MakeTemp(SymbolTable.StringToId(name), type));
         }
 
-        internal MSAst.BoundExpression MakeGeneratorTempExpression(string name) {
-            return MakeGeneratorTempExpression(name, typeof(object));
-        }
-
-        internal MSAst.BoundExpression MakeGeneratorTempExpression(string name, Type type) {
-            return Ast.Read(MakeGeneratorTemp(name, type));
-        }
-
         public void FreeTemp(MSAst.BoundExpression be) {
             FreeTemp(be.Variable);
         }
 
         public void FreeTemp(MSAst.Variable temp) {
+            if (this.Block is MSAst.GeneratorCodeBlock) {
+                return;
+            }
             if (_temps == null) {
                 _temps = new List<MSAst.Variable>();
             }

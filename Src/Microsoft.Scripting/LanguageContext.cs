@@ -39,15 +39,25 @@ namespace Microsoft.Scripting {
         : ICloneable
 #endif
     {
+        private ScriptDomainManager _domainManager;
         private static ModuleGlobalCache _noCache;
+        private ActionBinder _binder;
+        private ContextId _id;
 
-        public virtual ActionBinder Binder {
-            get { return Engine.DefaultBinder; }
+        protected LanguageContext(ScriptDomainManager domainManager) {
+            _domainManager = domainManager;
+            if (_domainManager != null) {   // TODO: DomainManager should never be null, but can be for things like InvariantContext today.
+                _id = _domainManager.AssignContextId(this);
+            }
         }
 
-        public virtual ScriptEngine Engine {
-            get {
-                return null;
+
+        public ActionBinder Binder {
+            get { 
+                return _binder; 
+            }
+            protected set {
+                _binder = value;
             }
         }
 
@@ -55,14 +65,13 @@ namespace Microsoft.Scripting {
         /// Provides the ContextId which includes members that should only be shown for this LanguageContext.
         /// 
         /// ContextId's are used for filtering by Scope's.
+        /// 
+        /// TODO: Not virtual, TestContext currently depends on being able to override.
         /// </summary>
         public virtual ContextId ContextId {
             get {
-                return ContextId.Empty;
+                return _id;
             }
-        }
-
-        protected LanguageContext() {
         }
 
         public static LanguageContext FromEngine(IScriptEngine engine) {
@@ -115,15 +124,6 @@ namespace Microsoft.Scripting {
         #region Source Code Parsing & Compilation
 
         /// <summary>
-        /// Parses the source code within a specified compiler context. 
-        /// The source unit to parse is held on by the context.
-        /// </summary>
-        /// <param name="context">Compiler context.</param>
-        /// <returns><b>null</b> on failure.</returns>
-        /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
-        public abstract CodeBlock ParseSourceCode(CompilerContext context);
-
-        /// <summary>
         /// Updates code properties of the specified source unit. 
         /// The default implementation invokes code parsing. 
         /// </summary>
@@ -149,7 +149,7 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
 
             if (options == null) options = GetCompilerOptions();
-            if (errorSink == null) errorSink = Engine.GetCompilerErrorSink();
+            if (errorSink == null) errorSink = GetCompilerErrorSink();
 
             CompilerContext context = new CompilerContext(sourceUnit, options, errorSink);
 
@@ -166,7 +166,7 @@ namespace Microsoft.Scripting {
             DumpBlock(block, sourceUnit.Id);
 
             // TODO: ParseSourceCode can update CompilerContext.Options
-            return new ScriptCode(block, Engine.GetLanguageContext(context.Options), context);
+            return new ScriptCode(block, this, context);
         }
 
         [Conditional("DEBUG")]
@@ -188,16 +188,10 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-#if !SILVERLIGHT
-        // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
-        public virtual SourceUnit GenerateSourceCode(System.CodeDom.CodeObject codeDom) {
-            throw new NotImplementedException();
-        }
-#endif
-
         public virtual ScriptCode Reload(ScriptCode original, ScriptScope module) {
             original.SourceUnit.Reload();
-            return CompileSourceCode(original.SourceUnit, Engine.GetModuleCompilerOptions(module));
+
+            return CompileSourceCode(original.SourceUnit, GetModuleCompilerOptions(module));
         }
 
         /// <summary>
@@ -207,7 +201,7 @@ namespace Microsoft.Scripting {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual CompilerOptions GetCompilerOptions() {
-            return Engine.GetDefaultCompilerOptions();
+            return new CompilerOptions();
         }
 
         /// <summary>
@@ -256,7 +250,8 @@ namespace Microsoft.Scripting {
         /// at the host level.
         /// </summary>
         public virtual bool TryLookupGlobal(CodeContext context, SymbolId name, out object value) {
-            return ScriptDomainManager.CurrentManager.Host.TryGetVariable(Engine, name, out value);
+            value = null;
+            return false;
         }
 
         /// <summary>
@@ -402,6 +397,162 @@ namespace Microsoft.Scripting {
 #else
             return Assembly.LoadFile(file);
 #endif
+        }
+
+        #region ScriptEngine API
+
+        /// <summary>
+        /// Parses the source code within a specified compiler context. 
+        /// The source unit to parse is held on by the context.
+        /// </summary>
+        /// <param name="context">Compiler context.</param>
+        /// <returns><b>null</b> on failure.</returns>
+        /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
+        public abstract CodeBlock ParseSourceCode(CompilerContext context);
+
+        public virtual string/*!*/ DisplayName {
+            get {
+                return "unknown";
+            }
+        }
+
+        public virtual Version LanguageVersion {
+            get {
+                return new Version(0, 0);
+            }
+        }
+
+        public virtual void SetScriptSourceSearchPaths(string[] paths) { 
+        }
+
+#if !SILVERLIGHT
+        // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
+        public virtual SourceUnit/*!*/ GenerateSourceCode(System.CodeDom.CodeObject codeDom, string path, SourceCodeKind kind) {
+            throw new NotImplementedException();
+        }
+#endif
+
+        /*public ScriptEnvironment ScriptRuntime {
+            get {
+                return _runtime;
+            }
+        }*/
+
+        public virtual ServiceType GetService<ServiceType>(params object[] args) where ServiceType : class {
+            if (typeof(ServiceType) == typeof(IConsole)) {
+                ConsoleOptions options = GetArg<ConsoleOptions>(args, 2, false);
+                if (options.TabCompletion) {
+                    return (ServiceType)(object)CreateSuperConsole(GetArg<CommandLine>(args, 1, false), GetArg<ScriptEngine>(args, 0, false), options.ColorfulConsole);
+                } else {
+                    return (ServiceType)(object)new BasicConsole(GetArg<ScriptEngine>(args, 0, false), options.ColorfulConsole);
+                }
+            } else if (typeof(ServiceType) == typeof(CommandLine)) {
+                return (ServiceType)(object)new CommandLine();
+            }
+
+            return null;
+        }
+
+        //TODO these three properties should become abstract and updated for all implementations
+        public virtual Guid LanguageGuid {
+            get {
+                return Guid.Empty;
+            }
+        }
+
+        public virtual Guid VendorGuid {
+            get {
+                return Guid.Empty;
+            }
+        }
+
+        public virtual void Shutdown() {
+        }
+
+        public virtual string/*!*/ FormatException(Exception exception) {
+            return exception.ToString();
+        }
+
+        public virtual TextWriter GetOutputWriter(bool isErrorOutput) {
+            return isErrorOutput ? Console.Error : Console.Out;
+        }
+        
+        public virtual EngineOptions/*!*/ Options {
+            get {
+                return new EngineOptions();
+            }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public virtual CompilerOptions GetDefaultCompilerOptions() {
+            return new CompilerOptions();
+        }
+
+        /// <summary>
+        /// Creates compiler options initialized by the options associated with the module.
+        /// </summary>
+        public virtual CompilerOptions GetModuleCompilerOptions(ScriptScope module) { // TODO: internal protected
+            return GetDefaultCompilerOptions();
+        }
+
+        public SourceUnit CreateFileUnit(string filename, Encoding encoding) {
+            return SourceUnit.CreateFileUnit(this, filename, encoding);
+        }
+
+        public SourceUnit CreateSnippet(string code) {
+            return SourceUnit.CreateSnippet(this, code);
+        }
+
+        public SourceUnit CreateSnippet(string code, SourceCodeKind kind) {
+            return SourceUnit.CreateSnippet(this, code, code, kind);
+        }
+
+        public SourceUnit CreateSnippet(string code, string id, SourceCodeKind kind) {
+            return SourceUnit.CreateSnippet(this, code, id, kind);
+        }
+
+        public SourceUnit TryGetSourceFileUnit(string path, Encoding encoding, SourceCodeKind kind) {
+            return _domainManager.Host.TryGetSourceFileUnit(_domainManager.GetScriptEngine(this), path, encoding, kind);
+        }
+
+        #endregion
+
+        // The advanced console functions are in a special non-inlined function so that 
+        // dependencies are pulled in only if necessary.
+        [MethodImplAttribute(MethodImplOptions.NoInlining)]
+        private static IConsole CreateSuperConsole(CommandLine commandLine, IScriptEngine engine, bool isColorful) {
+            Debug.Assert(engine != null);
+            return new SuperConsole(commandLine, engine, isColorful);
+        }
+
+        private static T GetArg<T>(object[] arg, int index, bool optional) {
+            if (!optional && index >= arg.Length) {
+                throw new ArgumentException("Invalid number of parameters for the service");
+            }
+
+            if (!(arg[index] is T)) {
+                throw new ArgumentException(
+                    String.Format("Invalid argument type; expecting {0}", typeof(T)),
+                    String.Format("arg[{0}]", index));
+            }
+
+            return (T)arg[index];
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public virtual ErrorSink GetCompilerErrorSink() {
+            return new ErrorSink();
+        }
+
+        public virtual void GetExceptionMessage(Exception exception, out string message, out string errorTypeName) {
+            message = exception.Message;
+            errorTypeName = exception.GetType().Name;
+        }
+
+        public ScriptDomainManager DomainManager {
+            get {
+                return _domainManager;
+            }
         }
     }
 }

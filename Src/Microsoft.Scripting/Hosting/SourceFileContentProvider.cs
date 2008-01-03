@@ -21,61 +21,28 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
+    /// <summary>
+    /// Provides a StreamContentProvider for a stream of content backed by a file on disk.
+    /// </summary>
     [Serializable]
-    public class SourceFileContentProvider : SourceContentProvider {
-        private readonly string _path;
-        private readonly Encoding _defaultEncoding; // optional
-        private readonly IScriptEngine _engine;     // optional
+    public class FileStreamContentProvider : StreamContentProvider {
+        private readonly string/*!*/ _path;
 
-        public string Path {
+        public string/*!*/ Path {
             get { return _path; }
         }
 
         #region Construction
 
-        /// <summary>
-        /// Binary file with an explicit encoding.
-        /// </summary>
-        public SourceFileContentProvider(string path, Encoding defaultEncoding)
-            : this(path, defaultEncoding, null) {
-        }
-
-        /// <summary>
-        /// Binary file with a default encoding. The actual encoding of the file is determined by first 
-        /// bytes of the file in a language specific way.
-        /// </summary>
-        public SourceFileContentProvider(string path, Encoding defaultEncoding, IScriptEngine engine) {
-            Contract.RequiresNotNull(defaultEncoding, "defaultEncoding");
+        internal FileStreamContentProvider(string/*!*/ path) {
+            Contract.RequiresNotNull(path, "path");
 
             _path = path;
-            _defaultEncoding = defaultEncoding;
-            _engine = engine;
-        }
+        }        
 
         #endregion
 
-        public override TextReader GetReader() {
-            Stream stream = OpenStream();
-
-            if (stream == null) {
-                throw new InvalidImplementationException();
-            }
-
-            TextReader reader;
-            Encoding encoding = _defaultEncoding;
-
-            if (_engine != null) {
-                reader = LanguageContext.FromEngine(_engine).GetSourceReader(stream, encoding);
-            } else if (encoding != null) {
-                reader = new StreamReader(stream, encoding, true);
-            } else {
-                reader = new StreamReader(stream, true);
-            }
-
-            return reader;
-        }
-
-        protected virtual Stream OpenStream() {
+        public override Stream GetStream() {
             return ScriptDomainManager.CurrentManager.PAL.OpenInputFileStream(Path);
         }
     }

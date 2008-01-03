@@ -29,18 +29,6 @@ namespace Microsoft.Scripting.Ast {
         public object Value {
             get { return _value; }
         }
-
-        public override AbstractValue AbstractEvaluate(AbstractContext context) {
-            return AbstractValue.Constant(_value, this);
-        }
-
-        public override bool IsConstant(object value) {
-            if (value == null) {
-                return _value == null;
-            } else {
-                return value.Equals(_value);
-            }
-        }
     }
 
     public static partial class Ast {

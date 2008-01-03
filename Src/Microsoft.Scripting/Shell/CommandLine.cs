@@ -142,13 +142,13 @@ namespace Microsoft.Scripting.Shell {
             int result = 1;
             if (Options.HandleExceptions) {
                 try {
-                    Engine.ExecuteFile(filename);
+                    Engine.ExecuteProgram(Engine.CreateScriptSourceFromFile(filename));
                     result = 0;
                 } catch (Exception e) {
                     Console.Write(Engine.FormatException(e), Style.Error);
                 }
             } else {
-                Engine.ExecuteFile(filename);
+                Engine.ExecuteProgram(Engine.CreateScriptSourceFromFile(filename));
                 result = 0;
             }
 
@@ -166,13 +166,13 @@ namespace Microsoft.Scripting.Shell {
 
             if (Options.HandleExceptions) {
                 try {
-                    Engine.ExecuteCommand(command);
+                    Engine.ExecuteProgram(Engine.CreateScriptSourceFromString(command));
                     result = 0;
                 } catch (Exception e) {
                     Console.Write(Engine.FormatException(e), Style.Error);
                 }
             } else {
-                Engine.ExecuteCommand(command);
+                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString(command));
                 result = 0;
             }
 
@@ -294,7 +294,7 @@ namespace Microsoft.Scripting.Shell {
                 return null;
             }
 
-            _engine.ExecuteCommand(s, _module);
+            _engine.Execute(_module, _engine.CreateScriptSourceFromString(s, SourceCodeKind.InteractiveCode));
 
             return null;
         }
@@ -340,7 +340,8 @@ namespace Microsoft.Scripting.Shell {
 
                 string code = b.ToString();
 
-                SourceCodeProperties props = _engine.GetCodeProperties(code, SourceCodeKind.InteractiveCode);
+
+                SourceCodeProperties props = _engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode).GetCodeProperties(); 
 
                 if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {
                     return props != SourceCodeProperties.IsEmpty ? code : null;

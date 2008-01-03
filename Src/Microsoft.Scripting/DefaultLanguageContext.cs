@@ -40,21 +40,14 @@ namespace Microsoft.Scripting {
         }
 
         public static CodeContext CreateCodeContext(Type[] extensionTypes) {
-            DefaultLanguageContext dlc = new DefaultLanguageContext();
+            DefaultLanguageContext dlc = new DefaultLanguageContext(null);
             CodeContext cc = new CodeContext(new Scope(), dlc, new ModuleContext(null));
-            dlc._binder = new DefaultActionBinder(cc, extensionTypes);
+            dlc.Binder = new DefaultActionBinder(cc, extensionTypes);
             return cc;
         }
 
-        internal ActionBinder _binder;
-
-        public DefaultLanguageContext() {
-        }
-
-        public override ActionBinder Binder {
-            get {
-                return _binder;
-            }
+        public DefaultLanguageContext(ScriptDomainManager manager)
+            : base(manager) {
         }
 
         public override CodeBlock ParseSourceCode(CompilerContext context) {

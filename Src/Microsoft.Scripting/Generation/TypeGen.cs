@@ -15,17 +15,13 @@
 
 using System;
 using System.Diagnostics;
-using System.Collections;
 using System.Collections.Generic;
-
 using System.Reflection;
 using System.Reflection.Emit;
 
-using System.Security.Permissions;
-
-using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public class TypeGen {
@@ -33,7 +29,7 @@ namespace Microsoft.Scripting.Generation {
         private readonly TypeBuilder _myType;
         private Slot _contextSlot;
         private ConstructorBuilder _initializer; // The .cctor() of the type
-        private CodeGen _initGen; // The IL generator for the .cctor()
+        private Compiler _initGen; // The IL generator for the .cctor()
         private Dictionary<object, Slot> _constants = new Dictionary<object, Slot>();
         private Dictionary<SymbolId, Slot> _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
         private List<TypeGen> _nestedTypeGens = new List<TypeGen>();
@@ -52,9 +48,9 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
-        /// Gets the CodeGen associated with the Type Initializer (cctor) creating it if necessary.
+        /// Gets the Compiler associated with the Type Initializer (cctor) creating it if necessary.
         /// </summary>
-        public CodeGen TypeInitializer {
+        public Compiler TypeInitializer {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
@@ -64,12 +60,12 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public CodeGen CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
+        public Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
             return CreateCodeGen(mi, ilg, paramTypes, null);
         }
 
-        public CodeGen CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
-            CodeGen ret = new CodeGen(this, _myAssembly, mi, ilg, paramTypes, constantPool);
+        public Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
+            Compiler ret = new Compiler(this, _myAssembly, mi, ilg, paramTypes, constantPool);
             if (_binder != null) ret.Binder = _binder;
             if (_contextSlot != null) ret.ContextSlot = _contextSlot;
             return ret;
@@ -137,7 +133,7 @@ namespace Microsoft.Scripting.Generation {
             return new StaticFieldSlot(fb);
         }
 
-        public CodeGen DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
+        public Compiler DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
             Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
@@ -149,7 +145,7 @@ namespace Microsoft.Scripting.Generation {
                 attrs,
                 baseMethod.ReturnType,
                 baseSignature);
-            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
+            Compiler ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
@@ -161,26 +157,26 @@ namespace Microsoft.Scripting.Generation {
         private const MethodAttributes MethodAttributesToEraseInOveride =
             MethodAttributes.Abstract | MethodAttributes.ReservedMask;
 
-        public CodeGen DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
+        public Compiler DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
             Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
             Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
-            CodeGen ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
+            Compiler ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
 
-        public CodeGen DefineMethodOverride(MethodInfo baseMethod) {
+        public Compiler DefineMethodOverride(MethodInfo baseMethod) {
             return DefineMethodOverride((MethodAttributes)0, baseMethod);
         }
 
-        public CodeGen DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
+        public Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
             return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, null, null, constantPool);
         }
 
-        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, 
+        public Compiler DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, 
             object[] defaultVals, CustomAttributeBuilder[] cabs, ConstantPool constantPool) {
             Contract.RequiresNotNull(paramTypes, "paramTypes");
             if (paramNames == null) {
@@ -201,7 +197,7 @@ namespace Microsoft.Scripting.Generation {
             Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
 
             MethodBuilder mb = _myType.DefineMethod(name, attrs, retType, parameterTypes);
-            CodeGen res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
+            Compiler res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
 
             if (paramNames == null) return res;
             // parameters are index from 1, with constant pool we need to skip the first arg
@@ -219,16 +215,16 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        public CodeGen DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames) {
+        public Compiler DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames) {
             return DefineMethod(attrs, name, retType, paramTypes, paramNames, null, null, null);
         }
 
-        public CodeGen DefineConstructor(Type[] paramTypes) {
+        public Compiler DefineConstructor(Type[] paramTypes) {
             ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
             return CreateCodeGen(cb, cb.GetILGenerator(), paramTypes);
         }
 
-        public CodeGen DefineStaticConstructor() {
+        public Compiler DefineStaticConstructor() {
             ConstructorBuilder cb = _myType.DefineTypeInitializer();
             return CreateCodeGen(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
         }
@@ -298,13 +294,13 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
-        public void EmitIndirectedSymbol(CodeGen cg, SymbolId id) {
+        public void EmitIndirectedSymbol(Compiler cg, SymbolId id) {
             Slot value;
             if (!_indirectSymbolIds.TryGetValue(id, out value)) {
                 // create field, emit fix-up...
 
                 value = AddStaticField(typeof(int), FieldAttributes.Private, "symbol_" + SymbolTable.IdToString(id));
-                CodeGen init = TypeInitializer;
+                Compiler init = TypeInitializer;
                 Slot localTmp = init.GetLocalTmp(typeof(SymbolId));
                 init.EmitString((string)SymbolTable.IdToString(id));
                 init.EmitCall(typeof(SymbolTable), "StringToId");

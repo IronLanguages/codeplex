@@ -323,4 +323,9 @@ def test_eolns():
         AssertError(SyntaxError, x, '\a')
         x('\n')
 
+def test_set_builtins():
+    g = {}
+    exec("", g, None)
+    Assert('__builtins__' in g.keys())
+
 run_test(__name__)

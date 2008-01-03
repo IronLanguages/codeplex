@@ -16,6 +16,8 @@
 using System;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
+
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -31,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
             _index = paramIndex;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             _param.EmitGet(cg);
@@ -39,7 +41,7 @@ namespace Microsoft.Scripting.Generation {
             cg.Emit(OpCodes.Ldelem_Ref);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             throw new NotImplementedException(Resources.NotImplemented);
         }
 

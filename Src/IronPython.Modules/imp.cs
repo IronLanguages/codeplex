@@ -32,7 +32,6 @@ using Microsoft.Scripting.Hosting;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
-    [PythonType("imp")]
     public static class PythonImport {
         internal const int PythonSource = 1;
         internal const int PythonCompiled = 2;
@@ -103,7 +102,7 @@ namespace IronPython.Modules {
         [Documentation("new_module(name) -> module\nCreates a new module without adding it to sys.modules.")]
         [PythonName("new_module")]
         public static object NewModule(CodeContext context, string name) { // TODO: remove context?
-            ScriptScope res = PythonEngine.CurrentEngine.MakePythonModule(name);
+            ScriptScope res = PythonContext.MakePythonModule(name, null, ModuleOptions.None);            
 
             PythonModuleOps.SetPythonCreated(res);
             return res;
@@ -189,11 +188,9 @@ namespace IronPython.Modules {
 
         [PythonName("load_source")]
         public static object LoadSource(CodeContext context, string name, string pathname) {
-            PythonEngine engine = PythonEngine.CurrentEngine;
-
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
-            SourceUnit codeUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, pathname, engine.SystemState.DefaultEncoding);
+            SourceUnit codeUnit = context.LanguageContext.TryGetSourceFileUnit(pathname, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
 
             return GenerateAndInitializeModule(context, name, pathname, codeUnit);
         }
@@ -262,8 +259,8 @@ namespace IronPython.Modules {
         }
 
         private static ScriptScope LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {
-            ScriptEngine engine = PythonEngine.CurrentEngine;
-            SourceUnit sourceUnit = SourceUnit.CreateFileUnit(engine, filename, file.Read());
+            SourceUnit sourceUnit = context.LanguageContext.CreateSnippet(file.Read(), filename, SourceCodeKind.File);
+            sourceUnit.IsVisibleToDebugger = true;
             return GenerateAndInitializeModule(context, name, filename, sourceUnit);
         }
 
@@ -273,27 +270,25 @@ namespace IronPython.Modules {
             PythonModuleOps.Set__file__(module, path);
             PythonModuleOps.Set__name__(module, moduleName);
 
-            return PythonEngine.CurrentEngine.Importer.InitializeModule(moduleName, module, true);
+            return PythonContext.GetImporter(context).InitializeModule(moduleName, module, true);
         }
 
 #if !SILVERLIGHT // files
-        private static ScriptScope LoadPackageDirectory(CodeContext context, string moduleName, string path) {
-            
+        private static ScriptScope LoadPackageDirectory(CodeContext context, string moduleName, string path) {            
             string initPath = Path.Combine(path, "__init__.py");
-            
-            PythonEngine engine = PythonEngine.CurrentEngine;
-            SourceUnit codeUnit = SourceUnit.CreateFileUnit(engine, initPath, engine.SystemState.DefaultEncoding);
+                        
+            SourceUnit codeUnit = context.LanguageContext.CreateFileUnit(initPath, PythonContext.GetSystemState(context).DefaultEncoding);
             ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, codeUnit);
 
             module.FileName = initPath;
             module.ModuleName = moduleName;
 
-            return PythonEngine.CurrentEngine.Importer.InitializeModule(moduleName, module, true);
+            return PythonContext.GetImporter(context).InitializeModule(moduleName, module, true);
         }
 #endif
 
         private static object LoadBuiltinModule(CodeContext context, string name) {
-            return PythonEngine.CurrentEngine.Importer.ImportBuiltin(context, name);
+            return PythonContext.GetImporter(context).ImportBuiltin(context, name);
         }
 
         #endregion

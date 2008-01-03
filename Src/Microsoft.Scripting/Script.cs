@@ -27,7 +27,6 @@ namespace Microsoft.Scripting {
     /// NOTE: Local hosting only.
     /// </summary>
     public static class Script {
-
         /// <exception cref="ArgumentNullException"><paramref name="languageId"/>, <paramref name="code"/></exception>
         /// <exception cref="ArgumentException">no language registered</exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
@@ -36,9 +35,9 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(languageId, "languageId");
             Contract.RequiresNotNull(code, "code");
 
-            ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine().Execute(code);
+            ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngine(languageId);
+            eng.Compile(eng.CreateScriptSourceFromString(code, SourceCodeKind.File)).Execute();
         }
-
         /// <exception cref="ArgumentNullException"><paramref name="languageId"/>, <paramref name="code"/></exception>
         /// <exception cref="ArgumentException">no language registered</exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
@@ -47,7 +46,8 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(languageId, "languageId");
             Contract.RequiresNotNull(expression, "expression");
 
-            return ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine().Evaluate(expression);
+            ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngine(languageId);
+            return eng.Execute(ScriptDomainManager.CurrentManager.Host.DefaultModule, eng.CreateScriptSourceFromString(expression, SourceCodeKind.Expression));
         }
 
         // TODO: file IO exceptions
@@ -58,7 +58,9 @@ namespace Microsoft.Scripting {
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static void ExecuteFile(string path) {
             Contract.RequiresNotNull(path, "path");
-            ScriptDomainManager.CurrentManager.GetLanguageProviderByFileExtension(Path.GetExtension(path)).GetEngine().ExecuteFile(path);
+
+            ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngineByFileExtension(Path.GetExtension(path));
+            eng.Compile(eng.CreateScriptSourceFromFile(path)).Execute(ScriptDomainManager.CurrentManager.CreateModule(""));
         }
 
         // TODO: file IO exceptions
@@ -68,7 +70,9 @@ namespace Microsoft.Scripting {
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static void ExecuteFileContent(string path) {
             Contract.RequiresNotNull(path, "path");
-            ScriptDomainManager.CurrentManager.GetLanguageProviderByFileExtension(Path.GetExtension(path)).GetEngine().ExecuteFileContent(path);
+
+            ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngineByFileExtension(Path.GetExtension(path));
+            eng.Compile(eng.CreateScriptSourceFromFile(path)).Execute(ScriptDomainManager.CurrentManager.Host.DefaultModule);
         }
 
         public static void SetVariable(string name, object value) {
@@ -97,8 +101,8 @@ namespace Microsoft.Scripting {
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public static IScriptEngine GetEngine(string languageId) {
             Contract.RequiresNotNull(languageId, "languageId");
-            
-            return ScriptDomainManager.CurrentManager.GetLanguageProvider(languageId).GetEngine();
+
+            return ScriptDomainManager.CurrentManager.GetEngine(languageId);
         }
     }
 }

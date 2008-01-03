@@ -80,9 +80,9 @@ namespace IronPython.Runtime.Calls {
             Expression test = MakeTypeTest(rule, types[index], rule.Parameters[index], templatable);
             if (index + 1 < types.Length) {
                 Expression nextTests = MakeTestForTypes(rule, types, templatable, index + 1);
-                if (test.IsConstant(true)) {
+                if (ConstantCheck.Check(test, true)) {
                     return nextTests;
-                } else if (nextTests.IsConstant(true)) {
+                } else if (ConstantCheck.Check(nextTests, true)) {
                     return test;
                 } else {
                     return Ast.AndAlso(test, nextTests);
@@ -288,15 +288,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(CompilerHelpers.GetType(self));
-            rule.SetTarget(
-                rule.MakeReturn(
-                    context.LanguageContext.Binder,
-                    Ast.Constant(isCallable)
-                )
-            );
-            return rule;
+            return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
         }
     }
 }

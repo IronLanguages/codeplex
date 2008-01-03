@@ -62,28 +62,28 @@ namespace Microsoft.Scripting.Ast {
 
         private void AddresOf(BoundAssignment node) {
             EmitExpression(node.Value);
-            node.Ref.Slot.EmitSet(_cg);
-            node.Ref.Slot.EmitGetAddr(_cg);
+            node.Ref.Slot.EmitSet(this);
+            node.Ref.Slot.EmitGetAddr(this);
         }
 
         private void AddresOf(BoundExpression node, Type type) {
             if (type == node.Type) {
-                node.Ref.Slot.EmitGetAddr(_cg);
+                node.Ref.Slot.EmitGetAddr(this);
             } else {
                 EmitExpressionAddress(node, type);
             }
         }
 
         private void AddresOf(ConditionalExpression node, Type type) {
-            Label eoi = _cg.DefineLabel();
-            Label next = _cg.DefineLabel();
+            Label eoi = DefineLabel();
+            Label next = DefineLabel();
             EmitExpression(node.Test);
-            _cg.Emit(OpCodes.Brfalse, next);
+            Emit(OpCodes.Brfalse, next);
             EmitAddress(node.IfTrue, type);
-            _cg.Emit(OpCodes.Br, eoi);
-            _cg.MarkLabel(next);
+            Emit(OpCodes.Br, eoi);
+            MarkLabel(next);
             EmitAddress(node.IfFalse, type);
-            _cg.MarkLabel(eoi);
+            MarkLabel(eoi);
         }
 
         private void AddresOf(CommaExpression node, Type type) {
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Ast {
                     // If we don't want the expression just emitted as the result,
                     // pop it off of the stack, unless it is a void expression.
                     if (current.Type != typeof(void)) {
-                        _cg.Emit(OpCodes.Pop);
+                        Emit(OpCodes.Pop);
                     }
                 }
             }
@@ -111,7 +111,7 @@ namespace Microsoft.Scripting.Ast {
                 EmitExpressionAddress(node, type);
             } else {
                 EmitInstance(node.Expression, node.Member.DeclaringType);
-                _cg.EmitFieldAddress((FieldInfo)node.Member);
+                EmitFieldAddress((FieldInfo)node.Member);
             }
         }
 
@@ -129,9 +129,9 @@ namespace Microsoft.Scripting.Ast {
             //Debug.Assert(TypeUtils.CanAssign(type, node.Type));
 
             EmitAs(node, type);
-            Slot tmp = _cg.GetLocalTmp(type);
-            tmp.EmitSet(_cg);
-            tmp.EmitGetAddr(_cg);
+            Slot tmp = GetLocalTmp(type);
+            tmp.EmitSet(this);
+            tmp.EmitGetAddr(this);
         }
     }
 }

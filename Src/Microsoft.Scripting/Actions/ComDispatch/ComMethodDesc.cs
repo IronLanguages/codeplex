@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices.ComTypes;
-using VarEnum = System.Runtime.InteropServices.VarEnum;
 using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -33,7 +32,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private readonly string _dispidOrName;
         private readonly bool _isPropertyGet;
         private readonly bool _isPropertyPut;
-        //private readonly int _mandatoryParamsCount;
+        private readonly ComParamDesc _returnValue;
         private readonly ComParamDesc[] _parameters;
 
         # endregion
@@ -57,13 +56,22 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             _hasTypeInfo = true;
 
-            int cNames;
-            string[] rgNames = new string[1];
-            typeInfo.GetNames(_memid, rgNames, 1, out cNames);
-            _name = rgNames[0];
-
             _isPropertyGet = (funcDesc.invkind & INVOKEKIND.INVOKE_PROPERTYGET) != 0;
             _isPropertyPut = (funcDesc.invkind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
+
+            ELEMDESC returnValue = funcDesc.elemdescFunc;
+            _returnValue = new ComParamDesc(returnValue, String.Empty);
+
+            int cNames;
+            string[] rgNames = new string[1 + funcDesc.cParams];
+            typeInfo.GetNames(_memid, rgNames, rgNames.Length, out cNames);
+            if (_isPropertyPut) {
+                rgNames[rgNames.Length - 1] = "value";
+                cNames++;
+            }
+            Debug.Assert(cNames == rgNames.Length);
+            _name = rgNames[0];
+
             _parameters = new ComParamDesc[funcDesc.cParams];
 
             int offset = 0;
@@ -72,7 +80,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     new IntPtr(funcDesc.lprgelemdescParam.ToInt64() + offset),
                     typeof(ELEMDESC));
 
-                _parameters[i] = new ComParamDesc(elemDesc);
+                _parameters[i] = new ComParamDesc(elemDesc, rgNames[1 + i]);
 
                 offset += Marshal.SizeOf(typeof(ELEMDESC));
             }
@@ -141,7 +149,41 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
+        public string Signature {
+            get {
+                if (!_hasTypeInfo) {
+                    return _name + "(...)";
+                }
+
+                StringBuilder result = new StringBuilder();
+                if (_returnValue.ParameterType == null) {
+                    result.Append("void");
+                } else {
+                    result.Append(_returnValue.ToString());
+                }
+                result.Append(" ");
+                result.Append(_name);
+                result.Append("(");
+                for (int i = 0; i < _parameters.Length; i++) {
+                    result.Append(_parameters[i].ToString());
+                    if (i < (_parameters.Length - 1)) {
+                        result.Append(", ");
+                    }
+                }
+                result.Append(")");
+                return result.ToString();
+            }
+        }
+
         # endregion
+
+        #region Public methods
+
+        public override string ToString() {
+            return Signature;
+        }
+
+        #endregion
     }
 }
 

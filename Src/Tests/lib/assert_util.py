@@ -160,8 +160,9 @@ if is_cli or is_silverlight:
 # This has to be a function since the InterpretedMode option can change at runtime
 def is_interpreted():
     if is_cli or is_silverlight:
-        import IronPython
-        return IronPython.Hosting.PythonEngine.CurrentEngine.Options.InterpretedMode
+        load_iron_python_test()
+        from IronPythonTest import TestHelpers
+        return TestHelpers.GetContext().Options.InterpretedMode
     else:
         return False    
 
@@ -215,6 +216,14 @@ def AssertErrorWithMessage(exc, expectedMessage, func, *args, **kwargs):
     try:   func(*args, **kwargs)
     except exc, inst:
         Assert(expectedMessage == inst.__str__(), \
+               "Exception %r message (%r) does not match %r" % (type(inst), inst.__str__(), expectedMessage))
+    else:  Assert(False, "Expected %r but got no exception" % exc)
+
+def AssertErrorWithPartialMessage(exc, expectedMessage, func, *args, **kwargs):
+    Assert(expectedMessage, "expectedMessage cannot be null")
+    try:   func(*args, **kwargs)
+    except exc, inst:
+        Assert(expectedMessage in inst.__str__(), \
                "Exception %r message (%r) does not contain %r" % (type(inst), inst.__str__(), expectedMessage))
     else:  Assert(False, "Expected %r but got no exception" % exc)
 
@@ -385,9 +394,9 @@ def print_failures(failures):
     
         if is_cli:
             if '-X:ExceptionDetail' in System.Environment.GetCommandLineArgs():
-                from IronPython.Hosting import PythonEngine
+                from IronPythonTest import TestHelpers
                 print 'CLR Exception: ',
-                print PythonEngine.CurrentEngine.FormatException(ex.clsException)
+                print TestHelpers.GetContext().FormatException(ex.clsException)
         
 def run_test(mod_name, noOutputPlease=False):
     import sys
@@ -399,7 +408,7 @@ def run_test(mod_name, noOutputPlease=False):
     includedTests = [arg[4:] for arg in sys.argv if arg.startswith('run:test_') and not arg.endswith('.py')]
     for name in dir(module): 
         obj = getattr(module, name)
-        if isinstance(obj, type(_do_nothing)) or isinstance(obj, type(_func)) :
+        if isinstance(obj, types.functionType):
             if name.endswith("_clionly") and not is_cli: continue
             if name.startswith("test_"): 
                 if not includedTests or name in includedTests:

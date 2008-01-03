@@ -14,8 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection.Emit;
 using System.Reflection;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {    
     public class FunctionEnvironmentSlot : EnvironmentSlot {
@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Generation {
             _storageType = storageType;
         }
 
-        public override void EmitGetDictionary(CodeGen cg) {
+        public override void EmitGetDictionary(Compiler cg) {
             EmitGet(cg);
             foreach (PropertyInfo pi in Tuple.GetAccessPath(_storageType, 0)) {
                 cg.EmitPropertyGet(pi);
