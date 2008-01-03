@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using SRC = System.Runtime.CompilerServices;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
 
@@ -143,6 +144,7 @@ namespace Microsoft.Scripting {
                 }
             }
 
+            [Confined]
             public override int GetHashCode() {
                 return _hashCode;
             }

@@ -98,7 +98,7 @@ namespace IronPython.Hosting {
                     }
 #endif
                     string fullPath = ScriptDomainManager.CurrentManager.PAL.GetFullPath(Options.FileName);
-                    PythonContext.AddToPath(Path.GetDirectoryName(fullPath));
+                    DefaultContext.DefaultPythonContext.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
 
@@ -127,16 +127,16 @@ namespace IronPython.Hosting {
             }
         }
 
-        private ScriptScope CreateMainModule() {
+        private ScriptScope/*!*/ CreateMainModule() {
             ModuleOptions trueDiv = (PythonContext.GetPythonOptions(null).DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            ScriptScope module = PythonContext.MakePythonModule("__main__", null, trueDiv | ModuleOptions.PublishModule);
+            PythonModule module = DefaultContext.DefaultPythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
             module.Scope.SetName(Symbols.Doc, null);
-            return module;
+            return module.Scope.ToScriptScope();
         }
 
         
         private void InitializePath() {
-            PythonContext.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
+            DefaultContext.DefaultPythonContext.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -144,19 +144,19 @@ namespace IronPython.Hosting {
                 if (path != null && path.Length > 0) {
                     string[] paths = path.Split(Path.PathSeparator);
                     foreach (string p in paths) {
-                        PythonContext.AddToPath(p);
+                        DefaultContext.DefaultPythonContext.AddToPath(p);
                     }
                 }
             }
 
             string entry = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             string site = Path.Combine(entry, "Lib");
-            PythonContext.AddToPath(site);
+            DefaultContext.DefaultPythonContext.AddToPath(site);
 
             // add DLLs directory if it exists            
             string dlls = Path.Combine(entry, "DLLs");
             if (Directory.Exists(dlls)) {
-                PythonContext.AddToPath(dlls);
+                DefaultContext.DefaultPythonContext.AddToPath(dlls);
             }
 #endif
         }
@@ -242,7 +242,13 @@ namespace IronPython.Hosting {
 
         public override int? TryInteractiveAction() {
             try {
-                return base.TryInteractiveAction();
+                try {
+                    return base.TryInteractiveAction();
+                } finally {
+                    // sys.exc_info() is normally cleared after functions exit. But interactive console enters statements
+                    // directly instead of using functions. So clear explicitly.
+                    PythonOps.ClearCurrentException();
+                }
             } catch (PythonSystemExitException se) {
                 return GetEffectiveExitCode(se);
             }
@@ -328,13 +334,14 @@ namespace IronPython.Hosting {
                 // TODO: move to compiler options
                 ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Generation.AssemblyGenAttributes.EmitDebugInfo;
                 
-                // TODO: Multi-engine support
-                ScriptScope engineModule = ((PythonContext)DefaultContext.Default.LanguageContext).CreateOptimizedModule(fileName, "__main__", true, Options.SkipFirstSourceLine);
+                ScriptCode compiledCode;
+                PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized, Options.SkipFirstSourceLine, out compiledCode);
 
-                if (Options.Introspection)
-                    Module = engineModule;
+                if (Options.Introspection) {
+                    Module = module.Scope.ToScriptScope();
+                }
 
-                engineModule.Execute();
+                compiledCode.Run(module.Scope, module);
                 return 0;
             } catch (PythonSystemExitException pythonSystemExit) {
                 

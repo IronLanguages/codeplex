@@ -209,8 +209,7 @@ namespace IronPython.Runtime.Types {
         /// Stores a method with the specified transformed name.
         /// </summary>
         private void StoreMethod(MethodInfo mi, TransformedName name, FunctionType funcType) {
-            CodeContext ctx = DefaultContext.Default;
-            RemoveNonOps(ctx, SymbolTable.StringToId(name.Name));
+            RemoveNonOps(DefaultContext.Default, SymbolTable.StringToId(name.Name));
 
             // store language specific version
             StoreMethod(SymbolTable.StringToId(name.Name), name.Name, name.Context, mi, funcType | FunctionType.OpsFunction); 

@@ -221,8 +221,9 @@ namespace IronPython.Runtime.Calls {
 
         private bool TryMakePropertyGet(MethodInfo getter, Expression arg, out Statement body) {
             if (getter != null && CompilerHelpers.CanOptimizeMethod(getter)) {
-                body = MakeCallStatement(getter, arg);
-                if (body != null) {
+                Expression call = Binder.MakeCallExpression(getter, arg);
+                if (call != null) {
+                    body = Rule.MakeReturn(Binder, call);
                     return true;
                 }
             }

@@ -22,7 +22,8 @@ from Merlin.Testing import *
 from Merlin.Testing.TypeSample import *
 from Merlin.Testing.DefaultMemberSample import *
 
-def test_indexer_not_named_as_item():
+def test_vb_scenarios():
+    '''vb supported scenarios '''
     x = ClassWithOverloadDefaultIndexer()
    
     for i in range(3):  
@@ -41,26 +42,60 @@ def test_indexer_not_named_as_item():
             
             #x.MyProperty[i, j] = a * 2
             #AreEqual(x.MyProperty[i, j], a * 2)
-            
+    
+    # negative scenarios: incorrect argument count, type
+    #x[()]
+    #x[1, 2, 3]
+    #x[x]
+
+    # value type
     x = StructWithDefaultIndexer()
     x.Init()
+    
     #x[1] = 1
     #print x.MyProperty[0]
     #x.MyProperty[1] = 1
-
-def test_indexer_not_existing():
-    x = ClassWithNotExisting()
+    
+    x = ClassWithNotExistingMember()
     # x[1] 
     # x[2] = 2
+    AreEqual(x.MyProperty[1] , 0)
+    x.MyProperty[1] = 10
+    AreEqual(x.MyProperty[1] , 10)
     
-def test_special_item():
+    # interface declared with default indexer
+    for t in [StructImplementsIDefaultIndexer, ClassImplementsIDefaultIndexer]:
+        x = t()
+        #AreEqual(x[5], 5)
+        #x[5] = 6
+        #Flag.Check(11)
+        
+        #IDefaultIndexer.MyProperty.GetValue(x, 5) 
+
+    # try to leverage default member from the derived class: no
+    x = DerivedClass()
+    # x[2]
+    # x[2] = 3
+    x.MyProperty[2] = 4
+    AreEqual(x.MyProperty[2], 4)
+    
+def test_cs_scenarios():
     x = ClassWithItem()
     AssertError(TypeError, lambda: x[1])
+    
     x.Item = 2
     AreEqual(x.Item, 2)
 
     x = ClassWithset_Item()
-    x[10] = 20
+    def f(): x[10] = 20
+    AssertError(AttributeError, f)
+    x.set_Item(3)
+    Flag.Check(3)
+    
+    # 
+    
+    # try other types
+    x = ClassWithDefaultMemberCtor(1)
     
 run_test(__name__)
 

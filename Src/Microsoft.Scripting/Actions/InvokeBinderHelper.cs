@@ -57,7 +57,9 @@ namespace Microsoft.Scripting.Actions {
             //TODO support non-object return types
             Expression callExpr = Ast.Action.Call(callAction, typeof(object), callArgs);
 
-            rule.SetTarget(Ast.Return(callExpr));
+            rule.SetTarget(
+                rule.MakeReturn(Binder, callExpr)
+            );
 
             return rule;
         }

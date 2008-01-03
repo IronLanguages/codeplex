@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -75,6 +76,7 @@ namespace Microsoft.Scripting {
 
         #region IEquatable<ContextId> Members
 
+        [StateIndependent]
         public bool Equals(ContextId other) {
             return this._id == other._id;
         }

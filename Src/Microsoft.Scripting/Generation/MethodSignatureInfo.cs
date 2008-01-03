@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -32,6 +33,7 @@ namespace Microsoft.Scripting.Generation {
             _pis = pis;
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             MethodSignatureInfo args = obj as MethodSignatureInfo;
             if (args == null) return false;
@@ -49,6 +51,7 @@ namespace Microsoft.Scripting.Generation {
             return true;
         }
 
+        [Confined]
         public override int GetHashCode() {
             int hash = 6551;
             foreach (ParameterInfo pi in _pis) {

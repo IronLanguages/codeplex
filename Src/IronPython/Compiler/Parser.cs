@@ -566,8 +566,9 @@ namespace IronPython.Compiler {
 
         public PythonAst ParseExpression() {
             // TODO: move from source unit  .TrimStart(' ', '\t')
-
-            return new PythonAst(new ReturnStatement(ParseTestListAsExpression()), false, TrueDivision, false);
+            ReturnStatement ret = new ReturnStatement(ParseTestListAsExpression());
+            ret.SetLoc(SourceSpan.None);
+            return new PythonAst(ret, false, TrueDivision, false);
         }
 
         private Expression ParseTestListAsExpression() {
@@ -1614,6 +1615,13 @@ namespace IronPython.Compiler {
         //except_clause: 'except' [test [',' test]]
         private TryStatementHandler ParseTryStmtHandler() {
             Eat(TokenKind.KeywordExcept);
+
+            // If this function has an except block, then it can set the current exception.
+            FunctionDefinition current = CurrentFunction;
+            if (current != null) {
+                current.CanSetSysExcInfo = true;
+            }
+
             SourceLocation start = GetStart();
             Expression test1 = null, test2 = null;
             if (PeekToken().Kind != TokenKind.Colon) {

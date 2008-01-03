@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class NestedTypeTracker : TypeTracker {
@@ -51,8 +52,9 @@ namespace Microsoft.Scripting.Actions {
         public override bool IsGenericType {
             get { return _type.IsGenericType; }
         }
-        
-        public override string ToString() {
+
+        [Confined]
+        public override string/*!*/ ToString() {
             return _type.ToString();
         }
     }

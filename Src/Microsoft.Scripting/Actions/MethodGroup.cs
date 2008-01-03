@@ -21,6 +21,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
 using System.Reflection;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -161,6 +162,7 @@ namespace Microsoft.Scripting.Actions {
                 _types = types;
             }
 
+            [Confined]
             public override bool Equals(object obj) {
                 TypeList tl = obj as TypeList;
                 if (tl == null || _types.Length != tl._types.Length) return false;
@@ -171,6 +173,7 @@ namespace Microsoft.Scripting.Actions {
                 return true;
             }
 
+            [Confined]
             public override int GetHashCode() {
                 int hc = 6551;
                 foreach (Type t in _types) {

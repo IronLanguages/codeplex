@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
@@ -24,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder which always produces null.  
     /// </summary>
-    public class NullArgBuilder : ArgBuilder {
+    class NullArgBuilder : ArgBuilder {
         public NullArgBuilder() { }
 
         public override int Priority {
@@ -41,6 +42,10 @@ namespace Microsoft.Scripting.Generation {
 
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return null;
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            return true;
         }
     }
 }

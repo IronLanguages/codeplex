@@ -57,6 +57,11 @@ namespace Microsoft.Scripting.Generation {
             return null;
         }
 
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            return true;
+        }
+
         private Expression[] GetParameters(Expression[] parameters) {
             Expression[] res = new Expression[_nameIndexes.Length];
             for (int i = 0; i < _nameIndexes.Length; i++) {

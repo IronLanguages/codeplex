@@ -18,6 +18,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -51,21 +52,25 @@ namespace Microsoft.Scripting.Actions {
             get { return DynamicActionKind.InvokeMember; }
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as InvokeMemberAction);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return _signature.GetHashCode() ^ (int)_flags;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("{0}{1} {2}", base.ToString(), _signature, _flags);
         }
 
 
         #region IEquatable<InvokeMemberAction> Members
 
+        [StateIndependent]
         public bool Equals(InvokeMemberAction other) {
             if (other == null) return false;
             return Name == other.Name && _flags == other._flags && _signature.Equals(other._signature);

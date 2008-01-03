@@ -270,18 +270,19 @@ namespace IronPython.Compiler.Ast {
                 body = catchAll;
             }
 
-            //  try {
-            //      extracted = PushExceptionHandler(exception)
+            // Codegen becomes:
+            //   try {
+            //     extracted = PythonOps.SetCurrentException(exception)
             //      < dynamic exception analysis >
             //  } finally {
-            //      PopExceptionHandler()
+            //     PythonOps.CheckThreadAbort(); 
             //  }
             return Ast.Try(
                 Ast.Statement(
                     Ast.Assign(
                         extracted.Variable,
                         Ast.Call(
-                            AstGenerator.GetHelperMethod("PushExceptionHandler"),
+                            AstGenerator.GetHelperMethod("SetCurrentException"),
                             exception
                         )
                     )
@@ -290,7 +291,7 @@ namespace IronPython.Compiler.Ast {
             ).Finally(
                 Ast.Statement(
                     Ast.Call(
-                        AstGenerator.GetHelperMethod("PopExceptionHandler")
+                        AstGenerator.GetHelperMethod("CheckThreadAbort")
                     )
                 )
             );

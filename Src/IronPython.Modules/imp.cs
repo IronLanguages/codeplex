@@ -29,6 +29,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
@@ -54,21 +55,24 @@ namespace IronPython.Modules {
         }
 
         [PythonName("find_module")]
-        public static PythonTuple FindModule(CodeContext context, string name) {
+        public static PythonTuple FindModule(CodeContext/*!*/ context, string/*!*/ name) {
+            if (name == null) throw PythonOps.TypeError("find_module() argument 1 must be string, not None");
             return FindBuiltinOrSysPath(context, name);
         }
 
         [PythonName("find_module")]
-        public static PythonTuple FindModule(CodeContext context, string name, List path) {
+        public static PythonTuple FindModule(CodeContext/*!*/ context, string/*!*/ name, List path) {
+            if (name == null) throw PythonOps.TypeError("find_module() argument 1 must be string, not None");
+
             if (path == null) {
                 return FindBuiltinOrSysPath(context, name);
             } else {
-                return FindModulePath(context, name, path);
+                return FindModulePath(name, path);
             }
         }
 
         [PythonName("load_module")]
-        public static object LoadModule(CodeContext context, string name, PythonFile file, string filename, PythonTuple description) {
+        public static object LoadModule(CodeContext/*!*/ context, string name, PythonFile file, string filename, PythonTuple/*!*/ description) {
             if (description == null) {
                 throw PythonOps.TypeError("load_module() argument 4 must be 3-item sequence, not None");
             }
@@ -76,23 +80,24 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("load_module() argument 4 must be sequence of length 3, not {0}", description.Count);
             }
 
+            PythonContext pythonContext = PythonContext.GetContext(context);
+
             // already loaded? do reload()
-            object mod;
-            if (SystemState.Instance.modules.TryGetValue(name, out mod)) {
-                ScriptScope module = mod as ScriptScope;
-                if (module != null) {
-                    return Builtin.reload(context, module);
-                }
+            PythonModule module = pythonContext.SystemState.GetModuleByName(name);
+            if (module != null) {
+                pythonContext.Importer.ReloadModule(module.Scope);
+                return module.Scope;
             }
+
             int type = Converter.ConvertToInt32(description[2]);
             switch (type) {
                 case PythonSource:
-                    return LoadPythonSource(context, name, file, filename);
+                    return LoadPythonSource(pythonContext, name, file, filename);
                 case CBuiltin:
                     return LoadBuiltinModule(context, name);
                 case PackageDirectory:
 #if !SILVERLIGHT // file-system
-                    return LoadPackageDirectory(context, name, filename);
+                    return LoadPackageDirectory(pythonContext, name, filename);
 #endif
                 default:
                     throw PythonOps.TypeError("don't know how to import {0}, (type code {1}", name, type);
@@ -101,11 +106,10 @@ namespace IronPython.Modules {
 
         [Documentation("new_module(name) -> module\nCreates a new module without adding it to sys.modules.")]
         [PythonName("new_module")]
-        public static object NewModule(CodeContext context, string name) { // TODO: remove context?
-            ScriptScope res = PythonContext.MakePythonModule(name, null, ModuleOptions.None);            
+        public static Scope/*!*/ NewModule(CodeContext/*!*/ context, string/*!*/ name) {
+            if (name == null) throw PythonOps.TypeError("new_module() argument 1 must be string, not None");
 
-            PythonModuleOps.SetPythonCreated(res);
-            return res;
+            return PythonContext.GetContext(context).CreateModule(name).Scope;
         }
 
         private static long lock_count;
@@ -139,7 +143,8 @@ namespace IronPython.Modules {
         public static object SEARCH_ERROR = SearchError;
 
         [PythonName("init_builtin")]
-        public static object InitBuiltin(CodeContext context, string name) {
+        public static object InitBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
+            if (name == null) throw PythonOps.TypeError("init_builtin() argument 1 must be string, not None");
             return LoadBuiltinModule(context, name);
         }
 
@@ -149,9 +154,10 @@ namespace IronPython.Modules {
         }
 
         [PythonName("is_builtin")]
-        public static int IsBuiltin(CodeContext context, string name) {
+        public static int IsBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
+            if (name == null) throw PythonOps.TypeError("is_builtin() argument 1 must be string, not None");
             Type ty;
-            if (SystemState.Instance.Builtins.TryGetValue(name, out ty)) {
+            if (PythonContext.GetContext(context).SystemState.Builtins.TryGetValue(name, out ty)) {
                 return 1;
             }
             return 0;
@@ -187,22 +193,29 @@ namespace IronPython.Modules {
 #endif
 
         [PythonName("load_source")]
-        public static object LoadSource(CodeContext context, string name, string pathname) {
+        public static object LoadSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
+            if (name == null) throw PythonOps.TypeError("load_source() argument 1 must be string, not None");
+            if (pathname == null) throw PythonOps.TypeError("load_source() argument 2 must be string, not None");
+            
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
-            SourceUnit codeUnit = context.LanguageContext.TryGetSourceFileUnit(pathname, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
-
-            return GenerateAndInitializeModule(context, name, pathname, codeUnit);
+            PythonContext pythonContext = PythonContext.GetContext(context);
+            SourceUnit codeUnit = pythonContext.TryGetSourceFileUnit(pathname, pythonContext.SystemState.DefaultEncoding, SourceCodeKind.File);
+            return pythonContext.CompileAndInitializeModule(name, pathname, codeUnit);
         }
 
         [PythonName("load_source")]
-        public static object LoadSource(CodeContext context, string name, string pathname, PythonFile file) {
-            return LoadPythonSource(context, name, file, pathname);
+        public static object LoadSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname, PythonFile/*!*/ file) {
+            if (name == null) throw PythonOps.TypeError("load_source() argument 1 must be string, not None");
+            if (pathname == null) throw PythonOps.TypeError("load_source() argument 2 must be string, not None");
+            if (pathname == null) throw PythonOps.TypeError("load_source() argument 3 must be file, not None");
+            
+            return LoadPythonSource(PythonContext.GetContext(context), name, file, pathname);
         }
 
         #region Implementation
 
-        private static PythonTuple FindBuiltinOrSysPath(CodeContext context, string name) {
+        private static PythonTuple FindBuiltinOrSysPath(CodeContext/*!*/ context, string/*!*/ name) {
             List sysPath = SystemState.Instance.path;
             if (sysPath == null) {
                 throw PythonOps.ImportError("sys.path must be a list of directory names");
@@ -210,7 +223,7 @@ namespace IronPython.Modules {
             return FindModuleBuiltinOrPath(context, name, sysPath);
         }
 
-        private static PythonTuple FindModulePath(CodeContext context, string name, List path) {
+        private static PythonTuple FindModulePath(string name, List path) {
             Debug.Assert(path != null);
 
             if (name == null) {
@@ -251,43 +264,30 @@ namespace IronPython.Modules {
                 return BuiltinModuleTuple(name);
             }
 
-            return FindModulePath(context, name, path);
+            return FindModulePath(name, path);
         }
 
         private static PythonTuple BuiltinModuleTuple(string name) {
             return PythonTuple.MakeTuple(null, name, PythonTuple.MakeTuple("", "", CBuiltin));
         }
 
-        private static ScriptScope LoadPythonSource(CodeContext context, string name, PythonFile file, string filename) {
-            SourceUnit sourceUnit = context.LanguageContext.CreateSnippet(file.Read(), filename, SourceCodeKind.File);
-            sourceUnit.IsVisibleToDebugger = true;
-            return GenerateAndInitializeModule(context, name, filename, sourceUnit);
-        }
-
-        private static ScriptScope GenerateAndInitializeModule(CodeContext context, string moduleName, string path, SourceUnit sourceUnit) {
-            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, sourceUnit);
-            
-            PythonModuleOps.Set__file__(module, path);
-            PythonModuleOps.Set__name__(module, moduleName);
-
-            return PythonContext.GetImporter(context).InitializeModule(moduleName, module, true);
+        private static Scope/*!*/ LoadPythonSource(PythonContext/*!*/ context, string/*!*/ name, PythonFile/*!*/ file, string/*!*/ fileName) {
+            SourceUnit sourceUnit = context.CreateSnippet(file.Read(), fileName, SourceCodeKind.File);
+            return context.CompileAndInitializeModule(name, fileName, sourceUnit).Scope;
         }
 
 #if !SILVERLIGHT // files
-        private static ScriptScope LoadPackageDirectory(CodeContext context, string moduleName, string path) {            
+        private static Scope/*!*/ LoadPackageDirectory(PythonContext/*!*/ context, string moduleName, string path) {
+            
             string initPath = Path.Combine(path, "__init__.py");
-                        
-            SourceUnit codeUnit = context.LanguageContext.CreateFileUnit(initPath, PythonContext.GetSystemState(context).DefaultEncoding);
-            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, codeUnit);
-
-            module.FileName = initPath;
-            module.ModuleName = moduleName;
-
-            return PythonContext.GetImporter(context).InitializeModule(moduleName, module, true);
+            
+            SourceUnit codeUnit = context.CreateFileUnit(initPath, context.SystemState.DefaultEncoding);
+            return context.CompileAndInitializeModule(moduleName, initPath, codeUnit).Scope;
         }
 #endif
 
-        private static object LoadBuiltinModule(CodeContext context, string name) {
+        private static object LoadBuiltinModule(CodeContext/*!*/ context, string/*!*/ name) {
+            Assert.NotNull(context, name);
             return PythonContext.GetImporter(context).ImportBuiltin(context, name);
         }
 

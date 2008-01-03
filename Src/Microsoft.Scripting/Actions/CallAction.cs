@@ -19,6 +19,7 @@ using System.Text;
 using Microsoft.Scripting.Ast;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class CallAction : DynamicAction, IEquatable<CallAction> {
@@ -54,20 +55,24 @@ namespace Microsoft.Scripting.Actions {
             get { return DynamicActionKind.Call; }
         }
 
+        [StateIndependent]
         public bool Equals(CallAction other) {
             if (other == null || other.GetType() != GetType()) return false;
             return _signature.Equals(other._signature);
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as CallAction);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return (int)Kind << 28 ^ _signature.GetHashCode();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return base.ToString() + _signature.ToString();
         }
     }

@@ -382,9 +382,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.DeleteUnboundExpression:
                     return Rewrite((DeleteUnboundExpression)node);
 
-                case AstNodeType.DynamicConversionExpression:
-                    return Rewrite((DynamicConversionExpression)node, stack);
-
                 case AstNodeType.EnvironmentExpression:
                 case AstNodeType.GeneratorIntrinsic:
                     return Rewrite((IntrinsicExpression)node);
@@ -624,17 +621,6 @@ namespace Microsoft.Scripting.Ast {
         private Expression Rewrite(DeleteUnboundExpression node) {
             // No action necessary, regardless of stack
             return node;
-        }
-
-        // DynamicConversionExpression
-        private Expression Rewrite(DynamicConversionExpression node, Stack stack) {
-            // The expression is evaluated on the current stack
-            Expression expression = RewriteExpression(node.Expression, stack);
-            if ((object)expression != (object)node.Expression) {
-                return Ast.DynamicConvert(expression, node.Type);
-            } else {
-                return node;
-            }
         }
 
         // IntrinsicExpression

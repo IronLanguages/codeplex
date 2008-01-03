@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class EventTracker : MemberTracker {
@@ -69,7 +70,8 @@ namespace Microsoft.Scripting.Actions {
             return new BoundMemberTracker(this, instance);
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return _event.ToString();
         }       
     }

@@ -15,13 +15,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
+
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Reflection;
 
     /// <summary>
     /// Builds the argument for an out argument when not passed a StrongBox.  The out parameter
@@ -54,6 +55,10 @@ namespace Microsoft.Scripting.Generation {
 
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return null;
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            return true;
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

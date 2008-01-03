@@ -39,7 +39,7 @@ namespace IronPython.Compiler.Ast {
             }
             return Ast.Return(
                 Span,
-                ag.Transform(_expression)
+                ag.TransformOrConstantNull(_expression, typeof(object))
             );
         }
 

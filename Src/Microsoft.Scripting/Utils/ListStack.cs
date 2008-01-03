@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {
 
@@ -80,7 +81,8 @@ namespace Microsoft.Scripting.Utils {
         /// Enumerates from the top of the stack to the bottom.
         /// </summary>
         /// <exception cref="InvalidOperationException">Stack has been modified during enumeration.</exception>
-        public IEnumerator<T> GetEnumerator() {
+        [Pure]
+        public IEnumerator<T>/*!*/ GetEnumerator() {
             int version = _version;
             for (int i = _list.Count - 1; i >= 0; i--) {
                 yield return _list[i];
@@ -90,7 +92,8 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator() {
+        [Pure]
+        IEnumerator/*!*/ IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }
     }

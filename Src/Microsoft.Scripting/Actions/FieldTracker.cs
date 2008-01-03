@@ -20,6 +20,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -80,7 +81,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return _field.ToString();
         }
 

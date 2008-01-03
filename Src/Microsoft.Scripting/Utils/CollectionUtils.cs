@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {
     public static class CollectionUtils {
@@ -64,11 +65,13 @@ namespace Microsoft.Scripting.Utils {
                 _enumerable = enumerable;
             }
 
-            public IEnumerator<S> GetEnumerator() {
+            [Pure]
+            public IEnumerator<S>/*!*/ GetEnumerator() {
                 return CollectionUtils.ToCovariant<T, S>(_enumerable.GetEnumerator());
             }
 
-            IEnumerator IEnumerable.GetEnumerator() {
+            [Pure]
+            IEnumerator/*!*/ IEnumerable.GetEnumerator() {
                 return GetEnumerator();
             }
         }

@@ -18,6 +18,7 @@ using System.Reflection.Emit;
 
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -112,46 +113,6 @@ namespace Microsoft.Scripting.Generation {
             cg.MarkLabel(endCheck);
         }
 
-        public void EmitGetAs(Compiler cg, Type asType) {
-            Contract.RequiresNotNull(cg, "cg");
-            Contract.RequiresNotNull(asType, "asType");
-
-            EmitGet(cg);
-            if (asType == typeof(object) && this.Type.IsValueType) {
-                cg.EmitBoxing(this.Type);
-                return;
-            }
-
-            if (asType.IsAssignableFrom(this.Type)) {
-                return;
-            }
-
-            if (asType.IsAssignableFrom(_knownType)) {
-                cg.EmitUnbox(asType);
-            } else {
-                // A special case for int-> double until we can do the proper matrix
-                if (asType == typeof(double)) {
-                    if (this.Type == typeof(int)) {
-                        cg.Emit(OpCodes.Conv_R8);
-                        return;
-                    } else if (this.KnownType == typeof(int)) {
-                        cg.EmitUnbox(typeof(int));
-                        cg.Emit(OpCodes.Conv_R8);
-                        return;
-                    }
-                }
-
-
-                if (this.Type != typeof(object)) {
-                    // TODO make this efficient, for now just go to object and back
-                    //throw new InvalidOperationException();
-                    cg.EmitBoxing(this.Type);
-                }
-                cg.EmitConvertFromObject(asType);
-            }
-        }
-
-
         public abstract Type Type { get; }
 
         /// <summary>
@@ -167,7 +128,8 @@ namespace Microsoft.Scripting.Generation {
             set { _knownType = value; }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("{0} Type: {1}", GetType().Name, Type.FullName);
         }
     }

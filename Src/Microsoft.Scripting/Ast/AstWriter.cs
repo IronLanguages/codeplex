@@ -397,9 +397,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.DoStatement:
                     Dump((DoStatement)node);
                     break;
-                case AstNodeType.DynamicConversionExpression:
-                    Dump((DynamicConversionExpression)node);
-                    break;
                 case AstNodeType.EmptyStatement:
                     Dump((EmptyStatement)node);
                     break;
@@ -649,13 +646,6 @@ namespace Microsoft.Scripting.Ast {
         // DeleteUnboundExpression
         private void Dump(DeleteUnboundExpression node) {
             Out(String.Format(".delname({0})", SymbolTable.IdToString(node.Name)));
-        }
-
-        // DynamicConversionExpression
-        private void Dump(DynamicConversionExpression node) {
-            Out(String.Format("(.convert.d {0})(", node.Type));
-            WalkNode(node.Expression);
-            Out(")");
         }
 
         // Prints ".instanceField" or "declaringType.staticField"

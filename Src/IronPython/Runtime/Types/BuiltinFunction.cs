@@ -23,6 +23,7 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
@@ -319,7 +320,9 @@ namespace IronPython.Runtime.Types {
         #region IDynamicObject Members
 
         LanguageContext IDynamicObject.LanguageContext {
-            get { throw new NotImplementedException(); }
+            get {
+                return DefaultContext.Default.LanguageContext;
+            }
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {

@@ -148,7 +148,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.CodeBlock TransformToAst(AstGenerator ag, CompilerContext context) {
-            string name = context.SourceUnit.Id ?? "<undefined>";
+            string name = context.SourceUnit.HasPath ? context.SourceUnit.Id : "<undefined>";
             MSAst.CodeBlock ast = Ast.CodeBlock(_body.Span, name);
             ast.IsGlobal = true;
 

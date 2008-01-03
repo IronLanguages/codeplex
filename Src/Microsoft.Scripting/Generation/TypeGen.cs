@@ -21,6 +21,7 @@ using System.Reflection.Emit;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -43,7 +44,8 @@ namespace Microsoft.Scripting.Generation {
             this._myType = myType;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return _myType.ToString();
         }
 
@@ -64,7 +66,7 @@ namespace Microsoft.Scripting.Generation {
             return CreateCodeGen(mi, ilg, paramTypes, null);
         }
 
-        public Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
+        internal Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
             Compiler ret = new Compiler(this, _myAssembly, mi, ilg, paramTypes, constantPool);
             if (_binder != null) ret.Binder = _binder;
             if (_contextSlot != null) ret.ContextSlot = _contextSlot;
@@ -157,10 +159,9 @@ namespace Microsoft.Scripting.Generation {
         private const MethodAttributes MethodAttributesToEraseInOveride =
             MethodAttributes.Abstract | MethodAttributes.ReservedMask;
 
-        public Compiler DefineMethodOverride(MethodAttributes extraAttrs, MethodInfo baseMethod) {
-            Contract.RequiresNotNull(baseMethod, "baseMethod");
-
-            MethodAttributes finalAttrs = (baseMethod.Attributes & ~MethodAttributesToEraseInOveride) | extraAttrs;
+        // TODO: Remove
+        internal Compiler DefineMethodOverride(MethodInfo baseMethod) {
+            MethodAttributes finalAttrs = baseMethod.Attributes & ~MethodAttributesToEraseInOveride;
             Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
             Compiler ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
@@ -168,55 +169,39 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
-        public Compiler DefineMethodOverride(MethodInfo baseMethod) {
-            return DefineMethodOverride((MethodAttributes)0, baseMethod);
-        }
-
-        public Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
-            return DefineMethod(CompilerHelpers.PublicStatic, name, retType, paramTypes, paramNames, null, null, constantPool);
-        }
-
-        public Compiler DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, 
-            object[] defaultVals, CustomAttributeBuilder[] cabs, ConstantPool constantPool) {
-            Contract.RequiresNotNull(paramTypes, "paramTypes");
-            if (paramNames == null) {
-                if (defaultVals != null) throw new ArgumentException("must provide paramNames when providing defaultVals");
-                if (cabs != null) throw new ArgumentException("must provide paramNames when providing cabs");
-            } else {
-                if (paramTypes.Count != paramNames.Count) {
-                    throw new ArgumentException("Must provide same number of paramNames as paramTypes");
-                }
-                if (defaultVals != null && defaultVals.Length > paramNames.Count) {
-                    throw new ArgumentException("Provided more defaultValues than parameters");
-                }
-                if (cabs != null && cabs.Length > paramNames.Count) {
-                    throw new ArgumentException("Provided more custom attributes than parameters");
-                }
+        public ILGen DefineMethod(string name, Type returnType, Type[] parameterTypes, string[] parameterNames) {
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(returnType, "returnType");
+            Contract.RequiresNotNullItems(parameterTypes, "parameterTypes");
+            if (parameterNames != null) {
+                Contract.Requires(parameterTypes.Length == parameterNames.Length, "parameterNames");
+                Contract.RequiresNotNullItems(parameterNames, "parameterNames");
             }
 
+            MethodBuilder mb = _myType.DefineMethod(name, CompilerHelpers.PublicStatic, returnType, parameterTypes);
+
+            if (parameterNames != null) {
+                for (int i = 0; i < parameterNames.Length; i++) {
+                    ParameterBuilder pb = mb.DefineParameter(i + 1, ParameterAttributes.None, parameterNames[i]);
+                }
+            }
+            return new ILGen(mb.GetILGenerator());
+        }
+
+        internal Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
             Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
 
-            MethodBuilder mb = _myType.DefineMethod(name, attrs, retType, parameterTypes);
+            MethodBuilder mb = _myType.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
             Compiler res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
 
-            if (paramNames == null) return res;
-            // parameters are index from 1, with constant pool we need to skip the first arg
-            int offset = constantPool != null ? 2 : 1;
-            for (int i = 0; i < paramNames.Count; i++) {
-                ParameterBuilder pb = res.DefineParameter(i + offset, ParameterAttributes.None, paramNames[i]);
-                if (defaultVals != null && i < defaultVals.Length && defaultVals[i] != DBNull.Value) {
-                    pb.SetConstant(defaultVals[i]);
-                }
-
-                if (cabs != null && i < cabs.Length && cabs[i] != null) {
-                    pb.SetCustomAttribute(cabs[i]);
+            if (paramNames != null) {
+                // parameters are index from 1, with constant pool we need to skip the first arg
+                int offset = constantPool != null ? 2 : 1;
+                for (int i = 0; i < paramNames.Count; i++) {
+                    ParameterBuilder pb = res.DefineParameter(i + offset, ParameterAttributes.None, paramNames[i]);
                 }
             }
             return res;
-        }
-
-        public Compiler DefineMethod(MethodAttributes attrs, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames) {
-            return DefineMethod(attrs, name, retType, paramTypes, paramNames, null, null, null);
         }
 
         public Compiler DefineConstructor(Type[] paramTypes) {

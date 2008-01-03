@@ -45,10 +45,9 @@ def test_pass_in_wrapper():
         AreEqual(call(x), value)
         Flag.Check(flag)
         
-        # bug 314245
-        #x = type2(value)
-        #AreEqual(call(x), value)
-        #Flag.Check(flag)
+        x = type2(value)
+        AreEqual(call(x), value)
+        Flag.Check(flag)
 
 def test_pass_in_value():
     for (call1, call2, value, flag) in [
@@ -174,8 +173,8 @@ def test_implicit_reference_conversions():
     for x in [None, a, c, d, e, f, g]:
         Consumer.EatArray(x); Flag.Check(806)
     
-    #for x in [VoidVoidDelegate(Consumer.MVoidVoid), Int32Int32Delegate(Consumer.MInt32Int32)]:
-        #Consumer.EatDelegate(x); Flag.Check(807)
+    for x in [VoidVoidDelegate(Consumer.MVoidVoid), Int32Int32Delegate(Consumer.MInt32Int32)]:
+        Consumer.EatDelegate(x); Flag.Check(807)
     
     a = AnyStruct()
     Consumer.EatAnyStruct(a); Flag.Check(850)
@@ -188,10 +187,12 @@ def test_implicit_reference_conversions():
 # http://msdn2.microsoft.com/en-us/library/aa691158(VS.71).aspx
 def test_boxing_conversion():
     for x in [ AnyStruct(), EnumInt16.B, None, StructBase()]:
-        Consumer.EatValueType(x); Flag.Check(809)
+        Consumer.EatValueType(x)
+        Flag.Check(809)
     
     for x in [EnumInt16.A, EnumUInt32.C, None]:
-        Consumer.EatEnumType(x); Flag.Check(810)    
+        Consumer.EatEnumType(x)
+        Flag.Check(810)    
 
 # http://msdn2.microsoft.com/en-us/library/aa691283(vs.71).aspx
 def test_implicit_enum_conversion():

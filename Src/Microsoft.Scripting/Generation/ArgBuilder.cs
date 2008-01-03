@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
     /// ArgBuilder provides an argument value used by the MethodBinder.  One ArgBuilder exists for each
     /// physical parameter defined on a method.  
     /// </summary>
-    public abstract class ArgBuilder {
+    abstract class ArgBuilder {
         public abstract int Priority {
             get;
         }
@@ -45,6 +45,11 @@ namespace Microsoft.Scripting.Generation {
         /// This function should be removed when BinaryOperator support is removed.
         /// </summary>
         internal abstract Expression CheckExpression(MethodBinderContext context, Expression[] parameters);
+
+        /// <summary>
+        /// Tests to see if the argument can be converted
+        /// </summary>
+        internal abstract bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures);
 
         /// <summary>
         /// Provides an Expression which will update the provided value after a call to the method.  May

@@ -22,6 +22,7 @@ using Microsoft.Scripting.Utils;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -29,8 +30,8 @@ namespace Microsoft.Scripting {
     /// specific request.
     /// </summary>
     public static class ReflectionCache {
-        private static Dictionary<MethodBaseCache, MethodGroup> _functions = new Dictionary<MethodBaseCache, MethodGroup>();
-        private static Dictionary<Type, TypeTracker> _typeCache = new Dictionary<Type, TypeTracker>();
+        private static readonly Dictionary<MethodBaseCache, MethodGroup> _functions = new Dictionary<MethodBaseCache, MethodGroup>();
+        private static readonly Dictionary<Type, TypeTracker> _typeCache = new Dictionary<Type, TypeTracker>();
 
         public static MethodGroup GetMethodGroup(Type type, string name) {
             return GetMethodGroup(type, name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.InvokeMethod, null);
@@ -138,6 +139,7 @@ namespace Microsoft.Scripting {
                 _members = members;
             }
 
+            [Confined]
             public override bool Equals(object obj) {
                 MethodBaseCache other = obj as MethodBaseCache;
                 if (other == null || _members.Length != other._members.Length) return false;
@@ -167,6 +169,7 @@ namespace Microsoft.Scripting {
                 return true;
             }
 
+            [Confined]
             public override int GetHashCode() {
                 int res = 6551;
                 foreach (MemberInfo mi in _members) {

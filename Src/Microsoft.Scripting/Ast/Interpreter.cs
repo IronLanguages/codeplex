@@ -101,8 +101,6 @@ namespace Microsoft.Scripting.Ast {
                     return Evaluate(context, (CommaExpression)node);
                 case AstNodeType.DeleteUnboundExpression:
                     return Evaluate(context, (DeleteUnboundExpression)node);
-                case AstNodeType.DynamicConversionExpression:
-                    return Evaluate(context, (DynamicConversionExpression)node);
                 case AstNodeType.EnvironmentExpression:
                     return NotImplemented();
                 case AstNodeType.MemberAssignment:
@@ -524,11 +522,6 @@ namespace Microsoft.Scripting.Ast {
 
         private static object Evaluate(CodeContext context, DeleteUnboundExpression node) {
             return RuntimeHelpers.RemoveName(context, node.Name);
-        }
-
-        private static object Evaluate(CodeContext context, DynamicConversionExpression node) {
-            object value = EvaluateExpression(context, node.Expression);
-            return context.LanguageContext.Binder.Convert(value, node.Type);
         }
 
         private static object Evaluate(CodeContext context, MemberAssignment node) {

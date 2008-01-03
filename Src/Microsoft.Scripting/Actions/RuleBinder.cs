@@ -23,17 +23,19 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Actions {
     class RuleBinder : Walker {
         private Dictionary<Variable, VariableReference> _refs;
+        private readonly Type _result;
 
-        public static VariableReference[] Bind(Expression test, Statement target) {
+        public static VariableReference[] Bind(Expression test, Statement target, Type result) {
             Assert.NotNull(test, target);
 
-            RuleBinder rb = new RuleBinder();
+            RuleBinder rb = new RuleBinder(result);
             rb.WalkNode(test);
             rb.WalkNode(target);
             return rb.GetReferences();
         }
 
-        private RuleBinder() {
+        private RuleBinder(Type result) {
+            _result = result;
         }
 
         protected internal override bool Walk(BoundAssignment node) {
@@ -48,6 +50,22 @@ namespace Microsoft.Scripting.Actions {
 
         protected internal override bool Walk(DeleteStatement node) {
             node.Ref = GetOrMakeRef(node.Variable);
+            return true;
+        }
+
+        // This may not belong here because it is checking for the
+        // AST type consistency. However, since it is the only check
+        // it seems unwarranted to make an extra walk of the AST just
+        // to verify this condition.
+        protected internal override bool Walk(ReturnStatement node) {
+            if (node.Expression == null) {
+                throw new ArgumentException("ReturnStatement in a rule must return value");
+            }
+            Type type = node.Expression.Type;
+            if (!_result.IsAssignableFrom(type)) {
+                string msg = String.Format("Cannot return {0} from a rule with return type {1}", type, _result);
+                throw new ArgumentException(msg);
+            }
             return true;
         }
 

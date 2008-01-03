@@ -18,6 +18,7 @@ using System.Collections.Generic;
 
 using System.Diagnostics;
 using System.Threading;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
     public static class SymbolTable {
@@ -37,9 +38,7 @@ namespace Microsoft.Scripting {
         }
 
         public static SymbolId StringToId(string field) {
-            if (field == null) {
-                throw new ArgumentNullException(Resources.NameMustBeString);
-            }
+            Contract.RequiresNotNull(field, "field");
 
             int res;
             lock (_lockObj) {
@@ -122,6 +121,11 @@ namespace Microsoft.Scripting {
             return _fieldDict[id.Id];
         }
 
+        // Tries to lookup the SymbolId to see if it is valid
+        public static bool ContainsId(SymbolId id) {
+            return _fieldDict.ContainsKey(id.Id);
+        }
+
         public static string[] IdsToStrings(IList<SymbolId> ids) {
             string[] ret = new string[ids.Count];
             for (int i = 0; i < ids.Count; i++) {
@@ -141,9 +145,7 @@ namespace Microsoft.Scripting {
         }
 
         public static bool StringHasId(string symbol) {
-            if (symbol == null) {
-                throw new ArgumentNullException(Resources.NameMustBeString);
-            }
+            Contract.RequiresNotNull(symbol, "symbol");
 
             lock (_lockObj) {
                 return _idDict.ContainsKey(symbol);

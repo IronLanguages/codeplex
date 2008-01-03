@@ -32,8 +32,10 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
 
-    [PythonType(typeof(ScriptScope))]
+    [PythonType(typeof(Scope))]
     public class SystemState : ICustomMembers {
+        private readonly PythonContext/*!*/ _languageContext;
+        
         private Encoding _defaultEncoding;
         private IAttributesCollection _dict;
         private object _exception_type, _exception_value, _exception_traceback;
@@ -43,9 +45,12 @@ namespace IronPython.Runtime {
         private Dictionary<string, Type> _builtinsDict = new Dictionary<string, Type>();
         private Dictionary<Type, string> _builtinModuleNames = new Dictionary<Type, string>();
 
-        private ScriptScope _builtins;
+        private Scope _builtins;
 
-        internal SystemState() {
+        internal SystemState(PythonContext/*!*/ languageContext) {
+            Assert.NotNull(languageContext);
+            _languageContext = languageContext;
+
             InitializeBuiltins();
         }
 
@@ -58,12 +63,12 @@ namespace IronPython.Runtime {
         /// <summary>
         /// TODO: Remove me, or stop caching built-ins.  This is broken if the user changes __builtin__
         /// </summary>
-        public ScriptScope BuiltinModuleInstance {
+        public Scope BuiltinModuleInstance {
             get {
                 lock (this) {
-                    ScriptScope res = _builtins;
+                    Scope res = _builtins;
                     if (res == null) {
-                        res = _builtins = (ScriptScope)modules["__builtin__"];
+                        res = _builtins = (Scope)modules["__builtin__"];
                         _builtins.ModuleChanged += new EventHandler<ModuleChangeEventArgs>(BuiltinsChanged);
                     }
                     return res;
@@ -77,7 +82,7 @@ namespace IronPython.Runtime {
                     // only cache values currently in built-ins, everything else will have
                     // no caching policy and will fall back to the LanguageContext.
                     object value;
-                    if (BuiltinModuleInstance.Scope.TryGetName(DefaultContext.Default.LanguageContext, name, out value)) {
+                    if (BuiltinModuleInstance.TryGetName(_languageContext, name, out value)) {
                         _builtinCache[name] = cache = new ModuleGlobalCache(value);
                     }
                 }
@@ -85,7 +90,31 @@ namespace IronPython.Runtime {
             return cache != null;
         }
 
-        void BuiltinsChanged(object sender, ModuleChangeEventArgs e) {
+        internal PythonModule GetModuleByName(string/*!*/ name) {
+            Assert.NotNull(name);
+            object scopeObj;
+            Scope scope;
+            if (modules.TryGetValue(name, out scopeObj) && (scope = scopeObj as Scope) != null) {
+                return _languageContext.EnsurePythonModule(scope);
+            }
+            return null;
+        }
+
+        internal PythonModule GetModuleByPath(string/*!*/ path) {
+            Assert.NotNull(path); 
+            foreach (object scopeObj in modules.Values) {
+                Scope scope = scopeObj as Scope;
+                if (scope != null) {
+                    PythonModule module = _languageContext.EnsurePythonModule(scope);
+                    if (ScriptDomainManager.CurrentManager.PathComparer.Compare(module.GetFile(), path) == 0) {
+                        return module;
+                    }
+                }
+            }
+            return null;
+        }
+
+        private void BuiltinsChanged(object sender, ModuleChangeEventArgs e) {
             ModuleGlobalCache mgc;
             lock (_builtinCache) {
                 if (_builtinCache.TryGetValue(e.Name, out mgc)) {
@@ -126,7 +155,7 @@ namespace IronPython.Runtime {
                 modules = new SymbolDictionary();
                 modules["sys"] = this;
 
-                modules["__builtin__"] = PythonModuleOps.MakePythonModule("__builtin__", typeof(Builtin));
+                modules["__builtin__"] = _languageContext.CreateBuiltinModule("__builtin__", typeof(Builtin)).Scope;
 
                 path = List.Make();
                 ps1 = ">>> ";
@@ -288,7 +317,7 @@ namespace IronPython.Runtime {
 
         [PythonName("exc_clear")]
         public void ClearException() {
-            PythonOps.PopExceptionHandler();
+            PythonOps.ClearCurrentException();
         }
 
         [PythonName("exc_info")]
@@ -344,6 +373,9 @@ namespace IronPython.Runtime {
         [PythonName("maxunicode")]
         public object maxunicode;
 
+        /// <summary>
+        /// Contains Scopes, DynamicTypes, ...
+        /// </summary>
         [PythonName("modules")]
         public IDictionary<object, object> modules;
 

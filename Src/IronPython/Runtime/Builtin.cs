@@ -86,7 +86,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
 
-            ScriptScope mod = ret as ScriptScope;
+            Scope mod = ret as Scope;
             if (mod != null && from != null) {
                 string strAttrName;
                 object attrValue;
@@ -412,7 +412,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.IOError(x);
             }
 
-            code.Run(execScope, ((PythonModuleContext)context.ModuleContext).Clone(), false); // Do not attempt evaluation mode for execfile
+            code.Run(execScope, ((PythonModule)context.ModuleContext).Clone(), false); // Do not attempt evaluation mode for execfile
         }
 
         public static object file = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
@@ -511,28 +511,26 @@ namespace IronPython.Runtime {
             }
         }
 
-        private static void help(CodeContext context, List<object> doced, StringBuilder doc, int indent, object o) {
-            PythonType dt;
-            BuiltinFunction bf;
-            BoundBuiltinFunction bbf;
-            PythonFunction pf;
+        private static void help(CodeContext/*!*/ context, List<object>/*!*/ doced, StringBuilder/*!*/ doc, int indent, object obj) {
+            PythonType type;
+            BuiltinFunction builtinFunction;
+            BoundBuiltinFunction boundBuiltinFunction;
+            PythonFunction function;
             BuiltinMethodDescriptor methodDesc;
-            Method m;
+            Method method;
             string strVal;
-            ScriptScope sm;
-            OldClass oc;
+            Scope scope;
+            OldClass oldClass;
 
-            if (doced.Contains(o)) return;  // document things only once
-            doced.Add(o);
+            if (doced.Contains(obj)) return;  // document things only once
+            doced.Add(obj);
 
-            if ((strVal = o as string) != null) {
+            if ((strVal = obj as string) != null) {
                 if (indent != 0) return;
 
                 // try and find things that string could refer to,
                 // then call help on them.
-                foreach (KeyValuePair<object, object> kvp in SystemState.Instance.modules) {
-                    object module = kvp.Value;
-
+                foreach (object module in SystemState.Instance.modules.Values) {
                     IList<object> attrs = PythonOps.GetAttrNames(context, module);
                     PythonType modType = DynamicHelpers.GetPythonType(module);
                     List candidates = new List();
@@ -548,33 +546,36 @@ namespace IronPython.Runtime {
 
                     // favor types, then built-in functions, then python functions,
                     // and then only display help for one.
-                    dt = null;
-                    bf = null;
-                    pf = null;
+                    type = null;
+                    builtinFunction = null;
+                    function = null;
                     for (int i = 0; i < candidates.Count; i++) {
-                        if ((dt = candidates[i] as PythonType) != null) {
+                        if ((type = candidates[i] as PythonType) != null) {
                             break;
                         }
 
-                        if (bf == null && (bf = candidates[i] as BuiltinFunction) != null)
+                        if (builtinFunction == null && (builtinFunction = candidates[i] as BuiltinFunction) != null)
                             continue;
 
-                        if (pf == null && (pf = candidates[i] as PythonFunction) != null)
+                        if (function == null && (function = candidates[i] as PythonFunction) != null)
                             continue;
                     }
 
-                    if (dt != null) help(context, doced, doc, indent, dt);
-                    else if (bf != null) help(context, doced, doc, indent, bf);
-                    else if (pf != null) help(context, doced, doc, indent, pf);
+                    if (type != null) help(context, doced, doc, indent, type);
+                    else if (builtinFunction != null) help(context, doced, doc, indent, builtinFunction);
+                    else if (function != null) help(context, doced, doc, indent, function);
                 }
-            } else if ((dt = o as PythonType) != null) {
+            } else if ((type = obj as PythonType) != null) {
                 // find all the functions, and display their 
                 // documentation                
-                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n", dt.Name, PythonOps.GetBoundAttr(context, dt, Symbols.Module));
+                if (indent == 0) {
+                    doc.AppendFormat("Help on {0} in module {1}\n\n", type.Name, PythonOps.GetBoundAttr(context, type, Symbols.Module));
+                }
+
                 PythonTypeSlot dts;
-                if (dt.TryResolveSlot(context, Symbols.Doc, out dts)) {
+                if (type.TryResolveSlot(context, Symbols.Doc, out dts)) {
                     object docText;
-                    if (dts.TryGetValue(context, null, dt, out docText) && docText != null)
+                    if (dts.TryGetValue(context, null, type, out docText) && docText != null)
                         AppendMultiLine(doc, docText.ToString() + Environment.NewLine, indent);
                     AppendIndent(doc, indent);
                     doc.AppendLine("Data and other attributes defined here:");
@@ -582,7 +583,7 @@ namespace IronPython.Runtime {
                     doc.AppendLine();
                 }
 
-                List<SymbolId> names = new List<SymbolId>(dt.GetMemberNames(context, null));
+                List<SymbolId> names = new List<SymbolId>(type.GetMemberNames(context, null));
                 names.Sort(delegate(SymbolId left, SymbolId right) {
                     return String.Compare(left.ToString(), right.ToString());
                 });
@@ -592,69 +593,73 @@ namespace IronPython.Runtime {
 
                     PythonTypeSlot value;
                     object val;
-                    if (dt.TryLookupSlot(context, name, out value) && value.TryGetValue(context, null, dt, out val)) {
+                    if (type.TryLookupSlot(context, name, out value) && value.TryGetValue(context, null, type, out val)) {
                         help(context, doced, doc, indent + 1, val);
                     }
                 }
-            } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
+            } else if ((methodDesc = obj as BuiltinMethodDescriptor) != null) {
                 if (indent == 0) doc.AppendFormat("Help on method-descriptor {0}\n\n", methodDesc.__name__);
                 AppendIndent(doc, indent);
                 doc.Append(methodDesc.__name__);
                 doc.Append("(...)\n");
 
                 AppendMultiLine(doc, methodDesc.__doc__, indent + 1);
-            } else if ((bbf = o as BoundBuiltinFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bbf.Target.__name__);
+            } else if ((boundBuiltinFunction = obj as BoundBuiltinFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", boundBuiltinFunction.Target.__name__);
 
                 AppendIndent(doc, indent);
-                doc.Append(bbf.Target.__name__);
+                doc.Append(boundBuiltinFunction.Target.__name__);
                 doc.Append("(...)\n");
 
-                AppendMultiLine(doc, bbf.Target.__doc__, indent + 1);
-            } else if ((bf = o as BuiltinFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bf.Name);
+                AppendMultiLine(doc, boundBuiltinFunction.Target.__doc__, indent + 1);
+            } else if ((builtinFunction = obj as BuiltinFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", builtinFunction.Name);
                 AppendIndent(doc, indent);
-                doc.Append(bf.Name);
+                doc.Append(builtinFunction.Name);
                 doc.Append("(...)\n");
 
-                AppendMultiLine(doc, bf.__doc__, indent + 1);
-            } else if ((pf = o as PythonFunction) != null) {
-                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", pf.__name__, pf.__module__);
+                AppendMultiLine(doc, builtinFunction.__doc__, indent + 1);
+            } else if ((function = obj as PythonFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on function {0} in module {1}:\n\n", function.__name__, function.__module__);
 
                 AppendIndent(doc, indent);
-                doc.Append(pf.GetSignatureString());
-                string pfDoc = Converter.ConvertToString(pf.__doc__);
+                doc.Append(function.GetSignatureString());
+                string pfDoc = Converter.ConvertToString(function.__doc__);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
-            } else if ((m = o as Method) != null && ((pf = m.Function as PythonFunction) != null)) {
-                if (indent == 0) doc.AppendFormat("Help on method {0} in module {1}:\n\n", pf.__name__, pf.__module__);
+            } else if ((method = obj as Method) != null && ((function = method.Function as PythonFunction) != null)) {
+                if (indent == 0) doc.AppendFormat("Help on method {0} in module {1}:\n\n", function.__name__, function.__module__);
 
                 AppendIndent(doc, indent);
-                doc.Append(pf.GetSignatureString());
-                if (m.Self == null) {
-                    doc.AppendFormat(" unbound {0} method\n", PythonOps.ToString(m.DeclaringClass));
+                doc.Append(function.GetSignatureString());
+
+                if (method.Self == null) {
+                    doc.AppendFormat(" unbound {0} method\n", PythonOps.ToString(method.DeclaringClass));
                 } else {
-                    doc.AppendFormat(" method of {0} instance\n", PythonOps.ToString(m.DeclaringClass));
+                    doc.AppendFormat(" method of {0} instance\n", PythonOps.ToString(method.DeclaringClass));
                 }
-                string pfDoc = Converter.ConvertToString(pf.__doc__);
+
+                string pfDoc = Converter.ConvertToString(function.__doc__);
                 if (!String.IsNullOrEmpty(pfDoc)) {
                     AppendMultiLine(doc, pfDoc, indent);
                 }
-            } else if ((sm = o as ScriptScope) != null) {
-                foreach (SymbolId si in sm.Scope.Keys) {
-                    if (si == Symbols.Class || si == Symbols.Builtins) continue;
+            } else if ((scope = obj as Scope) != null) {
+                foreach (SymbolId name in scope.Keys) {
+                    if (name == Symbols.Class || name == Symbols.Builtins) continue;
 
                     object value;
-                    if (sm.Scope.TryGetName(context.LanguageContext, si, out value)) {
+                    if (scope.TryGetName(context.LanguageContext, name, out value)) {
                         help(context, doced, doc, indent + 1, value);
                     }
                 }
-            } else if ((oc = o as OldClass) != null) {
-                if (indent == 0) doc.AppendFormat("Help on {0} in module {1}\n\n",
-                                    oc.Name, PythonOps.GetBoundAttr(context, oc, Symbols.Module));
+            } else if ((oldClass = obj as OldClass) != null) {
+                if (indent == 0) {
+                    doc.AppendFormat("Help on {0} in module {1}\n\n", oldClass.Name, PythonOps.GetBoundAttr(context, oldClass, Symbols.Module));
+                }
+
                 object docText;
-                if (oc.TryLookupSlot(Symbols.Doc, out docText) && docText != null) {
+                if (oldClass.TryLookupSlot(Symbols.Doc, out docText) && docText != null) {
                     AppendMultiLine(doc, docText.ToString() + Environment.NewLine, indent);
                     AppendIndent(doc, indent);
                     doc.AppendLine("Data and other attributes defined here:");
@@ -662,7 +667,7 @@ namespace IronPython.Runtime {
                     doc.AppendLine();
                 }
 
-                IList<object> names = oc.GetMemberNames(context);
+                IList<object> names = oldClass.GetMemberNames(context);
                 List sortNames = new List(names);
                 sortNames.Sort();
                 names = sortNames;
@@ -671,7 +676,7 @@ namespace IronPython.Runtime {
 
                     object value;
 
-                    if (oc.TryLookupSlot(SymbolTable.StringToId(name), out value))
+                    if (oldClass.TryLookupSlot(SymbolTable.StringToId(name), out value))
                         help(context, doced, doc, indent + 1, value);
                 }
             }
@@ -1187,13 +1192,15 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        public static object reload(CodeContext context, ScriptScope module) {
-            ((PythonContext)DefaultContext.Default.LanguageContext).CheckReloadable(module);
-            module.Reload();
-            return module;
+        public static object reload(CodeContext/*!*/ context, Scope/*!*/ scope) {
+            if (scope == null) {
+                throw PythonOps.TypeError("unexpected type: NoneType");
+            }
+            PythonContext.GetImporter(context).ReloadModule(scope);
+            return scope;
         }
 
-        public static object reload(CodeContext context, SystemState state) {
+        public static object reload(CodeContext/*!*/ context, SystemState/*!*/ state) {
             if (state == null) throw PythonOps.TypeError("unexpected type: NoneType");
 
             Debug.Assert(state == SystemState.Instance, "unexpected multiple instances of SystemState");
@@ -1369,9 +1376,9 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets the appropriate LanguageContext to be used for code compiled with Python's compile built-in
         /// </summary>
-        internal static CompilerOptions GetDefaultCompilerOptions(CodeContext context, bool inheritContext, CompileFlags cflags) {
+        internal static CompilerOptions GetDefaultCompilerOptions(CodeContext/*!*/ context, bool inheritContext, CompileFlags cflags) {
             if (inheritContext) {
-                if (((PythonModuleContext)context.ModuleContext).TrueDivision) {
+                if (((PythonModule)context.ModuleContext).TrueDivision) {
                     return new PythonCompilerOptions(true);
                 } else {
                     return new PythonCompilerOptions(false);
@@ -1404,16 +1411,16 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets a scope used for executing new code in optionally replacing the globals and locals dictionaries.
         /// </summary>
-        private static Microsoft.Scripting.Scope GetExecEvalScope(CodeContext context, IAttributesCollection globals, object localsDict) {
+        private static Scope GetExecEvalScope(CodeContext context, IAttributesCollection globals, object localsDict) {
             if (globals == null) globals = Builtin.globals(context);
             if (localsDict == null) localsDict = locals(context);
 
-            Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(
-                new Microsoft.Scripting.Scope(globals),
-                GetAttrLocals(context, localsDict));
+            PythonContext python = PythonContext.GetContext(context);
+
+            Scope scope = new Scope(python, new Scope(python, globals), GetAttrLocals(context, localsDict));
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
-                globals[Symbols.Builtins] = SystemState.Instance.BuiltinModuleInstance;
+                globals[Symbols.Builtins] = python.SystemState.BuiltinModuleInstance;
             }
             return scope;
         }

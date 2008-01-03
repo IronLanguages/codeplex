@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Diagnostics;
 
-    public class ReferenceArgBuilder : SimpleArgBuilder {
+    class ReferenceArgBuilder : SimpleArgBuilder {
         private Type _elementType;
         private Variable _tmp;
 

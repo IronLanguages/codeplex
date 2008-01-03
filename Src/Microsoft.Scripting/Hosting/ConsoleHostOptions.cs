@@ -35,24 +35,24 @@ namespace Microsoft.Scripting.Hosting {
             DisplayHelp
         }
 
-        private readonly List<string> _ignoredArgs = new List<string>();
-        private readonly List<string> _files = new List<string>();
+        private readonly List<string/*!*/> _ignoredArgs = new List<string/*!*/>();
+        private readonly List<string/*!*/> _files = new List<string/*!*/>();
         private string[] _sourceUnitSearchPaths = ArrayUtils.EmptyStrings;
         private Action _action;
         private bool _displayLogo = true;
         private bool _isMTA;
-        private readonly List<string> _environmentVars = new List<string>();
+        private readonly List<string/*!*/> _environmentVars = new List<string/*!*/>(); 
         private IScriptEngine _scriptEngine;
 
-        public List<string> IgnoredArgs { get { return _ignoredArgs; } }
-        public List<string> Files { get { return _files; } }
+        public List<string/*!*/> IgnoredArgs { get { return _ignoredArgs; } }
+        public List<string/*!*/> Files { get { return _files; } }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
         public string[] SourceUnitSearchPaths { get { return _sourceUnitSearchPaths; } set { _sourceUnitSearchPaths = value; } }
         public Action RunAction { get { return _action; } set { _action = value; } }
         public IScriptEngine ScriptEngine { get { return _scriptEngine; } set { _scriptEngine = value; } }
         public bool DisplayLogo { get { return _displayLogo; } set { _displayLogo = value; } }
         public bool IsMTA { get { return _isMTA; } set { _isMTA = value; } }
-        public List<string> EnvironmentVars { get { return _environmentVars; } }
+        public List<string/*!*/> EnvironmentVars { get { return _environmentVars; } }
         
         public ConsoleHostOptions() {
 

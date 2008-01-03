@@ -77,17 +77,18 @@ namespace Microsoft.Scripting {
         private static ScriptDomainManager _singleton;
 
         private readonly Dictionary<Type, ScriptEngine>/*!*/ _engines = new Dictionary<Type, ScriptEngine>(); // TODO: Key Should be LC, not Type
-        private readonly PlatformAdaptationLayer _pal;
-        private readonly IScriptHost _host;
-        private readonly Snippets _snippets;
-        private readonly ScriptEnvironment _environment;
-        private Dictionary<string, WeakReference> _modules;
+        private readonly PlatformAdaptationLayer/*!*/ _pal;
+        private readonly IScriptHost/*!*/ _host;
+        private readonly Snippets/*!*/ _snippets;
+        private readonly ScriptEnvironment/*!*/ _environment;
+        private readonly InvariantContext/*!*/ _invariantContext;
+
         private CommandDispatcher _commandDispatcher; // can be null
         
         // singletons:
-        public PlatformAdaptationLayer PAL { get { return _pal; } }
-        public Snippets Snippets { get { return _snippets; } }
-        public ScriptEnvironment Environment { get { return _environment; } }
+        public PlatformAdaptationLayer/*!*/ PAL { get { return _pal; } }
+        public Snippets/*!*/ Snippets { get { return _snippets; } }
+        public ScriptEnvironment/*!*/ Environment { get { return _environment; } }
 
         /// <summary>
         /// Gets the <see cref="ScriptDomainManager"/> associated with the current AppDomain. 
@@ -102,7 +103,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public IScriptHost Host {
+        public IScriptHost/*!*/ Host {
             get { return _host; }
         }
 
@@ -164,8 +165,10 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Initializes environment according to the setup information.
         /// </summary>
-        private ScriptDomainManager(ScriptEnvironmentSetup setup) {
+        private ScriptDomainManager(ScriptEnvironmentSetup/*!*/ setup) {
             Debug.Assert(setup != null);
+
+            _invariantContext = new InvariantContext(this);
 
             // create local environment for the host:
             _environment = new ScriptEnvironment(this);
@@ -366,7 +369,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="ArgumentNullException"><paramref name="languageId"/></exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        public bool TryGetLanguageContext(string languageId, out LanguageContext languageContext) {
+        public bool TryGetLanguageContext(string/*!*/ languageId, out LanguageContext languageContext) {
             Contract.RequiresNotNull(languageId, "languageId");
 
             bool result;
@@ -386,16 +389,7 @@ namespace Microsoft.Scripting {
             if (!TryGetLanguageContextByFileExtension(extension, out lc)) {
                 throw new ArgumentException(Resources.UnknownLanguageId);
             }
-            return GetOrMakeScriptEngine(lc);
-        }
-
-        private ScriptEngine GetOrMakeScriptEngine(LanguageContext lc) {
-            ScriptEngine res;
-            if (!_engines.TryGetValue(lc.GetType(), out res)) {
-                _engines[lc.GetType()] = res = new ScriptEngine(_environment, lc);
-                _host.EngineCreated(res);
-            }
-            return res;
+            return GetEngine(lc);
         }
 
         public bool TryGetEngine(string languageId, out ScriptEngine engine) {
@@ -405,7 +399,7 @@ namespace Microsoft.Scripting {
                 return false;
             }
 
-            engine = GetOrMakeScriptEngine(lc);
+            engine = GetEngine(lc);
             return true;
         }
 
@@ -416,21 +410,34 @@ namespace Microsoft.Scripting {
                 return false;
             }
 
-            engine = GetOrMakeScriptEngine(lc);
+            engine = GetEngine(lc);
             return true;
         }
 
-        public ScriptEngine GetEngine(string languageId) {
+        public ScriptEngine GetEngine(string/*!*/ languageId) {
+            Contract.RequiresNotNull(languageId, "languageId");
+
             LanguageContext lc;
             if (!TryGetLanguageContext(languageId, out lc)) {
                 throw new ArgumentException(Resources.UnknownLanguageId);
             }
 
-            return GetOrMakeScriptEngine(lc);
+            return GetEngine(lc);
         }
 
         public ScriptEngine GetEngine(Type languageContextType) {
-            return GetOrMakeScriptEngine(GetLanguageContext(languageContextType));
+            return GetEngine(GetLanguageContext(languageContextType));
+        }
+
+        internal ScriptEngine/*!*/ GetEngine(LanguageContext/*!*/ language) {
+            Assert.NotNull(language);
+            ScriptEngine engine;
+            if (!_engines.TryGetValue(language.GetType(), out engine)) {
+                engine = new ScriptEngine(_environment, language);
+                _engines[language.GetType()] = engine;
+                _host.EngineCreated(engine);
+            }
+            return engine;
         }
 
         public bool TryGetLanguageContextByFileExtension(string extension, out LanguageContext languageContext) {
@@ -531,8 +538,17 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        #region Modules
+        #region Modules // OBSOLETE
 
+        public StringComparer/*!*/ PathComparer {
+            get {
+                return StringComparer.Ordinal;
+            }
+        }
+
+        // TODO: remove
+        private Dictionary<string, ScriptScope> _modules = new Dictionary<string, ScriptScope>();
+        
         /// <summary>
         /// Uses the hosts search path and semantics to resolve the provided name to a SourceUnit.
         /// 
@@ -547,25 +563,26 @@ namespace Microsoft.Scripting {
             
             SourceUnit su = _host.ResolveSourceFileUnit(name);
             if (su == null) {
-                lock (_modules) {
-                    WeakReference wr;
-                    if (_modules.TryGetValue(name, out wr)) {
-                        ScriptScope res = (ScriptScope)wr.Target;
-                        if (res != null) {
-                            return res;
-                        }
-
-                        _modules.Remove(name);
-                    }
-                }
                 return null;
             }
+        
+            // TODO: remove (JS test in MerlinWeb relies on scope reuse)
+            ScriptScope result;
+            lock (_modules) {
+                if (_modules.TryGetValue(name, out result)) {
+                    return result;
+                }
+            }
+            result = ExecuteSourceUnit(su);
+            lock (_modules) {
+                _modules[name] = result;
+            }
 
-            return CompileAndPublishModule(name, su);
+            return result;
         }
 
         /// <summary>
-        /// Requests a SourceUnit from the provided path and compiles it to a ScriptModule.
+        /// Requests a SourceUnit from the provided path and compiles it to a ScriptScope.
         /// 
         /// If the host provides a SourceUnit which is equal to an already loaded SourceUnit the
         /// previously loaded module is returned.
@@ -575,292 +592,39 @@ namespace Microsoft.Scripting {
         /// <exception cref="ArgumentNullException"><paramref name="path"/></exception>
         /// <exception cref="ArgumentException">no language registered</exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
-        /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        public ScriptScope UseModule(string path, string languageId) {
+        /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
+        public ScriptScope UseModule(string/*!*/ path, string/*!*/ languageId) {
             Contract.RequiresNotNull(path, "path");
-            IScriptEngine engine = GetEngine(languageId);
+            Contract.RequiresNotNull(languageId, "languageId");
+
+            ScriptEngine engine = GetEngine(languageId);
 
             SourceUnit su = _host.TryGetSourceFileUnit(engine, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
             if (su == null) {
                 return null;
             }
 
-            return CompileAndPublishModule(Path.GetFileNameWithoutExtension(path), su);
+            return ExecuteSourceUnit(su);
         }
 
-        /// <summary>
-        /// Gets the ScriptModule that has been published under the given SourceUnit.
-        /// </summary>
-        public bool TryGetScriptModule(string publicName, out ScriptScope module) {
-            if (_modules == null) {
-                module = null;
-                return false;
-            }
-
-            lock(_modules) {
-                module = GetCachedModuleNoLock(publicName);
-            }
-
-            return module != null;
-        }
-
-        public void PublishModule(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-            Contract.Requires(module.FileName != null, "module", "Cannot publish module with null file name");
-            PublishModule(module, module.FileName);
-        }
-        
-        /// <summary>
-        /// Sets the ScriptModule that is registered for the given SourceUnit.
-        /// </summary>
-        public void PublishModule(ScriptScope module, string publicName) {
-            Contract.RequiresNotNull(module, "module");
-            Contract.RequiresNotNull(publicName, "publicName");
-
-            EnsureModules();
-
-            lock (_modules) {
-                _modules[publicName] = new WeakReference(module);
-            }
-        }
-
-        /// <summary>
-        /// Gets a list of all ScriptModule's and the associated SourceUnit which generated them.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
-        public IDictionary<string, ScriptScope> GetPublishedModules() {
-            IDictionary<string, ScriptScope> res = new Dictionary<string, ScriptScope>();
-            if (_modules != null) {
-                lock (_modules) {
-                    foreach (KeyValuePair<string, WeakReference> kvp in _modules) {
-                        if (kvp.Value.IsAlive) {
-                            res.Add(kvp.Key, (ScriptScope)kvp.Value.Target);
-                        } else {
-                            _modules.Remove(kvp.Key);
-                        }
-                    }
-                }
-            }
-            return res;
-        }
-
-        private Dictionary<string, LoadInfo> _loading = new Dictionary<string, LoadInfo>();
-
-        class LoadInfo {
-            public ScriptScope Module;
-            public Thread Thread;
-            public Exception Exception;
-            public bool Done;
-            public ManualResetEvent Mre;
-        }
-
-        private ScriptScope CompileAndPublishModule(string moduleName, SourceUnit su) {
-            Assert.NotNull(moduleName, su);
-
-            EnsureModules();
-
-            string key = su.Id ?? moduleName;
-
-            // check if we've already published this SourceUnit
-            lock (_modules) {
-                ScriptScope tmp = GetCachedModuleNoLock(key);
-                if (tmp != null) return tmp;
-            }
-
-            // compile and initialize the module...
-            ScriptScope mod = CompileModule(moduleName, su);
-            lock (_modules) {
-                // check if someone else compiled it first...
-                ScriptScope tmp = GetCachedModuleNoLock(key);
-                if (tmp != null) return tmp;
-
-                LoadInfo load;
-                if (_loading.TryGetValue(key, out load)) {
-                    if (load.Thread == Thread.CurrentThread) {
-                        return load.Module;
-                    }
-
-                    Monitor.Exit(_modules);
-                    try {
-                        lock (load) {
-                            if (!load.Done) {
-                                if (load.Mre == null) load.Mre = new ManualResetEvent(false);
-
-                                Monitor.Exit(load);
-                                try {
-                                    load.Mre.WaitOne();
-                                } finally {
-                                    Monitor.Enter(load);
-                                }
-                            }
-                        }
-                        if(load.Module != null) return load.Module;
-
-                        throw load.Exception;
-                    } finally {
-                        Monitor.Enter(_modules);
-                    }
-                }
-                load = new LoadInfo();
-                load.Module = mod;
-                load.Thread = Thread.CurrentThread;
-                _loading[key] = load;
-
-                bool success = false;
-
-                Monitor.Exit(_modules);
-                try {
-                    mod.Execute();
-                    success = true;
-                    lock (load) {
-                        load.Done = true;
-                        if (load.Mre != null) load.Mre.Set();
-                    }
-                    return mod;
-                } catch(Exception e) {
-                    lock (load) {
-                        load.Exception = e;
-                        load.Done = true;
-                        if (load.Mre != null) load.Mre.Set();
-                    }
-                    throw;
-                } finally {
-                    Monitor.Enter(_modules);
-                    _loading.Remove(key);
-                    if (success) _modules[key] = new WeakReference(mod);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Must be called with _modules lock held
-        /// </summary>
-        private ScriptScope GetCachedModuleNoLock(string publicName) {
-            WeakReference wr;
-            if (_modules.TryGetValue(publicName, out wr)) {
-                if (wr.IsAlive) {
-                    return (ScriptScope)wr.Target;
-                }
-
-                _modules.Remove(publicName);
-            }
-            return null;
-        }
-
-        private void EnsureModules() {
-            if (_modules == null) {
-                Interlocked.CompareExchange<Dictionary<string, WeakReference>>(ref _modules,
-                    new Dictionary<string, WeakReference>(),
-                    null);
-            }
-        }
-
-        public ScriptScope CompileModule(string name, SourceUnit sourceUnit) {
-            return CompileModule(name, ScriptModuleKind.Default, null, null, null, sourceUnit);
-        }
-
-        /// <summary>
-        /// Compiles a list of source units into a single module.
-        /// <c>scope</c> can be <c>null</c>.
-        /// <c>options</c> can be <c>null</c>.
-        /// <c>errorSink</c> can be <c>null</c>.
-        /// </summary>
-        public ScriptScope CompileModule(string name, ScriptModuleKind kind, Scope scope, CompilerOptions options, ErrorSink errorSink, 
-            params SourceUnit[] sourceUnits) {
-
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNullItems(sourceUnits, "sourceUnits");
-
-            // TODO: Two phases: parse/compile?
-            
-            // compiles all source units:
-            ScriptCode[] scriptCodes = new ScriptCode[sourceUnits.Length];
-            for (int i = 0; i < sourceUnits.Length; i++) {
-                scriptCodes[i] = sourceUnits[i].LanguageContext.CompileSourceCode(sourceUnits[i], options, errorSink);
-            }
-
-            return CreateModule(name, kind, scope, scriptCodes);
-        }
-
-        /// <summary>
-        /// Module creation factory. The only way how to create a module.
-        /// </summary>
-        public ScriptScope CreateModule(string name, params ScriptCode[] scriptCodes) {
-            return CreateModule(name, null, scriptCodes);
-        }
-
-        /// <summary>
-        /// Module creation factory. The only way how to create a module.
-        /// </summary>
-        public ScriptScope CreateModule(string name) {
-            return CreateModule(name, null, ScriptCode.EmptyArray);
-        }
-        
-        /// <summary>
-        /// Module creation factory. The only way how to create a module.
-        /// <c>scope</c> can be <c>null</c>.
-        /// </summary>
-        public ScriptScope CreateModule(string name, Scope scope) {
-            return CreateModule(name, scope, ScriptCode.EmptyArray);
-        }
-
-        public ScriptScope CreateModule(string name, Scope scope, params ScriptCode[] scriptCodes) {
-            return CreateModule(name, ScriptModuleKind.Default, scope, scriptCodes);
-        }
-        
-        /// <summary>
-        /// Module creation factory. The only way how to create a module.
-        /// Modules compiled from a single source file unit get <see cref="ScriptScope.FileName"/> property set to a host 
-        /// normalized full path of that source unit. The property is set to a <c>null</c> reference for other modules.
-        /// <c>scope</c> can be <c>null</c>.
-        /// 
-        /// Ensures creation of module contexts for all languages whose code is assembled into the module.
-        /// </summary>
-        public ScriptScope CreateModule(string name, ScriptModuleKind kind, Scope scope, params ScriptCode[] scriptCodes) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNullItems(scriptCodes, "scriptCodes");
-
-            OptimizedModuleGenerator generator = null;
-
-            if (scope == null) {
-                if (scriptCodes.Length == 1) {
-                    if (scriptCodes[0].LanguageContext.Options.InterpretedMode) {
-                        scope = new Scope();
-                    } else {
-                        generator = OptimizedModuleGenerator.Create(name, scriptCodes);
-                        scope = generator.GenerateScope();
-                    }
-                } else {
-                    scope = new Scope();
-                }
-            }
-            
-            ScriptScope result = new ScriptScope(name, kind, scope, scriptCodes);
-
-            // single source file unit modules have unique full path:
-            if (scriptCodes.Length == 1) {
-                result.FileName = scriptCodes[0].SourceUnit.Id;
-            } else {
-                result.FileName = null;
-            }
-
-            // Initializes module contexts for all contained optimized script codes;
-            // Module contexts stored in optimized module's code contexts cannot be changed from now on.
-            // Such change would require the CodeContexts to be overwritten.
-            if (generator != null) {
-                generator.BindGeneratedCodeToModule(result);
-            } else {
-                foreach (ScriptCode code in scriptCodes) {
-                    code.LanguageContext.EnsureModuleContext(result);
-                }
-            }
-            
-            _host.ModuleCreated(result);
-            return result;
+        // TODO:
+        public ScriptScope ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
+            ScriptCode compiledCode = sourceUnit.LanguageContext.CompileSourceCode(sourceUnit);
+            Scope scope = compiledCode.MakeOptimizedScope();
+            compiledCode.Run(scope);
+            return new ScriptScope(scope);
         }
 
         #endregion
 
+        #region Scopes
+
+        public IScriptScope/*!*/ CreateScope(IAttributesCollection dictionary) {
+            return new Scope(_invariantContext, dictionary).ToScriptScope();
+        }
+
+        #endregion
+        
         #region Command Dispatching
 
         // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
@@ -908,14 +672,6 @@ namespace Microsoft.Scripting {
         }
 
         #endregion
-
-        internal ScriptEngine GetScriptEngine(LanguageContext lc) {
-            ScriptEngine engine;
-            if (!_engines.TryGetValue(lc.GetType(), out engine)) {
-                throw new InvalidOperationException();
-            }
-            return engine;
-        }
 
         internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
             List<string> res = new List<string>();

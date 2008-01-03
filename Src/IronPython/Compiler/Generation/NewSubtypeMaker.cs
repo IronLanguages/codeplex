@@ -16,14 +16,15 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Compiler.Generation {
-    using Compiler = Microsoft.Scripting.Ast.Compiler;
 
     /// <summary>
     /// Creates sub-types of new-types.  Sub-types of new types are created when
@@ -61,29 +62,33 @@ namespace IronPython.Compiler.Generation {
             if (NeedsDictionary) {
                 // override our bases slots implementation w/ one that
                 // can use dicts
-                Compiler cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_Dict"));
-                _dictField.EmitGet(cg);
-                cg.EmitReturn();
-                cg.Finish();
+                MethodInfo decl; MethodBuilder impl;
+                ILGen il = DefineMethodOverride(typeof(IPythonObject), "get_Dict", out decl, out impl);
+                il.EmitLoadArg(0);
+                il.EmitFieldGet(_dictField);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
 
-                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("get_HasDictionary"));
-                cg.EmitBoolean(true);
-                cg.EmitReturn();
-                cg.Finish();
+                il = DefineMethodOverride(typeof(IPythonObject), "get_HasDictionary", out decl, out impl);
+                il.EmitBoolean(true);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
 
-                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("ReplaceDict"));
-                cg.EmitArgGet(0);
-                _dictField.EmitSet(cg);
-                cg.EmitBoolean(true);
-                cg.EmitReturn();
-                cg.Finish();
+                il = DefineMethodOverride(typeof(IPythonObject), "ReplaceDict", out decl, out impl);
+                il.EmitLoadArg(0);
+                il.EmitLoadArg(1);
+                il.EmitFieldSet(_dictField);
+                il.EmitBoolean(true);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
 
-                cg = _tg.DefineMethodOverride(typeof(IPythonObject).GetMethod("SetDict"));
-                _dictField.EmitGetAddr(cg);
-                cg.EmitArgGet(0);
-                cg.EmitCall(typeof(UserTypeOps), "SetDictHelper");
-                cg.EmitReturn();
-                cg.Finish();
+                il = DefineMethodOverride(typeof(IPythonObject), "SetDict", out decl, out impl);
+                il.EmitLoadArg(0);
+                il.EmitFieldAddress(_dictField);
+                il.EmitLoadArg(1);
+                il.EmitCall(typeof(UserTypeOps), "SetDictHelper");
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, decl);
             }
         }
 

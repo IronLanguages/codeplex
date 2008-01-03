@@ -64,8 +64,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual void PostWalk(DeleteUnboundExpression node) { }
 
         // DynamicConversionExpression
-        protected internal virtual bool Walk(DynamicConversionExpression node) { return true; }
-        protected internal virtual void PostWalk(DynamicConversionExpression node) { }
 
         // IntrinsicExpression
         protected internal virtual bool Walk(IntrinsicExpression node) { return true; }

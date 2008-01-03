@@ -42,6 +42,7 @@ namespace Microsoft.Scripting.Hosting {
         string FormatException(Exception exception);
 
         object Execute(IScriptScope scope, ScriptSource scriptSource);
+        T Execute<T>(IScriptScope scope, ScriptSource scriptSource);
 
         ObjectOperations Operations {
             get;
@@ -62,6 +63,13 @@ namespace Microsoft.Scripting.Hosting {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         CompilerOptions GetDefaultCompilerOptions();
 
+        IScriptScope GetScope(string/*!*/ path);
+        IScriptScope/*!*/ CreateScope();
+        IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary);
+
+        // TODO: remove
+        void PublishModule(string/*!*/ name, IScriptScope/*!*/ scope);
+
         ScriptSource CreateScriptSourceFromString(string code);
         ScriptSource CreateScriptSourceFromString(string code, ScriptSourceKind kind);
         ScriptSource CreateScriptSourceFromString(string code, string id, ScriptSourceKind kind);
@@ -77,6 +85,8 @@ namespace Microsoft.Scripting.Hosting {
         ICompiledCode Compile(ScriptSource scriptSource, ErrorSink sink);
         ICompiledCode Compile(ScriptSource scriptSource, CompilerOptions options, ErrorSink sink);
         bool TryGetVariable(IScriptScope scope, string name, out object value);
+        object GetVariable(IScriptScope/*!*/ scope, string/*!*/ name);
+        T GetVariable<T>(IScriptScope/*!*/ scope, string/*!*/ name);
 
 #if !SILVERLIGHT
         bool TryGetVariableAsHandle(IScriptScope scope, string name, out ObjectHandle value);
@@ -116,7 +126,7 @@ namespace Microsoft.Scripting.Hosting {
 
         public IScriptEnvironment Runtime {
             get {
-                return (RemoteScriptEnvironment)((ILocalObject)_engine.Runtime).Wrap();
+                return RemoteWrapper.WrapRemotable<IScriptEnvironment>(_engine.Runtime);
             }
         }
 
@@ -140,6 +150,10 @@ namespace Microsoft.Scripting.Hosting {
             return _engine.Execute(scope, scriptSource);
         }
 
+        public T Execute<T>(IScriptScope scope, ScriptSource scriptSource) {
+            return _engine.Execute<T>(scope, scriptSource);
+        }
+
         public Version LanguageVersion {
             get { return _engine.LanguageVersion; }
         }
@@ -154,6 +168,23 @@ namespace Microsoft.Scripting.Hosting {
             _engine.Shutdown();
         }
 
+        public IScriptScope GetScope(string/*!*/ path) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_engine.GetScope(path));
+        }
+
+        public IScriptScope/*!*/ CreateScope() {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_engine.CreateScope());
+        }
+
+        public IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_engine.CreateScope(dictionary));
+        }
+
+        // TODO: remove
+        public void PublishModule(string/*!*/ name, IScriptScope/*!*/ scope) {
+            _engine.PublishModule(name, scope);
+        }
+        
         public ScriptSource CreateScriptSourceFromString(string code, ScriptSourceKind kind) {
             return _engine.CreateScriptSourceFromString(code, kind);
         }
@@ -211,15 +242,15 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public ICompiledCode Compile(ScriptSource scriptSource) {
-            return new RemoteCompiledCode((CompiledCode)_engine.Compile(scriptSource));
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.Compile(scriptSource));
         }
 
         public ICompiledCode Compile(ScriptSource scriptSource, ErrorSink errorSink) {
-            return new RemoteCompiledCode((CompiledCode)_engine.Compile(scriptSource, errorSink));
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.Compile(scriptSource, errorSink));
         }
 
         public ICompiledCode Compile(ScriptSource scriptSource, CompilerOptions options, ErrorSink errorSink) {
-            return new RemoteCompiledCode((CompiledCode)_engine.Compile(scriptSource, options, errorSink));
+            return RemoteWrapper.WrapRemotable<ICompiledCode>(_engine.Compile(scriptSource, options, errorSink));
         }
 
         public ServiceType GetService<ServiceType>(params object[] args) where ServiceType : class {
@@ -255,7 +286,15 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         public bool TryGetVariable(IScriptScope scope, string name, out object value) {
-            return scope.TryGetVariable(name, out value);
+            return _engine.TryGetVariable(scope, name, out value);
+        }
+
+        public object GetVariable(IScriptScope/*!*/ scope, string/*!*/ name) {
+            return _engine.GetVariable(scope, name);
+        }
+
+        public T GetVariable<T>(IScriptScope/*!*/ scope, string/*!*/ name) {
+            return _engine.GetVariable<T>(scope, name);
         }
 
         public ObjectOperations CreateOperations() {
@@ -293,7 +332,9 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(scope, "scope");
             Contract.RequiresNotNull(scriptSource, "scriptSource");
 
-            return Compile(scriptSource, _language.GetModuleCompilerOptions(RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "scope"))).Evaluate(scope);
+            Scope localScope = RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "scope").Scope;
+            ScriptCode compiledCode = _language.CompileSourceCode(scriptSource, _language.GetModuleCompilerOptions(localScope), null);
+            return compiledCode.Run(localScope);
         }
 
         /// <summary>
@@ -336,8 +377,11 @@ namespace Microsoft.Scripting.Hosting {
         public int ExecuteProgram(ScriptSource/*!*/ scriptSource) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
 
+            // TODO: not correct, should go to language context
+            object obj = _language.CompileSourceCode(scriptSource, null, null).Run(new Scope(_language));
+
             int res;
-            if (!Operations.TryConvertTo<int>(Compile(scriptSource).Evaluate(), out res)) {
+            if (!Operations.TryConvertTo<int>(obj, out res)) {
                 res = 0;
             }
             return res;
@@ -350,14 +394,14 @@ namespace Microsoft.Scripting.Hosting {
         public virtual ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource));
+            return new CompiledCode(_language.CompileSourceCode(scriptSource, null, null));
         }
 
         /// <summary>
         /// Compile the provided ScriptSource and returns a CompileCode object that can be executed 
         /// repeatedly in its default scope or in other scopes without having to recompile the code.
         /// </summary>
-        public virtual ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource, ErrorSink errorSink) {
+        public virtual ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource, ErrorSink/*!*/ errorSink) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
             Contract.RequiresNotNull(errorSink, "errorSink");
 
@@ -368,11 +412,11 @@ namespace Microsoft.Scripting.Hosting {
         /// Compile the provided ScriptSource and returns a CompileCode object that can be executed 
         /// repeatedly in its default scope or in other scopes without having to recompile the code.
         /// </summary>
-        public ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource, CompilerOptions compilerOptions) {
+        public ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource, CompilerOptions/*!*/ compilerOptions) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
             Contract.RequiresNotNull(compilerOptions, "compilerOptions");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource, compilerOptions));
+            return new CompiledCode(_language.CompileSourceCode(scriptSource, compilerOptions, null));
         }
 
         /// <summary>
@@ -422,7 +466,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a new ObjectOperations object.  See the Operations property for why you might want to call this.
         /// </summary>
         public ObjectOperations/*!*/ CreateOperations() {
-            return new ObjectOperations(GetCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultModule));
+            return new ObjectOperations(GetCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultScope));
         }
 
         /// <summary>
@@ -438,6 +482,43 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
+        #region Scopes
+
+        public IScriptScope/*!*/ CreateScope() {
+            return new ScriptScope(new Scope(_language));
+        }
+
+        public IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
+            Contract.RequiresNotNull(dictionary, "dictionary");
+            return new ScriptScope(new Scope(_language, dictionary));
+        }
+
+        /// <summary>
+        /// This method returns the ScriptScope in which a ScriptSource of given path was executed.  
+        /// 
+        /// The ScriptSource.Path property is the key to finding the ScriptScope.  Hosts need 
+        /// to make sure they create a ScriptSource and set its Path property appropriately.
+        /// 
+        /// GetScope is primarily useful for tools that need to map files to their execution scopes. For example, 
+        /// an editor and interpreter tool might run a file Foo that imports or requires a file Bar.  
+        /// 
+        /// The editor's user might later open the file Bar and want to execute expressions in its context.  
+        /// The tool would need to find Bar's ScriptScope for setting the appropriate context in its interpreter window. 
+        /// This method helps with this scenario.
+        /// </summary>
+        public IScriptScope GetScope(string/*!*/ path) {
+            Contract.RequiresNotNull(path, "path");
+            Scope scope = _language.GetScope(path);
+            return (scope != null) ? new ScriptScope(scope) : null;
+        }
+
+        // TODO: remove
+        public void PublishModule(string/*!*/ name, IScriptScope/*!*/ scope) {
+            _language.PublishModule(name, RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "scope").Scope);
+        }
+
+        #endregion
+
         #region Source Unit Creation
 
         /// <summary>
@@ -445,24 +526,24 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default ScriptSourceKind is Expression.
         /// 
-        /// The ScriptSource's Identifier property defaults to the string of code.
+        /// The ScriptSource's Path property defaults to <c>null</c>.
         /// </summary>
         public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code) {
             Contract.RequiresNotNull(code, "code");
 
-            return CreateScriptSource(new SourceStringContentProvider(code), code, SourceCodeKind.Expression);
+            return CreateScriptSource(new SourceStringContentProvider(code), null, SourceCodeKind.Expression);
         }
 
         /// <summary>
         /// Return a ScriptSource object from string contents with the current engine as the language binding.
         /// 
-        /// The ScriptSource's Identifier property defaults to the string of code.
+        /// The ScriptSource's Path property defaults to <c>null</c>.
         /// </summary>
         public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code, ScriptSourceKind kind) {
             Contract.RequiresNotNull(code, "code");
             Contract.Requires(Enum.IsDefined(typeof(ScriptSourceKind), kind), "kind");
 
-            return CreateScriptSource(new SourceStringContentProvider(code), code, kind);
+            return CreateScriptSource(new SourceStringContentProvider(code), null, kind);
         }
 
         /// <summary>
@@ -470,9 +551,8 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default ScriptSourceKind is Expression.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code, string/*!*/ id) {
+        public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code, string id) {
             Contract.RequiresNotNull(code, "code");
-            Contract.RequiresNotNull(id, "id");
 
             return CreateScriptSource(new SourceStringContentProvider(code), id, SourceCodeKind.Expression);
         }
@@ -480,9 +560,8 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Return a ScriptSource object from string contents.  These are helpers for creating ScriptSources' with the right language binding.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code, string/*!*/ id, ScriptSourceKind kind) {
+        public ScriptSource/*!*/ CreateScriptSourceFromString(string/*!*/ code, string id, ScriptSourceKind kind) {
             Contract.RequiresNotNull(code, "code");
-            Contract.RequiresNotNull(id, "id");
             Contract.Requires(Enum.IsDefined(typeof(ScriptSourceKind), kind), "kind");
 
             return CreateScriptSource(new SourceStringContentProvider(code), id, kind);
@@ -496,7 +575,7 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default ScriptSourceKind is File.
         /// 
-        /// The ScriptSource's Identifier property will be the path argument.
+        /// The ScriptSource's Path property will be the path argument.
         /// 
         /// The encoding defaults to System.Text.Encoding.Default.
         /// </summary>
@@ -514,7 +593,7 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default ScriptSourceKind is File.
         /// 
-        /// The ScriptSource's Identifier property will be the path argument.
+        /// The ScriptSource's Path property will be the path argument.
         /// </summary>
         public ScriptSource/*!*/ CreateScriptSourceFromFile(string/*!*/ path, Encoding/*!*/ encoding) {
             Contract.RequiresNotNull(path, "path");
@@ -529,7 +608,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The path's extension does NOT have to be in ScriptRuntime.GetRegisteredFileExtensions 
         /// or map to this language engine with ScriptRuntime.GetEngineByFileExtension.
         /// 
-        /// The ScriptSource's Identifier property will be the path argument.
+        /// The ScriptSource's Path property will be the path argument.
         /// </summary>
         public ScriptSource/*!*/ CreateScriptSourceFromFile(string/*!*/ path, Encoding/*!*/ encoding, ScriptSourceKind kind) {
             Contract.RequiresNotNull(path, "path");
@@ -583,9 +662,8 @@ namespace Microsoft.Scripting.Hosting {
         ///     CodeMethodInvokeExpression
         ///     CodeExpressionStatement (for holding MethodInvoke)
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string/*!*/ id) {
+        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string id) {
             Contract.RequiresNotNull(content, "content");
-            Contract.RequiresNotNull(id, "id");
 
             return _language.GenerateSourceCode(content, id, SourceCodeKind.File);
         }
@@ -624,9 +702,8 @@ namespace Microsoft.Scripting.Hosting {
         ///     CodeMethodInvokeExpression
         ///     CodeExpressionStatement (for holding MethodInvoke)
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string/*!*/ id, SourceCodeKind kind) {
+        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string id, SourceCodeKind kind) {
             Contract.RequiresNotNull(content, "content");
-            Contract.RequiresNotNull(id, "id");
 
             return _language.GenerateSourceCode(content, id, kind);
         }
@@ -639,9 +716,8 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The encoding defaults to Encoding.Default.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string/*!*/ id) {
+        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string id) {
             Contract.RequiresNotNull(content, "content");
-            Contract.RequiresNotNull(id, "id");
 
             return CreateScriptSource(content, id, StringUtils.DefaultEncoding, SourceCodeKind.File);
         }
@@ -651,9 +727,8 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The default ScriptSourceKind is File.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string/*!*/ id, Encoding/*!*/ encoding) {
+        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string id, Encoding/*!*/ encoding) {
             Contract.RequiresNotNull(content, "content");
-            Contract.RequiresNotNull(id, "id");
             Contract.RequiresNotNull(encoding, "encoding");
 
             return CreateScriptSource(content, id, encoding, SourceCodeKind.File);
@@ -664,9 +739,8 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// The encoding defaults to Encoding.Default.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string/*!*/ id, Encoding/*!*/ encoding, ScriptSourceKind kind) {
+        public ScriptSource/*!*/ CreateScriptSource(StreamContentProvider/*!*/ content, string id, Encoding/*!*/ encoding, ScriptSourceKind kind) {
             Contract.RequiresNotNull(content, "content");
-            Contract.RequiresNotNull(id, "id");
             Contract.RequiresNotNull(encoding, "encoding");
             Contract.Requires(Enum.IsDefined(typeof(ScriptSourceKind), kind), "kind");
 
@@ -678,9 +752,8 @@ namespace Microsoft.Scripting.Hosting {
         /// 
         /// This helper lets you own the content provider so that you can implement a stream over internal host data structures, such as an editor's text representation.
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(TextContentProvider/*!*/ contentProvider, string/*!*/ id, ScriptSourceKind kind) {
+        public ScriptSource/*!*/ CreateScriptSource(TextContentProvider/*!*/ contentProvider, string id, ScriptSourceKind kind) {
             Contract.RequiresNotNull(contentProvider, "contentProvider");
-            Contract.RequiresNotNull(id, "id");
             Contract.Requires(Enum.IsDefined(typeof(ScriptSourceKind), kind), "kind");
 
             return ScriptSource.Create(_language, contentProvider, id, kind);
@@ -817,7 +890,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(name, "name");
 
             object dummy;
-            return TryGetVariable(scope, name, out dummy);
+            return scope.TryGetVariable(name, out dummy);
         }
 
         #endregion
@@ -995,24 +1068,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// This method returns the ScriptScope in which a ScriptSource executed.  
-        /// 
-        /// The ScriptSource's Identifier property is the key to finding the ScriptScope.  Hosts need 
-        /// to make sure they create a ScriptSource and set its Identifier property appropriately.
-        /// 
-        /// GetScope is primarily useful for tools that need to map files to their execution scopes.  For example, 
-        /// an editor and interpreter tool might run a file Foo that imports or requires a file Bar.  
-        /// 
-        /// The editor's user might later open the file Bar and want to execute expressions in its context.  
-        /// The tool would need to find Bar's ScriptScope for setting the appropriate context in its interpreter window.  This method helps with this scenario.
-        /// </summary>
-        public ScriptScope GetScope(ScriptSource/*!*/ scriptSource) {
-            Contract.RequiresNotNull(scriptSource, "scriptSource");
-
-            throw new NotImplementedException(scriptSource.ToString());
-        }
-
-        /// <summary>
         /// This method returns a string in the style of this engine's language to describe the exception argument.
         /// </summary>
         public string/*!*/ FormatException(Exception/*!*/ exception) {
@@ -1025,16 +1080,11 @@ namespace Microsoft.Scripting.Hosting {
 
         // Gets a LanguageContext for the specified module that captures the current state 
         // of the module which will be used for compilation and execution of the next piece of code against the module.
-        private CodeContext GetCodeContext(IScriptScope/*!*/ module) {
-            Debug.Assert(module != null);
+        private CodeContext GetCodeContext(IScriptScope/*!*/ scope) {
+            Debug.Assert(scope != null);
 
-            ScriptScope localScope = RemoteWrapper.GetLocalArgument<ScriptScope>(module ?? ScriptDomainManager.CurrentManager.Host.DefaultModule, "module");
-
-            CodeContext res = new CodeContext(
-                localScope.Scope,
-                _language,
-                _language.EnsureModuleContext(localScope)
-            );
+            ScriptScope localScope = RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "scope");
+            CodeContext res = new CodeContext(localScope.Scope, _language);
 
             return res;
         }
@@ -1048,7 +1098,7 @@ namespace Microsoft.Scripting.Hosting {
                 return _language;
             }
         }
-        
+
         public void Shutdown() {
             _language.Shutdown();
         }
@@ -1084,14 +1134,4 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
     }
-    
-    // TODO: (dependency workaround, should be in Python's assembly): 
-    [Flags]
-    public enum ModuleOptions {
-        None = 0x0000,
-        PublishModule = 0x0001,
-        TrueDivision = 0x0002,
-        ShowClsMethods = 0x0004
-    }
-
 }

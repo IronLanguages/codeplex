@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 
 namespace Microsoft.Scripting {
@@ -107,6 +108,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [Confined]
         bool IDictionary<object, object>.ContainsKey(object key) {
             Debug.Assert(!(key is SymbolId));
             lock (this) {
@@ -115,7 +117,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        ICollection<object> IDictionary<object, object>.Keys {
+        ICollection<object>/*!*/ IDictionary<object, object>.Keys {
             get {
                 List<object> res = new List<object>();
                 lock (this) if (_data != null) {
@@ -174,7 +176,7 @@ namespace Microsoft.Scripting {
             return TryGetObjectValue(key, out value);
         }
 
-        ICollection<object> IDictionary<object, object>.Values {
+        ICollection<object>/*!*/ IDictionary<object, object>.Values {
             get {
                 List<object> res = new List<object>();
                 lock (this) {
@@ -204,7 +206,7 @@ namespace Microsoft.Scripting {
         public object this[object key] {
             get {
                 Debug.Assert(!(key is SymbolId));
-
+                
                 string strKey = key as string;
                 object res;
                 if (strKey != null) {
@@ -263,11 +265,12 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [Confined]
         public bool Contains(KeyValuePair<object, object> item) {
             throw new NotImplementedException();
         }
 
-        public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
+        public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
             throw new NotImplementedException();
         }
 
@@ -304,7 +307,8 @@ namespace Microsoft.Scripting {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
+        [Pure]
+        IEnumerator<KeyValuePair<object, object>>/*!*/ IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             if (_data != null) {
                 foreach (KeyValuePair<SymbolId, object> o in _data) {
                     if (o.Key == SymbolId.Invalid) break;
@@ -334,7 +338,8 @@ namespace Microsoft.Scripting {
 
         #region IEnumerable Members
 
-        public System.Collections.IEnumerator GetEnumerator() {
+        [Pure]
+        public System.Collections.IEnumerator/*!*/ GetEnumerator() {
             List<object> l = new List<object>(this.Keys);
             for (int i = 0; i < l.Count; i++) {
                 object baseVal = l[i];
@@ -532,15 +537,18 @@ namespace Microsoft.Scripting {
 
         #region IDictionary Members
 
-        void IDictionary.Add(object key, object value) {
+        [Pure]
+        void IDictionary.Add(object/*!*/ key, object value) {
             AsObjectKeyedDictionary().Add(key, value);
         }
 
-        public bool Contains(object key) {
+        [Pure]
+        public bool Contains(object/*!*/ key) {
             return AsObjectKeyedDictionary().ContainsKey(key);
         }
 
-        IDictionaryEnumerator IDictionary.GetEnumerator() {
+        [Pure]
+        IDictionaryEnumerator/*!*/ IDictionary.GetEnumerator() {
             List<IDictionaryEnumerator> enums = new List<IDictionaryEnumerator>();
 
             enums.Add(new ExtraKeyEnumerator(this));
@@ -559,11 +567,11 @@ namespace Microsoft.Scripting {
             get { return false; }
         }
 
-        ICollection IDictionary.Keys {
+        ICollection/*!*/ IDictionary.Keys {
             get { return new List<object>(AsObjectKeyedDictionary().Keys); }
         }
 
-        void IDictionary.Remove(object key) {
+        void IDictionary.Remove(object/*!*/ key) {
             Debug.Assert(!(key is SymbolId));
             string strKey = key as string;
             if (strKey != null) {
@@ -576,13 +584,13 @@ namespace Microsoft.Scripting {
             }
         }
 
-        ICollection IDictionary.Values {
+        ICollection/*!*/ IDictionary.Values {
             get {
                 return new List<object>(AsObjectKeyedDictionary().Values);
             }
         }
 
-        object IDictionary.this[object key] {
+        object IDictionary.this[object/*!*/ key] {
             get { return AsObjectKeyedDictionary()[key]; }
             set { AsObjectKeyedDictionary()[key] = value; }
         }
@@ -595,7 +603,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public override object SyncRoot {
+        public override object/*!*/ SyncRoot {
             get {
                 // TODO: Sync root shouldn't be this, it should be data.
                 return this;

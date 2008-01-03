@@ -18,6 +18,6 @@ clr.AddReference("Microsoft.Scripting")
 from Microsoft.Scripting import *
 import System
 paramTypes = System.Array[System.Type]([])
-cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("test", str, paramTypes, None)
+cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("test", str, paramTypes)
 cg.EmitReturn()
 cg.Finish()

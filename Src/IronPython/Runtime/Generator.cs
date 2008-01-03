@@ -79,6 +79,29 @@ namespace IronPython.Runtime {
             _next = next;
         }
 
+        // Silverlight doesn't allow finalizers in user code.
+#if !SILVERLIGHT
+        // Pep 342 says generators now have finalizers (__del__) that call Close()
+        ~PythonGenerator() {
+            try {
+                // This may run the users generator.
+                this.Close();
+
+            } catch (Exception e) {
+                // An unhandled exceptions on the finalizer could tear down the process, so catch it.
+
+                // PEP says:
+                //   If close() raises an exception, a traceback for the exception is printed to sys.stderr
+                //   and further ignored; it is not propagated back to the place that
+                //   triggered the garbage collection. 
+
+                // Sample error message from CPython 2.5 looks like:
+                //     Exception __main__.MyError: MyError() in <generator object at 0x00D7F6E8> ignored
+                string message = string.Format("Exception {0} in {1} ignored\n", e.Message, this);
+                PythonOps.Write(SystemState.Instance.stderr, message);
+            }
+        }
+#endif // !SILVERLIGHT
 
         public override bool MoveNext() {
             _started = true;
@@ -100,6 +123,7 @@ namespace IronPython.Runtime {
             }
             _active = true;
 
+            Exception save = PythonOps.SaveCurrentException();
             try {
                 try {
                     // This calls into the delegate that has the real body of the generator.
@@ -115,6 +139,8 @@ namespace IronPython.Runtime {
                     ret = false;
                 }
             } finally {
+                // A generator restores the sys.exc_info() status after each yield point.
+                PythonOps.RestoreCurrentException(save);
                 _active = lastActive;
 
                 // If _next() returned false, or did not return (thus leavintg ret assigned to its initial value of false), then 

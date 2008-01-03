@@ -488,15 +488,13 @@ namespace IronPython.Runtime.Calls {
                     Expression call;
 
                     if (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) {
-                        call = cand.Target.MakeExpression(Binder,
-                            ret,
+                        call = cand.Target.MakeExpression(ret,
                             GetIndexArguments(ret),
                             testedTypes);
                     } else {
                         call = Ast.Comma(0,
                             ret.Parameters[ret.Parameters.Length - 1],
                             cand.Target.MakeExpression(
-                                Binder,
                                 ret,
                                 GetIndexArguments(ret),
                                 testedTypes)
@@ -666,7 +664,7 @@ namespace IronPython.Runtime.Calls {
                     clrtypes[1] = temp;
                 }
             }
-            return target.MakeExpression(Binder, block, vars, clrtypes);
+            return target.MakeExpression(block, vars, clrtypes);
         }
 
         private bool MakeOneComparisonTarget(MethodTarget target, StandardRule<T> rule, List<Statement> stmts, bool reverse) {
@@ -717,7 +715,7 @@ namespace IronPython.Runtime.Calls {
         private IfStatement MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
             Expression test = Ast.ReadDefined(var);
             if (test.Type != typeof(bool)) {
-                test = Ast.DynamicConvert(test, typeof(bool));
+                test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
             }
             return Ast.IfThen(
                 test,

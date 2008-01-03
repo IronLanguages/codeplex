@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Note that for module-level code, globals and locals are the same.
     /// </summary>
-    class ScopeAllocator {
+    public class ScopeAllocator {// TODO: internal
         private readonly ScopeAllocator _parent;
         private readonly StorageAllocator _allocator;
 
@@ -110,6 +110,7 @@ namespace Microsoft.Scripting.Generation {
             _generatorTemps.Add(slot);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public Slot GetGeneratorTemp() {
             Debug.Assert(_generatorTempIndex < _generatorTemps.Count);
             return _generatorTemps[_generatorTempIndex ++];

@@ -42,18 +42,12 @@ namespace IronPython.Runtime {
     /// Singleton living on Python engine.
     /// </summary>
     public sealed class Importer {
-        private LanguageContext _context;
-
-        // TODO: for convenience now, could be removed when we have _engine : ScriptEngine
-        private SystemState SystemState {
-            get {
-                return PythonContext.GetSystemState(null);
-            }
-        }
+        private readonly PythonContext/*!*/ _context;
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> _importSite = MakeImportSite();
 
-        internal Importer(LanguageContext context) {
+        internal Importer(PythonContext/*!*/ context) {
+            Assert.NotNull(context);
             _context = context;
         }
 
@@ -63,8 +57,14 @@ namespace IronPython.Runtime {
         /// Gateway into importing ... called from Ops.  Performs the initial import of
         /// a module and returns the module.
         /// </summary>
-        public object Import(CodeContext context, string fullName, PythonTuple from) {
-            return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.locals(context), from);
+        public object Import(CodeContext/*!*/ context, string fullName, PythonTuple from) {
+            Exception exLast = PythonOps.SaveCurrentException();
+            try {
+                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.locals(context), from);
+            } finally {
+                PythonOps.RestoreCurrentException(exLast);
+            }
+
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> MakeImportSite() {
@@ -78,42 +78,47 @@ namespace IronPython.Runtime {
         /// the module.  The outer modules dictionary is then updated with the
         /// result.
         /// </summary>
-        public object ImportFrom(CodeContext context, object mod, string name) {
-            ScriptScope from = mod as ScriptScope;
-            if (from != null) {
-                object ret;
-                if (from.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out ret)) {
-                    return ret;
+        public object ImportFrom(CodeContext/*!*/ context, object from, string name) {
+            Exception exLast = PythonOps.SaveCurrentException();
+            try {
+                Scope scope = from as Scope;
+                if (scope != null) {
+                    object ret;
+                    if (scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out ret)) {
+                        return ret;
+                    }
+
+                    object path;
+                    if (scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
+                        return ImportNestedModule(context, scope, name);
+                    }
+                } else {
+                    // This is too lax, for example it allows from module.class import member
+                    object ret;
+                    if (PythonOps.TryGetBoundAttr(context, from, SymbolTable.StringToId(name), out ret)) {
+                        return ret;
+                    }
                 }
-                   
-                object path;
-                if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
-                    return ImportNestedModule(context, from, name);
-                }
-            } else {
-                // This is too lax, for example it allows from module.class import member
-                object ret;
-                if (PythonOps.TryGetBoundAttr(context, mod, SymbolTable.StringToId(name), out ret)) {
-                    return ret;
-                }
+            } finally {
+                PythonOps.RestoreCurrentException(exLast);
             }
             throw PythonOps.ImportError("Cannot import name {0}", name);
         }
 
 
-        private object ImportModuleFrom(CodeContext context, object mod, string name) {
-            ScriptScope from = mod as ScriptScope;
-            if (from != null) {
+        private object ImportModuleFrom(CodeContext/*!*/ context, object from, string name) {
+            Scope scope = from as Scope;
+            if (scope != null) {
                 object path;
-                if (from.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
-                    return ImportNestedModule(context, from, name);
+                if (scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
+                    return ImportNestedModule(context, scope, name);
                 }
             }
 
-            NamespaceTracker rp = mod as NamespaceTracker;
-            if (rp != null) {
+            NamespaceTracker ns = from as NamespaceTracker;
+            if (ns != null) {
                 object val;
-                if (rp.TryGetValue(SymbolTable.StringToId(name), out val)) {
+                if (ns.TryGetValue(SymbolTable.StringToId(name), out val)) {
                     return val;
                 }
             }
@@ -123,10 +128,8 @@ namespace IronPython.Runtime {
 
         /// <summary>
         /// Called by the __builtin__.__import__ functions (general importing) and ScriptEngine (for site.py)
-        /// 
-        /// Returns a PythonModule.
         /// </summary>        
-        public object ImportModule(CodeContext context, string modName, bool bottom) {
+        public object ImportModule(CodeContext/*!*/ context, string/*!*/ modName, bool bottom) {
             object newmod = null;
             string[] parts = modName.Split('.');
 
@@ -153,11 +156,10 @@ namespace IronPython.Runtime {
                 
                 // fallback to DLR way of resolving source units:
                 if (newmod == null) {
-                    ScriptScope mod = ScriptDomainManager.CurrentManager.UseModule(modName);
-                    if (mod != null) {
-                        return InitializeModule(modName, mod, false);
+                    ScriptScope scope = ScriptDomainManager.CurrentManager.UseModule(modName);
+                    if (scope != null) {
+                        return scope.Scope;
                     }
-
                 }
 
                 if (newmod == null) {
@@ -181,12 +183,12 @@ namespace IronPython.Runtime {
             return bottom ? next : newmod;
         }
 
-        private object ImportTopRelative(CodeContext context, string name, string full, List path) {
-            object newmod = ImportFromPath(context, name, full, path);
-            if (newmod != null) {
-                context.Scope.SetName(SymbolTable.StringToId(name), newmod);
+        private Scope ImportTopRelative(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ full, List/*!*/ path) {
+            Scope importedScope = ImportFromPath(context, name, full, path);
+            if (importedScope != null) {
+                context.Scope.SetName(SymbolTable.StringToId(name), importedScope);
             }
-            return newmod;
+            return importedScope;
         }
 
         /// <summary>
@@ -203,7 +205,7 @@ namespace IronPython.Runtime {
         /// <param name="full">Output - full name of the module being imported</param>
         /// <param name="path">Path to use to search for "full"</param>
         /// <returns></returns>
-        private bool TryGetNameAndPath(CodeContext context, string name, out string full, out List path) {
+        private bool TryGetNameAndPath(CodeContext/*!*/ context, string name, out string full, out List path) {
             // Unless we can find enough information to perform relative import,
             // we are going to import the module whose name we got
             full = name;
@@ -243,19 +245,19 @@ namespace IronPython.Runtime {
             string parentName = modName.Substring(0, lastDot);
             object parentObject;
             // Try lookup parent module in the sys.modules
-            if (!PythonContext.GetSystemState(context).modules.TryGetValue(parentName, out parentObject)) {
+            if (!_context.SystemState.modules.TryGetValue(parentName, out parentObject)) {
                 // parent module not found in sys.modules, fallback to absolute import
                 return false;
             }
 
-            ScriptScope parentModule;
-            if ((parentModule = parentObject as ScriptScope) == null) {
+            Scope parentScope = parentObject as Scope;
+            if (parentScope == null) {
                 // the sys.module entry is not module, fallback to absolute import
                 return false;
             }
 
             // The parentModule now needs to have __path__ - list
-            if (parentModule.Scope.TryGetName(context.LanguageContext, Symbols.Path, out attribute) && (path = attribute as List) != null) {
+            if (parentScope.TryGetName(context.LanguageContext, Symbols.Path, out attribute) && (path = attribute as List) != null) {
                 // combine the module names
                 full = parentName + "." + name;
                 return true;
@@ -265,30 +267,49 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        internal void ReloadBuiltin(ScriptScope module) {
-            Type ty;
+        public void ReloadModule(Scope/*!*/ scope) {
+            PythonModule module = DefaultContext.DefaultPythonContext.GetReloadableModule(scope);
 
-            if (SystemState.Builtins.TryGetValue(module.ModuleName, out ty)) {
-                if (typeof(CustomSymbolDictionary).IsAssignableFrom(ty)) {
-                    CustomSymbolDictionary dict = (CustomSymbolDictionary)ty.GetConstructor(ArrayUtils.EmptyTypes).Invoke(ArrayUtils.EmptyObjects);
-                    //@todo share logic to copy old values in when not already there from reload
-                    module.Execute();
-                } else {
-                    PythonType type = DynamicHelpers.GetPythonTypeFromType(ty);
+            // We created the module and it only contains Python code. If the user changes
+            // __file__ we'll reload from that file. 
+            string fileName = module.GetFile() as string;
 
-                    foreach (SymbolId attrName in type.GetMemberNames(DefaultContext.DefaultCLS)) {
-                        module.Scope.SetName(attrName, type.GetBoundMember(DefaultContext.DefaultCLS, null, attrName));
-                    }
-                    module.Execute();
-                }
+            // built-in module:
+            if (fileName == null) {
+                ReloadBuiltinModule(module);
                 return;
             }
-            throw new NotImplementedException();
+
+            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(fileName, _context.SystemState.DefaultEncoding, SourceCodeKind.File);
+
+            if (sourceUnit == null) {
+                throw PythonOps.SystemError("module source file not found");
+            }
+
+            ScriptCode compiledCode = _context.CompileSourceCode(sourceUnit);
+            compiledCode.Run(scope);
         }
 
-        internal bool TryGetExistingModule(string fullName, out object ret) {
+        private void ReloadBuiltinModule(PythonModule/*!*/ module) {
+            Assert.NotNull(module);
+            Debug.Assert(module.GetName() is string, "Module is reloadable only if its name is a non-null string");
+            Type type;
+
+            string name = (string)module.GetName();
+
+            if (!_context.SystemState.Builtins.TryGetValue(name, out type)) {
+                throw new NotImplementedException();
+            }
+
+            // TODO: is this correct?
+            module.Scope.Clear();
+            module.SetName(name);
+            PythonModuleOps.PopulateModuleDictionary(module.Scope.Dict, type);
+        }
+
+        internal bool TryGetExistingModule(string/*!*/ fullName, out object ret) {
             // Python uses None/null as a key here to indicate a missing module
-            if (SystemState.modules.TryGetValue(fullName, out ret)) {
+            if (_context.SystemState.modules.TryGetValue(fullName, out ret)) {
                 return ret != null;
             }
             return false;
@@ -298,7 +319,7 @@ namespace IronPython.Runtime {
 
         #region Private Implementation Details
 
-        private object ImportTopAbsolute(CodeContext context, string name) {
+        private object ImportTopAbsolute(CodeContext/*!*/ context, string/*!*/ name) {
             object ret;
             if (TryGetExistingModule(name, out ret)) {
                 if (IsReflected(ret)) {
@@ -318,7 +339,7 @@ namespace IronPython.Runtime {
             ret = ImportBuiltin(context, name);
             if (ret != null) return ret;
 
-            ret = ImportFromPath(context, name, name, SystemState.path);
+            ret = ImportFromPath(context, name, name, _context.SystemState.path);
             if (ret != null) return ret;
 
             ret = ImportReflected(context, name);
@@ -327,9 +348,11 @@ namespace IronPython.Runtime {
             return null;
         }
 
-        private bool TryGetNestedModule(CodeContext context, ScriptScope mod, string name, out object nested) {
-            if (mod.Scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out nested)) {
-                if (nested is ScriptScope) return true;
+        private bool TryGetNestedModule(CodeContext/*!*/ context, Scope/*!*/ scope, string/*!*/ name, out object nested) {
+            Assert.NotNull(context, scope, name);
+
+            if (scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out nested)) {
+                if (nested is Scope) return true;
 
                 // This allows from System.Math import *
                 PythonType dt = nested as PythonType;
@@ -338,12 +361,14 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        private object ImportNestedModule(CodeContext context, ScriptScope mod, string name) {
+        private object ImportNestedModule(CodeContext/*!*/ context, Scope/*!*/ scope, string name) {
             object ret;
-            if (TryGetNestedModule(context, mod, name, out ret)) { return ret; }
+            if (TryGetNestedModule(context, scope, name, out ret)) { return ret; }
+
+            PythonModule module = _context.EnsurePythonModule(scope);
 
             string baseName;
-            List path = ResolveSearchPath(context, mod, out baseName);
+            List path = ResolveSearchPath(context, module, out baseName);
             string fullName = CreateFullName(baseName, name);
 
             if (TryGetExistingModule(fullName, out ret)) {
@@ -351,59 +376,60 @@ namespace IronPython.Runtime {
             }
 
             if (path != null) {
-                ret = ImportFromPath(context, name, fullName, path);
-                if (ret != null) {
-                    mod.Scope.SetName(SymbolTable.StringToId(name), ret);
-                    return ret;
+                Scope importedScope = ImportFromPath(context, name, fullName, path);
+                if (importedScope != null) {
+                    module.Scope.SetName(SymbolTable.StringToId(name), importedScope);
+                    return importedScope;
                 }
             }
 
-            throw PythonOps.ImportError("cannot import {0} from {1}", name, mod.ModuleName);
+            throw PythonOps.ImportError("cannot import {0} from {1}", name, module.GetName());
         }
 
-        private static void SetImported(CodeContext context, string name, object value) {
-            context.Scope.SetName(SymbolTable.StringToId(name), value);
-        }
-
-        private object FindImportFunction(CodeContext context) {
+        private object FindImportFunction(CodeContext/*!*/ context) {
             object builtin, import;
             if (!context.Scope.ModuleScope.TryGetName(context.LanguageContext, Symbols.Builtins, out builtin)) {
                 builtin = SystemState.Instance.BuiltinModuleInstance;
             }
 
-            ScriptScope sm = builtin as ScriptScope;            
-            if (sm != null && sm.Scope.TryGetName(context.LanguageContext, Symbols.Import, out import)) {
+            Scope scope = builtin as Scope;
+            if (scope != null && scope.TryGetName(context.LanguageContext, Symbols.Import, out import)) {
                 return import;
             }
 
             throw PythonOps.ImportError("cannot find __import__");
         }
 
-        internal object ImportBuiltin(CodeContext context, string name) {
+        internal object ImportBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
+            Assert.NotNull(context, name);
             RuntimeHelpers.TopNamespace.Initialize();
 
-            if (name.Equals("sys")) return SystemState;
+            if (name.Equals("sys")) {
+                return _context.SystemState;
+            }
+
             if (name.Equals("clr")) {
                 context.ModuleContext.ShowCls = true;
-                return SystemState.Instance.ClrModule;
+                return _context.SystemState.ClrModule;
             }
-            Type ty;
-            if (SystemState.Builtins.TryGetValue(name, out ty)) {
+
+            Type type;
+            if (_context.SystemState.Builtins.TryGetValue(name, out type)) {
                 // RuntimeHelpers.RunClassConstructor
                 // run the type's .cctor before doing any custom reflection on the type.
                 // This allows modules to lazily initialize PythonType's to custom values
                 // rather than having them get populated w/ the ReflectedType.  W/o this the
                 // cctor runs after we've done a bunch of reflection over the type that doesn't
                 // force the cctor to run.
-                System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(ty.TypeHandle);
-                ScriptScope ret = PythonModuleOps.MakePythonModule(name, ty);
-                SystemState.modules[name] = ret;                
-                return ret;
+                System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+                PythonModule module = _context.CreateBuiltinModule(name, type);
+                _context.PublishModule(name, module);
+                return module.Scope;
             }
             return null;
         }
 
-        private object ImportReflected(CodeContext context, string name) {
+        private object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {
             MemberTracker res = RuntimeHelpers.TopNamespace.TryGetPackageAny(name);
             if (res != null) {
                 context.ModuleContext.ShowCls = true;
@@ -419,7 +445,7 @@ namespace IronPython.Runtime {
                         break;
                 }
              
-                SystemState.modules[name] = realRes;                
+                _context.SystemState.modules[name] = realRes;                
                 return realRes;
             }
             return res;
@@ -437,25 +463,35 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Initializes the specified module and returns the user-exposable PythonModule.
         /// </summary>
-        internal ScriptScope InitializeModule(string fullName, ScriptScope smod, bool executeModule) {
+        internal void InitializeModule(string/*!*/ fullName, PythonModule/*!*/ module, ScriptCode/*!*/ code, bool executeModule) {
+            Assert.NotNull(fullName, module, code);
+
             //Put this in modules dict so we won't reload with circular imports
-            SystemState.modules[fullName] = smod;            
+            _context.PublishModule(fullName, module);
             bool success = false;
             try {
-                if(executeModule) smod.Execute();
+                if (executeModule) {
+                    code.Run(module.Scope, module);
+                }
+
                 success = true;
             } finally {
-                if (!success) SystemState.modules.Remove(fullName);
+                if (!success) {
+                    _context.SystemState.modules.Remove(fullName);
+                }
             }
-
-            return smod;
         }
 
-        private List ResolveSearchPath(CodeContext context, ScriptScope mod, out string baseName) {
-            baseName = mod.ModuleName;
+        private List ResolveSearchPath(CodeContext/*!*/ context, PythonModule/*!*/ module, out string baseName) {
+            baseName = module.GetName() as string;
+
+            // TODO: is this precise?
+            if (baseName == null) {
+                return null;
+            }
 
             object path;            
-            if (!mod.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
+            if (!module.Scope.TryGetName(context.LanguageContext, Symbols.Path, out path)) {
                 List basePath = path as List;
                 for (; ; ) {
                     int lastDot = baseName.LastIndexOf('.');
@@ -465,7 +501,7 @@ namespace IronPython.Runtime {
                     }
 
                     baseName = baseName.Substring(0, lastDot);
-                    object package = SystemState.modules[baseName];
+                    object package = _context.SystemState.modules[baseName];
                     if (PythonOps.TryGetBoundAttr(package, Symbols.Path, out path)) {
                         if (path is List) {
                             basePath = (List)path;
@@ -479,7 +515,7 @@ namespace IronPython.Runtime {
             return path as List; // trouble if __path__ is not a List
         }
 
-        private string CreateFullName(string baseName, string name) {
+        private string CreateFullName(string/*!*/ baseName, string name) {
             if (baseName == null || baseName.Length == 0 || baseName == "__main__") {
                 return name;
             }
@@ -488,44 +524,49 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        private ScriptScope ImportFromPath(CodeContext context, string name, string fullName, List path) {
-            ScriptScope ret = null;
+        private Scope ImportFromPath(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ fullName, List/*!*/ path) {
+            Assert.NotNull(context, name, fullName, path);
+
             foreach (object dirname in path) {
                 string str;
                 if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
+                    PythonModule module;
                     string pathname = Path.Combine(str, name);
 
-                    ret = LoadPackageFromSource(context, fullName, pathname);
-                    if (ret != null) {
-                        return ret;
+                    module = LoadPackageFromSource(context, fullName, pathname);
+                    if (module != null) {
+                        return module.Scope;
                     }
 
                     string filename = pathname + ".py";
-                    ret = LoadModuleFromSource(context, fullName, filename);
-                    if (ret != null) {
-                        return ret;
+                    module = LoadModuleFromSource(context, fullName, filename);
+                    if (module != null) {
+                        return module.Scope;
                     }
                 }
             }
-            return ret;
+
+            return null;
         }
 
-        private ScriptScope LoadModuleFromSource(CodeContext context, string name, string path) {
-            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
+        private PythonModule LoadModuleFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
+            Assert.NotNull(context, name, path);
+
+            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(path, _context.SystemState.DefaultEncoding, SourceCodeKind.File);
             if (sourceUnit == null) {
                 return null;
             }
             return LoadFromSourceUnit(sourceUnit, name, path);
         }
 
-        private ScriptScope LoadPackageFromSource(CodeContext context, string name, string path) {
+        private PythonModule LoadPackageFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
+            Assert.NotNull(context, name, path);
             return LoadModuleFromSource(context, name, Path.Combine(path, "__init__.py"));
         }
 
-        private ScriptScope LoadFromSourceUnit(SourceUnit sourceUnit, string name, string path) {
-            ScriptScope res = InitializeModule(name, ScriptDomainManager.CurrentManager.CompileModule(name, sourceUnit), true);
-            ScriptDomainManager.CurrentManager.PublishModule(res, path);
-            return res;
+        private PythonModule/*!*/ LoadFromSourceUnit(SourceUnit/*!*/ sourceCode, string/*!*/ name, string/*!*/ path) {
+            Assert.NotNull(sourceCode, name, path);
+            return _context.CompileModule(path, name, sourceCode, ModuleOptions.Initialize | ModuleOptions.Optimized | ModuleOptions.PublishModule, false);
         }
     }
 }

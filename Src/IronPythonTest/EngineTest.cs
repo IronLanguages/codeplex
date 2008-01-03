@@ -59,6 +59,10 @@ namespace IronPythonTest {
         public static LanguageContext GetContext(CodeContext context) {
             return context.LanguageContext;
         }
+
+        public static IScriptEngine GetEngine() {
+            return ScriptEnvironment.GetEnvironment().GetEngine(typeof(PythonContext));
+        }
     }
 
     public delegate int IntIntDelegate(int arg);
@@ -118,28 +122,24 @@ namespace IronPythonTest {
 #endif
     {
 
-        ScriptEngine pe = ScriptDomainManager.CurrentManager.GetEngine("py");
-        ScriptScope scope = ScriptDomainManager.CurrentManager.CreateModule("foo");
+        private readonly IScriptEngine _pe;
+        private readonly IScriptEnvironment _env;
 
         public EngineTest() {
             // Load a script with all the utility functions that are required
             // pe.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
+            _env = ScriptEnvironment.GetEnvironment();
+            _pe = _env.GetEngine("py");
         }
 
         // Used to test exception thrown in another domain can be shown correctly.
         public void Run(string script) {
-            pe.Execute(scope, pe.CreateScriptSourceFromString(script, SourceCodeKind.File));
+            IScriptScope scope = _env.CreateScope();
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString(script, SourceCodeKind.File));
         }
 
         static readonly string clspartName = "clsPart";
-
-        private static ScriptScope DefaultModule {
-            get {
-                // TODO: should Python engine work with IScriptModule?
-                return (ScriptScope)ScriptDomainManager.CurrentManager.Host.DefaultModule;
-            }
-        }
-
+        
         /// <summary>
         /// Asserts an condition it true
         /// </summary>
@@ -165,100 +165,100 @@ namespace IronPythonTest {
         // Execute
         public void ScenarioExecute() {
             ClsPart clsPart = new ClsPart();
-            IScriptScope default_module = ScriptDomainManager.CurrentManager.Host.DefaultModule;
 
-            DefaultModule.SetVariable(clspartName, clsPart);
+            IScriptScope scope = _env.CreateScope();
+
+            scope.SetVariable(clspartName, clsPart);
 
             // field: assign and get back
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 100 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if 100 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
             AreEqual(100, clsPart.Field);
 
             // property: assign and get back
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Property = clsPart.Field", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 100 != clsPart.Property: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Property = clsPart.Field", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if 100 != clsPart.Property: raise AssertionError('test failed')", SourceCodeKind.Statements));
             AreEqual(100, clsPart.Property);
 
             // method: Event not set yet
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if -1 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if -1 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // method: add python func as event handler
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("def f(x) : return x * x", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Event += f", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 4 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("def f(x) : return x * x", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Event += f", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if 4 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // ===============================================
 
             // reset the same variable with instance of the same type
-            DefaultModule.SetVariable(clspartName, new ClsPart());
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 0 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            scope.SetVariable(clspartName, new ClsPart());
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if 0 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // add cls method as event handler
-            DefaultModule.SetVariable("clsMethod", new IntIntDelegate(Negate));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Event += clsMethod", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if -2 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            scope.SetVariable("clsMethod", new IntIntDelegate(Negate));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Event += clsMethod", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if -2 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // ===============================================
 
             // reset the same variable with integer
-            DefaultModule.SetVariable(clspartName, 1);
-            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 1 != clsPart: raise AssertionError('test failed')", SourceCodeKind.Statements));
-            AreEqual((int)DefaultModule.LookupVariable(clspartName), 1);
+            scope.SetVariable(clspartName, 1);
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if 1 != clsPart: raise AssertionError('test failed')", SourceCodeKind.Statements));
+            AreEqual((int)scope.LookupVariable(clspartName), 1);
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute(null, null);
+                _pe.Execute(null, null);
             });
 
-            SourceUnit su = pe.CreateScriptSourceFromString("");
+            SourceUnit su = _pe.CreateScriptSourceFromString("");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute(null, su);
-            });
-
-            ScriptScope sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute(sm, (SourceUnit)null);
+                _pe.Execute(null, su);
             });
         }
 
         public void ScenarioEvaluateInAnonymousEngineModule() {
-            ScriptScope defaultModule = ScriptDomainManager.CurrentManager.CreateModule("");
-            ScriptScope anonymousModule = ScriptDomainManager.CurrentManager.CreateModule("");
-            ScriptScope anotherAnonymousModule = ScriptDomainManager.CurrentManager.CreateModule("");
-            pe.Execute(defaultModule, pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements));
-            pe.Execute(anonymousModule, pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements));
+            IScriptScope scope1 = _env.CreateScope();
+            IScriptScope scope2 = _env.CreateScope();
+            IScriptScope scope3 = _env.CreateScope();
 
-            anotherAnonymousModule.SetVariable("x", 2);
+            _pe.Execute(scope1, _pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements));
+            _pe.Execute(scope2, _pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements));
 
-            // Ensure that the default EngineModule is not affected
-            AreEqual(0, pe.Execute<int>(defaultModule, pe.CreateScriptSourceFromString("x")));
-            AreEqual(0, (int)defaultModule.LookupVariable("x"));
-            // Ensure that the anonymous context has been updated as expected
-            AreEqual(1, pe.Execute<int>(anonymousModule, pe.CreateScriptSourceFromString("x")));
-            AreEqual(1, (int)anonymousModule.LookupVariable("x"));
-            // Ensure that other anonymous contexts are not affected
-            AreEqual(2, pe.Execute<int>(anotherAnonymousModule, pe.CreateScriptSourceFromString("x")));
-            AreEqual(2, (int)anotherAnonymousModule.LookupVariable("x"));
+            scope3.SetVariable("x", 2);
+
+            AreEqual(0, _pe.Execute<int>(scope1, _pe.CreateScriptSourceFromString("x")));
+            AreEqual(0, (int)scope1.LookupVariable("x"));
+
+            AreEqual(1, _pe.Execute<int>(scope2, _pe.CreateScriptSourceFromString("x")));
+            AreEqual(1, (int)scope2.LookupVariable("x"));
+
+            AreEqual(2, _pe.Execute<int>(scope3, _pe.CreateScriptSourceFromString("x")));
+            AreEqual(2, (int)scope3.LookupVariable("x"));
         }
 
         public void ScenarioEvaluateInPublishedEngineModule() {
-            IScriptScope publishedModule = pe.Runtime.CreateModule("published_context_test");
-            IScriptScope otherModule = pe.Runtime.CreateModule("published_context_test");
-            pe.Runtime.PublishModule(publishedModule, "published_context_test");
-            pe.Execute(otherModule, pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements));
-            pe.Execute(publishedModule, pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements));
+            PythonContext pc = DefaultContext.DefaultPythonContext;
+
+            PythonModule publishedModule = pc.CreateModule("published_context_test");
+            PythonModule otherModule = pc.CreateModule("published_context_test");
+            pc.PublishModule("published_context_test", publishedModule);
+
+            pc.CompileSourceCode(_pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements)).Run(otherModule.Scope);
+            pc.CompileSourceCode(_pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements)).Run(publishedModule.Scope);
+
             // Ensure that the default EngineModule is not affected
-            AreEqual(0, pe.Execute<int>(otherModule, pe.CreateScriptSourceFromString("x")));
+            AreEqual(0, (int)pc.CompileSourceCode(_pe.CreateScriptSourceFromString("x")).Run(otherModule.Scope));
             // Ensure that the published context has been updated as expected
-            AreEqual(1, pe.Execute<int>(publishedModule, pe.CreateScriptSourceFromString("x")));
+            AreEqual(1, (int)pc.CompileSourceCode(_pe.CreateScriptSourceFromString("x")).Run(publishedModule.Scope));
 
             // Ensure that the published context is accessible from other contexts using sys.modules
             // TODO: do better:
             // pe.Import("sys", ScriptDomainManager.CurrentManager.DefaultModule);
-            pe.Execute(otherModule, pe.CreateScriptSourceFromString("from published_context_test import x", SourceCodeKind.Statements));
-            AreEqual(1, pe.Execute<int>(otherModule, pe.CreateScriptSourceFromString("x")));
+            pc.CompileSourceCode(_pe.CreateScriptSourceFromString("from published_context_test import x", SourceCodeKind.Statements)).Run(otherModule.Scope);
+            AreEqual(1, (int)pc.CompileSourceCode(_pe.CreateScriptSourceFromString("x")).Run(otherModule.Scope));
         }
 
 
@@ -375,49 +375,49 @@ namespace IronPythonTest {
         public void ScenarioCustomDictionary() {
             IAttributesCollection customGlobals = new StringDictionaryAdapterDict(new CustomDictionary());
             
-            IScriptScope customModule = pe.Runtime.CreateModule("customContext", ScriptModuleKind.Default, customGlobals);            
+            IScriptScope customModule = _pe.Runtime.CreateScope(customGlobals);            
 
             // Evaluate
-            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbol + 1")), CustomDictionary.customSymbolValue + 1);
+            AreEqual(_pe.Execute<int>(customModule, _pe.CreateScriptSourceFromString("customSymbol + 1")), CustomDictionary.customSymbolValue + 1);
 
             // Execute
-            pe.Execute(customModule, pe.CreateScriptSourceFromString("customSymbolPlusOne = customSymbol + 1", SourceCodeKind.Statements));
-            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbolPlusOne")), CustomDictionary.customSymbolValue + 1);
-            AreEqual((int)pe.GetVariable(customModule, "customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
+            _pe.Execute(customModule, _pe.CreateScriptSourceFromString("customSymbolPlusOne = customSymbol + 1", SourceCodeKind.Statements));
+            AreEqual(_pe.Execute<int>(customModule, _pe.CreateScriptSourceFromString("customSymbolPlusOne")), CustomDictionary.customSymbolValue + 1);
+            AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
 
             // Compile
-            ICompiledCode compiledCode = pe.Compile(pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2", SourceCodeKind.Statements));
+            ICompiledCode compiledCode = _pe.Compile(_pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2", SourceCodeKind.Statements));
 
             compiledCode.Execute(customModule);
-            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbolPlusTwo")), CustomDictionary.customSymbolValue + 2);
-            AreEqual((int)pe.GetVariable(customModule, "customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
+            AreEqual(_pe.Execute<int>(customModule, _pe.CreateScriptSourceFromString("customSymbolPlusTwo")), CustomDictionary.customSymbolValue + 2);
+            AreEqual(_pe.GetVariable<int>(customModule, "customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
 
             // check overriding of Add
             try {
-                pe.Execute(customModule, pe.CreateScriptSourceFromString("customSymbol = 1", SourceCodeKind.Statements));
+                _pe.Execute(customModule, _pe.CreateScriptSourceFromString("customSymbol = 1", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                pe.Execute(customModule, pe.CreateScriptSourceFromString(@"global customSymbol
+                _pe.Execute(customModule, _pe.CreateScriptSourceFromString(@"global customSymbol
 customSymbol = 1", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // check overriding of Remove
             try {
-                pe.Execute(customModule, pe.CreateScriptSourceFromString("del customSymbol", SourceCodeKind.Statements));
+                _pe.Execute(customModule, _pe.CreateScriptSourceFromString("del customSymbol", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                pe.Execute(customModule, pe.CreateScriptSourceFromString(@"global customSymbol
+                _pe.Execute(customModule, _pe.CreateScriptSourceFromString(@"global customSymbol
 del customSymbol", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // vars()
-            IDictionary vars = pe.Execute<IDictionary>(customModule, pe.CreateScriptSourceFromString("vars()"));
+            IDictionary vars = _pe.Execute<IDictionary>(customModule, _pe.CreateScriptSourceFromString("vars()"));
             AreEqual(true, vars.Contains("customSymbol"));
 
             // Miscellaneous APIs
@@ -434,58 +434,17 @@ del customSymbol", SourceCodeKind.Statements));
             return GC.GetTotalMemory(true);
         }
 
-        const string scenarioGCModuleName = "scenario_gc";
-
 #if !SILVERLIGHT
-        void CreateModules() {
-            for (int contextCount = 0; contextCount < 100; contextCount++) {
-                IScriptScope module = pe.Runtime.CreateModule(scenarioGCModuleName);                
-                module.SetVariable("x", "Hello");
-                pe.Execute(module, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py"));
-                AreEqual(pe.Execute<int>(module, pe.CreateScriptSourceFromString("x")), 1);
-            }
-
-            IScriptScope module2 = pe.Runtime.CreateModule(scenarioGCModuleName);
-            module2.SetVariable("x", "Hello");
-            pe.Execute(module2, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py"));
-            AreEqual(pe.Execute<int>(module2, pe.CreateScriptSourceFromString("x")), 1);
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule(null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule(null, null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule("some_name", null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule(null, ScriptModuleKind.Default, null, null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule("some_name", ScriptModuleKind.Default, null, null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Runtime.CreateModule("some_name", ScriptModuleKind.Default, new SymbolDictionary(), null);
-            });
-        }
-
         public void ScenarioXGC() {
             long initialMemory = GetTotalMemory();
 
-            // Create multiple engines and contexts
-            for (int engineCount = 0; engineCount < 100; engineCount++) {
-                CreateModules();
+            // Create multiple scopes:
+            for (int i = 0; i < 10000; i++) {
+                IScriptScope scope = _pe.CreateScope();
+                scope.SetVariable("x", "Hello");
+                _pe.Execute(scope, _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py"));
+                AreEqual(_pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("x")), 1);
             }
-
-            // Create multiple contexts in an engine that is not collected
-            CreateModules();
-            SystemState.Instance.modules.Remove(scenarioGCModuleName);
 
             long finalMemory = GetTotalMemory();
             long memoryUsed = finalMemory - initialMemory;
@@ -501,25 +460,25 @@ del customSymbol", SourceCodeKind.Statements));
 
         // Evaluate
         public void ScenarioEvaluate() {
-            ScriptScope scope = ScriptDomainManager.CurrentManager.CreateModule("foo");
-            AreEqual(10, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("4+6")));
-            AreEqual(10, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("4+6")));
+            IScriptScope scope = _env.CreateScope();
+            AreEqual(10, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("4+6")));
+            AreEqual(10, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("4+6")));
 
-            AreEqual("abab", (string)pe.Execute(scope, pe.CreateScriptSourceFromString("'ab' * 2")));
-            AreEqual("abab", pe.Execute<string>(scope, pe.CreateScriptSourceFromString("'ab' * 2")));
+            AreEqual("abab", (string)_pe.Execute(scope, _pe.CreateScriptSourceFromString("'ab' * 2")));
+            AreEqual("abab", _pe.Execute<string>(scope, _pe.CreateScriptSourceFromString("'ab' * 2")));
 
             ClsPart clsPart = new ClsPart();
             scope.SetVariable(clspartName, clsPart);
-            AreEqual(clsPart, pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart")) as ClsPart);
-            AreEqual(clsPart, pe.Execute<ClsPart>(scope, pe.CreateScriptSourceFromString("clsPart")));
+            AreEqual(clsPart, _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart")) as ClsPart);
+            AreEqual(clsPart, _pe.Execute<ClsPart>(scope, _pe.CreateScriptSourceFromString("clsPart")));
 
-            pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
-            AreEqual(100, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart.Field")));
-            AreEqual(100, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("clsPart.Field")));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
+            AreEqual(100, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("clsPart.Field")));
+            AreEqual(100, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("clsPart.Field")));
 
             // Ensure that we can get back a delegate to a Python method
-            pe.Execute(scope, pe.CreateScriptSourceFromString("def IntIntMethod(a): return a * 100", SourceCodeKind.Statements));
-            IntIntDelegate d = pe.Execute<IntIntDelegate>(scope, pe.CreateScriptSourceFromString("IntIntMethod"));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("def IntIntMethod(a): return a * 100", SourceCodeKind.Statements));
+            IntIntDelegate d = _pe.Execute<IntIntDelegate>(scope, _pe.CreateScriptSourceFromString("IntIntMethod"));
             AreEqual(d(2), 2 * 100);
         }
 
@@ -528,6 +487,8 @@ del customSymbol", SourceCodeKind.Statements));
         public void ScenarioExecuteFile() {
             SourceUnit tempFile1, tempFile2;
 
+            IScriptScope scope = _env.CreateScope();
+
             using (StringWriter sw = new StringWriter()) {
                 sw.WriteLine("var1 = (10, 'z')");
                 sw.WriteLine("");
@@ -535,12 +496,12 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("clsPart.Property = clsPart.Field * 5");
                 sw.WriteLine("clsPart.Event += (lambda x: x*x)");
 
-                tempFile1 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
             ClsPart clsPart = new ClsPart();
             scope.SetVariable(clspartName, clsPart);
-            pe.Execute(scope, tempFile1);
+            _pe.Execute(scope, tempFile1);
 
             using (StringWriter sw = new StringWriter()) {
                 sw.WriteLine("if var1[0] != 10: raise AssertionError('test failed')");
@@ -550,10 +511,10 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("var2 = clsPart.Method(var1[0])");
                 sw.WriteLine("if var2 != 10 * 10: raise AssertionError('test failed')");
 
-                tempFile2 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile2 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
-            pe.Execute(scope, tempFile2); 
+            _pe.Execute(scope, tempFile2); 
         }
 #endif
 
@@ -561,6 +522,8 @@ del customSymbol", SourceCodeKind.Statements));
         // Bug: 542
         public void Scenario542() {
             SourceUnit tempFile1;
+
+            IScriptScope scope = _env.CreateScope();
 
             using (StringWriter sw = new StringWriter()) {
                 sw.WriteLine("def M1(): return -1");
@@ -575,30 +538,30 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("class C2:");
                 sw.WriteLine("    def M(): return +1");
 
-                tempFile1 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
-            pe.Execute(scope, tempFile1);
+            _pe.Execute(scope, tempFile1);
 
-            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("M1()")));
-            AreEqual(+1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("M2()")));
+            AreEqual(-1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("M1()")));
+            AreEqual(+1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("M2()")));
 
-            AreEqual(-1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("M1()")));
-            AreEqual(+1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("M2()")));
+            AreEqual(-1, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("M1()")));
+            AreEqual(+1, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("M2()")));
 
-            pe.Execute(scope, pe.CreateScriptSourceFromString("if M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
-            pe.Execute(scope, pe.CreateScriptSourceFromString("if M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
 
 
-            pe.Execute(scope, pe.CreateScriptSourceFromString("c = C()", SourceCodeKind.SingleStatement));
-            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("c.M1()")));
-            AreEqual(+1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("c.M2()")));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("c = C()", SourceCodeKind.SingleStatement));
+            AreEqual(-1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("c.M1()")));
+            AreEqual(+1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("c.M2()")));
 
-            AreEqual(-1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("c.M1()")));
-            AreEqual(+1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("c.M2()")));
+            AreEqual(-1, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("c.M1()")));
+            AreEqual(+1, (int)_pe.Execute(scope, _pe.CreateScriptSourceFromString("c.M2()")));
 
-            pe.Execute(scope, pe.CreateScriptSourceFromString("if c.M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
-            pe.Execute(scope, pe.CreateScriptSourceFromString("if c.M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if c.M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("if c.M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
 
 
             //AreEqual(-1, pe.EvaluateAs<int>("C1.M()"));
@@ -614,9 +577,10 @@ del customSymbol", SourceCodeKind.Statements));
 
         // Bug: 167 
         public void Scenario167() {
-            pe.Execute(scope, pe.CreateScriptSourceFromString("a=1\r\nb=-1", SourceCodeKind.Statements));
-            AreEqual(1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("a")));
-            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("b")));
+            IScriptScope scope = _env.CreateScope();
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString("a=1\r\nb=-1", SourceCodeKind.Statements));
+            AreEqual(1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("a")));
+            AreEqual(-1, _pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("b")));
         }
 #if !SILVERLIGHT
         // AddToPath
@@ -629,19 +593,19 @@ del customSymbol", SourceCodeKind.Statements));
 
             try {
                 File.WriteAllText(tempFile1, "from lib.does_not_exist import *");
-                IScriptScope mod = pe.Runtime.CreateModule("foo");
+                IScriptScope scope = _pe.Runtime.CreateScope();
 
                 try {
-                    pe.Execute(mod, pe.CreateScriptSourceFromFile(tempFile1));
+                    _pe.Execute(scope, _pe.CreateScriptSourceFromFile(tempFile1));
                     throw new Exception("Scenario7");
                 } catch (IronPython.Runtime.Exceptions.PythonImportErrorException) { }
 
                 File.WriteAllText(tempFile1, "from lib.assert_util import *");
 
-                pe.SetScriptSourceSearchPaths(new string[] { Common.ScriptTestDirectory });
+                _pe.SetScriptSourceSearchPaths(new string[] { Common.ScriptTestDirectory });
 
-                pe.Execute(mod, pe.CreateScriptSourceFromFile(tempFile1));
-                pe.Execute(mod, pe.CreateScriptSourceFromString("AreEqual(5, eval('2 + 3'))", SourceCodeKind.Statements));
+                _pe.Execute(scope, _pe.CreateScriptSourceFromFile(tempFile1));
+                _pe.Execute(scope, _pe.CreateScriptSourceFromString("AreEqual(5, eval('2 + 3'))", SourceCodeKind.Statements));
             } finally {
                 File.Delete(tempFile1);
             }
@@ -665,21 +629,20 @@ del customSymbol", SourceCodeKind.Statements));
             }
 
             try {
-                pe.Options.ClrDebuggingEnabled = true;
-                IScriptScope scope = pe.Runtime.CreateModule("foo");
+                _pe.Options.ClrDebuggingEnabled = true;
+                IScriptScope scope = _pe.Runtime.CreateScope();
                 try {
-                    SourceUnit su = pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py");
-                    su.IsVisibleToDebugger = true;                    
-                    pe.Execute(scope, su);
+                    SourceUnit su = _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py");
+                    _pe.Execute(scope, su);
                     throw new Exception("We should not get here");
                 } catch (IronPython.Runtime.Exceptions.StringException e1) {
                     if (!e1.StackTrace.Contains(lineNumber))
                         throw new Exception("Debugging is not enabled even though Options.ClrDebuggingEnabled is specified");
                 }
 
-                pe.Options.ClrDebuggingEnabled = false;
+                _pe.Options.ClrDebuggingEnabled = false;
                 try {
-                    pe.Execute(scope, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py"));
+                    _pe.Execute(scope, _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py"));
                     throw new Exception("We should not get here");
                 } catch (StringException e2) {
                     if (e2.StackTrace.Contains(lineNumber))
@@ -687,7 +650,7 @@ del customSymbol", SourceCodeKind.Statements));
                 }
 
                 // Ensure that all APIs work
-                AreEqual(pe.Execute<int>(scope, pe.CreateScriptSourceFromString("x")), 1);
+                AreEqual(_pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("x")), 1);
                 //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("arg + x");
                 //AreEqual(d(100), 101);
                 //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
@@ -703,14 +666,16 @@ del customSymbol", SourceCodeKind.Statements));
         public void ScenarioCompileAndRun() {
             ClsPart clsPart = new ClsPart();
 
-            DefaultModule.SetVariable(clspartName, clsPart);
-            ICompiledCode compiledCode = pe.Compile(pe.CreateScriptSourceFromString("def f(): clsPart.Field += 10", SourceCodeKind.Statements));
-            compiledCode.Execute();
+            IScriptScope scope = _env.CreateScope();
 
-            compiledCode = pe.Compile(pe.CreateScriptSourceFromString("f()"));
-            compiledCode.Execute();
+            scope.SetVariable(clspartName, clsPart);
+            ICompiledCode compiledCode = _pe.Compile(_pe.CreateScriptSourceFromString("def f(): clsPart.Field += 10", SourceCodeKind.Statements));
+            compiledCode.Execute(scope);
+
+            compiledCode = _pe.Compile(_pe.CreateScriptSourceFromString("f()"));
+            compiledCode.Execute(scope);
             AreEqual(10, clsPart.Field);
-            compiledCode.Execute();
+            compiledCode.Execute(scope);
             AreEqual(20, clsPart.Field);
         }
 
@@ -725,37 +690,37 @@ del customSymbol", SourceCodeKind.Statements));
             TextReader oldIn = Console.In;
             TextWriter oldOut = Console.Out;
             TextWriter oldErr = Console.Error;
-            pe.Runtime.RedirectIO(new StreamReader(stdin), new StreamWriter(stdout), new StreamWriter(stderr));
+            _pe.Runtime.RedirectIO(new StreamReader(stdin), new StreamWriter(stdout), new StreamWriter(stderr));
             try {
-                IScriptScope scope = pe.Runtime.CreateModule("foo");
-                pe.Execute(scope, pe.CreateScriptSourceFromString("import sys", SourceCodeKind.Statements));
+                IScriptScope scope = _pe.Runtime.CreateScope();
+                _pe.Execute(scope, _pe.CreateScriptSourceFromString("import sys", SourceCodeKind.Statements));
 
                 stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
                 stdin.Position = 0;
-                pe.Execute(scope, pe.CreateScriptSourceFromString("output = sys.__stdin__.readline()", SourceCodeKind.Statements));
-                AreEqual("This is stdout", pe.Execute<string>(scope, pe.CreateScriptSourceFromString("output")));
-                pe.Execute(scope, pe.CreateScriptSourceFromString("sys.__stdout__.write(output)", SourceCodeKind.Statements));
+                _pe.Execute(scope, _pe.CreateScriptSourceFromString("output = sys.__stdin__.readline()", SourceCodeKind.Statements));
+                AreEqual("This is stdout", _pe.Execute<string>(scope, _pe.CreateScriptSourceFromString("output")));
+                _pe.Execute(scope, _pe.CreateScriptSourceFromString("sys.__stdout__.write(output)", SourceCodeKind.Statements));
                 stdout.Flush();
                 stdout.Position = 0;
                 int len = stdout.Read(buffer, 0, 14);
                 AreEqual(14, len);
                 AreEqual("This is stdout", encoding.GetString(buffer, 0, len));
 
-                pe.Execute(scope, pe.CreateScriptSourceFromString("sys.__stderr__.write(\"This is stderr\")", SourceCodeKind.Statements));
+                _pe.Execute(scope, _pe.CreateScriptSourceFromString("sys.__stderr__.write(\"This is stderr\")", SourceCodeKind.Statements));
                 stderr.Flush();
                 stderr.Position = 0;
                 len = stderr.Read(buffer, 0, 14);
                 AreEqual(14, len);
                 AreEqual("This is stderr", encoding.GetString(buffer, 0, len));
             } finally {
-                pe.Runtime.RedirectIO(oldIn, oldOut, oldErr);
+                _pe.Runtime.RedirectIO(oldIn, oldOut, oldErr);
             }
         }
 #endif
 
         public void ScenarioNullArguments() {
             try {
-                pe.Compile((SourceUnit)null);
+                _pe.Compile((SourceUnit)null);
                 throw new Exception();
             } catch (ArgumentNullException) {
                 //Pass
@@ -763,8 +728,9 @@ del customSymbol", SourceCodeKind.Statements));
         }
        
         public void Scenario12() {
+            IScriptScope scope = _env.CreateScope();
 
-            pe.Execute(scope, pe.CreateScriptSourceFromString(@"
+            _pe.Execute(scope, _pe.CreateScriptSourceFromString(@"
 class R(object):
     def __init__(self, a, b):
         self.a = a
@@ -780,6 +746,8 @@ if r.sum != 110:
     raise AssertionError('Scenario 12 failed')
 ", SourceCodeKind.Statements));
         }
+
+// TODO: rewrite 
 #if FALSE
         public void ScenarioTrueDivision1() {
             TestOldDivision(pe, DefaultModule);
@@ -851,9 +819,6 @@ if r.sum != 110:
                 } catch { }
             }
         }
-#endif
-
-#if !SILVERLIGHT
         public void ScenarioSystemStatePrefix() {
             AreEqual(IronPythonTest.Common.RuntimeDirectory, pe.SystemState.prefix);
         }

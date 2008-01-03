@@ -236,10 +236,7 @@ try: #Try
                     globals()["gblvar"] += 5
                     raise Myerr1  #try->(try->(except->(with ->fun ->(try->with->raise))))
             finally:    #try->(try->(except->(with ->fun ->(try->(with->raise)->Finally))))
-                if sys.platform=="win32":
-                    AreEqual(sys.exc_info()[0], exceptions.ZeroDivisionError)
-                else:
-                    AreEqual(sys.exc_info()[0], Myerr1)
+                AreEqual(sys.exc_info()[0], exceptions.ZeroDivisionError)
                 globals()["gblvar"] += 6 
                 class ClassInFinally:
                     def __enter__(self): 

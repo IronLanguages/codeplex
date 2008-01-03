@@ -36,7 +36,7 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(code, "code");
 
             ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngine(languageId);
-            eng.Compile(eng.CreateScriptSourceFromString(code, SourceCodeKind.File)).Execute();
+            eng.Execute(ScriptDomainManager.CurrentManager.CreateScope(null), eng.CreateScriptSourceFromString(code, SourceCodeKind.File));
         }
         /// <exception cref="ArgumentNullException"><paramref name="languageId"/>, <paramref name="code"/></exception>
         /// <exception cref="ArgumentException">no language registered</exception>
@@ -47,7 +47,7 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(expression, "expression");
 
             ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngine(languageId);
-            return eng.Execute(ScriptDomainManager.CurrentManager.Host.DefaultModule, eng.CreateScriptSourceFromString(expression, SourceCodeKind.Expression));
+            return eng.Execute(ScriptDomainManager.CurrentManager.Host.DefaultScope, eng.CreateScriptSourceFromString(expression, SourceCodeKind.Expression));
         }
 
         // TODO: file IO exceptions
@@ -60,7 +60,7 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(path, "path");
 
             ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngineByFileExtension(Path.GetExtension(path));
-            eng.Compile(eng.CreateScriptSourceFromFile(path)).Execute(ScriptDomainManager.CurrentManager.CreateModule(""));
+            ScriptDomainManager.CurrentManager.ExecuteSourceUnit(eng.CreateScriptSourceFromFile(path));
         }
 
         // TODO: file IO exceptions
@@ -72,27 +72,27 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(path, "path");
 
             ScriptEngine eng = ScriptDomainManager.CurrentManager.GetEngineByFileExtension(Path.GetExtension(path));
-            eng.Compile(eng.CreateScriptSourceFromFile(path)).Execute(ScriptDomainManager.CurrentManager.Host.DefaultModule);
+            eng.Compile(eng.CreateScriptSourceFromFile(path)).Execute(ScriptDomainManager.CurrentManager.Host.DefaultScope);
         }
 
         public static void SetVariable(string name, object value) {
-            ScriptDomainManager.CurrentManager.Host.DefaultModule.SetVariable(name, value);  
+            ScriptDomainManager.CurrentManager.Host.DefaultScope.SetVariable(name, value);  
         }
 
         public static object GetVariable(string name) {
-            return ScriptDomainManager.CurrentManager.Host.DefaultModule.LookupVariable(name);  
+            return ScriptDomainManager.CurrentManager.Host.DefaultScope.LookupVariable(name);  
         }
 
         public static bool VariableExists(string name) {
-            return ScriptDomainManager.CurrentManager.Host.DefaultModule.VariableExists(name);
+            return ScriptDomainManager.CurrentManager.Host.DefaultScope.VariableExists(name);
         }
 
         public static bool RemoveVariable(string name) {
-            return ScriptDomainManager.CurrentManager.Host.DefaultModule.RemoveVariable(name);
+            return ScriptDomainManager.CurrentManager.Host.DefaultScope.RemoveVariable(name);
         }
 
         public static void ClearVariables() {
-            ScriptDomainManager.CurrentManager.Host.DefaultModule.ClearVariables();
+            ScriptDomainManager.CurrentManager.Host.DefaultScope.ClearVariables();
         }
         
         /// <exception cref="ArgumentNullException"><paramref name="languageId"/></exception>

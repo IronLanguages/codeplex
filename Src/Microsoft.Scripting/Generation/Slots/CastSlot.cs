@@ -16,7 +16,9 @@
 using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -82,7 +84,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("CastSlot From: ({0}) To: {1}", _instance, _type);
         }
     }

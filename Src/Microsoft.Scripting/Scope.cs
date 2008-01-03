@@ -20,8 +20,12 @@ using System.Threading;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Scripting {
+
     /// <summary>
     /// Represents a context of execution.  A context of execution has a set of variables
     /// associated with it (its dictionary) and a parent context.  
@@ -48,8 +52,12 @@ namespace Microsoft.Scripting {
     /// 
     /// TODO: Thread safety
     /// </summary>
-    public class Scope {
-        private Scope _parent;
+    public class Scope : IMembersList {
+        private ScopeExtension[]/*!*/ _extensions; // resizable
+        private readonly LanguageContext/*!*/ _language;
+        private readonly Scope _parent;
+
+        // TODO: obsolete
         private IAttributesCollection _dict;
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
@@ -57,40 +65,160 @@ namespace Microsoft.Scripting {
         private bool _isVisible;
         private SourceLocation _sourceLocation;
 
+        public LanguageContext/*!*/ Language {
+            get { return _language; }
+        }
+
         /// <summary>
         /// Creates a new top-level scope with a new empty dictionary.  The scope
         /// is marked as being visible.
         /// </summary>
-        public Scope()
-            : this(null, null) {
+        public Scope(LanguageContext/*!*/ language)
+            : this(language, null, null) {
         }
 
         /// <summary>
         /// Creates a new top-level Scope with the provided dictionary
         /// </summary>
-        /// <param name="dictionary"></param>
-        public Scope(IAttributesCollection dictionary)
-            : this(null, dictionary) {
+        public Scope(LanguageContext/*!*/ language, IAttributesCollection dictionary)
+            : this(language, null, dictionary) {
         }
 
         /// <summary>
         /// Creates a new Scope with the provided parent and dictionary.
         /// </summary>
-        /// <param name="parent"></param>
-        /// <param name="dictionary"></param>
-        public Scope(Scope parent, IAttributesCollection dictionary)
-            : this(parent, dictionary, true) {
+        public Scope(LanguageContext/*!*/ language, Scope parent, IAttributesCollection dictionary)
+            : this(language, parent, dictionary, true) {
         }
 
         /// <summary>
         /// Creates a new Scope with the provided parent, dictionary and visibility.
         /// </summary>
-        public Scope(Scope parent, IAttributesCollection dictionary, bool isVisible) {
+        public Scope(LanguageContext/*!*/ language, Scope parent, IAttributesCollection dictionary, bool isVisible) {
+            Contract.RequiresNotNull(language, "language");
+
             _parent = parent;
             _dict = dictionary ?? new SymbolDictionary();
             _isVisible = isVisible;
             _temps = null;
+            _extensions = ScopeExtension.EmptyArray;
+            _language = language;
         }
+
+        #region TODO
+
+        public ScopeExtension GetExtension(ContextId languageContextId) {
+            return (languageContextId.Id < _extensions.Length) ? _extensions[languageContextId.Id] : null;
+        }
+
+        public ScopeExtension/*!*/ SetExtension(ContextId languageContextId, ScopeExtension/*!*/ extension) {
+            Contract.RequiresNotNull(extension, "extension");
+            
+            if (languageContextId.Id >= _extensions.Length) {
+                Array.Resize(ref _extensions, languageContextId.Id + 1);
+            }
+
+            ScopeExtension original = Interlocked.CompareExchange(ref _extensions[languageContextId.Id], extension, null);
+            return original ?? extension;
+        }
+
+#if OBSOLETE
+        // TODO: workaround
+        internal void Reloading() {
+            for (int i = 0; i < _extensions.Length; i++) {
+                if (_extensions[i] != null) {
+                    _extensions[i].ModuleReloading();
+                }
+            }
+        }
+
+        // TODO: workaround
+        internal void Reloaded() {
+            for (int i = 0; i < _extensions.Length; i++) {
+                if (_extensions[i] != null) {
+                    _extensions[i].ModuleReloaded();
+                }
+            }
+        }
+#endif
+
+        #region TODO: used by Python builtins
+
+
+        /// <summary>
+        /// Event fired when a module changes.
+        /// </summary>
+        public event EventHandler<ModuleChangeEventArgs> ModuleChanged;
+
+        /// <summary>
+        /// Called by the base class to fire the module change event when the
+        /// module has been modified.
+        /// </summary>
+        private void OnModuleChange(ModuleChangeEventArgs e) {
+            EventHandler<ModuleChangeEventArgs> handler = ModuleChanged;
+            if (handler != null) {
+                handler(this, e);
+            }
+        }
+
+        [SpecialName]
+        public object GetCustomMember(CodeContext context, string name) {
+            object value;
+            if (TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out value)) {
+                if (value != Uninitialized.Instance) {
+                    return value;
+                }
+            }
+            return OperationFailed.Value;
+        }
+
+        [SpecialName]
+        public void SetMemberAfter(string name, object value) {
+            OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Set, value));
+
+            SetName(SymbolTable.StringToId(name), value);
+        }
+
+        [SpecialName]
+        public bool DeleteMember(CodeContext context, string name) {
+            if (TryRemoveName(context.LanguageContext, SymbolTable.StringToId(name))) {
+                OnModuleChange(new ModuleChangeEventArgs(SymbolTable.StringToId(name), ModuleChangeType.Delete));
+
+                return true;
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #endregion
+
+        #region IMembersList
+
+        public IList<object> GetMemberNames(CodeContext context) {
+            List<object> ret;
+            if (!context.ModuleContext.ShowCls) {
+                ret = new List<object>();
+                foreach (KeyValuePair<object, object> kvp in GetAllItems(context.LanguageContext)) {
+                    if (kvp.Value != Uninitialized.Instance) {
+                        if (kvp.Key is SymbolId) {
+                            ret.Add(SymbolTable.IdToString((SymbolId)kvp.Key));
+                        } else {
+                            ret.Add(kvp.Key);
+                        }
+                    }
+                }
+            } else {
+                ret = new List<object>(GetAllKeys(context.LanguageContext));
+            }
+
+            return ret;
+        }
+
+        #endregion
+
+        #region Obsolete (TODO)
 
         /// <summary>
         /// Gets the parent of this Scope or null if the Scope has no parent.
@@ -155,12 +283,10 @@ namespace Microsoft.Scripting {
         }
 
         private Scope CloneForTemporaries() {
-            Scope s = new Scope();
-            s._parent = _parent;
-            s._dict = _dict;
+            Scope s = new Scope(_language, _parent, _dict, _isVisible);
             s._attrs = _attrs;
             s._contextScopes = _contextScopes;
-            s._isVisible = _isVisible;
+            s._extensions = _extensions;
             return s;
         }
 
@@ -216,7 +342,7 @@ namespace Microsoft.Scripting {
         /// Trys to lookup the provided name in the current scope.
         /// </summary>
         public bool TryGetName(SymbolId name, out object value) {
-            return TryGetName(InvariantContext.Instance, name, out value);
+            return TryGetName(_language, name, out value);
         }
 
         /// <summary>
@@ -255,7 +381,7 @@ namespace Microsoft.Scripting {
         /// Attempts to lookup the provided name in this scope or any outer scope.   
         /// </summary>
         public bool TryLookupName(SymbolId name, out object value) {
-            return TryLookupName(InvariantContext.Instance, name, out value);
+            return TryLookupName(_language, name, out value);
         }
 
         /// <summary>
@@ -283,7 +409,7 @@ namespace Microsoft.Scripting {
         /// name is not defined MissingMemberException is thrown.
         /// </summary>
         public object LookupName(SymbolId name) {
-            return LookupName(InvariantContext.Instance, name);
+            return LookupName(_language, name);
         }
 
         /// <summary>
@@ -377,7 +503,7 @@ namespace Microsoft.Scripting {
         /// Determines if this context or any outer scope contains the defined name.
         /// </summary>
         public bool ContainsName(SymbolId name) {
-            return ContainsName(InvariantContext.Instance, name);
+            return ContainsName(_language, name);
         }
 
         /// <summary>
@@ -393,7 +519,7 @@ namespace Microsoft.Scripting {
         /// Removes the provided name from this scope
         /// </summary>
         public void RemoveName(SymbolId name) {
-            RemoveName(InvariantContext.Instance, name);
+            RemoveName(_language, name);
         }
 
         /// <summary>
@@ -421,7 +547,7 @@ namespace Microsoft.Scripting {
         /// Attemps to remove the provided name from this scope
         /// </summary>
         public bool TryRemoveName(SymbolId name) {
-            return TryRemoveName(InvariantContext.Instance, name);
+            return TryRemoveName(_language, name);
         }
 
         /// <summary>
@@ -843,6 +969,13 @@ namespace Microsoft.Scripting {
                 }
                 return true;
             }
+        }
+
+        #endregion
+
+        // TODO:
+        public ScriptScope/*!*/ ToScriptScope() {
+            return new ScriptScope(this);
         }
     }
 

@@ -25,19 +25,21 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Hosting {
 
     sealed class PythonOptionsParser : OptionsParser {
+        private readonly PythonContext/*!*/ _context;
 
         private PythonConsoleOptions _consoleOptions;
         private PythonEngineOptions _engineOptions;
-        private PythonContext _context;
 
         public override ConsoleOptions ConsoleOptions { get { return _consoleOptions; } set { _consoleOptions = (PythonConsoleOptions)value; } } 
         public override EngineOptions EngineOptions { get { return _engineOptions; } set { _engineOptions = (PythonEngineOptions)value; } }
         
-        public PythonOptionsParser(PythonContext context) {
+        public PythonOptionsParser(PythonContext/*!*/ context) {
+            Assert.NotNull(context);
             _context = context;
         }
 
@@ -51,17 +53,16 @@ namespace IronPython.Hosting {
 
         public override void Parse(string[] args) {
             if (_consoleOptions == null) _consoleOptions = new PythonConsoleOptions();
-            if (_engineOptions == null) _engineOptions = PythonContext._engOptions;
+            if (_engineOptions == null) _engineOptions = _context.EngineOptions; // TODO: CLONE?
 
             base.Parse(args);
 
             PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
-            // TODO: Multi-engine support
-            PythonContext._systemState.argv = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            _context.SystemState.argv = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
             if (scriptOpt.WarningFilters != null)
-                PythonContext._systemState.warnoptions = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
+                _context.SystemState.warnoptions = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
 
-            PythonContext._systemState.SetRecursionLimit(_engineOptions.MaximumRecursion);
+            _context.SystemState.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }
 
         /// <exception cref="Exception">On error.</exception>

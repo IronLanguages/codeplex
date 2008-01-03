@@ -44,19 +44,18 @@ namespace Microsoft.Scripting.Hosting {
         IScriptEngine GetEngine(Type languageContextType);  // TODO: Remove me
         
         // modules:
-        IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes);
-        IScriptScope CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes);
+        IScriptScope/*!*/ CreateScope();
+        // IScriptScope/*!*/ CreateScope(string/*!*/ languageId);
+        IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary);
+        // IScriptScope/*!*/ CreateScope(string/*!*/ languageId, IAttributesCollection/*!*/ dictionary);
 
-        IScriptScope CompileModule(string name, params SourceUnit[] sourceUnits);
-        IScriptScope CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, params SourceUnit[] sourceUnits);
-        
+        IScriptScope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit);
 
-        void PublishModule(IScriptScope module);
-        void PublishModule(IScriptScope module, string publicName);
+#if OBSOLETE
+        IScriptScope CompileModule(string name, SourceUnit sourceCode);
+        IScriptScope CompileModule(string name, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, SourceUnit sourceCode);
+#endif
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
-        IDictionary<string, IScriptScope> GetPublishedModules();
-        
         Delegate GetDelegate(object callableObject, Type delegateType);
         
         // TODO:
@@ -64,6 +63,7 @@ namespace Microsoft.Scripting.Hosting {
 
         // TODO: remove
         ScriptDomainOptions GlobalOptions { get; set; }
+
     }
 
     public sealed class ScriptEnvironment : IScriptEnvironment, ILocalObject {
@@ -142,7 +142,7 @@ namespace Microsoft.Scripting.Hosting {
         internal string[] GetRegisteredFileExtensions(LanguageContext context) {
             return _manager.GetRegisteredFileExtensions(context);
         }
-        
+
         internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
             return _manager.GetRegisteredLanguageIdentifiers(context);
         }
@@ -164,62 +164,17 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Compilation, Module Creation
 
-        public IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes) {
-            return CreateModule(name, ScriptModuleKind.Default, null, compiledCodes);
+        public IScriptScope/*!*/ CreateScope() {
+            return _manager.CreateScope(null);
+        }
+        
+        public IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
+            Contract.RequiresNotNull(dictionary, "dictionary");
+            return _manager.CreateScope(dictionary);
         }
 
-        /// <summary>
-        /// Creates a module.
-        /// <c>dictionary</c> can be <c>null</c>
-        /// </summary>
-        /// <returns></returns>
-        public IScriptScope CreateModule(string name, ScriptModuleKind kind, IAttributesCollection dictionary, params ICompiledCode[] compiledCodes) {
-            Contract.RequiresNotNullItems(compiledCodes, "compiledCodes");
-
-            ScriptCode[] script_codes = new ScriptCode[compiledCodes.Length];
-            for (int i = 0; i < compiledCodes.Length; i++) {
-                script_codes[i] = ScriptCode.FromCompiledCode(RemoteWrapper.TryGetLocal<CompiledCode>(compiledCodes[i]));
-                if (script_codes[i] == null) {
-                    throw new ArgumentException(Resources.RemoteCodeModuleComposition, String.Format("{0}[{1}]", "compiledCodes", i));
-                }
-            }
-
-            return _manager.CreateModule(name, kind, new Scope(dictionary), script_codes);
-        }
-
-        public IScriptScope CompileModule(string name, params SourceUnit[] sourceUnits) {
-            return CompileModule(name, ScriptModuleKind.Default, null, null, null, sourceUnits);
-        }
-
-        /// <summary>
-        /// Compiles a list of source units into a single module.
-        /// <c>options</c> can be <c>null</c>
-        /// <c>errroSink</c> can be <c>null</c>
-        /// <c>dictionary</c> can be <c>null</c>
-        /// </summary>
-        public IScriptScope CompileModule(string name, ScriptModuleKind kind, CompilerOptions options, ErrorSink errorSink, 
-            IAttributesCollection dictionary, params SourceUnit[] sourceUnits) {
-
-            return _manager.CompileModule(name, kind, new Scope(dictionary), options, errorSink, sourceUnits);
-        }
-
-        public void PublishModule(IScriptScope module) {
-            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module"));
-        }
-
-        public void PublishModule(IScriptScope module, string publicName) {
-            _manager.PublishModule(RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module"), publicName);
-        }
-
-        public IDictionary<string, IScriptScope> GetPublishedModules() {
-            IDictionary<string, ScriptScope> local_modules = _manager.GetPublishedModules();
-
-            IDictionary<string, IScriptScope> result = new Dictionary<string, IScriptScope>(local_modules.Count);
-            foreach (KeyValuePair<string, ScriptScope> local_module in local_modules) {
-                result.Add(local_module.Key, local_module.Value);
-            }
-
-            return result;
+        public IScriptScope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
+            return _manager.ExecuteSourceUnit(sourceUnit);
         }
 
         #endregion

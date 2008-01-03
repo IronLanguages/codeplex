@@ -40,32 +40,97 @@ using Microsoft.Scripting.Shell;
 
 namespace IronPython.Runtime {
     public sealed class PythonContext : LanguageContext {
-        internal static SystemState _systemState;    // should be instance for multi-engine support
-        private static Importer _importer;          // should be instance for multi-engine support
-        internal static PythonEngineOptions _engOptions = new PythonEngineOptions(); // should be instance for multi-engine support
-        private static readonly PythonModuleContext _defaultModuleContext;
-        
         private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         private static readonly Guid LanguageVendor_Microsoft = new Guid(-1723120188, -6423, 0x11d2, 0x90, 0x3f, 0, 0xc0, 0x4f, 0xa3, 2, 0xa1);
-        internal static object _exceptionType;
-        /// <summary> Standard Python context.  This is the ContextId we use to indicate calls from the Python context. </summary>
+
+        private readonly SystemState/*!*/ _systemState;    
+        private readonly Importer/*!*/ _importer;          
+        private readonly PythonEngineOptions/*!*/ _engineOptions; 
+        private readonly object _exceptionType;
+
 
         private ScriptEngine _engine;
 #if !SILVERLIGHT
         private static int _hookedAssemblyResolve;
 #endif
 
-        static PythonContext() {
-            _defaultModuleContext = new PythonModuleContext(null);
+        public override EngineOptions Options {
+            get { return _engineOptions; }
+        }
+
+        public PythonEngineOptions PythonOptions {
+            get {
+                return _engineOptions;
+            }
+        }
+
+        public override Guid VendorGuid {
+            get {
+                return LanguageVendor_Microsoft;
+            }
+        }
+
+        public override Guid LanguageGuid {
+            get {
+                return PythonLanguageGuid;
+            }
+        }
+
+        public Importer/*!*/ Importer {
+            get {
+                return _importer;
+            }
+        }
+
+        public SystemState/*!*/ SystemState {
+            get {
+                return _systemState;
+            }
+        }
+
+        public object ExceptionType {
+            get {
+                return _exceptionType;
+            }
+        }
+
+        public PythonEngineOptions/*!*/ EngineOptions {
+            get {
+                return _engineOptions;
+            }
+        }
+
+        public override string DisplayName {
+            get {
+                return "IronPython";
+            }
+        }
+
+        public override Version LanguageVersion {
+            get {
+                return new Version(2, 0);
+            }
+        }
+
+        public ScriptEngine ScriptEngine {
+            get {
+                return _engine;
+            }
+            // friend: ScriptEngine
+            internal set {
+                Assert.NotNull(value);
+                _engine = value;
+            }
         }
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
         /// </summary>
-        public PythonContext(ScriptDomainManager manager)
+        public PythonContext(ScriptDomainManager/*!*/ manager)
             : base(manager) {
 
             // singletons:
+            _engineOptions = new PythonEngineOptions();
             _importer = new Importer(this);
 
             DefaultContext.CreateContexts(this);
@@ -83,8 +148,7 @@ namespace IronPython.Runtime {
                 ((PythonContext)DefaultContext.DefaultCLS.LanguageContext).Binder = Binder;
             }
 
-            _systemState = new SystemState();
-
+            _systemState = new SystemState(this);
             _exceptionType = ExceptionConverter.GetPythonException("Exception");
             _systemState.Initialize();
 #if SILVERLIGHT
@@ -105,19 +169,6 @@ namespace IronPython.Runtime {
                 // If so, we will not look up sys.path for module loads
             }
 #endif
-            // TODO:
-            // SetModuleCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultModule, _defaultModuleContext);
-        }
-
-        public ScriptEngine ScriptEngine {
-            get {
-                return _engine;
-            }
-            // friend: ScriptEngine
-            internal set {
-                Assert.NotNull(value);
-                _engine = value;
-            }
         }
 
         public override CodeBlock ParseSourceCode(CompilerContext context) {
@@ -290,46 +341,30 @@ namespace IronPython.Runtime {
         }
 #endif
 
-        public override ModuleContext CreateModuleContext(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-            InitializeModuleScope(module);
-            return new PythonModuleContext(module);
+        #region Scopes
+
+        public override Scope GetScope(string/*!*/ path) {
+            PythonModule module = _systemState.GetModuleByPath(path);
+            return (module != null) ? module.Scope : null;
+        }
+        
+        public PythonModule GetPythonModule(Scope scope) {
+            return (PythonModule)GetScopeExtension(scope);
+        }
+        
+        public PythonModule EnsurePythonModule(Scope scope) {
+            return (PythonModule)EnsureScopeExtension(scope);
         }
 
-        private void InitializeModuleScope(ScriptScope module) {
-            // TODO: following should be context sensitive variables:
-
-            // adds __builtin__ variable if this is not a __builtin__ module itself:             
-            if (PythonContext.GetSystemState(null).modules.ContainsKey("__builtin__")) {
-                module.SetVariable("__builtins__", PythonContext.GetSystemState(null).modules["__builtin__"]);
-            } else {
-                Debug.Assert(module.ModuleName == "__builtin__");
-            }
-
-            // do not set names if null to make attribute getter pas thru:
-            if (module.ModuleName != null) {
-                PythonModuleOps.Set__name__(module, module.ModuleName);
-            }
-
-            if (module.FileName != null) {
-                PythonModuleOps.Set__file__(module, module.FileName);
-            }
-
-            // If the filename is __init__.py then this is the initialization code
-            // for a package and we need to set the __path__ variable appropriately
-            if (module.FileName != null && Path.GetFileName(module.FileName) == "__init__.py") {
-                string dirname = Path.GetDirectoryName(module.FileName);
-                string dir_path = ScriptDomainManager.CurrentManager.Host.NormalizePath(dirname);
-                module.SetVariable("__path__", List.MakeList(dir_path));
-            }
+        public override ScopeExtension CreateScopeExtension(Scope scope) {
+            return CreatePythonModule(null, null, scope);
         }
 
-
-        public override void ModuleContextEntering(ModuleContext newContext) {
+        // TODO: remove
+        public override void ModuleContextEntering(ScopeExtension newContext) {
             if (newContext == null) return;
-            Debug.Assert(newContext is PythonModuleContext);
-            PythonModuleContext newPythonContext = (PythonModuleContext)newContext;
-            
+
+            PythonModule newPythonContext = (PythonModule)newContext;
 
             // code executed in the scope of module cannot disable TrueDivision:
 
@@ -342,6 +377,156 @@ namespace IronPython.Runtime {
             newPythonContext.TrueDivision |= ((PythonCompilerOptions)newPythonContext.CompilerContext.Options).TrueDivision;
         }
 
+        internal PythonModule/*!*/ CompileAndInitializeModule(string moduleName, string fileName, SourceUnit sourceUnit) {
+            ScriptCode compiledCode;
+            return CompileModule(fileName, moduleName, sourceUnit, ModuleOptions.Initialize, false, out compiledCode);
+        }
+
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options) {
+            ScriptCode compiledCode;
+            return CompileModule(fileName, moduleName, options, false, out compiledCode);
+        }
+
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, bool skipFirstLine) {
+            ScriptCode compiledCode;
+            return CompileModule(fileName, moduleName, options, skipFirstLine, out compiledCode);
+        }
+
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, bool skipFirstLine, out ScriptCode compiledCode) {
+            SourceUnit sourceCode = SourceUnit.CreateFileUnit(this, fileName, _systemState.DefaultEncoding);
+            return CompileModule(fileName, moduleName, sourceCode, options, skipFirstLine, out compiledCode);
+        }
+
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, bool skipFirstLine) {
+            ScriptCode compiledCode;
+            return CompileModule(fileName, moduleName, sourceCode, options, skipFirstLine, out compiledCode);
+        }
+
+        public PythonModule/*!*/ CompileModule(string fileName, string moduleName, SourceUnit sourceCode, ModuleOptions options, bool skipFirstLine,
+            out ScriptCode compiledCode) {
+
+            Contract.RequiresNotNull(fileName, "fileName");
+            Contract.RequiresNotNull(moduleName, "moduleName");
+            Contract.RequiresNotNull(sourceCode, "sourceCode");
+
+            PythonCompilerOptions compilerOptions = (PythonCompilerOptions)GetDefaultCompilerOptions();
+            compilerOptions.SkipFirstLine = skipFirstLine;
+
+            bool optimized = (options & ModuleOptions.Optimized) != 0 && !this.Options.InterpretedMode;
+
+            compiledCode = CompileSourceCode(sourceCode, compilerOptions, null);
+            Scope scope = compiledCode.MakeOptimizedScope();
+            return CreateModule(moduleName, fileName, scope, compiledCode, options);
+        }
+
+        public PythonModule/*!*/ CreateModule(string moduleName) {
+            return CreateModule(moduleName, null, new Dictionary<string, object>(), ModuleOptions.None);
+        }
+
+        public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type) {
+            SymbolDictionary dict = new SymbolDictionary();
+            IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(dict, type);
+            return CreateModule(moduleName, null, new Scope(this, dict), null, ModuleOptions.None);
+        }
+
+        public PythonModule/*!*/ CreateModule(string moduleName, ModuleOptions options) {
+            return CreateModule(moduleName, null, new Dictionary<string, object>(), options);
+        }
+
+        public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IDictionary<string, object> globals, ModuleOptions options) {
+            Contract.RequiresNotNull(moduleName, "moduleName");
+            Contract.RequiresNotNull(globals, "globals");
+
+            IAttributesCollection globalDict = globals as IAttributesCollection ?? new StringDictionaryAdapterDict(globals);
+            return CreateModule(moduleName, fileName, new Scope(this, globalDict), null, options);
+        }
+
+        private PythonModule/*!*/ CreateModule(string moduleName, string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
+            if (scope == null) {
+                scope = new Scope(this, new SymbolDictionary());
+            }
+
+            PythonModule module = CreatePythonModule(moduleName, fileName, scope);
+            module.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
+            module.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
+            module.IsPythonCreatedModule = true;
+
+            if ((options & ModuleOptions.Initialize) != 0) {
+                _importer.InitializeModule(moduleName, module, scriptCode, true);
+            } else if ((options & ModuleOptions.PublishModule) != 0) {
+                PublishModule(moduleName, module);
+            }
+
+            return module;
+        }
+
+        internal PythonModule/*!*/ CreatePythonModule(string moduleName, string fileName, Scope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
+
+            PythonModule module = new PythonModule(scope);
+            module = (PythonModule)scope.SetExtension(ContextId, module);
+
+            // adds __builtin__ variable if this is not a __builtin__ module itself:             
+            if (_systemState != null && _systemState.modules.ContainsKey("__builtin__")) {
+                module.Scope.SetName(Symbols.Builtins, _systemState.modules["__builtin__"]); // TODO: PythonContext.Id, 
+            } else {
+                Debug.Assert(moduleName == "__builtin__");
+            }
+
+            // do not set names if null to make attribute getter pas thru:
+            if (moduleName != null) {
+                module.SetName(moduleName);
+            }
+
+            if (fileName != null) {
+                module.SetFile(fileName);
+            }
+
+            // If the filename is __init__.py then this is the initialization code
+            // for a package and we need to set the __path__ variable appropriately
+            if (fileName != null && Path.GetFileName(fileName) == "__init__.py") {
+                string dirname = Path.GetDirectoryName(fileName);
+                string dir_path = ScriptDomainManager.CurrentManager.Host.NormalizePath(dirname);
+                module.Scope.SetName(ContextId, Symbols.Path, List.MakeList(dir_path));
+            }
+
+            return module;
+        }
+
+        public void PublishModule(string/*!*/ name, PythonModule/*!*/ module) {
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(module, "module");
+            _systemState.modules[name] = module.Scope;
+        }
+
+        // TODO: remove
+        public override void PublishModule(string/*!*/ name, Scope/*!*/ scope) {
+            PublishModule(name, DefaultContext.DefaultPythonContext.EnsurePythonModule(scope));
+        }
+
+        internal PythonModule GetReloadableModule(Scope/*!*/ scope) {
+            Assert.NotNull(scope);
+
+            PythonModule module = (PythonModule)GetScopeExtension(scope);
+
+            if (module == null || !module.IsPythonCreatedModule) {
+                throw PythonOps.TypeError("can only reload Python modules");
+            }
+
+            object name;
+            if (!scope.TryLookupName(this, Symbols.Name, out name) || !(name is string)) {
+                throw PythonOps.SystemError("nameless module");
+            }
+
+            if (!_systemState.modules.ContainsKey(name)) {
+                throw PythonOps.ImportError("module {0} not in sys.modules", name);
+            }
+
+            return module;
+        }
+
+        #endregion
+
         /// <summary>
         /// Python's global scope includes looking at built-ins.  First check built-ins, and if
         /// not there then fallback to any DLR globals.
@@ -353,71 +538,19 @@ namespace IronPython.Runtime {
                 return false;
             }
 
-            ScriptScope sm = builtins as ScriptScope;
-            if (sm == null) {
+            Scope scope = builtins as Scope;
+            if (scope == null) {
                 value = null;
                 return false;
             }
 
-            if (sm.Scope.TryGetName(context.LanguageContext, name, out value)) return true;
+            if (scope.TryGetName(context.LanguageContext, name, out value)) return true;
 
             return base.TryLookupGlobal(context, name, out value);
         }
 
         protected override Exception MissingName(SymbolId name) {
             throw PythonOps.NameError(name);
-        }
-
-        public override ScriptCode Reload(ScriptCode original, ScriptScope module) {
-            PythonModuleContext moduleContext = (PythonModuleContext)GetModuleContext(module);
-            if (moduleContext != null && moduleContext.IsPythonCreatedModule) {
-                CheckReloadablePythonModule(module);
-
-                // We created the module and it only contains Python code. If the user changes
-                // __file__ we'll reload from that file. 
-                string fileName = PythonModuleOps.Get__file__(module);
-                
-                // built-in module: TODO: explicitly mark builtin modules in module context?
-                if (fileName == null) {
-                    PythonContext.GetImporter(null).ReloadBuiltin(module);
-                    return original;
-                }
-
-                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(ScriptEngine, 
-                    fileName,
-                    _systemState.DefaultEncoding,
-                    SourceCodeKind.File);
-
-                if (sourceUnit == null) {
-                    throw PythonOps.SystemError("module cannot be reloaded");
-                }
-
-                return CompileSourceCode(sourceUnit, GetModuleCompilerOptions(module));
-            } else {
-                return base.Reload(original, module);
-            }
-        }
-
-        public void CheckReloadable(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-
-            // only check for Python requirements of reloading on modules created from Python.code.
-            PythonModuleContext moduleContext = (PythonModuleContext)GetModuleContext(module);
-            if (moduleContext != null && moduleContext.IsPythonCreatedModule) {
-                CheckReloadablePythonModule(module);
-            }
-        }
-
-        private void CheckReloadablePythonModule(ScriptScope pythonCreatedModule) {
-            Scope scope = pythonCreatedModule.Scope;
-
-            if (!scope.ContainsName(this, Symbols.Name))
-                throw PythonOps.SystemError("nameless module");
-
-            object name = scope.LookupName(this, Symbols.Name);
-            if (!_systemState.modules.ContainsKey(name)) {
-                throw PythonOps.ImportError("module {0} not in sys.modules", name);
-            }
         }
 
         public override CompilerOptions GetCompilerOptions() {
@@ -430,7 +563,7 @@ namespace IronPython.Runtime {
 
         protected override ModuleGlobalCache GetModuleCache(SymbolId name) {
             ModuleGlobalCache res;
-            if (!SystemState.Instance.TryGetModuleGlobalCache(name, out res)) {
+            if (!_systemState.TryGetModuleGlobalCache(name, out res)) {
                 res = base.GetModuleCache(name);
             }
 
@@ -469,10 +602,12 @@ namespace IronPython.Runtime {
             return PythonOps.IsCallable(obj, argumentCount, out min, out max);
         }
 
+        #region Assembly Loading
+
         public override Assembly LoadAssemblyFromFile(string file) {
 #if !SILVERLIGHT
             // check all files in the path...
-            IEnumerator ie = PythonOps.GetEnumerator(SystemState.Instance.path);
+            IEnumerator ie = PythonOps.GetEnumerator(_systemState.path);
             while (ie.MoveNext()) {
                 string str;
                 if (Converter.TryConvertToString(ie.Current, out str)) {
@@ -504,25 +639,17 @@ namespace IronPython.Runtime {
             AssemblyName an = new AssemblyName(args.Name);
             return DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(an.Name);
         }
+
+        /// <summary>
+        /// We use Assembly.LoadFile to load assemblies from a path specified by the script (in LoadAssemblyFromFileWithPath).
+        /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
+        /// find the dependencies, unless we can hook into the CLR loader.
+        /// </summary>
+        private static void HookAssemblyResolve() {
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(PythonContext.CurrentDomain_AssemblyResolve);
+        }
 #endif
-
-        public override string DisplayName {
-            get {
-                return "IronPython";
-            }
-        }
-
-        public override Guid LanguageGuid {
-            get {
-                return PythonLanguageGuid;
-            }
-        }
-
-        public override Version LanguageVersion {
-            get {
-                return new Version(2, 0);
-            }
-        }
+        #endregion
 
         public override void SetScriptSourceSearchPaths(string[] paths) {
             _systemState.path = List.Make(paths);
@@ -553,6 +680,20 @@ namespace IronPython.Runtime {
             return "1.0.0.0";
 #endif
         }
+
+        private static T GetAssemblyAttribute<T>() where T : Attribute {
+            Assembly asm = typeof(ScriptEngine).Assembly;
+            object[] attributes = asm.GetCustomAttributes(typeof(T), false);
+            if (attributes != null && attributes.Length > 0) {
+                return (T)attributes[0];
+            } else {
+                Debug.Assert(false, String.Format("Cannot find attribute {0}", typeof(T).Name));
+                return null;
+            }
+        }
+
+        // TODO: ExceptionFormatter service
+        #region Stack Traces and Exceptions
 
         public override string FormatException(Exception exception) {
             SyntaxErrorException syntax_error = exception as SyntaxErrorException;
@@ -641,6 +782,7 @@ namespace IronPython.Runtime {
             return className;
         }
 
+        
 #if SILVERLIGHT // stack trace
         private string FormatStackTraces(Exception e) {
 
@@ -824,20 +966,25 @@ namespace IronPython.Runtime {
         }
 #endif
 
-        private static T GetAssemblyAttribute<T>() where T : Attribute {
-            Assembly asm = typeof(ScriptEngine).Assembly;
-            object[] attributes = asm.GetCustomAttributes(typeof(T), false);
-            if (attributes != null && attributes.Length > 0) {
-                return (T)attributes[0];
-            } else {
-                Debug.Assert(false, String.Format("Cannot find attribute {0}", typeof(T).Name));
-                return null;
-            }
+        #endregion
+
+        public static Importer/*!*/ GetImporter(CodeContext context) {
+            return GetContext(context)._importer;
         }
 
-        public static Importer GetImporter(CodeContext context) {
+        public static SystemState/*!*/ GetSystemState(CodeContext context) {
+            return GetContext(context)._systemState;
+        }
+
+        public static PythonContext/*!*/ GetContext(CodeContext context) {
+            PythonContext result;
+
             // TODO: Multi-engine support
-            return _importer;
+            if (context == null || ((result = context.LanguageContext as PythonContext) == null)) {
+                return DefaultContext.DefaultPythonContext;
+            }
+
+            return result;
         }
 
         public override ServiceType GetService<ServiceType>(params object[] args) {
@@ -852,105 +999,31 @@ namespace IronPython.Runtime {
             return base.GetService<ServiceType>(args);
         }
 
-        public static SystemState GetSystemState(CodeContext context) {
-            // TODO: Multi-engine support
-            return _systemState;
-        }
-
         public static PythonEngineOptions GetPythonOptions(CodeContext context) {
-            return _engOptions;
+            return DefaultContext.DefaultPythonContext._engineOptions;
         }
 
-        public Importer Importer {
-            get {
-                return _importer;
-            }
-        }
-
-        /// <summary>
-        /// Should be instance method
-        /// </summary>
-        /// <param name="directory"></param>
-        public static void AddToPath(string directory) {
+        public void AddToPath(string directory) {
             _systemState.path.Append(directory);
         }
 
-        // scope can be null, should be instance method for multi-engine support
-        public static ScriptScope MakePythonModule(string name, Scope scope, ModuleOptions options) {
-            Contract.RequiresNotNull(name, "name");
-            if (scope == null) scope = new Scope(new SymbolDictionary());
-
-            ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule(name, scope);
-
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
-            moduleContext.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
-            moduleContext.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
-            moduleContext.IsPythonCreatedModule = true;
-
-            if ((options & ModuleOptions.PublishModule) != 0) {
-                _systemState.modules[module.ModuleName] = module;
-            }
-
-            return module;
-        }
-
-        /// <summary>
-        /// Create a module with optimized code. The restriction is that the user cannot specify a globals 
-        /// dictionary of her liking.
-        /// </summary>
-        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
-            return CreateOptimizedModule(fileName, moduleName, publishModule, false);
-        }
-
-        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule, bool skipFirstLine) {
-            Contract.RequiresNotNull(fileName, "fileName");
-            Contract.RequiresNotNull(moduleName, "moduleName");
-
-            SourceUnit sourceUnit = CreateFileUnit(fileName, _systemState.DefaultEncoding);
-            PythonCompilerOptions options = (PythonCompilerOptions)GetDefaultCompilerOptions();
-            options.SkipFirstLine = skipFirstLine;
-            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, ScriptModuleKind.Default, null, options, null, sourceUnit);
-
-            if (publishModule) {
-                _systemState.modules[moduleName] = module;
-            }
-
-            return module;
-        }
-
-        public override CompilerOptions GetDefaultCompilerOptions() {
+        public override CompilerOptions/*!*/ GetDefaultCompilerOptions() {
             return new PythonCompilerOptions(PythonOptions.DivisionOptions == PythonDivisionOptions.New);
         }
 
-        public override CompilerOptions GetModuleCompilerOptions(ScriptScope module) {
-            Assert.NotNull(module);
+        public override CompilerOptions/*!*/ GetModuleCompilerOptions(Scope/*!*/ scope) {
+            Assert.NotNull(scope);
 
             PythonCompilerOptions result = new PythonCompilerOptions();
-            PythonModuleContext moduleContext = (PythonModuleContext)GetModuleContext(module);
+            PythonModule module = GetPythonModule(scope);
 
-            if (moduleContext != null) {
-                result.TrueDivision = moduleContext.TrueDivision;
+            if (module != null) {
+                result.TrueDivision = module.TrueDivision;
             } else {
                 result.TrueDivision = PythonOptions.DivisionOptions == PythonDivisionOptions.New;
             }
 
             return result;
-        }
-
-        public override EngineOptions Options {
-            get { return _engOptions; }
-        }
-
-        public PythonEngineOptions PythonOptions {
-            get {
-                return _engOptions;
-            }
-        }
-
-        public override Guid VendorGuid {
-            get {
-                return LanguageVendor_Microsoft;
-            }
         }
 
         public override ErrorSink GetCompilerErrorSink() {
@@ -963,17 +1036,6 @@ namespace IronPython.Runtime {
             message = FormatPythonException(ExceptionConverter.ToPython(exception));
             typeName = GetPythonExceptionClassName(pythonEx);
         }
-
-#if !SILVERLIGHT
-        /// <summary>
-        /// We use Assembly.LoadFile to load assemblies from a path specified by the script (in LoadAssemblyFromFileWithPath).
-        /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
-        /// find the dependencies, unless we can hook into the CLR loader.
-        /// </summary>
-        private static void HookAssemblyResolve() {
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(PythonContext.CurrentDomain_AssemblyResolve);
-        }
-#endif
 
     }
 }

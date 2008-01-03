@@ -14,21 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using System.Globalization;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
-using System.Runtime.CompilerServices;
-using System.Reflection;
+using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
-using System.Diagnostics;
-using System.IO;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -36,25 +35,24 @@ namespace Microsoft.Scripting {
     /// </summary>
     public abstract class LanguageContext
 #if !SILVERLIGHT
-        : ICloneable
+ : ICloneable
 #endif
     {
-        private ScriptDomainManager _domainManager;
+        private readonly ScriptDomainManager/*!*/ _domainManager;
         private static ModuleGlobalCache _noCache;
         private ActionBinder _binder;
-        private ContextId _id;
+        private readonly ContextId _id;
 
-        protected LanguageContext(ScriptDomainManager domainManager) {
+        protected LanguageContext(ScriptDomainManager/*!*/ domainManager) {
+            Contract.RequiresNotNull(domainManager, "domainManager");
+
             _domainManager = domainManager;
-            if (_domainManager != null) {   // TODO: DomainManager should never be null, but can be for things like InvariantContext today.
-                _id = _domainManager.AssignContextId(this);
-            }
+            _id = domainManager.AssignContextId(this);
         }
-
-
+        
         public ActionBinder Binder {
-            get { 
-                return _binder; 
+            get {
+                return _binder;
             }
             protected set {
                 _binder = value;
@@ -74,49 +72,60 @@ namespace Microsoft.Scripting {
             }
         }
 
+        internal ScriptDomainManager/*!*/ DomainManager {
+            get { return _domainManager; }
+        }
+
         public static LanguageContext FromEngine(IScriptEngine engine) {
             ScriptEngine localEngine = RemoteWrapper.GetLocalArgument<ScriptEngine>(engine, "engine");
             return localEngine.LanguageContext;
         }
 
-        #region Module Context
+        #region Scope
 
-        public ModuleContext GetModuleContext(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-            return module.GetModuleContext(ContextId);
+        public virtual Scope GetScope(string/*!*/ path) {
+            return null;
         }
-        
-        public ModuleContext EnsureModuleContext(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-            ModuleContext context = module.GetModuleContext(ContextId);
+
+        public ScopeExtension/*!*/ GetScopeExtension(Scope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
+            return scope.GetExtension(ContextId);
+        }
+
+        public ScopeExtension/*!*/ EnsureScopeExtension(Scope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
+            ScopeExtension extension = scope.GetExtension(ContextId);
             
-            if (context == null) {
-                context = CreateModuleContext(module);
-                if (context == null) {
-                    throw new InvalidImplementationException("CreateModuleContext must return a module context.");
+            if (extension == null) {
+                extension = CreateScopeExtension(scope);
+                if (extension == null) {
+                    throw new InvalidImplementationException("CreateScopeExtension must return a scope extension.");
                 }
-                return module.SetModuleContext(ContextId, context);
+                return scope.SetExtension(ContextId, extension);
             }
 
-            return context;
-        }
-
-        /// <summary>
-        /// Notification sent when a ScriptCode is about to be executed within given ModuleContext.
-        /// </summary>
-        /// <param name="newContext"></param>
-        public virtual void ModuleContextEntering(ModuleContext newContext) {
-            // nop
+            return extension;
         }
 
         /// <summary>
         /// Factory for ModuleContext creation. 
-        /// It is guaranteed that this method is called once per each ScriptModule the langauge code is executed within.
+        /// It is guaranteed that this method is called once per each ScriptScope the langauge code is executed within.
         /// </summary>
-        /// <param name="module">The module the context will be associated with.</param>
-        /// <returns>Non-<c>null</c> module context instance.</returns>
-        public virtual ModuleContext CreateModuleContext(ScriptScope module) {
-            return new ModuleContext(module);
+        public virtual ScopeExtension/*!*/ CreateScopeExtension(Scope scope) {
+            return new ScopeExtension(scope);
+        }
+
+        // TODO: remove
+        /// <summary>
+        /// Notification sent when a ScriptCode is about to be executed within given ModuleContext.
+        /// </summary>
+        public virtual void ModuleContextEntering(ScopeExtension newContext) {
+            // nop
+        }
+
+        // TODO: remove
+        public virtual void PublishModule(string/*!*/ name, Scope/*!*/ scope) {
+            // nop
         }
 
         #endregion
@@ -140,7 +149,7 @@ namespace Microsoft.Scripting {
         public ScriptCode CompileSourceCode(SourceUnit sourceUnit) {
             return CompileSourceCode(sourceUnit, null, null);
         }
-        
+
         public ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options) {
             return CompileSourceCode(sourceUnit, options, null);
         }
@@ -188,11 +197,6 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        public virtual ScriptCode Reload(ScriptCode original, ScriptScope module) {
-            original.SourceUnit.Reload();
-
-            return CompileSourceCode(original.SourceUnit, GetModuleCompilerOptions(module));
-        }
 
         /// <summary>
         /// Creates the language specific CompilerContext object for code compilation.  The 
@@ -211,7 +215,7 @@ namespace Microsoft.Scripting {
             if (context.Scope.TryLookupName(this, name, out value)) {
                 return true;
             }
-            
+
             return TryLookupGlobal(context, name, out value);
         }
 
@@ -285,7 +289,7 @@ namespace Microsoft.Scripting {
 
         #region ICloneable Members
 
-        public virtual object Clone() {
+        public virtual object/*!*/ Clone() {
             return MemberwiseClone();
         }
 
@@ -365,7 +369,7 @@ namespace Microsoft.Scripting {
         /// Gets the value or throws an exception when the provided MethodCandidate cannot be called.
         /// </summary>
         /// <returns></returns>
-        public virtual object GetNotImplemented(params MethodCandidate []candidates) {
+        public virtual object GetNotImplemented(params MethodCandidate[] candidates) {
             throw new MissingMemberException("the specified operator is not implemented");
         }
 
@@ -422,7 +426,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public virtual void SetScriptSourceSearchPaths(string[] paths) { 
+        public virtual void SetScriptSourceSearchPaths(string[] paths) {
         }
 
 #if !SILVERLIGHT
@@ -431,12 +435,6 @@ namespace Microsoft.Scripting {
             throw new NotImplementedException();
         }
 #endif
-
-        /*public ScriptEnvironment ScriptRuntime {
-            get {
-                return _runtime;
-            }
-        }*/
 
         public virtual ServiceType GetService<ServiceType>(params object[] args) where ServiceType : class {
             if (typeof(ServiceType) == typeof(IConsole)) {
@@ -476,7 +474,7 @@ namespace Microsoft.Scripting {
         public virtual TextWriter GetOutputWriter(bool isErrorOutput) {
             return isErrorOutput ? Console.Error : Console.Out;
         }
-        
+
         public virtual EngineOptions/*!*/ Options {
             get {
                 return new EngineOptions();
@@ -491,7 +489,7 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Creates compiler options initialized by the options associated with the module.
         /// </summary>
-        public virtual CompilerOptions GetModuleCompilerOptions(ScriptScope module) { // TODO: internal protected
+        public virtual CompilerOptions/*!*/ GetModuleCompilerOptions(Scope/*!*/ scope) {
             return GetDefaultCompilerOptions();
         }
 
@@ -511,8 +509,11 @@ namespace Microsoft.Scripting {
             return SourceUnit.CreateSnippet(this, code, id, kind);
         }
 
-        public SourceUnit TryGetSourceFileUnit(string path, Encoding encoding, SourceCodeKind kind) {
-            return _domainManager.Host.TryGetSourceFileUnit(_domainManager.GetScriptEngine(this), path, encoding, kind);
+        public SourceUnit TryGetSourceFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
+            Contract.RequiresNotNull(path, "path");
+            Contract.RequiresNotNull(encoding, "encoding");
+
+            return _domainManager.Host.TryGetSourceFileUnit(_domainManager.GetEngine(this), path, encoding, kind);
         }
 
         #endregion
@@ -547,12 +548,6 @@ namespace Microsoft.Scripting {
         public virtual void GetExceptionMessage(Exception exception, out string message, out string errorTypeName) {
             message = exception.Message;
             errorTypeName = exception.GetType().Name;
-        }
-
-        public ScriptDomainManager DomainManager {
-            get {
-                return _domainManager;
-            }
         }
     }
 }

@@ -18,6 +18,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -62,7 +63,8 @@ namespace Microsoft.Scripting.Generation {
             get { return _field; }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("StaticFieldSlot Field: {0}.{1} Type: {1}", _field.DeclaringType, _field.Name, _field.FieldType);
         }
     }

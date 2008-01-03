@@ -19,6 +19,7 @@ using System.Runtime.Serialization;
 using System.Diagnostics;
 using System.Security.Permissions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     [Serializable]
@@ -45,25 +46,30 @@ namespace Microsoft.Scripting {
             get { return _id & 0x00FFFFFF; }
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             if (!(obj is SymbolId)) return false;
             SymbolId other = (SymbolId)obj;
             return _id == other._id;
         }
 
+        [StateIndependent]
         public bool Equals(SymbolId other) {
             return _id == other._id;
         }
 
+        [Confined]
         public bool CaseInsensitiveEquals(SymbolId other) {
             return (_id & 0x00FFFFFF) == (other._id & 0x00FFFFFF);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return _id;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        [Confined]
         public int GetCaseInsensitiveHashCode() {
             return (_id & 0x00FFFFFF);
         }
@@ -73,6 +79,7 @@ namespace Microsoft.Scripting {
         /// DO NOT USE THIS METHOD TO RETRIEVE STRING THAT THE SYMBOL REPRESENTS
         /// Use SymbolTable.IdToString(SymbolId) instead.
         /// </summary>
+        [Confined]
         public override string ToString() {
             return SymbolTable.IdToString(this);
         }

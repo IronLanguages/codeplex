@@ -223,7 +223,9 @@ namespace Microsoft.Scripting.Utils {
 
         public static Type[] GetParameterTypes(ParameterInfo[] parameterInfos) {
             Type[] result = new Type[parameterInfos.Length];
-            for (int i = 0; i < parameterInfos.Length; i++) result[i] = parameterInfos[i].ParameterType;
+            for (int i = 0; i < parameterInfos.Length; i++) {
+                result[i] = parameterInfos[i].ParameterType;
+            }
             return result;
         }
 

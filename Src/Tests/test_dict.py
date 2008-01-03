@@ -445,8 +445,7 @@ if is_cli:
 
     def test_dict_to_idict():
         """verify dicts can be converted to IDictionaries"""
-        import clr
-        clr.AddReference('IronPythonTest')
+        load_iron_python_test()
         from IronPythonTest import DictConversion
         AreEqual(list(DictConversion.ToIDictionary({1:100, 2:200, 3:300, 4:400})), [1,2,3,4,100,200,300,400])
 

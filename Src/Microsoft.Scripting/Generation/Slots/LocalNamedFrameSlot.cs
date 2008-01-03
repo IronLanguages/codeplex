@@ -16,6 +16,7 @@
 using System;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Ast;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     public class LocalNamedFrameSlot : Slot {
@@ -78,7 +79,8 @@ namespace Microsoft.Scripting.Generation {
             get { return _name; }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("LocalNamedFromSlot Name: ({0}) From: {1}", SymbolTable.IdToString(_name), _frame);
         }
     }

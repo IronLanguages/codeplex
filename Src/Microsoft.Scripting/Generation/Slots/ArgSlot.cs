@@ -16,7 +16,9 @@
 using System;
 using System.Reflection.Emit;
 using System.Diagnostics;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -59,7 +61,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("ArgSlot Index: {0} Type: {1}", _index, _argType.FullName);
         }
     }

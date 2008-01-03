@@ -74,7 +74,12 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakePropertyDeleteStatement(MethodInfo delete) {
-            AddToBody( MakeCallStatement(delete, Rule.Parameters[0]));
+            AddToBody(
+                Rule.MakeReturn(
+                    Binder,
+                    Binder.MakeCallExpression(delete, Rule.Parameters[0])
+                )
+            );
         }
 
         private void MakeCustomMembersBody(Type type) {

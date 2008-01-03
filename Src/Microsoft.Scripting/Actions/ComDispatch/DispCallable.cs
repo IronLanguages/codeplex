@@ -27,6 +27,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -45,7 +46,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             _methodDesc = methodDesc;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
         }
 

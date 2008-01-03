@@ -125,10 +125,6 @@ namespace Microsoft.Scripting.Ast {
                     Emit((DeleteUnboundExpression)node);
                     break;
 
-                case AstNodeType.DynamicConversionExpression:
-                    Emit((DynamicConversionExpression)node);
-                    break;
-
                 case AstNodeType.EnvironmentExpression:
                     EmitEnvironmentExpression();
                     break;
@@ -534,11 +530,6 @@ namespace Microsoft.Scripting.Ast {
             EmitCall(typeof(RuntimeHelpers), "RemoveName");
         }
 
-        private void Emit(DynamicConversionExpression node) {
-            EmitExpression(node.Expression);
-            EmitConvert(node.Expression.Type, node.Type);
-        }
-
         private void EmitEnvironmentExpression() {
             EmitEnvironmentOrNull();
         }
@@ -629,18 +620,6 @@ namespace Microsoft.Scripting.Ast {
                 Emit(OpCodes.Ldnull);
             } else {
                 EmitExpressionAsObject(node);
-            }
-        }
-
-        // TODO: REMOVE !!!
-        /// <summary>
-        /// Generates code for this expression in a value position.  This will leave
-        /// the value of the expression on the top of the stack typed as asType.
-        /// </summary>
-        private void EmitAs(Expression node, Type type) {
-            EmitExpression(node);  // emit as Type
-            if (type.IsValueType || !ConstantCheck.IsConstant(node, null)) {
-                EmitConvert(node.Type, type);
             }
         }
 

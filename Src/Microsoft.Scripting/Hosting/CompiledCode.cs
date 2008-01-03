@@ -17,20 +17,17 @@ using System.Diagnostics;
 using System.Runtime.Remoting;
 
 using Microsoft.Scripting.Utils;
+using System;
 
 namespace Microsoft.Scripting.Hosting {
 
     public interface ICompiledCode : IRemotable {
-        IScriptScope MakeModule(string name);
+        IScriptScope MakeOptimizedScope();
         
-        void Execute();
         void Execute(IScriptScope module);
-
-        object Evaluate();
         object Evaluate(IScriptScope module);
      
 #if !SILVERLIGHT
-        ObjectHandle EvaluateAndWrap();
         ObjectHandle EvaluateAndWrap(IScriptScope module);
 #endif
     }
@@ -39,64 +36,40 @@ namespace Microsoft.Scripting.Hosting {
     /// Hosting API counterpart for <see cref="ScriptCode"/>.
     /// </summary>
     public sealed class CompiledCode : ICompiledCode, ILocalObject {
-        private readonly ScriptCode _code;
+        private readonly ScriptCode/*!*/ _code;
 
         // should be called only from ScriptCode.FromCompiledCode:
-        internal ScriptCode ScriptCode { get { return _code; } }
+        internal ScriptCode/*!*/ ScriptCode { get { return _code; } }
 
-        internal CompiledCode(ScriptCode code) {
+        internal CompiledCode(ScriptCode/*!*/ code) {
             Debug.Assert(code != null);
             _code = code;
         }
 
-        public IScriptScope MakeModule(string name) {
-            Contract.RequiresNotNull(name, "name");
-            return ScriptDomainManager.CurrentManager.CreateModule(name, _code);
-        }
-
-        /// <summary>
-        /// Execute code within default module context.
-        /// </summary>
-        public void Execute() {
-            Evaluate(null);
+        public IScriptScope/*!*/ MakeOptimizedScope() {
+            return new ScriptScope(_code.MakeOptimizedScope());
         }
 
         /// <summary>
         /// Execute code within a given module context. 
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public void Execute(IScriptScope module) {
-            Evaluate(module);
-        }
-
-        /// <summary>
-        /// Execute code within default module context and returns the result.
-        /// </summary>
-        public object Evaluate() {
-            return Evaluate(null);
+        public void Execute(IScriptScope/*!*/ scope) {
+            Evaluate(scope);
         }
 
         /// <summary>
         /// Execute code within a given module context and returns the result.
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public object Evaluate(IScriptScope module) {
-            ScriptScope localModule;
+        public object Evaluate(IScriptScope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
 
-            if (module == null) {
-                localModule = RemoteWrapper.TryGetLocal<ScriptScope>(ScriptDomainManager.CurrentManager.Host.DefaultModule);
-            } else {
-                localModule = RemoteWrapper.GetLocalArgument<ScriptScope>(module, "module");
-            }
-
-            return _code.Run(localModule);
+            ScriptScope localModule = RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "module");
+            return _code.Run(localModule.Scope);
         }
 
 #if !SILVERLIGHT
-
-        public ObjectHandle EvaluateAndWrap() {
-            return new ObjectHandle(Evaluate());
-        }
 
         public ObjectHandle EvaluateAndWrap(IScriptScope module) {
             return new ObjectHandle(Evaluate(module));

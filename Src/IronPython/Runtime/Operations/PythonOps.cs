@@ -47,6 +47,7 @@ namespace IronPython.Runtime.Operations {
         [ThreadStatic]
         private static List<object> InfiniteRepr;
 
+        // The "current" exception on this thread that will be returned via sys.exc_info()
         [ThreadStatic]
         internal static Exception RawException;
 
@@ -2390,13 +2391,13 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// from spam import *
         /// </summary>
-        public static void ImportStar(CodeContext context, string fullName) {
+        public static void ImportStar(CodeContext/*!*/ context, string fullName) {
             object newmod = PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple("*"));
 
-            ScriptScope pnew = newmod as ScriptScope;
-            if (pnew != null) {
+            Scope scope = newmod as Scope;
+            if (scope != null) {
                 object all;
-                if (pnew.Scope.TryGetName(context.LanguageContext, Symbols.All, out all)) {
+                if (scope.TryGetName(context.LanguageContext, Symbols.All, out all)) {
                     IEnumerator exports = PythonOps.GetEnumerator(all);
 
                     while (exports.MoveNext()) {
@@ -2521,10 +2522,10 @@ namespace IronPython.Runtime.Operations {
             }
 
             IAttributesCollection attrLocals = Builtin.GetAttrLocals(context, locals);
-            
-            Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(new Microsoft.Scripting.Scope(globals), attrLocals);
 
-            fc.Call(new CodeContext(scope, context.LanguageContext, ((PythonModuleContext)context.ModuleContext).Clone()), scope, tryEvaluate);
+            Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(context.LanguageContext, new Microsoft.Scripting.Scope(context.LanguageContext, globals), attrLocals);
+
+            fc.Call(new CodeContext(scope, context.LanguageContext, ((PythonModule)context.ModuleContext).Clone()), scope, tryEvaluate);
         }
 
         #endregion        
@@ -2543,26 +2544,69 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Exception handling
+        // The semantics here are:
+        // 1. Each thread has a "current exception", which is returned as a tuple by sys.exc_info().
+        // 2. The current exception is set on encountering an except block, even if the except block doesn't
+        //    match the exception.
+        // 3. Each function on exit (either via exception, return, or yield) will restore the "current exception" 
+        //    to the value it had on function-entry. 
+        //
+        // So common codegen would be:
+        // 
+        // function() {
+        //   $save = SaveCurrentException();
+        //   try { 
+        //      <function body>
+        //
+        //      // except:
+        //        SetCurrentException($exception)
+        //        <except body>
+        //   
+        //   finally {
+        //      RestoreCurrentException($save)
+        //   }
 
-        public static object PushExceptionHandler(Exception clrException) {
-            ExceptionHelpers.PushExceptionHandler(clrException);
+        // Called at the start of the except handlers to set the current exception. 
+        public static object SetCurrentException(Exception clrException) {
+            Assert.NotNull(clrException);
 
+            ExceptionHelpers.AssociateDynamicStackFrames(clrException);
             RawException = clrException;
             GetExceptionInfo(); // force update of non-thread static exception info...
             return ExceptionConverter.ToPython(clrException);
         }
 
-        public static void PopExceptionHandler() {
-            ExceptionHelpers.PopExceptionHandler();
-
-            // only clear after the last exception is out, we
-            // leave the last thrown exception as our current
-            // exception
-            List<Exception> exceptions = ExceptionHelpers.CurrentExceptions;
-            if (exceptions == null || exceptions.Count == 0) {
-                PythonOps.RawException = null;
-            }
+        // Clear the current exception. Most callers should restore the exception.
+        // This is mainly for sys.exc_clear()        
+        public static void ClearCurrentException() {
+            RestoreCurrentException(null);
         }
+
+        // Called by code-gen to save it. Codegen just needs to pass this back to RestoreCurrentException.
+        public static Exception SaveCurrentException() {
+            return RawException;
+        }
+
+        // Check for thread abort exceptions.
+        // This is necessary to be able to catch python's KeyboardInterrupt exceptions.
+        // CLR restrictions require that this must be called from within a catch block. 
+        public static void CheckThreadAbort() {
+#if !SILVERLIGHT
+            ThreadAbortException tae = RawException as ThreadAbortException;
+            if (tae != null && tae.ExceptionState is Microsoft.Scripting.Shell.KeyboardInterruptException) {
+                // ThreadAbort can only be reset within a catch block. Codegen must have emitted this call 
+                // from a catch region. Else the abort is rethrown at the end of the catch.
+                Thread.ResetAbort();
+            }
+#endif
+        }
+
+        // Called at function exit (like popping). Pass value from SaveCurrentException.
+        public static void RestoreCurrentException(Exception clrException) {
+            RawException = clrException;
+        }
+ 
+
 
         public static object CheckException(object exception, object test) {
             Debug.Assert(exception != null);
@@ -2627,16 +2671,27 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
-        /// Support for exception handling (called directly by with statement)
+        /// Get an exception tuple for the "current" exception. This is used for sys.exc_info()
         /// </summary>
         public static PythonTuple GetExceptionInfo() {
-            if (RawException == null) {
+            return GetExceptionInfoLocal(RawException);
+        }
+
+        /// <summary>
+        /// Get an exception tuple for a given exception. This is like the inverse of MakeException.
+        /// </summary>
+        /// <param name="ex">the exception to create a tuple for.</param>
+        /// <returns>a tuple of (type, value, traceback)</returns>
+        /// <remarks>This is called directly by the With statement so that it can get an exception tuple
+        /// in its own private except handler without disturbing the thread-wide sys.exc_info(). </remarks>
+        public static PythonTuple GetExceptionInfoLocal(Exception ex) {
+            if (ex == null) {
                 return PythonTuple.MakeTuple(null, null, null);
             }
 
-            object pyExcep = ExceptionConverter.ToPython(RawException);
+            object pyExcep = ExceptionConverter.ToPython(ex);
 
-            TraceBack tb = CreateTraceBack(RawException);
+            TraceBack tb = CreateTraceBack(ex);
             SystemState.Instance.ExceptionTraceBack = tb;
 
             StringException se = pyExcep as StringException;
@@ -2695,7 +2750,7 @@ namespace IronPython.Runtime.Operations {
 
             if (type is Exception) {
                 throwable = type as Exception;
-            } else if (PythonOps.IsInstance(type, PythonContext._exceptionType)) {
+            } else if (PythonOps.IsInstance(type, DefaultContext.DefaultPythonContext.ExceptionType)) {
                 throwable = ExceptionConverter.ToClr(type);
             } else if (type is string) {
                 throwable = new StringException(type.ToString(), value);
@@ -2889,7 +2944,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool IsClsVisible(CodeContext context) {
-            PythonModuleContext pmc = context.ModuleContext as PythonModuleContext;
+            PythonModule pmc = context.ModuleContext as PythonModule;
             return pmc == null || pmc.ShowCls;
         }
 
@@ -3319,15 +3374,24 @@ namespace IronPython.Runtime.Operations {
             --PythonFunction.Depth;
         }
 
-
-
         #endregion
+
         public static object ReturnConversionResult(object value) {
             PythonTuple pt = value as PythonTuple;
             if (pt != null) {
                 return pt[0];
             }
             return NotImplemented;
+        }
+
+        public static CallAction MakeListCallAction(int count) {
+            ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, count);
+            infos[count - 1] = new ArgumentInfo(Microsoft.Scripting.Ast.ArgumentKind.List);
+            return CallAction.Make(new CallSignature(infos));
+        }
+
+        public static CallAction MakeSimpleCallAction(int count) {
+            return CallAction.Make(count);
         }
     }
 }

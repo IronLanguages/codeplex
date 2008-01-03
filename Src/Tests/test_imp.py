@@ -465,6 +465,23 @@ def test_import_from_custom():
     finally:
         __builtin__.__import__ = saved
         
+def test_module_name():
+    import imp
+    m = imp.new_module('foo')
+    AreEqual(m.__str__(), "<module 'foo' (built-in)>")
+    m.__name__ = 'bar'
+    AreEqual(m.__str__(), "<module 'bar' (built-in)>")
+    m.__name__ = None
+    AreEqual(m.__str__(), "<module '?' (built-in)>")
+    m.__name__ = []
+    AreEqual(m.__str__(), "<module '?' (built-in)>")
+    m.__file__ = None
+    AreEqual(m.__str__(), "<module '?' (built-in)>")
+    m.__file__ = []
+    AreEqual(m.__str__(), "<module '?' (built-in)>")
+    m.__file__ = 'foo.py'
+    AreEqual(m.__str__(), "<module '?' from 'foo.py'>")
+
 run_test(__name__)
 if is_silverlight==False:
     delete_all_f(__name__)

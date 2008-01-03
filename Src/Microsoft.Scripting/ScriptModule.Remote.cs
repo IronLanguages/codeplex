@@ -29,15 +29,6 @@ namespace Microsoft.Scripting {
             get { return _module; }
         }
 
-        public string ModuleName {
-            get { return _module.ModuleName; }
-        }
-
-        public string FileName {
-            get { return _module.FileName; }
-            set { _module.FileName = value; }
-        }
-
         #region Construction
 
         internal RemoteScriptModule(ScriptScope module) {
@@ -51,13 +42,6 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        public void Execute() {
-            _module.Execute();
-        }
-
-        public void Reload() {
-            _module.Reload();
-        }
 
         // throws SerializationException 
         public bool TryLookupVariable(string name, out object value) {
@@ -93,6 +77,10 @@ namespace Microsoft.Scripting {
 
         public void ClearVariables() {
             _module.ClearVariables();
+        }
+
+        public T GetVariable<T>(string/*!*/ name) {
+            return _module.GetVariable<T>(name);
         }
     }
 }

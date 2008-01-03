@@ -22,6 +22,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -56,7 +57,8 @@ namespace Microsoft.Scripting {
             _typesByArity[GetGenericArity(t1)] = t1;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             StringBuilder repr = new StringBuilder(base.ToString());
             repr.Append(":" + NormalizedName + "(");
 

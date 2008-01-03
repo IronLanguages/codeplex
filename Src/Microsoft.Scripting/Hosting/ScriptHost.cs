@@ -31,12 +31,11 @@ namespace Microsoft.Scripting.Hosting {
         string[] GetSourceFileNames(string mask, string searchPattern);
         
         // source units:
-        SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind);
+        SourceUnit TryGetSourceFileUnit(IScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind);
         SourceUnit ResolveSourceFileUnit(string name);
 
         // notifications:
         void EngineCreated(IScriptEngine engine);
-        void ModuleCreated(IScriptScope module);
 
         // environment variables:
         bool TrySetVariable(SymbolId name, object value);
@@ -48,7 +47,7 @@ namespace Microsoft.Scripting.Hosting {
         /// The default module should be created lazily as the environment is not prepared for module creation at the time the 
         /// host tis created (the host is created prior module creation so that it could be notified about the creation).
         /// </summary>
-        IScriptScope DefaultModule { get; } // throws InvalidOperationException if no default module is available
+        IScriptScope DefaultScope { get; } // throws InvalidOperationException if no default module is available
 
         /// <summary>
         /// Provides the host with a mechanism for catching exceptions thrown by
@@ -65,18 +64,18 @@ namespace Microsoft.Scripting.Hosting {
         /// The environment the host is attached to.
         /// </summary>
         private IScriptEnvironment _environment;
-        private ScriptScope _defaultModule;
+        private IScriptScope _defaultModule;
 
         /// <summary>
         /// Default module for convenience. Lazily init'd.
         /// </summary>
-        public virtual IScriptScope DefaultModule {
+        public virtual IScriptScope DefaultScope {
             get {
                 if (_defaultModule == null) {
                     if (Utilities.IsRemote(_environment)) 
                         throw new InvalidOperationException("Default module should by created in the remote appdomain.");
 
-                    CreateDefaultModule(ref _defaultModule);
+                    _defaultModule = _environment.CreateScope();
                  }
 
                 return _defaultModule;
@@ -102,13 +101,6 @@ namespace Microsoft.Scripting.Hosting {
             return new RemoteScriptHost(this);
         }
 #endif
-        static internal void CreateDefaultModule(ref ScriptScope defaultModule) {
-           // create a module and throw it away if there is already one:
-            ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule("<default>", null, ScriptCode.EmptyArray);
-            Utilities.MemoryBarrier();
-            Interlocked.CompareExchange<ScriptScope>(ref defaultModule, module, null);
-        }
-
         public virtual Action<Exception> EventExceptionHandler {
             get { return null; }
         }
@@ -142,7 +134,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Gets the default path used for searching for source units.
         /// </summary>
-        internal protected virtual IList<string> SourceUnitResolutionPath {
+        internal protected virtual IList<string/*!*/> SourceUnitResolutionPath {
             get {
 #if SILVERLIGHT
                 return new string[] { "." };
@@ -152,9 +144,10 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
             Contract.RequiresNotNull(engine, "engine");
             Contract.RequiresNotNull(path, "path");
+            Contract.RequiresNotNull(encoding, "encoding");
             
             if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {     
                 return engine.CreateScriptSource(new FileStreamContentProvider(path), NormalizePath(path), encoding, kind);
@@ -209,10 +202,6 @@ namespace Microsoft.Scripting.Hosting {
         #region Notifications
 
         public virtual void EngineCreated(IScriptEngine engine) {
-            // nop
-        }
-
-        public virtual void ModuleCreated(IScriptScope module) {
             // nop
         }
 

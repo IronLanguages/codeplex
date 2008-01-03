@@ -31,26 +31,18 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Creates the code for an optimized module.  
     /// </summary>
-    internal abstract class OptimizedModuleGenerator {
+    public abstract class OptimizedModuleGenerator {
         private ScriptCode[] _scriptCodes;
-        private string _moduleName;
         private Dictionary<LanguageContext, ScopeAllocator> _allocators = new Dictionary<LanguageContext, ScopeAllocator>();
         private List<CodeContext> _codeContexts = new List<CodeContext>();
 
-        public string ModuleName {
-            get { return _moduleName; }
-        }
-
-        protected OptimizedModuleGenerator(string moduleName, params ScriptCode[] scriptCodes) {
-            Assert.NotNull(moduleName);
+        protected OptimizedModuleGenerator(params ScriptCode[] scriptCodes) {
             Assert.NotNullItems(scriptCodes);
 
             _scriptCodes = scriptCodes;
-            _moduleName = moduleName;
         }
 
-        public static OptimizedModuleGenerator Create(string moduleName, params ScriptCode[] scriptCodes) {
-            Contract.RequiresNotNull(moduleName, "moduleName");
+        public static OptimizedModuleGenerator Create(params ScriptCode[] scriptCodes) {
             Contract.RequiresNotEmpty(scriptCodes, "scriptCodes");
             
             if (scriptCodes.Length != 1) throw new NotSupportedException("Only one ScriptCode currently supported");
@@ -66,14 +58,14 @@ namespace Microsoft.Scripting.Generation {
                     new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Demand();
 
 #endif
-                    return new StaticFieldModuleGenerator(moduleName, scriptCodes);
+                    return new StaticFieldModuleGenerator(scriptCodes);
 #if !SILVERLIGHT
                 } catch (SecurityException) {
                 }
 #endif
             }
 
-            return new TupleModuleGenerator(moduleName, scriptCodes);
+            return new TupleModuleGenerator(scriptCodes);
         }
 
         /// <summary>
@@ -116,7 +108,7 @@ namespace Microsoft.Scripting.Generation {
                 // Force creation of names used in other script codes into all optimized dictionaries
                 ScopeAllocator allocator = _allocators[scriptCode.LanguageContext];
                 IAttributesCollection iac = CreateLanguageDictionary(scriptCode.LanguageContext, allocator);
-                Scope scope = new Scope(iac);
+                Scope scope = new Scope(scriptCode.LanguageContext, iac);
 
                 // module context is filled later:
                 CodeContext codeContext = new CodeContext(scope, scriptCode.LanguageContext);
@@ -130,13 +122,6 @@ namespace Microsoft.Scripting.Generation {
                 _codeContexts.Add(codeContext);
             }
             return scopes;
-        }
-
-        public void BindGeneratedCodeToModule(ScriptScope module) {
-            Assert.NotNull(module);
-            foreach (CodeContext codeContext in _codeContexts) {
-                codeContext.ModuleContext = codeContext.LanguageContext.EnsureModuleContext(module);
-            }
         }
 
         private List<Compiler> GenerateScriptMethods() {
@@ -192,8 +177,8 @@ namespace Microsoft.Scripting.Generation {
     class TupleModuleGenerator : OptimizedModuleGenerator {
         private Dictionary<LanguageContext, TupleSlotFactory> _languages = new Dictionary<LanguageContext, TupleSlotFactory>();
 
-        public TupleModuleGenerator(string moduleName, params ScriptCode[] scriptCodes)
-            : base(moduleName, scriptCodes) {
+        public TupleModuleGenerator(params ScriptCode[] scriptCodes)
+            : base(scriptCodes) {
         }
 
         #region Abstract overrides
@@ -238,8 +223,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public StaticFieldModuleGenerator(string moduleName, params ScriptCode[] scriptCodes)
-            : base(moduleName, scriptCodes) {
+        public StaticFieldModuleGenerator(params ScriptCode[] scriptCodes)
+            : base(scriptCodes) {
         }
 
         #region Abstract overrides
@@ -278,11 +263,7 @@ namespace Microsoft.Scripting.Generation {
         protected override Compiler CreateCodeGen(ScriptCode scriptCode) {
             LanguageInfo li = _languages[scriptCode.LanguageContext];
 
-            return li.TypeGen.DefineMethod(CompilerHelpers.PublicStatic,
-                "Initialize",
-                typeof(object),
-                new Type[] { typeof(CodeContext) },
-                null);
+            return li.TypeGen.DefineMethod("Initialize", typeof(object), new Type[] { typeof(CodeContext) }, null, null);
         }
 
         #endregion
@@ -294,7 +275,7 @@ namespace Microsoft.Scripting.Generation {
             //scriptCode.CompilerContext.Options
             AssemblyGenAttributes genAttrs = ScriptDomainManager.Options.AssemblyGenAttributes;
 
-            if (scriptCode.SourceUnit.IsVisibleToDebugger)
+            if (scriptCode.SourceUnit.HasPath)
                 genAttrs |= AssemblyGenAttributes.EmitDebugInfo;
             
             if (ScriptDomainManager.Options.DebugCodeGeneration)
@@ -325,7 +306,7 @@ namespace Microsoft.Scripting.Generation {
         private static void GetCompiledSourceUnitAssemblyLocation(SourceUnit sourceUnit, out string outDir, out string fileName) {
             outDir = ScriptDomainManager.Options.BinariesDirectory;
 
-            if (String.IsNullOrEmpty(sourceUnit.Id)) {
+            if (!sourceUnit.HasPath) {
                 fileName = Guid.NewGuid().ToString();
                 return;
             }
@@ -345,7 +326,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private TypeGen GenerateModuleGlobalsType(AssemblyGen ag) {
-            TypeGen tg = ag.DefinePublicType(ModuleName + "$mod_" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary));
+            TypeGen tg = ag.DefinePublicType("$mod_" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary));
             tg.AddCodeContextField();
             tg.DefaultConstructor = tg.TypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
 

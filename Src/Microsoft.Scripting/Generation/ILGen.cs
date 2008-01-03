@@ -401,7 +401,7 @@ namespace Microsoft.Scripting.Generation {
                     break;
                 default:
                     if (index <= Byte.MaxValue) {
-                        Emit(OpCodes.Ldarg_S, index);
+                        Emit(OpCodes.Ldarg_S, (byte)index);
                     } else {
                         this.Emit(OpCodes.Ldarg, index);
                     }

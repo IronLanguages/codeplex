@@ -29,6 +29,7 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using Microsoft.Scripting.Utils;
+    using Microsoft.Scripting.Actions;
 
     internal class AstGenerator {
         private readonly MSAst.CodeBlock _block;
@@ -142,7 +143,7 @@ namespace IronPython.Compiler.Ast {
             // Do we need conversion?
             if (!CanAssign(type, expression.Type)) {
                 // Add conversion step to the AST
-                expression = Ast.DynamicConvert(expression, type);
+                expression = Ast.Action.ConvertTo(type, ConversionResultKind.ExplicitCast, expression);
             }
             return expression;
         }

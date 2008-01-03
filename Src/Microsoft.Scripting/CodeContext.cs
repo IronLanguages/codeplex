@@ -42,7 +42,7 @@ namespace Microsoft.Scripting {
         /// <summary> can be any dictionary or IMapping. </summary>        
         private readonly Scope _scope;
         private readonly LanguageContext _languageContext;
-        private ModuleContext _moduleContext; // internally mutable, optional (shouldn't be used when not set)
+        private ScopeExtension _moduleContext; // internally mutable, optional (shouldn't be used when not set)
         private LocalScope _localScope;
         private CodeContext _parent; // TODO: Ruby hack, move to local scope
 
@@ -51,22 +51,15 @@ namespace Microsoft.Scripting {
             _parent = parent;
         }
 
-        public CodeContext(Scope scope, LanguageContext languageContext, ModuleContext moduleContext) {
-            Assert.NotNull(scope, languageContext, moduleContext);
-
-            _languageContext = languageContext;
-            _moduleContext = moduleContext;
-            _scope = scope;
+        public CodeContext(Scope scope, LanguageContext languageContext)
+            : this(scope, languageContext, null) {
         }
 
-        /// <summary>
-        /// Called only from OptimizedModuleGenerator. ModuleContext will be set later.
-        /// </summary>
-        internal CodeContext(Scope scope, LanguageContext languageContext) {
+        public CodeContext(Scope scope, LanguageContext languageContext, ScopeExtension moduleContext) {
             Assert.NotNull(scope, languageContext);
 
             _languageContext = languageContext;
-            _moduleContext = null;
+            _moduleContext = moduleContext;
             _scope = scope;
         }
 
@@ -93,17 +86,11 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public ModuleContext ModuleContext {
+        public ScopeExtension ModuleContext {
             get {
-                return _moduleContext;
-            }
-            // friend: ScriptDomainManager.CreateModule
-            internal set {
-                Assert.NotNull(value);
-                _moduleContext = value;
+                return _moduleContext ?? _languageContext.EnsureScopeExtension(_scope);
             }
         }
-
 
         #endregion
     }   

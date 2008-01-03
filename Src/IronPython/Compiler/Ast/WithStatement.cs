@@ -156,14 +156,7 @@ namespace IronPython.Compiler.Ast {
 
                 // except:
                 ).Catch(typeof(Exception), exception.Variable,
-                    Ast.Try(
-                        // Python specific exception handling code
-                        Ast.Statement(
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("PushExceptionHandler"),
-                                exception
-                            )
-                        ),
+                    Ast.Block(
                         // Python specific exception handling code
                         Ast.Statement(
                             Ast.Call(
@@ -178,15 +171,8 @@ namespace IronPython.Compiler.Ast {
                         //  if not exit(*sys.exc_info()):
                         //      raise
                         Ast.IfThen(
-                            Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit)),
+                            Ast.Action.Operator(Operators.Not, typeof(bool), MakeExitCall(exit, exception)),
                             Ast.Rethrow()
-                        )
-                    ).Finally(
-                        // Python specific exception handling code
-                        Ast.Statement(
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("PopExceptionHandler")
-                            )
                         )
                     )
                 // finally:
@@ -211,14 +197,18 @@ namespace IronPython.Compiler.Ast {
             return Ast.Block(_body.Span, statements);
         }
 
-        private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit) {
-            // exit(*sys.exc_info())
+        private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit, MSAst.Expression exception) {
+            // The 'with' statement's exceptional clause explicitly does not set the thread's current exception information.
+            // So while the pseudo code says:
+            //    exit(*sys.exc_info())
+            // we'll actually do:
+            //    exit(*PythonOps.GetExceptionInfoLocal($exception))
             return Ast.Action.Call(
                 CallAction.Make(new CallSignature(MSAst.ArgumentKind.List)),
                 typeof(bool),
                 exit,
                 Ast.Call(
-                    AstGenerator.GetHelperMethod("GetExceptionInfo")
+                    AstGenerator.GetHelperMethod("GetExceptionInfoLocal"), exception
                 )
             );
         }

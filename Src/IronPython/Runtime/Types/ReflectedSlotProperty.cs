@@ -146,10 +146,11 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotGetValue, MethodInfo> CreateGetter() {
-            Compiler getter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("get_" + _slotInfo.Index.ToString(),
+            Compiler getter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+                "get_" + _slotInfo.Index.ToString(),
                 typeof(object),
-                new Type[] { typeof(object) },
-                null);
+                new Type[] { typeof(object) }
+            );
 
 
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");
@@ -167,10 +168,11 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotSetValue, MethodInfo> CreateSetter() {
-            Compiler setter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("set_" + _slotInfo.Index.ToString(),
-                                    typeof(void),
-                                    new Type[] { typeof(object), typeof(object) },
-                                    null);
+            Compiler setter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+                "set_" + _slotInfo.Index.ToString(),
+                typeof(void),
+                new Type[] { typeof(object), typeof(object) }
+            );
 
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");
 

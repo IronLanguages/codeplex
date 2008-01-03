@@ -115,9 +115,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.DoStatement:
                     DefaultWalk((DoStatement)node);
                     break;
-                case AstNodeType.DynamicConversionExpression:
-                    DefaultWalk((DynamicConversionExpression)node);
-                    break;
                 case AstNodeType.EmptyStatement:
                     DefaultWalk((EmptyStatement)node);
                     break;
@@ -261,14 +258,6 @@ namespace Microsoft.Scripting.Ast {
         // DeleteUnboundExpression
         private void DefaultWalk(DeleteUnboundExpression node) {
             Walk(node);
-            PostWalk(node);
-        }
-
-        // DynamicConversionExpression
-        private void DefaultWalk(DynamicConversionExpression node) {
-            if (Walk(node)) {
-                WalkNode(node.Expression);
-            }
             PostWalk(node);
         }
 

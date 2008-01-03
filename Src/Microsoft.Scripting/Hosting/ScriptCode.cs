@@ -18,11 +18,13 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
     /// ScriptCode is an instance of compiled code that is bound to a specific LanguageContext
-    /// but not a specific ScriptModule.  The code can be re-executed multiple times in different
+    /// but not a specific ScriptScope.  The code can be re-executed multiple times in different
     /// contexts. Hosting API counterpart for this class is <see cref="CompiledCode"/>.
     /// </summary>
     public class ScriptCode {
@@ -108,31 +110,38 @@ namespace Microsoft.Scripting {
             return _simpleTarget(codeContext);
         }
 
-        public object Run(ScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
+        public object Run(Scope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
 
-            ModuleContext moduleContext = _languageContext.EnsureModuleContext(module);
-            return Run(new CodeContext(module.Scope, _languageContext, moduleContext), false);
+            ScopeExtension scopeExtension = _languageContext.EnsureScopeExtension(scope);
+            return Run(new CodeContext(scope, _languageContext, scopeExtension), false);
         }
 
-        public object Run(Scope scope, ModuleContext moduleContext) {
+        public object Run(Scope/*!*/ scope, ScopeExtension/*!*/ moduleContext) {
             return Run(scope, moduleContext, false);
         }
 
-        public object Run(Scope scope, ModuleContext moduleContext, bool tryEvaluate) {
+        public object Run(Scope/*!*/ scope, ScopeExtension/*!*/ moduleContext, bool tryEvaluate) {
             Contract.RequiresNotNull(scope, "scope");
             Contract.RequiresNotNull(moduleContext, "moduleContext");
 
             return Run(new CodeContext(scope, _languageContext, moduleContext), tryEvaluate);
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return string.Format("ScriptCode '{0}' from {1}", SourceUnit, _languageContext.DisplayName);
         }
 
-        public static ScriptCode FromCompiledCode(CompiledCode compiledCode) {
+        public static ScriptCode/*!*/ FromCompiledCode(CompiledCode/*!*/ compiledCode) {
             Contract.RequiresNotNull(compiledCode, "compiledCode");
             return compiledCode.ScriptCode;
+        }
+
+        public Scope/*!*/ MakeOptimizedScope() {
+            Scope scope = OptimizedModuleGenerator.Create(this).GenerateScope();
+            _languageContext.EnsureScopeExtension(scope);
+            return scope;
         }
     }
 }

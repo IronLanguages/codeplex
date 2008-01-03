@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -37,12 +38,14 @@ namespace Microsoft.Scripting.Actions {
             get { return DynamicActionKind.DoOperation; }
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             DoOperationAction other = obj as DoOperationAction;
             if (other == null) return false;
             return _operation == other._operation;
         }
 
+        [Confined]
         public override int GetHashCode() {
             return (int)Kind << 28 ^ ((int)_operation) ;
         }
@@ -91,7 +94,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return base.ToString() + " " + _operation.ToString();
         }
     }

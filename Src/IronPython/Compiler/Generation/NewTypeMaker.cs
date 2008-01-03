@@ -35,7 +35,6 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Generation {
-    using Compiler = Microsoft.Scripting.Ast.Compiler;
     /// <summary>
     /// Python class hierarchy is represented using the __class__ field in the object. It does not 
     /// use the CLI type system for pure Python types. However, Python types which inherit from a 
@@ -59,13 +58,17 @@ namespace IronPython.Compiler.Generation {
 
         protected Type _baseType;
         protected IList<string> _slots;
-        protected TypeGen _tg;
-        protected Slot _typeField, _dictField, _weakrefField, _slotsField;
+        protected TypeBuilder _tg;
+        protected FieldInfo _typeField;
+        protected FieldInfo _dictField;
+        protected FieldInfo _weakrefField;
+        protected FieldInfo _slotsField;
         protected Type _tupleType;
         protected IEnumerable<Type> _interfaceTypes;
         protected PythonTuple _baseClasses;
 
         private bool _hasBaseTypeField;
+        private int _site;
 
         private Dictionary<string, VTableEntry> _vtable = new Dictionary<string, VTableEntry>();
 
@@ -91,7 +94,7 @@ namespace IronPython.Compiler.Generation {
                 Type tupleType = Tuple.MakeTupleType(CompilerHelpers.MakeRepeatedArray(typeof(object), typeInfo.Slots.Count));
                 ret = ret.MakeGenericType(tupleType);
 
-                for (int i = 0; i < typeInfo.Slots.Count; i++) {                    
+                for (int i = 0; i < typeInfo.Slots.Count; i++) {
                     string name = typeInfo.Slots[i];
                     if (name.StartsWith("__") && !name.EndsWith("__")) {
                         name = "_" + typeName + name;
@@ -103,7 +106,7 @@ namespace IronPython.Compiler.Generation {
                     } else if (name == "__weakref__") {
                         continue;
                     }
-                    
+
                     dict[SymbolTable.StringToId(name)] = new ReflectedSlotProperty(name, ret, i);
                 }
             }
@@ -278,7 +281,7 @@ namespace IronPython.Compiler.Generation {
                         baseInterfaces.Add(dt.ExtensionType);
                     } else if (IsInstanceType(dt.ExtensionType)) {
                         processing.Enqueue(dt);
-                    } else if(!Mro.IsOldStyle(dt)) {
+                    } else if (!Mro.IsOldStyle(dt)) {
                         curTypeToExtend = null;
                         break;
                     }
@@ -333,15 +336,14 @@ namespace IronPython.Compiler.Generation {
         }
 
         protected void ImplementInterface(Type interfaceType) {
-            _tg.TypeBuilder.AddInterfaceImplementation(interfaceType);
+            _tg.AddInterfaceImplementation(interfaceType);
         }
 
         private Type CreateNewType() {
             AssemblyGen ag = ScriptDomainManager.CurrentManager.Snippets.Assembly;
 
             string name = GetName();
-            _tg = ag.DefinePublicType(TypePrefix + name, _baseType);
-            _tg.Binder = PythonBinder.Instance;
+            _tg = ag.DefinePublicType(TypePrefix + name, _baseType).TypeBuilder;
 
             ImplementInterfaces();
 
@@ -371,7 +373,7 @@ namespace IronPython.Compiler.Generation {
             // Hashtable slots = collectSlots(dict, tg);
             // if (slots != null) tg.createAttrMethods(slots);
 
-            Type ret = _tg.FinishType();
+            Type ret = FinishType();
 
             AddBaseMethods(ret, specialNames);
 
@@ -392,21 +394,18 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void GetOrDefineDict() {
-            FieldInfo baseDictField = _baseType.GetField("_dict");
-            if (baseDictField == null) {
-                _dictField = _tg.AddField(typeof(IAttributesCollection), "__dict__");
-            } else {
-                _dictField = new FieldSlot(new ThisSlot(_tg.TypeBuilder), baseDictField);
+            _dictField = _baseType.GetField("_dict");
+            if (_dictField == null) {
+                _dictField = _tg.DefineField("__dict__", typeof(IAttributesCollection), FieldAttributes.Public);
             }
         }
 
         private void GetOrDefineClass() {
-            FieldInfo baseTypeField = _baseType.GetField("__class__");
-            if (baseTypeField == null) {
-                _typeField = _tg.AddField(typeof(PythonType), "__class__");
+            _typeField = _baseType.GetField("__class__");
+            if (_typeField == null) {
+                _typeField = _tg.DefineField("__class__", typeof(PythonType), FieldAttributes.Public);
             } else {
-                Debug.Assert(baseTypeField.FieldType == typeof(PythonType));
-                _typeField = new FieldSlot(new ThisSlot(_tg.TypeBuilder), baseTypeField);
+                Debug.Assert(_typeField.FieldType == typeof(PythonType));
                 _hasBaseTypeField = true;
             }
         }
@@ -414,14 +413,14 @@ namespace IronPython.Compiler.Generation {
         protected virtual ParameterInfo[] GetOverrideCtorSignature(ParameterInfo[] original) {
             ParameterInfo[] argTypes = new ParameterInfo[original.Length + 1];
             if (original.Length == 0 || original[0].ParameterType != typeof(CodeContext)) {
-                argTypes[0] = new ParameterInfoWrapper(_typeField.Type, "cls");
+                argTypes[0] = new ParameterInfoWrapper(_typeField.FieldType, "cls");
                 Array.Copy(original, 0, argTypes, 1, argTypes.Length - 1);
             } else {
                 argTypes[0] = original[0];
-                argTypes[1] = new ParameterInfoWrapper(_typeField.Type, "cls");
+                argTypes[1] = new ParameterInfoWrapper(_typeField.FieldType, "cls");
                 Array.Copy(original, 1, argTypes, 2, argTypes.Length - 2);
-            }            
-            
+            }
+
             return argTypes;
         }
 
@@ -497,7 +496,7 @@ namespace IronPython.Compiler.Generation {
                 paramNames[i] = overrideParams[i].Name;
             }
 
-            ConstructorBuilder cb = _tg.TypeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, argTypes);
+            ConstructorBuilder cb = _tg.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, argTypes);
 
             for (int i = 0; i < overrideParams.Length; i++) {
                 ParameterBuilder pb = cb.DefineParameter(i + 1,
@@ -516,27 +515,29 @@ namespace IronPython.Compiler.Generation {
                 }
             }
 
-            Compiler cg = _tg.CreateCodeGen(cb, cb.GetILGenerator(), argTypes);
+            ILGen il = CreateILGen(cb.GetILGenerator());
 
             // <typeField> = <arg0>
+            il.EmitLoadArg(0);
             if (pis.Length == 0 || pis[0].ParameterType != typeof(CodeContext)) {
-                cg.EmitArgGet(0);
-            } else {                
-                cg.EmitArgGet(1);
+                il.EmitLoadArg(1);
+            } else {
+                il.EmitLoadArg(2);
             }
-            _typeField.EmitSet(cg);
+            il.EmitFieldSet(_typeField);
 
             // initialize all slots to Uninitialized.instance
             if (_slots != null) {
                 MethodInfo init = typeof(PythonOps).GetMethod("InitializeUserTypeSlots");
 
-                cg.EmitType(_tupleType);
-                cg.EmitCall(init);
-                cg.EmitUnbox(_tupleType);
-                _slotsField.EmitSet(cg);
+                il.EmitLoadArg(0);
+                il.EmitType(_tupleType);
+                il.EmitCall(init);
+                il.EmitUnbox(_tupleType);
+                il.EmitFieldSet(_slotsField);
             }
 
-            CallBaseConstructor(parentConstructor, pis, overrideParams, cg);
+            CallBaseConstructor(parentConstructor, pis, overrideParams, il);
             return cb;
         }
 
@@ -559,8 +560,8 @@ namespace IronPython.Compiler.Generation {
             return i - (overrideParams.Length - pis.Length);
         }
 
-        private static void CallBaseConstructor(ConstructorInfo parentConstructor, ParameterInfo[] pis, ParameterInfo[] overrideParams, Compiler cg) {
-            cg.EmitThis();
+        private static void CallBaseConstructor(ConstructorInfo parentConstructor, ParameterInfo[] pis, ParameterInfo[] overrideParams, ILGen il) {
+            il.EmitLoadArg(0);
 #if DEBUG
             int lastIndex = -1;
 #endif
@@ -575,10 +576,12 @@ namespace IronPython.Compiler.Generation {
                     lastIndex = index;
                 }
 #endif
-                if(index >= 0) cg.EmitArgGet(i);
+                if (index >= 0) {
+                    il.EmitLoadArg(i + 1);
+                }
             }
-            cg.Emit(OpCodes.Call, parentConstructor);
-            cg.Emit(OpCodes.Ret);
+            il.Emit(OpCodes.Call, parentConstructor);
+            il.Emit(OpCodes.Ret);
         }
 
         private void InitializeVTableStrings() {
@@ -587,16 +590,36 @@ namespace IronPython.Compiler.Generation {
                 names[slot.index] = slot.name;
             }
 
-            Slot namesField = _tg.AddStaticField(typeof(string[]), VtableNamesField);
+            FieldBuilder namesField = _tg.DefineField(VtableNamesField, typeof(string[]), FieldAttributes.Public | FieldAttributes.Static);
 
-            Compiler cg = _tg.TypeInitializer;
-            cg.EmitArray(names);
-            namesField.EmitSet(cg);
+            ILGen il = GetCCtor();
+            il.EmitArray(names);
+            il.EmitFieldSet(namesField);
         }
+
+        private ILGen _cctor;
+        private LocalBuilder _cctorSymbolIdTemp;
+
+        ILGen GetCCtor() {
+            if (_cctor == null) {
+                ConstructorBuilder cctor = _tg.DefineTypeInitializer();
+                _cctor = CreateILGen(cctor.GetILGenerator());
+            }
+            return _cctor;
+        }
+
+        LocalBuilder GetCCtorSymbolIdTemp() {
+            ILGen cctor = GetCCtor();
+            if (_cctorSymbolIdTemp == null)  {
+                _cctorSymbolIdTemp = cctor.DeclareLocal(typeof(SymbolId));
+            }
+            return _cctorSymbolIdTemp;
+        }
+
 
 #if !SILVERLIGHT // ICustomTypeDescriptor
         private void ImplementCustomTypeDescriptor() {
-            _tg.TypeBuilder.AddInterfaceImplementation(typeof(ICustomTypeDescriptor));
+            ImplementInterface(typeof(ICustomTypeDescriptor));
 
             foreach (MethodInfo m in typeof(ICustomTypeDescriptor).GetMethods()) {
                 ImplementCTDOverride(m);
@@ -604,21 +627,22 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void ImplementCTDOverride(MethodInfo m) {
-            Compiler cg = _tg.DefineExplicitInterfaceImplementation(m);
-            cg.EmitThis();
+            MethodBuilder builder;
+            ILGen il = DefineExplicitInterfaceImplementation(m, out builder);
+            il.EmitLoadArg(0);
 
             ParameterInfo[] pis = m.GetParameters();
             Type[] paramTypes = new Type[pis.Length + 1];
             paramTypes[0] = typeof(object);
             for (int i = 0; i < pis.Length; i++) {
-                cg.EmitArgGet(i);
+                il.EmitLoadArg(i + 1);
                 paramTypes[i + 1] = pis[i].ParameterType;
             }
 
-            cg.EmitCall(typeof(CustomTypeDescHelpers), m.Name, paramTypes);
-            cg.EmitBoxing(m.ReturnType);
-            cg.EmitReturn();
-            cg.Finish();
+            il.EmitCall(typeof(CustomTypeDescHelpers), m.Name, paramTypes);
+            il.EmitBoxing(m.ReturnType);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(builder, m);
         }
 #endif
 
@@ -626,7 +650,7 @@ namespace IronPython.Compiler.Generation {
             get {
                 if (_slots == null) return true;
                 if (_slots.Contains("__dict__")) return true;
-                
+
                 foreach (PythonType pt in _baseClasses) {
                     if (IsInstanceType(pt.UnderlyingSystemType)) return true;
                 }
@@ -636,89 +660,92 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void ImplementDynamicObject() {
-            _tg.TypeBuilder.AddInterfaceImplementation(typeof(IDynamicObject));
+            ImplementInterface(typeof(IDynamicObject));
+            MethodInfo decl;
+            MethodBuilder impl;
+            ILGen il;
 
-            Compiler getRuleMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("GetRule"));
+            il = DefineMethodOverride(typeof(IDynamicObject), "GetRule", out decl, out impl);
             MethodInfo mi = typeof(UserTypeOps).GetMethod("GetRuleHelper");
-            GenericTypeParameterBuilder[] types = ((MethodBuilder)getRuleMethod.Method).DefineGenericParameters("T");
+            GenericTypeParameterBuilder[] types = impl.DefineGenericParameters("T");
 
-            for (int i = 0; i < 3; i++) getRuleMethod.EmitArgGet(i);
+            for (int i = 1; i < 4; i++) {
+                il.EmitLoadArg(i);
+            }
 
-            getRuleMethod.EmitCall(mi.MakeGenericMethod(types));
-            getRuleMethod.EmitReturn();
-            getRuleMethod.Finish();
+            il.EmitCall(mi.MakeGenericMethod(types));
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            Compiler getContextMethod = _tg.DefineMethodOverride(typeof(IDynamicObject).GetMethod("get_LanguageContext"));
-            getContextMethod.EmitCall(typeof(PythonOps), "GetLanguageContext");
-            getContextMethod.EmitReturn();
-            getContextMethod.Finish();
+            il = DefineMethodOverride(typeof(IDynamicObject), "get_LanguageContext", out decl, out impl);
+            il.EmitCall(typeof(PythonOps), "GetLanguageContext");
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
         }
 
         private void ImplementSuperDynamicObject() {
-            Compiler cg;
+            ILGen il;
+            MethodInfo decl;
+            MethodBuilder impl;
 
-            _tg.TypeBuilder.AddInterfaceImplementation(typeof(IPythonObject));
+            ImplementInterface(typeof(IPythonObject));
 
             MethodAttributes attrs = (MethodAttributes)0;
             if (_slots != null) attrs = MethodAttributes.Virtual;
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_Dict"));
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_Dict", out decl, out impl);
             if (NeedsDictionary) {
-                _dictField.EmitGet(cg);
-                cg.EmitReturn();
+                il.EmitLoadArg(0);
+                il.EmitFieldGet(_dictField);
             } else {
-                cg.Emit(OpCodes.Ldnull);
-                cg.EmitReturn();
+                il.EmitNull();
             }
-            cg.Finish();
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("ReplaceDict"));
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "ReplaceDict", out decl, out impl);
             if (NeedsDictionary) {
-                cg.EmitArgGet(0);
-                _dictField.EmitSet(cg);
-                cg.EmitBoolean(true);
-                cg.EmitReturn();
+                il.EmitLoadArg(0);
+                il.EmitLoadArg(1);
+                il.EmitFieldSet(_dictField);
+                il.EmitBoolean(true);
             } else {
-                cg.EmitBoolean(false);
-                cg.EmitReturn();
+                il.EmitBoolean(false);
             }
-            cg.Finish();
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_HasDictionary"));
-            if (NeedsDictionary) {
-                cg.EmitBoolean(true);
-                cg.EmitReturn();
-            } else {
-                cg.EmitBoolean(false);
-                cg.EmitReturn();
-            }
-            cg.Finish();
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_HasDictionary", out decl, out impl);
+            il.EmitBoolean(NeedsDictionary);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("SetDict"));
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetDict", out decl, out impl);
             if (NeedsDictionary) {
-                _dictField.EmitGetAddr(cg);
-                cg.EmitArgGet(0);
-                cg.EmitCall(typeof(UserTypeOps), "SetDictHelper");
-                                
-                cg.EmitReturn();
+                il.EmitLoadArg(0);
+                il.EmitFieldAddress(_dictField);
+                il.EmitLoadArg(1);
+                il.EmitCall(typeof(UserTypeOps), "SetDictHelper");
             } else {
-                cg.EmitNull();
-                cg.EmitReturn();
+                il.EmitNull();
             }
-            cg.Finish();
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
             if (_hasBaseTypeField) return;
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("get_PythonType"));
-            _typeField.EmitGet(cg);
-            cg.EmitReturn();
-            cg.Finish();
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "get_PythonType", out decl, out impl);
+            il.EmitLoadArg(0);
+            il.EmitFieldGet(_typeField);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(attrs, typeof(IPythonObject).GetMethod("SetPythonType"));
-            cg.EmitArgGet(0);
-            _typeField.EmitSet(cg);
-            cg.EmitReturn();
-            cg.Finish();
+            il = DefineMethodOverride(attrs, typeof(IPythonObject), "SetPythonType", out decl, out impl);
+            il.EmitLoadArg(0);
+            il.EmitLoadArg(1);
+            il.EmitFieldSet(_typeField);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
         }
 
         /// <summary>
@@ -730,12 +757,12 @@ namespace IronPython.Compiler.Generation {
         /// <param name="intf"></param>
         /// <param name="fExplicit"></param>
         private void DefineHelperInterface(Type intf, bool fExplicit) {
-            _tg.TypeBuilder.AddInterfaceImplementation(intf);
+            ImplementInterface(intf);
             MethodInfo[] mis = intf.GetMethods();
 
             foreach (MethodInfo mi in mis) {
-
-                Compiler cg = fExplicit ? _tg.DefineExplicitInterfaceImplementation(mi) : _tg.DefineMethodOverride(mi);
+                MethodBuilder impl;
+                ILGen il = fExplicit ? DefineExplicitInterfaceImplementation(mi, out impl) : DefineMethodOverride(mi, out impl);
                 ParameterInfo[] pis = mi.GetParameters();
 
                 MethodInfo helperMethod = typeof(UserTypeOps).GetMethod(mi.Name + "Helper");
@@ -745,17 +772,17 @@ namespace IronPython.Compiler.Generation {
                     // it as well.
                     Debug.Assert(helperMethod.GetParameters()[0].ParameterType == typeof(CodeContext));
                     offset = 1;
-                    cg.EmitArgGet(0);
-                } 
-
-                cg.EmitThis();
-                for (int i = offset; i < pis.Length; i++) {
-                    cg.EmitArgGet(i);
+                    il.EmitLoadArg(1);
                 }
 
-                cg.EmitCall(helperMethod);
-                cg.EmitReturn();
-                cg.Finish();
+                il.EmitLoadArg(0);
+                for (int i = offset; i < pis.Length; i++) {
+                    il.EmitLoadArg(i + 1);
+                }
+
+                il.EmitCall(helperMethod);
+                il.Emit(OpCodes.Ret);
+                _tg.DefineMethodOverride(impl, mi);
             }
         }
 
@@ -766,23 +793,20 @@ namespace IronPython.Compiler.Generation {
         }
 
         private void CreateWeakRefField() {
-            if (_weakrefField != null) return;
-
-            FieldInfo fi = _baseType.GetField("__weakref__");
-            if (fi != null) {
-                // base defines it
-                _weakrefField = new FieldSlot(new ThisSlot(_baseType), fi);
+            if (_weakrefField != null) {
+                return;
             }
 
+            _weakrefField = _baseType.GetField("__weakref__");
             if (_weakrefField == null) {
-                _weakrefField = _tg.AddField(typeof(WeakRefTracker), "__weakref__");
+                _weakrefField = _tg.DefineField("__weakref__", typeof(WeakRefTracker), FieldAttributes.Public);
             }
         }
 
         internal bool BaseHasWeakRef(PythonType curType) {
             PythonType dt = curType;
             PythonTypeSlot dts;
-            if (dt != null && 
+            if (dt != null &&
                 dt.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dts) &&
                 dt.TryLookupSlot(DefaultContext.Default, Symbols.WeakRef, out dts)) {
                 return true;
@@ -793,6 +817,7 @@ namespace IronPython.Compiler.Generation {
             }
             return false;
         }
+
         protected virtual void ImplementWeakReference() {
             CreateWeakRefField();
 
@@ -813,51 +838,55 @@ namespace IronPython.Compiler.Generation {
                 isWeakRefAble = false;
             }
 
-            _tg.TypeBuilder.AddInterfaceImplementation(typeof(IWeakReferenceable));
+            ImplementInterface(typeof(IWeakReferenceable));
+            MethodInfo decl;
+            MethodBuilder impl;
+            ILGen il;
 
-            Compiler cg = _tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetWeakRef"));
+            il = DefineMethodOverride(typeof(IWeakReferenceable), "SetWeakRef", out decl, out impl);
             if (!isWeakRefAble) {
-                cg.EmitBoolean(false);
-                cg.EmitReturn();
+                il.EmitBoolean(false);
             } else {
-                cg.EmitArgGet(0);
-                _weakrefField.EmitSet(cg);
-                cg.EmitBoolean(true);
-                cg.EmitReturn();
+                il.EmitLoadArg(0);
+                il.EmitLoadArg(1);
+                il.EmitFieldSet(_weakrefField);
+                il.EmitBoolean(true);
             }
-            cg.Finish();
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("SetFinalizer"));
-            cg.EmitArgGet(0);
-            _weakrefField.EmitSet(cg);
-            cg.EmitReturn();
-            cg.Finish();
+            il = DefineMethodOverride(typeof(IWeakReferenceable), "SetFinalizer", out decl, out impl);
+            il.EmitLoadArg(0);
+            il.EmitLoadArg(1);
+            il.EmitFieldSet(_weakrefField);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
 
-            cg = _tg.DefineMethodOverride(typeof(IWeakReferenceable).GetMethod("GetWeakRef"));
-            _weakrefField.EmitGet(cg);
-            cg.EmitReturn();
-            cg.Finish();
+            il = DefineMethodOverride(typeof(IWeakReferenceable), "GetWeakRef", out decl, out impl);
+            il.EmitLoadArg(0);
+            il.EmitFieldGet(_weakrefField);
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, decl);
         }
 
         private void ImplementSlots() {
             if (_slots != null) {
-                GenericTypeParameterBuilder[] tbp = _tg.TypeBuilder.DefineGenericParameters("Slots");
-                _slotsField = _tg.AddField(tbp[0], ".SlotValues");
+                GenericTypeParameterBuilder[] tbp = _tg.DefineGenericParameters("Slots");
+                _slotsField = _tg.DefineField(".SlotValues", tbp[0], FieldAttributes.Public);
                 _tupleType = tbp[0];
 
-                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0]);
-
-                Compiler getter = _tg.DefineMethod(MethodAttributes.Public,
-                        "get_$SlotValues",
-                        tbp[0],
-                        ArrayUtils.EmptyTypes,
-                        ArrayUtils.EmptyStrings);
-
-                _slotsField.EmitGet(getter);
-                getter.EmitReturn();
-                getter.Finish();
-
-                pb.SetGetMethod(getter.Method as MethodBuilder);
+                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0], ArrayUtils.EmptyTypes);
+                MethodBuilder mb = _tg.DefineMethod(
+                    "get_$SlotValues",
+                    MethodAttributes.Public,
+                    tbp[0],
+                    ArrayUtils.EmptyTypes
+                );
+                ILGen il = CreateILGen(mb.GetILGenerator());
+                il.EmitLoadArg(0);
+                il.EmitFieldGet(_slotsField);
+                il.Emit(OpCodes.Ret);
+                pb.SetGetMethod(mb);
             }
         }
 
@@ -868,35 +897,37 @@ namespace IronPython.Compiler.Generation {
 
             FieldInfo[] fields = _baseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance);
             foreach (FieldInfo fi in fields) {
-                if (!fi.IsFamily) continue;
+                if (!fi.IsFamily) {
+                    continue;
+                }
 
-                Compiler cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
-                                             FieldGetterPrefix + fi.Name, fi.FieldType, ArrayUtils.EmptyTypes, ArrayUtils.EmptyStrings);
+                MethodBuilder method;
+                method = _tg.DefineMethod(FieldGetterPrefix + fi.Name, MethodAttributes.Public | MethodAttributes.HideBySig,
+                                          fi.FieldType, ArrayUtils.EmptyTypes);
+                ILGen il = CreateILGen(method.GetILGenerator());
+                il.EmitLoadArg(0);
+                il.EmitFieldGet(fi);
+                il.Emit(OpCodes.Ret);
 
-                cg.EmitThis();
-                cg.EmitFieldGet(fi);
-                cg.EmitReturn();
-                cg.Finish();
-
-                cg = _tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
-                                             FieldSetterPrefix + fi.Name, null, new Type[] { fi.FieldType }, new string[] { "value" });
-
-                cg.EmitThis();
-                cg.EmitArgGet(0);
-                cg.EmitFieldSet(fi);                
-                cg.EmitReturn();
-                cg.Finish();
+                method = _tg.DefineMethod(FieldSetterPrefix + fi.Name, MethodAttributes.Public | MethodAttributes.HideBySig,
+                                          null, new Type[] { fi.FieldType });
+                method.DefineParameter(1, ParameterAttributes.None, "value");
+                il = CreateILGen(method.GetILGenerator());
+                il.EmitLoadArg(0);
+                il.EmitLoadArg(1);
+                il.EmitFieldSet(fi);
+                il.Emit(OpCodes.Ret);
             }
         }
 
         private void OverrideVirtualMethods(Type type, Dictionary<string, List<string>> specialNames) {
             // if we have conflicting virtual's do to new slots only override the methods on the
             // most derived class.
-            Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo> added = new Dictionary<KeyValuePair<string,MethodSignatureInfo>, MethodInfo>();
-            
+            Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo> added = new Dictionary<KeyValuePair<string, MethodSignatureInfo>, MethodInfo>();
+
             MethodInfo overridden;
             MethodInfo[] methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            
+
             foreach (MethodInfo mi in methods) {
                 KeyValuePair<string, MethodSignatureInfo> key = new KeyValuePair<string, MethodSignatureInfo>(mi.Name, new MethodSignatureInfo(mi.IsStatic, mi.GetParameters()));
 
@@ -933,7 +964,7 @@ namespace IronPython.Compiler.Generation {
                     List<string> methodNames = new List<string>();
                     methodNames.Add(mi.Name);
                     specialNames[mi.Name] = methodNames;
-                    CreateVirtualMethodHelper(_tg, mi);
+                    CreateVirtualMethodHelper(mi);
                 }
                 return;
             }
@@ -944,17 +975,17 @@ namespace IronPython.Compiler.Generation {
             List<string> names = new List<string>();
             names.Add(mi.Name);
             specialNames[mi.Name] = names;
-            foreach (PropertyInfo pi in pis) {                
+            foreach (PropertyInfo pi in pis) {
                 if (pi.GetIndexParameters().Length > 0) {
                     if (mi == pi.GetGetMethod(true)) {
                         names.Add("__getitem__");
                         CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__getitem__"));
-                        if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
+                        if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                         return;
                     } else if (mi == pi.GetSetMethod(true)) {
                         names.Add("__setitem__");
                         CreateVTableMethodOverride(mi, GetOrMakeVTableEntry("__setitem__"));
-                        if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
+                        if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                         return;
                     }
                 } else if (mi == pi.GetGetMethod(true)) {
@@ -962,14 +993,14 @@ namespace IronPython.Compiler.Generation {
                         names.Add("__getitem__");
                         if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                         CreateVTableGetterOverride(mi, GetOrMakeVTableEntry(name));
-                        if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
+                        if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                     }
                     return;
                 } else if (mi == pi.GetSetMethod(true)) {
                     names.Add("__setitem__");
                     if (NameConverter.TryGetName(DynamicHelpers.GetPythonTypeFromType(mi.DeclaringType), pi, mi, out name) == NameType.None) return;
                     CreateVTableSetterOverride(mi, GetOrMakeVTableEntry(name));
-                    if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
+                    if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
                     return;
                 }
             }
@@ -991,20 +1022,23 @@ namespace IronPython.Compiler.Generation {
         }
 
         /// <summary>
-        /// Loads all the incoming arguments of cg and forwards them to mi which
+        /// Loads all the incoming arguments and forwards them to mi which
         /// has the same signature and then returns the result
         /// </summary>
-        private static void EmitBaseMethodDispatch(MethodInfo mi, Compiler cg) {
+        private static void EmitBaseMethodDispatch(MethodInfo mi, ILGen il) {
             if (!mi.IsAbstract) {
-                cg.EmitThis();
-                foreach (Slot argSlot in cg.ArgumentSlots) argSlot.EmitGet(cg);
-                cg.EmitCall(OpCodes.Call, mi, null); // base call must be non-virtual
-                cg.EmitReturn();
+                il.EmitLoadArg(0);
+                ParameterInfo[] parameters = mi.GetParameters();
+                for (int i = 0; i < parameters.Length; i++) {
+                    il.EmitLoadArg(i + 1);
+                }
+                il.EmitCall(OpCodes.Call, mi, null); // base call must be non-virtual
+                il.Emit(OpCodes.Ret);
             } else {
-                cg.EmitThis();
-                cg.EmitString(mi.Name);
-                cg.EmitCall(typeof(PythonOps), "MissingInvokeMethodException");
-                cg.Emit(OpCodes.Throw);
+                il.EmitLoadArg(0);
+                il.EmitString(mi.Name);
+                il.EmitCall(typeof(PythonOps), "MissingInvokeMethodException");
+                il.Emit(OpCodes.Throw);
             }
         }
 
@@ -1032,9 +1066,9 @@ namespace IronPython.Compiler.Generation {
             names.Add(mi.Name);
             if (name != mi.Name) names.Add(name);
             specialNames[mi.Name] = names;
-            
+
             CreateVTableMethodOverride(mi, GetOrMakeVTableEntry(name));
-            if (!mi.IsAbstract) CreateVirtualMethodHelper(_tg, mi);
+            if (!mi.IsAbstract) CreateVirtualMethodHelper(mi);
         }
 
         private VTableEntry GetOrMakeVTableEntry(string name) {
@@ -1044,18 +1078,6 @@ namespace IronPython.Compiler.Generation {
             ret = new VTableEntry(name, _vtable.Count);
             _vtable[name] = ret;
             return ret;
-        }
-
-        private static void EmitBadCallThrow(Compiler cg, MethodInfo mi, string reason) {
-            cg.EmitString("Cannot override method from IronPython {0} because " + reason);
-            cg.EmitInt(1);
-            cg.Emit(OpCodes.Newarr, typeof(object));
-            cg.Emit(OpCodes.Dup);
-            cg.EmitInt(0);
-            cg.EmitString(mi.Name);
-            cg.Emit(OpCodes.Stelem_Ref);
-            cg.EmitCall(typeof(PythonOps), "TypeError");
-            cg.Emit(OpCodes.Throw);
         }
 
         /// <summary>
@@ -1069,142 +1091,376 @@ namespace IronPython.Compiler.Generation {
         ///     def SomeVirtualFunction(self, ...):
         /// 
         /// </summary>
-        internal Slot EmitBaseClassCallCheckForProperties(Compiler cg, MethodInfo baseMethod, VTableEntry methField) {
-            Label instanceCall = cg.DefineLabel();
-            Slot callTarget = cg.GetLocalTmp(typeof(object));
+        internal LocalBuilder EmitBaseClassCallCheckForProperties(ILGen il, MethodInfo baseMethod, VTableEntry methField) {
+            Label instanceCall = il.DefineLabel();
+            LocalBuilder callTarget = il.DeclareLocal(typeof(object));
 
-            _typeField.EmitGet(cg);
-            cg.EmitThis();
-            EmitSymbolId(cg, methField.name);
-            callTarget.EmitGetAddr(cg);
-            cg.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedValueHelper");
+            il.EmitLoadArg(0);
+            il.EmitFieldGet(_typeField);
+            il.EmitLoadArg(0);
+            EmitSymbolId(il, methField.name);
+            il.Emit(OpCodes.Ldloca, callTarget);
+            il.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedValueHelper");
 
-            cg.Emit(OpCodes.Brtrue, instanceCall);
+            il.Emit(OpCodes.Brtrue, instanceCall);
 
-            EmitBaseMethodDispatch(baseMethod, cg);
+            EmitBaseMethodDispatch(baseMethod, il);
 
-            cg.MarkLabel(instanceCall);
+            il.MarkLabel(instanceCall);
 
             return callTarget;
         }
 
         private void CreateVTableGetterOverride(MethodInfo mi, VTableEntry methField) {
-            Compiler cg = _tg.DefineMethodOverride(mi);
-            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
+            MethodBuilder impl;
+            ILGen il = DefineMethodOverride(mi, out impl);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
 
-            callTarget.EmitGet(cg);
-            cg.EmitThis();
-            EmitSymbolId(cg, methField.name);
-            cg.EmitCall(typeof(UserTypeOps), "GetPropertyHelper");
+            il.Emit(OpCodes.Ldloc, callTarget);
+            il.EmitLoadArg(0);
+            EmitSymbolId(il, methField.name);
+            il.EmitCall(typeof(UserTypeOps), "GetPropertyHelper");
 
-            cg.EmitReturnFromObject();
-            cg.Finish();
+            if (!il.TryEmitImplicitCast(typeof(object), mi.ReturnType)) {
+                EmitConvertFromObject(il, mi.ReturnType);
+            }
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, mi);
+        }
+
+        /// <summary>
+        /// Emit code to convert object to a given type. This code is semantically equivalent
+        /// to PythonBinder.EmitConvertFromObject, except this version accepts ILGen whereas
+        /// PythonBinder accepts Compiler. The Binder will chagne soon and the two will merge.
+        /// </summary>
+        public static void EmitConvertFromObject(ILGen il, Type toType) {
+            if (toType == typeof(object)) return;
+
+            MethodInfo fastConvertMethod = PythonBinder.GetFastConvertMethod(toType);
+            if (fastConvertMethod != null) {
+                il.EmitCall(fastConvertMethod);
+            } else if (toType == typeof(void)) {
+                il.Emit(OpCodes.Pop);
+            } else if (typeof(Delegate).IsAssignableFrom(toType)) {
+                il.EmitType(toType);
+                il.EmitCall(typeof(Converter), "ConvertToDelegate");
+                il.Emit(OpCodes.Castclass, toType);
+            } else {
+                Label end = il.DefineLabel();
+                il.Emit(OpCodes.Dup);
+                il.Emit(OpCodes.Isinst, toType);
+
+                il.Emit(OpCodes.Brtrue_S, end);
+                il.Emit(OpCodes.Ldtoken, toType);
+                il.EmitCall(PythonBinder.GetGenericConvertMethod(toType));
+                il.MarkLabel(end);
+
+                il.Emit(OpCodes.Unbox_Any, toType); //??? this check may be redundant
+            }
         }
 
         private void CreateVTableSetterOverride(MethodInfo mi, VTableEntry methField) {
-            Compiler cg = _tg.DefineMethodOverride(mi);
-            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
+            MethodBuilder impl;
+            ILGen il = DefineMethodOverride(mi, out impl);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
 
-            callTarget.EmitGet(cg);  // property
-            cg.EmitThis();           // instance
-            cg.EmitArgGet(0);
-            cg.EmitBoxing(mi.GetParameters()[0].ParameterType);    // newValue
-            EmitSymbolId(cg, methField.name);    // name
-            cg.EmitCall(typeof(UserTypeOps), "SetPropertyHelper");
-
-            cg.EmitReturn();
-            cg.Finish();
+            il.Emit(OpCodes.Ldloc, callTarget);     // property
+            il.EmitLoadArg(0);                      // instance
+            il.EmitLoadArg(1);
+            il.EmitBoxing(mi.GetParameters()[0].ParameterType);    // newValue
+            EmitSymbolId(il, methField.name);    // name
+            il.EmitCall(typeof(UserTypeOps), "SetPropertyHelper");
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, mi);
         }
 
         private void CreateVTableEventOverride(MethodInfo mi, VTableEntry methField) {
-            // override the add/remove method            
-            Compiler cg = _tg.DefineMethodOverride(mi);
+            // override the add/remove method  
+            MethodBuilder impl;
+            ILGen il = DefineMethodOverride(mi, out impl);
 
-            Slot callTarget = EmitBaseClassCallCheckForProperties(cg, mi, methField);
+            LocalBuilder callTarget = EmitBaseClassCallCheckForProperties(il, mi, methField);
 
-            callTarget.EmitGet(cg);
-            cg.EmitThis();
-            _typeField.EmitGet(cg);
-            cg.EmitArgGet(0);
-            cg.EmitBoxing(mi.GetParameters()[0].ParameterType);
-            EmitSymbolId(cg, methField.name);
-            cg.EmitCall(typeof(UserTypeOps), "AddRemoveEventHelper");
-
-            cg.EmitReturn();
-            cg.Finish();
+            il.Emit(OpCodes.Ldloc, callTarget);
+            il.EmitLoadArg(0);
+            il.EmitLoadArg(0);
+            il.EmitFieldGet(_typeField);
+            il.EmitLoadArg(1);
+            il.EmitBoxing(mi.GetParameters()[0].ParameterType);
+            EmitSymbolId(il, methField.name);
+            il.EmitCall(typeof(UserTypeOps), "AddRemoveEventHelper");
+            il.Emit(OpCodes.Ret);
+            _tg.DefineMethodOverride(impl, mi);
         }
 
         private void CreateVTableMethodOverride(MethodInfo mi, VTableEntry methField) {
             ParameterInfo[] parameters = mi.GetParameters();
-            Compiler cg = (mi.IsVirtual && !mi.IsFinal) ? _tg.DefineMethodOverride(mi) : _tg.DefineMethod(
-                mi.IsVirtual ? (mi.Attributes | MethodAttributes.NewSlot) : mi.Attributes,
+            MethodBuilder impl;
+            ILGen il;
+            if (mi.IsVirtual && !mi.IsFinal) {
+                il = DefineMethodOverride(mi, out impl);
+            } else {
+                impl = _tg.DefineMethod(
                     mi.Name,
+                    mi.IsVirtual ? (mi.Attributes | MethodAttributes.NewSlot) : mi.Attributes,
                     mi.ReturnType,
-                    ReflectionUtils.GetParameterTypes(parameters),
-                    CompilerHelpers.GetArgumentNames(parameters));
+                    ReflectionUtils.GetParameterTypes(parameters));
+                il = CreateILGen(impl.GetILGenerator());
+            }
+            //CompilerHelpers.GetArgumentNames(parameters));  TODO: Set names
 
-            Label instanceCall = cg.DefineLabel();
-            Slot callTarget = cg.GetLocalTmp(typeof(object));
+            Label instanceCall = il.DefineLabel();
+            LocalBuilder callTarget = il.DeclareLocal(typeof(object));
 
             // emit call to helper to do lookup
-            _typeField.EmitGet(cg);
-            cg.EmitThis();
-            EmitSymbolId(cg, methField.name);
-            callTarget.EmitGetAddr(cg);
-            cg.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedMethodHelper");
-            
-            cg.Emit(OpCodes.Brtrue, instanceCall);
+            il.EmitLoadArg(0);
+            il.EmitFieldGet(_typeField);
+            il.EmitLoadArg(0);
+            EmitSymbolId(il, methField.name);
+            il.Emit(OpCodes.Ldloca, callTarget);
+            il.EmitCall(typeof(UserTypeOps), "TryGetNonInheritedMethodHelper");
 
-            EmitBaseMethodDispatch(mi, cg);
+            il.Emit(OpCodes.Brtrue, instanceCall);
 
-            cg.MarkLabel(instanceCall);
+            EmitBaseMethodDispatch(mi, il);
 
-            int argStart = 0;
-            StubGenerator.CallType attrs = StubGenerator.CallType.None;
+            il.MarkLabel(instanceCall);
 
-            ParameterInfo[] pis = mi.GetParameters();
-            Slot context = null;
-            if (pis.Length > 0) {
-                if (pis[0].ParameterType == typeof(CodeContext)) {
-                    argStart = 1;
-                    context = cg.ArgumentSlots[0];
-                }
-                if (pis[pis.Length - 1].IsDefined(typeof(ParamArrayAttribute), false)) {
-                    attrs |= StubGenerator.CallType.ArgumentList;
-                }
+            EmitClrCallStub(il, mi, callTarget);
+
+            if (mi.IsVirtual && !mi.IsFinal) {
+                _tg.DefineMethodOverride(impl, mi);
             }
-            if (context == null) {
-                context = new PropertySlot(null, typeof(DefaultContext).GetProperty("Default"));
-            }
-            cg.ContextSlot = context;
-
-            StubGenerator.EmitClrCallStub(cg, callTarget, argStart, attrs);
-
-            cg.Finish();
         }
 
-        public static Compiler CreateVirtualMethodHelper(TypeGen tg, MethodInfo mi) {
+        public void CreateVirtualMethodHelper(MethodInfo mi) {
             ParameterInfo[] parms = mi.GetParameters();
             Type[] types = ReflectionUtils.GetParameterTypes(parms);
-            string[] paramNames = new string[parms.Length];
             Type miType = mi.DeclaringType;
             for (int i = 0; i < types.Length; i++) {
-                paramNames[i] = parms[i].Name;
                 if (types[i] == miType) {
-                    types[i] = tg.TypeBuilder;
+                    types[i] = _tg;
                 }
             }
-            Compiler cg = tg.DefineMethod(MethodAttributes.Public | MethodAttributes.HideBySig,
-                                         BaseMethodPrefix + mi.Name, mi.ReturnType, types, paramNames);
+            MethodBuilder method = _tg.DefineMethod(
+                BaseMethodPrefix + mi.Name,
+                MethodAttributes.Public | MethodAttributes.HideBySig,
+                mi.ReturnType, types
+            );
 
-            EmitBaseMethodDispatch(mi, cg);
-            cg.Finish();
-            return cg;
+            for (int i = 0; i < types.Length; i++) {
+                method.DefineParameter(i + 1, ParameterAttributes.None, parms[i].Name);
+            }
+
+            EmitBaseMethodDispatch(mi, CreateILGen(method.GetILGenerator()));
         }
 
-        private static void EmitSymbolId(Compiler cg, string name) {
+        private Dictionary<SymbolId, FieldBuilder> _symbolFields = new Dictionary<SymbolId, FieldBuilder>();
+        private void EmitSymbolId(ILGen il, string name) {
             Debug.Assert(name != null);
-            cg.EmitSymbolId(SymbolTable.StringToId(name));
+            SymbolId id = SymbolTable.StringToId(name);
+
+            FieldBuilder fb;
+            if (!_symbolFields.TryGetValue(id, out fb)) {
+                fb = _tg.DefineField("symbol_" + name, typeof(int),  FieldAttributes.Private | FieldAttributes.Static);
+                ILGen cctor = GetCCtor();
+                LocalBuilder localTmp = GetCCtorSymbolIdTemp();
+                cctor.EmitString(name);
+                cctor.EmitCall(typeof(SymbolTable), "StringToId");
+                cctor.Emit(OpCodes.Stloc, localTmp);
+                cctor.Emit(OpCodes.Ldloca, localTmp);
+                cctor.EmitPropertyGet(typeof(SymbolId), "Id");
+                cctor.EmitFieldSet(fb);
+
+                _symbolFields[id] = fb;
+            }
+
+            il.EmitFieldGet(fb);
+            // TODO: Cache the signature type!!!
+            il.EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
+        }
+
+
+        private Type FinishType() {
+            if (_cctor != null) {
+                _cctor.Emit(OpCodes.Ret);
+            }
+
+            return _tg.CreateType();
+        }
+
+        internal protected ILGen CreateILGen(ILGenerator il) {
+            // TODO: Debugging support
+            return new ILGen(il);
+        }
+
+        private ILGen DefineExplicitInterfaceImplementation(MethodInfo baseMethod, out MethodBuilder builder) {
+            MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
+            attrs |= MethodAttributes.NewSlot | MethodAttributes.Final;
+
+            Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
+            builder = _tg.DefineMethod(
+                baseMethod.DeclaringType.Name + "." + baseMethod.Name,
+                attrs,
+                baseMethod.ReturnType,
+                baseSignature
+            );
+            return CreateILGen(builder.GetILGenerator());
+        }
+
+        protected const MethodAttributes MethodAttributesToEraseInOveride = MethodAttributes.Abstract | MethodAttributes.ReservedMask;
+
+        protected ILGen DefineMethodOverride(Type type, string name, out MethodInfo decl, out MethodBuilder impl) {
+            return DefineMethodOverride(MethodAttributes.PrivateScope, type, name, out decl, out impl);
+        }
+
+        protected ILGen DefineMethodOverride(MethodAttributes extra, Type type, string name, out MethodInfo decl, out MethodBuilder impl) {
+            decl = type.GetMethod(name);
+            return DefineMethodOverride(extra, decl, out impl);
+        }
+
+        protected ILGen DefineMethodOverride(MethodInfo decl, out MethodBuilder impl) {
+            return DefineMethodOverride(MethodAttributes.PrivateScope, decl, out impl);
+        }
+
+        protected ILGen DefineMethodOverride(MethodAttributes extra, MethodInfo decl, out MethodBuilder impl) {
+            MethodAttributes finalAttrs = (decl.Attributes & ~MethodAttributesToEraseInOveride) | extra;
+            Type[] signature = ReflectionUtils.GetParameterTypes(decl.GetParameters());
+            impl = _tg.DefineMethod(decl.Name, finalAttrs, decl.ReturnType, signature);
+            return CreateILGen(impl.GetILGenerator());
+        }
+
+        /// <summary>
+        /// Generates stub to receive the CLR call and then call the dynamic language code.
+        /// This code is same as StubGenerator.cs in the Microsoft.Scripting, except it
+        /// accepts ILGen instead of Compiler.
+        /// </summary>
+        private void EmitClrCallStub(ILGen il, MethodInfo mi, LocalBuilder callTarget) {
+            int firstArg = 0;
+            bool list = false;              // The list calling convention
+            bool context = false;           // Context is an argument
+
+            ParameterInfo[] pis = mi.GetParameters();
+            if (pis.Length > 0) {
+                if (pis[0].ParameterType == typeof(CodeContext)) {
+                    firstArg = 1;
+                    context = true;
+                }
+                if (pis[pis.Length - 1].IsDefined(typeof(ParamArrayAttribute), false)) {
+                    list = true;
+                }
+            }
+
+            ParameterInfo[] args = pis;
+            int nargs = args.Length - firstArg;
+
+            // Create the action
+            ILGen cctor = GetCCtor();
+            cctor.EmitInt(nargs);
+            cctor.EmitCall(typeof(PythonOps).GetMethod(list ? "MakeListCallAction" : "MakeSimpleCallAction"));
+
+            // Create the dynamic site
+            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2));
+            FieldBuilder site = _tg.DefineField("site$" + _site++, siteType, FieldAttributes.Private | FieldAttributes.Static);
+            cctor.EmitCall(siteType.GetMethod("Create"));
+            cctor.EmitFieldSet(site);
+
+            List<ReturnFixer> fixers = new List<ReturnFixer>(0);
+
+            //
+            // Emit the site invoke
+            //
+            il.EmitFieldGet(site);
+
+            // Emit the code context
+            if (context) {
+                il.EmitLoadArg(1);
+            } else {
+                il.EmitPropertyGet(typeof(DefaultContext).GetProperty("Default"));
+            }
+
+            if (DynamicSiteHelpers.IsBigTarget(siteType)) {
+                il.EmitTuple(siteType.GetGenericArguments()[0], args.Length + 1, delegate(int index) {
+                    if (index == 0) {
+                        il.Emit(OpCodes.Ldloc, callTarget);
+                    } else {
+                        ReturnFixer rf = ReturnFixer.EmitArgument(il, args[index - 1], index);
+                        if (rf != null) {
+                            fixers.Add(rf);
+                        }
+                    }
+                });
+            } else {
+                il.Emit(OpCodes.Ldloc, callTarget);
+
+                for (int i = firstArg; i < args.Length; i++) {
+                    ReturnFixer rf = ReturnFixer.EmitArgument(il, args[i], i + 1);
+                    if (rf != null) {
+                        fixers.Add(rf);
+                    }
+                }
+            }
+
+            il.EmitCall(siteType, "Invoke");
+
+            foreach (ReturnFixer rf in fixers) {
+                rf.FixReturn(il);
+            }
+
+            EmitConvertFromObject(il, mi.ReturnType);
+            il.Emit(OpCodes.Ret);
+        }
+
+        private static Type[] CreateSignatureWithContext(int count) {
+            Type[] array = new Type[count + 1];
+            while (count > 0) {
+                array[count--] = typeof(object);
+            }
+            array[0] = typeof(CodeContext);
+            return array;
+        }
+    }
+
+    /// <summary>
+    /// Same as the DLR ReturnFixer, but accepts lower level constructs,
+    /// such as LocalBuilder, ParameterInfos and ILGen.
+    /// </summary>
+    sealed class ReturnFixer {
+        private readonly ParameterInfo _parameter;
+        private readonly LocalBuilder _reference;
+        private readonly int _index;
+
+        private ReturnFixer(LocalBuilder reference, ParameterInfo parameter, int index) {
+            Debug.Assert(reference.LocalType.IsGenericType && reference.LocalType.GetGenericTypeDefinition() == typeof(StrongBox<>));
+            Debug.Assert(parameter.ParameterType.IsByRef);
+
+            _parameter = parameter;
+            _reference = reference;
+            _index = index;
+        }
+
+        public void FixReturn(ILGen il) {
+            il.EmitLoadArg(_index);
+            il.Emit(OpCodes.Ldloc, _reference);
+            il.EmitFieldGet(_reference.LocalType.GetField("Value"));
+            il.EmitStoreValueIndirect(_parameter.ParameterType.GetElementType());
+        }
+
+        public static ReturnFixer EmitArgument(ILGen il, ParameterInfo parameter, int index) {
+            il.EmitLoadArg(index);
+            if (parameter.ParameterType.IsByRef) {
+                Type elementType = parameter.ParameterType.GetElementType();
+                Type concreteType = typeof(StrongBox<>).MakeGenericType(elementType);
+                LocalBuilder refSlot = il.DeclareLocal(concreteType);
+                il.EmitLoadValueIndirect(elementType);
+                il.EmitNew(concreteType, new Type[] { elementType });
+                il.Emit(OpCodes.Stloc, refSlot);
+                il.Emit(OpCodes.Ldloc, refSlot);
+                return new ReturnFixer(refSlot, parameter, index);
+            } else {
+                il.EmitBoxing(parameter.ParameterType);
+                return null;
+            }
         }
     }
 

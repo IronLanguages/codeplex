@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using Microsoft.Contracts;
 
 
 namespace Microsoft.Scripting.Utils {
@@ -64,6 +65,7 @@ namespace Microsoft.Scripting.Utils {
             dict.Add(new WeakObject<TKey>(key), value);
         }
 
+        [Confined]
         public bool ContainsKey(TKey key) {
             // We dont have to worry about creating "new WeakObject<TKey>(key)" since the comparer
             // can compare raw objects with WeakObject<T>.
@@ -71,7 +73,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
-        public ICollection<TKey> Keys {
+        public ICollection<TKey>/*!*/ Keys {
             get { 
                 // TODO:
                 throw new NotImplementedException(); 
@@ -87,7 +89,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")] // TODO: fix
-        public ICollection<TValue> Values {
+        public ICollection<TValue>/*!*/ Values {
             get { 
                 // TODO:
                 throw new NotImplementedException(); 
@@ -186,12 +188,13 @@ namespace Microsoft.Scripting.Utils {
             throw new NotImplementedException();
         }
 
+        [Confined]
         public bool Contains(KeyValuePair<TKey, TValue> item) {
             // TODO:
             throw new NotImplementedException();
         }
 
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
+        public void CopyTo(KeyValuePair<TKey, TValue>[]/*!*/ array, int arrayIndex) {
             // TODO:
             throw new NotImplementedException();
         }
@@ -221,7 +224,8 @@ namespace Microsoft.Scripting.Utils {
 
         #region IEnumerable<KeyValuePair<TKey,TValue>> Members
 
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() {
+        [Pure]
+        public IEnumerator<KeyValuePair<TKey, TValue>>/*!*/ GetEnumerator() {
             // TODO:
             throw new NotImplementedException(); 
         }
@@ -230,7 +234,8 @@ namespace Microsoft.Scripting.Utils {
 
         #region IEnumerable Members
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+        [Pure]
+        System.Collections.IEnumerator/*!*/ System.Collections.IEnumerable.GetEnumerator() {
             // TODO:
             throw new NotImplementedException(); 
         }
@@ -253,10 +258,12 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
+        [Confined]
         public override int GetHashCode() {
             return hashCode;
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Target.Equals(obj);
         }

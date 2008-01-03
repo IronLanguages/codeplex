@@ -107,6 +107,40 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
+        // This may not belong here because it is checking for the
+        // AST type consistency. However, since it is the only check
+        // it seems unwarranted to make an extra walk of the AST just
+        // to verify this condition.
+        protected internal override bool Walk(ReturnStatement node) {
+            if (_stack.Count == 0) {
+                throw InvalidReturnStatement("Return outside of code block", node);
+            }
+
+            Type returnType = _stack.Peek().CodeBlock.ReturnType;
+
+            if (node.Expression != null) {
+                if (!returnType.IsAssignableFrom(node.Expression.Type)) {
+                    throw InvalidReturnStatement("Invalid type of return expression value", node);
+                }
+            } else {
+                // return without expression can be only from code block with void return type
+                if (returnType != typeof(void)) {
+                    throw InvalidReturnStatement("Missing return expression", node);
+                }
+            }
+
+            return true;
+        }
+
+        private static ArgumentException InvalidReturnStatement(string message, ReturnStatement node) {
+            return new ArgumentException(
+                String.Format(
+                    "{0} at {1}:{2}-{3}:{4}", message,
+                    node.Start.Line, node.Start.Column, node.End.Line, node.End.Column
+                )
+            );
+        }
+
         protected internal override bool Walk(CatchBlock node) {
             // CatchBlock is not required to have target variable
             if (node.Variable != null) {

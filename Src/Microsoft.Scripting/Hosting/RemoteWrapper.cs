@@ -20,8 +20,12 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     public interface IRemotable {
+#if !SPECSHARP // TODO: remove the method
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         Type GetType();
+
+#endif
     }
 
     internal interface ILocalObject : IRemotable {
@@ -61,9 +65,13 @@ namespace Microsoft.Scripting.Hosting {
     internal abstract class RemoteWrapper : MarshalByRefObject, IRemotable {
         public abstract ILocalObject LocalObject { get; }
 
+#if !SPECSHARP // TODO: remove the method
+
         public new Type GetType() {
             return LocalObject.GetType();
         }
+
+#endif
 
         internal static T/*?*/ TryGetLocal<T>(object remotable) 
             where T : class, IRemotable {

@@ -29,7 +29,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\Bin\Debug\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -200,7 +200,6 @@
     <Compile Include="Ast\InterpreterData.cs" />
     <Compile Include="Ast\IntrinsicExpression.cs" />
     <Compile Include="Ast\Walker.cs" />
-    <Compile Include="Ast\DynamicConversionExpression.cs" />
     <Compile Include="Ast\AbstractValue.cs" />
     <Compile Include="Ast\AbstractContext.cs" />
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
@@ -219,6 +218,9 @@
     <Compile Include="DefaultLanguageContext.cs" />
     <Compile Include="CallType.cs" />
     <Compile Include="DocumentationAttribute.cs" />
+    <Compile Include="Generation\BindingResult.cs" />
+    <Compile Include="Generation\BindingTarget.cs" />
+    <Compile Include="Generation\ConversionFailure.cs" />
     <Compile Include="Generation\DebugILGen.cs" />
     <Compile Include="Generation\FrameStorageAllocator.cs" />
     <Compile Include="Generation\ILGen.cs" />
@@ -284,7 +286,7 @@
     <Compile Include="Ast\YieldLabelBuilder.cs" />
     <Compile Include="Ast\YieldStatement.cs" />
     <Compile Include="Ast\YieldTarget.cs" />
-    <Compile Include="BinderHelper.cs" />
+    <Compile Include="Actions\BinderHelper.cs" />
     <Compile Include="BinderType.cs" />
     <Compile Include="Ast\TreeCompiler.cs" />
     <Compile Include="Hosting\EngineTextContentProvider.cs" />
@@ -299,7 +301,6 @@
     <Compile Include="Hosting\SourceUnitReader.cs" />
     <Compile Include="Ast\VariableAddress.cs" />
     <Compile Include="LocalScope.cs" />
-    <Compile Include="MissingParameter.cs" />
     <Compile Include="Generation\ByRefReturnBuilder.cs" />
     <Compile Include="Actions\CallBinderHelper.cs" />
     <Compile Include="CallTargets.cs" />
@@ -327,11 +328,9 @@
     <Compile Include="Generation\TupleSlotFactory.cs" />
     <Compile Include="Hosting\CodeDomCodeGen.cs" />
     <Compile Include="Hosting\EngineOptions.cs" />
-    <Compile Include="IParameterSequence.cs" />
-    <Compile Include="KwArgBinder.cs" />
     <Compile Include="ModuleContext.cs" />
-    <Compile Include="MethodBinder.cs" />
-    <Compile Include="MethodCandidate.cs" />
+    <Compile Include="Generation\MethodBinder.cs" />
+    <Compile Include="Generation\MethodCandidate.cs" />
     <Compile Include="NameType.cs" />
     <Compile Include="NarrowingLevel.cs" />
     <Compile Include="None.cs" />
@@ -385,9 +384,7 @@
     <Compile Include="IConstructorWithCodeContext.cs" />
     <Compile Include="InvariantContext.cs" />
     <Compile Include="IValueEquality.cs" />
-    <Compile Include="KwCallInfo.cs" />
     <Compile Include="LanguageContext.cs" />
-    <Compile Include="MutableTypeAttribute.cs" />
     <Compile Include="ReflectionCache.cs" />
     <Compile Include="ScopeMemberAttributes.cs" />
     <Compile Include="ModuleChangeEventArgs.cs" />
@@ -413,11 +410,11 @@
     <Compile Include="ScriptModule.Remote.cs" />
     <Compile Include="Generation\EnvironmentFactory.cs" />
     <Compile Include="Generation\GlobalAllocator.cs" />
-    <Compile Include="ScriptModuleKind.cs" />
     <Compile Include="ScriptNameAttribute.cs" />
     <Compile Include="DynamicStackFrame.cs" />
     <Compile Include="StaticExtensionMethodAttribute.cs" />
     <Compile Include="StaticThisAttribute.cs" />
+    <Compile Include="Stubs.cs" />
     <Compile Include="SymbolDictionary.cs" />
     <Compile Include="BaseSymbolDictionary.cs" />
     <Compile Include="SyntaxErrorException.cs" />
@@ -442,7 +439,6 @@
     <Compile Include="Shell\BasicConsole.cs" />
     <Compile Include="Shell\SuperConsole.cs" />
     <Compile Include="Tuple.cs" />
-    <Compile Include="PythonTypeChangedEventArgs.cs" />
     <Compile Include="Generation\AssemblyGen.cs" />
     <Compile Include="Generation\AssemblyGenAttributes.cs" />
     <Compile Include="Generation\CodeGenOptions.cs" />
@@ -510,7 +506,6 @@
     <Compile Include="SymbolId.cs" />
     <Compile Include="SymbolTable.cs" />
     <Compile Include="Uninitialized.cs" />
-    <Compile Include="SilverlightProxies.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Math\MathResources.resx">

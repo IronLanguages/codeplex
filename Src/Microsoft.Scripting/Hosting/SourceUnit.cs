@@ -22,6 +22,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Hosting {
     public sealed class SourceUnit 
@@ -35,9 +36,7 @@ namespace Microsoft.Scripting.Hosting {
         private readonly LanguageContext _context;
 
         private TextContentProvider _contentProvider;
-        private Action<SourceUnit> _contentReloader; // TODO: better: ReloadableStringProvider?
 
-        private bool _isDebuggable;
         private bool _disableLineFeedLineSeparator;
 
         // content dependent properties:
@@ -53,6 +52,11 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public string Id {
             get { return _id; }
+        }
+
+        // TODO: maybe we could disallow empty id to ensure there is a single invalid value only
+        public bool HasPath {
+            get { return !String.IsNullOrEmpty(_id); }
         }
 
         public SourceCodeKind Kind {
@@ -86,23 +90,9 @@ namespace Microsoft.Scripting.Hosting {
             set { _codeProperties = value; } 
         }
 
-        public bool IsVisibleToDebugger {
-            get { return _isDebuggable; }
-            set { _isDebuggable = value; }
-        }
-
         public bool DisableLineFeedLineSeparator {
             get { return _disableLineFeedLineSeparator; }
             set { _disableLineFeedLineSeparator = value; }
-        }
-
-        public Action<SourceUnit> ContentReloader {
-            get { return _contentReloader; }
-            set { _contentReloader = value; }
-        }
-
-        public bool IsReloadable {
-            get { return _contentReloader != null; }
         }
 
         #region Construction
@@ -122,12 +112,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(contentProvider, "contentProvider");
 
-            SourceUnit res = new SourceUnit(context, contentProvider, id, kind);
-            
-            if (kind == SourceCodeKind.File) {
-                res.IsVisibleToDebugger = true;
-            }
-            return res;
+            return new SourceUnit(context, contentProvider, id, kind);
         }
 
         internal static SourceUnit CreateSnippet(LanguageContext context, string code) {
@@ -146,7 +131,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(code, "code");
 
-            return new SourceUnit(context, new SourceStringContentProvider(code), id, kind);
+            return Create(context, new SourceStringContentProvider(code), id, kind);
         }
 
         /// <summary>
@@ -168,25 +153,16 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(path, "path");
 
             TextContentProvider provider = new EngineTextContentProvider(context, new FileStreamContentProvider(path), encoding ?? StringUtils.DefaultEncoding);
-            SourceUnit result = new SourceUnit(context, provider, path, kind);
-            result.IsVisibleToDebugger = true;
-            return result;
+            return Create(context, provider, path, kind);
         }
 
         public static SourceUnit CreateFileUnit(LanguageContext context, string path, string content) {
-            return CreateFileUnit(context, path, content, null);
-        }
-
-        public static SourceUnit CreateFileUnit(LanguageContext context, string path, string content, Action<SourceUnit> contentReloader) {
             Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(content, "content");
 
             TextContentProvider provider = new SourceStringContentProvider(content);
-            SourceUnit result = new SourceUnit(context, provider, path, SourceCodeKind.File);
-            result.ContentReloader = contentReloader;
-            result.IsVisibleToDebugger = true;
-            return result;
+            return Create(context, provider, path, SourceCodeKind.File);
         }
 
         #endregion
@@ -194,12 +170,6 @@ namespace Microsoft.Scripting.Hosting {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public SourceUnitReader GetReader() {
             return new SourceUnitReader(this, _contentProvider.GetReader());
-        }
-
-        public void Reload() {
-            if (_contentReloader != null) {
-                _contentReloader(this);
-            }
         }
 
         public void SetContent(string content) {
@@ -250,7 +220,8 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return _id;
         }
 

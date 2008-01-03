@@ -26,6 +26,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Calls;
+using IronPython.Hosting;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -486,40 +487,6 @@ namespace IronPython.Runtime.Types {
             }
             set {
                 _builder = value;
-            }
-        }
-
-        /// <summary>
-        /// Simple class which implements CodeContext for a specific
-        /// context-ID.  Used for applying context-updates while building the 
-        /// Ops type.
-        /// </summary>
-        protected class SimpleContext : LanguageContext {
-            private ContextId _context;
-            //private bool _showCls = true;
-
-            private static ScriptScope SimpleModule = ScriptDomainManager.CurrentManager.CreateModule("<empty>");
-
-            public static CodeContext Create(ContextId contextId) {
-                SimpleContext context = new SimpleContext(contextId);
-                ModuleContext moduleContext = context.EnsureModuleContext(SimpleModule);
-                moduleContext.ShowCls = true;
-                return new CodeContext(SimpleModule.Scope, context, moduleContext);
-            }
-
-            private SimpleContext(ContextId context)
-                : base(null) {
-                _context = context;
-            }
-
-            public override ContextId ContextId {
-                get {
-                    return _context;
-                }
-            }
-
-            public override Microsoft.Scripting.Ast.CodeBlock ParseSourceCode(CompilerContext context) {
-                throw new NotSupportedException();
             }
         }
     }

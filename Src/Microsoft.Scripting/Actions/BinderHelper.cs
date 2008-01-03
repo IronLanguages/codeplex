@@ -157,15 +157,6 @@ namespace Microsoft.Scripting.Actions {
 
             return null;
         }
-        
-        public Statement MakeCallStatement(MethodInfo method, params Expression[] parameters) {
-            // TODO: Ast.Return not right, we need to go through the binder
-            Expression call = Binder.MakeCallExpression(method, parameters);
-            if (call != null) {
-                return Ast.Return(call);
-            }
-            return null;
-        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {            

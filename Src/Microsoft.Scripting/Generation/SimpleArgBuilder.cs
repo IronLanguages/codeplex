@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Generation {
     /// also tracks information about the original parameter and is used to create extended
     /// methods for params arrays and param dictionary functions.
     /// </summary>
-    public class SimpleArgBuilder : ArgBuilder {
+    class SimpleArgBuilder : ArgBuilder {
         private int _index;
         private Type _parameterType;
         private bool _isParams, _isParamsDict;
@@ -83,6 +83,16 @@ namespace Microsoft.Scripting.Generation {
 
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return context.CheckExpression(parameters[_index], _parameterType);
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            if (!context.CanConvert(paramTypes[_index], _parameterType, level)) {
+                if (failures != null) {
+                    failures.Add(new ConversionFailure(paramTypes[_index], _parameterType, _index));
+                }
+                return false;
+            }
+            return true;
         }
 
         public override AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {

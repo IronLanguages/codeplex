@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using System.Reflection.Emit;
 
 namespace Microsoft.Scripting.Generation {
     public static class StubGenerator {
@@ -46,9 +47,17 @@ namespace Microsoft.Scripting.Generation {
                 action = CallAction.Make(nargs);
             }
 
+            // Create strongly typed return type from the site.
+            // This will, among other things, generate tighter code.
+            Type[] siteArguments = CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2);
+            Type result = CompilerHelpers.GetReturnType(cg.Method);
+            if (result != typeof(void)) {
+                siteArguments[nargs + 1] = result;
+            }
+
             bool fast;
             Slot site = cg.CreateDynamicSite(action, 
-                CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2), 
+                siteArguments, 
                 out fast);
 
             site.EmitGet(cg);
@@ -77,7 +86,11 @@ namespace Microsoft.Scripting.Generation {
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(cg);
             }
-            cg.EmitReturnFromObject();
+
+            if (result == typeof(void)) {
+                cg.Emit(OpCodes.Pop);
+            }
+            cg.EmitReturn();
         }
 
         private static Type[] CreateSignatureWithContext(int count) {

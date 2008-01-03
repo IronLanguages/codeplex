@@ -23,6 +23,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -106,7 +107,8 @@ namespace Microsoft.Scripting {
             return val == null ? "(null)" : val.ToString();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("ModuleGlobal: {0} Value: {1} ({2})",
                 _name,
                 _value,

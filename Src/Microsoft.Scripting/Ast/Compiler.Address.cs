@@ -37,11 +37,6 @@ namespace Microsoft.Scripting.Ast {
                     AddresOf((ConditionalExpression)node, type);
                     break;
 
-                // TODO: Remove !!!
-                case AstNodeType.Convert:
-                    AddresOf((UnaryExpression)node, type);
-                    break;
-
                 case AstNodeType.BoundAssignment:
                     AddresOf((BoundAssignment)node);
                     break;
@@ -115,20 +110,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private void AddresOf(UnaryExpression node, Type type) {
-            Debug.Assert(node.NodeType == AstNodeType.Convert);
-            if (node.Type == type) {
-                EmitAddress(node.Operand, type);
-            } else {
-                EmitExpressionAddress(node, type);
-            }
-        }
-
         private void EmitExpressionAddress(Expression node, Type type) {
-            // TODO: Enable !!!
-            //Debug.Assert(TypeUtils.CanAssign(type, node.Type));
+            Debug.Assert(TypeUtils.CanAssign(type, node.Type));
 
-            EmitAs(node, type);
+            EmitExpression(node);
             Slot tmp = GetLocalTmp(type);
             tmp.EmitSet(this);
             tmp.EmitGetAddr(this);

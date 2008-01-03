@@ -580,16 +580,14 @@ namespace Microsoft.Scripting.Ast {
             cg.EmitBlockEndPosition(block);
 
             //TODO skip if Body is guaranteed to return
-            if (block.ReturnType == typeof(void)) {
-                cg.EmitReturn();
-            } else {
+            if (block.ReturnType != typeof(void)) {
                 if (TypeUtils.CanAssign(typeof(object), block.ReturnType)) {
-                    cg.EmitReturn(null);
+                    cg.EmitNull();
                 } else {
                     cg.EmitMissingValue(block.ReturnType);
-                    cg.EmitReturn();
                 }
             }
+            cg.EmitReturn();
         }
 
         private void EmitBlockStartPosition(CodeBlock block) {
