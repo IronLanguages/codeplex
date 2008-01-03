@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class DeleteMemberAction : MemberAction, IEquatable<DeleteMemberAction> {
@@ -22,6 +23,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEquatable<DeleteMemberAction> Members
 
+        [StateIndependent]
         public bool Equals(DeleteMemberAction other) {
             if (other == null) return false;
 

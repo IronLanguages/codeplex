@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -82,7 +83,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEnumerable<MemberTracker> Members
 
-        public IEnumerator<MemberTracker> GetEnumerator() {
+        [Pure]
+        public IEnumerator<MemberTracker>/*!*/ GetEnumerator() {
             foreach (MemberTracker tracker in _members) yield return tracker;
         }
 
@@ -90,7 +92,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEnumerable Members
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
+        [Pure]
+        System.Collections.IEnumerator/*!*/ System.Collections.IEnumerable.GetEnumerator() {
             foreach (MemberTracker tracker in _members) yield return tracker;
         }
 

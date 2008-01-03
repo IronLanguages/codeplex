@@ -277,9 +277,10 @@ namespace IronPython.Runtime.Operations {
                         Ast.Convert(rule.Parameters[0], self.GetType()),
                         self.GetType().GetProperty("Value")
                     ),
-                    Ast.DynamicConvert(
-                        Ast.Read(tmp),
-                        toType
+                    Ast.Action.ConvertTo(
+                        toType,
+                        ConversionResultKind.ExplicitCast,
+                        Ast.Read(tmp)
                     )
                 )
             );
@@ -1217,7 +1218,7 @@ namespace IronPython.Runtime.Operations {
                             MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, SymbolTable.IdToString(item), bmd.Template.Targets, BinderType.Normal);
                             MethodCandidate mc = mb.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.GetTypes(args));
                             if (mc != null) {
-                                Expression callExpr = mc.Target.MakeExpression(context.LanguageContext.Binder, rule, rule.Parameters);
+                                Expression callExpr = mc.Target.MakeExpression(rule, rule.Parameters);
 
                                 rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, callExpr));
                             } else {

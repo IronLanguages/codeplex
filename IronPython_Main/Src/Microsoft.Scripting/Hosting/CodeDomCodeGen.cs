@@ -66,7 +66,6 @@ namespace Microsoft.Scripting.Hosting {
             SourceUnit src = context.CreateSnippet(code, id, kind);
             src.SetLineMapping(_writer.GetLineMap());
             src.SetDocumentMapping(fileMap);
-            src.IsVisibleToDebugger = true;
             return src;
         }
 

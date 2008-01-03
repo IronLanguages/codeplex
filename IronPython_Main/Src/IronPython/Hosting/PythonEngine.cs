@@ -34,6 +34,9 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
+
+    using Microsoft.Scripting.Generation;
+
     public sealed class PythonEngine {
         // Work around until tests are updated.
         public static ScriptEngine CurrentEngine = ScriptDomainManager.CurrentManager.GetEngine("py");

@@ -41,6 +41,11 @@ if is_peverify_run:
         File.Copy(testpath.rowan_root + '\\Languages\\IronPython\\External\\Maui\\Maui.Core.dll',
                   tempMauiDir + '\\Maui.Core.dll')    
 
+#Cleanup the last run
+for t_name in ['ip_session.log', 'ip_session_stderr.log']:
+    if File.Exists(t_name):
+        File.Delete(t_name)
+
 #------------------------------------------------------------------------------
 #--Helper functions
 def getTestOutput():
@@ -79,7 +84,8 @@ def verifyResults(lines, testRegex):
     '''
     lines = removePrompts(lines)
     chopped = ''.join([line[:-1] for line in lines])
-    Assert(re.match(testRegex, chopped))
+    Assert(re.match(testRegex, chopped),
+           "Expected Regular Expression=" + testRegex + "\nActual Lines=" + chopped)
 
 
 #------------------------------------------------------------------------------

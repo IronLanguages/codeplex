@@ -22,6 +22,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -835,16 +836,19 @@ namespace Microsoft.Scripting.Hosting {
                 _siteType = siteType;
             }
 
+            [Confined]
             public override bool Equals(object obj) {
                 return Equals(obj as SiteKey);
             }
 
+            [Confined]
             public override int GetHashCode() {
                 return Action.GetHashCode() ^ _siteType.GetHashCode();
             }
 
             #region IEquatable<SiteKey> Members
 
+            [StateIndependent]
             public bool Equals(SiteKey other) {
                 if (other == null) return false;
 
@@ -854,7 +858,8 @@ namespace Microsoft.Scripting.Hosting {
 
             #endregion
 #if DEBUG
-            public override string ToString() {
+            [Confined]
+            public override string/*!*/ ToString() {
                 return String.Format("{0} {1}", Action.ToString(), HitCount);
             }
 #endif

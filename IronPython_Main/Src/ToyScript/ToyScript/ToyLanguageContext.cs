@@ -31,7 +31,7 @@ using Microsoft.Scripting.Helpers;
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
         public ToyLanguageContext(ScriptDomainManager manager) : base(manager) { 
-            Binder = new ToyBinder(new CodeContext(new Scope(), this, new ModuleContext(null)));
+            Binder = new ToyBinder(new CodeContext(new Scope(this), this));
         }
 
         public override MSAst.CodeBlock ParseSourceCode(CompilerContext context) {

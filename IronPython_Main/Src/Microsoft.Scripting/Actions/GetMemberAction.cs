@@ -15,6 +15,8 @@
 
 using System;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
+
 namespace Microsoft.Scripting.Actions {
     [Flags]
     public enum GetMemberBindingFlags {
@@ -60,10 +62,12 @@ namespace Microsoft.Scripting.Actions {
             get { return DynamicActionKind.GetMember; }
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as GetMemberAction);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return base.GetHashCode() ^ _flags.GetHashCode();
         }
@@ -82,6 +86,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEquatable<GetMemberAction> Members
 
+        [StateIndependent]
         public bool Equals(GetMemberAction other) {
             if (other == null) return false;
 

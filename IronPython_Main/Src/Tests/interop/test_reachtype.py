@@ -89,18 +89,26 @@ def test_nothing_public():
         pass
      
 def test_generic_types():
-    from NSwGeneric import G1, G2, G3
+    from NSwGeneric import G1, G2, G3, G4
 
     AreEqual(G1.A, 10)
     AreEqual(G1[int, int].A, 20)
-    AreEqual(G1[G1, G1].A, 20)             # G1
+    AreEqual(G1[G1, G1].A, 20)          # G1
     
-    AssertError(SystemError, lambda: G2.A)
+    AreEqual(G1[()].A, 10)              # empty tuple
+    AreEqual(G1[(int, str)].A, 20)
+    AssertErrorWithMessage(ValueError, "could not find compatible generic type for 1 type arguments", lambda: G1[int].A)
+
+    AssertErrorWithMessage(SystemError, "The operation requires a non-generic type for G2, but this represents generic types only", lambda: G2.A)
+    AssertErrorWithMessage(SystemError, "The operation requires a non-generic type for G2, but this represents generic types only", lambda: G2[()])
     AreEqual(G2[int].A, 30)
     AreEqual(G2[int, int].A, 40)
-    
-    AssertError(ValueError, lambda: G3[System.Exception])
+
+    AssertErrorWithMessage(ValueError, "GenericArguments[0], 'System.Exception', on 'NSwGeneric.G3`1[T]' violates the constraint of type 'T'.", lambda: G3[System.Exception])
     AreEqual(G3[int].A, 50)
+    
+    AssertErrorWithMessage(SystemError, "MakeGenericType on non-generic type", lambda: G4[()])
+    AssertErrorWithMessage(SystemError, "MakeGenericType on non-generic type", lambda: G4[int])
 
 def test_type_without_namespace():
     from PublicRefTypeWithoutNS import *    # warning expected
@@ -210,7 +218,7 @@ def test_digits_in_ns8074():
     AreEqual(NSWithDigits.Case2.Z.A, 10)
     AreEqual(str(NSWithDigits.Case2.Z0), "<type 'Z0'>")
     AreEqual(NSWithDigits.Case2.Z0.A, 0)
-    
-    
-run_test(__name__)    
+
+
+run_test(__name__)
 

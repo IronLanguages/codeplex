@@ -19,7 +19,7 @@ using System.Text;
 
 namespace Microsoft.Scripting {
     /// <summary>
-    /// Event args for when a ScriptModule has had its contents changed.  
+    /// Event args for when a ScriptScope has had its contents changed.  
     /// </summary>
     public class ModuleChangeEventArgs : EventArgs {
         private SymbolId _name;

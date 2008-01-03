@@ -25,6 +25,7 @@ using System.Text;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -583,27 +584,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitConvert(Type from, Type to) {
-            Contract.RequiresNotNull(from, "from");
-            Contract.RequiresNotNull(to, "to");
-
-            if (TryEmitImplicitCast(from, to)) {
-                return;
+        private void EmitImplicitCast(Type from, Type to) {
+            if (!TryEmitImplicitCast(from, to)) {
+                throw new ArgumentException(String.Format("Cannot cast from '{0}' to '{1}'", from, to));
             }
-
-            //TODO this is clearly not the most efficient conversion pattern...
-            this.EmitBoxing(from);
-            this.EmitConvertFromObject(to);
-        }
-
-        internal void EmitConvertFromObject(Type to) {
-            Contract.RequiresNotNull(to, "to");
-
-            if (TryEmitImplicitCast(typeof(object), to)) {
-                return;
-            }
-
-            Binder.EmitConvertFromObject(this, to);
         }
 
         public void EmitCast(Type from, Type to) {
@@ -662,22 +646,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal void EmitReturn(Expression expr) {
-            if (_yieldLabels != null) {
+            if (_generator) {
                 EmitReturnInGenerator(expr);
             } else {
                 if (expr == null) {
-                    EmitNull();
-                    EmitReturnFromObject();
+                    Debug.Assert(CompilerHelpers.GetReturnType(_method) == typeof(void));
                 } else {
-                    EmitAs(expr, CompilerHelpers.GetReturnType(_method));
-                    EmitReturn();
+                    Type result = CompilerHelpers.GetReturnType(_method);
+                    Debug.Assert(result.IsAssignableFrom(expr.Type));
+                    EmitExpression(expr);
+                    if (!TypeUtils.CanAssign(result, expr.Type)) {
+                        EmitImplicitCast(expr.Type, result);
+                    }
                 }
+                EmitReturn();
             }
-        }
-
-        public void EmitReturnFromObject() {
-            EmitConvertFromObject(CompilerHelpers.GetReturnType(_method));
-            EmitReturn();
         }
 
         internal void EmitReturnInGenerator(Expression expr) {
@@ -1138,7 +1121,11 @@ namespace Microsoft.Scripting.Ast {
             return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
         }
 
-        public Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
+        public Compiler DefineMethod(string name, Type returnType, IList<Type> parameterTypes, string[] parameterNames) {
+            return DefineMethod(name, returnType, parameterTypes, parameterNames, null);
+        }
+
+        internal Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
             Contract.RequiresNotNullItems(paramTypes, "paramTypes");
             //Contract.RequiresNotNull(paramNames, "paramNames");
 

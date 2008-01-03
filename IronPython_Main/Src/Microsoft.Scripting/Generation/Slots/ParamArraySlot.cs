@@ -16,6 +16,7 @@
 using System;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 
@@ -49,7 +50,8 @@ namespace Microsoft.Scripting.Generation {
             get { return typeof(object); }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("ParamArraySlot From: ({0}) Index: {1}", _param, _index);
         }
     }

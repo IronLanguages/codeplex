@@ -30,10 +30,13 @@ namespace Microsoft.Scripting.Hosting {
     public class LocalScriptHost : IScriptHost, ILocalObject {
         
         // implementors shouldn't have access to the host; they should call the base implementation for forwarding
+        private readonly IScriptEnvironment/*!*/ _environment;
         private RemoteScriptHost _remoteHost;
-        private ScriptScope _defaultModule;
+        private IScriptScope _defaultScope;
 
-        public LocalScriptHost() {
+        public LocalScriptHost(IScriptEnvironment/*!*/ environment) {
+            Assert.NotNull(environment);
+            _environment = environment;
         }
 
         // the host is not set in ctor in order to prevent manipulation with it while constructing the base class:
@@ -52,7 +55,7 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.GetSourceFileNames(mask, searchPattern);
         }
 
-        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
             Debug.Assert(_remoteHost != null);
             return _remoteHost.TryGetSourceFileUnit(RemoteWrapper.WrapRemotable<IScriptEngine>(engine), path, encoding, kind);
         }
@@ -71,12 +74,6 @@ namespace Microsoft.Scripting.Hosting {
             _remoteHost.EngineCreated(RemoteWrapper.WrapRemotable<IScriptEngine>(engine));
         }
 
-        public virtual void ModuleCreated(IScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-            Debug.Assert(_remoteHost != null);
-            _remoteHost.ModuleCreated(RemoteWrapper.WrapRemotable<IScriptScope>(module));
-        }
-
         // throws SerializationException 
         public virtual bool TrySetVariable(SymbolId name, object value) {
             Debug.Assert(_remoteHost != null);
@@ -89,12 +86,12 @@ namespace Microsoft.Scripting.Hosting {
             return _remoteHost.TryGetVariable(name, out value);
         }
 
-        public virtual IScriptScope DefaultModule {
+        public virtual IScriptScope DefaultScope {
             get {
-                if (_defaultModule == null) {
-                    ScriptHost.CreateDefaultModule(ref _defaultModule);
+                if (_defaultScope == null) {
+                    _defaultScope = _environment.CreateScope();
                 }
-                return _defaultModule;
+                return _defaultScope;
             }
         }
 

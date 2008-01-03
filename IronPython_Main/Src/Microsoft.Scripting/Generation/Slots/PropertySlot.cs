@@ -17,6 +17,7 @@ using System;
 using System.Reflection;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -84,7 +85,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("PropertySlot From: ({0}) On: {1} Property: {2}", _instance, _property.DeclaringType, _property.Name);
         }
     }

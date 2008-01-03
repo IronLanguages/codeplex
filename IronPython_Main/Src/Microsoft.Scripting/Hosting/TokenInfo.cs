@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -48,6 +49,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #region IEquatable<TokenInfo> Members
 
+        [StateIndependent]
         public bool Equals(TokenInfo other) {
             return _category == other._category && _trigger == other._trigger && _span == other._span;
         }

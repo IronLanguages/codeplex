@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -38,20 +39,24 @@ namespace Microsoft.Scripting.Actions {
         public ConversionResultKind ResultKind { get { return _resultKind; } }
         public override DynamicActionKind Kind { get { return DynamicActionKind.ConvertTo; } }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as ConvertToAction);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return (int)Kind << 28 ^ (int)ResultKind ^ _type.GetHashCode();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return base.ToString() + " to " + _type.ToString();
         }
 
         #region IEquatable<ConvertToAction> Members
 
+        [StateIndependent]
         public bool Equals(ConvertToAction other) {
             if (other == null) return false;
             return _type == other._type && _resultKind == other._resultKind;

@@ -202,7 +202,6 @@ if is_cli or is_silverlight:
         except ex, e:
             Assert(False)
         
-        AreEqual(sys.exc_info(), (None, None, None))
         
         Assert(isinstance(x, System.ArgumentException))
         
@@ -213,9 +212,8 @@ if is_cli or is_silverlight:
         except ex,e:
             Assert(e.__class__ == ex)
             Assert(e.args[0] == "hello world")
-        
-        AreEqual(sys.exc_info(), (None, None, None))
-        
+        # Note that sys.exc_info() is still set
+       
         try:
             a.CallVirtualOverloaded(5)
         except ex,e:
@@ -223,7 +221,6 @@ if is_cli or is_silverlight:
             Assert(e.args[0] == "hello world")
         
         
-        AreEqual(sys.exc_info(), (None, None, None))
         
         try:
             a.CallVirtualOverloaded(a)
@@ -232,7 +229,6 @@ if is_cli or is_silverlight:
             Assert(e.args[0] == "hello world")
         
         
-        AreEqual(sys.exc_info(), (None, None, None))
         # catch and re-throw (both throw again and rethrow)
         
         try:
@@ -240,7 +236,6 @@ if is_cli or is_silverlight:
         except ex,e:
             Assert(e.__class__ == ex)
             Assert(e.args[0] == "hello world")
-        AreEqual(sys.exc_info(), (None, None, None))
         
         try:
             a.CatchAndRethrow2()
@@ -248,14 +243,12 @@ if is_cli or is_silverlight:
             Assert(e.__class__ == ex)
             Assert(e.args[0] == "hello world")
         
-        AreEqual(sys.exc_info(), (None, None, None))
         
         
         class MyTest(ExceptionsTest):
             def VirtualFunc(self):
                 self.ThrowException()
         
-        AreEqual(sys.exc_info(), (None, None, None))
         a = MyTest()
         
         # start in python, call CLS which calls Python which calls CLS which raises the exception
@@ -265,7 +258,6 @@ if is_cli or is_silverlight:
             Assert(e.__class__ == IndexError)
         
         
-        AreEqual(sys.exc_info(), (None, None, None))
         # verify we can throw arbitrary classes
         class MyClass: pass
         
@@ -283,7 +275,6 @@ if is_cli or is_silverlight:
             pass
         # /BUG
         
-        AreEqual(sys.exc_info(), (None, None, None))
         
         # BUG 424 except "string", <data>
         try:
@@ -303,7 +294,6 @@ if is_cli or is_silverlight:
             pass
         # /BUG
         
-        AreEqual(sys.exc_info(), (None, None, None))
         # BUG 319 IOError not raised.
         if is_silverlight==False:
             try:
@@ -317,7 +307,6 @@ if is_cli or is_silverlight:
             raise System.Exception('Hello World')
         except System.Exception, e:
             Assert(type(e) == System.Exception)
-        AreEqual(sys.exc_info(), (None, None, None))
         
         
         
@@ -357,7 +346,7 @@ if is_cli or is_silverlight:
             raise Exception
         except:
             import exceptions
-            AreEqual(sys.exc_info()[0], exceptions.Exception)    
+            AreEqual(sys.exc_info()[0], exceptions.Exception)  
             AreEqual(sys.exc_info()[1].__class__, exceptions.Exception)
             
         try:
@@ -762,9 +751,9 @@ def test_nested_exceptions():
             ei = sys.exc_info()
             # PopException
         ei2 = sys.exc_info()
-
         AreEqual(ei, ei2)
-
+    ei3 = sys.exc_info()
+    AreEqual(ei, ei3)
 
 def test_swallow_from_else():
     def f():

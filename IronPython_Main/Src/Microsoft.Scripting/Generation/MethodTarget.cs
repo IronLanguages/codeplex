@@ -25,8 +25,9 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using Microsoft.Scripting.Utils;
+    using Microsoft.Contracts;
 
-    public class MethodTarget  {
+    public sealed class MethodTarget  {
         private MethodBinder _binder;
         private MethodBase _method;
         private int _parameterCount;
@@ -34,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
         private ArgBuilder _instanceBuilder;
         private ReturnBuilder _returnBuilder;
 
-        public MethodTarget(MethodBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
+        internal MethodTarget(MethodBinder binder, MethodBase method, int parameterCount, ArgBuilder instanceBuilder, IList<ArgBuilder> argBuilders, ReturnBuilder returnBuilder) {
             this._binder = binder;
             this._method = method;
             this._parameterCount = parameterCount;
@@ -47,14 +48,40 @@ namespace Microsoft.Scripting.Generation {
 
         public MethodBase Method {
             get { return _method; }
-            set { _method = value; }
+            internal set { _method = value; }
         }
 
-        public int ParameterCount {
+        internal int ParameterCount {
             get { return _parameterCount; }
         }
 
-        public bool CheckArgs(CodeContext context, object[] args) {
+        /// <summary>
+        /// Checks to see if this MethodTarget can be called with the specified types at the specified narrowing level.
+        /// 
+        /// The ActionBinder provided will be used for determining if the required type conversions are possible.
+        /// 
+        /// If any of the conversions cannot be performed and failures is non-null then it is populated with the types that 
+        /// cannot be converted.
+        /// </summary>
+        public bool CanCall(Type/*!*/[]/*!*/ types, NarrowingLevel level, IList<ConversionFailure> failures) {
+            Contract.RequiresNotNull(types, "types");
+            Contract.RequiresNotNullItems(types, "types");
+
+            MethodBinderContext ctx = new MethodBinderContext(_binder.ActionBinder, null);
+            if (_instanceBuilder.CanConvert(ctx, types, level, failures)) {
+                for (int i = 0; i < _argBuilders.Count; i++) {
+                    if (!_argBuilders[i].CanConvert(ctx, types, level, failures)) {
+                        if (failures == null) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return failures == null || failures.Count == 0;
+        }
+
+        internal bool CheckArgs(CodeContext context, object[] args) {
             //if (!instanceBuilder.Check(context, args)) return false;
             //foreach (ArgBuilder arg in argBuilders) {
             //    if (!arg.Check(context, args)) return false;
@@ -73,8 +100,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-
-        public object CallReflected(CodeContext context, object[] args) {
+        internal object CallReflected(CodeContext context, object[] args) {
             if (ScriptDomainManager.Options.EngineDebug) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Methods, this);
             }
@@ -109,8 +135,8 @@ namespace Microsoft.Scripting.Generation {
             return _returnBuilder.Build(context, callArgs, args, result);
         }
 
-        public Expression MakeExpression(ActionBinder binder, StandardRule rule, Expression[] parameters) {
-            MethodBinderContext context = new MethodBinderContext(binder, rule);
+        public Expression MakeExpression(StandardRule rule, Expression[] parameters) {
+            MethodBinderContext context = new MethodBinderContext(_binder.ActionBinder, rule);
 
             Expression check = Ast.True();
             if (_binder.IsBinaryOperator) {
@@ -211,12 +237,11 @@ namespace Microsoft.Scripting.Generation {
         /// Creates a call to this MethodTarget with the specified parameters.  Casts are inserted to force
         /// the types to the provided known types.
         /// </summary>
-        /// <param name="binder"></param>
         /// <param name="rule"></param>
         /// <param name="parameters"></param>
         /// <param name="knownTypes"></param>
         /// <returns></returns>
-        public Expression MakeExpression(ActionBinder binder, StandardRule rule, Expression[] parameters, Type[] knownTypes) {
+        public Expression MakeExpression(StandardRule rule, Expression[] parameters, Type[] knownTypes) {
             Expression[] args = parameters;
             if (knownTypes != null) {
                 args = new Expression[parameters.Length];
@@ -228,10 +253,10 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
-            return MakeExpression(binder, rule, args);
+            return MakeExpression(rule, args);
         }
 
-        public AbstractValue AbstractCall(AbstractContext context, IList<AbstractValue> args) {
+        internal AbstractValue AbstractCall(AbstractContext context, IList<AbstractValue> args) {
             AbstractValue[] callArgs = new AbstractValue[_argBuilders.Count];
             for (int i = 0; i < _argBuilders.Count; i++) {
                 callArgs[i] = _argBuilders[i].AbstractBuild(context, args);
@@ -272,7 +297,7 @@ namespace Microsoft.Scripting.Generation {
             return max;
         }
 
-        public int CompareEqualParameters(MethodTarget other) {
+        internal int CompareEqualParameters(MethodTarget other) {
             // Prefer normal methods over explicit interface implementations
             if (other.Method.IsPrivate && !this.Method.IsPrivate) return +1;
             if (this.Method.IsPrivate && !other.Method.IsPrivate) return -1;
@@ -309,13 +334,14 @@ namespace Microsoft.Scripting.Generation {
             return 0;
         }
 
-        protected static int Compare(int x, int y) {
+        private static int Compare(int x, int y) {
             if (x < y) return -1;
             else if (x > y) return +1;
             else return 0;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
         }
 
@@ -325,7 +351,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public MethodTarget MakeParamsExtended(int argCount, SymbolId[] names, int[] nameIndexes) {
+        internal MethodTarget MakeParamsExtended(int argCount, SymbolId[] names, int[] nameIndexes) {
             Debug.Assert(CompilerHelpers.IsParamsMethod(Method));
 
             List<ArgBuilder> newArgBuilders = new List<ArgBuilder>(_argBuilders.Count);

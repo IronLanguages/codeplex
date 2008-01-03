@@ -30,7 +30,7 @@ namespace Microsoft.Scripting {
     /// <summary>
     /// Helper methods that calls are generated to from the default DLR binders.
     /// </summary>
-    public static partial class BinderOps {
+    public static class BinderOps {
         /// <summary>
         /// Helper method to create an instance.  Work around for Silverlight where Activator.CreateInstance
         /// is SecuritySafeCritical.

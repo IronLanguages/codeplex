@@ -55,7 +55,7 @@ namespace Microsoft.Scripting {
 
         #region ICollection Members
 
-        public void CopyTo(Array array, int index) {
+        public void CopyTo(Array/*!*/ array, int index) {
             throw new NotImplementedException("The method or operation is not implemented.");
         }
 
@@ -63,8 +63,8 @@ namespace Microsoft.Scripting {
             get { return false; }
         }
 
-        public virtual object SyncRoot {
-            get { return null; }
+        public virtual object/*!*/ SyncRoot {
+            get { return this; }
         }
 
         #endregion        

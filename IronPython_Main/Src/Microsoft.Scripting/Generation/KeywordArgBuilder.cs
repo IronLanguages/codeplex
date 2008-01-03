@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Generation {
     /// total number of arguments provided by the user.  It then delegates to an 
     /// underlying ArgBuilder which only receives the single correct argument.
     /// </summary>
-    public class KeywordArgBuilder : ArgBuilder {
+    class KeywordArgBuilder : ArgBuilder {
         private int _kwArgCount, _kwArgIndex;
         private ArgBuilder _builder;
 
@@ -47,6 +47,17 @@ namespace Microsoft.Scripting.Generation {
 
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return _builder.CheckExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Length)] });
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            if (!_builder.CanConvert(context, new Type[] { paramTypes[GetKeywordIndex(paramTypes.Length)] }, level, failures)) {
+                if (failures != null) {
+                    // need to update to use the correct index
+                    ConversionFailure.ReplaceLastFailure(failures, GetKeywordIndex(paramTypes.Length));
+                }
+                return false;
+            }
+            return true;
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

@@ -307,7 +307,7 @@ namespace IronPython.Runtime.Calls {
                     GetTypeConstructor(binder, _creating, new Type[] { typeof(PythonType) });
 
                 Debug.Assert(cand != null);
-                return cand.Target.MakeExpression(binder,
+                return cand.Target.MakeExpression(
                     rule,
                     _creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
                     _creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(PythonType) });
@@ -338,7 +338,7 @@ namespace IronPython.Runtime.Calls {
                 MethodCandidate cand = mb.MakeBindingTarget(CallType.None, types);
 
                 if (cand != null) {
-                    return cand.Target.MakeExpression(binder,
+                    return cand.Target.MakeExpression(
                         rule,
                         _creating.IsSystemType ? Arguments.Expressions : ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions));
                 }
@@ -382,7 +382,7 @@ namespace IronPython.Runtime.Calls {
                 Expression[] parameters = ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions);
                 if (mc != null) {
                     if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
-                    return mc.Target.MakeExpression(binder, rule, parameters);
+                    return mc.Target.MakeExpression(rule, parameters);
                 }
                 return null;
 
@@ -508,7 +508,6 @@ namespace IronPython.Runtime.Calls {
                 if (mc != null) {
                     if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
                     return mc.Target.MakeExpression(
-                            binder,
                             rule,
                             ArrayUtils.Insert<Expression>(createExpr, Arguments.Expressions)
                         );

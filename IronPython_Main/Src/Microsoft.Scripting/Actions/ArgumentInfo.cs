@@ -19,6 +19,7 @@ using System.Text;
 using Microsoft.Scripting.Ast;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -53,6 +54,7 @@ namespace Microsoft.Scripting.Actions {
             return obj is ArgumentInfo && Equals((ArgumentInfo)obj);
         }
 
+        [StateIndependent]
         public bool Equals(ArgumentInfo other) {
             return _kind == other._kind && _name == other._name;
         }

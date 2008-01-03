@@ -19,13 +19,14 @@ using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class ActionExpression : Expression {
-        private readonly ReadOnlyCollection<Expression> _arguments;
-        private readonly DynamicAction _action;
+        private readonly ReadOnlyCollection<Expression>/*!*/ _arguments;
+        private readonly DynamicAction/*!*/ _action;
 
-        internal ActionExpression(DynamicAction /*!*/ action, ReadOnlyCollection<Expression> /*!*/ arguments, Type /*!*/ result)
+        internal ActionExpression(DynamicAction/*!*/ action, ReadOnlyCollection<Expression>/*!*/ arguments, Type/*!*/ result)
             : base(AstNodeType.ActionExpression, result) {
             _action = action;
             _arguments = arguments;

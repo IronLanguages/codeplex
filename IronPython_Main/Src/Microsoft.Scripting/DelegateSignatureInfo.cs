@@ -22,8 +22,12 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
+    /// <summary>
+    /// Used as the key for the RuntimeHelpers.GetDelegate method caching system
+    /// </summary>
     class DelegateSignatureInfo {
         private readonly ActionBinder _binder;
         private readonly Type _returnType;
@@ -39,6 +43,7 @@ namespace Microsoft.Scripting {
             _returnType = returnType;
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             DelegateSignatureInfo dsi = obj as DelegateSignatureInfo;
             if (dsi == null) {
@@ -66,6 +71,7 @@ namespace Microsoft.Scripting {
             return true;
         }
 
+        [Confined]
         public override int GetHashCode() {
             int hashCode = 5331;
 
@@ -77,7 +83,8 @@ namespace Microsoft.Scripting {
             return hashCode;
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             StringBuilder text = new StringBuilder();
             text.Append(_returnType.ToString());
             text.Append("(");
@@ -132,7 +139,10 @@ namespace Microsoft.Scripting {
         }
     }
 
-    public class DelegateInfo {
+    /// <summary>
+    /// Used as the value for the RuntimeHelpers.GetDelegate method caching system
+    /// </summary>
+    class DelegateInfo {
         private readonly MethodInfo _method;
         private readonly object[] _constants;
         private readonly int _target;

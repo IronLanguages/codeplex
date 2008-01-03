@@ -116,7 +116,7 @@ namespace Microsoft.Scripting.Actions {
                 MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
                 MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
                 if (mc != null) {
-                    Expression call = Ast.Convert(mc.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types), typeof(int));
+                    Expression call = Ast.Convert(mc.Target.MakeExpression(_rule, _rule.Parameters, _types), typeof(int));
                     switch (info.Operator) {
                         case Operators.GreaterThan: call = Ast.GreaterThan(call, Ast.Constant(0)); break;
                         case Operators.LessThan: call = Ast.LessThan(call, Ast.Constant(0)); break;
@@ -373,13 +373,13 @@ namespace Microsoft.Scripting.Actions {
 
                 if (cand != null) {
                     if (oper == Operators.GetItem) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, cand.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types)));
+                        _rule.SetTarget(_rule.MakeReturn(Binder, cand.Target.MakeExpression(_rule, _rule.Parameters, _types)));
                     } else {
 
                         _rule.SetTarget(_rule.MakeReturn(Binder,
                             Ast.Comma(0,
                                 _rule.Parameters[2],
-                                cand.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types)
+                                cand.Target.MakeExpression(_rule, _rule.Parameters, _types)
                             )
                         ));
                     }
@@ -453,7 +453,7 @@ namespace Microsoft.Scripting.Actions {
             MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
             MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
             if (mc != null) {
-                Expression call = mc.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types);
+                Expression call = mc.Target.MakeExpression(_rule, _rule.Parameters, _types);
                 _rule.SetTarget(_rule.MakeReturn(Binder, call));
                 return true;
             }
@@ -464,7 +464,7 @@ namespace Microsoft.Scripting.Actions {
             MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
             MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
             if (mc != null) {
-                Expression call = mc.Target.MakeExpression(Binder, _rule, _rule.Parameters, _types);
+                Expression call = mc.Target.MakeExpression(_rule, _rule.Parameters, _types);
                 _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(call)));
                 return true;
             }
@@ -485,7 +485,7 @@ namespace Microsoft.Scripting.Actions {
 
         private static Expression ConvertIfNeeded(Expression expression, Type type) {
             if (expression.Type != type) {
-                return Ast.DynamicConvert(expression, type);
+                return Ast.Action.ConvertTo(type, expression);
             }
             return expression;
         }

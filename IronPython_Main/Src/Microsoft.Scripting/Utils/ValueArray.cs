@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Utils {
  
@@ -35,6 +36,7 @@ namespace Microsoft.Scripting.Utils {
 
         #region IEquatable<ValueArray<T>> Members
 
+        [StateIndependent]
         public bool Equals(ValueArray<T> other) {
             if (other == null) return false;
 
@@ -53,10 +55,12 @@ namespace Microsoft.Scripting.Utils {
 
         #endregion
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as ValueArray<T>);
         }
 
+        [Confined]
         public override int GetHashCode() {
             int val = 6551;
 

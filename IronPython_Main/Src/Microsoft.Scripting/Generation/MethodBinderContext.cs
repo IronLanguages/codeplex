@@ -43,5 +43,9 @@ namespace Microsoft.Scripting.Generation {
         public Variable GetTemporary(Type type, string name) {
             return _rule.GetTemporary(type, name);
         }
+
+        public bool CanConvert(Type fromType, Type toType, NarrowingLevel level) {
+            return _actionBinder.CanConvertFrom(fromType, toType, level);
+        }
     }
 }

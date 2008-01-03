@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     using System.Diagnostics;
     using Microsoft.Scripting.Utils;
 
-    public class ParamsArgBuilder : ArgBuilder {
+    class ParamsArgBuilder : ArgBuilder {
         private int _start;
         private int _count;
         private Type _elementType;
@@ -66,6 +66,21 @@ namespace Microsoft.Scripting.Generation {
             Expression res = context.CheckExpression(parameters[_start], _elementType);
             for (int i = 1; i < _count; i++) {
                 res = Ast.AndAlso(res, context.CheckExpression(parameters[_start + i], _elementType));
+            }
+            return res;
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            if (_count == 0) return true;
+
+            bool res = true;
+            for (int i = 0; i < _count; i++) {
+                if (!context.CanConvert(paramTypes[_start + i], _elementType, level)) {
+                    if (failures != null) {
+                        failures.Add(new ConversionFailure(paramTypes[_start + i], _elementType, _start + i));
+                    }
+                    res = false;
+                }
             }
             return res;
         }

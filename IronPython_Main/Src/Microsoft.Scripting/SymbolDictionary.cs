@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -81,6 +82,7 @@ namespace Microsoft.Scripting {
             }
         }
 
+        [Confined]
         bool IDictionary<object, object>.ContainsKey(object key) {
             Debug.Assert(!(key is SymbolId));
             string strKey = key as string;
@@ -99,7 +101,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        ICollection<object> IDictionary<object, object>.Keys {
+        ICollection<object>/*!*/ IDictionary<object, object>.Keys {
             get {
                 // data.Keys is typed as ICollection<SymbolId>. Hence, we cannot return as a ICollection<object>.
                 // Instead, we need to copy the data to a List<object>
@@ -148,7 +150,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        ICollection<object> IDictionary<object, object>.Values {
+        ICollection<object>/*!*/ IDictionary<object, object>.Values {
             get {
                 // Are there any object-keys? If not we can use a fast-path
                 lock (this) {
@@ -225,13 +227,14 @@ namespace Microsoft.Scripting {
             lock (this) _data.Clear();
         }
 
+        [Confined]
         public bool Contains(KeyValuePair<object, object> item) {
             object value;
             if (AsObjectKeyedDictionary().TryGetValue(item.Key, out value) && value == item.Value) return true;
             return false;
         }
 
-        public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
+        public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
             // TODO:
             throw new NotImplementedException();
         }
@@ -272,7 +275,8 @@ namespace Microsoft.Scripting {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
+        [Pure]
+        IEnumerator<KeyValuePair<object, object>>/*!*/ IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
             lock (this) {
                 foreach (KeyValuePair<SymbolId, object> o in _data) {
                     if (o.Key == BaseSymbolDictionary.ObjectKeys) continue;
@@ -292,7 +296,8 @@ namespace Microsoft.Scripting {
 
         #region IEnumerable Members
 
-        public System.Collections.IEnumerator GetEnumerator() {
+        [Pure]
+        public System.Collections.IEnumerator/*!*/ GetEnumerator() {
             foreach (KeyValuePair<SymbolId, object> o in _data) {
                 if (o.Key == BaseSymbolDictionary.ObjectKeys) continue;
                 yield return SymbolTable.IdToString(o.Key);
@@ -375,15 +380,17 @@ namespace Microsoft.Scripting {
 
         #region IDictionary Members
 
-        void IDictionary.Add(object key, object value) {
+        void IDictionary.Add(object/*!*/ key, object value) {
             AsObjectKeyedDictionary().Add(key, value);
         }
 
-        public bool Contains(object key) {
+        [Pure]
+        public bool Contains(object/*!*/ key) {
             lock (this) return AsObjectKeyedDictionary().ContainsKey(key);
         }
 
-        IDictionaryEnumerator IDictionary.GetEnumerator() {
+        [Pure]
+        IDictionaryEnumerator/*!*/ IDictionary.GetEnumerator() {
             Dictionary<object, object> objData = GetObjectKeysDictionaryIfExists();
             if (objData == null) return new TransformDictionaryEnumerator(_data);
 
@@ -400,7 +407,7 @@ namespace Microsoft.Scripting {
             get { return false; }
         }
 
-        ICollection IDictionary.Keys {
+        ICollection/*!*/ IDictionary.Keys {
             get {
                 // data.Keys is typed as ICollection<SymbolId>. Hence, we cannot return as a ICollection.
                 // Instead, we need to copy the data to a List.
@@ -420,7 +427,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        void IDictionary.Remove(object key) {
+        void IDictionary.Remove(object/*!*/ key) {
             Debug.Assert(!(key is SymbolId));
             string strKey = key as string;
             lock (this) {
@@ -434,7 +441,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        ICollection IDictionary.Values {
+        ICollection/*!*/ IDictionary.Values {
             get {
                 List<object> res = new List<object>();
 
@@ -452,7 +459,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        object IDictionary.this[object key] {
+        object IDictionary.this[object/*!*/ key] {
             get { return AsObjectKeyedDictionary()[key]; }
             set { AsObjectKeyedDictionary()[key] = value; }
         }
@@ -465,7 +472,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        public override object SyncRoot {
+        public override object/*!*/ SyncRoot {
             get {
                 // TODO: We should really lock on something else...
                 return this;

@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
@@ -24,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder which provides the CodeContext parameter to a method.
     /// </summary>
-    public class ContextArgBuilder : ArgBuilder {
+    class ContextArgBuilder : ArgBuilder {
         public ContextArgBuilder() { }
 
         public override object Build(CodeContext context, object[] args) {
@@ -41,6 +42,10 @@ namespace Microsoft.Scripting.Generation {
 
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return null;
+        }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            return true;
         }
     }
 }

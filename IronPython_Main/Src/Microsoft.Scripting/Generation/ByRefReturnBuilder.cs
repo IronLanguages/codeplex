@@ -25,7 +25,7 @@ using Microsoft.Scripting.Ast;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class ByRefReturnBuilder : ReturnBuilder {
+    class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;
         private ActionBinder _binder;
 

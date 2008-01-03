@@ -12,29 +12,33 @@
  *
  *
  * ***************************************************************************/
+
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
-    /// <summary>
-    /// Represents a sequence which may have been provided as a set of parameters to an indexer.
-    /// 
-    /// TODO: This should be removed, and all uses of this should go to [SpecialName]object GetItem(..., params object[] keys)
-    /// and [SpecialName]void SetItem(..., params object [] keys) or this[params object[]xyz] which is also legal.  
-    /// 
-    /// currently this exists for backwards compatibility w/ IronPython's "expandable tuples".
-    /// </summary>
-    public interface IParameterSequence {
-        object[] Expand(object initial);
-        object this[int index] {
-            get;
+namespace IronPython.Runtime {
+    public sealed class KwCallInfo {
+        private readonly object[] _args;
+        private readonly string[] _names;
+
+        public KwCallInfo(object[] args, string[] names) {
+            _args = args;
+            _names = names;
         }
-        bool IsExpandable {
-            get;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
+        public object[] Arguments {
+            get {
+                return _args;
+            }
         }
-        int Count {
-            get;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
+        public string[] Names {
+            get {
+                return _names;
+            }
         }
     }
 }

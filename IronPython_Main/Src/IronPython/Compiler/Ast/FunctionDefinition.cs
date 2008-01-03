@@ -38,6 +38,9 @@ namespace IronPython.Compiler.Ast {
         private SourceUnit _sourceUnit;
         private bool _generator;                        // The function is a generator
 
+        // true if this function can set sys.exc_info(). Only functions with an except block can set that.
+        private bool _canSetSysExcInfo;
+
         private PythonVariable _variable;               // The variable corresponding to the function name
         private MSAst.CodeBlock _block;
 
@@ -78,6 +81,12 @@ namespace IronPython.Compiler.Ast {
         public bool IsGenerator {
             get { return _generator; }
             set { _generator = value; }
+        }
+
+        // Called by parser to mark that this function can set sys.exc_info(). 
+        // An alternative technique would be to just walk the body after the parse and look for a except block.
+        internal bool CanSetSysExcInfo {
+            set { _canSetSysExcInfo = value; }
         }
 
         internal PythonVariable Variable {
@@ -262,7 +271,42 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            code.Body = Ast.Block(statements);
+            MSAst.Statement body = Ast.Block(statements);
+
+            // If this function can modify sys.exc_info() (_canSetSysExcInfo), then it must restore the result on finish.
+            // 
+            // Wrap in 
+            //   $temp = PythonOps.SaveCurrentException()
+            //   <body>
+            //   PythonOps.RestoreCurrentException($temp)
+            // Skip this if we're a generator. For generators, the try finally is handled by the PythonGenerator class 
+            //  before it's invoked. This is because the restoration must occur at every place the function returns from 
+            //  a yield point. That's different than the finally semantics in a generator.
+            if (!IsGenerator && this._canSetSysExcInfo) 
+            {
+                MSAst.BoundExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
+                MSAst.Statement s = Ast.Try(
+                    Ast.Statement(
+                        Ast.Assign(
+                            extracted.Variable,
+                            Ast.Call(
+                                AstGenerator.GetHelperMethod("SaveCurrentException")                                
+                            )
+                        )
+                    ),
+                    body
+                ).Finally(
+                    Ast.Statement(
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod("RestoreCurrentException"), extracted
+                        )
+                    )
+                );
+                body = s;
+            }
+            code.Body = body;
+
+            
 
             FunctionAttributes flags = ComputeFlags(_parameters);
 

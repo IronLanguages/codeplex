@@ -23,7 +23,7 @@ using System.Collections;
 using Microsoft.Scripting.Utils;
 using System.Diagnostics;
 
-#if SILVERLIGHT // Proxies
+#if SILVERLIGHT // Stubs
 
 namespace System {
 
@@ -408,6 +408,36 @@ namespace System {
         }
 
 #endregion
+    }
+}
+
+#endif
+
+#if !SPECSHARP
+
+namespace Microsoft.Contracts {
+    [Conditional("SPECSHARP"), AttributeUsage(AttributeTargets.Delegate | AttributeTargets.Event | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
+    internal sealed class StateIndependentAttribute : Attribute {
+    }
+
+    [Conditional("SPECSHARP"), AttributeUsage(AttributeTargets.Delegate | AttributeTargets.Event | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
+    internal sealed class PureAttribute : Attribute {
+    }
+
+    [Conditional("SPECSHARP"), AttributeUsage(AttributeTargets.Delegate | AttributeTargets.Event | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false, Inherited = true)]
+    internal sealed class ConfinedAttribute : Attribute {
+    }
+
+    [Conditional("SPECSHARP"), AttributeUsage(AttributeTargets.Field)]
+    internal sealed class StrictReadonlyAttribute : Attribute {
+    }
+
+    internal static class NonNullType {
+        [DebuggerStepThrough]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters")]
+        public static void AssertInitialized<T>(T[] array) where T : class {
+            Assert.NotNullItems<T>(array);
+        }
     }
 }
 

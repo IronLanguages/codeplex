@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Types {
         #region IDynamicObject Members
 
         LanguageContext IDynamicObject.LanguageContext {
-            get { throw new NotImplementedException(); }
+            get { return DefaultContext.Default.LanguageContext; }
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {

@@ -40,13 +40,12 @@ namespace Microsoft.Scripting.Actions {
         private Expression _instance;                               // the instance or null if this is a non-instance call
         private Expression _test;                                   // the test expression, built up and assigned at the end
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we end up producing
-        private bool _binaryOperator, _reversedOperator;            // if we're producing a binary operator or a reversed operator (should go away, Python specific).
-        private MethodBase[] _targets;
+        private readonly bool _binaryOperator, _reversedOperator;   // if we're producing a binary operator or a reversed operator (should go away, Python specific).
+        private readonly MethodBase[] _targets;
 
-        public CallBinderHelper(CodeContext context, ActionType action, object[] args)
+        public CallBinderHelper(CodeContext/*!*/ context, ActionType/*!*/ action, object[]/*!*/ args)
             : base(context, action) {
-            Contract.RequiresNotNull(args, "args");
-            if (args.Length < 1) throw new ArgumentException("Must receive at least one argument, the target to call", "args");
+            Contract.RequiresNotEmpty(args, "args");
 
             _args = args;
             _test = _rule.MakeTypeTest(CompilerHelpers.GetType(_args[0]), 0);
@@ -134,7 +133,7 @@ namespace Microsoft.Scripting.Actions {
 
                     _rule.SetTarget(_rule.MakeReturn(
                         Binder,
-                        cand.Target.MakeExpression(Binder, _rule, exprargs, testTypes)));
+                        cand.Target.MakeExpression(_rule, exprargs, testTypes)));
                 }
             } else {
                 // make an error rule

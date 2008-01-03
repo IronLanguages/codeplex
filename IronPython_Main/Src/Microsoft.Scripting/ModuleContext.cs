@@ -26,19 +26,22 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
-    public class ModuleContext {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
-        public static readonly ModuleContext[] EmptyArray = new ModuleContext[0];
 
-        private readonly ScriptScope _module;
+    // TODO: this class should be abstract
+    public class ScopeExtension {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
+        public static readonly ScopeExtension[]/*!*/ EmptyArray = new ScopeExtension[0];
+
+        private readonly Scope/*!*/ _scope;
+
+        // TODO: is this meant to be on Scope or for invariant language (i.e. on InvariantScopeExtension)?
         private bool _showCls;
+
+        // TODO: remove?
         private CompilerContext _compilerContext;
 
-        /// <summary>
-        /// Optional.
-        /// </summary>
-        public ScriptScope Module {
-            get { return _module; }
+        public Scope/*!*/ Scope {
+            get { return _scope; }
         }
 
         /// <summary>
@@ -65,22 +68,19 @@ namespace Microsoft.Scripting {
             }
         }
 
-        /// <summary>
-        /// Creates a module context.
-        /// </summary>
-        /// <param name="module">Optional. <c>null</c> for default and invariant contexts.</param>
-        public ModuleContext(ScriptScope module) {
-            _module = module;
+        public ScopeExtension(Scope/*!*/ scope) {
+            Contract.RequiresNotNull(scope, "scope");
+            _scope = scope;
         }
 
         /// <summary>
         /// Copy constructor.
         /// </summary>
-        protected ModuleContext(ModuleContext context) {
-            Contract.RequiresNotNull(context, "context");
-            _module = context._module;
-            _showCls = context._showCls;
-            _compilerContext = context._compilerContext;
+        protected ScopeExtension(ScopeExtension/*!*/ extension) {
+            Contract.RequiresNotNull(extension, "extension");
+            _scope = extension._scope;
+            _showCls = extension._showCls;
+            _compilerContext = extension._compilerContext;
         }
 
         internal protected virtual void ModuleReloading() {

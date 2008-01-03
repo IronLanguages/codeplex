@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class BoundExpression : Expression {
@@ -54,7 +55,8 @@ namespace Microsoft.Scripting.Ast {
             internal set { _defined = value; }
         }
 
-        public override string ToString() {
+        [Confined]        
+        public override string/*!*/ ToString() {
             return "BoundExpression : " + SymbolTable.IdToString(Name);
         }
     }

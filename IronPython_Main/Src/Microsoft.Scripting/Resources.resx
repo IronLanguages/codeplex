@@ -201,9 +201,6 @@
   <data name="MissingType" xml:space="preserve">
     <value>Type '{0}' is missing or cannot be loaded.</value>
   </data>
-  <data name="NameMustBeString" xml:space="preserve">
-    <value>the name must be string</value>
-  </data>
   <data name="NameNotDefined" xml:space="preserve">
     <value>name '{0}' not defined</value>
   </data>

@@ -156,7 +156,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         internal static CodeContext GetEvaluationContext<T>(CodeContext context, ref object []args) {
-            context = new CodeContext(new Scope(context.Scope, null), context.LanguageContext, context.ModuleContext);
+            context = new CodeContext(new Scope(context.LanguageContext, context.Scope, null), context.LanguageContext, context.ModuleContext);
             if (DynamicSiteHelpers.IsBigTarget(typeof(T))) {
                 args = new object[] { Tuple.MakeTuple(typeof(T).GetGenericArguments()[0], args) };
             }

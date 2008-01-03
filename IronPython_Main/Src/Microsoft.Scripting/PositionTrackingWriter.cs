@@ -74,7 +74,7 @@ namespace Microsoft.Scripting {
             base.Write(value);
         }
 
-        public override void Write(char[] buffer, int index, int count) {
+        public override void Write(char[]/*!*/ buffer, int index, int count) {
             UpdateLineColumn(buffer, index, count);
             base.Write(buffer, index, count);
         }

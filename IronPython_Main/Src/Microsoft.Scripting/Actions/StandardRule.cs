@@ -22,6 +22,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -408,7 +409,7 @@ namespace Microsoft.Scripting.Actions {
                 // And rewrite the AST if needed
                 if (_references == null) {
                     AstRewriter.RewriteRule(this);
-                    _references = RuleBinder.Bind(_test, _target);
+                    _references = RuleBinder.Bind(_test, _target, ReturnType);
                 }
 
                 foreach (VariableReference vr in _references) {
@@ -432,8 +433,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return string.Format("StandardRule({0})", _target);
         }
 
@@ -487,7 +488,7 @@ namespace Microsoft.Scripting.Actions {
             MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, types);
 
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(binder, ret, ret.Parameters, types)));
+            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(ret, ret.Parameters, types)));
             return ret;
         }        
         

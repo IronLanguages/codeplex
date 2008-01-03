@@ -18,6 +18,7 @@ using System.Reflection.Emit;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -67,7 +68,8 @@ namespace Microsoft.Scripting.Generation {
             get { return _localBuilder; }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("LocalSlot Index: {0} Type {1}", _localBuilder.LocalIndex, _localBuilder.LocalType.FullName);
         }
     }

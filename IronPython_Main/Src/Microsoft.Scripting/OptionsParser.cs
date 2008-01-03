@@ -135,8 +135,9 @@ namespace Microsoft.Scripting {
 
                     string dir = PopNextArg();
 
-                    if (!ScriptDomainManager.CurrentManager.PAL.DirectoryExists(dir))
-                        throw new System.IO.DirectoryNotFoundException(String.Format("Directory '{0}' doesn't exist.", dir));
+                    if (!ScriptDomainManager.CurrentManager.PAL.DirectoryExists(dir)) {
+                        throw new InvalidOptionException(String.Format("Directory '{0}' doesn't exist.", dir));
+                    }
 
                     GlobalOptions.BinariesDirectory = dir;
                     break;

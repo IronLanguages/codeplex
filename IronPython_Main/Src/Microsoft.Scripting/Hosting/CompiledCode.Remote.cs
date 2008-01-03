@@ -31,30 +31,17 @@ namespace Microsoft.Scripting.Hosting {
 
         #region ICompiledCode Members
 
-        public IScriptScope MakeModule(string name) {
-            return RemoteWrapper.WrapRemotable<IScriptScope>(_compiledCode.MakeModule(name));
-        }
-
-        public void Execute() {
-            _compiledCode.Execute();
+        public IScriptScope MakeOptimizedScope() {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_compiledCode.MakeOptimizedScope());
         }
 
         public void Execute(IScriptScope module) {
             _compiledCode.Execute(module);
         }
 
-        // throws SerializationException 
-        public object Evaluate() {
-            return _compiledCode.Evaluate(); ;
-        }
-
         // throws SerializationException
         public object Evaluate(IScriptScope module) {
             return _compiledCode.Evaluate(module);
-        }
-
-        public ObjectHandle EvaluateAndWrap() {
-            return _compiledCode.EvaluateAndWrap();
         }
 
         public ObjectHandle EvaluateAndWrap(IScriptScope module) {

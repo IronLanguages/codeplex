@@ -150,7 +150,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets a rule for the provided action and arguments and executes it without compiling.
         /// </summary>
-        public object Execute(CodeContext cc, DynamicAction action, Type[] types, object[] args) {
+        public object Execute(CodeContext/*!*/ cc, DynamicAction/*!*/ action, Type/*!*/[]/*!*/ types, object[]/*!*/ args) {
             return DynamicSiteHelpers.Execute(cc, this, action, types, args);
         }
 
@@ -195,13 +195,6 @@ namespace Microsoft.Scripting.Actions {
                 default:
                     throw new NotImplementedException(action.ToString());
             }
-        }
-
-        /// <summary>
-        /// Emits the code to convert an arbitrary object to the specified type.
-        /// </summary>
-        public virtual void EmitConvertFromObject(Compiler cg, Type paramType) {
-            cg.EmitCast(typeof(object), paramType);
         }
 
         /// <summary>
@@ -407,7 +400,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="parameters">The parameters being used to access the property.  This includes the instance as the first entry, any index parameters, and the
         /// value being assigned as the last entry if isAssignment is true.</param>
         /// <returns></returns>
-        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression/*!*/[]/*!*/ parameters) {
+        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression[]/*!*/ parameters) {
             Contract.RequiresNotNull(tracker, "tracker");
             Contract.Requires(tracker.IsStatic, "expected only static property");
             Contract.RequiresNotNull(parameters, "parameters");
@@ -438,7 +431,10 @@ namespace Microsoft.Scripting.Actions {
                 Ast.Ast.Call(
                     typeof(RuntimeHelpers).GetMethod("CannotConvertError"),
                     Ast.Ast.RuntimeConstant(toType),
-                    value
+                    Ast.Ast.Convert(
+                        value,
+                        typeof(object)
+                    )
                )
             );
         }
@@ -566,7 +562,7 @@ namespace Microsoft.Scripting.Actions {
                     return rule.MakeError(
                         Ast.Ast.Call(
                             typeof(RuntimeHelpers).GetMethod("TypeErrorForExtraKeywordArgument"),
-                            Ast.Ast.Constant(binder._name, typeof(string)),
+                            Ast.Ast.Constant(binder.Name, typeof(string)),
                             Ast.Ast.Constant(kvp.Key, typeof(string))
                         )
                     );
@@ -578,7 +574,7 @@ namespace Microsoft.Scripting.Actions {
                         typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] {
                             typeof(string), typeof(int), typeof(int), typeof(int), typeof(int), typeof(bool), typeof(bool)
                         }),
-                        Ast.Ast.Constant(binder._name, typeof(string)), // name
+                        Ast.Ast.Constant(binder.Name, typeof(string)),  // name
                         Ast.Ast.Constant(minArgs),                      // min formal normal arg cnt
                         Ast.Ast.Constant(maxArgs),                      // max formal normal arg cnt
                         Ast.Ast.Constant(maxDflt),                      // default cnt

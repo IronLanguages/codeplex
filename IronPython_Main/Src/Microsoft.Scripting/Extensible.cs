@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     public class Extensible<T> {
@@ -28,15 +29,18 @@ namespace Microsoft.Scripting {
             get { return _value; }
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return _value.Equals(obj);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return _value.GetHashCode();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return _value.ToString();
         }
     }

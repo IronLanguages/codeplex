@@ -620,7 +620,7 @@ namespace IronPython.Runtime.Types {
             res[typeof(BigInteger)] = "long";
             res[typeof(Complex64)] = "complex";
             res[typeof(PythonType)] = "type";
-            res[typeof(ScriptScope)] = "module";
+            res[typeof(Scope)] = "module";
             res[typeof(SymbolDictionary)] = "dict";
             res[typeof(CustomSymbolDictionary)] = "dict";
             res[typeof(BaseSymbolDictionary)] = "dict";

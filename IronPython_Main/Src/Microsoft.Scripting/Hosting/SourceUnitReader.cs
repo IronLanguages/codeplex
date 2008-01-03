@@ -68,7 +68,7 @@ namespace Microsoft.Scripting {
             return _textReader.ReadToEnd();
         }
 
-        public override int Read(char[] buffer, int index, int count) {
+        public override int Read(char[]/*!*/ buffer, int index, int count) {
             return _textReader.Read(buffer, index, count);
         }
 

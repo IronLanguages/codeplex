@@ -31,9 +31,7 @@ using System.Diagnostics;
 using System.IO;
 
 namespace Microsoft.Scripting {
-    /// <summary>
-    /// Standard .NET language context for simple binding - no parsing.
-    /// </summary>
+    // TODO: should move to C#
     public class DefaultLanguageContext : LanguageContext {
         public static CodeContext CreateCodeContext() {
             return CreateCodeContext(Type.EmptyTypes);
@@ -41,7 +39,7 @@ namespace Microsoft.Scripting {
 
         public static CodeContext CreateCodeContext(Type[] extensionTypes) {
             DefaultLanguageContext dlc = new DefaultLanguageContext(null);
-            CodeContext cc = new CodeContext(new Scope(), dlc, new ModuleContext(null));
+            CodeContext cc = new CodeContext(new Scope(dlc), dlc);
             dlc.Binder = new DefaultActionBinder(cc, extensionTypes);
             return cc;
         }
@@ -55,6 +53,7 @@ namespace Microsoft.Scripting {
         }
     }
 
+    // TODO: invariant context
     internal class DefaultActionBinder : ActionBinder {
         private Type[] _extensionTypes;
 

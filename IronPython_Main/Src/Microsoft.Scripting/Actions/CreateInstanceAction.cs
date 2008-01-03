@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class CreateInstanceAction : CallAction, IEquatable<CreateInstanceAction> {
@@ -43,14 +44,17 @@ namespace Microsoft.Scripting.Actions {
             return new CreateInstanceAction(new CallSignature(argumentCount));
         }
 
+        [Confined]
         public override bool Equals(object obj) {
             return Equals(obj as CreateInstanceAction);
         }
 
+        [StateIndependent]
         public bool Equals(CreateInstanceAction other) {
             return base.Equals(other);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return base.GetHashCode();
         }

@@ -31,59 +31,11 @@ load_iron_python_test()
 import IronPython
 import IronPythonTest
 
-pe = IronPythonTest.TestHelpers.GetContext().DomainManager.GetEngineByFileExtension('py')
+pe = IronPythonTest.TestHelpers.GetEngine()
 et = IronPythonTest.EngineTest()
 for s in dir(et):
     if s.startswith("Scenario"):
         exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
-
-#Rowan Work Item 312902
-@skip("interpreted")
-def test_interpreted():
-    global pe
-
-    # IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode is tested at compile time:
-    # it will take effect not immediately, but in modules we import
-    save = IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode
-    IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = True
-    modules = sys.modules.copy()
-    try:
-        # Just try some important tests.
-        # The full test suite should pass using -X:Interpret; this is just a lightweight check for "run 0".
-
-        import test_delegate
-        import test_function
-        import test_closure
-        import test_namebinding
-        import test_generator
-        import test_tcf
-        import test_methoddispatch
-        import test_operator
-        import test_exec
-        import test_list
-        import test_cliclass
-        import test_exceptions
-        # These two pass, but take forever to run
-        #import test_numtypes
-        #import test_number
-        import test_str
-        import test_math
-        import test_statics
-        import test_property
-        import test_weakref
-        import test_specialcontext
-        import test_thread
-        import test_dict
-        import test_set
-        import test_tuple
-        import test_class
-        if not is_silverlight:
-            #This particular test corrupts the run - CodePlex Work Item 11830
-            import test_syntax
-    finally:
-        IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode = save
-        # "Un-import" these modules so that they get re-imported in emit mode
-        sys.modules = modules
 
 #Rowan Work Item 312902
 @skip("interpreted")
@@ -129,7 +81,9 @@ def c():
         x = System.Exception("first", e)
     return x
 
-@skip("silverlight")
+
+#Rowan Work Item 312902
+@skip("silverlight", "interpreted")
 def test_formatexception():
     try:
         AssertError(TypeError, pe.FormatException, None)
@@ -144,7 +98,8 @@ def test_formatexception():
     finally:
         pass
 
-@skip("silverlight")
+#Rowan Work Item 31290
+@skip("silverlight", "interpreted")
 def test_formatexception_showclrexceptions():
     try:
         pe.Options.ShowClrExceptions = True

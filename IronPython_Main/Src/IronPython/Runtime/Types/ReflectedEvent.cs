@@ -221,7 +221,7 @@ namespace IronPython.Runtime.Types {
 
                 bool isRemovePublic = remove.IsPublic && remove.DeclaringType.IsPublic;
                 if (isRemovePublic || ScriptDomainManager.Options.PrivateBinding) {
-                    
+
                     Delegate handler;
 
                     if (_event.Info.EventHandlerType.IsAssignableFrom(func.GetType())) {
@@ -293,7 +293,7 @@ namespace IronPython.Runtime.Types {
                 Assert.NotNull(context);
 
                 List<KeyValuePair<object, Delegate>> copyOfHandlers = _handlers.GetCopyForRead();
-                for (int i = 0; i < copyOfHandlers.Count; i++) {
+                for (int i = copyOfHandlers.Count - 1; i >= 0; i--) {
                     if (context.LanguageContext.EqualReturnBool(context, copyOfHandlers[i].Key, callableObject)) {
                         Delegate handler = copyOfHandlers[i].Value;
                         _handlers.RemoveAt(i);

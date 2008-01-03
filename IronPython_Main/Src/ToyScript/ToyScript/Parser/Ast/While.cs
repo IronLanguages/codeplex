@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
@@ -33,9 +34,10 @@ namespace ToyScript.Parser.Ast {
             return Ast.While(
                 Span,
                 _test.End,
-                Ast.DynamicConvert(
-                    _test.Generate(tg),
-                    typeof(bool)
+                Ast.Action.ConvertTo(
+                    typeof(bool),
+                    ConversionResultKind.ExplicitCast,
+                    _test.Generate(tg)
                 ),
                 _body.Generate(tg),
                 null

@@ -20,6 +20,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public struct CallSignature : IEquatable<CallSignature> {
@@ -99,6 +100,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEquatable<CallSignature> Members
 
+        [StateIndependent]
         public bool Equals(CallSignature other) {
             if (_infos == null) {
                 return other._infos == null;
@@ -166,23 +168,35 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public CallSignature InsertArgument(ArgumentInfo info) {
-            if (info.IsSimple && this.IsSimple) {
-                return new CallSignature(_argumentCount + 1);
+            return InsertArgumentAt(0, info);
+        }
+
+        public CallSignature InsertArgumentAt(int index, ArgumentInfo info) {
+            if (this.IsSimple) {
+                if (info.IsSimple) {
+                    return new CallSignature(_argumentCount + 1);
+                }
+                
+                return new CallSignature(ArrayUtils.InsertAt(GetArgumentInfos(), index, info));
             }
 
-            return new CallSignature(ArrayUtils.Insert(info, _infos));
+            return new CallSignature(ArrayUtils.InsertAt(_infos, index, info));
         }
 
         public CallSignature RemoveFirstArgument() {
+            return RemoveArgumentAt(0);
+        }
+
+        public CallSignature RemoveArgumentAt(int index) {
             if (_argumentCount == 0) {
                 throw new InvalidOperationException();
             }
-            
+
             if (IsSimple) {
                 return new CallSignature(_argumentCount - 1);
             }
 
-            return new CallSignature(ArrayUtils.RemoveFirst(_infos));
+            return new CallSignature(ArrayUtils.RemoveAt(_infos, index));
         }
 
         public int IndexOf(ArgumentKind kind) {

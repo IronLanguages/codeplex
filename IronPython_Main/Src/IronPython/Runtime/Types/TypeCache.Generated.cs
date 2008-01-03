@@ -154,7 +154,7 @@ namespace IronPython.Runtime.Types {
 
         public static PythonType Module {
             get {
-                if (scriptmodule == null) scriptmodule = DynamicHelpers.GetPythonTypeFromType(typeof(ScriptScope));
+                if (scriptmodule == null) scriptmodule = DynamicHelpers.GetPythonTypeFromType(typeof(Scope));
                 return scriptmodule;
             }
         }

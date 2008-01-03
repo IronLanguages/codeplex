@@ -22,6 +22,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public class AssemblyLoadedEventArgs : EventArgs {
@@ -61,7 +62,8 @@ namespace Microsoft.Scripting.Actions {
             UpdateId();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return base.ToString() + ":" + _fullName;
         }
 
@@ -392,7 +394,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEnumerable<KeyValuePair<object,object>> Members
 
-        public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+        [Pure]
+        public IEnumerator<KeyValuePair<object, object>>/*!*/ GetEnumerator() {
             foreach (object key in Keys) {
                 yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
             }
@@ -402,7 +405,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region IEnumerable Members
 
-        IEnumerator IEnumerable.GetEnumerator() {
+        [Pure]
+        IEnumerator/*!*/ IEnumerable.GetEnumerator() {
             foreach (object key in Keys) {
                 yield return new KeyValuePair<object, object>(key, this[SymbolTable.StringToId((string)key)]);
             }

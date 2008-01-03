@@ -32,154 +32,106 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
-[assembly: PythonExtensionTypeAttribute(typeof(ScriptScope), typeof(PythonModuleOps))]
+[assembly: PythonExtensionTypeAttribute(typeof(Scope), typeof(PythonModuleOps))]
 namespace IronPython.Runtime.Types {
     /// <summary>
     /// Represents functionality that is exposed on PythonModule's but not exposed on the common ScriptModule
     /// class.
     /// </summary>
     public static class PythonModuleOps {
-        private static object PythonCreated = new object();
 
         #region Public Python API Surface
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptScope MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
+        public static Scope/*!*/ MakeModule(CodeContext/*!*/ context, PythonType/*!*/ cls, params object[]/*!*/ args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
-                ScriptScope module = MakePythonModule(context, "?");
+                PythonModule module = PythonContext.GetContext(context).CreateModule("?");
                 
                 // TODO: should be null
                 module.Scope.Clear();
 
-                SetPythonCreated(module);
-
-                return module;
+                return module.Scope;
             }
             throw PythonOps.TypeError("{0} is not a subtype of module", cls.Name);
         }
 
         [StaticExtensionMethod("__new__")]
-        public static ScriptScope MakeModule(CodeContext context, PythonType cls, [ParamDictionary] PythonDictionary kwDict\u00F8, params object[] args\u00F8) {
+        public static Scope/*!*/ MakeModule(CodeContext/*!*/ context, PythonType/*!*/ cls, [ParamDictionary]PythonDictionary kwDict\u00F8, params object[]/*!*/ args\u00F8) {
             return MakeModule(context, cls, args\u00F8);
         }
 
         [PythonName("__init__")]
-        public static void Initialize(ScriptScope module, string name) {
-            Initialize(module, name, null);
+        public static void Initialize(Scope/*!*/ scope, string name) {
+            Initialize(scope, name, null);
         }
 
         [PythonName("__init__")]
-        public static void Initialize(ScriptScope module, string name, string documentation) {
-            module.ModuleName = name;
+        public static void Initialize(Scope/*!*/ scope, string name, string documentation) {
+            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(name);
 
             if (documentation != null) {
-                module.Scope.SetName(Symbols.Doc, documentation);
+                scope.SetName(Symbols.Doc, documentation);
             }
         }
 
         [PythonName("__repr__")]
         [SpecialName]
-        public static string ToCodeString(ScriptScope module) {
-            return ToString(module);
+        public static string/*!*/ ToCodeString(Scope/*!*/ scope) {
+            return ToString(scope);
         }
 
         [PythonName("__str__")]
         [SpecialName]
-        public static string ToString(ScriptScope module) {
-            if (Get__file__(module) == null) {
-                return String.Format("<module '{0}' (built-in)>", module.ModuleName);
+        public static string/*!*/ ToString(Scope/*!*/ scope) {
+            PythonModule module = DefaultContext.DefaultPythonContext.EnsurePythonModule(scope);
+            string file = module.GetFile() as string;
+            string name = module.GetName() as string ?? "?";
+
+            if (file == null) {
+                return String.Format("<module '{0}' (built-in)>", name);
             }
-            return String.Format("<module '{0}' from '{1}'>", module.ModuleName, Get__file__(module));
+            return String.Format("<module '{0}' from '{1}'>", name, file);
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static object Get__name__(ScriptScope module) {
-            object res;
-            if (module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.Name, out res)) {
-                return res;
-            }
-
-            return module.ModuleName;
+        public static object Get__name__(Scope/*!*/ scope) {
+            return DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetName();
         }
 
         [PropertyMethod, PythonName("__name__")]
-        public static void Set__name__(ScriptScope module, object value) {
-            module.SetVariable("__name__", value);
-
-            string strVal = value as string;
-            if (strVal != null) {
-                module.ModuleName = strVal;
-            }
+        public static void Set__name__(Scope/*!*/ scope, object value) {
+            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(value);
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Get__dict__(ScriptScope module) {
-            return new GlobalsDictionary(module.Scope);
+        public static IAttributesCollection/*!*/ Get__dict__(Scope/*!*/ scope) {
+            return new GlobalsDictionary(scope);
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Set__dict__(ScriptScope module, object value) {
+        public static IAttributesCollection Set__dict__(Scope/*!*/ scope, object value) {
             throw PythonOps.TypeError("readonly attribute");
         }
 
         [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection Delete__dict__(ScriptScope module) {
+        public static IAttributesCollection Delete__dict__(Scope/*!*/ scope) {
             throw PythonOps.TypeError("can't set attributes of built-in/extension type 'module'");
         }
         
         [PropertyMethod, PythonName("__file__")]
-        public static string Get__file__(ScriptScope module) {
-            object res;
-            if (!module.Scope.TryLookupName(DefaultContext.Default.LanguageContext, Symbols.File, out res)) {
-                return module.FileName;
-            }
-            return res as string;
+        public static object Get__file__(Scope/*!*/ scope) {
+            return DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetFile();
         }
 
         [PropertyMethod, PythonName("__file__")]
-        public static void Set__file__(ScriptScope module, string value) {
-            module.SetVariable("__file__", module.FileName = value);
-        }
-
-        public static void SetPythonCreated(ScriptScope module) {
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
-            moduleContext.IsPythonCreatedModule = true;
+        public static void Set__file__(Scope/*!*/ scope, object value) {
+            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetFile(value);
         }
 
         #endregion
 
-        /// <summary>
-        /// Creates a new PythonModule putting the members defined on type into it. 
-        /// 
-        /// Used for __builtins__ and the built-in modules (e.g. nt, re, etc...)
-        /// </summary>
-        internal static ScriptScope MakePythonModule(string name, Type type) {
-            Contract.RequiresNotNull(type, "type");
-
-            // TODO: hack to enable __builtin__ reloading:
-            //return MakePythonModule(name, new Scope(MakeModuleDictionary(type)), ModuleOptions.None);
-
-            // import __builtin__
-            // del __builtin__.pow
-            // reload(__builtin__)
-            // __builtin__.pow
-
-            // creates an empty module:
-            
-            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(name, 
-                ScriptModuleKind.Default,
-                new Scope(MakeModuleDictionary(type)), 
-                null, 
-                null);
-
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
-            moduleContext.IsPythonCreatedModule = true;
-
-            return module;
-        }
-
-        private static IAttributesCollection MakeModuleDictionary(Type type) {
-            IAttributesCollection dict = new SymbolDictionary();
+        internal static void PopulateModuleDictionary(IAttributesCollection/*!*/ dict, Type/*!*/ type) {
+            Assert.NotNull(dict, type);
 
             // we could take the easy way out and build a PythonType for the module
             // and then copy but that causes a bunch of overhead we don't need.  
@@ -233,27 +185,6 @@ namespace IronPython.Runtime.Types {
 
                 dict[SymbolTable.StringToId(strName)] = DynamicHelpers.GetPythonTypeFromType(t);
             }
-
-            return dict;
         }
-
-        internal static ScriptScope MakePythonModule(CodeContext context, string name) {
-            Scope scope = new Scope(new SymbolDictionary());
-
-            ScriptScope module = context.LanguageContext.DomainManager.CreateModule(name, scope);
-
-            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
-            moduleContext.IsPythonCreatedModule = true;
-
-            return module;
-        }
-
-        public static void PublishModule(IScriptScope module) {
-            Contract.RequiresNotNull(module, "module");
-
-            // TODO: remote modules here...
-            PythonContext.GetSystemState(null).modules[module.ModuleName] = module;
-        }        
-
     }
 }

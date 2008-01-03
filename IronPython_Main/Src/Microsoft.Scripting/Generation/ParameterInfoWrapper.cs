@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Generation {
             return Utils.ArrayUtils.EmptyObjects;
         }
 
-        public override object[] GetCustomAttributes(Type attributeType, bool inherit) {
+        public override object[] GetCustomAttributes(Type/*!*/ attributeType, bool inherit) {
             return Utils.ArrayUtils.EmptyObjects;
         }
     }

@@ -15,7 +15,9 @@
 
 using System;
 using System.Reflection.Emit;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -85,7 +87,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return String.Format("IndexSlot From: ({0}) Index: {1} Type: {2}", _instance, _index, _type);
         }
     }

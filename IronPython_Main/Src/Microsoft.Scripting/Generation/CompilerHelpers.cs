@@ -24,6 +24,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -43,8 +44,9 @@ namespace Microsoft.Scripting.Generation {
             if (IsStatic(mi)) {
                 return types;
             }
-
-            return ArrayUtils.Insert(mi.DeclaringType, types);
+            
+            // TODO (Spec#): do not specify <Type> type arg
+            return ArrayUtils.Insert<Type>(mi.DeclaringType, types);
         }
 
 
@@ -229,13 +231,15 @@ namespace Microsoft.Scripting.Generation {
             return ns;
         }
 
-        public static Type[] MakeParamTypeArray(IList<Type> baseParamTypes, ConstantPool constantPool) {
-            if (constantPool == null) return new List<Type>(baseParamTypes).ToArray();
-
-            List<Type> ret = new List<Type>();
-            ret.Add(constantPool.SlotType);
-            ret.AddRange(baseParamTypes);
-            return ret.ToArray();
+        internal static Type[] MakeParamTypeArray(IList<Type> baseParamTypes, ConstantPool constantPool) {
+            if (constantPool == null) {
+                return new List<Type>(baseParamTypes).ToArray();
+            } else {
+                List<Type> ret = new List<Type>();
+                ret.Add(constantPool.SlotType);
+                ret.AddRange(baseParamTypes);
+                return ret.ToArray();
+            }
         }
 
         public static void EmitStackTraceTryBlockStart(Compiler cg) {
@@ -311,7 +315,7 @@ namespace Microsoft.Scripting.Generation {
 
             string typeName = "";
 #if DEBUG
-            if (!String.IsNullOrEmpty(context.SourceUnit.Id)) {
+            if (context.SourceUnit.HasPath) {
                 typeName = ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(context.SourceUnit.Id)));
             }
 #endif
@@ -345,7 +349,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal static bool NeedDebuggableDynamicCodeGenerator(CompilerContext context) {
-            return context != null && context.SourceUnit.LanguageContext.Options.ClrDebuggingEnabled && context.SourceUnit.IsVisibleToDebugger;
+            return context != null && context.SourceUnit.LanguageContext.Options.ClrDebuggingEnabled && context.SourceUnit.HasPath;
         }
 
         #endregion
@@ -656,12 +660,13 @@ namespace Microsoft.Scripting.Generation {
             return res.ToArray();
         }
 
-        internal static Type[] GetSiteTypes(ActionExpression node) {
-            Type[] ret = new Type[node.Arguments.Count + 1];
+        internal static Type/*!*/[]/*!*/ GetSiteTypes(ActionExpression/*!*/ node) {
+            Type/*!*/[]/*!*/ ret = new Type/*!*/[node.Arguments.Count + 1];
             for (int i = 0; i < node.Arguments.Count; i++) {
                 ret[i] = node.Arguments[i].Type;
             }
             ret[node.Arguments.Count] = node.Type;
+            NonNullType.AssertInitialized(ret);
             return ret;
         }
     }

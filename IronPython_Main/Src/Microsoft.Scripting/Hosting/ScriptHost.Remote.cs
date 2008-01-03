@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Source Units
 
-        public SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
+        public SourceUnit TryGetSourceFileUnit(IScriptEngine/*!*/ engine, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
             return _host.TryGetSourceFileUnit(engine, path, encoding, kind);
         }
 
@@ -89,10 +89,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public void EngineCreated(IScriptEngine engine) {
             _host.EngineCreated(engine);
-        }
-
-        public void ModuleCreated(IScriptScope module) {
-            _host.ModuleCreated(module);
         }
 
         #endregion
@@ -111,9 +107,9 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Modules
 
-        public IScriptScope DefaultModule {
+        public IScriptScope DefaultScope {
             get {
-                return RemoteWrapper.WrapRemotable<IScriptScope>(_host.DefaultModule);
+                return RemoteWrapper.WrapRemotable<IScriptScope>(_host.DefaultScope);
             }
         }
 

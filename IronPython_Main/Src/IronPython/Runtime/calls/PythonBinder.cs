@@ -33,12 +33,10 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Compiler = Microsoft.Scripting.Ast.Compiler;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
         private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
-        internal static PythonBinder Instance = new PythonBinder(DefaultContext.Default);
 
         public PythonBinder(CodeContext context)
             : base(context) {
@@ -181,7 +179,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private static MethodInfo GetGenericConvertMethod(Type toType) {
+        internal static MethodInfo GetGenericConvertMethod(Type toType) {
             if (toType.IsValueType) {
                 if (toType.IsGenericType && toType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                     return typeof(Converter).GetMethod("ConvertToNullableType");
@@ -194,7 +192,7 @@ namespace IronPython.Runtime.Calls {
         }
 
 
-        private static MethodInfo GetFastConvertMethod(Type toType) {
+        internal static MethodInfo GetFastConvertMethod(Type toType) {
             if (toType == typeof(char)) {
                 return typeof(Converter).GetMethod("ConvertToChar");
             } else if (toType == typeof(int)) {
@@ -231,41 +229,6 @@ namespace IronPython.Runtime.Calls {
                 return typeof(Converter).GetMethod("ConvertToType");
             } else {
                 return null;
-            }
-        }
-
-
-        /// <summary>
-        /// TODO Something like this method belongs on the Binder; however, it is probably
-        /// something much more abstract.  This is just the first pass at removing this
-        /// to get rid of the custom PythonCodeGen.
-        /// </summary>
-        public override void EmitConvertFromObject(Compiler cg, Type toType) {
-            if (toType == typeof(object)) return;
-
-            MethodInfo fastConvertMethod = GetFastConvertMethod(toType);
-            if (fastConvertMethod != null) {
-                cg.EmitCall(fastConvertMethod);
-                return;
-            }
-
-            if (toType == typeof(void)) {
-                cg.Emit(OpCodes.Pop);
-            } else if (typeof(Delegate).IsAssignableFrom(toType)) {
-                cg.EmitType(toType);
-                cg.EmitCall(typeof(Converter), "ConvertToDelegate");
-                cg.Emit(OpCodes.Castclass, toType);
-            } else {
-                Label end = cg.DefineLabel();
-                cg.Emit(OpCodes.Dup);
-                cg.Emit(OpCodes.Isinst, toType);
-
-                cg.Emit(OpCodes.Brtrue_S, end);
-                cg.Emit(OpCodes.Ldtoken, toType);
-                cg.EmitCall(GetGenericConvertMethod(toType));
-                cg.MarkLabel(end);
-
-                cg.Emit(OpCodes.Unbox_Any, toType); //??? this check may be redundant
             }
         }
 

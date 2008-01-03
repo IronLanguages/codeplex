@@ -213,7 +213,7 @@ namespace IronPython.Runtime.Types {
 
             PublishDictionary();
 
-            Builder.Finish(!_type.IsDefined(typeof(MutableTypeAttribute), true));
+            Builder.Finish(true);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix

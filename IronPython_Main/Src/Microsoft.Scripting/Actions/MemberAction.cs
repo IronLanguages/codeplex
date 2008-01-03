@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public abstract class MemberAction : DynamicAction, IEquatable<MemberAction> {
@@ -27,20 +28,24 @@ namespace Microsoft.Scripting.Actions {
             _name = name;
         }
 
+        [Confined]
         public override bool Equals(object other) {
             return Equals(other as MemberAction);
         }
 
+        [Confined]
         public override int GetHashCode() {
             return (int)Kind << 28 ^ _name.GetHashCode();
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return base.ToString() + " " + SymbolTable.IdToString(_name);
         }
 
         #region IEquatable<MemberAction> Members
 
+        [StateIndependent]
         public bool Equals(MemberAction other) {
             if (other == null) return false;
             return _name == other._name && Kind == other.Kind;

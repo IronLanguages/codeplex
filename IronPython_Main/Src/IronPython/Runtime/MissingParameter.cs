@@ -12,15 +12,16 @@
  *
  *
  * ***************************************************************************/
+
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
-    /// <summary>
-    /// TODO: Remove me
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct, Inherited = true)]
-    public sealed class MutableTypeAttribute : Attribute {
+namespace IronPython.Runtime {
+    public sealed class MissingParameter {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
+        public static readonly MissingParameter Value = new MissingParameter();
+
+        private MissingParameter() { }
     }
 }

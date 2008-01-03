@@ -16,6 +16,7 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
 
@@ -25,7 +26,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder which provides a default parameter value for a method call.
     /// </summary>
-    public class DefaultArgBuilder : ArgBuilder {
+    class DefaultArgBuilder : ArgBuilder {
         private Type _argumentType;
         private object _defaultValue;
 
@@ -127,5 +128,9 @@ namespace Microsoft.Scripting.Generation {
         internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
             return null;
         }
+
+        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
+            return true;
+        }        
     }
 }

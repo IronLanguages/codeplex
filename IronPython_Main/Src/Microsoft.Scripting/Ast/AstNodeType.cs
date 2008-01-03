@@ -79,7 +79,6 @@ namespace Microsoft.Scripting.Ast {
         DeleteStatement,
         DeleteUnboundExpression,
         DoStatement,
-        DynamicConversionExpression,
         EmptyStatement,
         EnvironmentExpression,
         ExpressionStatement,

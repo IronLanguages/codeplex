@@ -20,12 +20,12 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public class ConstantPool {
+    internal class ConstantPool {
         private List<object> _data;
-
         private List<Type> _types;
         private Slot _dataSlot;
         private Compiler _cg;
+
         private static List<object> _staticData = new List<object>();
         private static object _nullVal = new object();
         private static int _lastCheck, _empties;

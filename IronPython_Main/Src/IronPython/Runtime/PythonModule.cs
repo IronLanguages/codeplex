@@ -15,9 +15,20 @@
 
 using Microsoft.Scripting;
 using System;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
-    public sealed class PythonModuleContext : ModuleContext {
+    [Flags]
+    public enum ModuleOptions {
+        None = 0,
+        PublishModule = 1,
+        TrueDivision = 2,
+        ShowClsMethods = 4,
+        Optimized = 8,
+        Initialize = 16
+    }
+
+    public class PythonModule : ScopeExtension {
         private bool _trueDivision;
         private bool _isPythonCreatedModule;
 
@@ -39,17 +50,17 @@ namespace IronPython.Runtime {
             }
         }
 
-        public PythonModuleContext(ScriptScope module)
-            : base(module) {
+        internal PythonModule(Scope scope)
+            : base(scope) {
         }
 
         /// <summary>
         /// Copy constructor.
         /// </summary>
-        private PythonModuleContext(PythonModuleContext context)
-            : base(context) {
-            _trueDivision = context._trueDivision;
-            _isPythonCreatedModule = context._isPythonCreatedModule;
+        protected PythonModule(PythonModule module)
+            : base(module) {
+            _trueDivision = module._trueDivision;
+            _isPythonCreatedModule = module._isPythonCreatedModule;
         }
 
         protected override void ModuleReloading() {
@@ -57,8 +68,28 @@ namespace IronPython.Runtime {
             _trueDivision = false;
         }
 
-        internal PythonModuleContext Clone() {
-            return (PythonModuleContext)this.MemberwiseClone();
+        internal void SetName(object value) {
+            Scope.SetName(Symbols.Name, value); // TODO: set in Python specific dict
+        }
+
+        internal object GetName() {
+            object result;
+            Scope.TryLookupName(DefaultContext.DefaultPythonContext, Symbols.Name, out result);
+            return result;
+        }
+
+        internal void SetFile(object value) {
+            Scope.SetName(Symbols.File, value); // TODO: set in Python specific dict
+        }
+
+        internal object GetFile() {
+            object result;
+            Scope.TryLookupName(DefaultContext.DefaultPythonContext, Symbols.File, out result);
+            return result;
+        }
+
+        internal PythonModule/*!*/ Clone() {
+            return (PythonModule)this.MemberwiseClone();
         }
     }
 }

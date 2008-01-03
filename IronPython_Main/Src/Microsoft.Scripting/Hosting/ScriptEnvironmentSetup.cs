@@ -121,8 +121,8 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <exception cref="InvalidImplementationException">The local host type has no constructor compatible with specified args.</exception>
-        private LocalScriptHost CreateLocalHost(RemoteScriptHost remoteHost) {
-            LocalScriptHost result = ReflectionUtils.CreateInstance<LocalScriptHost>(_localHostType);
+        private LocalScriptHost CreateLocalHost(IScriptEnvironment environment, RemoteScriptHost remoteHost) {
+            LocalScriptHost result = ReflectionUtils.CreateInstance<LocalScriptHost>(_localHostType, environment);
             result.SetRemoteHost(remoteHost);
             return result;
 
@@ -179,7 +179,7 @@ namespace Microsoft.Scripting.Hosting {
             Debug.Assert(environment != null);
 #if !SILVERLIGHT
             // a remote host was created by call to ScriptEnvironment.CreateRemote
-            if (_remoteHost != null) return CreateLocalHost(_remoteHost);
+            if (_remoteHost != null) return CreateLocalHost(environment, _remoteHost);
 #endif
             // do not create forwarding host (single app-domain scenario):
             return CreateHostLocally(environment);

@@ -32,7 +32,7 @@ namespace Microsoft.Scripting {
         }
 
         // TODO - Make this an abstract DeepCopy method and add a DefaultCompilerOptions
-        public virtual object Clone() {
+        public virtual object/*!*/ Clone() {
             return base.MemberwiseClone();
         }
     }

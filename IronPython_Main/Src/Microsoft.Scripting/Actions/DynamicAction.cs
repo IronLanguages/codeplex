@@ -15,6 +15,7 @@
 
 using System;
 using System.Diagnostics;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     public enum DynamicActionKind {
@@ -33,7 +34,8 @@ namespace Microsoft.Scripting.Actions {
     public abstract class DynamicAction {
         public abstract DynamicActionKind Kind { get; }
         
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return Kind.ToString();
         }
 

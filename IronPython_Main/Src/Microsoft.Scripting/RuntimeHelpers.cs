@@ -34,7 +34,7 @@ namespace Microsoft.Scripting {
     /// languages that use object as a universal type.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    public static partial class RuntimeHelpers {
+    public static class RuntimeHelpers {
         private const int MIN_CACHE = -100;
         private const int MAX_CACHE = 1000;
         private static readonly object[] cache = MakeCache();
@@ -238,7 +238,7 @@ namespace Microsoft.Scripting {
         // The locals dictionary must be first so that we have the benefit of an emtpy stack when we emit the value
         // in the ScopeExpression
         public static CodeContext CreateNestedCodeContext(IAttributesCollection locals, CodeContext context, bool visible) {
-            return new CodeContext(new Scope(context.Scope, locals, visible), context.LanguageContext, context.ModuleContext);
+            return new CodeContext(new Scope(context.LanguageContext, context.Scope, locals, visible), context.LanguageContext, context.ModuleContext);
         }
 
         // TODO: hack for Ruby, will be improved later
@@ -528,6 +528,8 @@ namespace Microsoft.Scripting {
 
                 dynamicObject.LanguageContext.CheckCallable(dynamicObject, parameters.Length);
 
+                // TODO: IDO.LanguageContext should be removed
+                Debug.Assert(dynamicObject.LanguageContext != null, "InvariantContext doesn't have a binder");
                 DelegateSignatureInfo signatureInfo = new DelegateSignatureInfo(
                     dynamicObject.LanguageContext.Binder,
                     invoke.ReturnType,

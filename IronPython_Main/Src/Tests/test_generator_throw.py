@@ -36,9 +36,33 @@ def EnsureClosed(g):
   except StopIteration:
     pass
 
+
 # test __del__ on generators.
 import sys
 import gc
+
+# Test that generator.__del__ is invoked and that it calls Close()
+# Note that .NET's GC:
+# 1) runs on another thread, 
+# 2) runs at a random time (but can be forcibly invoked from gc.collect)
+# So other generators that go out of scope will get closed() called at random times from wherever
+# the generator was left. This can introduce some nondeterminism in the tests.
+
+# Note that silverlight doesn't support finalizers, so we don't test Generator.__del__ on that platform.
+skiptest("silverlight")
+def test_del():
+  l=[0]
+  def ff3(l):
+    try:
+      yield 10
+    finally:
+      l[0] += 1      
+  g=ff3(l)
+  AreEqual(g.next(), 10) # move to inside the finally
+  del g
+  gc.collect()
+  AreEqual(l,[1]) # finally should have execute now.
+
 
 
 # Yield can appear in lambda expressions (or any function body).
@@ -821,5 +845,46 @@ def test_layering_2():
     DoIt(range(8), o)
     AreEqual(o.data, 'Page=[0,1,2]\nPage=[3,4,5]\nPage=[6,7...incomplete\ndone\n')
 
+
+#
+# Test Yield in expressions in an except block
+# even crazier example, (yield) in both Type + Value spots in Except clause
+#
+
+# generator to use with test_yield_except_crazy*
+def getCatch():      
+  yield 1
+  l=[0,1,2]
+  try:
+    raise MyError, 'a'
+  except (yield 'a'), l[(yield 'b')]:
+    AreEqual(sys.exc_info(), (None,None,None)) # will print None from the yields        
+    Assert(l[1] != 1) # validate that the catch properly assigned to it. 
+    yield 'c'
+  except (yield 'c'): # especially interesting here
+    yield 'd'
+  except:
+    print 'Not caught'
+  print 4
+
+# executes the generators 1st except clause
+def test_yield_except_crazy1():
+    g=getCatch()
+    AreEqual(g.next(), 1)
+    AreEqual(g.next(), 'a')
+    AreEqual(g.send(MyError), 'b')
+    AreEqual(g.send(1), 'c')
+    g.close()
+
+# executes the generators 2nd except clause
+def test_yield_except_crazy2():
+    # try the 2nd clause
+    g=getCatch() 
+    AreEqual(g.next(), 1)
+    AreEqual(g.next(), 'a')
+    AreEqual(g.send(ValueError), 'c') # Cause us to skip the first except handler
+    AreEqual(g.send(MyError), 'd')
+    g.close()
+    
 
 run_test(__name__)

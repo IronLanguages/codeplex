@@ -25,6 +25,7 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Contracts;
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -35,7 +36,7 @@ namespace Microsoft.Scripting {
         private static ClrModule _module;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
-        public static ClrModule GetInstance() {
+        public static ClrModule/*!*/ GetInstance() {
             if (_module == null) {
                 Interlocked.CompareExchange<ClrModule>(ref _module, new ClrModule(), null);
             }
@@ -45,7 +46,8 @@ namespace Microsoft.Scripting {
         private ClrModule() {
         }
 
-        public override string ToString() {
+        [Confined]
+        public override string/*!*/ ToString() {
             return "<module 'clr' (built-in)>";
         }
 
@@ -91,13 +93,13 @@ namespace Microsoft.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
-        public Assembly LoadAssemblyFromFileWithPath(string file) {
+        public Assembly/*!*/ LoadAssemblyFromFileWithPath(string/*!*/ file) {
             if (file == null) throw new ArgumentTypeException("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
             // We use Assembly.LoadFile instead of Assembly.LoadFrom as the latter first tries to use Assembly.Load
             return Assembly.LoadFile(file);
         }
 
-        public Assembly LoadAssemblyFromFile(CodeContext context, string file) {
+        public Assembly/*!*/ LoadAssemblyFromFile(CodeContext/*!*/ context, string/*!*/ file) {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (file.Length == 0) throw new ArgumentException("assembly name must not be empty string");
 
@@ -109,31 +111,51 @@ namespace Microsoft.Scripting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadWithPartialName")]
-        public Assembly LoadAssemblyByPartialName(string name) {
-            if (name == null) throw new ArgumentTypeException("LoadAssemblyByPartialName: arg 1 must be a string");
+        public Assembly/*!*/ LoadAssemblyByPartialName(string/*!*/ name) {
+            if (name == null) {
+                throw new ArgumentTypeException("LoadAssemblyByPartialName: arg 1 must be a string");
+            }
+
 #pragma warning disable 618
             return Assembly.LoadWithPartialName(name);
 #pragma warning restore 618
         }
 #endif
 
-        public Assembly LoadAssemblyByName(string name) {
-            if (name == null) throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
+        public Assembly/*!*/ LoadAssemblyByName(string/*!*/ name) {
+            if (name == null) {
+                throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
+            }
             return ScriptDomainManager.CurrentManager.PAL.LoadAssembly(name);
         }
 
-        public ScriptScope Use(string name) {
-            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(name);
-            if (res == null) throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
+        public Scope/*!*/ Use(string/*!*/ name) {
+            if (name == null) {
+                throw new ArgumentTypeException("Use: arg 1 must be a string");
+            }
 
-            return res;
+            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(name);
+            if (res == null) {
+                throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
+            }
+
+            return res.Scope;
         }
 
-        public ScriptScope Use(string path, string language) {
-            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(path, language);
-            if (res == null) throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
+        public Scope/*!*/ Use(string/*!*/ path, string/*!*/ language) {
+            if (path == null) {
+                throw new ArgumentTypeException("Use: arg 1 must be a string");
+            } 
+            if (language == null) {
+                throw new ArgumentTypeException("Use: arg 2 must be a string");
+            }
 
-            return res;
+            ScriptScope res = ScriptDomainManager.CurrentManager.UseModule(path, language);
+            if (res == null) {
+                throw new ArgumentException(String.Format("couldn't load module at path '{0}' in language '{1}'", path, language));
+            }
+
+            return res.Scope;
         }
 
         public CommandDispatcher SetCommandDispatcher(CommandDispatcher dispatcher) {
