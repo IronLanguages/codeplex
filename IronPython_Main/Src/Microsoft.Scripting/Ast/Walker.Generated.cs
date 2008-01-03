@@ -31,10 +31,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(ArrayIndexAssignment node) { return true; }
         protected internal virtual void PostWalk(ArrayIndexAssignment node) { }
 
-        // ArrayIndexExpression
-        protected internal virtual bool Walk(ArrayIndexExpression node) { return true; }
-        protected internal virtual void PostWalk(ArrayIndexExpression node) { }
-
         // BinaryExpression
         protected internal virtual bool Walk(BinaryExpression node) { return true; }
         protected internal virtual void PostWalk(BinaryExpression node) { }
@@ -95,10 +91,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(NewExpression node) { return true; }
         protected internal virtual void PostWalk(NewExpression node) { }
 
-        // ParenthesizedExpression
-        protected internal virtual bool Walk(ParenthesizedExpression node) { return true; }
-        protected internal virtual void PostWalk(ParenthesizedExpression node) { }
-
         // TypeBinaryExpression
         protected internal virtual bool Walk(TypeBinaryExpression node) { return true; }
         protected internal virtual void PostWalk(TypeBinaryExpression node) { }
@@ -130,10 +122,6 @@ namespace Microsoft.Scripting.Ast {
         // ContinueStatement
         protected internal virtual bool Walk(ContinueStatement node) { return true; }
         protected internal virtual void PostWalk(ContinueStatement node) { }
-
-        // DebugStatement
-        protected internal virtual bool Walk(DebugStatement node) { return true; }
-        protected internal virtual void PostWalk(DebugStatement node) { }
 
         // DeleteStatement
         protected internal virtual bool Walk(DeleteStatement node) { return true; }

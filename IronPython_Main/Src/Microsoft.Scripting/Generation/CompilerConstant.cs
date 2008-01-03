@@ -14,10 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -33,10 +30,10 @@ namespace Microsoft.Scripting.Generation {
         public abstract Type Type { get; }
 
         /// <summary>
-        /// Emits creation of the constant value into the CodeGen object provided.
+        /// Emits creation of the constant value into the Compiler object provided.
         /// </summary>
         /// <param name="cg"></param>
-        public abstract void EmitCreation(CodeGen cg);
+        public abstract void EmitCreation(Compiler cg);
 
         /// <summary>
         /// Creates a new instance of the constant and returns it.

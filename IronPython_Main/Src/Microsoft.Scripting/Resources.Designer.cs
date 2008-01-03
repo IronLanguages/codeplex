@@ -250,6 +250,15 @@ namespace Microsoft.Scripting {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Language &apos;{0}&apos; doesn&apos;t provide service {1}..
+        /// </summary>
+        internal static string MissingService {
+            get {
+                return ResourceManager.GetString("MissingService", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Language &apos;{0}&apos; doesn&apos;t provide a command line..
         /// </summary>
         internal static string MissingService_CommandLine {

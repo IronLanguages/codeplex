@@ -58,7 +58,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Statement Transform(AstGenerator ag) {
             // Temporary variable for the IEnumerator object
-            MSAst.Variable enumerator = ag.MakeGeneratorTemp("foreach_enumerator", typeof(IEnumerator));
+            MSAst.Variable enumerator = ag.MakeTemp(SymbolTable.StringToId("foreach_enumerator"), typeof(IEnumerator));
 
             ag.EnterLoop();
             try {

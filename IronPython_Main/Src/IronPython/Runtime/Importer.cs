@@ -42,20 +42,19 @@ namespace IronPython.Runtime {
     /// Singleton living on Python engine.
     /// </summary>
     public sealed class Importer {
-        private PythonEngine _engine;
+        private LanguageContext _context;
 
-        // TODO: for convenience now, could be removed when we have _engine : PythonEngine
+        // TODO: for convenience now, could be removed when we have _engine : ScriptEngine
         private SystemState SystemState {
             get {
-                return _engine.SystemState;
+                return PythonContext.GetSystemState(null);
             }
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> _importSite = MakeImportSite();
 
-        internal Importer(PythonEngine engine) {
-            Debug.Assert(engine != null);
-            _engine = engine;
+        internal Importer(LanguageContext context) {
+            _context = context;
         }
 
         #region Internal API Surface
@@ -123,7 +122,7 @@ namespace IronPython.Runtime {
         }
 
         /// <summary>
-        /// Called by the __builtin__.__import__ functions (general importing) and PythonEngine (for site.py)
+        /// Called by the __builtin__.__import__ functions (general importing) and ScriptEngine (for site.py)
         /// 
         /// Returns a PythonModule.
         /// </summary>        
@@ -244,7 +243,7 @@ namespace IronPython.Runtime {
             string parentName = modName.Substring(0, lastDot);
             object parentObject;
             // Try lookup parent module in the sys.modules
-            if (!SystemState.modules.TryGetValue(parentName, out parentObject)) {
+            if (!PythonContext.GetSystemState(context).modules.TryGetValue(parentName, out parentObject)) {
                 // parent module not found in sys.modules, fallback to absolute import
                 return false;
             }
@@ -512,7 +511,7 @@ namespace IronPython.Runtime {
         }
 
         private ScriptScope LoadModuleFromSource(CodeContext context, string name, string path) {
-            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(_engine, path, _engine.SystemState.DefaultEncoding);
+            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
             if (sourceUnit == null) {
                 return null;
             }

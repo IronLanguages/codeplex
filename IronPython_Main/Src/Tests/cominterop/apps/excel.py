@@ -63,7 +63,8 @@ def _test_excel():
 
         AreEqual('Sheet1', ws.Name)
 
-        if not preferComDispatch:
+        if not preferComDispatch: # Bug 325464
+            # COM has 1-based arrays
             AssertError(EnvironmentError, lambda: ws.Rows[0])
 
         for i in range(1, 10):
@@ -90,10 +91,6 @@ def _test_excel():
 
 
 def test_excelevents():
-    if not preferComDispatch:
-        print "Runs under -X:PreferComDispatch mode only!"
-        return
-            
     ex = None
     try: 
         ex = Excel.ApplicationClass() 
@@ -165,6 +162,10 @@ def test_excelevents():
         if ex: ex.Quit()
         else: print "ex is %s" % ex
 
-
+def test_new(): # regression test for 148579
+    AssertErrorWithMessage(TypeError, 
+        "Cannot create instances of Range", 
+        lambda: Excel.Range(1,2))
+    
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

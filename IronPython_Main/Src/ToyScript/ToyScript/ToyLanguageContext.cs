@@ -19,32 +19,19 @@ using System.Text;
 
 using ToyScript.Parser;
 using ToyScript.Parser.Ast;
+using ToyScript.Runtime;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Helpers;
 
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
-
-        private ScriptEngine _engine;
-
-        public ToyLanguageContext() { 
-        }
-
-        public override ScriptEngine Engine {
-            get {
-                return _engine;
-            }
-        }
-
-        internal ToyEngine ToyEngine {
-            get {
-                return (ToyEngine)_engine;
-            }
-            set {
-                _engine = value;
-            }
+        public ToyLanguageContext(ScriptDomainManager manager) : base(manager) { 
+            Binder = new ToyBinder(new CodeContext(new Scope(), this, new ModuleContext(null)));
         }
 
         public override MSAst.CodeBlock ParseSourceCode(CompilerContext context) {
@@ -59,6 +46,20 @@ namespace ToyScript {
                     context.SourceUnit.CodeProperties = SourceCodeProperties.None;
                     return ToyGenerator.Generate(tp.ParseFile(), context.SourceUnit.Id);
             }
+        }
+
+        public override string DisplayName {
+            get { return "ToyScript"; }
+        }
+
+        public override ServiceType GetService<ServiceType>(params object[] args) {
+            if (typeof(ServiceType) == typeof(OptionsParser)) {
+                return (ServiceType)(object)new DefaultOptionsParser();
+            } else if (typeof(ServiceType) == typeof(CommandLine)) {
+                return (ServiceType)(object)new ToyCommandLine();
+            }
+
+            return base.GetService<ServiceType>(args);
         }
     }
 }

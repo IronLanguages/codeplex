@@ -19,7 +19,6 @@ using IronPython.Runtime;
 
 [assembly: PythonModule("_random", typeof(IronPython.Modules.PythonRandom))]
 namespace IronPython.Modules {
-    [PythonType("_random")]
     public static class PythonRandom {
 
         [PythonType("Random")]

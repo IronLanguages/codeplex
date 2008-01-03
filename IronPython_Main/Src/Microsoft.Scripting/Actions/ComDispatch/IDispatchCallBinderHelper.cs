@@ -52,8 +52,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         private Expression ThisParameter { get { return Rule.Parameters[0]; } }
 
+        private Expression GetDispCallable() {
+            return Ast.ConvertHelper(ThisParameter, typeof(DispCallable));
+        }
+
         private Expression GetIDispatchObject() {
-            Expression dispCallable = Ast.ConvertHelper(ThisParameter, typeof(DispCallable));
+            Expression dispCallable = GetDispCallable();
             return Ast.ReadProperty(dispCallable, typeof(DispCallable).GetProperty("DispatchObject"));
         }
 
@@ -161,7 +165,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             //
             // Declare variables
             //
-            Variable excepInfo = Rule.GetTemporary(typeof(ComTypes.EXCEPINFO), "excepInfo");
+            Variable excepInfo = Rule.GetTemporary(typeof(ExcepInfo), "excepInfo");
             Variable argErr = Rule.GetTemporary(typeof(uint), "argErr");
             Variable hresult = Rule.GetTemporary(typeof(int), "hresult");
 
@@ -184,7 +188,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("IDispatchInvoke"),
                 Ast.ReadDefined(dispatchPointer),
                 Ast.ReadDefined(dispId),
-                Ast.Constant(ComTypes.INVOKEKIND.INVOKE_FUNC),
+                Ast.Constant(ComTypes.INVOKEKIND.INVOKE_FUNC|
+                             ComTypes.INVOKEKIND.INVOKE_PROPERTYGET), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
                 Ast.ReadDefined(dispParams),
                 Ast.ReadDefined(invokeResult),
                 Ast.ReadDefined(excepInfo),
@@ -193,12 +198,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             tryStatements.Add(stmt);
 
             //
-            // Marshal.ThrowExceptionForHR(hresult);
+            // ComRuntimeHelpers.CheckThrowException(hresult, excepInfo, argErr, ThisParameter);
             //
             stmt = Ast.Statement(
                 Ast.Call(
-                    typeof(Marshal).GetMethod("ThrowExceptionForHR", new Type[] { typeof(int) } ),
-                    Ast.ReadDefined(hresult)));
+                    typeof(ComRuntimeHelpers).GetMethod("CheckThrowException"),
+                    Ast.ReadDefined(hresult),
+                    Ast.ReadDefined(excepInfo),
+                    Ast.ReadDefined(argErr),
+                    GetDispCallable()));
             tryStatements.Add(stmt);
 
             //
@@ -434,7 +442,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             if ((_currentExplicitArgs.Length > VariantArray.NumberOfElements) ||
                 (hasAmbiguousMatch) ||
                 (!_varEnumSelector.IsSupportedByFastPath) ||
-                (Context.LanguageContext.Engine.Options.InterpretedMode)) { // The rule we generate cannot be interpreted
+                (Context.LanguageContext.Options.InterpretedMode)) { // The rule we generate cannot be interpreted
 
                 return MakeUnoptimizedInvokeRule();
             }

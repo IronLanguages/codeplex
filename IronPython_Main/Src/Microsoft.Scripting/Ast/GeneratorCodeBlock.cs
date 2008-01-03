@@ -46,178 +46,41 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Type _next;
 
+        // TODO: Move
         private List<YieldTarget> _topTargets;
-
-        private static int _Counter = 0;
-        private static string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
-
-        // Interpreted mode: Cache for emitted delegate so that we only generate code once.
-        private Delegate _delegate;
 
         internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
             : base(AstNodeType.GeneratorCodeBlock, span, name, typeof(object)) {
             _generator = generator;
+            Debug.Assert(generator.IsSubclassOf(typeof(Generator)));
             _next = next;
         }
 
-        internal protected override Delegate GetDelegateForInterpreter(CodeContext context, Type delegateType, bool forceWrapperMethod) {
-            // For now, always return a compiled delegate (since yield is not implemented)
-            lock (this) {
-                if (_delegate == null) {
-                    FlowChecker.Check(this);
-                    _delegate = GetCompiledDelegate(context.ModuleContext.CompilerContext, delegateType, forceWrapperMethod);
-                }
-                return _delegate;
-            }
+        public Type GeneratorType {
+            get { return _generator; }
         }
 
-        internal protected override void EmitBody(CodeGen cg) {
-            if (!cg.HasAllocator) {
-                // In the interpreted case, we do not have an allocator yet
-                Debug.Assert(cg.InterpretedMode);
-                cg.Allocator = CompilerHelpers.CreateFrameAllocator();
-            }
-            cg.Allocator.Block = this;
-            CreateEnvironmentFactory(true);
-            EmitGeneratorBody(cg);
-            cg.EmitReturn();
+        public Type DelegateType {
+            get { return _next; }
         }
 
-        /// <summary>
-        /// Defines the method with the correct signature and sets up the context slot appropriately.
-        /// </summary>
-        /// <returns></returns>
-        private CodeGen CreateMethod(CodeGen _impl) {
-            // Create the GenerateNext function
-            CodeGen ncg = _impl.DefineMethod(
-                GetGeneratorMethodName(),               // Method Name
-                typeof(bool),                           // Return Type
-                new Type[] {                            // signature
-                    _generator,
-                    typeof(object).MakeByRefType()
-                },
-                _GeneratorSigNames,                     // param names
-                GetStaticDataForBody(_impl));
-
-            Slot generator = ncg.GetArgumentSlot(0);
-            ncg.ContextSlot = new PropertySlot(generator, typeof(Generator).GetProperty("Context"));
-
-            // Namespace without er factory - all locals must exist ahead of time
-            ncg.Allocator = new ScopeAllocator(_impl.Allocator, null);
-            ncg.Allocator.Block = null;       // No scope is active at this point
-
-            // We are emitting generator, mark the CodeGen
-            ncg.IsGenerator = true;
-
-            return ncg;
+        internal IList<YieldTarget> TopTargets {
+            get { return _topTargets; }
         }
-
-        /// <summary>
-        /// Emits the body of the function that creates a Generator object.  Also creates another
-        /// CodeGen for the inner method which implements the user code defined in the generator.
-        /// </summary>
-        private void EmitGeneratorBody(CodeGen _impl) {
-            CodeGen ncg = CreateMethod(_impl);
-            ncg.EmitLineInfo = _impl.EmitLineInfo;
-
-            ncg.Allocator.GlobalAllocator.PrepareForEmit(ncg);
-
-            Slot flowedContext = _impl.ContextSlot;
-            // If there are no locals in the generator than we don't need the environment
-            if (HasEnvironment) {
-                // Environment creation is emitted into outer function that returns the generator
-                // function and then flowed into the generator method on each call via the Generator
-                // instance.
-                _impl.EnvironmentSlot = EmitEnvironmentAllocation(_impl);
-                flowedContext = CreateEnvironmentContext(_impl);
-
-                InitializeGeneratorEnvironment(_impl);
-
-                // Promote env storage to local variable
-                // envStorage = ((FunctionEnvironment)context.Locals).Tuple
-                EnvironmentFactory.EmitGetStorageFromContext(ncg);
-
-                ncg.EnvironmentSlot = EnvironmentFactory.CreateEnvironmentSlot(ncg);
-                ncg.EnvironmentSlot.EmitSet(ncg);
-
-                CreateGeneratorTemps(ncg);
-            }
-
-            CreateReferenceSlots(ncg);
-
-            // Emit the generator body 
-            EmitGenerator(ncg);
-
-            flowedContext.EmitGet(_impl);
-            _impl.EmitDelegateConstruction(ncg, _next);
-            _impl.EmitNew(_generator, new Type[] { typeof(CodeContext), _next });
-        }
-
-        private string GetGeneratorMethodName() {
-            return Name + "$g" + _Counter++;
-        }
-
-        private void CreateReferenceSlots(CodeGen cg) {
-            CreateAccessSlots(cg);
-            foreach (VariableReference r in References) {
-                r.CreateSlot(cg);
-                Debug.Assert(r.Slot != null);
-            }
-        }
-
-        private void CreateGeneratorTemps(CodeGen cg) {
-            for (int i = 0; i < GeneratorTemps; i++) {
-                cg.Allocator.AddGeneratorTemp(EnvironmentFactory.MakeEnvironmentReference(SymbolTable.StringToId("temp$" + i)).CreateSlot(cg.EnvironmentSlot));
-            }
-        }
-
-        // The slots for generators are created in 2 steps. In the outer function,
-        // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
-        private void InitializeGeneratorEnvironment(CodeGen cg) {
-            cg.Allocator.AddClosureAccessSlot(this, cg.EnvironmentSlot);
-            foreach (Variable p in Parameters) {
-                p.Allocate(cg);
-            }
-            foreach (Variable d in Variables) {
-                d.Allocate(cg);
-            }
-        }
-
-        private void EmitGenerator(CodeGen ncg) {
-            Debug.Assert(_topTargets != null);
-
-            Label[] jumpTable = new Label[_topTargets.Count];
-            for (int i = 0; i < jumpTable.Length; i++) {
-                jumpTable[i] = _topTargets[i].EnsureLabel(ncg);
-            }
-            ncg.YieldLabels = jumpTable;
-
-            Slot router = ncg.GetLocalTmp(typeof(int));
-            ncg.EmitGetGeneratorLocation();
-            router.EmitSet(ncg);
-            ncg.GotoRouter = router;
-            router.EmitGet(ncg);
-            ncg.Emit(OpCodes.Switch, jumpTable);
-
-            // fall-through on first pass
-            // yield statements will insert the needed labels after their returns
-
-            Compiler.Emit(ncg, Body);
-
-            // fall-through is almost always possible in generators, so this
-            // is almost always needed
-            ncg.EmitReturnInGenerator(null);
-            ncg.Finish();
-
-            ncg.GotoRouter = null;
-            ncg.FreeLocalTmp(router);
-        }
-
+        
         internal int BuildYieldTargets() {
             Debug.Assert(_topTargets == null);
             int temps;
             YieldLabelBuilder.BuildYieldTargets(this, out _topTargets, out temps);
             return temps;
+        }
+
+        // For generators, make all temps be generator-temps. A non-generator temp can't legally span a yield point,
+        // and yield points can be practically anywhere. 
+        // If we do flow analysis, then we could figure out which temps span yield points and which don't.
+        // For now, without the flow analysis, we err on the side of safety and just make everything generator temps.
+        public override Variable CreateTemporaryVariable(SymbolId name, Type type) {
+            return CreateGeneratorTempVariable(name, type);
         }
     }
 

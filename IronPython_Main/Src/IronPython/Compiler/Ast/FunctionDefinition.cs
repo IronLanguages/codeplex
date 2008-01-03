@@ -240,6 +240,14 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Statement> statements = new List<MSAst.Statement>();
             InitializeParameters(bodyGen, statements);
 
+            // For generators, we need to do a check before the first statement for Generator.Throw() / Generator.Close().
+            // The exception traceback needs to come from the generator's method body, and so we must do the check and throw
+            // from inside the generator.
+            if (IsGenerator) {
+                MSAst.Statement s1 = YieldExpression.CreateCheckThrowStatement(bodyGen, SourceSpan.None);
+                statements.Add(s1);
+            }
+
             // Transform the body and add the resulting statements into the list
             TransformBody(bodyGen, statements);
 

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21004</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{92A2631C-F9CE-4B0C-833A-64AD62AC801F}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -106,13 +106,11 @@
     <Compile Include="ToyLanguageContext.cs" />
     <Compile Include="Parser\ToyParser.cs" />
     <Compile Include="ToyHelpers.cs" />
-    <Compile Include="ToyEngine.cs" />
     <Compile Include="Runtime\ToyOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ToyLanguageProvider.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+    <ProjectReference Include="..\..\Microsoft.Scripting\Microsoft.Scripting.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>

@@ -77,6 +77,12 @@ namespace IronPython.Compiler.Ast {
             return be != null && be.IsComparison();
         }
 
+        // This is a compound comparison operator like: a < b < c.
+        // That's represented as binary operators, but it's not the same as (a<b) < c, so we do special transformations.
+        // We need to:
+        // - return true iff (a<b) && (b<c), but ensure that b is only evaluated once. 
+        // - ensure evaluation order is correct (a,b,c)
+        // - don't evaluate c if a<b is false.
         private MSAst.Expression FinishCompare(MSAst.Expression left, AstGenerator ag) {
             Debug.Assert(_right is BinaryExpression);
 
@@ -127,8 +133,10 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression left = ag.Transform(_left);
 
             if (NeedComparisonTransformation()) {
+                // This is a compound comparison like: (a < b < c)
                 return FinishCompare(left, ag);
             } else {
+                // Simple binary operator.
                 return MakeBinaryOperation(_op, left, ag.Transform(_right), type, Span);
             }
         }

@@ -13,19 +13,11 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-
-
 
 namespace Microsoft.Scripting {
     /// <summary>
@@ -89,7 +81,7 @@ namespace Microsoft.Scripting {
             if (_simpleTarget == null) {
                 lock (this) { // TODO: mutex object
                     if (_simpleTarget == null) {
-                        _simpleTarget = _code.CreateDelegate<CallTargetWithContext0>(_compilerContext);
+                        _simpleTarget = Compiler.CreateDelegate<CallTargetWithContext0>(_compilerContext, _code);
                     }
                 }
             }
@@ -99,12 +91,12 @@ namespace Microsoft.Scripting {
             codeContext.ModuleContext.CompilerContext =_compilerContext;
             _languageContext.ModuleContextEntering(codeContext.ModuleContext);
 
-            
-            bool doEvaluation = tryEvaluate || _languageContext.Engine.Options.InterpretedMode;
+
+            bool doEvaluation = tryEvaluate || _languageContext.Options.InterpretedMode;
             if (_simpleTarget == null && _optimizedTarget == null
                 && doEvaluation
-                && Ast.InterpretChecker.CanEvaluate(CodeBlock, _languageContext.Engine.Options.ProfileDrivenCompilation)) {
-                return CodeBlock.TopLevelExecute(codeContext);
+                && Ast.InterpretChecker.CanEvaluate(_code, _languageContext.Options.ProfileDrivenCompilation)) {
+                return Interpreter.TopLevelExecute(_code, codeContext);
             }
 
             if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?
@@ -135,7 +127,7 @@ namespace Microsoft.Scripting {
         }
 
         public override string ToString() {
-            return string.Format("ScriptCode '{0}' from {1}", SourceUnit, _languageContext.Engine.LanguageProvider.LanguageDisplayName);
+            return string.Format("ScriptCode '{0}' from {1}", SourceUnit, _languageContext.DisplayName);
         }
 
         public static ScriptCode FromCompiledCode(CompiledCode compiledCode) {

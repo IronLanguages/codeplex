@@ -14,22 +14,20 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
 
-namespace Microsoft.Scripting.Hosting {
+namespace Microsoft.Scripting.Ast {
+    /// <summary>
+    /// This class stores information used by the interpreter to execute code blocks.
+    /// </summary>
+    internal class InterpreterData {
+        // Interpreted mode: Cache for emitted delegate so that we only generate code once.
+        public Delegate Delegate;
 
-    [Serializable]
-    public abstract class SourceContentProvider {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public abstract TextReader GetReader();
+        // Profile-driven compilation support
+        public int CallCount = 0;
+        public CompilerContext DeclaringContext;
+        public bool ForceWrapperMethod;
 
-        /// <summary>
-        /// Reloads the content from its source if it could be out of sync.
-        /// </summary>
-        public virtual void Reload() {
-            // no-op
-        }
+        public const int MaxInterpretedCalls = 2;
     }
 }

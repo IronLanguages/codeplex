@@ -23,10 +23,7 @@ using System.IO;
 using System.Threading;
 using System.Security.Permissions;
 
-using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Hosting;
 
@@ -83,7 +80,7 @@ namespace Microsoft.Scripting.Generation {
         /// Creates the methods and optimized Scope's which get associated with each ScriptCode.
         /// </summary>
         public Scope GenerateScope() {
-            List<CodeGen> cgs = GenerateScriptMethods();
+            List<Compiler> cgs = GenerateScriptMethods();
             List<Scope> scopes = GenerateScriptScopes();
 
             Debug.Assert(cgs.Count == scopes.Count);
@@ -91,13 +88,13 @@ namespace Microsoft.Scripting.Generation {
             Debug.Assert(_codeContexts.Count == _scriptCodes.Length);
 
             List<CallTargetWithContext0> targets = new List<CallTargetWithContext0>();
-            foreach (CodeGen cg in cgs) {
+            foreach (Compiler cg in cgs) {
                 targets.Add((CallTargetWithContext0)cg.CreateDelegate(typeof(CallTargetWithContext0)));
             }
 
             // TODO: clean this up after clarifying dynamic site initialization logic
             for (int i = 0; i < _scriptCodes.Length; i++) {
-                Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContexts[i], cgs[i].MethodInfo.DeclaringType);
+                Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContexts[i], cgs[i].Method.DeclaringType);
             }
 
             // everything succeeded, commit the results
@@ -142,11 +139,11 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        private List<CodeGen> GenerateScriptMethods() {
-            List<CodeGen> cgs = new List<CodeGen>(_scriptCodes.Length);
+        private List<Compiler> GenerateScriptMethods() {
+            List<Compiler> cgs = new List<Compiler>(_scriptCodes.Length);
             foreach (ScriptCode sc in _scriptCodes) {
                 ScopeAllocator sa = CreateStorageAllocator(sc);
-                CodeGen cg = CreateCodeGen(sc);
+                Compiler cg = CreateCodeGen(sc);
                 cg.Allocator = sa;
 
                 // every module can hand it's environment to anything embedded in it.
@@ -157,7 +154,7 @@ namespace Microsoft.Scripting.Generation {
                 );
                                        
                 cg.Context = sc.CompilerContext;
-                sc.CodeBlock.EmitFunctionImplementation(cg);
+                cg.EmitFunctionImplementation(sc.CodeBlock);
 
                 cg.Finish();
 
@@ -185,7 +182,7 @@ namespace Microsoft.Scripting.Generation {
 
         #region Protected Members
 
-        protected abstract CodeGen CreateCodeGen(ScriptCode scriptCode);
+        protected abstract Compiler CreateCodeGen(ScriptCode scriptCode);
         protected abstract IAttributesCollection CreateLanguageDictionary(LanguageContext context, ScopeAllocator allocator);
         protected abstract SlotFactory CreateSlotFactory(ScriptCode scriptCode);
 
@@ -219,7 +216,7 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        protected override CodeGen CreateCodeGen(ScriptCode scriptCode) {
+        protected override Compiler CreateCodeGen(ScriptCode scriptCode) {
             return CompilerHelpers.CreateDynamicCodeGenerator(scriptCode.CompilerContext);
         }
 
@@ -278,7 +275,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        protected override CodeGen CreateCodeGen(ScriptCode scriptCode) {
+        protected override Compiler CreateCodeGen(ScriptCode scriptCode) {
             LanguageInfo li = _languages[scriptCode.LanguageContext];
 
             return li.TypeGen.DefineMethod(CompilerHelpers.PublicStatic,
@@ -364,7 +361,7 @@ namespace Microsoft.Scripting.Generation {
 
         private static void MakeInitialization(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
             li.TypeGen.TypeBuilder.AddInterfaceImplementation(typeof(IModuleDictionaryInitialization));
-            CodeGen cg = li.TypeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
+            Compiler cg = li.TypeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
 
             Label ok = cg.DefineLabel();
             cg.ContextSlot.EmitGet(cg);
@@ -412,7 +409,7 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeGetMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            CodeGen cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
@@ -459,7 +456,7 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeSetMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            CodeGen cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
             Slot valueSlot = cg.GetArgumentSlot(1);
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
@@ -482,9 +479,9 @@ namespace Microsoft.Scripting.Generation {
             cg.Finish();
         }
 
-        private CodeGen MakeRawKeysMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
+        private Compiler MakeRawKeysMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
             Slot rawKeysCache = li.TypeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
-            CodeGen init = li.TypeGen.TypeInitializer;
+            Compiler init = li.TypeGen.TypeInitializer;
 
             init.EmitInt(fields.Count);
             init.Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -501,7 +498,7 @@ namespace Microsoft.Scripting.Generation {
 
             rawKeysCache.EmitSet(init);
 
-            CodeGen cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
+            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
             rawKeysCache.EmitGet(cg);
             cg.EmitReturn();
             cg.Finish();

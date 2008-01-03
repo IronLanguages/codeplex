@@ -31,7 +31,6 @@ using IronPython.Runtime.Operations;
 [assembly: PythonModule("sha", typeof(IronPython.Modules.PythonSha))]
 namespace IronPython.Modules {
     [Documentation("SHA1 hash algorithm")]
-    [PythonType("sha")]
     public static class PythonSha {
         private static readonly SHA1CryptoServiceProvider hasher = new SHA1CryptoServiceProvider();
         private static readonly int digestSize = hasher.HashSize / 8;

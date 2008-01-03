@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -31,11 +32,11 @@ namespace Microsoft.Scripting.Generation {
             _storage = storage;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             _storage.EmitGet(cg);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             _storage.EmitGetAddr(cg);
         }
 
@@ -43,15 +44,15 @@ namespace Microsoft.Scripting.Generation {
             get { return _storage.Type; }
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             _storage.EmitSet(cg);
         }
 
-        public override void EmitSet(CodeGen cg, Slot val) {
+        public override void EmitSet(Compiler cg, Slot val) {
             _storage.EmitSet(cg, val);
         }
 
-        public virtual void EmitGetDictionary(CodeGen cg) {
+        public virtual void EmitGetDictionary(Compiler cg) {
             _storage.EmitGet(cg);
         }
     }

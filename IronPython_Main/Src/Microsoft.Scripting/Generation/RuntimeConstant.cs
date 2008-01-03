@@ -14,9 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public sealed class RuntimeConstant : CompilerConstant {
@@ -31,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
             get { return CompilerHelpers.GetVisibleType(_value); }
         }
 
-        public override void EmitCreation(CodeGen cg) {
+        public override void EmitCreation(Compiler cg) {
             throw new InvalidOperationException();
         }
 

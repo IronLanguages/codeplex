@@ -515,7 +515,7 @@ namespace Microsoft.Scripting.Actions {
         #region IDynamicObject Members
 
         public LanguageContext LanguageContext {
-            get { return InvariantContext.Instance; }
+            get { return null; }
         }
 
         public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {

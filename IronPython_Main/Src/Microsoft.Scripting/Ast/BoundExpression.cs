@@ -57,10 +57,6 @@ namespace Microsoft.Scripting.Ast {
         public override string ToString() {
             return "BoundExpression : " + SymbolTable.IdToString(Name);
         }
-
-        public override AbstractValue AbstractEvaluate(AbstractContext context) {
-            return context.Lookup(_variable);
-        }
     }
 
     public static partial class Ast {

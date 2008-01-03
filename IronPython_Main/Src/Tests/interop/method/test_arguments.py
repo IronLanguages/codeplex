@@ -539,7 +539,10 @@ def test_ctor_1_arg():
     #Ctor111(x)
     #AreEqual(x.Value, 10)   # bug 313045
     
-
+def test_object_array_as_ctor_args():
+    from System import Array
+    Ctor104(Array[object]([1,2]))
+    
 def test_ctor_keyword():
     def check(o):
         Flag[int, int, int].Check(1, 2, 3)

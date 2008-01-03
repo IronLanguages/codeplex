@@ -1053,5 +1053,17 @@ def test_method():
     method = type(C.method)(id, None, 'abc')
     AreEqual(method.im_class, 'abc')
     
+def test_function_type():
+    def f1(): pass
+    def f2(a): pass
+    def f3(a, b, c): pass
+    def f4(*a, **b): pass
     
+    def decorator(f): return f
+    @decorator
+    def f5(a): pass
+    
+    for x in [ f2, f3, f4, f5]:
+        AreEqual(type(f1), type(x))
+        
 run_test(__name__)

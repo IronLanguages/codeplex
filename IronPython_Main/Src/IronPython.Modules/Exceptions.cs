@@ -19,6 +19,16 @@ using System.Text;
 
 using IronPython.Runtime;
 
+// 
+// To add new builtin exceptions:
+//
+// 1) Add a new entry to ExceptionConverter.ExceptionMapping
+// 2) Add a static field to PythonExceptions module in the generated region.
+// 3) build ipy
+// 4) Run the generator script using the ipy you just built
+//   ipyd generate_exceptions.py
+// That will read the exception types from the currently running ipy, detect the new exception, and emit new 
+// source files (rewriting what you did in step #2).
 [assembly: PythonModule("exceptions", typeof(IronPython.Modules.PythonExceptions))]
 namespace IronPython.Modules {
     [PythonType("exceptions")]

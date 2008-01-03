@@ -16,10 +16,8 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -81,7 +79,7 @@ namespace Microsoft.Scripting.Generation {
             return _defaultValue;
         }
 
-        private static void EmitDefaultValue(CodeGen cg, object value, Type type) {
+        private static void EmitDefaultValue(Compiler cg, object value, Type type) {
             if (value is Missing) {
                 cg.EmitMissingValue(type);
             } else {

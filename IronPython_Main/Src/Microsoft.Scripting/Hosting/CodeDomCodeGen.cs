@@ -38,9 +38,9 @@ namespace Microsoft.Scripting.Hosting {
         abstract protected void WriteFunctionDefinition(CodeMemberMethod func);
         abstract protected string QuoteString(string val);
 
-        public SourceUnit GenerateCode(CodeMemberMethod codeDom, IScriptEngine engine) {
+        public SourceUnit/*!*/ GenerateCode(CodeMemberMethod codeDom, LanguageContext context, string id, SourceCodeKind kind) {
             Contract.RequiresNotNull(codeDom, "codeDom");
-            Contract.RequiresNotNull(engine, "engine");
+            Contract.RequiresNotNull(context, "context");
 
             // Convert the CodeDom to source code
             if (_writer != null) {
@@ -50,10 +50,10 @@ namespace Microsoft.Scripting.Hosting {
 
             WriteFunctionDefinition(codeDom);
 
-            return CreateSourceUnit(engine);
+            return CreateSourceUnit(context, id, kind);
         }
 
-        private SourceUnit CreateSourceUnit(IScriptEngine engine) {
+        private SourceUnit/*!*/ CreateSourceUnit(LanguageContext context, string id, SourceCodeKind kind) {
             KeyValuePair<int, string>[] fileMap = _writer.GetFileMap();
             string sourcePath = null;
             if (fileMap != null && fileMap.Length > 0) {
@@ -63,9 +63,10 @@ namespace Microsoft.Scripting.Hosting {
 
             string code = _writer.ToString();
 
-            SourceUnit src = SourceUnit.CreateFileUnit(engine, sourcePath, code);
+            SourceUnit src = context.CreateSnippet(code, id, kind);
             src.SetLineMapping(_writer.GetLineMap());
             src.SetDocumentMapping(fileMap);
+            src.IsVisibleToDebugger = true;
             return src;
         }
 

@@ -17,8 +17,9 @@ using System;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using System.Collections.Generic;
+
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -64,13 +65,13 @@ namespace Microsoft.Scripting.Generation {
             set { _index = value; }
         }
 
-        public override void EmitStorage(CodeGen cg) {
+        public override void EmitStorage(Compiler cg) {
             cg.EmitNew(StorageType.GetConstructor(ArrayUtils.EmptyTypes));
             cg.Emit(OpCodes.Dup);
             EmitNestedTupleInit(cg, StorageType);
         }
 
-        private static void EmitNestedTupleInit(CodeGen cg, Type storageType) {
+        private static void EmitNestedTupleInit(Compiler cg, Type storageType) {
             if (Tuple.GetSize(storageType) > Tuple.MaxSize) {
                 Slot tmp = cg.GetLocalTmp(storageType);
                 tmp.EmitSet(cg);
@@ -105,7 +106,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void EmitNewEnvironment(CodeGen cg) {
+        public override void EmitNewEnvironment(Compiler cg) {
             ConstructorInfo ctor = EnvironmentType.GetConstructor(
                 new Type[] {
                     StorageType,
@@ -136,13 +137,13 @@ namespace Microsoft.Scripting.Generation {
             cg.FreeLocalTmp(tmp);
         }
 
-        public override void EmitGetStorageFromContext(CodeGen cg) {
+        public override void EmitGetStorageFromContext(Compiler cg) {
             cg.EmitCodeContext();
             cg.EmitPropertyGet(typeof(CodeContext), "Scope");
             cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(StorageType));
         }
 
-        public override EnvironmentSlot CreateEnvironmentSlot(CodeGen cg) {
+        public override EnvironmentSlot CreateEnvironmentSlot(Compiler cg) {
             return new FunctionEnvironmentSlot(cg.GetNamedLocal(StorageType, "$environment"), StorageType);
         }
 

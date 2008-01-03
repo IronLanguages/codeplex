@@ -39,8 +39,7 @@ import IronPythonTest
 #--GLOBALS
     
 windir = get_environ_variable("windir")    
-pe = IronPython.Hosting.PythonEngine.CurrentEngine
-preferComDispatch = pe.Options.PreferComDispatchOverTypeInfo
+preferComDispatch = IronPythonTest.TestHelpers.GetContext().Options.PreferComDispatchOverTypeInfo
 
 agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")

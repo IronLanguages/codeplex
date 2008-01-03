@@ -48,32 +48,6 @@ namespace Microsoft.Scripting.Ast {
                 return _method;
             }
         }
-
-        public override bool IsConstant(object value) {
-            if (value == null) return false;
-
-            switch (NodeType) {
-                case AstNodeType.AndAlso:
-                    if (value.Equals(true)) {
-                        return _left.IsConstant(true) && _right.IsConstant(true);
-                    }
-                    if (value.Equals(false)) {
-                        // if left isn't a constant it has to be evaluated
-                        return _left.IsConstant(false);
-                    }
-                    break;
-
-                case AstNodeType.OrElse:
-                    if (value.Equals(true)) {
-                        return _left.IsConstant(true);
-                    }
-                    if (value.Equals(false)) {
-                        return _left.IsConstant(false) && _right.IsConstant(false);
-                    }
-                    break;
-            }
-            return false;
-        }
     }
 
     public static partial class Ast {
@@ -148,10 +122,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static bool IsNullableComparison(Expression left, Expression right) {
-            if (left.IsConstant(null) && !right.IsConstant(null) && TypeUtils.IsNullableType(right.Type)) {
+            if (ConstantCheck.IsConstant(left, null) && !ConstantCheck.IsConstant(right, null) && TypeUtils.IsNullableType(right.Type)) {
                 return true;
             }
-            if (right.IsConstant(null) && !left.IsConstant(null) && TypeUtils.IsNullableType(left.Type)) {
+            if (ConstantCheck.IsConstant(right, null) && !ConstantCheck.IsConstant(left, null) && TypeUtils.IsNullableType(left.Type)) {
                 return true;
             }
             return false;
@@ -333,6 +307,21 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static BinaryExpression ExclusiveOr(Expression left, Expression right) {
             return MakeBinaryArithmeticExpression(AstNodeType.ExclusiveOr, left, right);
+        }
+
+        /// <summary>
+        /// Creates a binary expression representing array indexing: array[index]
+        /// </summary>
+        public static BinaryExpression ArrayIndex(Expression array, Expression index) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(index, "index");
+            Contract.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
+
+            Type arrayType = array.Type;
+            Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+            Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
+
+            return new BinaryExpression(AstNodeType.ArrayIndex, array, index, array.Type.GetElementType(), null);
         }
 
         private static BinaryExpression MakeBinaryArithmeticExpression(AstNodeType nodeType, Expression left, Expression right) {

@@ -28,8 +28,6 @@ using Microsoft.Scripting.Utils;
 
 [assembly: PythonModule("_codecs", typeof(IronPython.Modules.PythonCodecs))]
 namespace IronPython.Modules {
-
-    [PythonType("_codecs")]
     public static class PythonCodecs {        
         internal const int EncoderIndex = 0;
         internal const int DecoderIndex = 1;

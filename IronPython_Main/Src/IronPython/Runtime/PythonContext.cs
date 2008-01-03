@@ -36,64 +36,87 @@ using IronPython.Hosting;
 using PyAst = IronPython.Compiler.Ast;
 using IronPython.Compiler.Generation;
 using System.Text;
+using Microsoft.Scripting.Shell;
 
 namespace IronPython.Runtime {
     public sealed class PythonContext : LanguageContext {
+        internal static SystemState _systemState;    // should be instance for multi-engine support
+        private static Importer _importer;          // should be instance for multi-engine support
+        internal static PythonEngineOptions _engOptions = new PythonEngineOptions(); // should be instance for multi-engine support
+        private static readonly PythonModuleContext _defaultModuleContext;
+        
+        private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
+        private static readonly Guid LanguageVendor_Microsoft = new Guid(-1723120188, -6423, 0x11d2, 0x90, 0x3f, 0, 0xc0, 0x4f, 0xa3, 2, 0xa1);
+        internal static object _exceptionType;
         /// <summary> Standard Python context.  This is the ContextId we use to indicate calls from the Python context. </summary>
-        public static ContextId Id = ContextId.RegisterContext(typeof(PythonContext));
 
-        private PythonEngine _engine;
-        private readonly bool _trueDivision;
+        private ScriptEngine _engine;
+#if !SILVERLIGHT
+        private static int _hookedAssemblyResolve;
+#endif
+
+        static PythonContext() {
+            _defaultModuleContext = new PythonModuleContext(null);
+        }
 
         /// <summary>
         /// Creates a new PythonContext not bound to Engine.
         /// </summary>
-        internal PythonContext()
-            : base() {
+        public PythonContext(ScriptDomainManager manager)
+            : base(manager) {
+
+            // singletons:
+            _importer = new Importer(this);
+
+            DefaultContext.CreateContexts(this);
+
+            Binder = new PythonBinder(DefaultContext.DefaultCLS);
+
+            if (DefaultContext.Default.LanguageContext.Binder == null) {
+                // hack to fix the default language context binder, there's an order of 
+                // initialization issue w/ the binder & the default context.
+                ((PythonContext)DefaultContext.Default.LanguageContext).Binder = Binder;
+            }
+            if (DefaultContext.DefaultCLS.LanguageContext.Binder == null) {
+                // hack to fix the default language context binder, there's an order of 
+                // initialization issue w/ the binder & the default context.
+                ((PythonContext)DefaultContext.DefaultCLS.LanguageContext).Binder = Binder;
+            }
+
+            _systemState = new SystemState();
+
+            _exceptionType = ExceptionConverter.GetPythonException("Exception");
+            _systemState.Initialize();
+#if SILVERLIGHT
+            AddToPath(".");
+#endif
+            
+            // sys.argv always includes at least one empty string.
+            Debug.Assert(PythonOptions.Arguments != null);
+            _systemState.argv = List.Make(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments);
+
+#if !SILVERLIGHT // AssemblyResolve
+            try {
+                if (Interlocked.Exchange(ref _hookedAssemblyResolve, 1) == 0) {
+                    HookAssemblyResolve();
+                }
+            } catch (System.Security.SecurityException) {
+                // We may not have SecurityPermissionFlag.ControlAppDomain. 
+                // If so, we will not look up sys.path for module loads
+            }
+#endif
+            // TODO:
+            // SetModuleCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultModule, _defaultModuleContext);
         }
 
-        public PythonContext(PythonEngine engine, PythonCompilerOptions options) {
-            Contract.RequiresNotNull(engine, "engine");
-            Contract.RequiresNotNull(options, "options");
-
-            _trueDivision = options.TrueDivision;
-            _engine = engine;
-        }
-
-        public PythonContext(PythonEngine engine, bool trueDivision) {
-            Contract.RequiresNotNull(engine, "engine");
-
-            _engine = engine;
-            _trueDivision = trueDivision;
-        }
-
-        /// <summary>
-        /// True division is encoded into a compiled code that this context is associated with. Cannot be changed.
-        /// </summary>
-        public bool TrueDivision {
-            get { return _trueDivision; }
-        }
-
-        public PythonEngine PythonEngine {
+        public ScriptEngine ScriptEngine {
             get {
                 return _engine;
             }
-            // friend: PythonEngine
+            // friend: ScriptEngine
             internal set {
                 Assert.NotNull(value);
                 _engine = value;
-            }
-        }
-
-        public override ScriptEngine Engine {
-            get {
-                return _engine;
-            }
-        }
-
-        public override ContextId ContextId {
-            get {
-                return PythonContext.Id;
             }
         }
 
@@ -105,7 +128,7 @@ namespace IronPython.Runtime {
             bool propertiesSet = false;
             int errorCode = 0;
 
-            using (Parser parser = Parser.CreateParser(context, PythonEngine.Options)) {
+            using (Parser parser = Parser.CreateParser(context, PythonContext.GetPythonOptions(null))) {
                 switch (context.SourceUnit.Kind) {
                     case SourceCodeKind.InteractiveCode:
                         ast = parser.ParseInteractiveCode(out properties);
@@ -262,8 +285,8 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT
         // Convert a CodeDom to source code, and output the generated code and the line number mappings (if any)
-        public override SourceUnit GenerateSourceCode(System.CodeDom.CodeObject codeDom) {
-            return new PythonCodeDomCodeGen().GenerateCode((System.CodeDom.CodeMemberMethod)codeDom, _engine);
+        public override SourceUnit/*!*/ GenerateSourceCode(System.CodeDom.CodeObject codeDom, string id, SourceCodeKind kind) {
+            return new PythonCodeDomCodeGen().GenerateCode((System.CodeDom.CodeMemberMethod)codeDom, this, id, kind);
         }
 #endif
 
@@ -277,8 +300,8 @@ namespace IronPython.Runtime {
             // TODO: following should be context sensitive variables:
 
             // adds __builtin__ variable if this is not a __builtin__ module itself:             
-            if (PythonEngine.SystemState.modules.ContainsKey("__builtin__")) {
-                module.Scope.SetName(Symbols.Builtins, PythonEngine.SystemState.modules["__builtin__"]);
+            if (PythonContext.GetSystemState(null).modules.ContainsKey("__builtin__")) {
+                module.SetVariable("__builtins__", PythonContext.GetSystemState(null).modules["__builtin__"]);
             } else {
                 Debug.Assert(module.ModuleName == "__builtin__");
             }
@@ -297,15 +320,16 @@ namespace IronPython.Runtime {
             if (module.FileName != null && Path.GetFileName(module.FileName) == "__init__.py") {
                 string dirname = Path.GetDirectoryName(module.FileName);
                 string dir_path = ScriptDomainManager.CurrentManager.Host.NormalizePath(dirname);
-                module.Scope.SetName(Symbols.Path, List.MakeList(dir_path));
+                module.SetVariable("__path__", List.MakeList(dir_path));
             }
         }
 
 
         public override void ModuleContextEntering(ModuleContext newContext) {
             if (newContext == null) return;
-
+            Debug.Assert(newContext is PythonModuleContext);
             PythonModuleContext newPythonContext = (PythonModuleContext)newContext;
+            
 
             // code executed in the scope of module cannot disable TrueDivision:
 
@@ -315,7 +339,7 @@ namespace IronPython.Runtime {
             //}
 
             // flow the code's true division into the module if we have it set
-            newPythonContext.TrueDivision |= _trueDivision;
+            newPythonContext.TrueDivision |= ((PythonCompilerOptions)newPythonContext.CompilerContext.Options).TrueDivision;
         }
 
         /// <summary>
@@ -355,18 +379,20 @@ namespace IronPython.Runtime {
                 
                 // built-in module: TODO: explicitly mark builtin modules in module context?
                 if (fileName == null) {
-                    PythonEngine.Importer.ReloadBuiltin(module);
+                    PythonContext.GetImporter(null).ReloadBuiltin(module);
                     return original;
                 }
 
-                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(PythonEngine, fileName,
-                    PythonEngine.SystemState.DefaultEncoding);
+                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(ScriptEngine, 
+                    fileName,
+                    _systemState.DefaultEncoding,
+                    SourceCodeKind.File);
 
                 if (sourceUnit == null) {
                     throw PythonOps.SystemError("module cannot be reloaded");
                 }
 
-                return CompileSourceCode(sourceUnit, PythonEngine.GetModuleCompilerOptions(module));
+                return CompileSourceCode(sourceUnit, GetModuleCompilerOptions(module));
             } else {
                 return base.Reload(original, module);
             }
@@ -389,19 +415,13 @@ namespace IronPython.Runtime {
                 throw PythonOps.SystemError("nameless module");
 
             object name = scope.LookupName(this, Symbols.Name);
-            if (!PythonEngine.SystemState.modules.ContainsKey(name)) {
+            if (!_systemState.modules.ContainsKey(name)) {
                 throw PythonOps.ImportError("module {0} not in sys.modules", name);
             }
         }
 
         public override CompilerOptions GetCompilerOptions() {
-            return new PythonCompilerOptions(TrueDivision);
-        }
-
-        public override Microsoft.Scripting.Actions.ActionBinder Binder {
-            get {
-                return _engine.DefaultBinder;
-            }
+            return new PythonCompilerOptions();
         }
 
         public override bool IsTrue(object obj) {
@@ -485,5 +505,475 @@ namespace IronPython.Runtime {
             return DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(an.Name);
         }
 #endif
+
+        public override string DisplayName {
+            get {
+                return "IronPython";
+            }
+        }
+
+        public override Guid LanguageGuid {
+            get {
+                return PythonLanguageGuid;
+            }
+        }
+
+        public override Version LanguageVersion {
+            get {
+                return new Version(2, 0);
+            }
+        }
+
+        public override void SetScriptSourceSearchPaths(string[] paths) {
+            _systemState.path = List.Make(paths);
+        }
+        
+        public override TextWriter GetOutputWriter(bool isErrorOutput) {
+            return new OutputWriter(this, isErrorOutput);
+        }
+
+        public override void Shutdown() {
+            object callable;
+
+            if (PythonOps.TryGetBoundAttr(_systemState, Symbols.SysExitFunc, out callable)) {
+                PythonCalls.Call(callable);
+            }
+        }
+
+        private static string GetInformationalVersion() {
+            AssemblyInformationalVersionAttribute attribute = GetAssemblyAttribute<AssemblyInformationalVersionAttribute>();
+            return attribute != null ? attribute.InformationalVersion : "";
+        }
+
+        private static string GetFileVersion() {
+#if !SILVERLIGHT // file version
+            AssemblyFileVersionAttribute attribute = GetAssemblyAttribute<AssemblyFileVersionAttribute>();
+            return attribute != null ? attribute.Version : "";
+#else
+            return "1.0.0.0";
+#endif
+        }
+
+        public override string FormatException(Exception exception) {
+            SyntaxErrorException syntax_error = exception as SyntaxErrorException;
+            if (syntax_error != null) {
+                return FormatPythonSyntaxError(syntax_error);
+            }
+
+            object pythonEx = ExceptionConverter.ToPython(exception);
+
+            string result = FormatStackTraces(exception) + FormatPythonException(pythonEx) + Environment.NewLine;
+
+            if (Options.ShowClrExceptions) {
+                result += FormatCLSException(exception);
+            }
+
+            return result;
+        }
+
+        internal static string FormatPythonSyntaxError(SyntaxErrorException e) {
+            string sourceLine = e.GetCodeLine();
+
+            return String.Format(
+                "  File \"{1}\", line {2}{0}" +
+                "    {3}{0}" +
+                "    {4}^{0}" +
+                "{5}: {6}{0}",
+                Environment.NewLine,
+                e.GetSymbolDocumentName(),
+                e.Line > 0 ? e.Line.ToString() : "?",
+                (sourceLine != null) ? sourceLine.Replace('\t', ' ') : null,
+                new String(' ', e.Column != 0 ? e.Column - 1 : 0),
+                GetPythonExceptionClassName(ExceptionConverter.ToPython(e)), e.Message);
+        }
+
+        private static string FormatCLSException(Exception e) {
+            StringBuilder result = new StringBuilder();
+            result.AppendLine("CLR Exception: ");
+            while (e != null) {
+                result.Append("    ");
+                result.AppendLine(e.GetType().Name);
+                if (!String.IsNullOrEmpty(e.Message)) {
+                    result.AppendLine(": ");
+                    result.AppendLine(e.Message);
+                } else {
+                    result.AppendLine();
+                }
+
+                e = e.InnerException;
+            }
+
+            return result.ToString();
+        }
+
+        internal static string FormatPythonException(object pythonException) {
+            string result = "";
+
+            // dump the python exception.
+            if (pythonException != null) {
+                string str = pythonException as string;
+                if (str != null) {
+                    result += str;
+                } else if (pythonException is StringException) {
+                    result += pythonException.ToString();
+                } else {
+                    result += GetPythonExceptionClassName(pythonException) + ": " + pythonException.ToString();
+                }
+            }
+
+            return result;
+        }
+
+        private static string GetPythonExceptionClassName(object pythonException) {
+            string className = "";
+            object val;
+            if (PythonOps.TryGetBoundAttr(pythonException, Symbols.Class, out val)) {
+                if (PythonOps.TryGetBoundAttr(val, Symbols.Name, out val)) {
+                    className = val.ToString();
+                    if (PythonOps.TryGetBoundAttr(pythonException, Symbols.Module, out val)) {
+                        string moduleName = val.ToString();
+                        if (moduleName != ExceptionConverter.defaultExceptionModule) {
+                            className = moduleName + "." + className;
+                        }
+                    }
+                }
+            }
+            return className;
+        }
+
+#if SILVERLIGHT // stack trace
+        private string FormatStackTraces(Exception e) {
+
+            StringBuilder result = new StringBuilder();
+            result.AppendLine("Traceback (most recent call last):");
+            DynamicStackFrame[] dfs = RuntimeHelpers.GetDynamicStackFrames(e);
+            for (int i = 0; i < dfs.Length; ++i) {
+                DynamicStackFrame frame = dfs[i];
+                result.AppendFormat("  at {0} in {1}, line {2}\n", frame.GetMethodName(), frame.GetFileName(), frame.GetFileLineNumber());
+            }
+
+            if (Options.ExceptionDetail) {
+                result.AppendLine(e.Message);
+            }
+            
+            return result.ToString();
+        }
+#else
+        private string FormatStackTraces(Exception e) {
+            bool printedHeader = false;
+
+            return FormatStackTraces(e, ref printedHeader);
+        }
+
+        private string FormatStackTraces(Exception e, ref bool printedHeader) {
+            return FormatStackTraces(e, null, ref printedHeader);
+        }
+
+        private string FormatStackTraces(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
+            string result = "";
+            if (Options.ExceptionDetail) {
+                if (!printedHeader) {
+                    result = e.Message + Environment.NewLine;
+                    printedHeader = true;
+                }
+                IList<System.Diagnostics.StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
+
+                if (traces != null) {
+                    for (int i = 0; i < traces.Count; i++) {
+                        for (int j = 0; j < traces[i].FrameCount; j++) {
+                            StackFrame curFrame = traces[i].GetFrame(j);
+                            if (fsf == null || fsf(curFrame))
+                                result += curFrame.ToString() + Environment.NewLine;
+                        }
+                    }
+                }
+
+                if (e.StackTrace != null) result += e.StackTrace.ToString() + Environment.NewLine;
+                if (e.InnerException != null) result += FormatStackTraces(e.InnerException, ref printedHeader);
+            } else {
+                result = FormatStackTraceNoDetail(e, fsf, ref printedHeader);
+            }
+
+            return result;
+        }
+
+        internal string FormatStackTraceNoDetail(Exception e, FilterStackFrame fsf, ref bool printedHeader) {
+            string result = String.Empty;
+            // dump inner most exception first, followed by outer most.
+            if (e.InnerException != null) result += FormatStackTraceNoDetail(e.InnerException, fsf, ref printedHeader);
+
+            if (!printedHeader) {
+                result += "Traceback (most recent call last):" + Environment.NewLine;
+                printedHeader = true;
+            }
+            List<DynamicStackFrame> dynamicFrames = new List<DynamicStackFrame>(RuntimeHelpers.GetDynamicStackFrames(e));
+            IList<StackTrace> traces = ExceptionHelpers.GetExceptionStackTraces(e);
+            if (traces != null && traces.Count > 0) {
+                for (int i = traces.Count - 1; i >= 0; i--) {
+                    result += FormatStackTrace(traces[i], dynamicFrames, fsf);
+                }
+            }
+            result += FormatStackTrace(new StackTrace(e, true), dynamicFrames, fsf);
+
+            //TODO: we would like to be able to assert this;
+            // right now, we cannot, because we are not using dynamic frames for non-interpreted dynamic methods.
+            // (we create the frames, but we do not consume them in FormatStackTrace.)
+            //Debug.Assert(dynamicFrames.Count == 0);
+
+            return result;
+        }
+
+        private string FormatStackTrace(StackTrace st, List<DynamicStackFrame> dynamicFrames, FilterStackFrame fsf) {
+            string result = "";
+
+            StackFrame[] frames = st.GetFrames();
+            if (frames == null) return result;
+
+            for (int i = frames.Length - 1; i >= 0; i--) {
+                StackFrame frame = frames[i];
+                MethodBase method = frame.GetMethod();
+                Type parentType = method.DeclaringType;
+                if (parentType != null) {
+                    string typeName = parentType.FullName;
+                    if (typeName == "Microsoft.Scripting.Ast.CodeBlock" && method.Name == "DoExecute") {
+                        // Evaluated frame -- Replace with dynamic frame
+                        Debug.Assert(dynamicFrames.Count > 0);
+                        //if (dynamicFrames.Count == 0) continue;
+                        result += FrameToString(dynamicFrames[dynamicFrames.Count - 1]) + Environment.NewLine;
+                        dynamicFrames.RemoveAt(dynamicFrames.Count - 1);
+                        continue;
+                    }
+                    if (typeName.StartsWith("IronPython.") ||
+                        typeName.StartsWith("ReflectOpt.") ||
+                        typeName.StartsWith("System.Reflection.") ||
+                        typeName.StartsWith("System.Runtime") ||
+                        typeName.StartsWith("Microsoft.Scripting") ||
+                        typeName.StartsWith("IronPythonConsole.")) {
+                        continue;
+                    }
+                }
+
+
+                if (fsf != null && !fsf(frame)) continue;
+
+                // TODO: also try to use dynamic frames for non-interpreted dynamic methods
+                result += FrameToString(frame) + Environment.NewLine;
+            }
+
+            return result;
+        }
+
+        private string FrameToString(DynamicStackFrame frame) {
+            return String.Format("  File {0}, line {1}, in {2}",
+                frame.GetFileName(), frame.GetFileLineNumber(), frame.GetMethodName());
+        }
+
+
+        private string FrameToString(StackFrame frame) {
+            if (frame.GetMethod().DeclaringType != null &&
+                frame.GetMethod().DeclaringType.Assembly == ScriptDomainManager.CurrentManager.Snippets.Assembly.AssemblyBuilder) {
+                string methodName;
+                int dollar;
+
+                if (frame.GetMethod().Name == "Run") methodName = "-toplevel-";
+                else if ((dollar = frame.GetMethod().Name.IndexOf('$')) == -1) methodName = frame.GetMethod().Name;
+                else methodName = frame.GetMethod().Name.Substring(0, dollar);
+
+                return String.Format("  File {0}, line {1}, in {2}",
+                    frame.GetFileName(),
+                    frame.GetFileLineNumber(),
+                    methodName);
+            } else {
+                string methodName;
+                int dollar;
+
+                if ((dollar = frame.GetMethod().Name.IndexOf('$')) == -1) methodName = frame.GetMethod().Name;
+                else methodName = frame.GetMethod().Name.Substring(0, dollar);
+
+                string filename = frame.GetFileName();
+                string line = frame.GetFileLineNumber().ToString();
+                if (String.IsNullOrEmpty(filename)) {
+                    if (frame.GetMethod().DeclaringType != null) {
+                        filename = frame.GetMethod().DeclaringType.Assembly.GetName().Name;
+                        line = "unknown";
+                    }
+                }
+
+                return String.Format("  File {0}, line {1}, in {2}",
+                    filename,
+                    line,
+                    methodName);
+            }
+        }
+
+        public delegate bool FilterStackFrame(StackFrame frame);
+
+        private string FormatException(Exception exception, object pythonException, FilterStackFrame filter) {
+            Debug.Assert(pythonException != null);
+            Debug.Assert(exception != null);
+
+            string result = string.Empty;
+            bool printedHeader = false;
+            result += FormatStackTraces(exception, filter, ref printedHeader);
+            result += FormatPythonException(pythonException);
+            if (Options.ShowClrExceptions) {
+                result += FormatCLSException(exception);
+            }
+
+            return result;
+        }
+#endif
+
+        private static T GetAssemblyAttribute<T>() where T : Attribute {
+            Assembly asm = typeof(ScriptEngine).Assembly;
+            object[] attributes = asm.GetCustomAttributes(typeof(T), false);
+            if (attributes != null && attributes.Length > 0) {
+                return (T)attributes[0];
+            } else {
+                Debug.Assert(false, String.Format("Cannot find attribute {0}", typeof(T).Name));
+                return null;
+            }
+        }
+
+        public static Importer GetImporter(CodeContext context) {
+            // TODO: Multi-engine support
+            return _importer;
+        }
+
+        public override ServiceType GetService<ServiceType>(params object[] args) {
+            if (typeof(ServiceType) == typeof(CommandLine)) {
+                return (ServiceType)(object)new PythonCommandLine();
+            } else if (typeof(ServiceType) == typeof(OptionsParser)) {
+                return (ServiceType)(object)new PythonOptionsParser(this);
+            } else if (typeof(ServiceType) == typeof(ITokenCategorizer)) {
+                return (ServiceType)(object)new PythonTokenCategorizer();
+            }
+
+            return base.GetService<ServiceType>(args);
+        }
+
+        public static SystemState GetSystemState(CodeContext context) {
+            // TODO: Multi-engine support
+            return _systemState;
+        }
+
+        public static PythonEngineOptions GetPythonOptions(CodeContext context) {
+            return _engOptions;
+        }
+
+        public Importer Importer {
+            get {
+                return _importer;
+            }
+        }
+
+        /// <summary>
+        /// Should be instance method
+        /// </summary>
+        /// <param name="directory"></param>
+        public static void AddToPath(string directory) {
+            _systemState.path.Append(directory);
+        }
+
+        // scope can be null, should be instance method for multi-engine support
+        public static ScriptScope MakePythonModule(string name, Scope scope, ModuleOptions options) {
+            Contract.RequiresNotNull(name, "name");
+            if (scope == null) scope = new Scope(new SymbolDictionary());
+
+            ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule(name, scope);
+
+            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
+            moduleContext.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
+            moduleContext.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
+            moduleContext.IsPythonCreatedModule = true;
+
+            if ((options & ModuleOptions.PublishModule) != 0) {
+                _systemState.modules[module.ModuleName] = module;
+            }
+
+            return module;
+        }
+
+        /// <summary>
+        /// Create a module with optimized code. The restriction is that the user cannot specify a globals 
+        /// dictionary of her liking.
+        /// </summary>
+        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule) {
+            return CreateOptimizedModule(fileName, moduleName, publishModule, false);
+        }
+
+        public ScriptScope CreateOptimizedModule(string fileName, string moduleName, bool publishModule, bool skipFirstLine) {
+            Contract.RequiresNotNull(fileName, "fileName");
+            Contract.RequiresNotNull(moduleName, "moduleName");
+
+            SourceUnit sourceUnit = CreateFileUnit(fileName, _systemState.DefaultEncoding);
+            PythonCompilerOptions options = (PythonCompilerOptions)GetDefaultCompilerOptions();
+            options.SkipFirstLine = skipFirstLine;
+            ScriptScope module = ScriptDomainManager.CurrentManager.CompileModule(moduleName, ScriptModuleKind.Default, null, options, null, sourceUnit);
+
+            if (publishModule) {
+                _systemState.modules[moduleName] = module;
+            }
+
+            return module;
+        }
+
+        public override CompilerOptions GetDefaultCompilerOptions() {
+            return new PythonCompilerOptions(PythonOptions.DivisionOptions == PythonDivisionOptions.New);
+        }
+
+        public override CompilerOptions GetModuleCompilerOptions(ScriptScope module) {
+            Assert.NotNull(module);
+
+            PythonCompilerOptions result = new PythonCompilerOptions();
+            PythonModuleContext moduleContext = (PythonModuleContext)GetModuleContext(module);
+
+            if (moduleContext != null) {
+                result.TrueDivision = moduleContext.TrueDivision;
+            } else {
+                result.TrueDivision = PythonOptions.DivisionOptions == PythonDivisionOptions.New;
+            }
+
+            return result;
+        }
+
+        public override EngineOptions Options {
+            get { return _engOptions; }
+        }
+
+        public PythonEngineOptions PythonOptions {
+            get {
+                return _engOptions;
+            }
+        }
+
+        public override Guid VendorGuid {
+            get {
+                return LanguageVendor_Microsoft;
+            }
+        }
+
+        public override ErrorSink GetCompilerErrorSink() {
+            return new CompilerErrorSink();
+        }
+
+        public override void GetExceptionMessage(Exception exception, out string message, out string typeName) {
+            object pythonEx = ExceptionConverter.ToPython(exception);
+
+            message = FormatPythonException(ExceptionConverter.ToPython(exception));
+            typeName = GetPythonExceptionClassName(pythonEx);
+        }
+
+#if !SILVERLIGHT
+        /// <summary>
+        /// We use Assembly.LoadFile to load assemblies from a path specified by the script (in LoadAssemblyFromFileWithPath).
+        /// However, when the CLR loader tries to resolve any of assembly references, it will not be able to
+        /// find the dependencies, unless we can hook into the CLR loader.
+        /// </summary>
+        private static void HookAssemblyResolve() {
+            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(PythonContext.CurrentDomain_AssemblyResolve);
+        }
+#endif
+
     }
 }

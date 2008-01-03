@@ -942,19 +942,5 @@ namespace IronPython.Compiler {
         private void DumpToken(Token token) {
             Console.WriteLine("{0} `{1}`", token.Kind, token.Image.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t"));
         }
-
-#if !SILVERLIGHT
-        public static TimeSpan Benchmark(string code) {
-            Tokenizer t = new Tokenizer(new ErrorSink());
-            t.Initialize(SourceUnit.CreateSnippet(PythonEngine.CurrentEngine, code));
-
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
-            while (t.Next() != Tokens.EndOfFileToken) ;
-            watch.Stop();
-
-            return watch.Elapsed;
-        }
-#endif
     }
 }

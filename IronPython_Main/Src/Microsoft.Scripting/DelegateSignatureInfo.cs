@@ -16,10 +16,10 @@
 using System;
 using System.Text;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
@@ -104,7 +104,7 @@ namespace Microsoft.Scripting {
             ConstantPool constants = new ConstantPool();
 
             // Create the method
-            CodeGen cg = snippets.DefineMethod(ToString(), _returnType, delegateParams, constants);
+            Compiler cg = snippets.DefineMethod(ToString(), _returnType, delegateParams, constants);
             cg.Binder = _binder;
 
             // Add the space for the delegate target and save the index at which it was placed,

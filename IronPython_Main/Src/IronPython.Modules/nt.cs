@@ -36,7 +36,6 @@ using IronPython.Runtime.Types;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
-    [PythonType("nt")]
     public static class PythonNT {
         #region Public API Surface
 

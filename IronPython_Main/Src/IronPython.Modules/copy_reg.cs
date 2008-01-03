@@ -30,7 +30,6 @@ using IronPython.Runtime.Types;
 [assembly: PythonModule("copy_reg", typeof(IronPython.Modules.PythonCopyReg))]
 namespace IronPython.Modules {
     [Documentation("Provides global reduction-function registration for pickling and copying objects.")]
-    [PythonType("copy_reg")]
     public static class PythonCopyReg {
 
         private static PythonDictionary dispatchTable = new PythonDictionary();

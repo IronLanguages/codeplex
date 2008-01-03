@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Hosting {
         string[] GetSourceFileNames(string mask, string searchPattern);
         
         // source units:
-        SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding);
+        SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind);
         SourceUnit ResolveSourceFileUnit(string name);
 
         // notifications:
@@ -39,8 +39,8 @@ namespace Microsoft.Scripting.Hosting {
         void ModuleCreated(IScriptScope module);
 
         // environment variables:
-        bool TrySetVariable(IScriptEngine engine, SymbolId name, object value);
-        bool TryGetVariable(IScriptEngine engine, SymbolId name, out object value);
+        bool TrySetVariable(SymbolId name, object value);
+        bool TryGetVariable(SymbolId name, out object value);
         
         /// <summary>
         /// Default module is provided by the host.
@@ -152,12 +152,12 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding) {
+        public virtual SourceUnit TryGetSourceFileUnit(IScriptEngine engine, string path, Encoding encoding, SourceCodeKind kind) {
             Contract.RequiresNotNull(engine, "engine");
             Contract.RequiresNotNull(path, "path");
             
-            if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {
-                return SourceUnit.CreateFileUnit(engine, path, encoding);
+            if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {     
+                return engine.CreateScriptSource(new FileStreamContentProvider(path), NormalizePath(path), encoding, kind);
             }
 
             return null;
@@ -189,13 +189,13 @@ namespace Microsoft.Scripting.Hosting {
                             throw new InvalidOperationException(String.Format(Resources.AmbigiousModule, fullPath, finalPath));
                         }
 
-                        LanguageProvider provider;
-                        if (!ScriptDomainManager.CurrentManager.TryGetLanguageProviderByFileExtension(extension, out provider)) {
+                        ScriptEngine engine;
+                        if (!ScriptDomainManager.CurrentManager.TryGetEngine(extension, out engine)) {
                             // provider may have been unregistered, let's pick another one: 
                             continue;    
                         }
 
-                        result = SourceUnit.CreateFileUnit(provider.GetEngine(), NormalizePath(fullPath), StringUtils.DefaultEncoding);
+                        result = TryGetSourceFileUnit(engine, fullPath, StringUtils.DefaultEncoding, SourceCodeKind.File);
                         finalPath = fullPath;
                     }
                 }
@@ -220,11 +220,11 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Variables
 
-        public virtual bool TrySetVariable(IScriptEngine engine, SymbolId name, object value) {
+        public virtual bool TrySetVariable(SymbolId name, object value) {
             return false;
         }
 
-        public virtual bool TryGetVariable(IScriptEngine engine, SymbolId name, out object value) {
+        public virtual bool TryGetVariable(SymbolId name, out object value) {
             value = null;
             return false;
         }

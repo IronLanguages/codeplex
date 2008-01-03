@@ -15,8 +15,9 @@
 
 using System;
 using System.Reflection;
-using System.Diagnostics;
 using System.Collections.Generic;
+
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
 
@@ -30,13 +31,13 @@ namespace Microsoft.Scripting.Generation {
         private List<Slot> _slots = new List<Slot>();
         private List<SymbolId> _names = new List<SymbolId>();
         private Type _dictType, _tupleType;
-        private Dictionary<CodeGen, List<Slot>> _concreteSlots;
+        private Dictionary<Compiler, List<Slot>> _concreteSlots;
 
         public TupleSlotFactory(Type dictType) {
             _dictType = dictType;
         }
 
-        protected virtual Slot PrepareSlotForEmit(CodeGen cg) {
+        protected virtual Slot PrepareSlotForEmit(Compiler cg) {
             // Emit globals from context and cast to tuple type            
 
             // tmpLocal = ((tupleDictType)codeContext.Scope.GlobalScope.GetDictionary(context)).Tuple
@@ -51,8 +52,8 @@ namespace Microsoft.Scripting.Generation {
             return tmpLocal;
         }
 
-        public override void PrepareForEmit(CodeGen cg) {
-            if (_concreteSlots == null) _concreteSlots = new Dictionary<CodeGen, List<Slot>>();
+        public override void PrepareForEmit(Compiler cg) {
+            if (_concreteSlots == null) _concreteSlots = new Dictionary<Compiler, List<Slot>>();
             if (_concreteSlots.ContainsKey(cg)) return;
 
             Slot tmpLocal = PrepareSlotForEmit(cg);
@@ -64,7 +65,7 @@ namespace Microsoft.Scripting.Generation {
             _concreteSlots[cg] = concreteSlots;
         }
 
-        public Slot GetConcreteSlot(CodeGen cg, int data) {
+        public Slot GetConcreteSlot(Compiler cg, int data) {
             return _concreteSlots[cg][data];
         }
 

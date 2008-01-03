@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -35,7 +36,7 @@ namespace IronPython.Runtime.Types {
 
         protected virtual bool TryGetContextValue(SymbolId name, ContextId context, out object value) {
             PythonTypeSlot dts;
-            if (_builder.UnfinishedType.TryLookupContextSlot(SimpleContext.Create(context),
+            if (_builder.UnfinishedType.TryLookupContextSlot(DefaultContext.Default,
                 name,
                 out dts)) {
                 value = dts;
@@ -48,7 +49,7 @@ namespace IronPython.Runtime.Types {
 
         protected virtual bool TryGetValue(SymbolId name, ContextId context, out object value) {
             PythonTypeSlot dts;
-            if (_builder.UnfinishedType.TryLookupSlot(SimpleContext.Create(context),
+            if (_builder.UnfinishedType.TryLookupSlot(DefaultContext.Default,
                 name,
                 out dts)) {
                 value = dts;
@@ -507,14 +508,8 @@ namespace IronPython.Runtime.Types {
             }
 
             private SimpleContext(ContextId context)
-                : base() {
+                : base(null) {
                 _context = context;
-            }
-
-            public override ActionBinder Binder {
-                get {
-                    return null;
-                }
             }
 
             public override ContextId ContextId {
@@ -527,6 +522,5 @@ namespace IronPython.Runtime.Types {
                 throw new NotSupportedException();
             }
         }
-
     }
 }

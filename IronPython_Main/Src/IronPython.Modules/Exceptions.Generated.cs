@@ -19,6 +19,7 @@ using System.Text;
 
 using IronPython.Runtime.Exceptions;
 
+// This generated code is updated by the generate_exceptions.py script.
 namespace IronPython.Modules {
     public static partial class PythonExceptions {
         #region Generated Exceptions Module
@@ -26,6 +27,7 @@ namespace IronPython.Modules {
         // *** BEGIN GENERATED CODE ***
 
         public static object Exception = ExceptionConverter.GetPythonException("Exception");
+        public static object GeneratorExit = ExceptionConverter.GetPythonException("GeneratorExit");
         public static object ValueError = ExceptionConverter.GetPythonException("ValueError");
         public static object ImportError = ExceptionConverter.GetPythonException("ImportError");
         public static object RuntimeError = ExceptionConverter.GetPythonException("RuntimeError");

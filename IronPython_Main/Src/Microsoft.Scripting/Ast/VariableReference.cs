@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
 
@@ -44,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _slot; }
         }
 
-        public void CreateSlot(CodeGen cg) {
+        public void CreateSlot(Compiler cg) {
             _slot = _variable.CreateSlot(cg);
         }
     }

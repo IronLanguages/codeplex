@@ -51,7 +51,7 @@ namespace IronPython.Runtime {
 
         public static SystemState Instance {
             get {
-                return PythonEngine.CurrentEngine.SystemState;
+                return PythonContext.GetSystemState(null);
             }
         }
 
@@ -353,7 +353,7 @@ namespace IronPython.Runtime {
         [PythonName("platform")]
         public object platform;
 
-        // default to location of IronPython.dll, host can override by calling PythonEngine.InitializeModules
+        // default to location of IronPython.dll, host can override by calling ScriptEngine.InitializeModules
         // In Silverlight the 1 host always sets this
         [PythonName("prefix")]
 #if SILVERLIGHT

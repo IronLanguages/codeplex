@@ -180,6 +180,9 @@
   <data name="MissingOptionValue" xml:space="preserve">
     <value>Argument expected for the {0} option.</value>
   </data>
+  <data name="MissingService" xml:space="preserve">
+    <value>Language '{0}' doesn't provide service {1}.</value>
+  </data>
   <data name="MissingService_CommandLine" xml:space="preserve">
     <value>Language '{0}' doesn't provide a command line.</value>
   </data>

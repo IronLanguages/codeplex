@@ -31,7 +31,6 @@ using System.Net.Sockets;
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {
     [Documentation("Provides support for asynchronous socket operations.")]
-    [PythonType("select")]
     public static class PythonSelect {
 #if SILVERLIGHT // RunClassConstructor workaround
         public static void __cctor() { }

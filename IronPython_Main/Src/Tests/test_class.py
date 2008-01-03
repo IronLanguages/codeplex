@@ -857,7 +857,7 @@ def test_newstyle_lookup():
             ('__mul__', 'obj * obj'),
             ('__floordiv__', 'obj // obj'),
             ('__mod__', 'obj % obj'),
-            #('__divmod__', 'divmod(obj,obj)'), #bug 975, divmod alone doesn't work
+            ('__divmod__', 'divmod(obj,obj)'), 
             ('__pow__', 'pow(obj, obj)'),
             ('__lshift__', 'obj << obj'),
             ('__rshift__', 'obj >> obj'),
@@ -2194,5 +2194,15 @@ def test_object_as_condition():
     flag = 0
     if o % o: flag = 1   # the bug was causing cast error before
     AreEqual(flag, 1)
+
+def test_unbound_class_method():
+    class C(object):
+        def f(): return 1
     
+    x = C()
+    AssertErrorWithPartialMessage(TypeError, "unbound method f() must be called with", lambda: C.f())
+    AssertErrorWithPartialMessage(TypeError, "unbound method f() must be called with", lambda: C.f(C))
+    AssertErrorWithPartialMessage(TypeError, "arguments (1 given)", lambda: C.f(x))
+    AssertErrorWithPartialMessage(TypeError, "arguments (1 given)", lambda: x.f())
+        
 run_test(__name__)

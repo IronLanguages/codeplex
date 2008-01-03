@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
         [StaticExtensionMethod("__new__")]
         public static ScriptScope MakeModule(CodeContext context, PythonType cls, params object[] args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
-                ScriptScope module = PythonEngine.CurrentEngine.MakePythonModule("?");
+                ScriptScope module = MakePythonModule(context, "?");
                 
                 // TODO: should be null
                 module.Scope.Clear();
@@ -104,7 +104,7 @@ namespace IronPython.Runtime.Types {
 
         [PropertyMethod, PythonName("__name__")]
         public static void Set__name__(ScriptScope module, object value) {
-            module.Scope.SetName(Symbols.Name, value);
+            module.SetVariable("__name__", value);
 
             string strVal = value as string;
             if (strVal != null) {
@@ -138,7 +138,7 @@ namespace IronPython.Runtime.Types {
 
         [PropertyMethod, PythonName("__file__")]
         public static void Set__file__(ScriptScope module, string value) {
-            module.Scope.SetName(Symbols.File, module.FileName = value);
+            module.SetVariable("__file__", module.FileName = value);
         }
 
         public static void SetPythonCreated(ScriptScope module) {
@@ -147,13 +147,6 @@ namespace IronPython.Runtime.Types {
         }
 
         #endregion
-
-        // TODO: Should be internal on PythonOps:
-
-        public static ScriptCode CompileFlowTrueDivision(SourceUnit codeUnit, LanguageContext context) {
-            // flow TrueDivision and bind to the current module, use default error sink:
-            return context.CompileSourceCode(codeUnit);
-        }
 
         /// <summary>
         /// Creates a new PythonModule putting the members defined on type into it. 
@@ -243,5 +236,24 @@ namespace IronPython.Runtime.Types {
 
             return dict;
         }
+
+        internal static ScriptScope MakePythonModule(CodeContext context, string name) {
+            Scope scope = new Scope(new SymbolDictionary());
+
+            ScriptScope module = context.LanguageContext.DomainManager.CreateModule(name, scope);
+
+            PythonModuleContext moduleContext = (PythonModuleContext)DefaultContext.Default.LanguageContext.EnsureModuleContext(module);
+            moduleContext.IsPythonCreatedModule = true;
+
+            return module;
+        }
+
+        public static void PublishModule(IScriptScope module) {
+            Contract.RequiresNotNull(module, "module");
+
+            // TODO: remote modules here...
+            PythonContext.GetSystemState(null).modules[module.ModuleName] = module;
+        }        
+
     }
 }

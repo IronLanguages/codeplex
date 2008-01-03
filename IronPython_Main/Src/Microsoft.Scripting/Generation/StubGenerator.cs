@@ -15,10 +15,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     public static class StubGenerator {
@@ -33,7 +31,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Generates stub to receive the CLR call and then call the dynamic language code.
         /// </summary>
-        public static void  EmitClrCallStub(CodeGen cg, Slot callTarget, int firstArg, CallType functionAttributes) {
+        public static void  EmitClrCallStub(Compiler cg, Slot callTarget, int firstArg, CallType functionAttributes) {
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
             IList<Slot> args = cg.ArgumentSlots;
             int nargs = args.Count - firstArg;

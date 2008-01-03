@@ -16,6 +16,7 @@
 using System;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -27,17 +28,17 @@ namespace Microsoft.Scripting.Generation {
         public ThisSlot(Type type) {
             this._type = type;
         }
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitThis();
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             throw new InvalidOperationException(Resources.InvalidOperation_SetThis);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.Emit(OpCodes.Ldarga, 0);

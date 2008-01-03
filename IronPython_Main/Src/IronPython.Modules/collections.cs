@@ -28,7 +28,6 @@ using Microsoft.Scripting;
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {
     [Documentation("High performance data structures\n")]
-    [PythonType("collections")]
     public class PythonCollections {
         public static object deque = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDequeCollection));
 

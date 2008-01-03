@@ -27,7 +27,7 @@ namespace IronPython.Compiler.Ast {
 
     public class AssignmentStatement : Statement {
         // _left.Length is 1 for simple assignments like "x = 1"
-        // _left.Lenght will be 3 for "x = y = z = 1"
+        // _left.Length will be 3 for "x = y = z = 1"
         private readonly Expression[] _left;
         private readonly Expression _right;
 
@@ -52,6 +52,19 @@ namespace IronPython.Compiler.Ast {
                 // Do not need temps for simple assignment
                 return _left[0].TransformSet(ag, Span, right, Operators.None);
             } else {
+                // Python assignment semantics:
+                // - only evaluate RHS once. 
+                // - evaluates assignment from left to right
+                // - does not evaluate getters.
+                // 
+                // So 
+                //   a=b[c]=d=f() 
+                // should be:
+                //   $temp = f()
+                //   a = $temp
+                //   b[c] = $temp
+                //   d = $temp
+
                 List<MSAst.Statement> statements = new List<MSAst.Statement>();
 
                 // 1. Create temp variable for the right value
@@ -62,8 +75,8 @@ namespace IronPython.Compiler.Ast {
                     AstGenerator.MakeAssignment(right_temp.Variable, right)
                     );
 
-                for (int index = _left.Length - 1; index >= 0; index--) {
-                    Expression e = _left[index];
+                // Do left to right assignment
+                foreach(Expression e in _left) {
                     if (e == null) {
                         continue;
                     }

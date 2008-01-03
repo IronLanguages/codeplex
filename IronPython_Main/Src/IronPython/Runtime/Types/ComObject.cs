@@ -262,7 +262,7 @@ namespace IronPython.Runtime.Types {
 
         static ComObject CreateComObject(object rcw) {
             PythonEngineOptions engineOptions;
-            engineOptions = PythonOps.GetLanguageContext().Engine.Options as PythonEngineOptions;
+            engineOptions = PythonOps.GetLanguageContext().Options as PythonEngineOptions;
             ComDispatch.IDispatch dispatchObject = rcw as ComDispatch.IDispatch;
             if (engineOptions.PreferComDispatchOverTypeInfo && (dispatchObject != null)) {
                 // We can do method invocations on IDispatch objects
@@ -514,8 +514,6 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        const int TYPE_E_LIBNOTREGISTERED = unchecked((int)0x8002801D);
-
         private static ComObjectWithTypeInfo CheckIDispatchTypeInfo(object rcw) {
             ComDispatch.IDispatch dispatch = rcw as ComDispatch.IDispatch;
 
@@ -523,27 +521,20 @@ namespace IronPython.Runtime.Types {
                 return null;
             }
 
-            uint typeCount;
-            dispatch.GetTypeInfoCount(out typeCount);
-            Debug.Assert(typeCount <= 1);
-            if (typeCount == 0) {
+            ComTypes.ITypeInfo typeInfo = IDispatchObject.GetITypeInfoFromIDispatch(dispatch, false);
+            if (typeInfo == null) {
                 return null;
             }
 
             IntPtr typeInfoPtr = IntPtr.Zero;
             ComObjectWithTypeInfo ret;
             try {
-                try {
-                    dispatch.GetTypeInfo(0, 0, out typeInfoPtr);
-                } catch (COMException e) {
-                    // This must be a registration-free COM object
-                    Debug.Assert(e.ErrorCode == TYPE_E_LIBNOTREGISTERED);
-                    return null;
-                }
-
+                typeInfoPtr = Marshal.GetIUnknownForObject(typeInfo);
                 ret = CheckTypeInfo(rcw, typeInfoPtr);
             } finally {
-                if (typeInfoPtr != IntPtr.Zero) Marshal.Release(typeInfoPtr);
+                if (typeInfoPtr != IntPtr.Zero) {
+                    Marshal.Release(typeInfoPtr);
+                }
             }
 
             return ret;
@@ -614,10 +605,10 @@ namespace IronPython.Runtime.Types {
     /// fails we will try to determine whether an event is requested. To do 
     /// so we will do the following set of steps:
     /// 1. Verify the COM object implements IConnectionPointContainer
-    /// 2. Attempt to find COM object?s coclass?s description
+    /// 2. Attempt to find COM object’s coclass’s description
     ///    a. Query the object for IProvideClassInfo interface. Go to 3, if found
-    ///    b. From object?s IDispatch retrieve primary interface description
-    ///    c. Scan coclasses declared in object?s type library.
+    ///    b. From object’s IDispatch retrieve primary interface description
+    ///    c. Scan coclasses declared in object’s type library.
     ///    d. Find coclass implementing this particular primary interface 
     /// 3. Scan coclass for all its source interfaces.
     /// 4. Check whether to any of the methods on the source interfaces matches 
@@ -642,7 +633,7 @@ namespace IronPython.Runtime.Types {
     /// multicast delegate that will be invoked when the event is raised.
     /// 4. ComEventSink implements IReflect interface which is exposed as
     /// custom IDispatch to COM consumers. This allows us to intercept calls
-    /// to IDispatch.Invoke and apply  custom logic ? in particular we will
+    /// to IDispatch.Invoke and apply  custom logic – in particular we will
     /// just find and invoke the multicast delegate corresponding to the invoked
     /// dispid.
     ///  </summary>
@@ -653,7 +644,6 @@ namespace IronPython.Runtime.Types {
 
         public ComDispatch.ComTypeDesc _comTypeDesc;
         private static Dictionary<Guid, ComDispatch.ComTypeDesc> _CacheComTypeDesc;
-        private static Dictionary<SymbolId, ComDispatch.ComEventDesc> _EventsEmptyDict;
 
         internal IDispatchObject(ComDispatch.IDispatch rcw) : base(rcw) {
             _dispatchObject = new ComDispatch.IDispatchObject(rcw);
@@ -686,7 +676,7 @@ namespace IronPython.Runtime.Types {
         static int GetIDsOfNames(ComDispatch.IDispatch dispatch, SymbolId name, out int dispId) {
             int[] dispIds = new int[1];
             Guid emtpyRiid = Guid.Empty;
-            int hresult = dispatch.GetIDsOfNames(
+            int hresult = dispatch.TryGetIDsOfNames(
                 ref emtpyRiid,
                 new string[] { name.ToString() },
                 1,
@@ -702,7 +692,7 @@ namespace IronPython.Runtime.Types {
             ComTypes.DISPPARAMS dispParams = new ComTypes.DISPPARAMS();
             ComTypes.EXCEPINFO excepInfo = new ComTypes.EXCEPINFO();
             uint argErr;
-            int hresult = dispatch.Invoke(
+            int hresult = dispatch.TryInvoke(
                 memberDispId,
                 ref emtpyRiid,
                 0,
@@ -845,18 +835,71 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal static ComTypes.ITypeInfo GetITypeInfoFromIDispatch(ComDispatch.IDispatch dispatch) {
-            IntPtr pTypeInfo = IntPtr.Zero;
-            dispatch.GetTypeInfo(0, 0, out pTypeInfo);
+        /// <summary>
+        /// This method should be called when typeinfo is not available for an object. The function
+        /// will check if the typeinfo is expected to be missing. This can include error cases where
+        /// the same error is guaranteed to happen all the time, on all machines, under all circumstances.
+        /// In such cases, we just have to operate without the typeinfo.
+        /// 
+        /// However, if accessing the typeinfo is failing in a transient way, we might want to throw
+        /// an exception so that we will eagerly predictably indicate the problem.
+        /// </summary>
+        private static void CheckIfMissingTypeInfoIsExpected(int hresult, bool throwIfMissingExpectedTypeInfo) {
+            Debug.Assert(!ComDispatch.ComHresults.IsSuccess(hresult));
+
+            // Word.Basic always returns this because of an incorrect implementation of IDispatch.GetTypeInfo
+            // Any implementation that returns E_NOINTERFACE is likely to do so in all environments
+            if (hresult == ComDispatch.ComHresults.E_NOINTERFACE) {
+                return;
+            }
+
+            // This assert is potentially over-restrictive since COM components can behave in quite unexpected ways.
+            // However, asserting the common expected cases ensures that we find out about the unexpected scenarios, and
+            // can investigate the scenarios to ensure that there is no bug in our own code.
+            Debug.Assert(hresult == ComDispatch.ComHresults.TYPE_E_LIBNOTREGISTERED);
+
+            if (throwIfMissingExpectedTypeInfo) {
+                Marshal.ThrowExceptionForHR(hresult);
+            }
+        }
+
+        /// <summary>
+        /// Look for typeinfo using IDispatch.GetTypeInfo
+        /// </summary>
+        /// <param name="dispatch"></param>
+        /// <param name="throwIfMissingExpectedTypeInfo">
+        /// Some COM objects just dont expose typeinfo. In these cases, this method will return null.
+        /// Some COM objects do intend to expose typeinfo, but may not be able to do so if the type-library is not properly 
+        /// registered. This will be considered as acceptable or as an error condition depending on throwIfMissingExpectedTypeInfo</param>
+        /// <returns></returns>
+        internal static ComTypes.ITypeInfo GetITypeInfoFromIDispatch(ComDispatch.IDispatch dispatch, bool throwIfMissingExpectedTypeInfo) {
+            uint typeCount;
+            int hresult = dispatch.TryGetTypeInfoCount(out typeCount);
+            Marshal.ThrowExceptionForHR(hresult);
+            Debug.Assert(typeCount <= 1);
+            if (typeCount == 0) {
+                return null;
+            }
+
+            IntPtr typeInfoPtr = IntPtr.Zero;
+
+            hresult = dispatch.TryGetTypeInfo(0, 0, out typeInfoPtr);
+            if (!ComDispatch.ComHresults.IsSuccess(hresult)) {
+                CheckIfMissingTypeInfoIsExpected(hresult, throwIfMissingExpectedTypeInfo);
+                return null;
+            }
+            if (typeInfoPtr == IntPtr.Zero) { // be defensive against components that return IntPtr.Zero
+                if (throwIfMissingExpectedTypeInfo) {
+                    Marshal.ThrowExceptionForHR(ComDispatch.ComHresults.E_FAIL);
+                }
+                return null;
+            }
 
             ComTypes.ITypeInfo typeInfo = null;
             try {
-                if (pTypeInfo != IntPtr.Zero)
-                    typeInfo = Marshal.GetObjectForIUnknown(pTypeInfo) as ComTypes.ITypeInfo;
+                typeInfo = Marshal.GetObjectForIUnknown(typeInfoPtr) as ComTypes.ITypeInfo;
             } finally {
-                if (pTypeInfo != IntPtr.Zero)
-                    Marshal.Release(pTypeInfo);
-                pTypeInfo = IntPtr.Zero;
+                Marshal.Release(typeInfoPtr);
             }
 
             return typeInfo;
@@ -882,15 +925,6 @@ namespace IronPython.Runtime.Types {
             return SymbolTable.StringToId(prefix + rgNames[0]);
         }
 
-        private static Dictionary<SymbolId, ComDispatch.ComEventDesc> EmptyEvents {
-            get {
-                if (_EventsEmptyDict == null) {
-                    _EventsEmptyDict = new Dictionary<SymbolId, ComDispatch.ComEventDesc>();
-                }
-                return _EventsEmptyDict;
-            }
-        }
-
         private void EnsureScanDefinedEvents() {
 
             // _comTypeDesc.Events is null if we have not yet attempted
@@ -900,7 +934,12 @@ namespace IronPython.Runtime.Types {
             }
 
             // check type info in the type descriptions cache
-            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject);
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject, true);
+            if (typeInfo == null) {
+                _comTypeDesc = ComDispatch.ComTypeDesc.CreateEmptyTypeDesc();
+                return;
+            }
+
             ComTypes.TYPEATTR typeAttr = GetTypeAttrForTypeInfo(typeInfo);
 
             if (_comTypeDesc == null) {
@@ -919,12 +958,12 @@ namespace IronPython.Runtime.Types {
             ComTypes.IConnectionPointContainer cpc = Obj as ComTypes.IConnectionPointContainer;
             if (cpc == null) {
                 // No ICPC - this object does not support events
-                events = EmptyEvents;
+                events = ComDispatch.ComTypeDesc.EmptyEvents;
             } else if ((classTypeInfo = GetCoClassTypeInfo(this.Obj, typeInfo)) == null) {
                 // no class info found - this object may support events
                 // but we could not discover those
                 Debug.Assert(false, "object support IConnectionPoint but no class info found");
-                events = EmptyEvents;
+                events = ComDispatch.ComTypeDesc.EmptyEvents;
             } else {
                 events = new Dictionary<SymbolId, ComDispatch.ComEventDesc>();
 
@@ -943,8 +982,9 @@ namespace IronPython.Runtime.Types {
                     }
                 }
 
-                if (events.Count ==  0)
-                    events = EmptyEvents;
+                if (events.Count == 0) {
+                    events = ComDispatch.ComTypeDesc.EmptyEvents;
+                }
             }
 
             EnsureComTypeDescCache();
@@ -1081,8 +1121,13 @@ namespace IronPython.Runtime.Types {
             if (_comTypeDesc != null && _comTypeDesc.Funcs != null)
                 return;
 
-            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject);
-            ComTypes.TYPEATTR typeAttr= GetTypeAttrForTypeInfo(typeInfo);
+            ComTypes.ITypeInfo typeInfo = GetITypeInfoFromIDispatch(_dispatchObject.DispatchObject, true);
+            if (typeInfo == null) {
+                _comTypeDesc = ComDispatch.ComTypeDesc.CreateEmptyTypeDesc();
+                return;
+            }
+
+            ComTypes.TYPEATTR typeAttr = GetTypeAttrForTypeInfo(typeInfo);
 
             if (_comTypeDesc == null) {
                 if (_CacheComTypeDesc != null &&

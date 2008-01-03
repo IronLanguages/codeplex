@@ -13,12 +13,7 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-
-using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Ast {

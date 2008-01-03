@@ -21,7 +21,6 @@ using IronPython.Runtime.Operations;
 
 [assembly: PythonModule("math", typeof(IronPython.Modules.PythonMath))]
 namespace IronPython.Modules {
-    [PythonType("math")]
     public static partial class PythonMath {
        
         public static double pi = Math.PI;

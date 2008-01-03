@@ -312,6 +312,7 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.Add:
                 case AstNodeType.And:
                 case AstNodeType.AndAlso:
+                case AstNodeType.ArrayIndex:
                 case AstNodeType.Divide:
                 case AstNodeType.Equal:
                 case AstNodeType.ExclusiveOr:
@@ -356,9 +357,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ArrayIndexAssignment:
                     Dump((ArrayIndexAssignment)node);
                     break;
-                case AstNodeType.ArrayIndexExpression:
-                    Dump((ArrayIndexExpression)node);
-                    break;
                 case AstNodeType.BlockStatement:
                     Dump((BlockStatement)node);
                     break;
@@ -380,14 +378,15 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.CodeContextExpression:
                     Out(".context");
                     break;
+                case AstNodeType.GeneratorIntrinsic:
+                    Out(".gen_intrinsic");
+                    break;
+
                 case AstNodeType.CommaExpression:
                     Dump((CommaExpression)node);
                     break;
                 case AstNodeType.ContinueStatement:
                     Dump((ContinueStatement)node);
-                    break;
-                case AstNodeType.DebugStatement:
-                    Dump((DebugStatement)node);
                     break;
                 case AstNodeType.DeleteStatement:
                     Dump((DeleteStatement)node);
@@ -433,9 +432,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.ParamsExpression:
                     Out(".params");
-                    break;
-                case AstNodeType.ParenthesizedExpression:
-                    Dump((ParenthesizedExpression)node);
                     break;
                 case AstNodeType.ReturnStatement:
                     Dump((ReturnStatement)node);
@@ -530,42 +526,43 @@ namespace Microsoft.Scripting.Ast {
             WalkNode(node.Value);
         }
 
-        // ArrayIndexExpression
-        private void Dump(ArrayIndexExpression node) {
-            WalkNode(node.Array);
-            Out("[");
-            WalkNode(node.Index);
-            Out("]");
-        }
-
         // BinaryExpression
         private void Dump(BinaryExpression node) {
-            WalkNode(node.Left);
-            string op;
-            switch (node.NodeType) {
-                case AstNodeType.Equal: op = "=="; break;
-                case AstNodeType.NotEqual: op = "!="; break;
-                case AstNodeType.AndAlso: op = "&&"; break;
-                case AstNodeType.OrElse: op = "||"; break;
-                case AstNodeType.GreaterThan: op = ">"; break;
-                case AstNodeType.LessThan: op = "<"; break;
-                case AstNodeType.GreaterThanOrEqual: op = ">="; break;
-                case AstNodeType.LessThanOrEqual: op = "<="; break;
-                case AstNodeType.Add: op = "+"; break;
-                case AstNodeType.Subtract: op = "-"; break;
-                case AstNodeType.Divide: op = "/"; break;
-                case AstNodeType.Modulo: op = "%"; break;
-                case AstNodeType.Multiply: op = "*"; break;
-                case AstNodeType.LeftShift: op = "<<"; break;
-                case AstNodeType.RightShift: op = ">>"; break;
-                case AstNodeType.And: op = "&"; break;
-                case AstNodeType.Or: op = "|"; break;
-                case AstNodeType.ExclusiveOr: op = "^"; break;
-                default:
-                    throw new InvalidOperationException();
+            if (node.NodeType == AstNodeType.ArrayIndex) {
+                WalkNode(node.Left);
+                Out("[");
+                WalkNode(node.Right);
+                Out("]");
+            } else {
+                string op;
+                switch (node.NodeType) {
+                    case AstNodeType.Equal: op = "=="; break;
+                    case AstNodeType.NotEqual: op = "!="; break;
+                    case AstNodeType.AndAlso: op = "&&"; break;
+                    case AstNodeType.OrElse: op = "||"; break;
+                    case AstNodeType.GreaterThan: op = ">"; break;
+                    case AstNodeType.LessThan: op = "<"; break;
+                    case AstNodeType.GreaterThanOrEqual: op = ">="; break;
+                    case AstNodeType.LessThanOrEqual: op = "<="; break;
+                    case AstNodeType.Add: op = "+"; break;
+                    case AstNodeType.Subtract: op = "-"; break;
+                    case AstNodeType.Divide: op = "/"; break;
+                    case AstNodeType.Modulo: op = "%"; break;
+                    case AstNodeType.Multiply: op = "*"; break;
+                    case AstNodeType.LeftShift: op = "<<"; break;
+                    case AstNodeType.RightShift: op = ">>"; break;
+                    case AstNodeType.And: op = "&"; break;
+                    case AstNodeType.Or: op = "|"; break;
+                    case AstNodeType.ExclusiveOr: op = "^"; break;
+                    default:
+                        throw new InvalidOperationException();
+                }
+                Out(Flow.Break, "(", Flow.None);
+                WalkNode(node.Left);
+                Out(Flow.Space, op, Flow.Space | Flow.Break);
+                WalkNode(node.Right);
+                Out(Flow.None, ")", Flow.Break);
             }
-            Out(Flow.Space, op, Flow.Space | Flow.Break);
-            WalkNode(node.Right);
         }
 
         // BoundAssignment
@@ -731,13 +728,6 @@ namespace Microsoft.Scripting.Ast {
             Out(")");
         }
 
-        // ParenthesizedExpression
-        private void Dump(ParenthesizedExpression node) {
-            Out("(");
-            WalkNode(node.Expression);
-            Out(")");
-        }
-
         // TypeBinaryExpression
         private void Dump(TypeBinaryExpression node) {
             WalkNode(node.Expression);
@@ -808,11 +798,6 @@ namespace Microsoft.Scripting.Ast {
             Out(".continue;", Flow.NewLine);
         }
 
-        // DebugStatement
-        private void Dump(DebugStatement node) {
-            Out(".debug(" + node.Marker + ");", Flow.NewLine);
-        }
-
         // DeleteStatement
         private void Dump(DeleteStatement node) {
             Out(".del");
@@ -834,8 +819,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // EmptyStatement
-        private void Dump(EmptyStatement node) {
-            Out(";", Flow.NewLine);
+        private void Dump(EmptyStatement node) {            
+            Out("/*empty*/;", Flow.NewLine);
         }
 
         // ExpressionStatement

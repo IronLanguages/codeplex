@@ -33,10 +33,12 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Compiler = Microsoft.Scripting.Ast.Compiler;
 
     public class PythonBinder : ActionBinder {
         private static Dictionary<string, string[]> _memberMapping;
         private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
+        internal static PythonBinder Instance = new PythonBinder(DefaultContext.Default);
 
         public PythonBinder(CodeContext context)
             : base(context) {
@@ -238,7 +240,7 @@ namespace IronPython.Runtime.Calls {
         /// something much more abstract.  This is just the first pass at removing this
         /// to get rid of the custom PythonCodeGen.
         /// </summary>
-        public override void EmitConvertFromObject(CodeGen cg, Type toType) {
+        public override void EmitConvertFromObject(Compiler cg, Type toType) {
             if (toType == typeof(object)) return;
 
             MethodInfo fastConvertMethod = GetFastConvertMethod(toType);

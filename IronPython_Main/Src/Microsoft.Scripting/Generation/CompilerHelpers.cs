@@ -30,6 +30,7 @@ namespace Microsoft.Scripting.Generation {
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
+        private static MethodInfo _CreateInstanceMethod = typeof(BinderOps).GetMethod("CreateInstance");
 
         public static string[] GetArgumentNames(ParameterInfo[] parameterInfos) {
             string[] ret = new string[parameterInfos.Length];
@@ -163,6 +164,25 @@ namespace Microsoft.Scripting.Generation {
             return mi.IsConstructor || mi.IsStatic;
         }
 
+        /// <summary>
+        /// True if the MethodBase is method which is going to construct an object
+        /// </summary>
+        public static bool IsConstructor(MethodBase mb) {
+            if (mb.IsConstructor) {
+                return true;
+            }
+
+            if (mb.IsGenericMethod) {
+                MethodInfo mi = mb as MethodInfo;
+
+                if (mi.GetGenericMethodDefinition() == _CreateInstanceMethod) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static T[] MakeRepeatedArray<T>(T item, int count) {
             T[] ret = new T[count];
             for (int i = 0; i < count; i++) ret[i] = item;
@@ -184,9 +204,9 @@ namespace Microsoft.Scripting.Generation {
         /// This doesn't set up allocator for globals. Further initialization needed.
         /// </summary>
         /// <param name="outer">Codegen of the lexically enclosing block.</param>
-        /// <param name="codeGen">CodeGen object to use to allocate the locals on the CLR stack.</param>
+        /// <param name="codeGen">Compiler object to use to allocate the locals on the CLR stack.</param>
         /// <returns>New ScopeAllocator</returns>
-        internal static ScopeAllocator CreateLocalStorageAllocator(CodeGen outer, CodeGen codeGen) {
+        internal static ScopeAllocator CreateLocalStorageAllocator(Compiler outer, Compiler codeGen) {
             LocalStorageAllocator allocator = new LocalStorageAllocator(new LocalSlotFactory(codeGen));
             return new ScopeAllocator((outer != null && outer.HasAllocator) ? outer.Allocator : null, allocator);
         }
@@ -218,7 +238,7 @@ namespace Microsoft.Scripting.Generation {
             return ret.ToArray();
         }
 
-        public static void EmitStackTraceTryBlockStart(CodeGen cg) {
+        public static void EmitStackTraceTryBlockStart(Compiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
@@ -228,7 +248,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public static void EmitStackTraceFaultBlock(CodeGen cg, string name, string displayName) {
+        public static void EmitStackTraceFaultBlock(Compiler cg, string name, string displayName) {
             Contract.RequiresNotNull(cg, "cg");
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(displayName, "displayName");
@@ -244,9 +264,9 @@ namespace Microsoft.Scripting.Generation {
 
                 cg.EmitCodeContext();
                 if (cg.IsDynamicMethod) {
-                    cg.ConstantPool.AddData(cg.MethodBase).EmitGet(cg);
+                    cg.ConstantPool.AddData(cg.Method).EmitGet(cg);
                 } else {
-                    cg.Emit(OpCodes.Ldtoken, cg.MethodInfo);
+                    cg.Emit(OpCodes.Ldtoken, (MethodInfo)cg.Method);
                     cg.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
                 }
                 cg.EmitString(name);
@@ -262,11 +282,11 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        #region CodeGen Creation Support
+        #region Compiler Creation Support
 
-        internal static CodeGen CreateDebuggableDynamicCodeGenerator(CompilerContext context, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
+        internal static Compiler CreateDebuggableDynamicCodeGenerator(CompilerContext context, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
             TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, context.SourceUnit);
-            CodeGen cg = tg.DefineMethod("Initialize", retType, paramTypes, paramNames, constantPool);
+            Compiler cg = tg.DefineMethod("Initialize", retType, paramTypes, paramNames, constantPool);
 
             tg.AddCodeContextField();
             cg.DynamicMethod = true;
@@ -277,7 +297,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// 
         /// </summary>
-        internal static CodeGen CreateDynamicCodeGenerator(string name, Type retType, IList<Type> paramTypes, ConstantPool constantPool) {
+        internal static Compiler CreateDynamicCodeGenerator(string name, Type retType, IList<Type> paramTypes, ConstantPool constantPool) {
             return ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(name, retType, paramTypes, constantPool);
         }
 
@@ -286,8 +306,8 @@ namespace Microsoft.Scripting.Generation {
         /// The CodeGenerator is usually tied to a dynamic method
         /// unless debugging has been enabled.
         /// </summary>
-        public static CodeGen CreateDynamicCodeGenerator(CompilerContext context) {
-            CodeGen cg;
+        public static Compiler CreateDynamicCodeGenerator(CompilerContext context) {
+            Compiler cg;
 
             string typeName = "";
 #if DEBUG
@@ -325,7 +345,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         internal static bool NeedDebuggableDynamicCodeGenerator(CompilerContext context) {
-            return context != null && context.SourceUnit.Engine.Options.ClrDebuggingEnabled && context.SourceUnit.IsVisibleToDebugger;
+            return context != null && context.SourceUnit.LanguageContext.Options.ClrDebuggingEnabled && context.SourceUnit.IsVisibleToDebugger;
         }
 
         #endregion
@@ -458,7 +478,7 @@ namespace Microsoft.Scripting.Generation {
             return fi.IsPublic && fi.DeclaringType.IsVisible;
         }
 
-        internal static void CreateYieldLabels(CodeGen cg, List<YieldTarget> targets) {
+        internal static void CreateYieldLabels(Compiler cg, List<YieldTarget> targets) {
             if (targets != null) {
                 foreach (YieldTarget yt in targets) {
                     yt.EnsureLabel(cg);

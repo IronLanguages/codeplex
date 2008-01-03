@@ -44,6 +44,27 @@ namespace IronPython.Runtime.Exceptions {
 #endif
     }
 
+    /// <summary>
+    /// GeneratorExitException is a standard exception raised by Generator.Close() to allow a caller
+    /// to close out a generator.
+    /// </summary>
+    /// <remarks>GeneratorExit is introduced in Pep342 for Python2.5. </remarks>
+    [Serializable]
+    public class GeneratorExitException : Exception {
+        public GeneratorExitException() {
+        }
+
+        public GeneratorExitException(string message)
+            : base(message) {
+        }
+        public GeneratorExitException(string message, Exception innerException)
+            : base(message, innerException) {
+        }
+
+#if !SILVERLIGHT // SerializationInfo
+        protected GeneratorExitException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
+    }
 
     [PythonType("SystemExit")]
     [Serializable]

@@ -362,4 +362,25 @@ def test_index_by_tuple():
     i[(5,)] = "D"; AreEqual(i.index, (5,)); AreEqual(i.value, "D")
     i[6,] = "E"; AreEqual(i.index, (6,)); AreEqual(i.value, "E")
 
+
+def test_assignment_order():
+  # declare types to log the execution ordering
+  class Q:
+    def __init__(self):
+      self.log = ""
+    # we're just doing assignment, so don't define a __getitem__
+    def __setitem__(self, idx, val):
+      self.log += "(idx=%s, val=%s)" % ( idx, val)
+  c=Q()
+  def f():
+    c[0]=1 # do a side effect to log execution order of f()
+    return 'x' 
+  # Now execute the interesting statement. This has side-effects in c.log to log execution order.  
+  c[5]=c[2]=f()
+  # now check that order is as expected
+  # - assignments should occur from left to right
+  # - rhs expression is evalled first, and should only be executed once, 
+  AreEqual(c.log, "(idx=0, val=1)(idx=5, val=x)(idx=2, val=x)")
+
+
 run_test(__name__)

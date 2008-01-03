@@ -65,6 +65,7 @@ namespace IronPython.Runtime.Exceptions {
             new ExceptionMapping("Exception", typeof(System.Exception), new ExceptionMapping[]{
                 new ExceptionMapping("SystemExit", typeof(PythonSystemExitException), SystemExitExceptionCreator),
                 new ExceptionMapping("StopIteration", typeof(StopIterationException)),
+                new ExceptionMapping("GeneratorExit", typeof(GeneratorExitException)),
                 new ExceptionMapping("StandardError", typeof(System.ApplicationException), new ExceptionMapping[]{
                     new ExceptionMapping("KeyboardInterrupt", typeof(KeyboardInterruptException)),
                     new ExceptionMapping("ImportError", typeof(PythonImportErrorException)),

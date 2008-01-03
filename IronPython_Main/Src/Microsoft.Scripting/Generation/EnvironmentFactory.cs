@@ -14,8 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -70,19 +69,19 @@ namespace Microsoft.Scripting.Generation {
         ///     SymbolId[] of names in the environment
         ///     SymbolId[] of names in the outer environment
         /// </summary>
-        public abstract void EmitNewEnvironment(CodeGen cg);
+        public abstract void EmitNewEnvironment(Compiler cg);
 
         /// <summary>
         /// Emits the creation of the underlying storage object.
         /// </summary>
         /// <param name="cg"></param>
-        public abstract void EmitStorage(CodeGen cg);
+        public abstract void EmitStorage(Compiler cg);
 
-        public abstract void EmitGetStorageFromContext(CodeGen cg);
+        public abstract void EmitGetStorageFromContext(Compiler cg);
 
         /// <summary>
-        /// Creates the slot that holds onto the environment for the specified CodeGen.
+        /// Creates the slot that holds onto the environment for the specified Compiler.
         /// </summary>
-        public abstract EnvironmentSlot CreateEnvironmentSlot(CodeGen cg);        
+        public abstract EnvironmentSlot CreateEnvironmentSlot(Compiler cg);        
     }
 }

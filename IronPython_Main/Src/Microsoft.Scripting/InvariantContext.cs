@@ -29,14 +29,14 @@ namespace Microsoft.Scripting {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")] // TODO: fix
         static InvariantContext() {
-            Instance = new InvariantContext();
+            Instance = new InvariantContext(null);
             ModuleContext moduleContext = new ModuleContext(null);
             moduleContext.ShowCls = true;
             CodeContext = new CodeContext(new Scope(new SymbolDictionary()), Instance, moduleContext);
         }
         
-        private InvariantContext()
-            : base() {
+        private InvariantContext(ScriptDomainManager manager)
+            : base(manager) {
         }
 
         public override Microsoft.Scripting.Ast.CodeBlock ParseSourceCode(CompilerContext context) {

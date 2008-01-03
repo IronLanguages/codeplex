@@ -38,9 +38,10 @@ namespace Microsoft.Scripting.Hosting {
         // language providers (TODO: register):
         string[] GetRegisteredFileExtensions();
         string[] GetRegisteredLanguageIdentifiers();
-        ILanguageProvider GetLanguageProvider(string languageId);
-        ILanguageProvider GetLanguageProvider(Type languageProviderType);
-        ILanguageProvider GetLanguageProviderByFileExtension(string extension);
+
+        IScriptEngine GetEngine(string languageId);
+        IScriptEngine GetEngineByFileExtension(string extension);
+        IScriptEngine GetEngine(Type languageContextType);  // TODO: Remove me
         
         // modules:
         IScriptScope CreateModule(string name, params ICompiledCode[] compiledCodes);
@@ -138,20 +139,27 @@ namespace Microsoft.Scripting.Hosting {
             return _manager.GetRegisteredLanguageIdentifiers();
         }
 
-        /// <exception cref="ArgumentNullException"><paramref name="type"/></exception>
-        /// <exception cref="ArgumentException"><paramref name="type"/></exception>
-        /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
-        /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
-        public ILanguageProvider GetLanguageProvider(string languageId) {
-            return _manager.GetLanguageProvider(languageId);
+        internal string[] GetRegisteredFileExtensions(LanguageContext context) {
+            return _manager.GetRegisteredFileExtensions(context);
+        }
+        
+        internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
+            return _manager.GetRegisteredLanguageIdentifiers(context);
         }
 
-        public ILanguageProvider GetLanguageProvider(Type languageProviderType) {
-            return _manager.GetLanguageProvider(languageProviderType);
+        public IScriptEngine GetEngine(string languageId) {
+            return _manager.GetEngine(languageId);
         }
 
-        public ILanguageProvider GetLanguageProviderByFileExtension(string extension) {
-            return _manager.GetLanguageProviderByFileExtension(extension);
+        public IScriptEngine GetEngineByFileExtension(string extension) {
+            return _manager.GetEngineByFileExtension(extension);
+        }
+
+        /// <summary>
+        /// Temporary, shouldn't exist
+        /// </summary>
+        public IScriptEngine GetEngine(Type languageContextType) {
+            return _manager.GetEngine(languageContextType);
         }
 
         #region Compilation, Module Creation

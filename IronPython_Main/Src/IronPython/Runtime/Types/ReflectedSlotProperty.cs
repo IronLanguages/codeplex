@@ -15,15 +15,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
+    using Compiler = Microsoft.Scripting.Ast.Compiler;
+
     /// <summary>
     /// Represents a member of a user-defined type which defines __slots__.  The names listed in
     /// __slots__ have storage allocated for them with the type and provide fast get/set access.
@@ -146,7 +146,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotGetValue, MethodInfo> CreateGetter() {
-            CodeGen getter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("get_" + _slotInfo.Index.ToString(),
+            Compiler getter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("get_" + _slotInfo.Index.ToString(),
                 typeof(object),
                 new Type[] { typeof(object) },
                 null);
@@ -167,7 +167,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotSetValue, MethodInfo> CreateSetter() {
-            CodeGen setter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("set_" + _slotInfo.Index.ToString(),
+            Compiler setter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("set_" + _slotInfo.Index.ToString(),
                                     typeof(void),
                                     new Type[] { typeof(object), typeof(object) },
                                     null);

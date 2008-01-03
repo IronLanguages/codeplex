@@ -17,6 +17,8 @@
 from lib.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
+from System.Runtime.InteropServices import COMException
+from System import InvalidOperationException
 
 com_type_name = "DlrComLibrary.DlrComServer"
 
@@ -29,6 +31,19 @@ def test_perfScenarios():
     AreEqual(com_obj.IntArguments(1, 2), None)
     AreEqual(com_obj.StringArguments("hello", "there"), None)
     AreEqual(com_obj.ObjectArguments(com_obj, com_obj), None)
+
+def test_errorInfo():
+    try:
+        com_obj.TestErrorInfo()
+    except COMException, e:
+        AreEqual("Test error message" in str(e), True)
+
+def test_documentation():
+    import IronPython
+    ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
+    AssertResults("void IntArguments(Int32 arg1, Int32 arg2)",
+                  InvalidOperationException, # Not implemented yet
+                  ops.GetDocumentation, com_obj.IntArguments)
 
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

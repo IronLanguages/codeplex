@@ -22,7 +22,20 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Ast {
+
+    /// <summary>
+    /// Ast rewriting to spill the CLR stack into temporary variables
+    /// in order to guarantee some properties of code generation, for
+    /// example that we always enter try block on empty stack.
+    /// </summary>
     class AstRewriter {
+
+        // Is the evaluation stack empty?
+        private enum Stack {
+            Empty,
+            NonEmpty
+        };
+
         private abstract class TempMaker {
             /// <summary>
             /// Current temporary variable
@@ -30,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
             private int _temp;
 
             /// <summary>
-            /// List of free temporary variables
+            /// List of free temporary variables. These can be recycled for new temps.
             /// </summary>
             private List<Variable> _freeTemps;
 
@@ -42,6 +55,7 @@ namespace Microsoft.Scripting.Ast {
             internal Variable Temp(Type type) {
                 Variable temp;
                 if (_freeTemps != null) {
+                    // Recycle from the free-list if possible.
                     for (int i = _freeTemps.Count - 1; i >= 0; i--) {
                         temp = _freeTemps[i];
                         if (temp.Type == type) {
@@ -50,6 +64,7 @@ namespace Microsoft.Scripting.Ast {
                         }
                     }
                 }
+                // Not on the free-list, create a brand new one. 
                 temp = MakeTemp("$temp$" + _temp++, type);
                 return UseTemp(temp);
             }
@@ -77,6 +92,8 @@ namespace Microsoft.Scripting.Ast {
                 return _usedTemps != null ? _usedTemps.Count : 0;
             }
 
+            // Free temporaries created since the last marking. 
+            // This is a performance optimization to lower the overall number of tempories needed.
             internal void Free(int mark) {
                 // (_usedTemps != null) ==> (mark <= _usedTemps.Count)
                 Debug.Assert(_usedTemps == null || mark <= _usedTemps.Count);
@@ -172,7 +189,8 @@ namespace Microsoft.Scripting.Ast {
         private void Rewrite(CodeBlock block) {
             VerifyTemps();
 
-            Statement body = RewriteStatement(block.Body);
+            // Block starts with an empty stack
+            Statement body = RewriteStatement(block.Body, Stack.Empty);
 
             VerifyTemps();
 
@@ -185,8 +203,10 @@ namespace Microsoft.Scripting.Ast {
         private void Rewrite(StandardRule rule) {
             VerifyTemps();
 
-            Expression test = RewriteExpressionFreeTemps(rule.Test);
-            Statement target = RewriteStatement(rule.Target);
+            // The rule test starts on empty stack.
+            Expression test = RewriteExpressionFreeTemps(rule.Test, Stack.Empty);
+            // So does the target
+            Statement target = RewriteStatement(rule.Target, Stack.Empty);
 
             VerifyTemps();
 
@@ -279,10 +299,17 @@ namespace Microsoft.Scripting.Ast {
 
         #region Expressions
 
+
+        /// <summary>
+        /// Rewrite the expression
+        /// </summary>
+        /// <param name="node">Expression to rewrite</param>
+        /// <param name="stack">State of the stack before the expression is emitted.</param>
+        /// <returns>Rewritten expression.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-        private Expression RewriteExpression(Expression node) {
+        private Expression RewriteExpression(Expression node, Stack stack) {
             if (node == null) {
                 return null;
             }
@@ -290,9 +317,10 @@ namespace Microsoft.Scripting.Ast {
             switch (node.NodeType) {
                 case AstNodeType.AndAlso:
                 case AstNodeType.OrElse:
-                    return RewriteLogical((BinaryExpression)node);
+                    return RewriteLogical((BinaryExpression)node, stack);
                 case AstNodeType.Add:
                 case AstNodeType.And:
+                case AstNodeType.ArrayIndex:
                 case AstNodeType.Divide:
                 case AstNodeType.Equal:
                 case AstNodeType.ExclusiveOr:
@@ -307,13 +335,13 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.Or:
                 case AstNodeType.RightShift:
                 case AstNodeType.Subtract:
-                    return Rewrite((BinaryExpression)node);
+                    return Rewrite((BinaryExpression)node, stack);
 
                 case AstNodeType.Call:
-                    return Rewrite((MethodCallExpression)node);
+                    return Rewrite((MethodCallExpression)node, stack);
 
                 case AstNodeType.Conditional:
-                    return Rewrite((ConditionalExpression)node);
+                    return Rewrite((ConditionalExpression)node, stack);
 
                 case AstNodeType.Constant:
                     return Rewrite((ConstantExpression)node);
@@ -322,25 +350,22 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.Negate:
                 case AstNodeType.Not:
                 case AstNodeType.OnesComplement:
-                    return Rewrite((UnaryExpression)node);
+                    return Rewrite((UnaryExpression)node, stack);
 
                 case AstNodeType.New:
-                    return Rewrite((NewExpression)node);
+                    return Rewrite((NewExpression)node, stack);
 
                 case AstNodeType.TypeIs:
-                    return Rewrite((TypeBinaryExpression)node);
+                    return Rewrite((TypeBinaryExpression)node, stack);
 
                 case AstNodeType.ActionExpression:
                     return Rewrite((ActionExpression)node);
 
                 case AstNodeType.ArrayIndexAssignment:
-                    return Rewrite((ArrayIndexAssignment)node);
-
-                case AstNodeType.ArrayIndexExpression:
-                    return Rewrite((ArrayIndexExpression)node);
+                    return Rewrite((ArrayIndexAssignment)node, stack);
 
                 case AstNodeType.BoundAssignment:
-                    return Rewrite((BoundAssignment)node);
+                    return Rewrite((BoundAssignment)node, stack);
 
                 case AstNodeType.BoundExpression:
                     return Rewrite((BoundExpression)node);
@@ -352,49 +377,49 @@ namespace Microsoft.Scripting.Ast {
                     return Rewrite((IntrinsicExpression)node);
 
                 case AstNodeType.CommaExpression:
-                    return Rewrite((CommaExpression)node);
+                    return Rewrite((CommaExpression)node, stack);
 
                 case AstNodeType.DeleteUnboundExpression:
                     return Rewrite((DeleteUnboundExpression)node);
 
                 case AstNodeType.DynamicConversionExpression:
-                    return Rewrite((DynamicConversionExpression)node);
+                    return Rewrite((DynamicConversionExpression)node, stack);
 
                 case AstNodeType.EnvironmentExpression:
+                case AstNodeType.GeneratorIntrinsic:
                     return Rewrite((IntrinsicExpression)node);
 
                 case AstNodeType.MemberAssignment:
-                    return Rewrite((MemberAssignment)node);
+                    return Rewrite((MemberAssignment)node, stack);
 
                 case AstNodeType.MemberExpression:
-                    return Rewrite((MemberExpression)node);
+                    return Rewrite((MemberExpression)node, stack);
 
                 case AstNodeType.NewArrayExpression:
+                    // NewArrayExpression doesn't need stack state because
+                    // its children always execute on non-empty stack
                     return Rewrite((NewArrayExpression)node);
 
                 case AstNodeType.ParamsExpression:
                     return Rewrite((IntrinsicExpression)node);
 
-                case AstNodeType.ParenthesizedExpression:
-                    return Rewrite((ParenthesizedExpression)node);
-
                 case AstNodeType.UnboundAssignment:
-                    return Rewrite((UnboundAssignment)node);
+                    return Rewrite((UnboundAssignment)node, stack);
 
                 case AstNodeType.UnboundExpression:
                     return Rewrite((UnboundExpression)node);
 
                 case AstNodeType.VoidExpression:
-                    return Rewrite((VoidExpression)node);
+                    return Rewrite((VoidExpression)node, stack);
 
                 default:
                     throw new InvalidOperationException();
             }
         }
 
-        private Expression RewriteExpressionFreeTemps(Expression expression) {
+        private Expression RewriteExpressionFreeTemps(Expression expression, Stack stack) {
             int mark = Mark();
-            expression = RewriteExpression(expression);
+            expression = RewriteExpression(expression, stack);
             Free(mark);
             return expression;
         }
@@ -402,7 +427,10 @@ namespace Microsoft.Scripting.Ast {
         // ActionExpression
         private Expression Rewrite(ActionExpression node) {
             Expression[] clone, comma;
-            if (RewriteExpressions(node.Arguments, out clone, out comma)) {
+
+            // Stack is never empty when dynamic site arguments are being
+            // executed because the dynamic site "this" is on the stack.
+            if (RewriteExpressions(node.Arguments, Stack.NonEmpty, out clone, out comma)) {
                 comma[comma.Length - 1] =
                     Ast.Action.ActionExpression(node.Action, clone, node.Type);
                 return Ast.Comma(comma);
@@ -412,10 +440,16 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ArrayIndexAssignment
-        private Expression Rewrite(ArrayIndexAssignment node) {
-            Expression value = RewriteExpression(node.Value);
-            Expression array = RewriteExpression(node.Array);
-            Expression index = RewriteExpression(node.Index);
+        private Expression Rewrite(ArrayIndexAssignment node, Stack stack) {
+            // Value is evaluated first, on a stack in current state
+            Expression value = RewriteExpression(node.Value, stack);
+
+            // Array is evaluated second, but value is saved into a temp
+            // so the stack is still in the original state.
+            Expression array = RewriteExpression(node.Array, stack);
+
+            // Index is emitted into definitely a non-empty stack
+            Expression index = RewriteExpression(node.Index, Stack.NonEmpty);
 
             // Did any of them change?
             if (((object)value != (object)node.Value) ||
@@ -439,33 +473,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // ArrayIndexExpression
-        private Expression Rewrite(ArrayIndexExpression node) {
-            Expression array = RewriteExpression(node.Array);
-            Expression index = RewriteExpression(node.Index);
-
-            if (((object)array != (object)node.Array) ||
-                ((object)index != (object)node.Index)) {
-
-                Expression saveArray, saveIndex;
-
-                array = ToTemp(array, out saveArray);
-                index = ToTemp(index, out saveIndex);
-
-                return Ast.Comma(
-                    saveArray,
-                    saveIndex,
-                    Ast.ArrayIndex(array, index)
-                );
-            } else {
-                return node;
-            }
-        }
-
         // BinaryExpression: AndAlso, OrElse
-        private Expression RewriteLogical(BinaryExpression node) {
-            Expression left = RewriteExpression(node.Left);
-            Expression right = RewriteExpression(node.Right);
+        private Expression RewriteLogical(BinaryExpression node, Stack stack) {
+            // Left expression runs on a stack as left by parent
+            Expression left = RewriteExpression(node.Left, stack);
+            // ... and so does the right one
+            Expression right = RewriteExpression(node.Right, stack);
 
             if (((object)left != (object)node.Left) ||
                 ((object)right != (object)node.Right)) {
@@ -476,9 +489,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // BinaryExpression
-        private Expression Rewrite(BinaryExpression node) {
-            Expression left = RewriteExpression(node.Left);
-            Expression right = RewriteExpression(node.Right);
+        private Expression Rewrite(BinaryExpression node, Stack stack) {
+            // Left expression executes on the stack as left by parent
+            Expression left = RewriteExpression(node.Left, stack);
+            // Right expression always has non-empty stack (left is on it)
+            Expression right = RewriteExpression(node.Right, Stack.NonEmpty);
 
             if (((object)left != (object)node.Left) ||
                 ((object)right != (object)node.Right)) {
@@ -498,8 +513,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // BoundAssignment
-        private Expression Rewrite(BoundAssignment node) {
-            Expression value = RewriteExpression(node.Value);
+        private Expression Rewrite(BoundAssignment node, Stack stack) {
+            // Expression is evaluated on a stack in current state
+            Expression value = RewriteExpression(node.Value, stack);
             if ((object)value != (object)node.Value) {
                 return Ast.Assign(node.Variable, value);
             } else {
@@ -509,18 +525,18 @@ namespace Microsoft.Scripting.Ast {
 
         // BoundExpression
         private Expression Rewrite(BoundExpression node) {
-            // No action necessary
+            // No action necessary, regardless of the stack state
             return node;
         }
 
         // CodeBlockExpression
         private Expression Rewrite(CodeBlockExpression node) {
-            // No action necessary
+            // No action necessary, regardless of the stack state.
             return node;
         }
 
         // CommaExpression
-        private Expression Rewrite(CommaExpression node) {
+        private Expression Rewrite(CommaExpression node, Stack stack) {
             ReadOnlyCollection<Expression> expressions = node.Expressions;
             int index = node.ValueIndex;
             Expression[] clone = null;
@@ -528,7 +544,16 @@ namespace Microsoft.Scripting.Ast {
 
             for (int i = 0; i < expressions.Count; i++) {
                 Expression expression = expressions[i];
-                Expression rewritten = RewriteExpression(expression);
+
+                // The expressions up and till the "ValueIndex" are
+                // evaluated on the stack as left by parent. After that
+                // the expression that forms the value of the comma
+                // stays on the stack so rest is evaluated with non-empty stack.
+                Expression rewritten = RewriteExpression(expression, stack);
+
+                if (i == index) {
+                    stack = Stack.NonEmpty;
+                }
 
                 if ((object)expression != (object)rewritten) {
                     if (clone == null) {
@@ -572,10 +597,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ConditionalExpression
-        private Expression Rewrite(ConditionalExpression node) {
-            Expression test = RewriteExpression(node.Test);
-            Expression ifTrue = RewriteExpression(node.IfTrue);
-            Expression ifFalse = RewriteExpression(node.IfFalse);
+        private Expression Rewrite(ConditionalExpression node, Stack stack) {
+            // Test executes at the stack as left by parent
+            Expression test = RewriteExpression(node.Test, stack);
+            // The test is popped by conditional jump so branches execute
+            // at the stack as left by parent too.
+            Expression ifTrue = RewriteExpression(node.IfTrue, stack);
+            Expression ifFalse = RewriteExpression(node.IfFalse, stack);
 
             if (((object)test != (object)node.Test) ||
                 ((object)ifTrue != (object)node.IfTrue) ||
@@ -588,32 +616,45 @@ namespace Microsoft.Scripting.Ast {
 
         // ConstantExpression
         private Expression Rewrite(ConstantExpression node) {
-            // No action necessary
+            // No action necessary, regardless of stack
             return node;
         }
 
         // DeleteUnboundExpression
         private Expression Rewrite(DeleteUnboundExpression node) {
-            // No action necessary
+            // No action necessary, regardless of stack
             return node;
         }
 
         // DynamicConversionExpression
-        private Expression Rewrite(DynamicConversionExpression node) {
-            // No action necessary
-            return node;
+        private Expression Rewrite(DynamicConversionExpression node, Stack stack) {
+            // The expression is evaluated on the current stack
+            Expression expression = RewriteExpression(node.Expression, stack);
+            if ((object)expression != (object)node.Expression) {
+                return Ast.DynamicConvert(expression, node.Type);
+            } else {
+                return node;
+            }
         }
 
         // IntrinsicExpression
         private Expression Rewrite(IntrinsicExpression node) {
-            // No action necessary
+            // No action necessary, regardless of stack
             return node;
         }
 
         // MemberAssignment
-        private Expression Rewrite(MemberAssignment node) {
-            Expression expression = RewriteExpression(node.Expression);
-            Expression value = RewriteExpression(node.Value);
+        private Expression Rewrite(MemberAssignment node, Stack stack) {
+            Expression expression = null;
+            if (node.Expression != null) {
+                // If there's an instance, it executes on the stack in current state
+                // and rest is executed on non-empty stack.
+                // Otherwise the stack is left unchaged.
+                expression = RewriteExpression(node.Expression, stack);
+                stack = Stack.NonEmpty;
+            }
+            
+            Expression value = RewriteExpression(node.Value, stack);
 
             if (((object)expression != (object)node.Expression) ||
                 ((object)value != (object)node.Value)) {
@@ -638,8 +679,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // MemberExpression
-        private Expression Rewrite(MemberExpression node) {
-            Expression expression = RewriteExpression(node.Expression);
+        private Expression Rewrite(MemberExpression node, Stack stack) {
+            // Expression is emitted on top of the stack in current state
+            Expression expression = RewriteExpression(node.Expression, stack);
             if ((object)expression != (object)node.Expression) {
                 return new MemberExpression(node.Member, expression, node.Type);
             } else {
@@ -649,17 +691,27 @@ namespace Microsoft.Scripting.Ast {
 
         // MethodCallExpression
         // TODO: ref parameters!!!
-        private Expression Rewrite(MethodCallExpression node) {
-            Expression instance = RewriteExpression(node.Instance);
+        private Expression Rewrite(MethodCallExpression node, Stack stack) {
+            Expression instance = null;
             ReadOnlyCollection<Expression> args = node.Arguments;
             Expression[] clone = null;
             Expression[] comma = null;
             int ci = 0; // comma array fill index
 
+            if (node.Instance != null) {
+                // For instance methods, the instance executes on the
+                // stack as is, but stays on the stack, making it non-empty.
+                instance = RewriteExpression(node.Instance, stack);
+                stack = Stack.NonEmpty;
+            }
+
             if (args != null) {
                 for (int i = 0; i < args.Count; i++) {
                     Expression arg = args[i];
-                    Expression rarg = RewriteExpression(arg);
+                    Expression rarg = RewriteExpression(arg, stack);
+
+                    // After the first argument, stack is definitely non-empty
+                    stack = Stack.NonEmpty;
 
                     if ((object)arg != (object)rarg) {
                         if (clone == null) {
@@ -701,7 +753,9 @@ namespace Microsoft.Scripting.Ast {
         private Expression Rewrite(NewArrayExpression node) {
             Expression[] clone, comma;
 
-            if (RewriteExpressions(node.Expressions, out clone, out comma)) {
+            // Array elements are never emitted on an empty stack because
+            // the array reference and the index are on the stack.
+            if (RewriteExpressions(node.Expressions, Stack.NonEmpty, out clone, out comma)) {
                 comma[comma.Length - 1] = Ast.NewArray(node.Type, clone);
                 return Ast.Comma(comma);
             } else {
@@ -710,9 +764,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // NewExpression
-        private Expression Rewrite(NewExpression node) {
+        private Expression Rewrite(NewExpression node, Stack stack) {
             Expression[] clone, comma;
-            if (RewriteExpressions(node.Arguments, out clone, out comma)) {
+
+            // The first expression starts on a stack as provided by
+            // parent, rest are definitely non-emtpy (which RewriteExpressions
+            // guarantees.
+            if (RewriteExpressions(node.Arguments, stack, out clone, out comma)) {
                 comma[comma.Length - 1] =
                     Ast.New(node.Constructor, clone);
                 return Ast.Comma(comma);
@@ -721,19 +779,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // ParenthesizedExpression
-        private Expression Rewrite(ParenthesizedExpression node) {
-            Expression expression = RewriteExpression(node.Expression);
-            if ((object)expression != (object)node.Expression) {
-                return Ast.Parenthesize(expression);
-            } else {
-                return node;
-            }
-        }
-
         // TypeBinaryExpression
-        private Expression Rewrite(TypeBinaryExpression node) {
-            Expression expression = RewriteExpression(node.Expression);
+        private Expression Rewrite(TypeBinaryExpression node, Stack stack) {
+            // The expression is emitted on top of current stack
+            Expression expression = RewriteExpression(node.Expression, stack);
             if ((object)expression != (object)node.Expression) {
                 return Ast.TypeIs(expression, node.TypeOperand);
             } else {
@@ -742,8 +791,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // UnaryExpression
-        private Expression Rewrite(UnaryExpression node) {
-            Expression expression = RewriteExpression(node.Operand);
+        private Expression Rewrite(UnaryExpression node, Stack stack) {
+            // Operand is emitted on top of the stack as is
+            Expression expression = RewriteExpression(node.Operand, stack);
             if ((object)expression != (object)node.Operand) {
                 return new UnaryExpression(node.NodeType, expression, node.Type);
             } else {
@@ -752,8 +802,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // UnboundAssignment
-        private Expression Rewrite(UnboundAssignment node) {
-            Expression expression = RewriteExpression(node.Value);
+        private Expression Rewrite(UnboundAssignment node, Stack stack) {
+            // Value is emitted on the stack in current state
+            Expression expression = RewriteExpression(node.Value, stack);
             if ((object)expression != (object)node.Value) {
                 return Ast.Assign(node.Name, expression);
             } else {
@@ -768,17 +819,27 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // VoidExpression
-        private Expression Rewrite(VoidExpression node) {
-            Statement statement = RewriteStatement(node.Statement);
-            return Ast.Void(statement);
+        private Expression Rewrite(VoidExpression node, Stack stack) {
+            Statement statement = RewriteStatement(node.Statement, stack);
+            if ((object)statement != (object)node.Statement) {
+                return Ast.Void(statement);
+            } else {
+                return node;
+            }
         }
 
         #endregion
 
         #region Statements
 
+        /// <summary>
+        /// Rewrites the statement to spill stack if needed.
+        /// </summary>
+        /// <param name="node">The node to rewrite</param>
+        /// <param name="stack">The state of the stack before the statement codegen.</param>
+        /// <returns>Rewritten statement</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private Statement RewriteStatement(Statement node) {
+        private Statement RewriteStatement(Statement node, Stack stack) {
             if (node == null) {
                 return null;
             }
@@ -787,7 +848,7 @@ namespace Microsoft.Scripting.Ast {
 
             switch (node.NodeType) {
                 case AstNodeType.BlockStatement:
-                    result = Rewrite((BlockStatement)node);
+                    result = Rewrite((BlockStatement)node, stack);
                     break;
 
                 case AstNodeType.BreakStatement:
@@ -798,16 +859,12 @@ namespace Microsoft.Scripting.Ast {
                     result = Rewrite((ContinueStatement)node);
                     break;
 
-                case AstNodeType.DebugStatement:
-                    result = Rewrite((DebugStatement)node);
-                    break;
-
                 case AstNodeType.DeleteStatement:
                     result = Rewrite((DeleteStatement)node);
                     break;
 
                 case AstNodeType.DoStatement:
-                    result = Rewrite((DoStatement)node);
+                    result = Rewrite((DoStatement)node, stack);
                     break;
 
                 case AstNodeType.EmptyStatement:
@@ -815,43 +872,43 @@ namespace Microsoft.Scripting.Ast {
                     break;
 
                 case AstNodeType.ExpressionStatement:
-                    result = Rewrite((ExpressionStatement)node);
+                    result = Rewrite((ExpressionStatement)node, stack);
                     break;
 
                 case AstNodeType.IfStatement:
-                    result = Rewrite((IfStatement)node);
+                    result = Rewrite((IfStatement)node, stack);
                     break;
 
                 case AstNodeType.LabeledStatement:
-                    result = Rewrite((LabeledStatement)node);
+                    result = Rewrite((LabeledStatement)node, stack);
                     break;
 
                 case AstNodeType.LoopStatement:
-                    result = Rewrite((LoopStatement)node);
+                    result = Rewrite((LoopStatement)node, stack);
                     break;
 
                 case AstNodeType.ReturnStatement:
-                    result = Rewrite((ReturnStatement)node);
+                    result = Rewrite((ReturnStatement)node, stack);
                     break;
 
                 case AstNodeType.ScopeStatement:
-                    result = Rewrite((ScopeStatement)node);
+                    result = Rewrite((ScopeStatement)node, stack);
                     break;
 
                 case AstNodeType.SwitchStatement:
-                    result = Rewrite((SwitchStatement)node);
+                    result = Rewrite((SwitchStatement)node, stack);
                     break;
 
                 case AstNodeType.ThrowStatement:
-                    result = Rewrite((ThrowStatement)node);
+                    result = Rewrite((ThrowStatement)node, stack);
                     break;
 
                 case AstNodeType.TryStatement:
-                    result = Rewrite((TryStatement)node);
+                    result = Rewrite((TryStatement)node, stack);
                     break;
 
                 case AstNodeType.YieldStatement:
-                    result = Rewrite((YieldStatement)node);
+                    result = Rewrite((YieldStatement)node, stack);
                     break;
 
                 default:
@@ -863,13 +920,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // BlockStatement
-        private Statement Rewrite(BlockStatement node) {
+        private Statement Rewrite(BlockStatement node, Stack stack) {
             ReadOnlyCollection<Statement> statements = node.Statements;
             Statement[] clone = null;
 
             for (int i = 0; i < statements.Count; i++) {
                 Statement statement = statements[i];
-                Statement rewritten = RewriteStatement(statement);
+                // All statements within the block execute at the
+                // same stack state.
+                Statement rewritten = RewriteStatement(statement, stack);
 
                 if (((object)rewritten != (object)statement) && (clone == null)) {
                     clone = Clone(statements, i);
@@ -913,12 +972,6 @@ namespace Microsoft.Scripting.Ast {
             return node;
         }
 
-        // DebugStatement
-        private Statement Rewrite(DebugStatement node) {
-            // No action necessary
-            return node;
-        }
-
         // DeleteStatement
         private Statement Rewrite(DeleteStatement node) {
             // No action necessary
@@ -926,12 +979,17 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // DoStatement
-        private Statement Rewrite(DoStatement node) {
-            Statement body = RewriteStatement(node.Body);
-            Expression test = RewriteExpressionFreeTemps(node.Test);
+        private Statement Rewrite(DoStatement node, Stack stack) {
+            // The "do" statement requires empty stack so it can
+            // guarantee it for its child nodes.
+            Statement body = RewriteStatement(node.Body, Stack.Empty);
+            Expression test = RewriteExpressionFreeTemps(node.Test, Stack.Empty);
 
+            // Loop needs empty stack to execute so if the stack is initially
+            // not empty, we rewrite to get empty stack.
             if (((object)body != (object)node.Body) ||
-                ((object)test != (object)node.Test)) {
+                ((object)test != (object)node.Test) ||
+                stack != Stack.Empty) {
                 return new DoStatement(node.Span, node.Header, test, body);
             } else {
                 return node;
@@ -940,13 +998,15 @@ namespace Microsoft.Scripting.Ast {
 
         // EmptyStatement
         private Statement Rewrite(EmptyStatement node) {
-            // No action necessary
+            // No action necessary, regardless of stack
             return node;
         }
 
         // ExpressionStatement
-        private Statement Rewrite(ExpressionStatement node) {
-            Expression expression = RewriteExpressionFreeTemps(node.Expression);
+        private Statement Rewrite(ExpressionStatement node, Stack stack) {
+            // Expression executes on the stack in the current state
+            Expression expression = RewriteExpressionFreeTemps(node.Expression, stack);
+
             if ((object)expression != (object)node.Expression) {
                 return Ast.Statement(node.Span, expression);
             } else {
@@ -955,13 +1015,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // IfStatement
-        private Statement Rewrite(IfStatement node) {
+        private Statement Rewrite(IfStatement node, Stack stack) {
             ReadOnlyCollection<IfStatementTest> tests = node.Tests;
             IfStatementTest[] clone = null;
 
             for (int i = 0; i < tests.Count; i++) {
                 IfStatementTest test = tests[i];
-                IfStatementTest rtest = Rewrite(test);
+                IfStatementTest rtest = Rewrite(test, stack);
 
                 if (((object)test != (object)rtest) && (clone == null)) {
                     clone = Clone(tests, i);
@@ -972,8 +1032,8 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            Statement @else = RewriteStatement(node.ElseStatement);
-            
+            Statement @else = RewriteStatement(node.ElseStatement, stack);
+
             // Did we rewrite anything?
             if (clone != null) {
                 return new IfStatement(node.Span, CollectionUtils.ToReadOnlyCollection(clone), @else);
@@ -985,8 +1045,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // LabeledStatement
-        private Statement Rewrite(LabeledStatement node) {
-            Statement statement = RewriteStatement(node.Statement);
+        private Statement Rewrite(LabeledStatement node, Stack stack) {
+            Statement statement = RewriteStatement(node.Statement, stack);
             if ((object)statement != (object)node.Statement) {
                 return Ast.Labeled(node.Span, statement);
             } else {
@@ -995,16 +1055,21 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // LoopStatement
-        private Statement Rewrite(LoopStatement node) {
-            Expression test = RewriteExpressionFreeTemps(node.Test);
-            Expression incr = RewriteExpressionFreeTemps(node.Increment);
-            Statement body = RewriteStatement(node.Body);
-            Statement @else = RewriteStatement(node.ElseStatement);
+        private Statement Rewrite(LoopStatement node, Stack stack) {
+            // The loop statement requires empty stack for itself, so it
+            // can guarantee it to the child nodes.
+            Expression test = RewriteExpressionFreeTemps(node.Test, Stack.Empty);
+            Expression incr = RewriteExpressionFreeTemps(node.Increment, Stack.Empty);
+            Statement body = RewriteStatement(node.Body, Stack.Empty);
+            Statement @else = RewriteStatement(node.ElseStatement, Stack.Empty);
 
+            // However, the loop itself requires that it executes on an empty stack
+            // so we need to rewrite if the stack is not empty.
             if (((object)test != (object)node.Test) ||
                 ((object)incr != (object)node.Increment) ||
                 ((object)body != (object)node.Body) ||
-                ((object)@else != (object)node.ElseStatement)) {
+                ((object)@else != (object)node.ElseStatement) ||
+                stack != Stack.Empty) {
                 return Ast.Loop(node.Span, node.Header, test, incr, body, @else);
             } else {
                 return node;
@@ -1012,9 +1077,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ReturnStatement
-        private Statement Rewrite(ReturnStatement node) {
-            Expression expression = RewriteExpressionFreeTemps(node.Expression);
-            if ((object)expression != (object)node.Expression) {
+        private Statement Rewrite(ReturnStatement node, Stack stack) {
+            // Return requires empty stack to execute so the expression is
+            // going to execute on an empty stack.
+            Expression expression = RewriteExpressionFreeTemps(node.Expression, Stack.Empty);
+
+            // However, the statement itself needs an empty stack for itself
+            // so if stack is not empty, rewrite to empty the stack.
+            if ((object)expression != (object)node.Expression ||
+                stack != Stack.Empty) {
                 return Ast.Return(node.Span, expression);
             } else {
                 return node;
@@ -1022,9 +1093,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ScopeStatement
-        private Statement Rewrite(ScopeStatement node) {
-            Expression scope = RewriteExpressionFreeTemps(node.Scope);
-            Statement body = RewriteStatement(node.Body);
+        private Statement Rewrite(ScopeStatement node, Stack stack) {
+            Expression scope = RewriteExpressionFreeTemps(node.Scope, stack);
+            Statement body = RewriteStatement(node.Body, stack);
 
             if (((object)scope != (object)node.Scope) ||
                 ((object)body != (object)node.Body)) {
@@ -1035,14 +1106,16 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // SwitchStatement
-        private Statement Rewrite(SwitchStatement node) {
-            Expression test = RewriteExpressionFreeTemps(node.TestValue);
+        private Statement Rewrite(SwitchStatement node, Stack stack) {
+            // The switch statement test is emitted on the stack in current state
+            Expression test = RewriteExpressionFreeTemps(node.TestValue, stack);
             ReadOnlyCollection<SwitchCase> cases = node.Cases;
             SwitchCase[] clone = null;
 
             for (int i = 0; i < cases.Count; i++) {
                 SwitchCase @case = cases[i];
-                SwitchCase rcase = Rewrite(@case);
+                // And all the cases also run on the same stack level.
+                SwitchCase rcase = Rewrite(@case, stack);
 
                 if (((object)rcase != (object)@case) && (clone == null)) {
                     clone = Clone(cases, i);
@@ -1063,8 +1136,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ThrowStatement
-        private Statement Rewrite(ThrowStatement node) {
-            Expression value = RewriteExpressionFreeTemps(node.Value);
+        private Statement Rewrite(ThrowStatement node, Stack stack) {
+            Expression value = RewriteExpressionFreeTemps(node.Value, stack);
             if ((object)value != (object)node.Value) {
                 return Ast.Throw(node.Span, value);
             } else {
@@ -1073,8 +1146,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // TryStatement
-        private Statement Rewrite(TryStatement node) {
-            Statement body = RewriteStatement(node.Body);
+        private Statement Rewrite(TryStatement node, Stack stack) {
+            // Try statement definitely needs an empty stack so its
+            // child nodes execute at empty stack.
+            Statement body = RewriteStatement(node.Body, Stack.Empty);
             ReadOnlyCollection<CatchBlock> handlers = node.Handlers;
             CatchBlock[] clone = null;
 
@@ -1093,11 +1168,13 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            Statement @finally = RewriteStatement(node.FinallyStatement);
+            Statement @finally = RewriteStatement(node.FinallyStatement, Stack.Empty);
 
+            // If the stack is initially not empty, rewrite to spill the stack
             if ((clone != null) ||
                 ((object)body != (object)node.Body) ||
-                ((object)@finally != (object)node.FinallyStatement)) {
+                ((object)@finally != (object)node.FinallyStatement) ||
+                stack != Stack.Empty) {
 
                 if (clone != null) {
                     handlers = CollectionUtils.ToReadOnlyCollection(clone);
@@ -1110,11 +1187,24 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // YieldStatement
-        private Statement Rewrite(YieldStatement node) {
-            Expression expression = RewriteExpressionFreeTemps(node.Expression);
+        private Statement Rewrite(YieldStatement node, Stack stack) {
+            // Yield expression is always execute on an non-empty stack
+            // given the nature of the codegen.
+            Expression expression = RewriteExpressionFreeTemps(node.Expression, Stack.NonEmpty);
 
-            // Yield needs empty stack too, so rewrite it always
-            return Ast.Yield(node.Span, expression);
+            if ((object)expression != (object)node.Expression || stack != Stack.Empty) {
+                // Yield's argument was changed. We may need to hoist it.
+                // This will flatten nested yields, which simplifies yield codegen. So:
+                //   yield (yield x)
+                // becomes:
+                //   $t = yield x
+                //   yield $t
+                Expression saveArg;
+                expression = ToTemp(expression, out saveArg);
+                return Ast.Block(Ast.Statement(saveArg), Ast.Yield(node.Span, expression));
+            } else {
+                return node;
+            }
         }
 
         #endregion
@@ -1123,7 +1213,8 @@ namespace Microsoft.Scripting.Ast {
 
         // CatchBlock
         private CatchBlock Rewrite(CatchBlock node) {
-            Statement body = RewriteStatement(node.Body);
+            // Catch block starts with an empty stack (guaranteed by TryStatement)
+            Statement body = RewriteStatement(node.Body, Stack.Empty);
 
             if ((object)body != (object)node.Body) {
                 return Ast.Catch(node.Span, node.Header, node.Test, node.Variable, body);
@@ -1133,9 +1224,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // IfStatementTest
-        private IfStatementTest Rewrite(IfStatementTest node) {
-            Expression test = RewriteExpressionFreeTemps(node.Test);
-            Statement body = RewriteStatement(node.Body);
+        private IfStatementTest Rewrite(IfStatementTest node, Stack stack) {
+            Expression test = RewriteExpressionFreeTemps(node.Test, stack);
+            Statement body = RewriteStatement(node.Body, stack);
 
             if (((object)test != (object)node.Test) ||
                 ((object)body != (object)node.Body)) {
@@ -1146,8 +1237,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // SwitchCase
-        private SwitchCase Rewrite(SwitchCase node) {
-            Statement body = RewriteStatement(node.Body);
+        private SwitchCase Rewrite(SwitchCase node, Stack stack) {
+            Statement body = RewriteStatement(node.Body, stack);
 
             if ((object)body != (object)node.Body) {
                 return new SwitchCase(node.Header, node.IsDefault, node.Value, body);
@@ -1182,14 +1273,18 @@ namespace Microsoft.Scripting.Ast {
         /// for the resulting comma.
         /// </summary>
         /// <returns>Cloned array or null, if no change encountered.</returns>
-        private bool RewriteExpressions(ReadOnlyCollection<Expression>/*!*/ expressions, out Expression[] clone, out Expression[] comma) {
+        private bool RewriteExpressions(ReadOnlyCollection<Expression>/*!*/ expressions, Stack stack, out Expression[] clone, out Expression[] comma) {
             Debug.Assert(expressions != null);
 
             clone = comma = null;
 
             for (int i = 0, count = expressions.Count; i < count; i++) {
                 Expression arg = expressions[i];
-                Expression exp = RewriteExpression(arg);
+
+                // Rewrite the expression. The first expression has stack
+                // as parent guarantees it, others will set to non-empty.
+                Expression exp = RewriteExpression(arg, stack);
+                stack = Stack.NonEmpty;
 
                 // The expression has been rewritten, rewrite this too.
                 if (((object)arg != (object)exp) && (clone == null)) {

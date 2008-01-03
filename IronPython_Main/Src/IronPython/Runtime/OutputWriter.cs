@@ -25,10 +25,11 @@ using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
     sealed class OutputWriter : TextWriter {
-
+        private PythonContext _context;
         private bool _isErrorOutput;
 
-        public OutputWriter(bool isErrorOutput) {
+        public OutputWriter(PythonContext context, bool isErrorOutput) {
+            _context = context;
             _isErrorOutput = isErrorOutput;
         }
 
@@ -49,7 +50,7 @@ namespace IronPython.Runtime {
             try {
                 PythonOps.PrintWithDestNoNewline(Sink, value);
             } catch (Exception e) {
-                PythonOps.Print(PythonEngine.CurrentEngine.FormatException(e));
+                PythonOps.Print(_context.FormatException(e));
             }
         }
 

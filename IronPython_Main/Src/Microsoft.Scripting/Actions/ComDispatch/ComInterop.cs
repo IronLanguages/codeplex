@@ -43,14 +43,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     public interface IDispatch {
 
         [PreserveSig]
-        int GetTypeInfoCount(out uint pctinfo);
+        int TryGetTypeInfoCount(out uint pctinfo);
 
         [PreserveSig]
-        int GetTypeInfo(uint iTInfo, int lcid, out IntPtr info);
+        int TryGetTypeInfo(uint iTInfo, int lcid, out IntPtr info);
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         [PreserveSig]
-        int GetIDsOfNames(
+        int TryGetIDsOfNames(
             ref Guid iid,
             [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPWStr, SizeParamIndex = 2)]
             string[] names,
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
         [PreserveSig]
-        int Invoke(
+        int TryInvoke(
             int dispIdMember,
             ref Guid riid,
             int lcid,
@@ -95,6 +95,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     public interface IProvideClassInfo {
         void GetClassInfo(out IntPtr info);
     }
+
 }
 
 #endif

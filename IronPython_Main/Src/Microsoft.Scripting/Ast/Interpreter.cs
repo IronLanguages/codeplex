@@ -12,18 +12,19 @@
  *
  *
  * ***************************************************************************/
+
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    public static class Interpreter {
+    public static partial class Interpreter {
 
         // TODO: Make internal
         public static object[] Evaluate(CodeContext context, IList<Expression> items) {
@@ -53,6 +54,7 @@ namespace Microsoft.Scripting.Ast {
                     return EvaluateOrElse(context, (BinaryExpression)node);
                 case AstNodeType.Add:
                 case AstNodeType.And:
+                case AstNodeType.ArrayIndex:
                 case AstNodeType.Divide:
                 case AstNodeType.Equal:
                 case AstNodeType.ExclusiveOr:
@@ -87,8 +89,6 @@ namespace Microsoft.Scripting.Ast {
                     return Evaluate(context, (ActionExpression)node);
                 case AstNodeType.ArrayIndexAssignment:
                     return Evaluate(context, (ArrayIndexAssignment)node);
-                case AstNodeType.ArrayIndexExpression:
-                    return Evaluate(context, (ArrayIndexExpression)node);
                 case AstNodeType.BoundAssignment:
                     return Evaluate(context, (BoundAssignment)node);
                 case AstNodeType.BoundExpression:
@@ -113,8 +113,6 @@ namespace Microsoft.Scripting.Ast {
                     return Evaluate(context, (NewArrayExpression)node);
                 case AstNodeType.ParamsExpression:
                     return NotImplemented();
-                case AstNodeType.ParenthesizedExpression:
-                    return Evaluate(context, (ParenthesizedExpression)node);
                 case AstNodeType.UnboundAssignment:
                     return Evaluate(context, (UnboundAssignment)node);
                 case AstNodeType.UnboundExpression:
@@ -259,6 +257,11 @@ namespace Microsoft.Scripting.Ast {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static object EvaluateBinaryOperator(AstNodeType nodeType, object l, object r) {
             switch (nodeType) {
+                case AstNodeType.ArrayIndex:
+                    Array array = (Array)l;
+                    int index = (int)r;
+                    return array.GetValue(index);
+
                 case AstNodeType.GreaterThan:
                     return RuntimeHelpers.BooleanToObject(((IComparable)l).CompareTo(r) > 0);
                 case AstNodeType.LessThan:
@@ -458,12 +461,6 @@ namespace Microsoft.Scripting.Ast {
             return value;
         }
 
-        private static object Evaluate(CodeContext context, ArrayIndexExpression node) {
-            Array array = (Array)EvaluateExpression(context, node.Array);
-            int index = (int)EvaluateExpression(context, node.Index);
-            return array.GetValue(index);
-        }
-
         private static object Evaluate(CodeContext context, BoundAssignment node) {
             object value = EvaluateExpression(context, node.Value);
             EvaluateAssignVariable(context, node.Variable, value);
@@ -502,7 +499,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object Evaluate(CodeContext context, CodeBlockExpression node) {
-            return node.Block.GetDelegateForInterpreter(context, node.DelegateType, node.ForceWrapperMethod);
+            return GetDelegateForInterpreter(node.Block, context, node.DelegateType, node.ForceWrapperMethod);
         }
 
         private static object Evaluate(CodeContext context) {
@@ -595,10 +592,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object Evaluate(CodeContext context, ParenthesizedExpression node) {
-            return EvaluateExpression(context, node.Expression);
-        }
-
         private static object Evaluate(CodeContext context, UnboundAssignment node) {
             object value = EvaluateExpression(context, node.Value);
             RuntimeHelpers.SetName(context, node.Name, value);
@@ -633,8 +626,6 @@ namespace Microsoft.Scripting.Ast {
                         return ExecuteBreak();
                     case AstNodeType.ContinueStatement:
                         return ExecuteContinue();
-                    case AstNodeType.DebugStatement:
-                        return Execute((DebugStatement)node);
                     case AstNodeType.DeleteStatement:
                         return Execute(context, (DeleteStatement)node);
                     case AstNodeType.DoStatement:
@@ -693,12 +684,6 @@ namespace Microsoft.Scripting.Ast {
 
         private static object ExecuteContinue() {
             return Continue;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "node")]
-        private static object Execute(DebugStatement node) {
-            Debug.WriteLine(node.Marker);
-            return NextStatement;
         }
 
         // TODO: Should not be name-based.

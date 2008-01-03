@@ -25,9 +25,8 @@ namespace ToyScript {
         protected override void Initialize() {
             base.Initialize();
             //RuntimeHelpers.TopNamespace.LoadAssembly(typeof(System.Diagnostics.Stopwatch).Assembly);
-            this.Options.LanguageProvider =
-                ScriptEnvironment.GetEnvironment().GetLanguageProvider(
-                    typeof(ToyLanguageProvider));
+            this.Options.ScriptEngine =
+                ScriptEnvironment.GetEnvironment().GetEngine(typeof(ToyLanguageContext));
         }
 
         [STAThread]

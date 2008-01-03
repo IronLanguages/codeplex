@@ -24,15 +24,17 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
-
-    [Serializable]
-    public sealed class SourceUnit {
+    public sealed class SourceUnit 
+#if !SILVERLIGHT
+        : MarshalByRefObject 
+#endif
+    {
 
         private readonly SourceCodeKind _kind;
         private readonly string _id;
-        private readonly IScriptEngine _engine;
+        private readonly LanguageContext _context;
 
-        private SourceContentProvider _contentProvider;
+        private TextContentProvider _contentProvider;
         private Action<SourceUnit> _contentReloader; // TODO: better: ReloadableStringProvider?
 
         private bool _isDebuggable;
@@ -58,10 +60,25 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// Script engine of the language of the unit.
+        /// LanguageContext of the language of the unit.
+        /// 
+        /// TODO: Internal
         /// </summary>
-        public IScriptEngine Engine {
-            get { return _engine; }
+        public LanguageContext LanguageContext {
+            get { return _context; }
+        }
+
+        public Guid LanguageGuid {
+            get {
+                return _context.LanguageGuid;
+            }
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public SourceCodeProperties GetCodeProperties() {
+            _context.ParseSourceCode(new CompilerContext(this, null, new ErrorSink()));
+
+            return _codeProperties ?? SourceCodeProperties.None;
         }
 
         public SourceCodeProperties? CodeProperties {
@@ -90,10 +107,10 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Construction
 
-        private SourceUnit(IScriptEngine engine, SourceContentProvider contentProvider, string id, SourceCodeKind kind) {
-            Assert.NotNull(engine, contentProvider);
+        private SourceUnit(LanguageContext context, TextContentProvider contentProvider, string id, SourceCodeKind kind) {
+            Assert.NotNull(context, contentProvider);
 
-            _engine = engine;
+            _context = context;
             _contentProvider = contentProvider;
             _kind = kind;
             _id = id;
@@ -101,60 +118,72 @@ namespace Microsoft.Scripting.Hosting {
 
         // move factories to ScriptEngine/ScriptHost?
 
-        public static SourceUnit Create(IScriptEngine engine, SourceContentProvider contentProvider, string id, SourceCodeKind kind) {
-            Contract.RequiresNotNull(engine, "engine");
+        internal static SourceUnit/*!*/ Create(LanguageContext context, TextContentProvider contentProvider, string id, SourceCodeKind kind) {
+            Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(contentProvider, "contentProvider");
 
-            return new SourceUnit(engine, contentProvider, id, kind);
+            SourceUnit res = new SourceUnit(context, contentProvider, id, kind);
+            
+            if (kind == SourceCodeKind.File) {
+                res.IsVisibleToDebugger = true;
+            }
+            return res;
         }
 
-        public static SourceUnit CreateSnippet(IScriptEngine engine, string code) {
-            return CreateSnippet(engine, code, null, SourceCodeKind.Default);
+        internal static SourceUnit CreateSnippet(LanguageContext context, string code) {
+            return CreateSnippet(context, code, null, SourceCodeKind.Default);
         }
 
-        public static SourceUnit CreateSnippet(IScriptEngine engine, string code, SourceCodeKind kind) {
-            return CreateSnippet(engine, code, null, kind);
+        internal static SourceUnit CreateSnippet(LanguageContext context, string code, SourceCodeKind kind) {
+            return CreateSnippet(context, code, null, kind);
         }
 
-        public static SourceUnit CreateSnippet(IScriptEngine engine, string code, string id) {
-            return CreateSnippet(engine, code, id, SourceCodeKind.Default);
+        internal static SourceUnit CreateSnippet(LanguageContext context, string code, string id) {
+            return CreateSnippet(context, code, id, SourceCodeKind.Default);
         }
 
-        public static SourceUnit CreateSnippet(IScriptEngine engine, string code, string id, SourceCodeKind kind) {
-            Contract.RequiresNotNull(engine, "engine");
+        internal static SourceUnit CreateSnippet(LanguageContext context, string code, string id, SourceCodeKind kind) {
+            Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(code, "code");
 
-            return new SourceUnit(engine, new SourceStringContentProvider(code), id, kind);
+            return new SourceUnit(context, new SourceStringContentProvider(code), id, kind);
         }
 
         /// <summary>
         /// Should be called by host only. TODO: move to the ScriptHost?
         /// </summary>
-        public static SourceUnit CreateFileUnit(IScriptEngine engine, string path) {
-            return CreateFileUnit(engine, path, (Encoding)null);
+        public static SourceUnit CreateFileUnit(LanguageContext context, string path) {
+            return CreateFileUnit(context, path, (Encoding)null);
         }
 
-        public static SourceUnit CreateFileUnit(IScriptEngine engine, string path, Encoding encoding) {
-            Contract.RequiresNotNull(engine, "engine");
+        public static SourceUnit CreateFileUnit(LanguageContext context, string path, Encoding encoding) {
+            Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(path, "path");
 
-            SourceContentProvider provider = new SourceFileContentProvider(path, encoding ?? StringUtils.DefaultEncoding, engine);
-            SourceUnit result = new SourceUnit(engine, provider, path, SourceCodeKind.File);
+            return CreateFileUnit(context, path, encoding, SourceCodeKind.File);
+        }
+
+        public static SourceUnit CreateFileUnit(LanguageContext context, string path, Encoding encoding, SourceCodeKind kind) {
+            Contract.RequiresNotNull(context, "context");
+            Contract.RequiresNotNull(path, "path");
+
+            TextContentProvider provider = new EngineTextContentProvider(context, new FileStreamContentProvider(path), encoding ?? StringUtils.DefaultEncoding);
+            SourceUnit result = new SourceUnit(context, provider, path, kind);
             result.IsVisibleToDebugger = true;
             return result;
         }
 
-        public static SourceUnit CreateFileUnit(IScriptEngine engine, string path, string content) {
-            return CreateFileUnit(engine, path, content, null);
+        public static SourceUnit CreateFileUnit(LanguageContext context, string path, string content) {
+            return CreateFileUnit(context, path, content, null);
         }
 
-        public static SourceUnit CreateFileUnit(IScriptEngine engine, string path, string content, Action<SourceUnit> contentReloader) {
-            Contract.RequiresNotNull(engine, "engine");
+        public static SourceUnit CreateFileUnit(LanguageContext context, string path, string content, Action<SourceUnit> contentReloader) {
+            Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(content, "content");
 
-            SourceContentProvider provider = new SourceStringContentProvider(content);
-            SourceUnit result = new SourceUnit(engine, provider, path, SourceCodeKind.File);
+            TextContentProvider provider = new SourceStringContentProvider(content);
+            SourceUnit result = new SourceUnit(context, provider, path, SourceCodeKind.File);
             result.ContentReloader = contentReloader;
             result.IsVisibleToDebugger = true;
             return result;

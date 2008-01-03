@@ -61,7 +61,19 @@ namespace Microsoft.Scripting.Ast {
             _rewrite = true;
         }
 
+        // We must explicitly override all derived classes of CodeBlock to ensure that
+        // we bind against this class as opposed to our base class. 
+        
+        // If we don't override this, then we'd bind to base.Walk(CodeBlock) instead. 
+        protected internal override bool Walk(GeneratorCodeBlock node) {
+            return CommonCodeBlock(node);
+        }
+
         protected internal override bool Walk(CodeBlock node) {
+            return CommonCodeBlock(node);
+        }
+
+        bool CommonCodeBlock(CodeBlock node) {
             // Simple stack of flags
             bool backup = _rewrite;
             _rewrite = false;

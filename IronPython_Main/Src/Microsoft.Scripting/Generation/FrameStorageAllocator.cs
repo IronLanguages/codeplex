@@ -46,7 +46,7 @@ namespace Microsoft.Scripting.Generation {
             return new FrameStorage(name, type);
         }
 
-        public override Slot GetAccessSlot(CodeGen cg, CodeBlock block) {
+        public override Slot GetAccessSlot(Compiler cg, CodeBlock block) {
             return cg.ContextSlot;
         }
     }

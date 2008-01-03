@@ -773,8 +773,18 @@ def test_pers_load():
             pass
     
     
-def test_unpickling_error():
+def test_loads_negative():
+    AssertError(EOFError, cPickle.loads, "")
+    
+@disabled("CodePlex 3290")    
+def test_load_negative():
     if cPickle.__name__ == "cPickle":   # pickle vs. cPickle report different exceptions, even on Cpy
-        AssertError(cPickle.UnpicklingError, cPickle.loads, '\x02')
+        filename = nt.tempnam()
+        for temp in ['\x02', "No"]:
+            write_to_file(filename, content=temp)            
+            f = open(filename)
+            AssertError(cPickle.UnpicklingError, cPickle.load, f)
+            f.close()
+
     
 run_test(__name__)

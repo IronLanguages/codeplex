@@ -26,6 +26,7 @@ using Microsoft.Scripting.Shell;
 using System.Reflection;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Hosting {
    
@@ -35,7 +36,6 @@ namespace IronPython.Hosting {
     public class PythonCommandLine : CommandLine {
 
         private new PythonConsoleOptions Options { get { return (PythonConsoleOptions)base.Options; } }
-        private new PythonEngine Engine { get { return (PythonEngine)base.Engine; } }
         
         public PythonCommandLine() {
         }
@@ -43,7 +43,7 @@ namespace IronPython.Hosting {
         protected override string Logo {
             get {
                 return String.Format("IronPython console: {0}{1}{2}{1}",
-                    Engine.VersionString, Environment.NewLine, Engine.Copyright);
+                    Engine.LanguageVersion, Environment.NewLine, "Copyright (c) Microsoft Corporation. All rights reserved.");
             }
         }
         
@@ -70,7 +70,7 @@ namespace IronPython.Hosting {
 
         protected override int Run() {
             if (Options.ModuleToRun != null) {
-                Engine.Execute("import " + Options.ModuleToRun);
+                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString("import " + Options.ModuleToRun, SourceCodeKind.Statements));
                 return 0;
             }
 
@@ -98,7 +98,7 @@ namespace IronPython.Hosting {
                     }
 #endif
                     string fullPath = ScriptDomainManager.CurrentManager.PAL.GetFullPath(Options.FileName);
-                    Engine.AddToPath(Path.GetDirectoryName(fullPath));
+                    PythonContext.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
 
@@ -113,7 +113,7 @@ namespace IronPython.Hosting {
                 // if the user used the -m option we need to update sys.argv to arv[0] is the full path
                 // to the module we'll run.  If we don't find the module we'll have an import error
                 // and this doesn't matter.
-                foreach (object o in PythonEngine.CurrentEngine.SystemState.path) {
+                foreach (object o in PythonContext.GetSystemState(null).path) {
                     string str = o as string;
                     if (str == null) continue;
 
@@ -128,18 +128,15 @@ namespace IronPython.Hosting {
         }
 
         private ScriptScope CreateMainModule() {
-            ModuleOptions trueDiv = (Engine.Options.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            ScriptScope module = Engine.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
+            ModuleOptions trueDiv = (PythonContext.GetPythonOptions(null).DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
+            ScriptScope module = PythonContext.MakePythonModule("__main__", null, trueDiv | ModuleOptions.PublishModule);
             module.Scope.SetName(Symbols.Doc, null);
-
-            // TODO: 
-            // module.Scope.SetName(Symbols.Doc, null);
             return module;
         }
 
         
         private void InitializePath() {
-            Engine.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
+            PythonContext.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -147,25 +144,25 @@ namespace IronPython.Hosting {
                 if (path != null && path.Length > 0) {
                     string[] paths = path.Split(Path.PathSeparator);
                     foreach (string p in paths) {
-                        Engine.AddToPath(p);
+                        PythonContext.AddToPath(p);
                     }
                 }
             }
 
             string entry = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             string site = Path.Combine(entry, "Lib");
-            Engine.AddToPath(site);
+            PythonContext.AddToPath(site);
 
             // add DLLs directory if it exists            
             string dlls = Path.Combine(entry, "DLLs");
             if (Directory.Exists(dlls)) {
-                Engine.AddToPath(dlls);
+                PythonContext.AddToPath(dlls);
             }
 #endif
         }
 
         private string InitializeModules() {
-            string version = Engine.VersionString;
+            string version = Engine.LanguageVersion.ToString();
             
             this.Module = CreateMainModule();
             
@@ -176,7 +173,7 @@ namespace IronPython.Hosting {
             string executable = Assembly.GetEntryAssembly().Location;
             string prefix = Path.GetDirectoryName(executable);
 #endif
-            Engine.InitializeModules(prefix, executable, version);
+            PythonContext.GetSystemState(null).SetHostVariables(prefix, executable, version);
             return version;
         }
 
@@ -187,7 +184,7 @@ namespace IronPython.Hosting {
 
             try {
                 // TODO: do better
-                Engine.Execute("import site");
+                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString("import site", SourceCodeKind.SingleStatement));
             } catch (Exception e) {
                 Console.Write(Engine.FormatException(e), Style.Error);
             }
@@ -225,7 +222,7 @@ namespace IronPython.Hosting {
             if (startup != null && startup.Length > 0) {
                 if (Options.HandleExceptions) {
                     try {
-                        Engine.ExecuteFileContent(startup, Module);
+                        Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
                     } catch (Exception e) {
                         if (e is PythonSystemExitException) throw;
                         Console.Write(Engine.FormatException(e), Style.Error);
@@ -234,7 +231,7 @@ namespace IronPython.Hosting {
                     }
                 } else {
                     try {
-                        Engine.ExecuteFileContent(startup, Module);
+                        Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
                     } finally {
                         Engine.DumpDebugInfo();
                     }
@@ -268,30 +265,30 @@ namespace IronPython.Hosting {
         #region Command
 
         protected override int RunCommand(string command) {
-            int result = 1;
-
             if (Options.HandleExceptions) {
                 try {
-                    ScriptScope module = CreateMainModule();
-                    if (Options.Introspection)
-                        Module = module;
-
-                    Engine.Execute(command, module);
-                    result = 0;
-                } catch (PythonSystemExitException pythonSystemExit) {
-                    result = GetEffectiveExitCode(pythonSystemExit);
+                    return RunCommandWorker(command);
                 } catch (Exception e) {
                     Console.Write(Engine.FormatException(e), Style.Error);
+                    return 1;
                 }
-            } else {
-                try {
-                    Engine.ExecuteCommand(command);
-                    result = 0;
-                } catch (PythonSystemExitException pythonSystemExit) {
-                    result = GetEffectiveExitCode(pythonSystemExit);
-                }
-            }
+            } 
 
+            return RunCommandWorker(command);            
+        }
+
+        private int RunCommandWorker(string command) {
+            int result = 1;
+            try {
+                ScriptScope module = CreateMainModule();
+                if (Options.Introspection)
+                    Module = module;
+
+                Engine.Execute(module, Engine.CreateScriptSourceFromString(command, SourceCodeKind.File));
+                result = 0;
+            } catch (PythonSystemExitException pythonSystemExit) {
+                result = GetEffectiveExitCode(pythonSystemExit);
+            }
             return result;
         }
 
@@ -331,8 +328,8 @@ namespace IronPython.Hosting {
                 // TODO: move to compiler options
                 ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Generation.AssemblyGenAttributes.EmitDebugInfo;
                 
-                ScriptScope engineModule = Engine.CreateOptimizedModule(fileName, "__main__", true, 
-                    Engine.Options.SkipFirstSourceLine);
+                // TODO: Multi-engine support
+                ScriptScope engineModule = ((PythonContext)DefaultContext.Default.LanguageContext).CreateOptimizedModule(fileName, "__main__", true, Options.SkipFirstSourceLine);
 
                 if (Options.Introspection)
                     Module = engineModule;

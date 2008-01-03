@@ -15,8 +15,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
+
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public class ConstantPool {
@@ -24,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
 
         private List<Type> _types;
         private Slot _dataSlot;
-        private CodeGen _cg;
+        private Compiler _cg;
         private static List<object> _staticData = new List<object>();
         private static object _nullVal = new object();
         private static int _lastCheck, _empties;
@@ -51,7 +52,7 @@ namespace Microsoft.Scripting.Generation {
             get { return _data.Count; }
         }
 
-        public void SetCodeGen(CodeGen cg, Slot dataSlot) {
+        public void SetCodeGen(Compiler cg, Slot dataSlot) {
             this._cg = cg;
             this._dataSlot = dataSlot;
         }

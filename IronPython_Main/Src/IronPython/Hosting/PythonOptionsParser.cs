@@ -24,6 +24,7 @@ using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime;
 
 namespace IronPython.Hosting {
 
@@ -31,11 +32,13 @@ namespace IronPython.Hosting {
 
         private PythonConsoleOptions _consoleOptions;
         private PythonEngineOptions _engineOptions;
+        private PythonContext _context;
 
         public override ConsoleOptions ConsoleOptions { get { return _consoleOptions; } set { _consoleOptions = (PythonConsoleOptions)value; } } 
         public override EngineOptions EngineOptions { get { return _engineOptions; } set { _engineOptions = (PythonEngineOptions)value; } }
         
-        public PythonOptionsParser() {
+        public PythonOptionsParser(PythonContext context) {
+            _context = context;
         }
 
         public override ConsoleOptions GetDefaultConsoleOptions() {
@@ -48,9 +51,17 @@ namespace IronPython.Hosting {
 
         public override void Parse(string[] args) {
             if (_consoleOptions == null) _consoleOptions = new PythonConsoleOptions();
-            if (_engineOptions == null) _engineOptions = new PythonEngineOptions();
+            if (_engineOptions == null) _engineOptions = PythonContext._engOptions;
 
             base.Parse(args);
+
+            PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
+            // TODO: Multi-engine support
+            PythonContext._systemState.argv = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            if (scriptOpt.WarningFilters != null)
+                PythonContext._systemState.warnoptions = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
+
+            PythonContext._systemState.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }
 
         /// <exception cref="Exception">On error.</exception>
@@ -78,7 +89,7 @@ namespace IronPython.Hosting {
                     _consoleOptions.ModuleToRun = PeekNextArg();
                     _engineOptions.Arguments = PopRemainingArgs();                                   
                     break;
-                case "-x": _engineOptions.SkipFirstSourceLine = true; break;
+                case "-x": _consoleOptions.SkipFirstSourceLine = true; break;
                 case "-v": GlobalOptions.Verbose = true; break;
                 case "-u": GlobalOptions.BufferedStandardOutAndError = false; break;
                 case "-S": _consoleOptions.SkipImportSite = true; break;

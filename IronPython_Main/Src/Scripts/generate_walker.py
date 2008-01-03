@@ -17,6 +17,11 @@ import generate
 import System
 import clr
 
+# This generates PythonWalker.Generated.cs
+# usage is just:
+#   ipyd generate_walker.py
+# it wills can all types in IronPython and detect AST nodes based on type inheritence.
+
 def inherits(t, p):
     if not t:
         return False

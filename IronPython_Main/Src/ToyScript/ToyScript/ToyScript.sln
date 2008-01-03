@@ -1,33 +1,13 @@
+﻿Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
 
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToyScript", "ToyScript.csproj", "{92A2631C-F9CE-4B0C-833A-64AD62AC801F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "..\Microsoft.Scripting\Microsoft.Scripting.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "..\..\Microsoft.Scripting\Microsoft.Scripting.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToyConsole", "..\ToyConsole\ToyConsole.csproj", "{157A4685-D71A-4FF9-854F-64C9CAE21F43}"
 EndProject
 Global
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 3
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = http://vstfdevdiv:8080/
-		SccProjectUniqueName0 = ToyScript.csproj
-		SccProjectName0 = .
-		SccAuxPath0 = http://vstfdevdiv:8080
-		SccLocalPath0 = .
-		SccProvider0 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccProjectUniqueName1 = ..\\..\\..\\Runtime\\Microsoft.Scripting\\Microsoft.Scripting.csproj
-		SccProjectName1 = ../../../Runtime/Microsoft.Scripting
-		SccAuxPath1 = http://vstfdevdiv:8080
-		SccLocalPath1 = ..\\..\\..\\Runtime\\Microsoft.Scripting
-		SccProvider1 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccProjectUniqueName2 = ..\\ToyConsole\\ToyConsole.csproj
-		SccProjectName2 = ../ToyConsole
-		SccAuxPath2 = http://vstfdevdiv:8080
-		SccLocalPath2 = ..\\ToyConsole
-		SccProvider2 = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		FxCop|Any CPU = FxCop|Any CPU

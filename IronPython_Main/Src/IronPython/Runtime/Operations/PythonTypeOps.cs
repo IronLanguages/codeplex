@@ -353,7 +353,7 @@ namespace IronPython.Runtime.Operations {
             // don't run __init__ if it's not a subclass of ourselves,
             // or if this is the user doing type(x), or if it's a standard
             // .NET type which doesn't have an __init__ method (this is a perf optimization)
-            return (!cls.IsSystemType || cls.GetContextTag(PythonContext.Id) != null) &&
+            return (!cls.IsSystemType || cls.GetContextTag(DefaultContext.Id) != null) &&
                 newObjectType.IsSubclassOf(cls) &&                
                 (cls != TypeCache.PythonType || argCnt > 1);
         }

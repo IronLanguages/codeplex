@@ -34,14 +34,6 @@ namespace Microsoft.Scripting.Ast {
         public Type TypeOperand {
             get { return _typeOperand; }
         }
-
-        public override bool IsConstant(object value) {
-            // allow constant TypeIs expressions to be optimized away
-            if (value is bool && ((bool)value) == true) {
-                return _typeOperand.IsAssignableFrom(_expression.Type);
-            }
-            return false;
-        }
     }
 
     /// <summary>

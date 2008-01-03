@@ -32,7 +32,6 @@ using IronPython.Runtime.Types;
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
-    [PythonType("weakref")]
     public static class PythonWeakRef {
         static PythonWeakRef() {
             PythonType.SetPythonType(typeof(PythonWeakRefProxy),
@@ -53,10 +52,10 @@ namespace IronPython.Modules {
             // to track it's weak references
             PythonType dt = obj as PythonType;
             if (dt != null) {
-                PythonTypeContext ctx = dt.GetContextTag(PythonContext.Id) as PythonTypeContext;
+                PythonTypeContext ctx = dt.GetContextTag(DefaultContext.Id) as PythonTypeContext;
                 if (ctx == null) {
                     ctx = new PythonTypeContext();
-                    dt.SetContextTag(PythonContext.Id, ctx);
+                    dt.SetContextTag(DefaultContext.Id, ctx);
                 }
 
                 return (PythonTypeContext)ctx;

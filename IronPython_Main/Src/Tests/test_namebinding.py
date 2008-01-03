@@ -835,21 +835,26 @@ except NameError: pass
 ## delete builtin func
 import __builtin__
 
-try: del pow
+try: 
+    del pow
+    AssertUnreachable("should have thrown")
 except NameError: pass
-else: print "fail"
 
-# TODO: reloading doesn't work
-#try:
-#    del __builtin__.pow
-#
-#    # bug 1127
-#    #AssertError(NameError, lambda: pow)
-#    AssertError(AttributeError, lambda: __builtin__.pow)
-#finally: 
-#    reload(__builtin__)
-#    # make sure we still have access to __builtin__'s after reloading
-#    dir('abc')
+if not is_interpreted():
+    try:
+        del __builtin__.pow
+        AssertError(NameError, lambda: pow)
+        AssertError(AttributeError, lambda: __builtin__.pow)
+    finally: 
+        reload(__builtin__)
+        # make sure we still have access to __builtin__'s after reloading
+        # AreEqual(pow(2,2), 4) # bug 359890
+        dir('abc')
+
+## Overriding __builtin__ method inconsistent with -X:GenerateAsSnippets flag
+import __builtin__
+__builtin__.help = 10
+AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))
 
 # Test that run time name lookup skips over class scopes
 # (because class variables aren't implicitly accessible inside member functions)

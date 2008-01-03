@@ -16,6 +16,9 @@
 from lib.assert_util import *
 import sys
 
+
+
+
 def ifilter(iterable):
     def predicate(x):
         return x % 3
@@ -373,3 +376,111 @@ if sys.platform != "win32":
     lstate(256)
     #
     lstate(512)
+
+
+
+#
+# Test that calling on a closed generator throws a StopIteration exception and does not 
+# do any further execution of the generator. (See codeplex workitem 1402)
+# 
+#
+
+
+# 1) Test exiting by normal return
+l=[0, 0]
+def f(l):
+  l[0] += 1 # side effect
+  yield 'a'
+  l[1] += 1  # side effect statement
+
+g=f(l)
+Assert(g.next() == 'a')
+Assert(l == [1,0]) # should not have executed past yield
+AssertError(StopIteration, g.next)
+Assert(l == [1,1]) # now should have executed
+
+# Generator is now closed, future calls should just keep throwing
+AssertError(StopIteration, g.next)
+Assert(l == [1,1]) # verify that we didn't execute any more statements
+
+
+
+# 2) Now test with exiting via StopIteration exception
+l = [0,0]
+def f(l):
+  yield 'c'
+  l[0] += 1
+  raise StopIteration
+  l[1] += 1
+
+g=f(l)
+Assert(g.next() == 'c')
+Assert(l == [0,0])
+AssertError(StopIteration, g.next)
+Assert(l == [1,0])
+
+# generator is now closed from unhandled exception. Future calls should throw StopIteration
+AssertError(StopIteration, g.next)
+Assert(l == [1,0]) # verify that we didn't execute any more statements
+
+# repeat enumeration in a comprehension. 
+# This tests that StopIteration is properly caught and gracefully terminates the generator.
+l=[0,0]
+AreEqual([x for x in f(l)], ['c'])
+AreEqual(l,[1,0])
+
+
+
+# 3) Now test with exiting via throwing an unhandled exception
+class MyError:
+  pass
+
+l=[0, 0]
+def f(l):
+  l[0] += 1 # side effect
+  yield 'b'
+  l[1] += 1  # side effect statement
+  raise MyError
+
+g=f(l)
+Assert(g.next() == 'b')
+Assert(l == [1,0])
+AssertError(MyError, g.next)
+Assert(l == [1,1])
+
+# generator is now closed from unhandled exception. Future calls should throw StopIteration
+AssertError(StopIteration, g.next)
+Assert(l == [1,1]) # verify that we didn't execute any more statements
+
+
+# repeat enumeration in a comprehension. Unlike case 2, this now fails since the exception
+# is MyError instead of StopIteration
+l=[0,0]
+def g():
+  return [x for x in f(l)]
+AssertError(MyError, g)
+AreEqual(l,[1,1])
+
+
+# Test that generator can't be called re-entrantly. This is explicitly called out in Pep 255.
+# Any operation should throw a ValueError if called.
+def f():
+  try:
+    i = me.next() # error: reentrant call! Should throw ValueError, which we can catch.
+  except ValueError: 
+    yield 7
+  yield 10
+  # try again, should still throw
+  me.send(None) 
+  Assert(False) # unreachable!
+
+me = f()
+AreEqual(me.next(), 7)
+# Generator should still be alive 
+AreEqual(me.next(), 10)
+AssertError(ValueError, me.next)
+# since the last call went unhandled, the generator is now closed.
+AssertError(StopIteration, me.next)
+
+
+

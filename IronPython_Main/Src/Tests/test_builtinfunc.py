@@ -13,11 +13,15 @@
 #
 #####################################################################################
 
-#This has to be run first: importing lib.assert_util masked a bug. Just make sure
-#this does not throw
+#-----------------------------------------------------------------------------------
+#These have to be run first: importing lib.assert_util masked a bug. Just make sure
+#these do not throw
 for stuff in [bool, True, False]:
     temp = dir(stuff)  
 
+items = globals().items() #4716
+
+#-----------------------------------------------------------------------------------
 from lib.assert_util import *
 
 AssertError(NameError, lambda: __new__)
@@ -32,6 +36,8 @@ def test_callable():
     Assert(callable(lambda x, y: x + y))
     Assert(callable(C))
     Assert(not callable(C.x))
+    Assert(not callable(__builtins__))
+    
 
 def test_cmp():
     x = {}
@@ -258,9 +264,7 @@ def test_int_ctor():
     AreEqual(int('0x10', 16), 16)
     AreEqual(long('0x10', 16), 16L)
    
-@disabled("BUG 148521")
 def test_type():
-    #BUG 148521
     AreEqual(len(type.__bases__), 1)
     AreEqual(type.__bases__[0], object)
     

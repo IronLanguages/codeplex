@@ -14,10 +14,11 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     public interface ILazySlotFactory<T> {
-        Slot GetConcreteSlot(CodeGen cg, T data);
+        Slot GetConcreteSlot(Compiler cg, T data);
     }
 
 
@@ -32,19 +33,19 @@ namespace Microsoft.Scripting.Generation {
             _type = type;
         }
 
-        public override void EmitGet(CodeGen cg) {
+        public override void EmitGet(Compiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitGet(cg);
         }
 
-        public override void EmitGetAddr(CodeGen cg) {
+        public override void EmitGetAddr(Compiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitGetAddr(cg);
         }
 
-        public override void EmitSet(CodeGen cg) {
+        public override void EmitSet(Compiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitSet(cg);
         }
 
-        public override void EmitSet(CodeGen cg, Slot val) {
+        public override void EmitSet(Compiler cg, Slot val) {
             _factory.GetConcreteSlot(cg, _data).EmitSet(cg, val);
         }
 

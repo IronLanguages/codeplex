@@ -19,8 +19,8 @@ using System.Globalization;
 
 namespace Microsoft.Scripting.Ast {
     public abstract class Statement : Node {
-        private SourceLocation _start;
-        private SourceLocation _end;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
         protected Statement(AstNodeType nodeType, SourceSpan span)
             : base(nodeType) {
@@ -40,11 +40,6 @@ namespace Microsoft.Scripting.Ast {
             get {
                 return new SourceSpan(_start, _end);
             }
-        }
-
-        public void SetLoc(SourceSpan span) {
-            _start = span.Start;
-            _end = span.End;
         }
     }
 }

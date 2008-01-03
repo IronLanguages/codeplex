@@ -32,7 +32,6 @@ using IronPython.Runtime.Types;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
-    [PythonType("thread")]
     public static class PythonThread {
         private static int _stackSize;
 
@@ -190,29 +189,30 @@ namespace IronPython.Modules {
         }
 
         private class ThreadObj {
-            object func, kwargs;
-            PythonTuple args;
-            CodeContext context;
+            private readonly object _func, _kwargs;
+            private readonly PythonTuple _args;
+            private readonly CodeContext _context;
+
             public ThreadObj(CodeContext context, object function, PythonTuple args, object kwargs) {
                 Debug.Assert(args != null);
-                func = function;
-                this.kwargs = kwargs;
-                this.args = args;
-                this.context = context;
+                _func = function;
+                _kwargs = kwargs;
+                _args = args;
+                _context = context;
             }
 
             public void Start() {
                 try {
-                    if (kwargs != null) {
-                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, ArrayUtils.EmptyObjects, ArrayUtils.EmptyStrings, args, kwargs);
+                    if (_kwargs != null) {
+                        PythonOps.CallWithArgsTupleAndKeywordDictAndContext(_context, _func, ArrayUtils.EmptyObjects, ArrayUtils.EmptyStrings, _args, _kwargs);
                     } else {
-                        PythonOps.CallWithArgsTuple(func, ArrayUtils.EmptyObjects, args);
+                        PythonOps.CallWithArgsTuple(_func, ArrayUtils.EmptyObjects, _args);
                     }
                 } catch (PythonSystemExitException) {
                     // ignore and quit
                 } catch (Exception e) {
                     PythonOps.Print("Unhandled exception on thread");
-                    string result = PythonEngine.CurrentEngine.FormatException(e);
+                    string result = _context.LanguageContext.FormatException(e);
                     PythonOps.Print(result);
                 }
             }

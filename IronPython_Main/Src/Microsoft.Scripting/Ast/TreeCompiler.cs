@@ -65,7 +65,7 @@ namespace Microsoft.Scripting.Ast {
             List<SymbolId> names;
             string name;
 
-            block.ComputeSignature(false, false, out types, out names, out name);
+            Compiler.ComputeSignature(block, false, false, out types, out names, out name);
 
             AssemblyGen ag;
             if (DebugAssembly) {
@@ -74,11 +74,12 @@ namespace Microsoft.Scripting.Ast {
                 ag = ScriptDomainManager.CurrentManager.Snippets.Assembly;
             }
 
-            CodeGen cg = ag.DefineMethod(block.Name, block.ReturnType, types, null);
+            Compiler cg = ag.DefineMethod(block.Name, block.ReturnType, types, null);
             cg.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, cg);
 
-            block.CreateSlots(cg);
-            block.EmitBody(cg);
+            Compiler.CreateSlots(cg, block);
+            Compiler.EmitBody(cg, block);
+
             cg.Finish();
 
             return (T)(object)cg.CreateDelegate(typeof(T));

@@ -27,7 +27,23 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class BinderHelper<T, ActionType> where ActionType : DynamicAction {
+    public class BinderHelper {
+        internal BinderHelper() { }
+
+        public static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(CompilerHelpers.GetType(self));
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Constant(isCallable)
+                )
+            );
+            return rule;
+        }
+    }
+
+    public class BinderHelper<T, ActionType> : BinderHelper where ActionType : DynamicAction {
         private readonly CodeContext/*!*/ _context;
         private readonly ActionType/*!*/ _action;
         

@@ -270,7 +270,6 @@ def test_Q():
     TestCommandLine(("-Q", "warn", "-c", "print 3/2"), "1\n")
     TestCommandLine(("-Q", "warnall", "-c", "print 3/2"), "1\n")
 
-@disabled("CodePlex Work Item 12965")
 def test_doc():
     TestCommandLine(("", "-c", "print __doc__"), "None\n", 0)
 

@@ -80,7 +80,8 @@ namespace IronPython.Runtime {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
             ISequence from = fromList as ISequence;
 
-            object ret = PythonEngine.CurrentEngine.Importer.ImportModule(context, name, from != null && from.GetLength() > 0);
+            Importer imp = PythonContext.GetImporter(context);
+            object ret = imp.ImportModule(context, name, from != null && from.GetLength() > 0);
             if (ret == null) {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
@@ -94,7 +95,7 @@ namespace IronPython.Runtime {
 
                     if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null && strAttrName != "*") {
                         try {
-                            attrValue = PythonEngine.CurrentEngine.Importer.ImportFrom(context, mod, strAttrName);
+                            attrValue = PythonContext.GetImporter(context).ImportFrom(context, mod, strAttrName);
                         } catch (PythonImportErrorException) {
                             continue;
                         }
@@ -218,14 +219,13 @@ namespace IronPython.Runtime {
 
             bool inheritContext = GetCompilerInheritance(dontInherit);
             CompileFlags cflags = GetCompilerFlags(flags);
-            PythonContext lc = GetCompilerLanguageContext(context, inheritContext, cflags);
-            ScriptEngine engine = context.LanguageContext.Engine;
+            CompilerOptions opts = GetDefaultCompilerOptions(context, inheritContext, cflags);
             SourceUnit sourceUnit;
 
             switch (kind) {
-                case "exec": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Default); break;
-                case "eval": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.Expression); break;
-                case "single": sourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.SingleStatement); break;
+                case "exec": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.Default); break;
+                case "eval": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.Expression); break;
+                case "single": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.SingleStatement); break;
                 default: 
                     throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
@@ -233,9 +233,9 @@ namespace IronPython.Runtime {
             if ((cflags & CompileFlags.CO_DONT_IMPLY_DEDENT) != 0) {
                 // re-parse in interactive code mode to see if this is valid
                 ErrorSink es = new CompilerErrorSink();
-                SourceUnit altSourceUnit = SourceUnit.CreateSnippet(engine, source, filename, SourceCodeKind.InteractiveCode);
+                SourceUnit altSourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.InteractiveCode);
                 CompilerContext compilerContext = new CompilerContext(altSourceUnit, null, es);
-                Parser p = Parser.CreateParser(compilerContext, PythonEngine.CurrentEngine.Options, false, false);
+                Parser p = Parser.CreateParser(compilerContext, PythonContext.GetPythonOptions(context), false, false);
                 SourceCodeProperties prop;
                 IronPython.Compiler.Ast.PythonAst ast = p.ParseInteractiveCode(out prop);
 
@@ -244,7 +244,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            ScriptCode compiledCode = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, lc);
+            ScriptCode compiledCode = context.LanguageContext.CompileSourceCode(sourceUnit, opts);
             compiledCode.EnsureCompiled();
 
             FunctionCode res = new FunctionCode(compiledCode, cflags);
@@ -370,9 +370,9 @@ namespace IronPython.Runtime {
             Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
 
             // TODO: remove TrimStart
-            SourceUnit expr_code = SourceUnit.CreateSnippet(context.LanguageContext.Engine, expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
+            SourceUnit expr_code = context.LanguageContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
 
-            return PythonModuleOps.CompileFlowTrueDivision(expr_code, context.LanguageContext).Run(scope, context.ModuleContext, true);
+            return context.LanguageContext.CompileSourceCode(expr_code, GetDefaultCompilerOptions(context, true, 0)).Run(scope, context.ModuleContext, true);
         }
 
         public static void execfile(CodeContext context, object filename) {
@@ -396,11 +396,9 @@ namespace IronPython.Runtime {
 
             if (l == null) l = g;
 
-            PythonEngine engine = PythonEngine.CurrentEngine;
-
             Scope execScope = GetExecEvalScope(context, g, l);
             string path = Converter.ConvertToString(filename);
-            SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, path, engine.SystemState.DefaultEncoding);
+            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
 
             if (sourceUnit == null) {
                 throw PythonOps.IOError("execfile: specified file doesn't exist");
@@ -409,12 +407,12 @@ namespace IronPython.Runtime {
             ScriptCode code;
 
             try {
-                code = PythonModuleOps.CompileFlowTrueDivision(sourceUnit, context.LanguageContext);
+                code = context.LanguageContext.CompileSourceCode(sourceUnit, GetDefaultCompilerOptions(context, true, 0));
             } catch (UnauthorizedAccessException x) {
                 throw PythonOps.IOError(x);
             }
 
-            code.Run(execScope, context.ModuleContext, false); // Do not attempt evaluation mode for execfile
+            code.Run(execScope, ((PythonModuleContext)context.ModuleContext).Clone(), false); // Do not attempt evaluation mode for execfile
         }
 
         public static object file = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
@@ -1371,13 +1369,17 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets the appropriate LanguageContext to be used for code compiled with Python's compile built-in
         /// </summary>
-        private static PythonContext GetCompilerLanguageContext(CodeContext context, bool inheritContext, CompileFlags cflags) {
+        internal static CompilerOptions GetDefaultCompilerOptions(CodeContext context, bool inheritContext, CompileFlags cflags) {
             if (inheritContext) {
-                return (PythonContext)context.LanguageContext;
+                if (((PythonModuleContext)context.ModuleContext).TrueDivision) {
+                    return new PythonCompilerOptions(true);
+                } else {
+                    return new PythonCompilerOptions(false);
+                }                
             } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
-                return (PythonContext)DefaultContext.DefaultTrueDivision.LanguageContext;
+                return new PythonCompilerOptions(true);
             } else {
-                return (PythonContext)DefaultContext.Default.LanguageContext;
+                return context.LanguageContext.GetDefaultCompilerOptions();
             }
         }
 

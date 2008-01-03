@@ -116,28 +116,28 @@ namespace Microsoft.Scripting.Hosting {
                 ArrayUtils.PrintTable(sb, options_help);                
             }
 
-            if (_options.LanguageProvider != null) {
-                sb.AppendLine(String.Format("{0} command line:", _options.LanguageProvider.LanguageDisplayName));
+            if (_options.ScriptEngine != null) {
+                sb.AppendLine(String.Format("{0} command line:", _options.ScriptEngine.LanguageDisplayName));
                 sb.AppendLine();
-                PrintLanguageHelp(_options.LanguageProvider, sb);
+                PrintLanguageHelp(_options.ScriptEngine, sb);
                 sb.AppendLine();
             }
 
             return sb.ToString();
         }
 
-        public void PrintLanguageHelp(ILanguageProvider provider, StringBuilder output) {
+        public void PrintLanguageHelp(IScriptEngine provider, StringBuilder output) {
             Contract.RequiresNotNull(provider, "provider");
             Contract.RequiresNotNull(output, "output");
 
             string command_line, comments;
             string[,] options, environment_variables;
 
-            provider.GetOptionsParser().GetHelp(out command_line, out options, out environment_variables, out comments);
+            provider.GetService<OptionsParser>().GetHelp(out command_line, out options, out environment_variables, out comments);
 
             // only display language specific options if one or more optinos exists.
             if (command_line != null || options != null || environment_variables != null || comments != null) {
-                output.AppendLine(String.Format("{0} command line:", _options.LanguageProvider.LanguageDisplayName));
+                output.AppendLine(String.Format("{0} command line:", _options.ScriptEngine.LanguageDisplayName));
                 output.AppendLine();
 
                 if (command_line != null) {
@@ -201,9 +201,9 @@ namespace Microsoft.Scripting.Hosting {
                 return;
             }
 
-            Debug.Assert(_options.LanguageProvider != null);
-            
-            OptionsParser opt_parser = _options.LanguageProvider.GetOptionsParser();
+            Debug.Assert(_options.ScriptEngine != null);
+
+            OptionsParser opt_parser = _options.ScriptEngine.GetService<OptionsParser>();
                 
             opt_parser.GlobalOptions = ScriptDomainManager.Options;
 
@@ -243,13 +243,13 @@ namespace Microsoft.Scripting.Hosting {
 
             EngineOptions engine_options = (optionsParser != null) ? optionsParser.EngineOptions : null;
 
-            IScriptEngine engine = _options.LanguageProvider.GetEngine(engine_options);
+            IScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
 
-            engine.SetSourceUnitSearchPaths(_options.SourceUnitSearchPaths);
+            engine.SetScriptSourceSearchPaths(_options.SourceUnitSearchPaths);
 
             int result = 0;
             foreach (string filePath in _options.Files) {
-                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding);
+                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
                 if (sourceUnit == null) {
                     throw new FileNotFoundException(string.Format("Source file '{0}' not found.", filePath));
                 }
@@ -307,27 +307,27 @@ namespace Microsoft.Scripting.Hosting {
             console_options = optionsParser.ConsoleOptions;
             engine_options = optionsParser.EngineOptions;
 
-            command_line = _options.LanguageProvider.GetCommandLine();
+            command_line = _options.ScriptEngine.GetService<CommandLine>();
 
-            IScriptEngine engine = _options.LanguageProvider.GetEngine(engine_options);
+            IScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
 
             if (console_options.PrintVersionAndExit) {
-                Console.WriteLine(engine.VersionString);
+                Console.WriteLine("{0} {1} on .NET {2}", engine.LanguageDisplayName, engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
             }
 
             if (console_options.PrintUsageAndExit) {
                 if (optionsParser != null) {
                     StringBuilder sb = new StringBuilder();
-                    PrintLanguageHelp(_options.LanguageProvider, sb);
+                    PrintLanguageHelp(_options.ScriptEngine, sb);
                     Console.Write(sb.ToString());
                 }
                 return 0;
             }
 
-            engine.SetSourceUnitSearchPaths(_options.SourceUnitSearchPaths);
+            engine.SetScriptSourceSearchPaths(_options.SourceUnitSearchPaths);
 
-            IConsole console = _options.LanguageProvider.GetConsole(command_line, engine, console_options);
+            IConsole console = _options.ScriptEngine.GetService<IConsole>(command_line, console_options);
 
             int result;
             if (console_options.HandleExceptions) {

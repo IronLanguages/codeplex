@@ -14,10 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using System.Globalization;
-using System.Collections.Generic;
-
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -29,18 +25,6 @@ namespace Microsoft.Scripting.Ast {
         protected Expression(AstNodeType nodeType, Type type)
             : base(nodeType) {
             _type = type;
-        }
-
-        public virtual AbstractValue AbstractEvaluate(AbstractContext context) {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Tests to see if this expression is a constant with the given value.
-        /// </summary>
-        /// <param name="value">The constant value to check for.</param>
-        public virtual bool IsConstant(object value) {
-            return false;
         }
 
         public Type Type {

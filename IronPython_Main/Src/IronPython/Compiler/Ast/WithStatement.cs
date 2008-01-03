@@ -81,7 +81,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
-            MSAst.BoundExpression exit = ag.MakeGeneratorTempExpression("with_exit");
+            MSAst.BoundExpression exit = ag.MakeTempExpression("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
                 exit.Variable,
                 Ast.Action.GetMember(
@@ -110,7 +110,7 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 4. exc = True
             //******************************************************************
-            MSAst.BoundExpression exc = ag.MakeGeneratorTempExpression("with_exc", typeof(bool));
+            MSAst.BoundExpression exc = ag.MakeTempExpression("with_exc", typeof(bool));
             statements[3] = AstGenerator.MakeAssignment(
                 exc.Variable,
                 Ast.True()

@@ -42,7 +42,7 @@ namespace IronPythonTest {
         public static string InputTestDirectory;
 
         static Common() {
-            RuntimeDirectory = Path.GetDirectoryName(typeof(PythonEngine).Assembly.Location);
+            RuntimeDirectory = Path.GetDirectoryName(typeof(PythonContext).Assembly.Location);
             RootDirectory = Environment.GetEnvironmentVariable("MERLIN_ROOT");
             if (RootDirectory != null) {
                 ScriptTestDirectory = Path.Combine(RootDirectory, "Languages\\IronPython\\Tests");
@@ -54,6 +54,12 @@ namespace IronPythonTest {
         }
     }
 #endif
+
+    public static class TestHelpers {
+        public static LanguageContext GetContext(CodeContext context) {
+            return context.LanguageContext;
+        }
+    }
 
     public delegate int IntIntDelegate(int arg);
     public delegate string RefStrDelegate(ref string arg);
@@ -112,7 +118,8 @@ namespace IronPythonTest {
 #endif
     {
 
-        PythonEngine pe = PythonEngine.CurrentEngine;
+        ScriptEngine pe = ScriptDomainManager.CurrentManager.GetEngine("py");
+        ScriptScope scope = ScriptDomainManager.CurrentManager.CreateModule("foo");
 
         public EngineTest() {
             // Load a script with all the utility functions that are required
@@ -121,7 +128,7 @@ namespace IronPythonTest {
 
         // Used to test exception thrown in another domain can be shown correctly.
         public void Run(string script) {
-            pe.Execute(script);
+            pe.Execute(scope, pe.CreateScriptSourceFromString(script, SourceCodeKind.File));
         }
 
         static readonly string clspartName = "clsPart";
@@ -163,93 +170,95 @@ namespace IronPythonTest {
             DefaultModule.SetVariable(clspartName, clsPart);
 
             // field: assign and get back
-            pe.Execute("clsPart.Field = 100");
-            pe.Execute("if 100 != clsPart.Field: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 100 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
             AreEqual(100, clsPart.Field);
 
             // property: assign and get back
-            pe.Execute("clsPart.Property = clsPart.Field");
-            pe.Execute("if 100 != clsPart.Property: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Property = clsPart.Field", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 100 != clsPart.Property: raise AssertionError('test failed')", SourceCodeKind.Statements));
             AreEqual(100, clsPart.Property);
 
             // method: Event not set yet
-            pe.Execute("a = clsPart.Method(2)");
-            pe.Execute("if -1 != a: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if -1 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // method: add python func as event handler
-            pe.Execute("def f(x) : return x * x");
-            pe.Execute("clsPart.Event += f");
-            pe.Execute("a = clsPart.Method(2)");
-            pe.Execute("if 4 != a: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("def f(x) : return x * x", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Event += f", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 4 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // ===============================================
 
             // reset the same variable with instance of the same type
             DefaultModule.SetVariable(clspartName, new ClsPart());
-            pe.Execute("if 0 != clsPart.Field: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 0 != clsPart.Field: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // add cls method as event handler
             DefaultModule.SetVariable("clsMethod", new IntIntDelegate(Negate));
-            pe.Execute("clsPart.Event += clsMethod");
-            pe.Execute("a = clsPart.Method(2)");
-            pe.Execute("if -2 != a: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("clsPart.Event += clsMethod", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("a = clsPart.Method(2)", SourceCodeKind.Statements));
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if -2 != a: raise AssertionError('test failed')", SourceCodeKind.Statements));
 
             // ===============================================
 
             // reset the same variable with integer
             DefaultModule.SetVariable(clspartName, 1);
-            pe.Execute("if 1 != clsPart: raise AssertionError('test failed')");
+            pe.Execute(default_module, pe.CreateScriptSourceFromString("if 1 != clsPart: raise AssertionError('test failed')", SourceCodeKind.Statements));
             AreEqual((int)DefaultModule.LookupVariable(clspartName), 1);
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute((SourceUnit)null, null, null);
+                pe.Execute(null, null);
             });
 
-            SourceUnit su = SourceUnit.CreateSnippet(pe, "");
+            SourceUnit su = pe.CreateScriptSourceFromString("");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute(su, null, null);
+                pe.Execute(null, su);
             });
 
             ScriptScope sm = Microsoft.Scripting.ScriptDomainManager.CurrentManager.CreateModule("empty");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Execute((SourceUnit)null, sm, null);
+                pe.Execute(sm, (SourceUnit)null);
             });
         }
 
         public void ScenarioEvaluateInAnonymousEngineModule() {
-            ScriptScope anonymousModule = pe.CreateModule("", ModuleOptions.None);
-            ScriptScope anotherAnonymousModule = pe.CreateModule("", ModuleOptions.None);
-            pe.Execute("x = 0");
-            pe.Execute("x = 1", anonymousModule);
+            ScriptScope defaultModule = ScriptDomainManager.CurrentManager.CreateModule("");
+            ScriptScope anonymousModule = ScriptDomainManager.CurrentManager.CreateModule("");
+            ScriptScope anotherAnonymousModule = ScriptDomainManager.CurrentManager.CreateModule("");
+            pe.Execute(defaultModule, pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements));
+            pe.Execute(anonymousModule, pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements));
 
             anotherAnonymousModule.SetVariable("x", 2);
 
             // Ensure that the default EngineModule is not affected
-            AreEqual(0, pe.EvaluateAs<int>("x"));
-            AreEqual(0, (int)ScriptDomainManager.CurrentManager.Host.DefaultModule.LookupVariable("x"));
+            AreEqual(0, pe.Execute<int>(defaultModule, pe.CreateScriptSourceFromString("x")));
+            AreEqual(0, (int)defaultModule.LookupVariable("x"));
             // Ensure that the anonymous context has been updated as expected
-            AreEqual(1, pe.EvaluateAs<int>("x", anonymousModule));
+            AreEqual(1, pe.Execute<int>(anonymousModule, pe.CreateScriptSourceFromString("x")));
             AreEqual(1, (int)anonymousModule.LookupVariable("x"));
             // Ensure that other anonymous contexts are not affected
-            AreEqual(2, pe.EvaluateAs<int>("x", anotherAnonymousModule));
+            AreEqual(2, pe.Execute<int>(anotherAnonymousModule, pe.CreateScriptSourceFromString("x")));
             AreEqual(2, (int)anotherAnonymousModule.LookupVariable("x"));
         }
 
         public void ScenarioEvaluateInPublishedEngineModule() {
-            ScriptScope publishedModule = pe.CreateModule("published_context_test", ModuleOptions.PublishModule);
-            pe.Execute("x = 0");
-            pe.Execute("x = 1", publishedModule);
+            IScriptScope publishedModule = pe.Runtime.CreateModule("published_context_test");
+            IScriptScope otherModule = pe.Runtime.CreateModule("published_context_test");
+            pe.Runtime.PublishModule(publishedModule, "published_context_test");
+            pe.Execute(otherModule, pe.CreateScriptSourceFromString("x = 0", SourceCodeKind.Statements));
+            pe.Execute(publishedModule, pe.CreateScriptSourceFromString("x = 1", SourceCodeKind.Statements));
             // Ensure that the default EngineModule is not affected
-            AreEqual(0, pe.EvaluateAs<int>("x"));
+            AreEqual(0, pe.Execute<int>(otherModule, pe.CreateScriptSourceFromString("x")));
             // Ensure that the published context has been updated as expected
-            AreEqual(1, pe.EvaluateAs<int>("x", publishedModule));
+            AreEqual(1, pe.Execute<int>(publishedModule, pe.CreateScriptSourceFromString("x")));
 
             // Ensure that the published context is accessible from other contexts using sys.modules
             // TODO: do better:
             // pe.Import("sys", ScriptDomainManager.CurrentManager.DefaultModule);
-            pe.Execute("import sys", ScriptDomainManager.CurrentManager.Host.DefaultModule);
-            pe.Execute("x_from_published_context_test = sys.modules['published_context_test'].x");
-            AreEqual(1, pe.EvaluateAs<int>("x_from_published_context_test"));
+            pe.Execute(otherModule, pe.CreateScriptSourceFromString("from published_context_test import x", SourceCodeKind.Statements));
+            AreEqual(1, pe.Execute<int>(otherModule, pe.CreateScriptSourceFromString("x")));
         }
 
 
@@ -364,91 +373,56 @@ namespace IronPythonTest {
         }
 
         public void ScenarioCustomDictionary() {
-            CustomDictionary customGlobals = new CustomDictionary();
-            ScriptScope customModule = pe.CreateModule("customContext", customGlobals, ModuleOptions.PublishModule);
-            PythonContext customContext = new PythonContext(pe, false);
+            IAttributesCollection customGlobals = new StringDictionaryAdapterDict(new CustomDictionary());
+            
+            IScriptScope customModule = pe.Runtime.CreateModule("customContext", ScriptModuleKind.Default, customGlobals);            
 
             // Evaluate
-            AreEqual(pe.EvaluateAs<int>("customSymbol + 1", customModule), CustomDictionary.customSymbolValue + 1);
+            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbol + 1")), CustomDictionary.customSymbolValue + 1);
 
             // Execute
-            pe.Execute("customSymbolPlusOne = customSymbol + 1", customModule);
-            AreEqual(pe.EvaluateAs<int>("customSymbolPlusOne", customModule), CustomDictionary.customSymbolValue + 1);
-            AreEqual((int)customModule.Scope.LookupName(customContext, SymbolTable.StringToId("customSymbolPlusOne")), CustomDictionary.customSymbolValue + 1);
+            pe.Execute(customModule, pe.CreateScriptSourceFromString("customSymbolPlusOne = customSymbol + 1", SourceCodeKind.Statements));
+            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbolPlusOne")), CustomDictionary.customSymbolValue + 1);
+            AreEqual((int)pe.GetVariable(customModule, "customSymbolPlusOne"), CustomDictionary.customSymbolValue + 1);
 
             // Compile
-            ICompiledCode compiledCode = pe.CompileCode("customSymbolPlusTwo = customSymbol + 2");
+            ICompiledCode compiledCode = pe.Compile(pe.CreateScriptSourceFromString("customSymbolPlusTwo = customSymbol + 2", SourceCodeKind.Statements));
 
             compiledCode.Execute(customModule);
-            AreEqual(pe.EvaluateAs<int>("customSymbolPlusTwo", customModule), CustomDictionary.customSymbolValue + 2);
-            AreEqual((int)customModule.Scope.LookupName(customContext, SymbolTable.StringToId("customSymbolPlusTwo")), CustomDictionary.customSymbolValue + 2);
+            AreEqual(pe.Execute<int>(customModule, pe.CreateScriptSourceFromString("customSymbolPlusTwo")), CustomDictionary.customSymbolValue + 2);
+            AreEqual((int)pe.GetVariable(customModule, "customSymbolPlusTwo"), CustomDictionary.customSymbolValue + 2);
 
             // check overriding of Add
             try {
-                pe.Execute("customSymbol = 1", customModule);
+                pe.Execute(customModule, pe.CreateScriptSourceFromString("customSymbol = 1", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                pe.Execute(@"global customSymbol
-customSymbol = 1", customModule);
+                pe.Execute(customModule, pe.CreateScriptSourceFromString(@"global customSymbol
+customSymbol = 1", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // check overriding of Remove
             try {
-                pe.Execute("del customSymbol", customModule);
+                pe.Execute(customModule, pe.CreateScriptSourceFromString("del customSymbol", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             try {
-                pe.Execute(@"global customSymbol
-del customSymbol", customModule);
+                pe.Execute(customModule, pe.CreateScriptSourceFromString(@"global customSymbol
+del customSymbol", SourceCodeKind.Statements));
                 throw new Exception("We should not reach here");
             } catch (UnboundNameException) { }
 
             // vars()
-            IDictionary vars = pe.EvaluateAs<IDictionary>("vars()", customModule);
+            IDictionary vars = pe.Execute<IDictionary>(customModule, pe.CreateScriptSourceFromString("vars()"));
             AreEqual(true, vars.Contains("customSymbol"));
 
             // Miscellaneous APIs
             //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("customSymbol + arg", customModule);
             //AreEqual(d(1), CustomDictionary.customSymbolValue + 1);
-        }
-
-        public void ScenarioModuleWithLocals() {
-            // Ensure that the namespace is not already polluted
-            if (DefaultModule.VariableExists("global_variable"))
-                DefaultModule.RemoveVariable("global_variable");
-            if (DefaultModule.VariableExists("local_variable"))
-                DefaultModule.RemoveVariable("local_variable");
-
-            // Simple use of locals
-            Dictionary<string, object> locals = new Dictionary<string, object>();
-            locals["local_variable"] = 100;
-            AreEqual(100, pe.EvaluateAs<int>("local_variable", DefaultModule, locals));
-
-            // Ensure simple writes go to locals, not globals
-            pe.Execute("local_variable = 200", DefaultModule, locals);
-            AreEqual(200, pe.EvaluateAs<int>("local_variable", DefaultModule, locals));
-            AreEqual(200, (int)locals["local_variable"]);
-            if (DefaultModule.VariableExists("local_variable"))
-                throw new Exception("local_variable is set in the Globals dictionary");
-            try {
-                pe.Evaluate("local_variable", DefaultModule, null);
-            } catch (UnboundNameException) { }
-
-            // Ensure writes to globals go to globals, not locals
-            pe.Execute(@"global global_variable
-global_variable = 300", DefaultModule, locals);
-            AreEqual(300, pe.EvaluateAs<int>("global_variable", DefaultModule, locals));
-            AreEqual(300, (int)DefaultModule.LookupVariable("global_variable"));
-            if (locals.ContainsKey("global_variable"))
-                throw new Exception("global_variable is set in the locals dictionary");
-
-            // vars()
-            IDictionary vars = pe.EvaluateAs<IDictionary>("vars()", DefaultModule, locals);
-            AreEqual(true, vars.Contains("local_variable"));
         }
 
         static long GetTotalMemory() {
@@ -465,29 +439,40 @@ global_variable = 300", DefaultModule, locals);
 #if !SILVERLIGHT
         void CreateModules() {
             for (int contextCount = 0; contextCount < 100; contextCount++) {
-                ScriptScope module = pe.CreateModule(scenarioGCModuleName, ModuleOptions.PublishModule);
+                IScriptScope module = pe.Runtime.CreateModule(scenarioGCModuleName);                
                 module.SetVariable("x", "Hello");
-                pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module);
-                AreEqual(pe.EvaluateAs<int>("x", module), 1);
+                pe.Execute(module, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py"));
+                AreEqual(pe.Execute<int>(module, pe.CreateScriptSourceFromString("x")), 1);
             }
 
-            ScriptScope module2 = pe.CreateModule(scenarioGCModuleName);
+            IScriptScope module2 = pe.Runtime.CreateModule(scenarioGCModuleName);
             module2.SetVariable("x", "Hello");
-            pe.ExecuteFileContent(Common.InputTestDirectory + "\\simpleCommand.py", module2);
-            AreEqual(pe.EvaluateAs<int>("x", module2), 1);
+            pe.Execute(module2, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\simpleCommand.py"));
+            AreEqual(pe.Execute<int>(module2, pe.CreateScriptSourceFromString("x")), 1);
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateModule(null, null, ModuleOptions.None);
+                pe.Runtime.CreateModule(null);
             });
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateModule("some_name", null, ModuleOptions.None);
+                pe.Runtime.CreateModule(null, null);
             });
 
             AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateModule(null, new Dictionary<string, object>(), ModuleOptions.None);
+                pe.Runtime.CreateModule("some_name", null);
             });
 
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Runtime.CreateModule(null, ScriptModuleKind.Default, null, null);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Runtime.CreateModule("some_name", ScriptModuleKind.Default, null, null);
+            });
+
+            AssertExceptionThrown<ArgumentNullException>(delegate() {
+                pe.Runtime.CreateModule("some_name", ScriptModuleKind.Default, new SymbolDictionary(), null);
+            });
         }
 
         public void ScenarioXGC() {
@@ -516,39 +501,26 @@ global_variable = 300", DefaultModule, locals);
 
         // Evaluate
         public void ScenarioEvaluate() {
-            AreEqual(10, (int)pe.Evaluate("4+6"));
-            AreEqual(10, pe.EvaluateAs<int>("4+6"));
+            ScriptScope scope = ScriptDomainManager.CurrentManager.CreateModule("foo");
+            AreEqual(10, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("4+6")));
+            AreEqual(10, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("4+6")));
 
-            AreEqual("abab", (string)pe.Evaluate("'ab' * 2"));
-            AreEqual("abab", pe.EvaluateAs<string>("'ab' * 2"));
+            AreEqual("abab", (string)pe.Execute(scope, pe.CreateScriptSourceFromString("'ab' * 2")));
+            AreEqual("abab", pe.Execute<string>(scope, pe.CreateScriptSourceFromString("'ab' * 2")));
 
             ClsPart clsPart = new ClsPart();
-            DefaultModule.SetVariable(clspartName, clsPart);
-            AreEqual(clsPart, pe.Evaluate("clsPart") as ClsPart);
-            AreEqual(clsPart, pe.EvaluateAs<ClsPart>("clsPart"));
+            scope.SetVariable(clspartName, clsPart);
+            AreEqual(clsPart, pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart")) as ClsPart);
+            AreEqual(clsPart, pe.Execute<ClsPart>(scope, pe.CreateScriptSourceFromString("clsPart")));
 
-            pe.Execute("clsPart.Field = 100");
-            AreEqual(100, (int)pe.Evaluate("clsPart.Field"));
-            AreEqual(100, pe.EvaluateAs<int>("clsPart.Field"));
+            pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart.Field = 100", SourceCodeKind.Statements));
+            AreEqual(100, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("clsPart.Field")));
+            AreEqual(100, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("clsPart.Field")));
 
             // Ensure that we can get back a delegate to a Python method
-            pe.Execute("def IntIntMethod(a): return a * 100");
-            IntIntDelegate d = pe.EvaluateAs<IntIntDelegate>("IntIntMethod");
+            pe.Execute(scope, pe.CreateScriptSourceFromString("def IntIntMethod(a): return a * 100", SourceCodeKind.Statements));
+            IntIntDelegate d = pe.Execute<IntIntDelegate>(scope, pe.CreateScriptSourceFromString("IntIntMethod"));
             AreEqual(d(2), 2 * 100);
-
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Evaluate(null, null, null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Evaluate("some_name", null, null);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.Evaluate(null, DefaultModule, null);
-            });
-
         }
 
 #if !SILVERLIGHT
@@ -563,12 +535,12 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("clsPart.Property = clsPart.Field * 5");
                 sw.WriteLine("clsPart.Event += (lambda x: x*x)");
 
-                tempFile1 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
+                tempFile1 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
             ClsPart clsPart = new ClsPart();
-            DefaultModule.SetVariable(clspartName, clsPart);
-            pe.ExecuteSourceUnit(tempFile1, null);
+            scope.SetVariable(clspartName, clsPart);
+            pe.Execute(scope, tempFile1);
 
             using (StringWriter sw = new StringWriter()) {
                 sw.WriteLine("if var1[0] != 10: raise AssertionError('test failed')");
@@ -578,10 +550,10 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("var2 = clsPart.Method(var1[0])");
                 sw.WriteLine("if var2 != 10 * 10: raise AssertionError('test failed')");
 
-                tempFile2 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
+                tempFile2 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
-            pe.ExecuteSourceUnit(tempFile2, null); 
+            pe.Execute(scope, tempFile2); 
         }
 #endif
 
@@ -603,30 +575,30 @@ global_variable = 300", DefaultModule, locals);
                 sw.WriteLine("class C2:");
                 sw.WriteLine("    def M(): return +1");
 
-                tempFile1 = SourceUnit.CreateFileUnit(pe, "", sw.ToString());
+                tempFile1 = pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
             }
 
-            pe.ExecuteSourceUnit(tempFile1, null);
+            pe.Execute(scope, tempFile1);
 
-            AreEqual(-1, pe.EvaluateAs<int>("M1()"));
-            AreEqual(+1, pe.EvaluateAs<int>("M2()"));
+            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("M1()")));
+            AreEqual(+1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("M2()")));
 
-            AreEqual(-1, (int)pe.Evaluate("M1()"));
-            AreEqual(+1, (int)pe.Evaluate("M2()"));
+            AreEqual(-1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("M1()")));
+            AreEqual(+1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("M2()")));
 
-            pe.Execute("if M1() != -1: raise AssertionError('test failed')");
-            pe.Execute("if M2() != +1: raise AssertionError('test failed')");
+            pe.Execute(scope, pe.CreateScriptSourceFromString("if M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            pe.Execute(scope, pe.CreateScriptSourceFromString("if M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
 
 
-            pe.Execute("c = C()");
-            AreEqual(-1, pe.EvaluateAs<int>("c.M1()"));
-            AreEqual(+1, pe.EvaluateAs<int>("c.M2()"));
+            pe.Execute(scope, pe.CreateScriptSourceFromString("c = C()", SourceCodeKind.SingleStatement));
+            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("c.M1()")));
+            AreEqual(+1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("c.M2()")));
 
-            AreEqual(-1, (int)pe.Evaluate("c.M1()"));
-            AreEqual(+1, (int)pe.Evaluate("c.M2()"));
+            AreEqual(-1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("c.M1()")));
+            AreEqual(+1, (int)pe.Execute(scope, pe.CreateScriptSourceFromString("c.M2()")));
 
-            pe.Execute("if c.M1() != -1: raise AssertionError('test failed')");
-            pe.Execute("if c.M2() != +1: raise AssertionError('test failed')");
+            pe.Execute(scope, pe.CreateScriptSourceFromString("if c.M1() != -1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
+            pe.Execute(scope, pe.CreateScriptSourceFromString("if c.M2() != +1: raise AssertionError('test failed')", SourceCodeKind.SingleStatement));
 
 
             //AreEqual(-1, pe.EvaluateAs<int>("C1.M()"));
@@ -635,40 +607,41 @@ global_variable = 300", DefaultModule, locals);
             //AreEqual(-1, (int)pe.Evaluate("C1.M()"));
             //AreEqual(+1, (int)pe.Evaluate("C2.M()"));
 
-            //pe.Execute("if C1.M() != -1: raise AssertionError('test failed')");
-            //pe.Execute("if C2.M() != +1: raise AssertionError('test failed')");
+            //pe.Execute(pe.CreateScriptSourceFromString("if C1.M() != -1: raise AssertionError('test failed')");
+            //pe.Execute(pe.CreateScriptSourceFromString("if C2.M() != +1: raise AssertionError('test failed')");
         }
 #endif
 
         // Bug: 167 
         public void Scenario167() {
-            pe.Execute("a=1\r\nb=-1");
-            AreEqual(1, pe.EvaluateAs<int>("a"));
-            AreEqual(-1, pe.EvaluateAs<int>("b"));
+            pe.Execute(scope, pe.CreateScriptSourceFromString("a=1\r\nb=-1", SourceCodeKind.Statements));
+            AreEqual(1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("a")));
+            AreEqual(-1, pe.Execute<int>(scope, pe.CreateScriptSourceFromString("b")));
         }
 #if !SILVERLIGHT
         // AddToPath
 
-        public void ScenarioAddToPath() { // runs first to avoid path-order issues
-            string ipc_dll = typeof(PythonEngine).Assembly.Location;
+        public void ScenarioAddToPath() { // runs first to avoid path-order issues            
+            string ipc_dll = typeof(PythonContext).Assembly.Location;
             string ipc_path = Path.GetDirectoryName(ipc_dll);
-            pe.InitializeModules(ipc_path, ipc_path + "\\ipy.exe", pe.VersionString);
+            //pe.InitializeModules(ipc_path, ipc_path + "\\ipy.exe", pe.VersionString);
             string tempFile1 = Path.GetTempFileName();
 
             try {
                 File.WriteAllText(tempFile1, "from lib.does_not_exist import *");
+                IScriptScope mod = pe.Runtime.CreateModule("foo");
 
                 try {
-                    pe.ExecuteFileContent(tempFile1);
+                    pe.Execute(mod, pe.CreateScriptSourceFromFile(tempFile1));
                     throw new Exception("Scenario7");
                 } catch (IronPython.Runtime.Exceptions.PythonImportErrorException) { }
 
                 File.WriteAllText(tempFile1, "from lib.assert_util import *");
 
-                pe.AddToPath(Common.ScriptTestDirectory);
+                pe.SetScriptSourceSearchPaths(new string[] { Common.ScriptTestDirectory });
 
-                pe.ExecuteFileContent(tempFile1);
-                pe.Execute("AreEqual(5, eval('2 + 3'))");
+                pe.Execute(mod, pe.CreateScriptSourceFromFile(tempFile1));
+                pe.Execute(mod, pe.CreateScriptSourceFromString("AreEqual(5, eval('2 + 3'))", SourceCodeKind.Statements));
             } finally {
                 File.Delete(tempFile1);
             }
@@ -692,18 +665,21 @@ global_variable = 300", DefaultModule, locals);
             }
 
             try {
-                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = true;
+                pe.Options.ClrDebuggingEnabled = true;
+                IScriptScope scope = pe.Runtime.CreateModule("foo");
                 try {
-                    pe.ExecuteFileContent(Common.InputTestDirectory + "\\raise.py");
+                    SourceUnit su = pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py");
+                    su.IsVisibleToDebugger = true;                    
+                    pe.Execute(scope, su);
                     throw new Exception("We should not get here");
                 } catch (IronPython.Runtime.Exceptions.StringException e1) {
                     if (!e1.StackTrace.Contains(lineNumber))
                         throw new Exception("Debugging is not enabled even though Options.ClrDebuggingEnabled is specified");
                 }
 
-                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = false;
+                pe.Options.ClrDebuggingEnabled = false;
                 try {
-                    pe.ExecuteFileContent(Common.InputTestDirectory + "\\raise.py");
+                    pe.Execute(scope, pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py"));
                     throw new Exception("We should not get here");
                 } catch (StringException e2) {
                     if (e2.StackTrace.Contains(lineNumber))
@@ -711,68 +687,13 @@ global_variable = 300", DefaultModule, locals);
                 }
 
                 // Ensure that all APIs work
-                AreEqual(pe.EvaluateAs<int>("x"), 1);
+                AreEqual(pe.Execute<int>(scope, pe.CreateScriptSourceFromString("x")), 1);
                 //IntIntDelegate d = pe.CreateLambda<IntIntDelegate>("arg + x");
                 //AreEqual(d(100), 101);
                 //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
                 //AreEqual(d(100), 101);
             } finally {
                 PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = false;
-            }
-        }
-
-        public void ScenarioExecuteFileOptimized() {
-            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\simpleCommand.py", "__main__", false);
-            module.Execute();
-
-            AreEqual(1, pe.EvaluateAs<int>("x", module));
-
-            // Ensure that we can set new globals in the context, and execute further code
-            module.SetVariable("y", 2);
-            AreEqual(3, pe.EvaluateAs<int>("x+y", module));
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateOptimizedModule(null, null, false, false);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateOptimizedModule("some_name", null, false, false);
-            });
-
-            AssertExceptionThrown<ArgumentNullException>(delegate() {
-                pe.CreateOptimizedModule(null, "some_name", false, false);
-            });
-
-        }
-
-        public void ScenarioOptimizedModuleBeforeExecutingGlobalCode() {
-            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\uninitializedGlobal.py", "__main__", true);
-
-            AreEqual(module.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("x")), false);
-            AreEqual(module.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("y")), false);
-
-            // Set a global variable before executing global code
-            module.SetVariable("x", 1);
-            module.Execute();
-
-            // Ensure that the global code picked up the value of "x" that was pumped into the module
-            AreEqual(101, pe.EvaluateAs<int>("x", module));
-            AreEqual(2, pe.EvaluateAs<int>("y", module));
-        }
-
-        public void ScenarioCreateOptimizedModule_ScriptThrows() {
-            // We should be able to use the EngineModule even if an exception is thrown by the script
-            ScriptScope module = pe.CreateOptimizedModule(Common.InputTestDirectory + "\\raise.py", "__main__", true);
-
-            try {
-                module.Execute();
-                throw new Exception("We should not reach here");
-            } catch (StringException) {
-                AreEqual(1, pe.EvaluateAs<int>("x", module));
-
-                // Ensure that we can set new globals in the context, and execute further code
-                module.SetVariable("y", 2);
-                AreEqual(3, pe.EvaluateAs<int>("x+y", module));
             }
         }
 
@@ -783,16 +704,17 @@ global_variable = 300", DefaultModule, locals);
             ClsPart clsPart = new ClsPart();
 
             DefaultModule.SetVariable(clspartName, clsPart);
-            ICompiledCode compiledCode = pe.CompileCode("def f(): clsPart.Field += 10");
+            ICompiledCode compiledCode = pe.Compile(pe.CreateScriptSourceFromString("def f(): clsPart.Field += 10", SourceCodeKind.Statements));
             compiledCode.Execute();
 
-            compiledCode = pe.CompileCode("f()");
+            compiledCode = pe.Compile(pe.CreateScriptSourceFromString("f()"));
             compiledCode.Execute();
             AreEqual(10, clsPart.Field);
             compiledCode.Execute();
             AreEqual(20, clsPart.Field);
         }
-#if FALSE
+
+#if !SILVERLIGHT
         public void ScenarioStreamRedirect() {
             MemoryStream stdout = new MemoryStream();
             MemoryStream stdin = new MemoryStream();
@@ -800,231 +722,49 @@ global_variable = 300", DefaultModule, locals);
             ASCIIEncoding encoding = new ASCIIEncoding();
             byte[] buffer = new byte[15];
 
-            pe.SetStandardError(stderr);
-            pe.SetStandardInput(stdin);
-            pe.SetStandardOutput(stdout);
-            pe.Import("sys");
+            TextReader oldIn = Console.In;
+            TextWriter oldOut = Console.Out;
+            TextWriter oldErr = Console.Error;
+            pe.Runtime.RedirectIO(new StreamReader(stdin), new StreamWriter(stdout), new StreamWriter(stderr));
+            try {
+                IScriptScope scope = pe.Runtime.CreateModule("foo");
+                pe.Execute(scope, pe.CreateScriptSourceFromString("import sys", SourceCodeKind.Statements));
 
-            stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
-            stdin.Position = 0;
-            pe.Execute("output = sys.__stdin__.readline()");
-            AreEqual("This is stdout", pe.EvaluateAs<string>("output"));
-            pe.Execute("sys.__stdout__.write(output)");
-            stdout.Flush();
-            stdout.Position = 0;
-            int len = stdout.Read(buffer, 0, 14);
-            AreEqual(14, len);
-            AreEqual("This is stdout", encoding.GetString(buffer, 0, len));
+                stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
+                stdin.Position = 0;
+                pe.Execute(scope, pe.CreateScriptSourceFromString("output = sys.__stdin__.readline()", SourceCodeKind.Statements));
+                AreEqual("This is stdout", pe.Execute<string>(scope, pe.CreateScriptSourceFromString("output")));
+                pe.Execute(scope, pe.CreateScriptSourceFromString("sys.__stdout__.write(output)", SourceCodeKind.Statements));
+                stdout.Flush();
+                stdout.Position = 0;
+                int len = stdout.Read(buffer, 0, 14);
+                AreEqual(14, len);
+                AreEqual("This is stdout", encoding.GetString(buffer, 0, len));
 
-            pe.Execute("sys.__stderr__.write(\"This is stderr\")");
-            stderr.Flush();
-            stderr.Position = 0;
-            len = stderr.Read(buffer, 0, 14);
-            AreEqual(14, len);
-            AreEqual("This is stderr", encoding.GetString(buffer, 0, len));
+                pe.Execute(scope, pe.CreateScriptSourceFromString("sys.__stderr__.write(\"This is stderr\")", SourceCodeKind.Statements));
+                stderr.Flush();
+                stderr.Position = 0;
+                len = stderr.Read(buffer, 0, 14);
+                AreEqual(14, len);
+                AreEqual("This is stderr", encoding.GetString(buffer, 0, len));
+            } finally {
+                pe.Runtime.RedirectIO(oldIn, oldOut, oldErr);
+            }
         }
 #endif
-#if FALSE
-
-        public void ScenarioCreateMethodAndLambda() {
-            //Generic delegate types
-            GenericDelegate<int, int, int> del = pe.CreateLambda<GenericDelegate<int, int, int>>("arg1+arg2");
-            AreEqual(9, del(6, 3));
-            del = pe.CreateMethod<GenericDelegate<int, int, int>>("return arg1+arg2");
-            AreEqual(12, del(8, 4));
-
-            //ByRef reference type arguments
-            string arg = "Hello";
-            RefStrDelegate rsdel = null;
-            rsdel = pe.CreateLambda<RefStrDelegate>("'%s World!' % arg.Value");
-            AreEqual("Hello World!", rsdel(ref arg));
-
-            arg = "Hello";
-            rsdel = pe.CreateMethod<RefStrDelegate>("arg.Value = '%s World!' % arg.Value\nreturn arg.Value");
-            AreEqual("Hello World!", rsdel(ref arg));
-            AreEqual("Hello World!", arg);
-
-            //ByRef value type arguments
-            int argi = 323;
-            RefIntDelegate ridel = null;
-            ridel = pe.CreateLambda<RefIntDelegate>("arg.Value+27");
-            AreEqual(350, ridel(ref argi));
-
-            argi = 323;
-            ridel = pe.CreateMethod<RefIntDelegate>("arg.Value+=127\nreturn arg.Value+1");
-            AreEqual(451, ridel(ref argi));
-            AreEqual(450, argi);
-
-            //Specify our own parameter names
-            List<string> args = new List<string>(new string[] { "dir", "secondarg" });
-            del = pe.CreateLambda<GenericDelegate<int, int, int>>("dir+secondarg", args);
-            AreEqual(6, del(3, 3));
-            del = pe.CreateMethod<GenericDelegate<int, int, int>>("return dir+secondarg", args);
-            AreEqual(6, del(3, 3));
-        }
-
-        public void ScenarioCoverage() {
-            ScriptCode compiledCode = ScriptDomainManager.CurrentManager.CompileCode(
-                new SourceCodeUnit(pe, "arg1+arg2", "MyNewSourceFile"), pe.GetDefaultCompilerOptions(), new PythonErrorSink(true));
-            AreEqual("ScriptCode MyNewSourceFile from Python", compiledCode.ToString());
-        }
 
         public void ScenarioNullArguments() {
             try {
-                pe.CompileCode((string)null);
+                pe.Compile((SourceUnit)null);
                 throw new Exception();
             } catch (ArgumentNullException) {
                 //Pass
-            }
-
-            try {
-                pe.CreateLambda<IntIntDelegate>("x=2", null, null);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
-
-            try {
-                pe.CreateMethod<IntIntDelegate>("x=2", null, null);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
-
-            try {
-                pe.CreateModule(null, new Dictionary<string, object>(), ModuleOptions.None);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
-
-            try {
-                pe.CreateModule("moduleName", null, ModuleOptions.None);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
-
-            try {
-                pe.CreateOptimizedModule(null, "moduleName", false);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
-
-            try {
-                pe.CreateOptimizedModule("some_path", null, false);
-                throw new Exception();
-            } catch (ArgumentNullException) {
-                //Pass
-            }
+            }            
         }
-#endif
-
-        private static void ExecuteAndVerify(PythonEngine pe, ScriptScope module, IDictionary<string, object> locals, string text, string expectedText) {
-            MemoryStream stream = new MemoryStream();
-            object old_out = SystemState.Instance.stdout;
-            PythonFile pf = new PythonFile();
-            pf.Initialize(stream, StringUtils.DefaultEncoding, "<stdout>", "w");
-            pf.IsConsole = true;
-            SystemState.Instance.stdout = pf;
-            try {
-                pe.Execute(text, module, locals);
-            } finally {
-                SystemState.Instance.stdout = old_out;
-            }
-
-            byte[] array = stream.ToArray();
-            AreEqual(StringUtils.DefaultEncoding.GetString(array, 0, array.Length), expectedText);
-        }
-
-#if !SILVERLIGHT
-        public void ScenarioVariableScoping() {
-            Dictionary<string, object> globals = new Dictionary<string, object>();
-            Dictionary<string, object> locals = new Dictionary<string, object>();
-            ScriptScope module1 = pe.CreateModule("module1", globals, ModuleOptions.PublishModule);
-
-            //Set variables in each context
-            globals["x"] = 1;
-
-            SourceUnit tempFile1 = SourceUnit.CreateFileUnit(pe, "MyVirtualFile.py", "y = 2");
-            pe.Execute(tempFile1, module1, locals);
-
-            locals["z"] = 3;
-
-            //Query for a variable from each context
-            AreEqual((int)pe.Evaluate("x", module1, locals), 1);
-            AreEqual((int)pe.Evaluate("y", module1, locals), 2);
-            AreEqual((int)pe.Evaluate("z", module1, locals), 3);
-
-            AreEqual(pe.EvaluateAs<int>("x", module1, locals), 1);
-            AreEqual(pe.EvaluateAs<int>("y", module1, locals), 2);
-            AreEqual(pe.EvaluateAs<int>("z", module1, locals), 3);
-
-            ExecuteAndVerify(pe, module1, locals, "print x", "1" + Environment.NewLine);
-            ExecuteAndVerify(pe, module1, locals, "print y", "2" + Environment.NewLine);
-            ExecuteAndVerify(pe, module1, locals, "print z", "3" + Environment.NewLine);
-
-            //Set conflicting variables in each context and verify resolution
-            module1.SetVariable("context", "module");
-            AreEqual("module", pe.EvaluateAs<string>("context", module1, locals));
-            locals["context"] = "local";
-            AreEqual("local", pe.EvaluateAs<string>("context", module1, locals));
-            pe.Execute("context='also local'", module1, locals);
-            AreEqual("also local", pe.EvaluateAs<string>("context", module1, locals));
-            AreEqual("also local", (string)locals["context"]);
-
-            //Validate that the module dict hasn't changed in an unexpected way
-            AreEqual(false, module1.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("y")));
-            AreEqual(false, module1.Scope.ContainsName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("z")));
-
-            //Remove the conflicting variables from each context and verify resolution
-            pe.Execute("del(context)", module1, locals);
-            AreEqual(false, locals.ContainsKey("context"));
-            AreEqual("module", pe.EvaluateAs<string>("context", module1, locals));
-            module1.Scope.ModuleScope.RemoveName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("context"));
-            try {
-                AreEqual("module", pe.EvaluateAs<string>("context", module1, locals));
-                Console.WriteLine("All references to context have been removed, we should get an error when looking up this name");
-                throw new Exception();
-            } catch (UnboundNameException) {
-                //Pass
-            }
-
-            //Change an existing variable in each context
-            locals["z"] = 6;
-            pe.Execute("y = 5", module1, locals);
-            globals["x"] = 4;
-
-            //Verify that the engine gets the updated values
-            AreEqual(4, (int)pe.Evaluate("x", module1, locals));
-            AreEqual(5, (int)pe.Evaluate("y", module1, locals));
-            AreEqual(6, (int)pe.Evaluate("z", module1, locals));
-
-            AreEqual(4, pe.EvaluateAs<int>("x", module1, locals));
-            AreEqual(5, pe.EvaluateAs<int>("y", module1, locals));
-            AreEqual(6, pe.EvaluateAs<int>("z", module1, locals));
-
-            ExecuteAndVerify(pe, module1, locals, "print x", "4" + Environment.NewLine);
-            ExecuteAndVerify(pe, module1, locals, "print y", "5" + Environment.NewLine);
-            ExecuteAndVerify(pe, module1, locals, "print z", "6" + Environment.NewLine);
-
-            //Hide a builtin from each context and verify we can recover it
-            globals["dir"] = "overriden in module";
-            AreEqual("overriden in module", pe.EvaluateAs<string>("dir", module1, locals));
-            globals.Remove("dir");
-            AreEqual(true, pe.Evaluate("dir", module1, locals) is BuiltinFunction);
-
-            locals["dir"] = "overriden in locals";
-            AreEqual("overriden in locals", pe.EvaluateAs<string>("dir", module1, locals));
-            locals.Remove("dir");
-            AreEqual(true, pe.Evaluate("dir", module1, locals) is BuiltinFunction);
-        }
-#endif
-
+       
         public void Scenario12() {
 
-            pe.Execute(@"
+            pe.Execute(scope, pe.CreateScriptSourceFromString(@"
 class R(object):
     def __init__(self, a, b):
         self.a = a
@@ -1038,9 +778,9 @@ class R(object):
 r = R(10, 100)
 if r.sum != 110:
     raise AssertionError('Scenario 12 failed')
-");
+", SourceCodeKind.Statements));
         }
-
+#if FALSE
         public void ScenarioTrueDivision1() {
             TestOldDivision(pe, DefaultModule);
             ScriptScope module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
@@ -1051,7 +791,7 @@ if r.sum != 110:
             TestOldDivision(pe, DefaultModule);
             ScriptScope module = pe.CreateModule("__future__", ModuleOptions.PublishModule);
             module.SetVariable("division", 1);
-            pe.Execute("from __future__ import division", module);
+            pe.Execute(pe.CreateScriptSourceFromString("from __future__ import division", module));
             TestNewDivision(pe, module);
         }
 
@@ -1077,7 +817,7 @@ if r.sum != 110:
             try {
                 PythonEngine.CurrentEngine.Options.DivisionOptions = PythonDivisionOptions.Old;
                 ScriptScope module = pe.CreateModule("anonymous", ModuleOptions.TrueDivision);
-                pe.Execute("import " + modName, module);
+                pe.Execute(pe.CreateScriptSourceFromString("import " + modName, module));
                 int res = pe.EvaluateAs<int>(modName + ".result", module);
                 AreEqual(res, 0);
             } finally {
@@ -1101,7 +841,7 @@ if r.sum != 110:
 
             try {
                 ScriptScope module = ScriptDomainManager.CurrentManager.CreateModule(modName);
-                pe.Execute("import " + modName, module);
+                pe.Execute(pe.CreateScriptSourceFromString("import " + modName, module));
                 double res = pe.EvaluateAs<double>(modName + ".result", module);
                 AreEqual(res, 0.5);
                 AreEqual((bool)((PythonContext)DefaultContext.Default.LanguageContext).TrueDivision, false);
@@ -1112,24 +852,31 @@ if r.sum != 110:
             }
         }
 #endif
+
+#if !SILVERLIGHT
+        public void ScenarioSystemStatePrefix() {
+            AreEqual(IronPythonTest.Common.RuntimeDirectory, pe.SystemState.prefix);
+        }
+#endif
+
         private static void TestOldDivision(ScriptEngine pe, ScriptScope module) {
-            pe.Execute("result = 1/2", module);
+            pe.Execute(pe.CreateScriptSourceFromString("result = 1/2", module));
             AreEqual((int)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 0);
             AreEqual(pe.EvaluateAs<int>("1/2", module), 0);
-            pe.Execute("exec 'result = 3/2'", module);
+            pe.Execute(pe.CreateScriptSourceFromString("exec 'result = 3/2'", module));
             AreEqual((int)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 1);
             AreEqual(pe.EvaluateAs<int>("eval('3/2')", module), 1);
         }
 
         private static void TestNewDivision(ScriptEngine pe, ScriptScope module) {
-            pe.Execute("result = 1/2", module);
+            pe.Execute(pe.CreateScriptSourceFromString("result = 1/2", module));
             AreEqual((double)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 0.5);
             AreEqual(pe.EvaluateAs<double>("1/2", module), 0.5);
-            pe.Execute("exec 'result = 3/2'", module);
+            pe.Execute(pe.CreateScriptSourceFromString("exec 'result = 3/2'", module));
             AreEqual((double)module.Scope.LookupName(DefaultContext.Default.LanguageContext, SymbolTable.StringToId("result")), 1.5);
             AreEqual(pe.EvaluateAs<double>("eval('3/2')", module), 1.5);
         }
-
+#endif
         // More to come: exception related...
 
         public static int Negate(int arg) { return -1 * arg; }

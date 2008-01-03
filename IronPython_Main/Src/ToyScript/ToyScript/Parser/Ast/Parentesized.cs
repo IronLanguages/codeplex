@@ -28,9 +28,7 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.Parenthesize(
-                _expression.Generate(tg)
-            );
+            return _expression.Generate(tg);
         }
     }
 }

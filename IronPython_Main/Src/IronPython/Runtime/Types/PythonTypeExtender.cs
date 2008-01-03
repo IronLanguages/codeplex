@@ -21,6 +21,7 @@ using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {        
     /// <summary>
@@ -208,7 +209,7 @@ namespace IronPython.Runtime.Types {
         /// Stores a method with the specified transformed name.
         /// </summary>
         private void StoreMethod(MethodInfo mi, TransformedName name, FunctionType funcType) {
-            CodeContext ctx = SimpleContext.Create(name.Context);
+            CodeContext ctx = DefaultContext.Default;
             RemoveNonOps(ctx, SymbolTable.StringToId(name.Name));
 
             // store language specific version

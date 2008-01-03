@@ -43,21 +43,21 @@ namespace IronPython.Runtime.Types {
 
         public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget1 optimizedCtor) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, DefaultContext.Id);
             ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }
 
         public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType, CallTarget2 optimizedCtor) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, DefaultContext.Id);
             ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }
 
         public static PythonType Build(string name, Type baseType, Type opsType, Type extensibleType) {
             OpsReflectedTypeBuilder rtb = new OpsReflectedTypeBuilder(opsType, extensibleType);
-            PythonType res = rtb.DoBuild(name, baseType, extensibleType, PythonContext.Id);
+            PythonType res = rtb.DoBuild(name, baseType, extensibleType, DefaultContext.Id);
             ExtensionTypeAttribute.RegisterType(baseType, opsType);
             return res;
         }        
@@ -79,7 +79,7 @@ namespace IronPython.Runtime.Types {
                 } while (curType != typeof(object));
             }
 
-            SetValue(Symbols.Module, PythonContext.Id, "__builtin__");
+            SetValue(Symbols.Module, DefaultContext.Id, "__builtin__");
         }
 
         private void AddReflectedUnboundMethod(MethodInfo mi) {
@@ -114,7 +114,7 @@ namespace IronPython.Runtime.Types {
 
         private bool ContainsNonOps(SymbolId name) {
             object value;
-            if(TryGetValue(name, PythonContext.Id, out value)) {
+            if(TryGetValue(name, DefaultContext.Id, out value)) {
                 BuiltinFunction rum = value as BuiltinFunction;
                 BuiltinMethodDescriptor bimd;
                 if (rum != null) {
@@ -133,7 +133,7 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         private void RemoveNonOps(SymbolId name) {
             if (ContainsNonOps(name)) {
-                RemoveValue(name, PythonContext.Id);
+                RemoveValue(name, DefaultContext.Id);
             }
         }
 

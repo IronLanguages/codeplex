@@ -252,7 +252,8 @@ namespace Microsoft.Scripting.Shell {
                 }
 
                 try {
-                    object value = _engine.Evaluate(String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr), _commandLine.Module);
+                    string code = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr);
+                    object value = _engine.Execute(_commandLine.Module, _engine.CreateScriptSourceFromString(code));
                     IEnumerable<string> result = _engine.Operations.GetMemberNames(value);
                     _options.Root = root;
                     foreach (string option in result) {

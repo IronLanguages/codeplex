@@ -28,15 +28,23 @@ namespace Microsoft.Scripting.Ast {
         /// This method will leave the value of the expression
         /// on the top of the stack typed as Type.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public void EmitExpression(Expression node) {
             Debug.Assert(node != null);
 
             switch (node.NodeType) {
                 case AstNodeType.AndAlso:
+                    EmitBooleanOperator((BinaryExpression)node, true);
+                    break;
+
                 case AstNodeType.OrElse:
+                    EmitBooleanOperator((BinaryExpression)node, false);
+                    break;
+
                 case AstNodeType.Add:
                 case AstNodeType.And:
+                case AstNodeType.ArrayIndex:
                 case AstNodeType.Divide:
                 case AstNodeType.Equal:
                 case AstNodeType.ExclusiveOr:
@@ -89,10 +97,6 @@ namespace Microsoft.Scripting.Ast {
                     Emit((ArrayIndexAssignment)node);
                     break;
 
-                case AstNodeType.ArrayIndexExpression:
-                    Emit((ArrayIndexExpression)node);
-                    break;
-
                 case AstNodeType.BoundAssignment:
                     Emit((BoundAssignment)node);
                     break;
@@ -107,6 +111,10 @@ namespace Microsoft.Scripting.Ast {
 
                 case AstNodeType.CodeContextExpression:
                     EmitCodeContext();
+                    break;
+
+                case AstNodeType.GeneratorIntrinsic:
+                    EmitGeneratorIntrinsic();
                     break;
 
                 case AstNodeType.CommaExpression:
@@ -141,10 +149,6 @@ namespace Microsoft.Scripting.Ast {
                     EmitParamsExpression();
                     break;
 
-                case AstNodeType.ParenthesizedExpression:
-                    Emit((ParenthesizedExpression)node);
-                    break;
-
                 case AstNodeType.UnboundAssignment:
                     Emit((UnboundAssignment)node);
                     break;
@@ -168,33 +172,27 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private void EmitExpressionAsObject(Expression node) {
             EmitExpression(node);
-            _cg.EmitBoxing(node.Type);
+            EmitBoxing(node.Type);
         }
 
         #region BinaryExpression
 
         private void Emit(BinaryExpression node) {
-            // TODO: code gen will be suboptimal for chained AndAlsos and AndAlso inside If
-            switch (node.NodeType) {
-                case AstNodeType.AndAlso:
-                case AstNodeType.OrElse:
-                    EmitBooleanOperator(node, node.NodeType == AstNodeType.AndAlso);
-                    return;
-            }
+            Debug.Assert(node.NodeType != AstNodeType.AndAlso && node.NodeType != AstNodeType.OrElse);
 
             EmitExpression(node.Left);
             EmitExpression(node.Right);
 
             if (node.Method != null) {
-                _cg.EmitCall(node.Method);
+                EmitCall(node.Method);
             } else {
-                GenerateBinaryOperator(_cg, node.NodeType);
+                GenerateBinaryOperator(node.NodeType, node.Type);
             }
         }
 
         private void EmitBooleanOperator(BinaryExpression node, bool isAnd) {
-            Label otherwise = _cg.DefineLabel();
-            Label endif = _cg.DefineLabel();
+            Label otherwise = DefineLabel();
+            Label endif = DefineLabel();
 
             // if (_left) 
             EmitBranchFalse(node.Left, otherwise);
@@ -203,85 +201,89 @@ namespace Microsoft.Scripting.Ast {
             if (isAnd) {
                 EmitExpression(node.Right);
             } else {
-                _cg.EmitInt(1);
+                EmitInt(1);
             }
 
-            _cg.Emit(OpCodes.Br, endif);
+            Emit(OpCodes.Br, endif);
             // otherwise
-            _cg.MarkLabel(otherwise);
+            MarkLabel(otherwise);
 
             if (isAnd) {
-                _cg.EmitInt(0);
+                EmitInt(0);
             } else {
                 EmitExpression(node.Right);
             }
 
             // endif
-            _cg.MarkLabel(endif);
+            MarkLabel(endif);
             return;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        private static void GenerateBinaryOperator(CodeGen _cg, AstNodeType nodeType) {
+        private void GenerateBinaryOperator(AstNodeType nodeType, Type type) {
             switch (nodeType) {
+                case AstNodeType.ArrayIndex:
+                    EmitLoadElement(type);
+                    break;
+
                 case AstNodeType.Equal:
-                    _cg.Emit(OpCodes.Ceq);
+                    Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.NotEqual:
-                    _cg.Emit(OpCodes.Ceq);
-                    _cg.EmitInt(0);
-                    _cg.Emit(OpCodes.Ceq);
+                    Emit(OpCodes.Ceq);
+                    EmitInt(0);
+                    Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.GreaterThan:
-                    _cg.Emit(OpCodes.Cgt);
+                    Emit(OpCodes.Cgt);
                     break;
 
                 case AstNodeType.LessThan:
-                    _cg.Emit(OpCodes.Clt);
+                    Emit(OpCodes.Clt);
                     break;
 
                 case AstNodeType.GreaterThanOrEqual:
-                    _cg.Emit(OpCodes.Clt);
-                    _cg.EmitInt(0);
-                    _cg.Emit(OpCodes.Ceq);
+                    Emit(OpCodes.Clt);
+                    EmitInt(0);
+                    Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.LessThanOrEqual:
-                    _cg.Emit(OpCodes.Cgt);
-                    _cg.EmitInt(0);
-                    _cg.Emit(OpCodes.Ceq);
+                    Emit(OpCodes.Cgt);
+                    EmitInt(0);
+                    Emit(OpCodes.Ceq);
                     break;
                 case AstNodeType.Multiply:
-                    _cg.Emit(OpCodes.Mul);
+                    Emit(OpCodes.Mul);
                     break;
                 case AstNodeType.Modulo:
-                    _cg.Emit(OpCodes.Rem);
+                    Emit(OpCodes.Rem);
                     break;
                 case AstNodeType.Add:
-                    _cg.Emit(OpCodes.Add);
+                    Emit(OpCodes.Add);
                     break;
                 case AstNodeType.Subtract:
-                    _cg.Emit(OpCodes.Sub);
+                    Emit(OpCodes.Sub);
                     break;
                 case AstNodeType.Divide:
-                    _cg.Emit(OpCodes.Div);
+                    Emit(OpCodes.Div);
                     break;
                 case AstNodeType.LeftShift:
-                    _cg.Emit(OpCodes.Shl);
+                    Emit(OpCodes.Shl);
                     break;
                 case AstNodeType.RightShift:
-                    _cg.Emit(OpCodes.Shr);
+                    Emit(OpCodes.Shr);
                     break;
                 case AstNodeType.And:
-                    _cg.Emit(OpCodes.And);
+                    Emit(OpCodes.And);
                     break;
                 case AstNodeType.Or:
-                    _cg.Emit(OpCodes.Or);
+                    Emit(OpCodes.Or);
                     break;
                 case AstNodeType.ExclusiveOr:
-                    _cg.Emit(OpCodes.Xor);
+                    Emit(OpCodes.Xor);
                     break;
                 default:
                     throw new InvalidOperationException(nodeType.ToString());
@@ -313,7 +315,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // Emit the actual call
-            _cg.EmitCall(node.Method);
+            EmitCall(node.Method);
         }
 
         private void EmitArgument(Expression argument, Type type) {
@@ -327,19 +329,19 @@ namespace Microsoft.Scripting.Ast {
         #endregion
 
         private void Emit(ConditionalExpression node) {
-            Label eoi = _cg.DefineLabel();
-            Label next = _cg.DefineLabel();
+            Label eoi = DefineLabel();
+            Label next = DefineLabel();
             EmitExpression(node.Test);
-            _cg.Emit(OpCodes.Brfalse, next);
+            Emit(OpCodes.Brfalse, next);
             EmitExpression(node.IfTrue);
-            _cg.Emit(OpCodes.Br, eoi);
-            _cg.MarkLabel(next);
+            Emit(OpCodes.Br, eoi);
+            MarkLabel(next);
             EmitExpression(node.IfFalse);
-            _cg.MarkLabel(eoi);
+            MarkLabel(eoi);
         }
 
         private void Emit(ConstantExpression node) {
-            _cg.EmitConstant(node.Value);
+            EmitConstant(node.Value);
         }
 
         private void Emit(UnaryExpression node) {
@@ -347,22 +349,22 @@ namespace Microsoft.Scripting.Ast {
 
             switch (node.NodeType) {
                 case AstNodeType.Convert:
-                    _cg.EmitCast(node.Operand.Type, node.Type);
+                    EmitCast(node.Operand.Type, node.Type);
                     break;
 
                 case AstNodeType.Not:
                     if (node.Operand.Type == typeof(bool)) {
-                        _cg.Emit(OpCodes.Ldc_I4_0);
-                        _cg.Emit(OpCodes.Ceq);
+                        Emit(OpCodes.Ldc_I4_0);
+                        Emit(OpCodes.Ceq);
                     } else {
-                        _cg.Emit(OpCodes.Not);
+                        Emit(OpCodes.Not);
                     }
                     break;
                 case AstNodeType.Negate:
-                    _cg.Emit(OpCodes.Neg);
+                    Emit(OpCodes.Neg);
                     break;
                 case AstNodeType.OnesComplement:
-                    _cg.Emit(OpCodes.Not);
+                    Emit(OpCodes.Not);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -374,33 +376,33 @@ namespace Microsoft.Scripting.Ast {
             for (int i = 0; i < arguments.Count; i++) {
                 EmitExpression(arguments[i]);
             }
-            _cg.EmitNew(node.Constructor);
+            EmitNew(node.Constructor);
         }
 
         private void Emit(TypeBinaryExpression node) {
             if (node.TypeOperand.IsAssignableFrom(node.Expression.Type)) {
                 // if its always true just emit the bool
-                _cg.EmitConstant(true);
+                EmitConstant(true);
                 return;
             }
 
             EmitExpressionAsObject(node.Expression);
-            _cg.Emit(OpCodes.Isinst, node.TypeOperand);
-            _cg.Emit(OpCodes.Ldnull);
-            _cg.Emit(OpCodes.Cgt_Un);
+            Emit(OpCodes.Isinst, node.TypeOperand);
+            Emit(OpCodes.Ldnull);
+            Emit(OpCodes.Cgt_Un);
         }
 
         #region ActionExpression
 
         private void Emit(ActionExpression node) {
             bool fast;
-            Slot site = _cg.CreateDynamicSite(node.Action, GetSiteTypes(node), out fast);
+            Slot site = CreateDynamicSite(node.Action, GetSiteTypes(node), out fast);
             MethodInfo method = site.Type.GetMethod("Invoke");
 
             Debug.Assert(!method.IsStatic);
 
             // Emit "this" - the site
-            site.EmitGet(_cg);
+            site.EmitGet(this);
             ParameterInfo[] parameters = method.GetParameters();
 
             int first = 0;
@@ -409,7 +411,7 @@ namespace Microsoft.Scripting.Ast {
             if (!fast) {
                 Debug.Assert(parameters[0].ParameterType == typeof(CodeContext));
 
-                _cg.EmitCodeContext();
+                EmitCodeContext();
 
                 // skip the CodeContext parameter
                 first = 1;
@@ -419,7 +421,7 @@ namespace Microsoft.Scripting.Ast {
                 // tuple parameters
                 Debug.Assert(parameters.Length == first + 1);
 
-                _cg.EmitTuple(
+                EmitTuple(
                     site.Type.GetGenericArguments()[0],
                     node.Arguments.Count,
                     delegate(int index) {
@@ -436,7 +438,7 @@ namespace Microsoft.Scripting.Ast {
 
 
             // Emit the site invoke
-            _cg.EmitCall(site.Type, "Invoke");
+            EmitCall(site.Type, "Invoke");
         }
 
         private static Type[] GetSiteTypes(ActionExpression node) {
@@ -454,49 +456,51 @@ namespace Microsoft.Scripting.Ast {
             EmitExpression(node.Value);
 
             // Save the expression value - order of evaluation is different than that of the Stelem* instruction
-            Slot temp = _cg.GetLocalTmp(node.Type);
-            temp.EmitSet(_cg);
+            Slot temp = GetLocalTmp(node.Type);
+            temp.EmitSet(this);
 
             // Emit the array reference
             EmitExpression(node.Array);
             // Emit the index (integer)
             EmitExpression(node.Index);
             // Emit the value
-            temp.EmitGet(_cg);
+            temp.EmitGet(this);
             // Store it in the array
-            _cg.EmitStoreElement(node.Type);
-            temp.EmitGet(_cg);
-            _cg.FreeLocalTmp(temp);
-        }
-
-        private void Emit(ArrayIndexExpression node) {
-            // Emit the array reference
-            EmitExpression(node.Array);
-            // Emit the index
-            EmitExpression(node.Index);
-            // Load the array element
-            _cg.EmitLoadElement(node.Type);
+            EmitStoreElement(node.Type);
+            temp.EmitGet(this);
+            FreeLocalTmp(temp);
         }
 
         private void Emit(BoundAssignment node) {
             EmitExpression(node.Value);
-            _cg.Emit(OpCodes.Dup);
-            node.Ref.Slot.EmitSet(_cg);
+            Emit(OpCodes.Dup);
+            node.Ref.Slot.EmitSet(this);
         }
 
         private void Emit(BoundExpression node) {
             // Do not emit CheckInitialized for variables that are defined, or for temp variables.
             // Only emit CheckInitialized for variables of type object
             bool check = !node.IsDefined && !node.Variable.IsTemporary && node.Variable.Type == typeof(object);
-            _cg.EmitGet(node.Ref.Slot, node.Name, check);
+            EmitGet(node.Ref.Slot, node.Name, check);
         }
 
         private void Emit(CodeBlockExpression node) {
-            node.Block.EmitDelegateConstruction(_cg, node.ForceWrapperMethod, node.IsStronglyTyped, node.DelegateType);
+            EmitDelegateConstruction(this, node.Block, node.ForceWrapperMethod, node.IsStronglyTyped, node.DelegateType);
         }
 
-        private void EmitCodeContext() {
-            _cg.EmitCodeContext();
+        // Emit the generator intrinsic arg used in a GeneratorCodeBlock.
+        private void EmitGeneratorIntrinsic() {
+            // This is coupled to the codegen in GeneratorCodeBlock, 
+            // which always uses the 1st arg.
+            ArgumentSlots[0].EmitGet(this);
+        }
+
+        public void EmitCodeContext() {
+            if (ContextSlot == null) {
+                throw new InvalidOperationException("ContextSlot not available.");
+            }
+
+            ContextSlot.EmitGet(this);
         }
 
         #region CommaExpression
@@ -516,7 +520,7 @@ namespace Microsoft.Scripting.Ast {
                 // If we don't want the expression just emitted as the result,
                 // pop it off of the stack, unless it is a void expression.
                 if (index != node.ValueIndex && current.Type != typeof(void)) {
-                    _cg.Emit(OpCodes.Pop);
+                    Emit(OpCodes.Pop);
                 }
             }
         }
@@ -525,18 +529,18 @@ namespace Microsoft.Scripting.Ast {
 
         private void Emit(DeleteUnboundExpression node) {
             // RuntimeHelpers.RemoveName(CodeContext, name)
-            _cg.EmitCodeContext();
-            _cg.EmitSymbolId(node.Name);
-            _cg.EmitCall(typeof(RuntimeHelpers), "RemoveName");
+            EmitCodeContext();
+            EmitSymbolId(node.Name);
+            EmitCall(typeof(RuntimeHelpers), "RemoveName");
         }
 
         private void Emit(DynamicConversionExpression node) {
             EmitExpression(node.Expression);
-            _cg.EmitConvert(node.Expression.Type, node.Type);
+            EmitConvert(node.Expression.Type, node.Type);
         }
 
         private void EmitEnvironmentExpression() {
-            _cg.EmitEnvironmentOrNull();
+            EmitEnvironmentOrNull();
         }
 
         private void Emit(MemberAssignment node) {
@@ -546,11 +550,11 @@ namespace Microsoft.Scripting.Ast {
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
                     EmitExpression(node.Value);
-                    _cg.EmitFieldSet((FieldInfo)node.Member);
+                    EmitFieldSet((FieldInfo)node.Member);
                     break;
                 case MemberTypes.Property:
                     EmitExpression(node.Value);
-                    _cg.EmitPropertySet((PropertyInfo)node.Member);
+                    EmitPropertySet((PropertyInfo)node.Member);
                     break;
                 default:
                     Debug.Assert(false, "Invalid member type");
@@ -564,10 +568,10 @@ namespace Microsoft.Scripting.Ast {
 
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
-                    _cg.EmitFieldGet((FieldInfo)node.Member);
+                    EmitFieldGet((FieldInfo)node.Member);
                     break;
                 case MemberTypes.Property:
-                    _cg.EmitPropertyGet((PropertyInfo)node.Member);
+                    EmitPropertyGet((PropertyInfo)node.Member);
                     break;
                 default:
                     Debug.Assert(false, "Invalid member type");
@@ -586,7 +590,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(NewArrayExpression node) {
-            _cg.EmitArray(
+            EmitArray(
                 node.Type.GetElementType(),
                 node.Expressions.Count,
                 delegate(int index) {
@@ -596,30 +600,57 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitParamsExpression() {
-            Debug.Assert(_cg.ParamsSlot != null);
-            _cg.ParamsSlot.EmitGet(_cg);
-        }
-
-        private void Emit(ParenthesizedExpression node) {
-            EmitExpression(node.Expression);
+            Debug.Assert(ParamsSlot != null);
+            ParamsSlot.EmitGet(this);
         }
 
         private void Emit(UnboundAssignment node) {
             EmitExpressionAsObject(node.Value);
-            _cg.EmitCodeContext();
-            _cg.EmitSymbolId(node.Name);
-            _cg.EmitCall(typeof(RuntimeHelpers), "SetNameReorder");
+            EmitCodeContext();
+            EmitSymbolId(node.Name);
+            EmitCall(typeof(RuntimeHelpers), "SetNameReorder");
         }
 
         private void Emit(UnboundExpression node) {
             // RuntimeHelpers.LookupName(CodeContext, name)
-            _cg.EmitCodeContext();
-            _cg.EmitSymbolId(node.Name);
-            _cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
+            EmitCodeContext();
+            EmitSymbolId(node.Name);
+            EmitCall(typeof(RuntimeHelpers), "LookupName");
         }
 
         private void Emit(VoidExpression node) {
             EmitStatement(node.Statement);
         }
+
+        #region Expression helpers
+
+        private void EmitExpressionAsObjectOrNull(Expression node) {
+            if (node == null) {
+                Emit(OpCodes.Ldnull);
+            } else {
+                EmitExpressionAsObject(node);
+            }
+        }
+
+        // TODO: REMOVE !!!
+        /// <summary>
+        /// Generates code for this expression in a value position.  This will leave
+        /// the value of the expression on the top of the stack typed as asType.
+        /// </summary>
+        private void EmitAs(Expression node, Type type) {
+            EmitExpression(node);  // emit as Type
+            if (type.IsValueType || !ConstantCheck.IsConstant(node, null)) {
+                EmitConvert(node.Type, type);
+            }
+        }
+
+        private void EmitExpressionAndPop(Expression node) {
+            EmitExpression(node);
+            if (node.Type != typeof(void)) {
+                Emit(OpCodes.Pop);
+            }
+        }
+
+        #endregion
     }
 }
