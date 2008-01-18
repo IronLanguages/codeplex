@@ -2182,8 +2182,8 @@ def bad_float_to_long():
     AssertError(OverflowError, long, 1.0e340-1.0e340)   # NAN
 
 def test_int___int__():
-    x = 3
-    AreEqual(x.__int__(), x)
+    for x in [-(int(2**(32-1)-1)), -3, -2, -1, 0, 1, 2, 3, int(2**(32-1)-1)]:
+        AreEqual(x.__int__(), x)
 
 def test_long_conv():
     class Foo(long):
@@ -2192,4 +2192,17 @@ def test_long_conv():
 
     AreEqual(long(Foo()), 42L)
 
+def test_pow_edges():
+    class foo(object):
+        def __pow__(self, *args): return NotImplemented
+    
+    
+    AssertErrorWithPartialMessage(TypeError, "3rd argument not allowed unless all arguments are integers", pow, foo(), 2.0, 3.0)
+    AssertErrorWithPartialMessage(TypeError, "unsupported operand type(s)", pow, foo(), 2, 3)
+    
+    x = 3
+    AreEqual(x.__pow__(2.0, 3.0), NotImplemented)
+    AreEqual(x.__pow__(2.0, 3), NotImplemented)
+    AreEqual(x.__pow__(2, 3.0), NotImplemented)
+    
 run_test(__name__)

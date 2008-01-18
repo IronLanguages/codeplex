@@ -22,7 +22,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     [PythonType(typeof(PythonType))]
-    public class ExtensibleType : PythonType, ICustomMembers, ICallableWithCodeContext {
+    public class ExtensibleType : PythonType, ICustomMembers {
         
         [StaticExtensionMethod("__new__")]
         public static object Make(PythonType cls, object o) {
@@ -119,13 +119,9 @@ namespace IronPython.Runtime.Types {
         }
 
 
-        #region ICallableWithCodeContext Members
-
-        [SpecialName, PythonName("__call__")]    // still need PythonName for the virtual override to work
-        public virtual object Call(CodeContext context, params object[] args) {
+        [SpecialName]
+        public object Call(CodeContext context, params object[] args) {
             return PythonTypeOps.CallParams(context, this, args);
         }
-
-        #endregion
     }
 }

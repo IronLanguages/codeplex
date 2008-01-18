@@ -32,9 +32,8 @@ namespace ToyScript.Parser.Ast {
             _else = @else;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return Ast.If(
-                Span,
                 Ast.IfConditions(
                     Ast.IfCondition(
                         Span,

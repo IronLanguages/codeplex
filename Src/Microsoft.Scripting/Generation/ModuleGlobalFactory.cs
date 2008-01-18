@@ -25,8 +25,8 @@ namespace Microsoft.Scripting.Generation {
             _storage = storage;
         }
 
-        protected override Slot CreateSlot(SymbolId name, Type type) {
-            return new ModuleGlobalSlot(_storage.MakeSlot(name, typeof(ModuleGlobalWrapper)));
+        public override Slot CreateSlot(SymbolId name, Type type) {
+            return new ModuleGlobalSlot(_storage.CreateSlot(name, typeof(ModuleGlobalWrapper)));
         }
 
         public SlotFactory Storage {

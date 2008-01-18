@@ -144,6 +144,9 @@ Environment.SetEnvironmentVariable("IRONPYTHONPATH", tmpdir)
 # Verify that the file gets loaded by default.
 TestCommandLine(("-c", "import sys; print sys.foo"), "123\n")
 
+# CP778 - verify 'site' does not show up in dir()
+TestCommandLine(("-c", "print 'site' in dir()"), "False\n")
+
 # Verify that Lib remains in sys.path.
 TestCommandLine(("-S", "-c", "import sys; print str(sys.exec_prefix + '\\lib').lower() in [x.lower() for x in sys.path]"), "True\n")
 

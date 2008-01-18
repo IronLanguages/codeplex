@@ -14,9 +14,22 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class EmptyStatement : Statement {
-        internal EmptyStatement(SourceSpan span)
-            : base(AstNodeType.EmptyStatement, span) {
+    public sealed class EmptyStatement : Expression, ISpan {
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
+
+        internal EmptyStatement(SourceLocation start, SourceLocation end)
+            : base(AstNodeType.EmptyStatement, typeof(void)) {
+            _start = start;
+            _end = end;
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -26,7 +39,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static EmptyStatement Empty(SourceSpan span) {
-            return new EmptyStatement(span);
+            return new EmptyStatement(span.Start, span.End);
         }
     }
 }

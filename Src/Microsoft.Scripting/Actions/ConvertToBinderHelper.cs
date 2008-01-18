@@ -319,7 +319,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce an error when a conversion cannot occur
         /// </summary>
         private void MakeErrorTarget() {
-            Statement target;
+            Expression target;
 
             switch (Action.ResultKind) {
                 case ConversionResultKind.ImplicitCast:
@@ -361,7 +361,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a conversion rule by calling the helper method to do the convert
         /// </summary>
         private void MakeConversionTarget(MethodTracker method, Type fromType, bool isImplicit) {
-            Statement ret = _rule.MakeReturn(
+            Expression ret = _rule.MakeReturn(
                 Binder,
                 Binder.MakeCallExpression(method.Method, Ast.Convert(_rule.Parameters[0], fromType))
             );
@@ -375,7 +375,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to produce a conversion rule by calling the helper method to do the convert
         /// </summary>
         private void MakeExtensibleConversionTarget(MethodTracker method, Type fromType, bool isImplicit) {
-            Statement ret = _rule.MakeReturn(
+            Expression ret = _rule.MakeReturn(
                 Binder,
                 Binder.MakeCallExpression(method.Method, GetExtensibleValue(fromType))
             );
@@ -389,7 +389,7 @@ namespace Microsoft.Scripting.Actions {
         /// Helper to wrap explicit conversion call into try/catch incase it throws an exception.  If
         /// it throws the default value is returned.
         /// </summary>
-        private Statement WrapForThrowingTry(bool isImplicit, Statement ret) {
+        private Expression WrapForThrowingTry(bool isImplicit, Expression ret) {
             if (!isImplicit && Action.ResultKind == ConversionResultKind.ExplicitTry) {
                 ret = Ast.Try(ret).Catch(typeof(Exception), CompilerHelpers.GetTryConvertReturnValue(Context, _rule));
             }
@@ -401,12 +401,24 @@ namespace Microsoft.Scripting.Actions {
         /// input matches the type we're converting to or has an implicit conversion at the IL level)
         /// </summary>
         private void MakeSimpleConversionTarget(Type toType) {
-            _rule.SetTarget(
-                _rule.MakeReturn(
-                    Binder,
-                    Ast.ConvertHelper(_rule.Parameters[0], CompilerHelpers.GetVisibleType(toType))
-                )
-            );
+            if (toType.IsValueType && _rule.ReturnType == typeof(object) && _rule.Parameters[0].Type == typeof(object)) {
+                // boxed value type is being converted back to object.  We've done 
+                // the type check, there's no need to unbox & rebox the value.  infact 
+                // it breaks calls on instance methods so we need to avoid it.
+                _rule.SetTarget(
+                    _rule.MakeReturn(
+                        Binder,
+                        _rule.Parameters[0]
+                    )
+                );
+            } else {
+                _rule.SetTarget(
+                    _rule.MakeReturn(
+                        Binder,
+                        Ast.ConvertHelper(_rule.Parameters[0], CompilerHelpers.GetVisibleType(toType))
+                    )
+                );
+            }
         }
 
         /// <summary>

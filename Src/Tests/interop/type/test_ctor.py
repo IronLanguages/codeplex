@@ -75,11 +75,11 @@ def test_2_byref_args():
     AreEqual(f(1, 2), (30, 40))
     AreEqual(f(arg2 = 1, arg1 = 2), (30, 40)); Flag.Check(21)
     
-    AssertErrorWithMessage(TypeError, "M202() takes exactly 2 arguments (2 given)", lambda: f(clr.Reference[int](3), 4))  # bug 311239
+    AssertErrorWithMessage(TypeError, "expected int, got StrongBox[int]", lambda: f(clr.Reference[int](3), 4))  # bug 311239
     x = clr.Reference[int](3)
     y = clr.Reference[int](4)
     #f(arg2 = y, *(x,)); Flag.Check(34) # bug 311169
-    AssertErrorWithMessage(TypeError, "M202() takes exactly 2 non-keyword arguments (2 given)", lambda: f(arg1 = x, *(y,))) # msg
+    AssertErrorWithMessage(TypeError, "M202() got multiple values for keyword argument 'arg1'", lambda: f(arg1 = x, *(y,))) # msg
     
     # just curious
     x = y = clr.Reference[int](5)
@@ -103,11 +103,11 @@ def test_2_out_args():
     #public void M205(out int arg1, out int arg2) { arg1 = 70; arg2 = 80; }
     f = obj.M205
     AreEqual(f(), (70, 80))
-    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 arguments (1 given)", lambda: f(1))
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(1))
     #AssertErrorWithMessage(TypeError, "M205() ??)", lambda: f(1, 2))
     
-    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 non-keyword arguments (1 given)", lambda: f(arg2 = clr.Reference[int](2)))
-    AssertErrorWithMessage(TypeError, "M205() takes exactly 2 non-keyword arguments (1 given)", lambda: f(arg1 = clr.Reference[int](2)))
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(arg2 = clr.Reference[int](2)))
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(arg1 = clr.Reference[int](2)))
     
     for l in [
         lambda: f(*(x, y)),
@@ -229,8 +229,8 @@ def test_ctor_bad_property_field():
     AssertErrorWithMessage(AttributeError, "Field LiteralField is read-only", lambda: Ctor730(LiteralField = 3))
     #AssertErrorWithMessage(AttributeError, "xxx", lambda: Ctor710(StaticField = 10))
     #AssertErrorWithMessage(AttributeError, "xxx", lambda: Ctor750(StaticProperty = 10))
-    AssertErrorWithMessage(TypeError, "Ctor760() got an unexpected keyword argument 'InstanceMethod'", lambda: Ctor760(InstanceMethod = 1))
-    AssertErrorWithMessage(TypeError, "Ctor760() got an unexpected keyword argument 'MyEvent'", lambda: Ctor760(MyEvent = 1))
+    AssertErrorWithMessage(TypeError, "Ctor760() takes no arguments (1 given)", lambda: Ctor760(InstanceMethod = 1))
+    AssertErrorWithMessage(TypeError, "expected EventHandler, got int", lambda: Ctor760(MyEvent = 1))
 
 def test_set_field_for_value_type_in_ctor():
     # with all fields set
@@ -248,13 +248,13 @@ def test_set_field_for_value_type_in_ctor():
     # with not-existing field as keyword
     # http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=361389
     AssertErrorWithMessage(TypeError, 
-        "CreateInstance() got an unexpected keyword argument 'IntField'", 
+        "CreateInstance() takes no arguments (2 given)", 
         lambda: Struct(IntField = 2, FloatField = 3.4))
     
     # set with value of "wrong" type
     # http://vstfdevdiv:8080/WorkItemTracking/WorkItem.aspx?artifactMoniker=361389
     AssertErrorWithMessage(TypeError, 
-        "CreateInstance() got an unexpected keyword argument 'StringField'", 
+        "expected str, got int", 
         lambda: Struct(StringField = 2))
 
 run_test(__name__)

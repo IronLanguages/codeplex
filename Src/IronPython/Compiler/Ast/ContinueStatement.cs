@@ -22,7 +22,7 @@ namespace IronPython.Compiler.Ast {
         public ContinueStatement() {
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             if (ag.InLoop) {
                 return Ast.Continue(Span);
             } else {

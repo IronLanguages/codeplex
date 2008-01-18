@@ -36,18 +36,31 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// </summary>
     /// <typeparam name="T">Type of the DynamicSite</typeparam>
     public class IDispatchCallBinderHelper<T> :  CallBinderHelper<T, CallAction> {
-        private object _currentThis;                                // the implicit first argument
-        private object[] _currentExplicitArgs;                      // the explicit arguments the binder is binding to (does not include the "this" argument)
         VarEnumSelector _varEnumSelector;
+        MethodBinderContext _methodBinderContext;
+        SymbolId[] _keywordArgNames;
+        int _totalExplicitArgs; // Includes the individial elements of ArgumentKind.Dictionary (if any)
 
-        public IDispatchCallBinderHelper(CodeContext context, CallAction action, object[] args) : base(context, action, args) {
+        Variable _dispatchObject;
+        Variable _dispatchPointer;
+        Variable _dispId;
+        Variable _dispParams;
+        Variable _paramVariants;
+        Variable _invokeResult;
+        Variable _returnValue;
+        Variable _dispIdsOfKeywordArgsPinned;
+
+        public IDispatchCallBinderHelper(CodeContext context, CallAction action, object[] args)
+            : base(context, action, args) {
             Contract.RequiresNotNull(args, "args");
             if (args.Length < 1) {
                 throw new ArgumentException("Must receive at least one argument, the target to call", "args");
             }
 
-            _currentThis = args[0];
-            _currentExplicitArgs = ArrayUtils.RemoveFirst(args);
+            // Set Instance to some value so that CallBinderHelper has the right number of parameters to work with
+            Instance = GetIDispatchObject();
+
+            _methodBinderContext = new MethodBinderContext(Binder, Rule);
         }
 
         private Expression ThisParameter { get { return Rule.Parameters[0]; } }
@@ -67,101 +80,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return Ast.ReadProperty(comMethodDesc, typeof(ComMethodDesc).GetProperty("DispId"));
         }
 
-        /// <summary>
-        /// Do the work of Marshal.GetNativeVariantForObject.
-        /// </summary>
-        /// <param name="explicitArgIndex">This does not include the implicit "this" argument. It only includes 
-        /// the explicit arguments passed by the user</param>
-        /// <param name="targetComType"></param>
-        /// <param name="paramVariants"></param>
-        private List<Statement> MarshalArgumentToVariant(int explicitArgIndex, VarEnum targetComType, Variable paramVariants) {
-            List<Statement> stmts = new List<Statement>();
-            Statement stmt;
-
-            FieldInfo variantArrayField = VariantArray.GetField(explicitArgIndex);
-
-            // Convert the argument into a form that can be expressed as a Variant
-            Expression comCompatibleObject = Rule.Parameters[1 + explicitArgIndex];
-            comCompatibleObject = Binder.ConvertExpression(comCompatibleObject, VarEnumSelector.GetManagedMarshalType(targetComType));
-
-            if (Variant.IsPrimitiveType(targetComType) ||
-                (targetComType == VarEnum.VT_UNKNOWN) ||
-                (targetComType == VarEnum.VT_DISPATCH)) {
-                // paramVariants._elementN.AsType = (cast)argN
-                stmt = Ast.Statement(
-                    Ast.AssignProperty(
-                        Ast.ReadField(
-                            Ast.ReadDefined(paramVariants),
-                            variantArrayField),
-                        Variant.GetAccessor(targetComType),
-                        comCompatibleObject));
-                stmts.Add(stmt);
-                return stmts;
-            }
-
-            switch(targetComType) {
-                case VarEnum.VT_EMPTY:
-                    return stmts;
-
-                case VarEnum.VT_NULL:
-                    // paramVariants._elementN.SetAsNULL();
-
-                    stmt = Ast.Statement(
-                        Ast.Call(
-                            Ast.ReadField(
-                                Ast.ReadDefined(paramVariants),
-                                variantArrayField),
-                            typeof(Variant).GetMethod("SetAsNULL")));
-                    stmts.Add(stmt);
-                    return stmts;
-
-                default:
-                    Debug.Assert(false, "Unexpected VarEnum");
-                    return stmts;
-            }
-        }
-
-        private List<Statement> ClearArgumentVariant(int explicitArgIndex, VarEnum targetComType, Variable paramVariants) {
-            List<Statement> stmts = new List<Statement>();
-            Statement stmt;
-
-            FieldInfo variantArrayField = VariantArray.GetField(explicitArgIndex);
-
-            switch (targetComType) {
-                case VarEnum.VT_EMPTY:
-                case VarEnum.VT_NULL:
-                    return stmts;
-
-                case VarEnum.VT_BSTR:
-                case VarEnum.VT_UNKNOWN:
-                case VarEnum.VT_DISPATCH:
-                    // paramVariants._elementN.Clear()
-                    stmt = Ast.Statement(
-                        Ast.Call(
-                            Ast.ReadField(
-                                Ast.ReadDefined(paramVariants),
-                                variantArrayField),
-                            typeof(Variant).GetMethod("Clear")));
-                    stmts.Add(stmt);
-                    return stmts;
-
-                default:
-                    if (Variant.IsPrimitiveType(targetComType)) {
-                        return stmts;
-                    }
-                    Debug.Assert(false, "Unexpected VarEnum");
-                    return stmts;
-            }
-        }
-
-        private Statement GenerateTryBlock(
-            Variable dispatchPointer, 
-            Variable dispId, 
-            Variable dispParams, 
-            Variable paramVariants,
-            Variable invokeResult,
-            Variable returnValue) {
-
+        private Expression GenerateTryBlock() {
             //
             // Declare variables
             //
@@ -169,15 +88,58 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             Variable argErr = Rule.GetTemporary(typeof(uint), "argErr");
             Variable hresult = Rule.GetTemporary(typeof(int), "hresult");
 
-            List<Statement> tryStatements = new List<Statement>();
-            Statement stmt;
+            List<Expression> tryStatements = new List<Expression>();
+            Expression expr;
+
+            if (_keywordArgNames.Length > 0) {
+
+                // _dispParams.rgdispidNamedArgs = ComRuntimeHelpers.UnsafeMethods.GetIdsOfNamedParameters(out _dispIdsOfKeywordArgsPinned)
+
+                _dispIdsOfKeywordArgsPinned = Rule.GetTemporary(typeof(GCHandle), "dispIdsOfKeywordArgsPinned");
+
+                string[] names = SymbolTable.IdsToStrings(_keywordArgNames);
+                names = ArrayUtils.Insert(((DispCallable)Callable).ComMethodDesc.Name, names);
+
+                expr = Ast.Write(
+                    _dispParams,
+                    typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs"),
+                    Ast.Call(typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("GetIdsOfNamedParameters"),
+                        Ast.Read(_dispatchObject),
+                        Ast.Constant(names),
+                        Ast.Read(_dispId),
+                        Ast.Read(_dispIdsOfKeywordArgsPinned)));
+                tryStatements.Add(expr);
+            }
 
             //
             // Marshal the arguments to Variants
             //
-            for (int i = 0; i < Rule.Parameters.Length - 1; i++) {
-                VarEnumSelector.DispatchArgumentInfo argInfo = _varEnumSelector.DispatchArguments[i];
-                List<Statement> marshalStatements = MarshalArgumentToVariant(i, argInfo.VariantType, paramVariants);
+            // For a call like this:
+            //   comObj.Foo(100, 101, 102, x=123, z=125)
+            // DISPPARAMS needs to be setup like this:
+            //   cArgs:             5
+            //   cNamedArgs:        2
+            //   rgArgs:            123, 125, 102, 101, 100
+            //   rgdispidNamedArgs: dx, dz (the dispids of x and z respectively)
+
+            Expression[] parameters = MakeArgumentExpressions();
+            int reverseIndex = _varEnumSelector.VariantBuilders.Length - 1;
+            int positionalArgs = _varEnumSelector.VariantBuilders.Length - _keywordArgNames.Length; // args passed by position order and not by name
+            for (int i = 0; i < _varEnumSelector.VariantBuilders.Length; i++, reverseIndex--) {
+                int variantIndex;
+                if (i >= positionalArgs) {
+                    // Named arguments are in order at the start of rgArgs
+                    variantIndex = i - positionalArgs;
+                } else {
+                    // Positial arguments are in reverse order at the tail of rgArgs
+                    variantIndex = reverseIndex;
+                }
+                VariantBuilder variantBuilder = _varEnumSelector.VariantBuilders[i];
+                List<Expression> marshalStatements = variantBuilder.WriteArgumentVariant(
+                    _methodBinderContext, 
+                    _paramVariants, 
+                    variantIndex, 
+                    parameters);
                 tryStatements.AddRange(marshalStatements);
             }
 
@@ -186,80 +148,102 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             //
             MethodCallExpression invoke = Ast.Call(
                 typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("IDispatchInvoke"),
-                Ast.ReadDefined(dispatchPointer),
-                Ast.ReadDefined(dispId),
+                Ast.ReadDefined(_dispatchPointer),
+                Ast.ReadDefined(_dispId),
                 Ast.Constant(ComTypes.INVOKEKIND.INVOKE_FUNC|
                              ComTypes.INVOKEKIND.INVOKE_PROPERTYGET), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
-                Ast.ReadDefined(dispParams),
-                Ast.ReadDefined(invokeResult),
+                Ast.ReadDefined(_dispParams),
+                Ast.ReadDefined(_invokeResult),
                 Ast.ReadDefined(excepInfo),
                 Ast.ReadDefined(argErr));
-            stmt = Ast.Write(hresult, invoke);
-            tryStatements.Add(stmt);
+            expr = Ast.Write(hresult, invoke);
+            tryStatements.Add(expr);
 
             //
             // ComRuntimeHelpers.CheckThrowException(hresult, excepInfo, argErr, ThisParameter);
             //
-            stmt = Ast.Statement(
+            expr = Ast.Statement(
                 Ast.Call(
                     typeof(ComRuntimeHelpers).GetMethod("CheckThrowException"),
                     Ast.ReadDefined(hresult),
                     Ast.ReadDefined(excepInfo),
                     Ast.ReadDefined(argErr),
                     GetDispCallable()));
-            tryStatements.Add(stmt);
+            tryStatements.Add(expr);
 
             //
-            // returnValue = (ReturnType)invokeResult.ToObject();
+            // _returnValue = (ReturnType)_invokeResult.ToObject();
             //
-            stmt = Ast.Write(
-                returnValue,
-                Binder.ConvertExpression(
-                    Ast.Call(
-                        Ast.ReadDefined(invokeResult),
-                        typeof(Variant).GetMethod("ToObject")),
-                    Rule.ReturnType));
-            tryStatements.Add(stmt);
+            Expression invokeResultObject = Binder.ConvertExpression(
+                Ast.Call(
+                    Ast.ReadDefined(_invokeResult),
+                    typeof(Variant).GetMethod("ToObject")),
+                Rule.ReturnType);
+
+            ArgBuilder[] argBuilders = _varEnumSelector.GetArgBuilders();
+
+            Expression[] parametersForUpdates = MakeArgumentExpressions();
+            Expression returnValues = _varEnumSelector.ReturnBuilder.ToExpression(
+                _methodBinderContext, 
+                argBuilders, 
+                parametersForUpdates, 
+                invokeResultObject);
+            expr = Ast.Write(_returnValue, returnValues);
+            tryStatements.Add(expr);
+
+            foreach (ArgBuilder argBuilder in argBuilders) {
+                Expression updateFromReturn = argBuilder.UpdateFromReturn(_methodBinderContext, parametersForUpdates);
+                if (updateFromReturn != null) {
+                    expr = Ast.Statement(updateFromReturn);
+                    tryStatements.Add(expr);
+                }
+            }
 
             return Ast.Block(tryStatements);
         }
 
-        private Statement GenerateFinallyBlock(
-            Variable dispatchObject,
-            Variable dispatchPointer,
-            Variable paramVariants,
-            Variable result) {
-            List<Statement> finallyStatements = new List<Statement>();
-            Statement stmt;
+        private Expression GenerateFinallyBlock() {
+            List<Expression> finallyStatements = new List<Expression>();
+            Expression expr;
 
             //
-            // dispatchObject.ReleaseDispatchPointer(dispatchPointer);
+            // _dispatchObject.ReleaseDispatchPointer(_dispatchPointer);
             //
-            stmt = Ast.Statement(
+            expr = Ast.Statement(
                 Ast.Call(
-                    Ast.ReadDefined(dispatchObject),
+                    Ast.ReadDefined(_dispatchObject),
                     typeof(IDispatchObject).GetMethod("ReleaseDispatchPointer"),
-                    Ast.ReadDefined(dispatchPointer)));
-            finallyStatements.Add(stmt);
+                    Ast.ReadDefined(_dispatchPointer)));
+            finallyStatements.Add(expr);
 
             //
             // Clear memory allocated for marshalling
             //
-            for (int i = 0; i < Rule.Parameters.Length - 1; i++) {
-                VarEnumSelector.DispatchArgumentInfo argInfo = _varEnumSelector.DispatchArguments[i];
-                List<Statement> clearingStatements = ClearArgumentVariant(i, argInfo.VariantType, paramVariants);
+            foreach (VariantBuilder variantBuilder in _varEnumSelector.VariantBuilders) {
+                List<Expression> clearingStatements = variantBuilder.Clear(_paramVariants);
                 finallyStatements.AddRange(clearingStatements);
             }
 
             //
-            // result.Clear()
+            // _invokeResult.Clear()
             //
 
-            stmt = Ast.Statement(
+            expr = Ast.Statement(
                 Ast.Call(
-                    Ast.ReadDefined(result),
+                    Ast.ReadDefined(_invokeResult),
                     typeof(Variant).GetMethod("Clear")));
-            finallyStatements.Add(stmt);
+            finallyStatements.Add(expr);
+
+            //
+            // _dispIdsOfKeywordArgsPinned.Free()
+            //
+            if (_dispIdsOfKeywordArgsPinned != null) {
+                expr = Ast.Statement(
+                    Ast.Call(
+                        Ast.ReadDefined(_dispIdsOfKeywordArgsPinned),
+                        typeof(GCHandle).GetMethod("Free")));
+                finallyStatements.Add(expr);
+            }
 
             return Ast.Block(finallyStatements);
         }
@@ -268,118 +252,113 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// Create a stub for the target of the optimized lopop.
         /// </summary>
         /// <returns></returns>
-        private Statement MakeIDispatchInvokeTarget() {
-            Debug.Assert(_varEnumSelector.DispatchArguments.Length == (Rule.Parameters.Length - 1));
+        private Expression MakeIDispatchInvokeTarget() {
+            Debug.Assert(_varEnumSelector.VariantBuilders.Length == _totalExplicitArgs);
 
-            // Since we are taking the address of local variables, this *has* to be compiled.
+            // Since we are taking the address of local variables, this *has* to be compiled since we pass
+            // the local variables by-reference to IDispatch::Invoke. If the method is interpreted, the locals
+            // will be allocated on the GC heap, and would need to be pinned to be used by-reference.
             Rule.CanInterpretTarget = false;
 
-            List<Statement> stmts = new List<Statement>();
-            Statement stmt;
+            List<Expression> exprs = new List<Expression>();
+            Expression expr;
 
             //
-            // Declare variables, and initialize them to trivial values
+            // Create variables, and initialize them to trivial values
             //
-            Variable dispatchObject = Rule.GetTemporary(typeof(IDispatchObject), "dispatchObject");
-            Variable dispatchPointer = Rule.GetTemporary(typeof(IntPtr), "dispatchPointer");
-            Variable dispId = Rule.GetTemporary(typeof(int), "dispId");
-            Variable dispParams = Rule.GetTemporary(typeof(ComTypes.DISPPARAMS), "dispParams");
-            Variable paramVariants = Rule.GetTemporary(typeof(VariantArray), "paramVariants");
-            Variable invokeResult = Rule.GetTemporary(typeof(Variant), "invokeResult");
-            Variable returnValue = Rule.GetTemporary(Rule.ReturnType, "returnValue");
+            _dispatchObject = Rule.GetTemporary(typeof(IDispatchObject), "dispatchObject");
+            _dispatchPointer = Rule.GetTemporary(typeof(IntPtr), "dispatchPointer");
+            _dispId = Rule.GetTemporary(typeof(int), "dispId");
+            _dispParams = Rule.GetTemporary(typeof(ComTypes.DISPPARAMS), "dispParams");
+            _paramVariants = Rule.GetTemporary(typeof(VariantArray), "paramVariants");
+            _invokeResult = Rule.GetTemporary(typeof(Variant), "invokeResult");
+            _returnValue = Rule.GetTemporary(Rule.ReturnType, "returnValue");            
+            _dispIdsOfKeywordArgsPinned = null;
 
             //
-            // dispId = ((DispCallable)this).ComMethodDesc.DispId;
+            // _dispId = ((DispCallable)this).ComMethodDesc.DispId;
             //
-            stmt = Ast.Write(
-                dispId,
+            expr = Ast.Write(
+                _dispId,
                 Ast.ReadProperty(
                     Ast.ReadProperty(
                         Ast.ConvertHelper(ThisParameter, typeof(DispCallable)),
                         typeof(DispCallable).GetProperty("ComMethodDesc")),
                     typeof(ComMethodDesc).GetProperty("DispId")));
-            stmts.Add(stmt);
+            exprs.Add(expr);
 
             //
-            // dispParams.rgvararg = RuntimeHelpers.UnsafeMethods.ConvertByrefToPtr(paramVariants)
+            // _dispParams.rgvararg = RuntimeHelpers.UnsafeMethods.ConvertVariantByrefToPtr(ref _paramVariants._element0)
             //
-            if (Rule.Parameters.Length != 0) {
+            if (_totalExplicitArgs != 0) {
                 MethodCallExpression addrOfParamVariants = Ast.Call(
-                    typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertByrefToPtr"),
+                    typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertVariantByrefToPtr"),
                     Ast.ReadField(
-                        Ast.ReadDefined(paramVariants),
+                        Ast.ReadDefined(_paramVariants),
                         VariantArray.GetField(0)));
-                stmt = Ast.Write(
-                    dispParams,
+                expr = Ast.Write(
+                    _dispParams,
                     typeof(ComTypes.DISPPARAMS).GetField("rgvarg"),
                     addrOfParamVariants);
 
-                stmts.Add(stmt);
+                exprs.Add(expr);
             }
 
             //
-            // dispParams.cArgs = <number_of_params>;
-            // dispParams.cNamedArgs = 0;
+            // _dispParams.cArgs = <number_of_params>;
+            // _dispParams.cNamedArgs = N;
             //
-            stmt = Ast.Write(
-                dispParams,
+            expr = Ast.Write(
+                _dispParams,
                 typeof(ComTypes.DISPPARAMS).GetField("cArgs"),
-                Ast.Constant(Rule.Parameters.Length - 1));
-            stmts.Add(stmt);
+                Ast.Constant(_totalExplicitArgs));
+            exprs.Add(expr);
 
-            stmt = Ast.Write(
-                dispParams,
+            expr = Ast.Write(
+                _dispParams,
                 typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
-                Ast.Constant(0));
-            stmts.Add(stmt);
+                Ast.Constant(_keywordArgNames.Length));
+            exprs.Add(expr);
 
             //
-            // dispatchObject = ((DispCallable)this).DispatchObject
-            // dispatchPointer = dispatchObject.GetDispatchPointerInCurrentApartment();
+            // _dispatchObject = ((DispCallable)this).DispatchObject
+            // _dispatchPointer = dispatchObject.GetDispatchPointerInCurrentApartment();
             //
 
-            stmt = Ast.Write(
-                dispatchObject,
+            expr = Ast.Write(
+                _dispatchObject,
                 GetIDispatchObject());
-            stmts.Add(stmt);
+            exprs.Add(expr);
 
-            stmt = Ast.Write(
-                dispatchPointer,
+            expr = Ast.Write(
+                _dispatchPointer,
                 Ast.Call(
-                    Ast.ReadDefined(dispatchObject),
+                    Ast.ReadDefined(_dispatchObject),
                     typeof(IDispatchObject).GetMethod("GetDispatchPointerInCurrentApartment")));
-            stmts.Add(stmt);
+            exprs.Add(expr);
 
-            Statement tryStatements = GenerateTryBlock(
-                dispatchPointer, 
-                dispId, 
-                dispParams, 
-                paramVariants,
-                invokeResult,
-                returnValue);
+            Expression tryStatements = GenerateTryBlock();
 
-            Statement finallyStatements = GenerateFinallyBlock(
-                dispatchObject, 
-                dispatchPointer,
-                paramVariants,
-                invokeResult);
+            Expression finallyStatements = GenerateFinallyBlock();
 
-            stmt = Ast.TryFinally(tryStatements, finallyStatements);
-            stmts.Add(stmt);
+            expr = Ast.TryFinally(tryStatements, finallyStatements);
+            exprs.Add(expr);
 
-            stmt = Ast.Return(
-                Ast.ReadDefined(returnValue));
-            stmts.Add(stmt);
+            expr = Ast.Return(
+                Ast.ReadDefined(_returnValue));
+            exprs.Add(expr);
 
-            return Ast.Block(stmts);
+            return Ast.Block(exprs);
         }
 
         # region Unoptimized or error cases
 
-        private Statement MakeUnoptimizedInvokeTarget() {
-            Expression dispCallable = Ast.ConvertHelper(ThisParameter, typeof(DispCallable));
+        private Expression MakeUnoptimizedInvokeTarget() {
+            Expression dispCallable = GetDispCallable();
             Expression[] arguments = MakeArgumentExpressions();
-            arguments = ArrayUtils.Insert<Expression>(Ast.CodeContext(), arguments);
+            arguments = ArrayUtils.RemoveFirst(arguments); // Remove the instance argument
+
+            arguments = ArrayUtils.Insert<Expression>(Ast.CodeContext(), Ast.Constant(_keywordArgNames), arguments);
             MethodInfo unoptimizedInvoke = typeof(DispCallable).GetMethod("UnoptimizedInvoke");
             Expression target = Ast.ComplexCallHelper(dispCallable, unoptimizedInvoke, arguments);
             return Ast.Return(target);
@@ -391,55 +370,26 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return Rule;
         }
 
-        private StandardRule<T> MakeListCallRule() {
-            MakeSplatTests();
-            Rule.SetTest(Test);
-            // We should be able to generate an optimized target. For now, we will keep things simple.
-            Rule.SetTarget(MakeUnoptimizedInvokeTarget());
-            return Rule;
-        }
-
-        private StandardRule<T> MakeRuleForByrefParams() {
-            Test = Ast.AndAlso(
-                Test,
-                Ast.Equal(
-                    Ast.ReadProperty(
-                        Ast.ReadProperty(Ast.ConvertHelper(ThisParameter, typeof(DispCallable)),
-                                         typeof(DispCallable).GetProperty("ComMethodDesc")),
-                        typeof(ComMethodDesc).GetProperty("HasByrefOrOutParameters")),
-                    Ast.Constant(true)));
-            Rule.SetTest(Test);
-
-            Rule.SetTarget(MakeUnoptimizedInvokeTarget());
-            return Rule;
-        }
-
         #endregion
 
         public override StandardRule<T> MakeRule() {
-            if (Action.Signature.HasKeywordArgument()) {
-                throw new NotImplementedException("Fancy call types not supported with IDispatch");
-            }
+            DispCallable dispCallable = (DispCallable)Callable;
 
-            if (Action.Signature.HasListArgument()) {
-                return MakeListCallRule();
-            }
-
-            DispCallable currentDispCallable = (DispCallable)_currentThis;
-
-            // For byref or out parameters, fall back to the default helper
-            if (currentDispCallable.ComMethodDesc.HasByrefOrOutParameters) {
-                return MakeRuleForByrefParams();
-            }
+            Type[] explicitArgTypes; // will not include implicit instance argument (if any)            
+            GetArgumentNamesAndTypes(out _keywordArgNames, out explicitArgTypes);
+            _totalExplicitArgs = explicitArgTypes.Length;
 
             bool hasAmbiguousMatch = false;
             try {
-                _varEnumSelector = new VarEnumSelector(Binder, _currentExplicitArgs);
+                _varEnumSelector = new VarEnumSelector(Binder, Rule.ReturnType, explicitArgTypes);
             } catch (AmbiguousMatchException) {
                 hasAmbiguousMatch = true;
             }
 
-            if ((_currentExplicitArgs.Length > VariantArray.NumberOfElements) ||
+            Type[] testTypes = ArrayUtils.Insert(typeof(DispCallable), explicitArgTypes); // Add a dummy instance argument - it will not really be used
+            FinishTestForCandidate(testTypes, explicitArgTypes);
+
+            if ((explicitArgTypes.Length > VariantArray.NumberOfElements) ||
                 (hasAmbiguousMatch) ||
                 (!_varEnumSelector.IsSupportedByFastPath) ||
                 (Context.LanguageContext.Options.InterpretedMode)) { // The rule we generate cannot be interpreted
@@ -447,25 +397,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return MakeUnoptimizedInvokeRule();
             }
 
-            // Check that all the parameters are by-value
-            Test = Ast.AndAlso(
-                Test,
-                Ast.Equal(
-                    Ast.ReadProperty(
-                        Ast.ReadProperty(Ast.ConvertHelper(ThisParameter, typeof(DispCallable)),
-                                         typeof(DispCallable).GetProperty("ComMethodDesc")),
-                        typeof(ComMethodDesc).GetProperty("HasByrefOrOutParameters")),
-                    Ast.Constant(false)));
-
-            for (int i = 0; i < _currentExplicitArgs.Length; i++) {
-                Test = Ast.AndAlso(
-                    Test,
-                    Rule.MakeTypeTest(CompilerHelpers.GetType(_currentExplicitArgs[i]), i + 1));
-            }
-
             Rule.SetTest(Test);
 
-            Statement target = MakeIDispatchInvokeTarget();
+            Expression target = MakeIDispatchInvokeTarget();
             Rule.SetTarget(target);
 
             return Rule;

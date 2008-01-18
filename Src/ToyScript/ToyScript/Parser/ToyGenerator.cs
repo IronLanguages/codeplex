@@ -57,7 +57,7 @@ namespace ToyScript.Parser {
         internal static MSAst.CodeBlock Generate(Statement statement, string name) {
             ToyGenerator tg = new ToyGenerator(name);
 
-            MSAst.Statement body = statement.Generate(tg);
+            MSAst.Expression body = statement.Generate(tg);
 
             return tg.Scope.FinishScope(body);
         }

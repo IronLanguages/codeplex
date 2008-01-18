@@ -21,7 +21,6 @@ using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
-        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
         #region Generated DynamicSiteHelpers
 
@@ -61,38 +60,22 @@ namespace Microsoft.Scripting.Actions {
             return genType.MakeGenericType(types);
         }
 
-        public static object Execute(CodeContext/*!*/ context, ActionBinder/*!*/ binder, DynamicAction/*!*/ action, Type/*!*/[]/*!*/ types, object[]/*!*/ args) {
-            Contract.RequiresNotNull(types, "types");
-            Contract.RequiresNotNull(args, "args");
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(binder, "binder");
-            Contract.RequiresNotNull(action, "action");
+        public static Type MakeDynamicSiteTargetType(Type/*!*/[] types) {
+            Type siteType;
 
-            ReflectedCaller rc;
-
-            lock (_executeSites) {
-                ValueArray<Type> array = new ValueArray<Type>(types);
-                if (!_executeSites.TryGetValue(array, out rc)) {
-                    Type siteType;
-
-                    switch (args.Length) {
-                        case 1: siteType = typeof(DynamicSiteTarget<,>).MakeGenericType(types); break;
-                        case 2: siteType = typeof(DynamicSiteTarget<,,>).MakeGenericType(types); break;
-                        case 3: siteType = typeof(DynamicSiteTarget<,,,>).MakeGenericType(types); break;
-                        case 4: siteType = typeof(DynamicSiteTarget<,,,,>).MakeGenericType(types); break;
-                        case 5: siteType = typeof(DynamicSiteTarget<,,,,,>).MakeGenericType(types); break;
-                        case 6: siteType = typeof(DynamicSiteTarget<,,,,,,>).MakeGenericType(types); break;
-                        default:
-                            Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));
-                            siteType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, types[types.Length - 1]);
-                            break;
-                    }
-                    MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
-                    _executeSites[array] = rc = ReflectedCaller.Create(target);
-                }
+            switch (types.Length) {
+                case 2: siteType = typeof(DynamicSiteTarget<,>).MakeGenericType(types); break;
+                case 3: siteType = typeof(DynamicSiteTarget<,,>).MakeGenericType(types); break;
+                case 4: siteType = typeof(DynamicSiteTarget<,,,>).MakeGenericType(types); break;
+                case 5: siteType = typeof(DynamicSiteTarget<,,,,>).MakeGenericType(types); break;
+                case 6: siteType = typeof(DynamicSiteTarget<,,,,,>).MakeGenericType(types); break;
+                case 7: siteType = typeof(DynamicSiteTarget<,,,,,,>).MakeGenericType(types); break;
+                default:
+                    Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));
+                    siteType = typeof(BigDynamicSiteTarget<,>).MakeGenericType(tupleType, types[types.Length - 1]);
+                    break;
             }
-
-            return rc.Invoke(binder, context, action, args);
+            return siteType;
         }
 
         private class UninitializedTargetHelper<T0, T1, T2, T3, T4, T5, Tret> {

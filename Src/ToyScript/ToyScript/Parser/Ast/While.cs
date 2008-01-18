@@ -30,7 +30,7 @@ namespace ToyScript.Parser.Ast {
             _body = body;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return Ast.While(
                 Span,
                 _test.End,

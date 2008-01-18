@@ -26,25 +26,34 @@ namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public static partial class Interpreter {
 
-        // TODO: Make internal
-        public static object[] Evaluate(CodeContext context, IList<Expression> items) {
-            Contract.RequiresNotNullItems(items, "items");
+        #region Entry points
 
-            object[] ret = new object[items.Count];
-            for (int i = 0; i < items.Count; i++) {
-                ret[i] = EvaluateExpression(context, items[i]);
+        public static object Evaluate(CodeContext context, Expression expression) {
+            object result = EvaluateExpression(context, expression);
+
+            if (result is ControlFlow) {
+                throw new InvalidOperationException("Invalid expression");
             }
-            return ret;
+
+            return result;
         }
 
-        // Hold on to one instance for each member of the ControlFlow enumeration to avoid unnecessary boxing
-        internal static readonly object NextStatement = ControlFlow.NextStatement;
-        internal static readonly object Break = ControlFlow.Break;
-        internal static readonly object Continue = ControlFlow.Continue;
+        public static object Execute(CodeContext context, Expression expression) {
+            ControlFlow result = EvaluateExpression(context, expression) as ControlFlow;
 
+            if (result != null && result.Kind == ControlFlowKind.Return) {
+                return result.Value;
+            }
+
+            return null;
+        }
+
+        #endregion
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        internal static object EvaluateExpression(CodeContext context, Expression node) {
+        private static object EvaluateExpression(CodeContext context, Expression node) {
             Debug.Assert(node != null);
 
             switch (node.NodeType) {
@@ -69,60 +78,104 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.Or:
                 case AstNodeType.RightShift:
                 case AstNodeType.Subtract:
-                    return Evaluate(context, (BinaryExpression)node);
+                    return EvaluateBinary(context, (BinaryExpression)node);
                 case AstNodeType.Call:
-                    return Evaluate(context, (MethodCallExpression)node);
+                    return EvaluateMethodCall(context, (MethodCallExpression)node);
                 case AstNodeType.Conditional:
-                    return Evaluate(context, (ConditionalExpression)node);
+                    return EvaluateConditional(context, (ConditionalExpression)node);
                 case AstNodeType.Constant:
-                    return Evaluate((ConstantExpression)node);
+                    return EvaluateConstant((ConstantExpression)node);
                 case AstNodeType.Convert:
                 case AstNodeType.Negate:
                 case AstNodeType.Not:
                 case AstNodeType.OnesComplement:
-                    return Evaluate(context, (UnaryExpression)node);
+                    return EvaluateUnary(context, (UnaryExpression)node);
                 case AstNodeType.New:
-                    return Evaluate(context, (NewExpression)node);
+                    return EvaluateNew(context, (NewExpression)node);
                 case AstNodeType.TypeIs:
-                    return Evaluate(context, (TypeBinaryExpression)node);
+                    return EvaluateTypeBinary(context, (TypeBinaryExpression)node);
                 case AstNodeType.ActionExpression:
-                    return Evaluate(context, (ActionExpression)node);
+                    return EvaluateAction(context, (ActionExpression)node);
                 case AstNodeType.ArrayIndexAssignment:
-                    return Evaluate(context, (ArrayIndexAssignment)node);
+                    return EvaluateArrayIndex(context, (ArrayIndexAssignment)node);
                 case AstNodeType.BoundAssignment:
-                    return Evaluate(context, (BoundAssignment)node);
+                    return EvaluateBound(context, (BoundAssignment)node);
                 case AstNodeType.BoundExpression:
-                    return Evaluate(context, (BoundExpression)node);
+                    return EvaluateBoundAssignment(context, (BoundExpression)node);
                 case AstNodeType.CodeBlockExpression:
-                    return Evaluate(context, (CodeBlockExpression)node);
+                    return EvaluateCodeBlock(context, (CodeBlockExpression)node);
                 case AstNodeType.CodeContextExpression:
-                    return Evaluate(context);
-                case AstNodeType.CommaExpression:
-                    return Evaluate(context, (CommaExpression)node);
+                    return EvaluateCodeContext(context);
                 case AstNodeType.DeleteUnboundExpression:
-                    return Evaluate(context, (DeleteUnboundExpression)node);
+                    return EvaluateDeleteUnbound(context, (DeleteUnboundExpression)node);
                 case AstNodeType.EnvironmentExpression:
                     return NotImplemented();
                 case AstNodeType.MemberAssignment:
-                    return Evaluate(context, (MemberAssignment)node);
+                    return EvaluateMemberAssignment(context, (MemberAssignment)node);
                 case AstNodeType.MemberExpression:
-                    return Evaluate(context, (MemberExpression)node);
+                    return EvaluateMember(context, (MemberExpression)node);
                 case AstNodeType.NewArrayExpression:
-                    return Evaluate(context, (NewArrayExpression)node);
+                    return EvaluateNewArray(context, (NewArrayExpression)node);
                 case AstNodeType.ParamsExpression:
                     return NotImplemented();
                 case AstNodeType.UnboundAssignment:
-                    return Evaluate(context, (UnboundAssignment)node);
+                    return EvaluateUnboundAssignment(context, (UnboundAssignment)node);
                 case AstNodeType.UnboundExpression:
-                    return Evaluate(context, (UnboundExpression)node);
-                case AstNodeType.VoidExpression:
-                    return Evaluate(context, (VoidExpression)node);
+                    return EvaluateUnbound(context, (UnboundExpression)node);
+
+                // Statements
+                case AstNodeType.Block:
+                    return ExecuteBlock(context, (Block)node);
+                case AstNodeType.BreakStatement:
+                    return ExecuteBreak(context, (BreakStatement)node);
+                case AstNodeType.ContinueStatement:
+                    return ExecuteContinue(context, (ContinueStatement)node);
+                case AstNodeType.DeleteStatement:
+                    return ExecuteDelete(context, (DeleteStatement)node);
+                case AstNodeType.DoStatement:
+                    return ExecuteDo(context, (DoStatement)node);
+                case AstNodeType.EmptyStatement:
+                    return ExecuteEmpty(context, (EmptyStatement)node);
+                case AstNodeType.ExpressionStatement:
+                    return ExecuteExpression(context, (ExpressionStatement)node);
+                case AstNodeType.LabeledStatement:
+                    return ExecuteLabeled(context, (LabeledStatement)node);
+                case AstNodeType.LoopStatement:
+                    return ExecuteLoop(context, (LoopStatement)node);
+                case AstNodeType.ReturnStatement:
+                    return ExecuteReturn(context, (ReturnStatement)node);
+                case AstNodeType.ScopeStatement:
+                    return ExecuteScope(context, (ScopeStatement)node);
+                case AstNodeType.SwitchStatement:
+                    return ExecuteSwitch(context, (SwitchStatement)node);
+                case AstNodeType.ThrowStatement:
+                    return ExecuteThrow(context, (ThrowStatement)node);
+                case AstNodeType.TryStatement:
+                    return ExecuteTry(context, (TryStatement)node);
+                case AstNodeType.YieldStatement:
+                    return NotImplemented();
                 default:
                     throw new InvalidOperationException();
             }
         }
-        
-        private static object Evaluate(ConstantExpression node) {
+
+
+        /// <summary>
+        /// Evaluates expression and checks it for ControlFlow. If it is control flow, returns true,
+        /// otherwise returns false.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="node"></param>
+        /// <param name="result">Result of the evaluation</param>
+        /// <returns>true if control flow, false if not</returns>
+        private static bool EvaluateAndCheckFlow(CodeContext context, Expression node, out object result) {
+            result = EvaluateExpression(context, node);
+            return result is ControlFlow;
+        }
+
+        // Individual expressions and statements
+
+        private static object EvaluateConstant(ConstantExpression node) {
             CompilerConstant cc = node.Value as CompilerConstant;
             if (cc != null) {
                 return cc.Create(); // TODO: Only create once?
@@ -131,24 +184,18 @@ namespace Microsoft.Scripting.Ast {
             return node.Value;
         }
 
-        private static object Evaluate(CodeContext context, ConditionalExpression node) {
-            object ret = EvaluateExpression(context, node.Test);
-            if ((bool)ret) {
+        private static object EvaluateConditional(CodeContext context, ConditionalExpression node) {
+            object test;
+
+            if (EvaluateAndCheckFlow(context, node.Test, out test)) {
+                return test;
+            }
+
+            if ((bool)test) {
                 return EvaluateExpression(context, node.IfTrue);
             } else {
                 return EvaluateExpression(context, node.IfFalse);
             }
-        }
-
-        private static object EvaluateInstance(CodeContext context, Expression instance, Type type) {
-            object res = EvaluateExpression(context, instance);
-
-            // box "this" if it is a value type (in case _method tries to modify it)
-            // -- this keeps the same semantics as Emit().
-            if (type != null && type.IsValueType) {
-                res = System.Runtime.CompilerServices.RuntimeHelpers.GetObjectValue(res);
-            }
-            return res;
         }
 
         private static bool IsInputParameter(ParameterInfo pi) {
@@ -169,11 +216,13 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object Evaluate(CodeContext context, MethodCallExpression node) {
+        private static object EvaluateMethodCall(CodeContext context, MethodCallExpression node) {
             object instance = null;
             // Evaluate the instance first (if the method is non-static)
             if (!node.Method.IsStatic) {
-                instance = EvaluateInstance(context, node.Instance, node.Method.DeclaringType);
+                if (EvaluateAndCheckFlow(context, node.Instance, out instance)) {
+                    return instance;
+                }
             }
 
             object[] parameters = new object[node.ParameterInfos.Length];
@@ -195,7 +244,13 @@ namespace Microsoft.Scripting.Ast {
                         }
                     } else if (IsInputParameter(node.ParameterInfos[i])) {
                         Expression arg = node.Arguments[i];
-                        parameters[i] = arg != null ? EvaluateExpression(context, arg) : null;
+                        object argValue = null;
+                        if (arg != null) {
+                            if (EvaluateAndCheckFlow(context, arg, out argValue)) {
+                                return argValue;
+                            }
+                        }
+                        parameters[i] = argValue;
                     }
                 }
             }
@@ -232,22 +287,35 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvaluateAndAlso(CodeContext context, BinaryExpression node) {
-            object ret = EvaluateExpression(context, node.Left);
+            object ret;
+            if (EvaluateAndCheckFlow(context, node.Left, out ret)) {
+                return ret;
+            }
             return ((bool)ret) ? EvaluateExpression(context, node.Right) : ret;
         }
+
         private static object EvaluateOrElse(CodeContext context, BinaryExpression node) {
-            object ret = EvaluateExpression(context, node.Left);
+            object ret;
+            if (EvaluateAndCheckFlow(context, node.Left, out ret)) {
+                return ret;
+            }
             return ((bool)ret) ? ret : EvaluateExpression(context, node.Right);
         }
 
-        private static object Evaluate(CodeContext context, BinaryExpression node) {
-            object l = EvaluateExpression(context, node.Left);
-            object r = EvaluateExpression(context, node.Right);
+        private static object EvaluateBinary(CodeContext context, BinaryExpression node) {
+            object left, right;
 
-            if (node.Method!= null) {
-                return node.Method.Invoke(null, new object[] { l, r });
+            if (EvaluateAndCheckFlow(context, node.Left, out left)) {
+                return left;
+            }
+            if (EvaluateAndCheckFlow(context, node.Right, out right)) {
+                return right;
+            }
+
+            if (node.Method != null) {
+                return node.Method.Invoke(null, new object[] { left, right });
             } else {
-                return EvaluateBinaryOperator(node.NodeType, l, r);
+                return EvaluateBinaryOperator(node.NodeType, left, right);
             }
         }
 
@@ -393,41 +461,52 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        private static object Evaluate(CodeContext context, UnaryExpression node) {
-            object x = EvaluateExpression(context, node.Operand);
+        private static object EvaluateUnary(CodeContext context, UnaryExpression node) {
+            object value;
+            if (EvaluateAndCheckFlow(context, node.Operand, out value)) {
+                return value;
+            }
+
             switch (node.NodeType) {
                 case AstNodeType.Convert:
-                    return Cast.Explicit(x, node.Type);
+                    if (node.Type == typeof(void)) {
+                        return null;
+                    }
+                    return Cast.Explicit(value, node.Type);
 
                 case AstNodeType.Not:
-                    if (x is bool) return (bool)x ? RuntimeHelpers.False : RuntimeHelpers.True;
-                    if (x is int) return (int)~(int)x;
-                    if (x is long) return (long)~(long)x;
-                    if (x is short) return (short)~(short)x;
-                    if (x is uint) return (uint)~(uint)x;
-                    if (x is ulong) return (ulong)~(ulong)x;
-                    if (x is ushort) return (ushort)~(ushort)x;
-                    if (x is byte) return (byte)~(byte)x;
-                    if (x is sbyte) return (sbyte)~(sbyte)x;
-                    throw new InvalidOperationException("can't perform unary not on type " + CompilerHelpers.GetType(x).Name);
+                    if (value is bool) return (bool)value ? RuntimeHelpers.False : RuntimeHelpers.True;
+                    if (value is int) return (int)~(int)value;
+                    if (value is long) return (long)~(long)value;
+                    if (value is short) return (short)~(short)value;
+                    if (value is uint) return (uint)~(uint)value;
+                    if (value is ulong) return (ulong)~(ulong)value;
+                    if (value is ushort) return (ushort)~(ushort)value;
+                    if (value is byte) return (byte)~(byte)value;
+                    if (value is sbyte) return (sbyte)~(sbyte)value;
+                    throw new InvalidOperationException("can't perform unary not on type " + CompilerHelpers.GetType(value).Name);
 
                 case AstNodeType.Negate:
-                    if (x is int) return (int)(-(int)x);
-                    if (x is long) return (long)(-(long)x);
-                    if (x is short) return (short)(-(short)x);
-                    if (x is float) return -(float)x;
-                    if (x is double) return -(double)x;
-                    throw new InvalidOperationException("can't negate type " + CompilerHelpers.GetType(x).Name);
+                    if (value is int) return (int)(-(int)value);
+                    if (value is long) return (long)(-(long)value);
+                    if (value is short) return (short)(-(short)value);
+                    if (value is float) return -(float)value;
+                    if (value is double) return -(double)value;
+                    throw new InvalidOperationException("can't negate type " + CompilerHelpers.GetType(value).Name);
 
                 default:
                     throw new NotImplementedException();
             }
         }
 
-        private static object Evaluate(CodeContext context, NewExpression node) {
+        private static object EvaluateNew(CodeContext context, NewExpression node) {
             object[] args = new object[node.Arguments.Count];
             for (int i = 0; i < node.Arguments.Count; i++) {
-                args[i] = EvaluateExpression(context, node.Arguments[i]);
+                object argValue;
+                if (EvaluateAndCheckFlow(context, node.Arguments[i], out argValue)) {
+                    return argValue;
+                }
+                args[i] = argValue;
             }
             try {
                 return node.Constructor.Invoke(args);
@@ -436,40 +515,64 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object Evaluate(CodeContext context, TypeBinaryExpression node) {
+        private static object EvaluateTypeBinary(CodeContext context, TypeBinaryExpression node) {
+            object value;
+            if (EvaluateAndCheckFlow(context, node.Expression, out value)) {
+                return value;
+            }
             return RuntimeHelpers.BooleanToObject(
-                node.TypeOperand.IsInstanceOfType(EvaluateExpression(context, node.Expression))
+                node.TypeOperand.IsInstanceOfType(value)
             );
         }
 
-        private static object Evaluate(CodeContext context, ActionExpression node) {
+        private static object EvaluateAction(CodeContext context, ActionExpression node) {
+            object[] args = new object[node.Arguments.Count];
+            for (int i = 0; i < node.Arguments.Count; i++) {
+                object argValue;
+                if (EvaluateAndCheckFlow(context, node.Arguments[i], out argValue)) {
+                    return argValue;
+                }
+                args[i] = argValue;
+            }
+
             return context.LanguageContext.Binder.Execute(
                 context,
                 node.Action,
                 CompilerHelpers.GetSiteTypes(node),
-                Evaluate(context, node.Arguments)
+                args
             );
         }
 
-        private static object Evaluate(CodeContext context, ArrayIndexAssignment node) {
-            object value = EvaluateExpression(context, node.Value); // evaluate the value first
-            Array array = (Array)EvaluateExpression(context, node.Array);
-            int index = (int)EvaluateExpression(context, node.Index);
-            array.SetValue(value, index);
+        private static object EvaluateArrayIndex(CodeContext context, ArrayIndexAssignment node) {
+            object value, array, index;
+
+            // evaluate the value first
+            if (EvaluateAndCheckFlow(context, node.Value, out value)) {
+                return value;
+            }
+            if (EvaluateAndCheckFlow(context, node.Array, out array)) {
+                return array;
+            }
+            if (EvaluateAndCheckFlow(context, node.Index, out index)) {
+                return index;
+            }
+            ((Array)array).SetValue(value, (int)index);
             return value;
         }
 
-        private static object Evaluate(CodeContext context, BoundAssignment node) {
-            object value = EvaluateExpression(context, node.Value);
+        private static object EvaluateBound(CodeContext context, BoundAssignment node) {
+            object value;
+            if (EvaluateAndCheckFlow(context, node.Value, out value)) {
+                return value;
+            }
             EvaluateAssignVariable(context, node.Variable, value);
             return value;
         }
 
-        private static object Evaluate(CodeContext context, BoundExpression node) {
+        private static object EvaluateBoundAssignment(CodeContext context, BoundExpression node) {
             object ret;
             switch (node.Variable.Kind) {
                 case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
                     if (!context.Scope.TemporaryStorage.TryGetValue(node.Variable, out ret)) {
                         throw context.LanguageContext.MissingName(node.Variable.Name);
                     } else {
@@ -496,37 +599,28 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object Evaluate(CodeContext context, CodeBlockExpression node) {
+        private static object EvaluateCodeBlock(CodeContext context, CodeBlockExpression node) {
             return GetDelegateForInterpreter(node.Block, context, node.DelegateType, node.ForceWrapperMethod);
         }
 
-        private static object Evaluate(CodeContext context) {
+        private static object EvaluateCodeContext(CodeContext context) {
             return context;
         }
 
-        private static object Evaluate(CodeContext context, CommaExpression node) {
-            object result = null;
-            for (int index = 0; index < node.Expressions.Count; index++) {
-                Expression current = node.Expressions[index];
-
-                if (current != null) {
-                    object val = EvaluateExpression(context, current);
-                    if (index == node.ValueIndex) {
-                        // Save the value at the designated index
-                        result = val;
-                    }
-                }
-            }
-            return result;
-        }
-
-        private static object Evaluate(CodeContext context, DeleteUnboundExpression node) {
+        private static object EvaluateDeleteUnbound(CodeContext context, DeleteUnboundExpression node) {
             return RuntimeHelpers.RemoveName(context, node.Name);
         }
 
-        private static object Evaluate(CodeContext context, MemberAssignment node) {
-            object target = node.Expression != null ? EvaluateExpression(context, node.Expression) : null;
-            object value = EvaluateExpression(context, node.Value);
+        private static object EvaluateMemberAssignment(CodeContext context, MemberAssignment node) {
+            object target = null, value;
+            if (node.Expression != null) {
+                if (EvaluateAndCheckFlow(context, node.Expression, out target)) {
+                    return target;
+                }
+            }
+            if (EvaluateAndCheckFlow(context, node.Value, out value)) {
+                return value;
+            }
 
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
@@ -544,8 +638,13 @@ namespace Microsoft.Scripting.Ast {
             return null;
         }
 
-        private static object Evaluate(CodeContext context, MemberExpression node) {
-            object self = node.Expression != null ? EvaluateExpression(context, node.Expression) : null;
+        private static object EvaluateMember(CodeContext context, MemberExpression node) {
+            object self = null;
+            if (node.Expression != null) {
+                if (EvaluateAndCheckFlow(context, node.Expression, out self)) {
+                    return self;
+                }
+            }
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
                     FieldInfo field = (FieldInfo)node.Member;
@@ -561,129 +660,82 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException();
         }
 
-        private static object Evaluate(CodeContext context, NewArrayExpression node) {
+        private static object EvaluateNewArray(CodeContext context, NewArrayExpression node) {
             if (node.Type.GetElementType().IsValueType) {
                 // value arrays cannot be cast to object arrays
                 object contents = (object)node.Constructor.Invoke(new object[] { node.Expressions.Count });
                 MethodInfo setter = node.Type.GetMethod("Set");
                 for (int i = 0; i < node.Expressions.Count; i++) {
-                    setter.Invoke(
-                        contents,
-                        new object[] {
-                            i,
-                            EvaluateExpression(context, node.Expressions[i])
-                        }
-                    );
+                    object value;
+                    if (EvaluateAndCheckFlow(context, node.Expressions[i], out value)) {
+                        return value;
+                    }
+                    setter.Invoke(contents, new object[] { i, value });
                 }
                 return contents;
             } else {
                 object[] contents = (object[])node.Constructor.Invoke(new object[] { node.Expressions.Count });
                 for (int i = 0; i < node.Expressions.Count; i++) {
-                    contents[i] = EvaluateExpression(context, node.Expressions[i]);
+                    object value;
+                    if (EvaluateAndCheckFlow(context, node.Expressions[i], out value)) {
+                        return value;
+                    }
+                    contents[i] = value;
                 }
                 return contents;
             }
         }
 
-        private static object Evaluate(CodeContext context, UnboundAssignment node) {
-            object value = EvaluateExpression(context, node.Value);
+        private static object EvaluateUnboundAssignment(CodeContext context, UnboundAssignment node) {
+            object value;
+            if (EvaluateAndCheckFlow(context, node.Value, out value)) {
+                return value;
+            }
             RuntimeHelpers.SetName(context, node.Name, value);
             return value;
         }
 
-        private static object Evaluate(CodeContext context, UnboundExpression node) {
+        private static object EvaluateUnbound(CodeContext context, UnboundExpression node) {
             return RuntimeHelpers.LookupName(context, node.Name);
         }
 
-        private static object Evaluate(CodeContext context, VoidExpression node) {
-            object ret = ExecuteStatement(context, node.Statement);
-
-            if (ret != NextStatement) {
-                throw new ExpressionReturnException(ret);
-            }
-
-            return null;
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        internal static object ExecuteStatement(CodeContext context, Statement node) {
+        private static object ExecuteBlock(CodeContext context, Block node) {
             context.Scope.SourceLocation = node.Start;
-            try {
-#if DEBUG
-                ExpressionReturnException.CurrentDepth++;
-#endif
-                switch (node.NodeType) {
-                    case AstNodeType.BlockStatement:
-                        return Execute(context, (BlockStatement)node);
-                    case AstNodeType.BreakStatement:
-                        return ExecuteBreak();
-                    case AstNodeType.ContinueStatement:
-                        return ExecuteContinue();
-                    case AstNodeType.DeleteStatement:
-                        return Execute(context, (DeleteStatement)node);
-                    case AstNodeType.DoStatement:
-                        return Execute(context, (DoStatement)node);
-                    case AstNodeType.EmptyStatement:
-                        return ExecuteEmpty();
-                    case AstNodeType.ExpressionStatement:
-                        return Execute(context, (ExpressionStatement)node);
-                    case AstNodeType.IfStatement:
-                        return Execute(context, (IfStatement)node);
-                    case AstNodeType.LabeledStatement:
-                        return ExecuteLabeled();
-                    case AstNodeType.LoopStatement:
-                        return Execute(context, (LoopStatement)node);
-                    case AstNodeType.ReturnStatement:
-                        return Execute(context, (ReturnStatement)node);
-                    case AstNodeType.ScopeStatement:
-                        return Execute(context, (ScopeStatement)node);
-                    case AstNodeType.SwitchStatement:
-                        return Execute(context, (SwitchStatement)node);
-                    case AstNodeType.ThrowStatement:
-                        return Execute(context, (ThrowStatement)node);
-                    case AstNodeType.TryStatement:
-                        return Execute(context, (TryStatement)node);
-                    case AstNodeType.YieldStatement:
-                        return NotImplemented();
-                    default:
-                        throw new InvalidOperationException();
-                }
-            } catch (ExpressionReturnException ex) {
-#if DEBUG
-                Debug.Assert(ex.Depth == ExpressionReturnException.CurrentDepth);
-#endif
-                return ex.Value;
-#if DEBUG
-            } finally {
-                ExpressionReturnException.CurrentDepth--;
-#endif
-            }
-        }
 
-        private static object Execute(CodeContext context, BlockStatement node) {
-            object ret = NextStatement;
-            foreach (Statement stmt in node.Statements) {
-                ret = ExecuteStatement(context, stmt);
-                if (ret != NextStatement) {
-                    break;
+            object result = ControlFlow.NextStatement;
+            for (int index = 0; index < node.Expressions.Count; index++) {
+                Expression current = node.Expressions[index];
+
+                object val;
+                if (EvaluateAndCheckFlow(context, current, out val)) {
+                    if (val != ControlFlow.NextStatement) {
+                        return val;
+                    }
+                }
+
+                if (index == node.Expressions.Count - 1 && node.Type != typeof(void)) {
+                    // Save the value at the designated index
+                    result = val;
                 }
             }
-            return ret;
+            return result;
         }
 
-        private static object ExecuteBreak() {
-            return Break;
+        private static object ExecuteBreak(CodeContext context, BreakStatement node) {
+            context.Scope.SourceLocation = node.Start;
+            return ControlFlow.Break;
         }
 
-        private static object ExecuteContinue() {
-            return Continue;
+        private static object ExecuteContinue(CodeContext context, ContinueStatement node) {
+            context.Scope.SourceLocation = node.Start;
+            return ControlFlow.Continue;
         }
 
         // TODO: Should not be name-based.
-        private static object Execute(CodeContext context, DeleteStatement node) {
+        private static object ExecuteDelete(CodeContext context, DeleteStatement node) {
+            context.Scope.SourceLocation = node.Start;
             switch (node.Variable.Kind) {
                 case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
                     context.Scope.TemporaryStorage.Remove(node.Variable);
                     break;
                 case Variable.VariableKind.Global:
@@ -694,92 +746,166 @@ namespace Microsoft.Scripting.Ast {
                     break;
             }
 
-            return NextStatement;
+            return ControlFlow.NextStatement;
         }
 
-        private static object Execute(CodeContext context, DoStatement node) {
-            object ret = NextStatement;
+        private static object ExecuteDo(CodeContext context, DoStatement node) {
+            context.Scope.SourceLocation = node.Start;
 
-            do {
-                ret = ExecuteStatement(context, node.Body);
-                if (ret == Break) {
+            for (; ; ) {
+                ControlFlow cf;
+
+                object ret = EvaluateExpression(context, node.Body);
+
+                if ((cf = ret as ControlFlow) != null) {
+                    if (cf == ControlFlow.Break) {
+                        break;
+                    } else if (cf.Kind == ControlFlowKind.Return) {
+                        return ret;
+                    }
+                }
+
+                ret = EvaluateExpression(context, node.Test);
+                if ((cf = ret as ControlFlow) != null) {
+                    if (cf == ControlFlow.Break) {
+                        break;
+                    } else if (cf.Kind == ControlFlowKind.Return) {
+                        return ret;
+                    }
+                }
+
+                // Check the condition
+                if (!(bool)ret) {
                     break;
-                } else if (!(ret is ControlFlow)) {
-                    return ret;
-                }
-            } while ((bool)EvaluateExpression(context, node.Test));
-
-            return NextStatement;
-        }
-
-        private static object ExecuteEmpty() {
-            return NextStatement;
-        }
-
-        private static object Execute(CodeContext context, ExpressionStatement node) {
-            EvaluateExpression(context, node.Expression);
-            return NextStatement;
-        }
-
-        private static object Execute(CodeContext context, IfStatement node) {
-            foreach (IfStatementTest t in node.Tests) {
-                if ((bool)EvaluateExpression(context, t.Test)) {
-                    return ExecuteStatement(context, t.Body);
                 }
             }
-            if (node.ElseStatement != null) {
-                return ExecuteStatement(context, node.ElseStatement);
-            }
-            return NextStatement;
+
+            return ControlFlow.NextStatement;
         }
 
-        private static object ExecuteLabeled() {
+        private static object ExecuteEmpty(CodeContext context, EmptyStatement node) {
+            context.Scope.SourceLocation = node.Start;
+            return ControlFlow.NextStatement;
+        }
+
+        private static object ExecuteExpression(CodeContext context, ExpressionStatement node) {
+            context.Scope.SourceLocation = node.Start;
+            object value;
+            if (EvaluateAndCheckFlow(context, node.Expression, out value)) {
+                return value;
+            }
+            return ControlFlow.NextStatement;
+        }
+
+        private static object ExecuteLabeled(CodeContext context, LabeledStatement node) {
+            context.Scope.SourceLocation = node.Start;
             throw new NotImplementedException();
         }
 
-        private static object Execute(CodeContext context, LoopStatement node) {
-            object ret = NextStatement;
-            while (node.Test == null || (bool)EvaluateExpression(context, node.Test)) {
-                ret = ExecuteStatement(context, node.Body);
-                if (ret == Break) {
-                    return NextStatement;
-                } else if (!(ret is ControlFlow)) {
-                    return ret;
+        private static object ExecuteLoop(CodeContext context, LoopStatement node) {
+            context.Scope.SourceLocation = node.Start;
+
+            for (; ; ) {
+                ControlFlow cf;
+
+                if (node.Test != null) {
+                    object test = EvaluateExpression(context, node.Test);
+                    if ((cf = test as ControlFlow) != null) {
+                        if (cf == ControlFlow.Break) {
+                            // Break out of the loop and execute next statement outside
+                            return ControlFlow.NextStatement;
+                        } else if (cf.Kind == ControlFlowKind.Return) {
+                            return test;
+                        }
+                    }
+
+                    // Test is false, break the loop
+                    if (!(bool)test) {
+                        break;
+                    }
                 }
+
+                object body = EvaluateExpression(context, node.Body);
+                if ((cf = body as ControlFlow) != null) {
+                    if (cf == ControlFlow.Break) {
+                        // Break out of the loop and execute next statement outside
+                        return ControlFlow.NextStatement;
+                    } else if (cf.Kind == ControlFlowKind.Return) {
+                        return body;
+                    }
+                }
+
                 if (node.Increment != null) {
-                    EvaluateExpression(context, node.Increment);
+                    object increment = EvaluateExpression(context, node.Increment);
+                    if ((cf = increment as ControlFlow) != null) {
+                        if (cf == ControlFlow.Break) {
+                            // Break out of the loop and execute next statement outside
+                            return ControlFlow.NextStatement;
+                        } else if (cf.Kind == ControlFlowKind.Return) {
+                            return increment;
+                        }
+                    }
                 }
             }
+
             if (node.ElseStatement != null) {
-                return ExecuteStatement(context, node.ElseStatement);
+                return EvaluateExpression(context, node.ElseStatement);
             }
-            return NextStatement;
+
+            return ControlFlow.NextStatement;
         }
 
-        private static object Execute(CodeContext context, ReturnStatement node) {
+        private static object ExecuteReturn(CodeContext context, ReturnStatement node) {
+            context.Scope.SourceLocation = node.Start;
+            object value = null;
             if (node.Expression != null) {
-                return EvaluateExpression(context, node.Expression);
-            } else {
-                return null;
+                value = EvaluateExpression(context, node.Expression);
+                ControlFlow cf = value as ControlFlow;
+                if (cf != null) {
+                    // propagate
+                    return cf;
+                }
             }
+
+            return ControlFlow.Return(value);
         }
 
-        private static object Execute(CodeContext context, ScopeStatement node) {
+        private static object ExecuteScope(CodeContext context, ScopeStatement node) {
+            context.Scope.SourceLocation = node.Start;
             CodeContext scopeContext;
+            ControlFlow cf;
+
             // TODO: should work with LocalScope
             if (node.Scope != null) {
-                IAttributesCollection scopeObject = EvaluateExpression(context, node.Scope) as IAttributesCollection;
-                scopeContext = RuntimeHelpers.CreateNestedCodeContext(scopeObject, context, true);
+                object scope = EvaluateExpression(context, node.Scope);
+                if ((cf = scope as ControlFlow) != null) {
+                    if (cf.Kind == ControlFlowKind.Return) {
+                        return cf;
+                    }
+                }
+                scopeContext = RuntimeHelpers.CreateNestedCodeContext(scope as IAttributesCollection, context, true);
             } else {
                 scopeContext = RuntimeHelpers.CreateCodeContext(context);
             }
-            ExecuteStatement(scopeContext, node.Body);
-            return NextStatement;
+
+            object body;
+            if (EvaluateAndCheckFlow(scopeContext, node.Body, out body)) {
+                return body;
+            }
+
+            // Eat the value and return "next"
+            return ControlFlow.NextStatement;
         }
 
-        private static object Execute(CodeContext context, SwitchStatement node) {
-            int test = (int)EvaluateExpression(context, node.TestValue);
+        private static object ExecuteSwitch(CodeContext context, SwitchStatement node) {
+            context.Scope.SourceLocation = node.Start;
 
+            object testValue;
+            if (EvaluateAndCheckFlow(context, node.TestValue, out testValue)) {
+                return testValue;
+            }
+
+            int test = (int)testValue;
             ReadOnlyCollection<SwitchCase> cases = node.Cases;
             int target = 0;
             while (target < cases.Count) {
@@ -793,15 +919,20 @@ namespace Microsoft.Scripting.Ast {
 
             while (target < cases.Count) {
                 SwitchCase sc = cases[target];
-                object result = ExecuteStatement(context, sc.Body);
-                if (result == Continue) {
-                    return result;
-                } else if (result == Break) {
-                    return NextStatement;
+                object result = EvaluateExpression(context, sc.Body);
+
+                ControlFlow cf = result as ControlFlow;
+                if (cf == ControlFlow.Continue) {
+                    return cf;
+                } else if (cf == ControlFlow.Break) {
+                    return ControlFlow.NextStatement;
+                } else if (cf.Kind == ControlFlowKind.Return) {
+                    return cf;
                 }
                 target++;
             }
-            return NextStatement;
+
+            return ControlFlow.NextStatement;
         }
 
         #region Exceptions
@@ -819,7 +950,7 @@ namespace Microsoft.Scripting.Ast {
             _evalExceptions.Add(exc);
         }
 
-        internal static Exception LastEvalException {
+        private static Exception LastEvalException {
             get {
                 if (_evalExceptions == null || _evalExceptions.Count == 0) {
                     throw new InvalidOperationException("rethrow outside of catch block");
@@ -829,24 +960,31 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-
-
-        private static object Execute(CodeContext context, ThrowStatement node) {
+        private static object ExecuteThrow(CodeContext context, ThrowStatement node) {
             if (node.Value == null) {
                 throw LastEvalException;
             } else {
-                throw (Exception)EvaluateExpression(context, node.Value);
+                object exception;
+                if (EvaluateAndCheckFlow(context, node.Exception, out exception)) {
+                    return exception;
+                }
+
+                throw (Exception)exception;
             }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2219:DoNotRaiseExceptionsInExceptionClauses")]
-        private static object Execute(CodeContext context, TryStatement node) {
+        private static object ExecuteTry(CodeContext context, TryStatement node) {
             bool rethrow = false;
             Exception savedExc = null;
-            object ret = NextStatement;
+            object ret = ControlFlow.NextStatement;
+
             try {
-                ret = ExecuteStatement(context, node.Body);
+                if (EvaluateAndCheckFlow(context, node.Body, out ret)) {
+                    return ret;
+                }
+                ret = ControlFlow.NextStatement;
             } catch (Exception exc) {
                 rethrow = true;
                 savedExc = exc;
@@ -859,7 +997,13 @@ namespace Microsoft.Scripting.Ast {
                                 if (handler.Variable != null) {
                                     EvaluateAssignVariable(context, handler.Variable, exc);
                                 }
-                                ret = ExecuteStatement(context, handler.Body);
+
+                                object body;
+                                if (EvaluateAndCheckFlow(context, handler.Body, out body)) {
+                                    ret = body;
+                                } else {
+                                    ret = ControlFlowKind.NextStatement;
+                                }
                                 break;
                             }
                         }
@@ -869,8 +1013,8 @@ namespace Microsoft.Scripting.Ast {
                 }
             } finally {
                 if (node.FinallyStatement != null) {
-                    object finallyRet = ExecuteStatement(context, node.FinallyStatement);
-                    if (finallyRet != NextStatement) {
+                    object finallyRet = EvaluateExpression(context, node.FinallyStatement);
+                    if (finallyRet != ControlFlow.NextStatement) {
                         ret = finallyRet;
                         rethrow = false;
                     }
@@ -906,10 +1050,9 @@ namespace Microsoft.Scripting.Ast {
             return EvaluateAssignVariable(context, node.Variable, value);
         }
 
-        internal static object EvaluateAssignVariable(CodeContext context, Variable var, object value) {
+        private static object EvaluateAssignVariable(CodeContext context, Variable var, object value) {
             switch (var.Kind) {
                 case Variable.VariableKind.Temporary:
-                case Variable.VariableKind.GeneratorTemporary:
                     context.Scope.TemporaryStorage[var] = value;
                     break;
                 case Variable.VariableKind.Global:
@@ -923,7 +1066,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvaluateAssign(CodeContext context, MemberExpression node, object value) {
-            object self = node.Expression != null ? EvaluateExpression(context, node.Expression) : null;
+            object self = null;
+            if (EvaluateAndCheckFlow(context, node.Expression, out self)) {
+                return self;
+            }
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
                     FieldInfo field = (FieldInfo)node.Member;
@@ -942,12 +1088,12 @@ namespace Microsoft.Scripting.Ast {
         }
 
 
-        internal static EvaluationAddress EvaluateAddress(CodeContext context, Expression node) {
+        private static EvaluationAddress EvaluateAddress(CodeContext context, Expression node) {
             switch (node.NodeType) {
                 case AstNodeType.BoundExpression:
                     return EvaluateAddress((BoundExpression)node);
-                case AstNodeType.CommaExpression:
-                    return EvaluateAddress(context, (CommaExpression)node);
+                case AstNodeType.Block:
+                    return EvaluateAddress(context, (Block)node);
                 case AstNodeType.Conditional:
                     return EvaluateAddress(context, (ConditionalExpression)node);
                 default:
@@ -959,22 +1105,22 @@ namespace Microsoft.Scripting.Ast {
             return new VariableAddress(node);
         }
 
-        private static EvaluationAddress EvaluateAddress(CodeContext context, CommaExpression node) {
+        private static EvaluationAddress EvaluateAddress(CodeContext context, Block node) {
+            if (node.Type == typeof(void)) {
+                throw new NotSupportedException("Address of block without value");
+            }
+
             List<EvaluationAddress> addresses = new List<EvaluationAddress>();
             foreach(Expression current in node.Expressions) {
-                if (current != null) {
-                    addresses.Add(EvaluateAddress(context, current));
-                } else {
-                    addresses.Add(null);
-                }
+                addresses.Add(EvaluateAddress(context, current));
             }
             return new CommaAddress(node, addresses);
         }
 
         private static EvaluationAddress EvaluateAddress(CodeContext context, ConditionalExpression node) {
-            bool test = (bool)Interpreter.EvaluateExpression(context, node.Test);
+            object test = (bool)Interpreter.EvaluateExpression(context, node.Test);
 
-            if (test) {
+            if ((bool) test) {
                 return EvaluateAddress(context, node.IfTrue);
             } else {
                 return EvaluateAddress(context, node.IfFalse);

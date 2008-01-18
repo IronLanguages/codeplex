@@ -220,6 +220,30 @@ def test_partial_lists_broken():
     Assert("[]" in response)
     ipi.End()    
     
+def test_partial_lists_cp3530():
+
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    
+    try:
+        ipi.ExecutePartialLine("[{'a':None},")
+        response = ipi.ExecuteLine("]")
+        Assert("[{'a': None}]" in response, response)
+    
+        ipi.ExecutePartialLine("[{'a'")
+        response = ipi.ExecutePartialLine(":None},")
+        response = ipi.ExecuteLine("]")
+        Assert("[{'a': None}]" in response, response)
+    
+        ipi.ExecutePartialLine("[{'a':None},")
+        ipi.ExecutePartialLine("1,")
+        response = ipi.ExecuteLine("2]")
+        Assert("[{'a': None}, 1, 2]" in response, response)
+    
+    finally:
+        ipi.End()
+    
+    
 ##########################################################
 # Support partial tuples
 def test_partial_tuples():

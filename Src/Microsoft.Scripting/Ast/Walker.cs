@@ -14,12 +14,13 @@
  * ***************************************************************************/
 
 using System.Collections.Generic;
+using System;
 
 namespace Microsoft.Scripting.Ast {
     partial class Walker {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-        public void WalkNode(Node node) {
+        public void WalkNode(Expression node) {
             if (node == null) {
                 return;
             }
@@ -73,8 +74,8 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ArrayIndexAssignment:
                     DefaultWalk((ArrayIndexAssignment)node);
                     break;
-                case AstNodeType.BlockStatement:
-                    DefaultWalk((BlockStatement)node);
+                case AstNodeType.Block:
+                    DefaultWalk((Block)node);
                     break;
                 case AstNodeType.BoundAssignment:
                     DefaultWalk((BoundAssignment)node);
@@ -85,12 +86,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.BreakStatement:
                     DefaultWalk((BreakStatement)node);
                     break;
-                case AstNodeType.CatchBlock:
-                    DefaultWalk((CatchBlock)node);
-                    break;
-                case AstNodeType.CodeBlock:
-                    DefaultWalk((CodeBlock)node);
-                    break;
                 case AstNodeType.CodeBlockExpression:
                     DefaultWalk((CodeBlockExpression)node);
                     break;
@@ -99,9 +94,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ParamsExpression:
                 case AstNodeType.GeneratorIntrinsic:
                     DefaultWalk((IntrinsicExpression)node);
-                    break;
-                case AstNodeType.CommaExpression:
-                    DefaultWalk((CommaExpression)node);
                     break;
                 case AstNodeType.ContinueStatement:
                     DefaultWalk((ContinueStatement)node);
@@ -120,15 +112,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.ExpressionStatement:
                     DefaultWalk((ExpressionStatement)node);
-                    break;
-                case AstNodeType.GeneratorCodeBlock:
-                    DefaultWalk((GeneratorCodeBlock)node);
-                    break;
-                case AstNodeType.IfStatement:
-                    DefaultWalk((IfStatement)node);
-                    break;
-                case AstNodeType.IfStatementTest:
-                    DefaultWalk((IfStatementTest)node);
                     break;
                 case AstNodeType.LabeledStatement:
                     DefaultWalk((LabeledStatement)node);
@@ -151,9 +134,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ScopeStatement:
                     DefaultWalk((ScopeStatement)node);
                     break;
-                case AstNodeType.SwitchCase:
-                    DefaultWalk((SwitchCase)node);
-                    break;
                 case AstNodeType.SwitchStatement:
                     DefaultWalk((SwitchStatement)node);
                     break;
@@ -169,13 +149,31 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.UnboundExpression:
                     DefaultWalk((UnboundExpression)node);
                     break;
-                case AstNodeType.VoidExpression:
-                    DefaultWalk((VoidExpression)node);
-                    break;
                 case AstNodeType.YieldStatement:
                     DefaultWalk((YieldStatement)node);
                     break;
             }
+        }
+
+        public void WalkNode(CatchBlock node) {
+            DefaultWalk(node);
+        }
+
+        public void WalkNode(CodeBlock node) {
+            GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
+            if (gcb != null) {
+                DefaultWalk(gcb);
+            } else {
+                DefaultWalk(node);
+            }
+        }
+
+        public void WalkNode(IfStatementTest node) {
+            DefaultWalk(node);
+        }
+
+        public void WalkNode(SwitchCase node) {
+            DefaultWalk(node);
         }
 
         // ActionExpression
@@ -225,16 +223,6 @@ namespace Microsoft.Scripting.Ast {
         private void DefaultWalk(CodeBlockExpression node) {
             if (node.IsDeclarative && Walk(node)) {
                 WalkNode(node.Block);
-            }
-            PostWalk(node);
-        }
-
-        // CommaExpression
-        private void DefaultWalk(CommaExpression node) {
-            if (Walk(node)) {
-                foreach (Expression e in node.Expressions) {
-                    WalkNode(e);
-                }
             }
             PostWalk(node);
         }
@@ -351,19 +339,11 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // VoidExpression
-        private void DefaultWalk(VoidExpression node) {
+        // Block
+        private void DefaultWalk(Block node) {
             if (Walk(node)) {
-                WalkNode(node.Statement);
-            }
-            PostWalk(node);
-        }
-
-        // BlockStatement
-        private void DefaultWalk(BlockStatement node) {
-            if (Walk(node)) {
-                foreach (Statement stmt in node.Statements) {
-                    WalkNode(stmt);
+                foreach (Expression expr in node.Expressions) {
+                    WalkNode(expr);
                 }
             }
             PostWalk(node);
@@ -406,17 +386,6 @@ namespace Microsoft.Scripting.Ast {
         private void DefaultWalk(ExpressionStatement node) {
             if (Walk(node)) {
                 WalkNode(node.Expression);
-            }
-            PostWalk(node);
-        }
-
-        // IfStatement
-        private void DefaultWalk(IfStatement node) {
-            if (Walk(node)) {
-                foreach (IfStatementTest t in node.Tests) {
-                    WalkNode(t);
-                }
-                WalkNode(node.ElseStatement);
             }
             PostWalk(node);
         }

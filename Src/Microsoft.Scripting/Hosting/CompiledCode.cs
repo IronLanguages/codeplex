@@ -36,18 +36,22 @@ namespace Microsoft.Scripting.Hosting {
     /// Hosting API counterpart for <see cref="ScriptCode"/>.
     /// </summary>
     public sealed class CompiledCode : ICompiledCode, ILocalObject {
+        private readonly ScriptEngine/*!*/ _engine;
         private readonly ScriptCode/*!*/ _code;
 
         // should be called only from ScriptCode.FromCompiledCode:
         internal ScriptCode/*!*/ ScriptCode { get { return _code; } }
 
-        internal CompiledCode(ScriptCode/*!*/ code) {
-            Debug.Assert(code != null);
+        internal CompiledCode(ScriptEngine/*!*/ engine, ScriptCode/*!*/ code) {
+            Assert.NotNull(engine);
+            Assert.NotNull(code);
+
+            _engine = engine;
             _code = code;
         }
 
         public IScriptScope/*!*/ MakeOptimizedScope() {
-            return new ScriptScope(_code.MakeOptimizedScope());
+            return new ScriptScope(_engine, _code.MakeOptimizedScope());
         }
 
         /// <summary>

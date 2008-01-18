@@ -25,14 +25,16 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
     public static class PythonLocale {
         internal static LocaleInfo currentLocale = new LocaleInfo();
 
+        public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "_locale", "");
+
         public static object CHAR_MAX = 127;
-        public static object Error = ExceptionConverter.CreatePythonException("Error", "_locale");
         public static object LC_ALL = (int)LocaleCategories.All;
         public static object LC_COLLATE = (int)LocaleCategories.Collate;
         public static object LC_CTYPE = (int)LocaleCategories.CType;
@@ -42,7 +44,7 @@ namespace IronPython.Modules {
 
         [Documentation("gets the default locale tuple")]
         [PythonName("_getdefaultlocale")]
-        public static object GetDefaultLocale() {
+        public static object GetDefaultLocale() {            
             return PythonTuple.MakeTuple(new object[] { CultureInfo.CurrentCulture.Name, "" });
         }
 
@@ -148,7 +150,7 @@ Currently returns the string unmodified")]
                         conv = null;
                         break;
                     default:
-                        throw ExceptionConverter.CreateThrowable(Error, "unknown locale category");
+                        throw PythonExceptions.CreateThrowable(Error, "unknown locale category");
                 }
             }
 
@@ -176,7 +178,7 @@ Currently returns the string unmodified")]
                     case LocaleCategories.Monetary: return CultureToName(Monetary);
                     case LocaleCategories.Numeric: return CultureToName(Numeric);
                     default:
-                        throw ExceptionConverter.CreateThrowable(Error, "unknown locale category");
+                        throw PythonExceptions.CreateThrowable(Error, "unknown locale category");
                 }
             }
 
@@ -190,7 +192,7 @@ Currently returns the string unmodified")]
                 try {
                     return StringUtils.GetCultureInfo(locale);
                 } catch (ArgumentException) {
-                    throw ExceptionConverter.CreateThrowable(Error, String.Format("unknown locale: {0}", locale));
+                    throw PythonExceptions.CreateThrowable(Error, String.Format("unknown locale: {0}", locale));
                 }
             }
 

@@ -30,24 +30,13 @@ namespace Microsoft.Scripting.Actions {
     /// all the assemblies loaded and the built-in modules.
     /// </summary>
     public class TopNamespaceTracker : NamespaceTracker {
-        private int _initialized;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
-        private bool _isolated;
         private int _lastDiscovery = 0;
 
-        internal TopNamespaceTracker()
+        public TopNamespaceTracker()
             : base(null) {
             SetTopPackage(this);
-        }
-
-        /// <summary>
-        /// Creates a top reflected package that is optionally isolated
-        /// from all other packages in the system.
-        /// </summary>
-        public TopNamespaceTracker(bool isolated)
-            : this() {
-            this._isolated = isolated;
-        }
+        }       
 
         #region Public API Surface
 
@@ -72,7 +61,6 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public MemberTracker TryGetPackageAny(SymbolId name) {
-            Initialize();
             MemberTracker ret;
             if (TryGetValue(name, out ret)) {
                 return ret;
@@ -105,23 +93,7 @@ namespace Microsoft.Scripting.Actions {
                 UpdateId();
             }
 
-            EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
-            if (assmLoaded != null) {
-                assmLoaded(this, new AssemblyLoadedEventArgs(assem));
-            }
             return true;
-        }
-
-
-        public void Initialize() {
-            if (_initialized != 0) return;
-            if (System.Threading.Interlocked.Exchange(ref _initialized, 1) == 0) {
-
-                // add mscorlib
-                ClrModule.GetInstance().AddReference(typeof(string).Assembly);
-                // add system.dll
-                ClrModule.GetInstance().AddReference(typeof(System.Diagnostics.Debug).Assembly);
-            }
         }
 
         #endregion
@@ -134,7 +106,5 @@ namespace Microsoft.Scripting.Actions {
                 _lastDiscovery = _packageAssemblies.Count;
             }
         }
-
-        public event EventHandler<AssemblyLoadedEventArgs> AssemblyLoaded;
     }
 }

@@ -30,7 +30,7 @@ namespace IronPython.Compiler.Ast {
             get { return _names; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // global statement is Python's specific syntactic sugar.
             return Ast.Empty(Span);
         }

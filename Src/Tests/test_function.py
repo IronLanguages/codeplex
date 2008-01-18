@@ -62,7 +62,7 @@ else:
     try:
         CreateSubType(type(foo))
     except TypeError, e:
-        Assert(e.msg.find("is not an acceptable base type") != -1)
+        Assert(e.message.find("is not an acceptable base type") != -1)
 
 def a(*args): return args
 def b(*args): return a(*args)
@@ -372,7 +372,7 @@ AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (3 given)",
                                    "abs() takes exactly one argument (3 given)",   abs, 1, 2, 3)
 AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
                                    "abs() takes no keyword arguments",             abs, dummy=2)
-AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
+AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (2 given)",
                                    "abs() takes no keyword arguments",             abs, 1, dummy=2)
 AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (0 given)",
                                    "abs() takes exactly one argument (0 given)",   lambda:abs())
@@ -380,7 +380,7 @@ AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (3 given)",
                                    "abs() takes exactly one argument (3 given)",   lambda:abs(1, 2, 3))
 AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
                                    "abs() takes no keyword arguments",             lambda:abs(dummy=2))
-AssertErrorWithMessages(TypeError, "abs() got an unexpected keyword argument 'dummy'",
+AssertErrorWithMessages(TypeError, "abs() takes exactly 1 argument (2 given)",
                                    "abs() takes no keyword arguments",             lambda:abs(1, dummy=2))
 
 # list([m]) has one default argument (built-in type)

@@ -14,16 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Diagnostics;
     using Microsoft.Scripting.Utils;
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     class ParamsArgBuilder : ArgBuilder {
         private int _start;
@@ -60,29 +56,11 @@ namespace Microsoft.Scripting.Generation {
             return Ast.NewArray(_elementType.MakeArrayType(), elems);
         }
 
-        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
-            if (_count == 0) return null;
 
-            Expression res = context.CheckExpression(parameters[_start], _elementType);
-            for (int i = 1; i < _count; i++) {
-                res = Ast.AndAlso(res, context.CheckExpression(parameters[_start + i], _elementType));
+        public override Type Type {
+            get {
+                return _elementType.MakeArrayType();
             }
-            return res;
-        }
-
-        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
-            if (_count == 0) return true;
-
-            bool res = true;
-            for (int i = 0; i < _count; i++) {
-                if (!context.CanConvert(paramTypes[_start + i], _elementType, level)) {
-                    if (failures != null) {
-                        failures.Add(new ConversionFailure(paramTypes[_start + i], _elementType, _start + i));
-                    }
-                    res = false;
-                }
-            }
-            return res;
         }
     }
 }

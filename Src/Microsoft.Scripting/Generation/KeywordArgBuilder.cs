@@ -14,8 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -26,13 +25,22 @@ namespace Microsoft.Scripting.Generation {
     /// offset within the keyword arguments, the number of keyword arguments, and the 
     /// total number of arguments provided by the user.  It then delegates to an 
     /// underlying ArgBuilder which only receives the single correct argument.
+    /// 
+    /// Delaying the calculation of the position to emit time allows the method binding to be 
+    /// done without knowing the exact the number of arguments provided by the user. Hence,
+    /// the method binder can be dependent only on the set of method overloads and keyword names,
+    /// but not the user arguments. While the number of user arguments could be determined
+    /// upfront, the current MethodBinder does not have this design.
     /// </summary>
     class KeywordArgBuilder : ArgBuilder {
         private int _kwArgCount, _kwArgIndex;
         private ArgBuilder _builder;
 
         public KeywordArgBuilder(ArgBuilder builder, int kwArgCount, int kwArgIndex) {
+            Debug.Assert(BuilderExpectsSingleParameter(builder));
             _builder = builder;
+
+            Debug.Assert(kwArgIndex < kwArgCount);
             _kwArgCount = kwArgCount;
             _kwArgIndex = kwArgIndex;
         }
@@ -41,23 +49,24 @@ namespace Microsoft.Scripting.Generation {
             get { return _builder.Priority; }
         }
 
+        /// <summary>
+        /// The underlying builder should expect a single parameter as KeywordArgBuilder is responsible
+        /// for calculating the correct parameter to use
+        /// </summary>
+        /// <param name="builder"></param>
+        internal static bool BuilderExpectsSingleParameter(ArgBuilder builder) {
+            return (((SimpleArgBuilder)builder).Index == 0);
+        }
+
         internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+            Debug.Assert(BuilderExpectsSingleParameter(_builder));
             return _builder.ToExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Length)] });
         }
 
-        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
-            return _builder.CheckExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Length)] });
-        }
-
-        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
-            if (!_builder.CanConvert(context, new Type[] { paramTypes[GetKeywordIndex(paramTypes.Length)] }, level, failures)) {
-                if (failures != null) {
-                    // need to update to use the correct index
-                    ConversionFailure.ReplaceLastFailure(failures, GetKeywordIndex(paramTypes.Length));
-                }
-                return false;
+        public override Type Type {
+            get {
+                return _builder.Type;
             }
-            return true;
         }
 
         internal override Expression ToReturnExpression(MethodBinderContext context) {

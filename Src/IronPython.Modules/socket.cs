@@ -685,10 +685,10 @@ namespace IronPython.Modules {
 
         #region Fields
 
-        public static OldClass error = ExceptionConverter.CreatePythonException("error", "socket");
-        public static OldClass herror = ExceptionConverter.CreatePythonException("herror", "socket", error);
-        public static OldClass gaierror = ExceptionConverter.CreatePythonException("gaierror", "socket", error);
-        public static OldClass timeout = ExceptionConverter.CreatePythonException("timeout", "socket", error);
+        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "socket", "");
+        public static PythonType herror = PythonExceptions.CreateSubType(error, "herror", "socket", "");
+        public static PythonType gaierror = PythonExceptions.CreateSubType(error, "gaierror", "socket", "");
+        public static PythonType timeout = PythonExceptions.CreateSubType(error, "timeout", "socket", "");       
 
         private static int? DefaultTimeout = null; // in milliseconds
 
@@ -724,28 +724,28 @@ namespace IronPython.Modules {
             } else if (port is string) {
                 if (!Int32.TryParse((string)port, out numericPort)) {
                     // TODO: also should consult GetServiceByName                    
-                    throw MakeException(gaierror, "getaddrinfo failed");
+                    throw PythonExceptions.CreateThrowable(gaierror, "getaddrinfo failed");
                 }
             } else if (port is ExtensibleString) {
                 if (!Int32.TryParse(((ExtensibleString)port).Value, out numericPort)) {
                     // TODO: also should consult GetServiceByName                    
-                    throw MakeException(gaierror, "getaddrinfo failed");
+                    throw PythonExceptions.CreateThrowable(gaierror, "getaddrinfo failed");
                 }
             } else {
-                throw MakeException(gaierror, "getaddrinfo failed");
+                throw PythonExceptions.CreateThrowable(gaierror, "getaddrinfo failed");
             }
 
             if (socktype != 0) {
                 // we just use this to validate; socketType isn't actually used
                 System.Net.Sockets.SocketType socketType = (System.Net.Sockets.SocketType)Enum.ToObject(typeof(System.Net.Sockets.SocketType), socktype);
                 if (socketType == System.Net.Sockets.SocketType.Unknown || !Enum.IsDefined(typeof(System.Net.Sockets.SocketType), socketType)) {
-                    throw MakeException(gaierror, PythonTuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
+                    throw PythonExceptions.CreateThrowable(gaierror, PythonTuple.MakeTuple((int)SocketError.SocketNotSupported, "getaddrinfo failed"));
                 }
             }
 
             AddressFamily addressFamily = (AddressFamily)Enum.ToObject(typeof(AddressFamily), family);
             if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
-                throw MakeException(gaierror, PythonTuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
+                throw PythonExceptions.CreateThrowable(gaierror, PythonTuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
             }
 
             // Again, we just validate, but don't actually use protocolType
@@ -836,14 +836,14 @@ namespace IronPython.Modules {
                     aliases = List.MakeEmptyList(0);
                     ips.Append(host);
                 } else {
-                    throw MakeException(gaierror, (int)SocketError.HostNotFound, "no IPv4 addresses associated with host");
+                    throw PythonExceptions.CreateThrowable(gaierror, (int)SocketError.HostNotFound, "no IPv4 addresses associated with host");
                 }
             } else {
                 IPHostEntry hostEntry;
                 try {
                     hostEntry = Dns.GetHostEntry(host);
                 } catch (SocketException e) {
-                    throw MakeException(gaierror, e.ErrorCode, "no IPv4 addresses associated with host");
+                    throw PythonExceptions.CreateThrowable(gaierror, e.ErrorCode, "no IPv4 addresses associated with host");
                 }
                 hostname = hostEntry.HostName;
                 aliases = List.Make(hostEntry.Aliases);
@@ -941,19 +941,19 @@ namespace IronPython.Modules {
                 // Do double lookup to force reverse DNS lookup to match CPython behavior
                 hostEntry = Dns.GetHostEntry(host);
                 if (hostEntry.AddressList.Length < 1) {
-                    throw MakeException(error, "sockaddr resolved to zero addresses");
+                    throw PythonExceptions.CreateThrowable(error, "sockaddr resolved to zero addresses");
                 }
                 hostEntry = Dns.GetHostEntry(hostEntry.AddressList[0]);
             } catch (SocketException e) {
-                throw MakeException(gaierror, e.ErrorCode, e.Message);
+                throw PythonExceptions.CreateThrowable(gaierror, e.ErrorCode, e.Message);
             } catch (IndexOutOfRangeException) {
-                throw MakeException(gaierror, "sockaddr resolved to zero addresses");
+                throw PythonExceptions.CreateThrowable(gaierror, "sockaddr resolved to zero addresses");
             }
 
             if (hostEntry.AddressList.Length > 1) {
-                throw MakeException(error, "sockaddr resolved to multiple addresses");
+                throw PythonExceptions.CreateThrowable(error, "sockaddr resolved to multiple addresses");
             } else if (hostEntry.AddressList.Length < 1) {
-                throw MakeException(error, "sockaddr resolved to zero addresses");
+                throw PythonExceptions.CreateThrowable(error, "sockaddr resolved to zero addresses");
             }
 
             if ((flags & (int)NI_NUMERICHOST) != 0) {
@@ -999,7 +999,7 @@ namespace IronPython.Modules {
                 case "tcp": return IPPROTO_TCP;
                 case "udp": return IPPROTO_UDP;
                 default:
-                    throw MakeException(error, "protocol not found");
+                    throw PythonExceptions.CreateThrowable(error, "protocol not found");
             }
         }
 
@@ -1105,7 +1105,7 @@ namespace IronPython.Modules {
                     throw MakeException(new SocketException((int)SocketError.AddressFamilyNotSupported));
                 }
             } catch (FormatException) {
-                throw MakeException(error, "illegal IP address passed to inet_pton");
+                throw PythonExceptions.CreateThrowable(error, "illegal IP address passed to inet_pton");
             }
             return StringOps.FromByteArray(ip.GetAddressBytes());
         }
@@ -1126,7 +1126,7 @@ namespace IronPython.Modules {
                 (packedIP.Length == IPv4AddrBytes && addressFamily == (int)AddressFamily.InterNetwork)
                 || (packedIP.Length == IPv6AddrBytes && addressFamily == (int)AddressFamily.InterNetworkV6)
             )) {
-                throw MakeException(error, "invalid length of packed IP address string");
+                throw PythonExceptions.CreateThrowable(error, "invalid length of packed IP address string");
             }
             byte[] ipBytes = StringOps.ToByteArray(packedIP);
             if (addressFamily == (int)AddressFamily.InterNetworkV6) {
@@ -1331,27 +1331,16 @@ namespace IronPython.Modules {
                 switch (se.SocketErrorCode) {
                     case SocketError.NotConnected:  // CPython times out when the socket isn't connected.
                     case SocketError.TimedOut:
-                        return MakeException(timeout, se.ErrorCode, se.Message);
+                        return PythonExceptions.CreateThrowable(timeout, se.ErrorCode, se.Message);
                     default:
-                        return MakeException(error, se.ErrorCode, se.Message);
+                        return PythonExceptions.CreateThrowable(error, se.ErrorCode, se.Message);
                 }
             } else if (exception is ObjectDisposedException) {
-                return MakeException(error, (int)EBADF, "the socket is closed");
+                return PythonExceptions.CreateThrowable(error, (int)EBADF, "the socket is closed");
             } else if (exception is InvalidOperationException) {
                 return MakeException(new SocketException((int)SocketError.InvalidArgument));
             } else {
                 return exception;
-            }
-        }
-
-        /// <summary>
-        /// Return an exception of a specified type with a specified message
-        /// </summary>
-        private static Exception MakeException(OldClass type, params object[] args) {
-            if (args.Length == 1) {
-                return ExceptionConverter.ToClr(PythonCalls.Call(type, args[0]));
-            } else {
-                return ExceptionConverter.ToClr(PythonCalls.Call(type, PythonTuple.MakeTuple(args)));
             }
         }
 
@@ -1480,7 +1469,7 @@ namespace IronPython.Modules {
                 }
                 throw new SocketException((int)SocketError.HostNotFound);
             } catch (SocketException e) {
-                throw MakeException(gaierror, e.ErrorCode, "no addresses of the specified family associated with host");
+                throw PythonExceptions.CreateThrowable(gaierror, e.ErrorCode, "no addresses of the specified family associated with host");
             }
         }
 

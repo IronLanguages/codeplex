@@ -21,6 +21,7 @@ using System.IO;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting.Math;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("struct", typeof(IronPython.Modules.PythonStruct))]
 namespace IronPython.Modules {
@@ -309,7 +310,7 @@ namespace IronPython.Modules {
                     case '<': // little endian
                     case '>': // big endian
                     case '!': // big endian
-                        if (i != 0) ExceptionConverter.CreateThrowable(error, "unexpected byte order");
+                        if (i != 0) PythonExceptions.CreateThrowable(error, "unexpected byte order");
                         break;
                     default:
                         if (Char.IsDigit(fmt[i])) {
@@ -328,7 +329,7 @@ namespace IronPython.Modules {
             return len;
         }
 
-        public static object error = ExceptionConverter.CreatePythonException("error", "struct");
+        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "struct", "");
 
         #endregion
 
@@ -737,7 +738,7 @@ namespace IronPython.Modules {
         #region Misc. Private APIs
 
         private static Exception Error(string msg) {
-            return ExceptionConverter.CreateThrowable(error, msg);
+            return PythonExceptions.CreateThrowable(error, msg);
         }
 
         #endregion

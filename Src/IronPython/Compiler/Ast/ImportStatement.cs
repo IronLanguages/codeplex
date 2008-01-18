@@ -44,8 +44,8 @@ namespace IronPython.Compiler.Ast {
             get { return _asNames; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
-            List<MSAst.Statement> statements = new List<MSAst.Statement>();
+        internal override MSAst.Expression Transform(AstGenerator ag) {
+            List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             for (int i = 0; i < _names.Length; i++) {
                 statements.Add(

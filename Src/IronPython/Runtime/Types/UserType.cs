@@ -29,8 +29,10 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Compiler.Generation;
 using Microsoft.Scripting.Ast;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Types {
+    
     /// <summary>
     /// UserType represents the type of new-style Python classes (which can inherit from built-in types). 
     /// 
@@ -77,61 +79,7 @@ namespace IronPython.Runtime.Types {
             utb.DoBuild(context);
         }
 
-        /// <summary>
-        /// TODO: This needs to become an IDynamicObject
-        /// </summary>
-        class TypePrepender : ICallableWithCodeContext, IFancyCallable {
-            private PythonType _type;
-            private PrependerState _state;
 
-            public class PrependerState {
-                public PrependerState(BuiltinFunction ctor) {
-                    Ctor = ctor;
-                }
-
-                public BuiltinFunction Ctor;
-                public FastDynamicSite<BuiltinFunction, PythonType, object[], object> Site;                
-            }
-
-            public TypePrepender(PythonType dt, PrependerState state) {
-                _type = dt;
-                _state = state;
-            }
-
-            #region ICallableWithCodeContext Members
-
-            public object Call(CodeContext context, object[] args) {
-                // we've already boxed the args so we'll just call through a splat-site
-                // which will do the unsplat for us.
-                if (_state.Site == null) {
-                    CreateCallSite();
-                }
-
-                return _state.Site.Invoke(_state.Ctor, _type, args);
-            }
-
-            private void CreateCallSite() {
-                _state.Site = FastDynamicSite<BuiltinFunction, PythonType, object[], object>.Create(
-                    DefaultContext.Default,
-                    CallAction.Make(
-                        new CallSignature(
-                            new ArgumentInfo(ArgumentKind.Simple),
-                            new ArgumentInfo(ArgumentKind.List)
-                        )
-                    )
-                );
-            }
-
-            #endregion
-
-            #region IFancyCallable Members
-
-            public object Call(CodeContext context, object[] args, string[] names) {
-                return PythonCalls.CallWithKeywordArgs(_state.Ctor, ArrayUtils.Insert((object)_type, args), names);
-            }
-
-            #endregion
-        }
 
         private PythonType DoBuild(CodeContext context) {
             Debug.Assert(Builder != null);
@@ -662,8 +610,6 @@ namespace IronPython.Runtime.Types {
                     ret = null;
                     return false;
                 }
-
-                //Console.WriteLine(value);
 
                 if (other.GetType() == typeof(KwCallInfo)) {
                     KwCallInfo kwinfo = (KwCallInfo)other;

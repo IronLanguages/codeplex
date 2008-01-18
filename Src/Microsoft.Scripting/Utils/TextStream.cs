@@ -21,13 +21,13 @@ using System.IO;
 namespace Microsoft.Scripting.Utils {
     public abstract class TextStreamBase : Stream {
 
-        private bool _buffered;
+        private readonly bool _buffered;
 
         protected TextStreamBase(bool buffered) {
             _buffered = buffered;
         }
 
-        public abstract Encoding Encoding { get; }
+        public abstract Encoding/*!*/ Encoding { get; }
         public abstract TextReader Reader { get; }
         public abstract TextWriter Writer { get; }
 
@@ -48,19 +48,19 @@ namespace Microsoft.Scripting.Utils {
             Writer.Flush();
         }
 
-        public sealed override int Read(byte[] buffer, int offset, int count) {
+        public sealed override int Read(byte[]/*!*/ buffer, int offset, int count) {
             if (!CanRead) throw new InvalidOperationException();
             Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
 
-            char[] char_buffer = new char[count];
-            int real_count = Reader.Read(char_buffer, 0, count);
-            return Encoding.GetBytes(char_buffer, 0, real_count, buffer, offset);
+            char[] charBuffer = new char[count];
+            int realCount = Reader.Read(charBuffer, 0, count);
+            return Encoding.GetBytes(charBuffer, 0, realCount, buffer, offset);
         }
 
-        public sealed override void Write(byte[] buffer, int offset, int count) {
+        public sealed override void Write(byte[]/*!*/ buffer, int offset, int count) {
             Contract.RequiresArrayRange(buffer, offset, count, "offset", "count");
-            char[] char_buffer = Encoding.GetChars(buffer, offset, count);
-            Writer.Write(char_buffer, 0, char_buffer.Length);
+            char[] charBuffer = Encoding.GetChars(buffer, offset, count);
+            Writer.Write(charBuffer, 0, charBuffer.Length);
             if (!_buffered) Writer.Flush();
         }
 
@@ -94,9 +94,9 @@ namespace Microsoft.Scripting.Utils {
 
     public sealed class TextStream : TextStreamBase {
 
-        private TextReader _reader;
-        private TextWriter _writer;
-        private Encoding _encoding;
+        private readonly TextReader _reader;
+        private readonly TextWriter _writer;
+        private readonly Encoding/*!*/ _encoding;
 
         public override Encoding Encoding {
             get { return _encoding; }
@@ -110,26 +110,26 @@ namespace Microsoft.Scripting.Utils {
             get { return _writer; }
         }
 
-        public TextStream(TextReader reader, Encoding encoding)
+        public TextStream(TextReader/*!*/ reader, Encoding/*!*/ encoding)
             : base(true) {
             Contract.RequiresNotNull(reader, "reader");
             Contract.RequiresNotNull(encoding, "encoding");
 
-            this._reader = reader;
-            this._encoding = encoding;
+            _reader = reader;
+            _encoding = encoding;
         }
 
-        public TextStream(TextWriter writer, Encoding encoding)
-            : this(writer, encoding, true) {
+        public TextStream(TextWriter/*!*/ writer)
+            : this(writer, writer.Encoding, true) {
         }
 
-        public TextStream(TextWriter writer, Encoding encoding, bool buffered)
+        public TextStream(TextWriter/*!*/ writer, Encoding/*!*/ encoding, bool buffered)
             : base(buffered) {
             Contract.RequiresNotNull(writer, "writer");
             Contract.RequiresNotNull(encoding, "encoding");
 
-            this._writer = writer;
-            this._encoding = encoding;
+            _writer = writer;
+            _encoding = encoding;
         }
     }
 

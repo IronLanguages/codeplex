@@ -15,11 +15,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Diagnostics;
+using System.Reflection;
 
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override object Build(CodeContext context, object[] args) {            
+        public override object Build(CodeContext context, object[] args) {
             return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
         }
 
@@ -79,20 +79,6 @@ namespace Microsoft.Scripting.Generation {
             Debug.Assert(_index < parameters.Length);
             Debug.Assert(parameters[_index] != null);
             return context.ConvertExpression(parameters[_index], _parameterType);
-        }
-
-        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
-            return context.CheckExpression(parameters[_index], _parameterType);
-        }
-
-        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
-            if (!context.CanConvert(paramTypes[_index], _parameterType, level)) {
-                if (failures != null) {
-                    failures.Add(new ConversionFailure(paramTypes[_index], _parameterType, _index));
-                }
-                return false;
-            }
-            return true;
         }
 
         public override AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {
@@ -106,7 +92,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public Type Type {
+        public override Type Type {
             get {
                 return _parameterType;
             }

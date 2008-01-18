@@ -91,7 +91,7 @@ def getRCWFromProgID(prog_id):
     return Activator.CreateInstance(getTypeFromProgID(prog_id))
 
 #------------------------------------------------------------------------------    
-def AssertResults(expectedResultWithIDispatch, expectedResultWithInteropAssembly, func, *args):
+def AssertResults(expectedResultWithIDispatch, expectedResultWithInteropAssembly, func, *args, **kwargs):
     if preferComDispatch: expectedResult = expectedResultWithIDispatch
     else: expectedResult = expectedResultWithInteropAssembly
     
@@ -102,11 +102,11 @@ def AssertResults(expectedResultWithIDispatch, expectedResultWithInteropAssembly
     except TypeError: pass
     
     if exceptionExpected:
-        try:        result = func(*args)
+        try:        result = func(*args, **kwargs)
         except expectedResult: return
         else :      Fail("Expected %r but got no exception (result=%r)" % (expectedResult, result))
     else:
-        AreEqual(func(*args), expectedResult)
+        AreEqual(func(*args, **kwargs), expectedResult)
 
 #------------------------------------------------------------------------------
 def genPeverifyInteropAsm(file):

@@ -29,7 +29,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private readonly bool _hasTypeInfo;
         private readonly int _memid;  // this is the member id extracted from FUNCDESC.memid
         private readonly string _name;
-        private readonly string _dispidOrName;
         private readonly bool _isPropertyGet;
         private readonly bool _isPropertyPut;
         private readonly ComParamDesc _returnValue;
@@ -41,7 +40,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         private ComMethodDesc(int dispId) {
             _memid = dispId;
-            _dispidOrName = String.Format("[DISPID={0}]", dispId);
         }
 
         public ComMethodDesc(string name, int dispId)
@@ -60,7 +58,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             _isPropertyPut = (funcDesc.invkind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
 
             ELEMDESC returnValue = funcDesc.elemdescFunc;
-            _returnValue = new ComParamDesc(returnValue, String.Empty);
+            _returnValue = new ComParamDesc(ref returnValue);
 
             int cNames;
             string[] rgNames = new string[1 + funcDesc.cParams];
@@ -80,7 +78,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     new IntPtr(funcDesc.lprgelemdescParam.ToInt64() + offset),
                     typeof(ELEMDESC));
 
-                _parameters[i] = new ComParamDesc(elemDesc, rgNames[1 + i]);
+                _parameters[i] = new ComParamDesc(ref elemDesc, rgNames[1 + i]);
 
                 offset += Marshal.SizeOf(typeof(ELEMDESC));
             }
@@ -96,10 +94,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
-        public string DispIdOrName {
+        internal string DispIdString {
             get {
-                Debug.Assert(_dispidOrName != null);
-                return _dispidOrName; 
+                return String.Format("[DISPID={0}]", _memid);
             }
         }
 

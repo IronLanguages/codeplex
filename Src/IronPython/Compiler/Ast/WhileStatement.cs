@@ -53,7 +53,7 @@ namespace IronPython.Compiler.Ast {
             End = end;
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             ag.EnterLoop();
             try {
                 return Ast.While(

@@ -14,12 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -33,7 +29,7 @@ namespace Microsoft.Scripting.Generation {
         private int[] _nameIndexes;
         private int _argIndex;
 
-        public ParamsDictArgBuilder(int argIndex, SymbolId[] names, int []nameIndexes) {
+        public ParamsDictArgBuilder(int argIndex, SymbolId[] names, int[] nameIndexes) {
             _argIndex = argIndex;
             _names = names;
             _nameIndexes = nameIndexes;
@@ -53,13 +49,10 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
-            return null;
-        }
-
-
-        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
-            return true;
+        public override Type Type {
+            get {
+                return typeof(IAttributesCollection);
+            }
         }
 
         private Expression[] GetParameters(Expression[] parameters) {

@@ -21,7 +21,7 @@ if testpath.basePyDir.lower()=='src':
     print "Skipping DLR COM Lib tests..."
     sys.exit(0)
 
-for test_module in ["dlrcomserver", "paramsinretval"]:
+for test_module in ["dlrcomserver", "paramsinretval", "OutParams"]:
     print "--------------------------------------------------------------------"
     print "Importing", test_module, "..."
     try:

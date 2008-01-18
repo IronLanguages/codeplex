@@ -21,6 +21,6 @@ namespace IronPython.Compiler.Ast {
             get { return null; }
         }
 
-        internal abstract MSAst.Statement Transform(AstGenerator ag);
+        internal abstract MSAst.Expression Transform(AstGenerator ag);
     }
 }

@@ -90,7 +90,7 @@ namespace IronPython.Compiler.Ast {
             return ArrayUtils.Append(GetActionArgumentsForGetOrDelete(ag), right);
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if(op != Operators.None) {
                 right = Ast.Action.Operator(op,
                             typeof(object),
@@ -105,15 +105,17 @@ namespace IronPython.Compiler.Ast {
 
             return Ast.Statement(
                 Span,
-                Ast.Action.Operator(
-                    SetOperator,
-                    typeof(object),
-                    GetActionArgumentsForSet(ag, right)
+                Ast.Void(
+                    Ast.Action.Operator(
+                        SetOperator,
+                        typeof(object),
+                        GetActionArgumentsForSet(ag, right)
+                    )
                 )
             );
         }
         
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             return Ast.Statement(
                 Span,
                 Ast.Action.Operator(

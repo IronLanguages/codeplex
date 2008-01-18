@@ -22,7 +22,7 @@ namespace IronPython.Compiler.Ast {
         public EmptyStatement() {
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             return Ast.Empty(Span);
         }
 

@@ -56,23 +56,17 @@ namespace Microsoft.Scripting {
     /// </summary>
     public sealed class ScriptScope : IScriptScope, ILocalObject {
         private readonly Scope/*!*/ _scope;
+        private readonly IScriptEngine/*!*/ _engine;
 
-        // TODO: remove
-        // We should go to _scope.Language for ObjectOperations.
-        // We need to split OO into HAPI and LAPI piece
-        private readonly ScriptEngine/*!*/ _engine;
-
-        // friend: Scope
-        internal ScriptScope(Scope/*!*/ scope) {
+        internal ScriptScope(IScriptEngine/*!*/ engine, Scope/*!*/ scope) {
+            Assert.NotNull(engine);
             Assert.NotNull(scope);
+            
             _scope = scope;
-
-            // TODO: remove
-            _engine = _scope.Language.DomainManager.GetEngine(_scope.Language);
+            _engine = engine;
         }
 
-        // TODO: internal
-        public Scope/*!*/ Scope {
+        internal Scope/*!*/ Scope {
             get {
                 return _scope;
             }
@@ -140,6 +134,14 @@ namespace Microsoft.Scripting {
         /// </summary>
         public void ClearVariables() {
             _scope.Clear();
+        }
+
+        public IEnumerable<KeyValuePair<string, object>> Items {
+            get {
+                foreach (KeyValuePair<SymbolId, object> kvp in _scope.Items) {
+                    yield return new KeyValuePair<string, object>(SymbolTable.IdToString(kvp.Key), kvp.Value);
+                }
+            }
         }
 
         // dynamic behavior of the scope:

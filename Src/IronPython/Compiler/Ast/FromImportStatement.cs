@@ -61,7 +61,7 @@ namespace IronPython.Compiler.Ast {
             _fromFuture = fromFuture;
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             if (_names == _star) {
                 // from a[.b] import *
                 return Ast.Statement(
@@ -75,7 +75,7 @@ namespace IronPython.Compiler.Ast {
             } else {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
-                List<MSAst.Statement> statements = new List<MSAst.Statement>();
+                List<MSAst.Expression> statements = new List<MSAst.Expression>();
                 MSAst.BoundExpression module = ag.MakeTempExpression("module");
 
                 // Create initializer of the array of names being passed to ImportWithNames

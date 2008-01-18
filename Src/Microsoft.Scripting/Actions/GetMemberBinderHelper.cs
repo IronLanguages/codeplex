@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Actions {
             : base(context, action, args) {
         }
 
-        public Statement MakeMemberRuleTarget(Type instanceType, params MemberInfo[] members) {
+        public Expression MakeMemberRuleTarget(Type instanceType, params MemberInfo[] members) {
             // This should go away w/ abstract values when it'll be easier to compose rules.
             return MakeRuleBody(instanceType, members);
         }
@@ -57,11 +57,11 @@ namespace Microsoft.Scripting.Actions {
             return Rule;
         }
 
-        public Statement MakeRuleBody(Type type, params MemberInfo[] members) {
+        public Expression MakeRuleBody(Type type, params MemberInfo[] members) {
             return MakeBodyHelper(type, new MemberGroup(members));
         }
 
-        private Statement MakeGetMemberTarget() {
+        private Expression MakeGetMemberTarget() {
             Type type = CompilerHelpers.GetType(Target);
             if (typeof(TypeTracker).IsAssignableFrom(type)) {
                 type = ((TypeTracker)Target).Type;
@@ -92,7 +92,7 @@ namespace Microsoft.Scripting.Actions {
             return MakeBodyHelper(type, members);
         }
 
-        private Statement MakeBodyHelper(Type type, MemberGroup members) {
+        private Expression MakeBodyHelper(Type type, MemberGroup members) {
             MakeOperatorGetMemberBody(type, "GetCustomMember");
 
             Expression error;
@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             Expression val = tracker.GetValue(Binder, type);
-            Statement newBody;
+            Expression newBody;
             if (val != null) {
                 newBody = Rule.MakeReturn(Binder, val);
             } else {

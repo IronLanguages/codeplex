@@ -129,7 +129,7 @@ namespace IronPython.Compiler.Ast {
             return TryGetVariable(name, out variable);
         }
 
-        internal override PythonVariable BindName(SymbolId name) {
+        internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
             PythonVariable variable;
 
             // First try variables local to this scope
@@ -154,7 +154,7 @@ namespace IronPython.Compiler.Ast {
                 return null;
             } else {
                 // Create a global variable to bind to.
-                return GetGlobalScope().EnsureGlobalVariable(name);
+                return GetGlobalScope().EnsureGlobalVariable(binder, name);
             }
         }
 
@@ -206,7 +206,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             MSAst.Expression function = TransformToFunctionExpression(ag);
             return Ast.Statement(
                 new SourceSpan(Start, Header),
@@ -246,14 +246,14 @@ namespace IronPython.Compiler.Ast {
 
             // Initialize parameters - unpack tuples.
             // Since tuples unpack into locals, this must be done after locals have been created.
-            List<MSAst.Statement> statements = new List<MSAst.Statement>();
+            List<MSAst.Expression> statements = new List<MSAst.Expression>();
             InitializeParameters(bodyGen, statements);
 
             // For generators, we need to do a check before the first statement for Generator.Throw() / Generator.Close().
             // The exception traceback needs to come from the generator's method body, and so we must do the check and throw
             // from inside the generator.
             if (IsGenerator) {
-                MSAst.Statement s1 = YieldExpression.CreateCheckThrowStatement(bodyGen, SourceSpan.None);
+                MSAst.Expression s1 = YieldExpression.CreateCheckThrowStatement(bodyGen, SourceSpan.None);
                 statements.Add(s1);
             }
 
@@ -262,16 +262,16 @@ namespace IronPython.Compiler.Ast {
 
             if (ScriptDomainManager.Options.DebugMode) {
                 // add beginning and ending break points for the function.
-                if (statements.Count == 0 || statements[0].Start != Body.Start) {
+                if (statements.Count == 0 || GetExpressionStart(statements[0]) != Body.Start) {
                     statements.Insert(0, Ast.Empty(new SourceSpan(Body.Start, Body.Start)));
                 }
 
-                if (statements[statements.Count - 1].End != Body.End) {
+                if (GetExpressionEnd(statements[statements.Count - 1]) != Body.End) {
                     statements.Add(Ast.Empty(new SourceSpan(Body.End, Body.End)));
                 }
             }
 
-            MSAst.Statement body = Ast.Block(statements);
+            MSAst.Expression body = Ast.Block(statements);
 
             // If this function can modify sys.exc_info() (_canSetSysExcInfo), then it must restore the result on finish.
             // 
@@ -285,7 +285,7 @@ namespace IronPython.Compiler.Ast {
             if (!IsGenerator && this._canSetSysExcInfo) 
             {
                 MSAst.BoundExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
-                MSAst.Statement s = Ast.Try(
+                MSAst.Expression s = Ast.Try(
                     Ast.Statement(
                         Ast.Assign(
                             extracted.Variable,
@@ -337,6 +337,24 @@ namespace IronPython.Compiler.Ast {
             return ret;
         }
 
+        private SourceLocation GetExpressionStart(MSAst.Expression expression) {
+            MSAst.ISpan span = expression as MSAst.ISpan;
+            if (span != null) {
+                return span.Start;
+            } else {
+                return SourceLocation.None;
+            }
+        }
+
+        private SourceLocation GetExpressionEnd(MSAst.Expression expression) {
+            MSAst.ISpan span = expression as MSAst.ISpan;
+            if (span != null) {
+                return span.End;
+            } else {
+                return SourceLocation.None;
+            }
+        }
+
         private void TransformParameters(AstGenerator outer, AstGenerator inner, List<MSAst.Expression> defaults, List<MSAst.Expression> names) {
             for (int i = 0; i < _parameters.Length; i++) {
                 // Create the parameter in the inner code block
@@ -358,25 +376,25 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        private void InitializeParameters(AstGenerator ag, List<MSAst.Statement> init) {
+        private void InitializeParameters(AstGenerator ag, List<MSAst.Expression> init) {
             foreach (Parameter p in _parameters) {
                 p.Init(ag, init);
             }
         }
 
-        private void TransformBody(AstGenerator ag, List<MSAst.Statement> statements) {
+        private void TransformBody(AstGenerator ag, List<MSAst.Expression> statements) {
             SuiteStatement suite = _body as SuiteStatement;
 
             // Special case suite statement to avoid unnecessary allocation of extra node.
             if (suite != null) {
                 foreach (Statement one in suite.Statements) {
-                    MSAst.Statement transforned = ag.Transform(one);
+                    MSAst.Expression transforned = ag.Transform(one);
                     if (transforned != null) {
                         statements.Add(transforned);
                     }
                 }
             } else {
-                MSAst.Statement transformed = ag.Transform(_body);
+                MSAst.Expression transformed = ag.Transform(_body);
                 if (transformed != null) {
                     statements.Add(transformed);
                 }

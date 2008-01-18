@@ -27,8 +27,8 @@ namespace ToyScript.Parser.Ast {
             _statements = statements;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
-            MSAst.Statement[] statements = new MSAst.Statement[_statements.Length];
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
+            MSAst.Expression[] statements = new MSAst.Expression[_statements.Length];
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _statements[i].Generate(tg);
             }

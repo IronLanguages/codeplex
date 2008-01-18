@@ -14,16 +14,26 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Collections.Generic;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using System.Diagnostics;
+using System.Text;
+
 using Microsoft.Contracts;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
-    public class MethodCandidate {
+    /// <summary>
+    /// MethodCandidate represents the different possible ways of calling a method or a set of method overloads.
+    /// A single method can result in multiple MethodCandidates. Some reasons include:
+    /// - Every optional parameter or parameter with a default value will result in a candidate
+    /// - The presence of ref and out parameters will add a candidate for languages which want to return the updated values as return values.
+    /// - ArgumentKind.List and ArgumentKind.Dictionary can result in a new candidate per invocation since the list might be different every time.
+    ///
+    /// Each MethodCandidate represents the parameter type for the candidate using ParameterWrapper.
+    /// 
+    /// Contrast this with MethodTarget which represents the real physical invocation of a method
+    /// </summary>
+    class MethodCandidate {
         private MethodTarget _target;
         private List<ParameterWrapper> _parameters;
         private NarrowingLevel _narrowingLevel;
@@ -57,39 +67,21 @@ namespace Microsoft.Scripting.Generation {
         public override string/*!*/ ToString() {
             return string.Format("MethodCandidate({0})", Target);
         }
+        
+        internal bool IsApplicable(Type[] types, NarrowingLevel narrowingLevel, List<ConversionResult> conversionResults) {            
+            // attempt to convert each parameter
+            bool res = true;
+            for (int i = 0; i < types.Length; i++) {
+                bool success = _parameters[i].HasConversionFrom(types[i], narrowingLevel);
 
-        internal bool IsApplicable(Type[] types, SymbolId[] names, NarrowingLevel allowNarrowing) {
-            if (HasParamsDictionary() || !TryGetNormalizedArguments(types, names, out types)) {
-                return false;
+                conversionResults.Add(new ConversionResult(types[i], _parameters[i].Type, i, !success));
+                    
+                res &= success;                
             }
 
-            return IsApplicable(types, allowNarrowing);
+            return res;
         }
-
-        internal bool IsApplicable(Type[] types, SymbolId[] names, NarrowingLevel allowNarrowing, List<ConversionFailure> conversionFailures) {
-            if (HasParamsDictionary() || !TryGetNormalizedArguments(types, names, out types)) {
-                return false;
-            }
-
-            return _target.CanCall(types, allowNarrowing, conversionFailures);
-        }
-                
-        internal bool CheckArgs(CodeContext context, object[] args, SymbolId[] names) {
-            Type [] newArgs;
-            if (!TryGetNormalizedArguments(CompilerHelpers.GetTypes(args), names, out newArgs)) {
-                return false;
-            }
-
-            if (IsApplicable(newArgs, NarrowingLevel.None)) {
-                return true;
-            }
-
-            object []objArgs;
-            TryGetNormalizedArguments(args, names, out objArgs);
-
-            return Target.CheckArgs(context, objArgs);
-        }
-                
+                         
         internal int CompareTo(MethodCandidate other, CallType callType, Type[] actualTypes) {
             int? cmpParams = CompareParameters(other, actualTypes);
             if (cmpParams == +1 || cmpParams == -1) return (int)cmpParams;
@@ -113,6 +105,8 @@ namespace Microsoft.Scripting.Generation {
         /// fill in those spots w/ extra ParameterWrapper's.  
         /// </summary>
         internal MethodCandidate MakeParamsExtended(ActionBinder binder, int count, SymbolId[] names) {
+            Debug.Assert(CompilerHelpers.IsParamsMethod(_target.Method));
+
             List<ParameterWrapper> newParameters = new List<ParameterWrapper>(count);
             // if we don't have a param array we'll have a param dict which is type object
             Type elementType = null;  
@@ -160,11 +154,14 @@ namespace Microsoft.Scripting.Generation {
                 }
             } else if (unusedNames.Count != 0) {
                 // unbound kw args and no where to put them, can't call...
+                // TODO: We could do better here because this results in an incorrect arg # error message.
                 return null;
             }
 
             // if we have too many or too few args we also can't call
-            if(count != newParameters.Count) return null;
+            if (count != newParameters.Count) {
+                return null;
+            }
 
             return new MethodCandidate(_target.MakeParamsExtended(count, unusedNames.ToArray(), unusedNameIndexes.ToArray()), newParameters);
         }
@@ -206,7 +203,7 @@ namespace Microsoft.Scripting.Generation {
             return true;
         }
 
-        private bool HasParamsDictionary() {
+        internal bool HasParamsDictionary() {
             foreach (ParameterWrapper pw in _parameters) {
                 // can't bind to methods that are params dictionaries, only to their extended forms.
                 if (pw.IsParamsDict) return true;
@@ -214,37 +211,52 @@ namespace Microsoft.Scripting.Generation {
             return false;
         }
 
-        private bool TryGetNormalizedArguments<T>(T[] argTypes, SymbolId[] names, out T[] args) {
+        internal bool TryGetNormalizedArguments<T>(T[] argTypes, SymbolId[] names, out T[] args, out CallFailure failure) {
             if (names.Length == 0) {
+                // no named arguments, success!
                 args = argTypes;
+                failure = null;
                 return true;
             }
 
             T[] res = new T[argTypes.Length];
             Array.Copy(argTypes, res, argTypes.Length - names.Length);
+            List<SymbolId> unboundNames = null;
+            List<SymbolId> duppedNames = null;
 
             for (int i = 0; i < names.Length; i++) {
                 bool found = false;
                 for (int j = 0; j < _parameters.Count; j++) {
                     if (_parameters[j].Name == names[i]) {
-                        if (res[j] != null) {
-                            args = null;
-                            return false;
-                        }
-
-                        res[j] = argTypes[i + argTypes.Length - names.Length];
-
                         found = true;
+
+                        if (res[j] != null) {
+                            if (duppedNames == null) duppedNames = new List<SymbolId>();
+                            duppedNames.Add(names[i]);
+                        } else {
+                            res[j] = argTypes[i + argTypes.Length - names.Length];
+                        }
                         break;
                     }
                 }
 
                 if (!found) {
-                    args = null;
-                    return false;
+                    if (unboundNames == null) unboundNames = new List<SymbolId>();
+                    unboundNames.Add(names[i]);
                 }
             }
 
+            if (unboundNames != null) {
+                failure = new CallFailure(Target, unboundNames.ToArray(), true);
+                args = null;
+                return false;
+            } else if (duppedNames != null) {
+                failure = new CallFailure(Target, duppedNames.ToArray(), false);
+                args = null;
+                return false;
+            }
+
+            failure = null;
             args = res;
             return true;
         }

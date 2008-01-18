@@ -14,15 +14,11 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
 using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -97,7 +93,7 @@ namespace IronPython.Runtime.Types {
                 throw new MissingMemberException("unreadable property");
             }
 
-            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Getter }, BinderType.Normal);
+            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Getter });
 
             if (instance != null) {                
                 return binder.CallInstanceReflected(context, instance, args);
@@ -109,7 +105,7 @@ namespace IronPython.Runtime.Types {
         public bool CallSetter(CodeContext context, object instance, object[] args, object value) {
             if (instance == null && (Setter == null || !Setter.IsStatic)) return false;
 
-            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Setter }, BinderType.Normal);
+            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Setter });
 
             if (args.Length == 0) {
                 if (instance != null) {

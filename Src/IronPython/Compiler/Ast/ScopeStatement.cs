@@ -74,6 +74,10 @@ namespace IronPython.Compiler.Ast {
             get { return _variables; }
         }
 
+        internal virtual bool IsGlobal {
+            get { return false; }
+        }
+
         protected virtual void CreateVariables(MSAst.CodeBlock block) {
             if (_variables != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _variables) {
@@ -116,19 +120,19 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
-        internal abstract PythonVariable BindName(SymbolId name);
+        internal abstract PythonVariable BindName(PythonNameBinder binder, SymbolId name);
 
         internal virtual void Bind(PythonNameBinder binder) {
             if (_references != null) {
                 foreach (KeyValuePair<SymbolId, PythonReference> kv in _references) {
                     PythonVariable variable;
-                    kv.Value.PythonVariable = variable = BindName(kv.Key);
+                    kv.Value.PythonVariable = variable = BindName(binder, kv.Key);
 
                     // Accessing outer scope variable which is being deleted?
                     if (variable != null &&
                         variable.Deleted &&
-                        variable.Kind != VariableKind.Global &&
-                        (object)variable.Scope != (object)this) {
+                        (object)variable.Scope != (object)this &&
+                        !variable.Scope.IsGlobal) {
 
                         // report syntax error
                         binder.ReportSyntaxError(

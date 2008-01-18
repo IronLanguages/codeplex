@@ -329,7 +329,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Compares the two objects and returns true if the left object is greater than the right object.
         /// Throws an exception if hte comparison cannot be performed.
         /// </summary>
-        public object GreaterThan(object self, object other) {
+        public bool GreaterThan(object self, object other) {
             return DoOperation<object, object, bool>(Operators.GreaterThan, self, other);
         }
 
@@ -444,8 +444,8 @@ namespace Microsoft.Scripting.Hosting {
         /// Gets the member name on the remote object.  Throws an exception if the member is not defined or
         /// is write-only.
         /// </summary>
-        public object GetMember(ObjectHandle obj, string name) {
-            return GetMember(GetLocalObject(obj), name);
+        public ObjectHandle GetMember(ObjectHandle obj, string name) {
+            return new ObjectHandle(GetMember(GetLocalObject(obj), name));
         }
 
         /// <summary>
@@ -490,7 +490,7 @@ namespace Microsoft.Scripting.Hosting {
         /// the new remote object.
         /// </summary>
         public ObjectHandle ConvertTo<T>(ObjectHandle obj) {
-            return ConvertTo<T>(new ObjectHandle(GetLocalObject(obj)));
+            return new ObjectHandle(ConvertTo<T>(GetLocalObject(obj)));
         }
 
         /// <summary>
@@ -511,85 +511,85 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Performs the specified binary operator on the remote object.
         /// </summary>
-        public object DoOperation(Operators op, ObjectHandle target, ObjectHandle other) {
-            return DoOperation(op, GetLocalObject(target), GetLocalObject(other));
+        public ObjectHandle DoOperation(Operators op, ObjectHandle target, ObjectHandle other) {
+            return new ObjectHandle(DoOperation(op, GetLocalObject(target), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Adds the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Add(ObjectHandle self, ObjectHandle other) {            
-            return Add(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Add(ObjectHandle self, ObjectHandle other) {            
+            return new ObjectHandle(Add(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Subtracts the 1st remote object from the second.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Subtract(ObjectHandle self, ObjectHandle other) {
-            return Subtract(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Subtract(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(Subtract(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Raises the 1st remote object to the power of the 2nd.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Power(ObjectHandle self, ObjectHandle other) {
-            return Power(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Power(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(Power(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Multiplies the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Multiply(ObjectHandle self, ObjectHandle other) {
-            return Multiply(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Multiply(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(Multiply(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Divides the 1st remote object by the 2nd. Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Divide(ObjectHandle self, ObjectHandle other) {
-            return Divide(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Divide(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(Divide(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Performs modulus on the 1st remote object by the 2nd.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object Modulus(ObjectHandle self, ObjectHandle other) {
-            return Modulus(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle Modulus(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(Modulus(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Shifts the 1st remote object left by the 2nd remote object.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object LeftShift(ObjectHandle self, ObjectHandle other) {
-            return LeftShift(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle LeftShift(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(LeftShift(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Shifts the 1st remote  object right by the 2nd remote object.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object RightShift(ObjectHandle self, ObjectHandle other) {
-            return RightShift(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle RightShift(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(RightShift(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Performs bitwise-and on the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object BitwiseAnd(ObjectHandle self, ObjectHandle other) {
-            return BitwiseAnd(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle BitwiseAnd(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(BitwiseAnd(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Performs bitwise-or on the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object BitwiseOr(ObjectHandle self, ObjectHandle other) {
-            return BitwiseOr(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle BitwiseOr(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(BitwiseOr(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
         /// Performs exclusive-or on the two remote objects.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object ExclusiveOr(ObjectHandle self, ObjectHandle other) {
-            return ExclusiveOr(GetLocalObject(self), GetLocalObject(other));
+        public ObjectHandle ExclusiveOr(ObjectHandle self, ObjectHandle other) {
+            return new ObjectHandle(ExclusiveOr(GetLocalObject(self), GetLocalObject(other)));
         }
 
         /// <summary>
@@ -602,7 +602,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Compares the two remote objects and returns true if the 1st is greater than the 2nd.  Throws an exception if the operation cannot be performed.
         /// </summary>
-        public object GreaterThan(ObjectHandle self, ObjectHandle other) {
+        public bool GreaterThan(ObjectHandle self, ObjectHandle other) {
             return GreaterThan(GetLocalObject(self), GetLocalObject(other));
         }
 

@@ -15,20 +15,16 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
 
 using IronPython.Runtime;
-using IronPython.Runtime.Calls;
 using IronPython.Hosting;
 using IronPython.Runtime.Operations;
-using IronPython.Runtime.Exceptions;
 
 using IronPython.Compiler.Ast;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
@@ -37,7 +33,7 @@ namespace IronPython.Compiler {
     /// <summary>
     /// Summary description for Parser.
     /// </summary>
-    internal class Parser : IDisposable { // TODO: remove IDisposable
+    public class Parser : IDisposable { // TODO: remove IDisposable
         private class TokenizerErrorSink : ErrorSink {
             private readonly Parser _parser;
 
@@ -133,7 +129,7 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
-            return CreateParser(context, options, false, true);
+            return CreateParser(context, options, verbatim, true);
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim, bool implyDedent) {
@@ -297,7 +293,7 @@ namespace IronPython.Compiler {
             }
 
             string msg;
-            switch(errorCode) {
+            switch (errorCode) {
                 case ErrorCodes.IndentationError: msg = Resources.ExpectedIndentation; break;
                 default: msg = Resources.UnexpectedToken; break;
             }
@@ -470,7 +466,7 @@ namespace IronPython.Compiler {
 
             properties = SourceCodeProperties.None;
 
-        
+
             StartParsing();
             Statement ret = InternalParseInteractiveInput(out parsingMultiLineCmpdStmt, out isEmptyStmt);
 
@@ -690,7 +686,7 @@ namespace IronPython.Compiler {
                 case TokenKind.KeywordDel:
                     return ParseDelStmt();
                 case TokenKind.KeywordYield:
-                    return ParseYieldStmt(); 
+                    return ParseYieldStmt();
                 default:
                     return ParseExprStmt();
             }
@@ -726,7 +722,7 @@ namespace IronPython.Compiler {
             return stmt;
         }
 
-        
+
         private Statement ParseYieldStmt() {
             // For yield statements, continue to enforce that it's currently in a function. 
             // This gives us better syntax error reporting for yield-statements than for yield-expressions.
@@ -760,7 +756,7 @@ namespace IronPython.Compiler {
             // - used in RHS of top-level assignment.
 
 
-            
+
             // Mark that this function is actually a generator.
             // If we're in a generator expression, then we don't have a function yet.
             //    g=((yield i) for i in range(5))
@@ -771,19 +767,19 @@ namespace IronPython.Compiler {
             }
 
             SourceLocation start = GetStart();
-            
+
             // Parse expression list after yield. This can be:
             // 1) empty, in which case it becomes 'yield None'
             // 2) a single expression
             // 3) multiple expression, in which case it's wrapped in a tuple.
             const bool allowEmptyExpr = true;
             Expression yieldResult = ParseTestListAsExpr(allowEmptyExpr);
-            
+
             // Check empty expression and convert to 'none'
             TupleExpression t = yieldResult as TupleExpression;
             if (t != null) {
                 if (t.Items.Length == 0) {
-                    yieldResult = new ConstantExpression(null); 
+                    yieldResult = new ConstantExpression(null);
                 }
             }
 
@@ -791,7 +787,7 @@ namespace IronPython.Compiler {
 
             yieldExpression.SetLoc(start, GetEnd());
             return yieldExpression;
-            
+
         }
 
 
@@ -2272,13 +2268,13 @@ namespace IronPython.Compiler {
                 Debug.Assert(yieldResult != null); // we already verified we should get a yield expression.
                 hasRightParenthesis = Eat(TokenKind.RightParenthesis);
                 ret = yieldResult;
-                
+
             } else {
                 bool prevAllow = _allowIncomplete;
                 try {
                     _allowIncomplete = true;
 
-                    
+
 
 
                     Expression test = ParseTest();

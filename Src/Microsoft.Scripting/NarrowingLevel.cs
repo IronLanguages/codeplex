@@ -21,6 +21,7 @@ namespace Microsoft.Scripting {
     /// Narrowing conversions are conversions that cannot be proved to always succeed, conversions that are 
     /// known to possibly lose information, and conversions across domains of types sufficiently different 
     /// to merit narrowing notation like casts. 
+    /// 
     /// Its upto every language to define the levels for conversions. The narrowling levels can be used by
     /// for method overload resolution, where the overload is based on the parameter types (and not the number 
     /// of parameters).
@@ -31,18 +32,21 @@ namespace Microsoft.Scripting {
         /// implicit numeric conversions, Type.IsAssignableFrom, StringBuilder to string, etc.
         /// </summary>
         None,
-
         /// <summary>
-        /// Preferred narrowing conversion
-        /// IList[object] to IList[T], IEnumerator[object] to IEnumerator[T]
+        /// Language defined prefered narrowing conversion.  First level that introduces narrowing
+        /// conversions.
         /// </summary>
-        Preferred,
-
+        One,
         /// <summary>
-        /// This is used by BinderType.BinaryOperator
+        /// Language defined preferred narrowing conversion.  Second level that introduces narrowing
+        /// conversions and should have more conversions than One.
         /// </summary>
-        Operator,
-
+        Two,
+        /// <summary>
+        /// Language defined preferred narrowing conversion.  Third level that introduces narrowing
+        /// conversions and should have more conversions that Two.
+        /// </summary>
+        Three,
         /// <summary>
         /// A somewhat meaningful conversion is possible, but it will quite likely be lossy.
         /// For eg. BigInteger to an Int32, Boolean to Int32, one-char string to a char,

@@ -14,16 +14,21 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class DoStatement : Statement {
+    public sealed class DoStatement : Expression, ISpan {
         private readonly SourceLocation _header;
         private readonly Expression /*!*/ _test;
-        private readonly Statement /*!*/ _body;
+        private readonly Expression /*!*/ _body;
+
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
         /// <summary>
         /// Called by <see cref="DoStatementBuilder"/>.
         /// </summary>
-        internal DoStatement(SourceSpan span, SourceLocation header, Expression /*!*/ test, Statement /*!*/ body)
-            : base(AstNodeType.DoStatement, span) {
+        internal DoStatement(SourceLocation start, SourceLocation end, SourceLocation header, Expression /*!*/ test, Expression /*!*/ body)
+            : base(AstNodeType.DoStatement, typeof(void)) {
+            _start = start;
+            _end = end;
             _header = header;
             _test = test;
             _body = body;
@@ -37,8 +42,16 @@ namespace Microsoft.Scripting.Ast {
             get { return _test; }
         }
 
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
-        }                
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
     }
 }

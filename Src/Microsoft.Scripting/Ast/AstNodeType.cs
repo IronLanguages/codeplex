@@ -14,7 +14,13 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Ast {
+
     public enum AstNodeType {
+
+        #region Generated Expression Tree Node Types
+
+        // *** BEGIN GENERATED CODE ***
+
         Add,
         //    AddChecked,
         And,
@@ -61,20 +67,15 @@ namespace Microsoft.Scripting.Ast {
         //    SubtractChecked,
         //    TypeAs,
         TypeIs,
-
-        // DLR Added values
         ActionExpression,
         ArrayIndexAssignment,
-        BlockStatement,
+        Block,
         BoundAssignment,
         BoundExpression,
         BreakStatement,
-        CatchBlock,
-        CodeBlock,
         CodeBlockExpression,
         CodeContextExpression,
         GeneratorIntrinsic,
-        CommaExpression,
         ContinueStatement,
         DeleteStatement,
         DeleteUnboundExpression,
@@ -82,28 +83,24 @@ namespace Microsoft.Scripting.Ast {
         EmptyStatement,
         EnvironmentExpression,
         ExpressionStatement,
-        GeneratorCodeBlock,
-        IfStatement,
-        IfStatementTest,
         LabeledStatement,
         LoopStatement,
         MemberAssignment,
         MemberExpression,
         NewArrayExpression,
-
         OnesComplement,
-
         ParamsExpression,
         ReturnStatement,
         ScopeStatement,
-        SwitchCase,
         SwitchStatement,
         ThrowStatement,
         TryStatement,
-
         UnboundAssignment,
         UnboundExpression,
-        VoidExpression,
-        YieldStatement
+        YieldStatement,
+
+        // *** END GENERATED CODE ***
+
+        #endregion
     }
 }

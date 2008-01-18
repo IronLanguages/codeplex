@@ -65,7 +65,6 @@ namespace Microsoft.Scripting.Math {
                 x = (ulong)v;
             }
 
-            //Console.WriteLine("{0}, {1}, {2}, {3}", v, x, (uint)x, (uint)(x >> BitsPerDigit));
             return new BigInteger(s, (uint)x, (uint)(x >> BitsPerDigit));
         }
 

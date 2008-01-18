@@ -22,6 +22,7 @@ using System.Reflection;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using System.Text;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>
@@ -29,9 +30,13 @@ namespace Microsoft.Scripting.Actions {
     /// for producing rules for actions.  These optimized rules are used for calling methods, 
     /// performing operators, and getting members using the ActionBinder's conversion semantics.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract class ActionBinder {
         private CodeContext _context;
         private readonly RuleCache _ruleCache = new RuleCache();
+
+        // The ReflectiveCaller cache
+        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
         protected ActionBinder(CodeContext context) {
             _context = context;
@@ -127,7 +132,7 @@ namespace Microsoft.Scripting.Actions {
 
                 CodeContext tmpCtx = callerContext.Scope.GetTemporaryVariableContext(callerContext, rule.ParamVariables, callArgs);
                 try {
-                    if ((bool)Interpreter.EvaluateExpression(tmpCtx, rule.Test)) {
+                    if ((bool)Interpreter.Evaluate(tmpCtx, rule.Test)) {
                         if (site != null) {
                             DynamicSiteHelpers.UpdateSite<T>(callerContext, site, ref target, ref rules, rule);
                         }
@@ -151,7 +156,22 @@ namespace Microsoft.Scripting.Actions {
         /// Gets a rule for the provided action and arguments and executes it without compiling.
         /// </summary>
         public object Execute(CodeContext/*!*/ cc, DynamicAction/*!*/ action, Type/*!*/[]/*!*/ types, object[]/*!*/ args) {
-            return DynamicSiteHelpers.Execute(cc, this, action, types, args);
+            Contract.RequiresNotNull(cc, "context");
+            Contract.RequiresNotNull(action, "action");
+            Contract.RequiresNotNullItems(types, "types");
+            Contract.RequiresNotNull(args, "args");
+
+            ReflectedCaller rc;
+            lock (_executeSites) {
+                ValueArray<Type> array = new ValueArray<Type>(types);
+                if (!_executeSites.TryGetValue(array, out rc)) {
+                    Type siteType = DynamicSiteHelpers.MakeDynamicSiteTargetType(types);
+                    MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
+                    _executeSites[array] = rc = ReflectedCaller.Create(target);
+
+                }
+            }
+            return rc.Invoke(this, cc, action, args);
         }
 
         public virtual AbstractValue AbstractExecute(DynamicAction action, IList<AbstractValue> args) {
@@ -242,7 +262,10 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Converts the provided expression to the given type.  The expression is safe to evaluate multiple times.
         /// </summary>
-        public virtual Expression ConvertExpression(Expression expr, Type toType) {
+        public virtual Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType) {
+            Contract.RequiresNotNull(expr, "expr");
+            Contract.RequiresNotNull(toType, "toType");
+
             Type exprType = expr.Type;
 
             if (toType == typeof(object)) {
@@ -262,13 +285,6 @@ namespace Microsoft.Scripting.Actions {
                 ConvertToAction.Make(visType, ConversionResultKind.ExplicitCast),
                 expr);
         }
-
-        /// <summary>
-        /// Returns an expression which checks to see if the provided expression can be converted to the provided type.
-        /// 
-        /// TODO: Remove me when operator method binding disappears from the MethodBinder.
-        /// </summary>
-        public abstract Expression CheckExpression(Expression expr, Type toType);
 
         /// <summary>
         /// Gets the return value when an object contains out / by-ref parameters.  
@@ -415,15 +431,102 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        public virtual ErrorInfo MakeInvalidParametersError(string name, int expectedParams, params Expression[] args) {            
+        public virtual ErrorInfo MakeInvalidParametersError(BindingTarget target) {
+            switch (target.Result) {
+                case BindingResult.CallFailure:            return MakeCallFailureError(target);
+                case BindingResult.AmbigiousMatch:         return MakeAmbigiousCallError(target);
+                case BindingResult.IncorrectArgumentCount: return MakeIncorrectArgumentCountError(target);
+                default: throw new InvalidOperationException();
+            }
+        }
+
+        private static ErrorInfo MakeIncorrectArgumentCountError(BindingTarget target) {
+            int minArgs = Int32.MaxValue;
+            int maxArgs = Int32.MinValue;
+            foreach (int argCnt in target.ExpectedArgumentCount) {
+                minArgs = System.Math.Min(minArgs, argCnt);
+                maxArgs = System.Math.Max(maxArgs, argCnt);
+            }
+
             return ErrorInfo.FromException(
                 Ast.Ast.Call(
-                    typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] { typeof(string), typeof(int), typeof(int) }),
-                    Ast.Ast.Constant(name),
-                    Ast.Ast.Constant(args.Length),
-                    Ast.Ast.Constant(expectedParams)
+                    typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] {
+                                typeof(string), typeof(int), typeof(int) , typeof(int), typeof(int), typeof(bool), typeof(bool)
+                            }),
+                    Ast.Ast.Constant(target.Name, typeof(string)),  // name
+                    Ast.Ast.Constant(minArgs),                      // min formal normal arg cnt
+                    Ast.Ast.Constant(maxArgs),                      // max formal normal arg cnt
+                    Ast.Ast.Constant(0),                            // default cnt
+                    Ast.Ast.Constant(target.ActualArgumentCount),   // args provided
+                    Ast.Ast.Constant(false),                        // hasArgList
+                    Ast.Ast.Constant(false)                         // kwargs provided
                 )
             );
+        }
+
+        private ErrorInfo MakeAmbigiousCallError(BindingTarget target) {
+            StringBuilder sb = new StringBuilder("Multiple targets could match: ");
+            string outerComma = "";
+            foreach (MethodTarget mt in target.AmbigiousMatches) {
+                Type[] types = mt.GetParameterTypes();
+                string innerComma = "";
+
+                sb.Append(outerComma);
+                sb.Append(target.Name);
+                sb.Append('(');
+                foreach (Type t in types) {
+                    sb.Append(innerComma);
+                    sb.Append(GetTypeName(t));
+                    innerComma = ", ";
+                }
+
+                sb.Append(')');
+                outerComma = ", ";
+            }
+
+            return ErrorInfo.FromException(
+                Ast.Ast.Call(
+                    typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                    Ast.Ast.Constant(sb.ToString(), typeof(string))
+                )
+            );
+        }
+
+        private ErrorInfo MakeCallFailureError(BindingTarget target) {
+            foreach (CallFailure cf in target.CallFailures) {
+                switch (cf.Reason) {
+                    case CallFailureReason.ConversionFailure:
+                        foreach (ConversionResult cr in cf.ConversionResults) {
+                            if (cr.Failed) {
+                                return ErrorInfo.FromException(
+                                    Ast.Ast.Call(
+                                        typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                                        Ast.Ast.Constant(String.Format("expected {0}, got {1}", GetTypeName(cr.To), GetTypeName(cr.From)))
+                                    )
+                                );
+                            }
+                        }
+                        break;
+                    case CallFailureReason.DuplicateKeyword:
+                        return ErrorInfo.FromException(
+                                Ast.Ast.Call(
+                                    typeof(RuntimeHelpers).GetMethod("TypeErrorForDuplicateKeywordArgument"),
+                                    Ast.Ast.Constant(target.Name, typeof(string)),
+                                    Ast.Ast.Constant(SymbolTable.IdToString(cf.KeywordArguments[0]), typeof(string))    // TODO: Report all bad arguments?
+                            )
+                        );
+                    case CallFailureReason.UnassignableKeyword:
+                        return ErrorInfo.FromException(
+                                Ast.Ast.Call(
+                                    typeof(RuntimeHelpers).GetMethod("TypeErrorForExtraKeywordArgument"),
+                                    Ast.Ast.Constant(target.Name, typeof(string)),
+                                    Ast.Ast.Constant(SymbolTable.IdToString(cf.KeywordArguments[0]), typeof(string))    // TODO: Report all bad arguments?
+                            )
+                        );
+                    default: throw new InvalidOperationException();
+                }
+            }
+            throw new InvalidOperationException();
         }
 
         public virtual ErrorInfo MakeConversionError(Type toType, Expression value) {            
@@ -439,6 +542,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
+        
         #endregion
 
         #region Deprecated Error production
@@ -449,7 +553,20 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// Deprecated, use the non-generic version instead
         /// </summary>
-        public virtual Statement MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
+        public virtual Expression MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
+            return rule.MakeError(
+                Ast.Ast.New(
+                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Ast.Constant(name)
+                )
+            );
+        }
+        
+        /// <summary>
+        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
+        /// doing this for the time being until we get a more robust error return mechanism.
+        /// </summary>
+        public virtual Expression MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
             return rule.MakeError(
                 Ast.Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
@@ -462,147 +579,16 @@ namespace Microsoft.Scripting.Actions {
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// </summary>
-        public virtual Expression MakeMissingMemberError(Type type, string name, Type returnType) {
-            return Ast.Ast.New(
-                typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Ast.Constant(name)
-            );
-        }
-
-        /// <summary>
-        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
-        /// doing this for the time being until we get a more robust error return mechanism.
-        /// </summary>
-        public virtual Statement MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(
-                Ast.Ast.New(
-                    typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
-                    Ast.Ast.Constant(name)
-                )
-            );
-        }
-
-        /// <summary>
-        /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
-        /// doing this for the time being until we get a more robust error return mechanism.
-        /// </summary>
-        public virtual Statement MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
+        public virtual Expression MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
             return MakeReadOnlyMemberError<T>(rule, type, name);
         }
 
         #endregion
 
-        public virtual Statement MakeInvalidParametersError(MethodBinder binder, DynamicAction action, CallType callType, IList<MethodBase> targets, StandardRule rule, object []args) {
-            int minArgs = Int32.MaxValue;
-            int maxArgs = Int32.MinValue;
-            int maxDflt = Int32.MinValue;
-            int argsProvided = args.Length - 1; // -1 to remove the object we're calling
-            bool hasArgList = false, hasNamedArgument = false;
-            Dictionary<string, bool> namedArgs = new Dictionary<string, bool>();
-
-            CallAction ca = action as CallAction;
-            if (ca != null) {
-                hasNamedArgument = ca.Signature.HasNamedArgument();
-                int dictArgIndex = ca.Signature.IndexOf(ArgumentKind.Dictionary);
-
-                if (dictArgIndex > -1) {
-                    argsProvided--;
-                    IAttributesCollection iac = args[dictArgIndex + 1] as IAttributesCollection;
-                    if (iac != null) {
-                        foreach (KeyValuePair<object, object> kvp in iac) {
-                            namedArgs[(string)kvp.Key] = false;
-                        }
-                    }
-                }
-
-                argsProvided += GetParamsArgumentCountAdjust(ca, args);
-                foreach (SymbolId si in ca.Signature.GetArgumentNames()) {
-                    namedArgs[SymbolTable.IdToString(si)] = false;
-                }
-            } else {
-                maxArgs = minArgs = rule.Parameters.Length;
-                maxDflt = 0;
-            }
-
-            foreach (MethodBase mb in targets) {
-                if (callType == CallType.ImplicitInstance && CompilerHelpers.IsStatic(mb)) continue;
-
-                ParameterInfo[] pis = mb.GetParameters();
-                int cnt = pis.Length;
-                int dflt = 0;
-
-                if (!CompilerHelpers.IsStatic(mb) && callType == CallType.None) {
-                    cnt++;
-                }
-
-                foreach (ParameterInfo pi in pis) {
-                    if (pi.ParameterType == typeof(CodeContext)) {
-                        cnt--;
-                    } else if (CompilerHelpers.IsParamArray(pi)) {
-                        cnt--;
-                        hasArgList = true;
-                    } else if (CompilerHelpers.IsParamDictionary(pi)) {
-                        cnt--;
-                    } else if (!CompilerHelpers.IsMandatoryParameter(pi)) {
-                        dflt++;
-                        cnt--;
-                    }
-
-                    namedArgs[pi.Name] = true;
-                }
-
-                minArgs = System.Math.Min(cnt, minArgs);
-                maxArgs = System.Math.Max(cnt, maxArgs);
-                maxDflt = System.Math.Max(dflt, maxDflt);
-            }
-
-            foreach (KeyValuePair<string, bool> kvp in namedArgs) {
-                if (kvp.Value == false) {
-                    // unbound named argument.
-                    return rule.MakeError(
-                        Ast.Ast.Call(
-                            typeof(RuntimeHelpers).GetMethod("TypeErrorForExtraKeywordArgument"),
-                            Ast.Ast.Constant(binder.Name, typeof(string)),
-                            Ast.Ast.Constant(kvp.Key, typeof(string))
-                        )
-                    );
-                }
-            }
-
-            return rule.MakeError(
-                    Ast.Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("TypeErrorForIncorrectArgumentCount", new Type[] {
-                            typeof(string), typeof(int), typeof(int), typeof(int), typeof(int), typeof(bool), typeof(bool)
-                        }),
-                        Ast.Ast.Constant(binder.Name, typeof(string)),  // name
-                        Ast.Ast.Constant(minArgs),                      // min formal normal arg cnt
-                        Ast.Ast.Constant(maxArgs),                      // max formal normal arg cnt
-                        Ast.Ast.Constant(maxDflt),                      // default cnt
-                        Ast.Ast.Constant(argsProvided),                 // args provided
-                        Ast.Ast.Constant(hasArgList),                   // hasArgList
-                        Ast.Ast.Constant(hasNamedArgument)              // kwargs provided
-                    )
-                );
-        }
-
-        /// <summary>
-        /// Given a CallAction and its arguments gets the number by which the parameter count should
-        /// be adjusted due to the params array to get the logical number of parameters.
-        /// </summary>
-        protected static int GetParamsArgumentCountAdjust(CallAction action, object[] args) {
-            int paramsCount = 0;
-            int listArgIndex = action.Signature.IndexOf(ArgumentKind.List);
-
-            if (listArgIndex > -1) {
-                paramsCount--;
-                IList<object> paramArgs = args[listArgIndex + 1] as IList<object>;
-                if (paramArgs != null) {
-                    paramsCount += paramArgs.Count;
-                }
-            }
-            return paramsCount;
-        }
-
+        protected virtual string GetTypeName(Type t) {
+            return t.Name;
+        }       
+        
         public MemberGroup GetExtensionMembers(Type type, string name) {
             Type curType = type;
             do {

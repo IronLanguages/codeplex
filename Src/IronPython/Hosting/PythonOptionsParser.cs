@@ -53,7 +53,7 @@ namespace IronPython.Hosting {
 
         public override void Parse(string[] args) {
             if (_consoleOptions == null) _consoleOptions = new PythonConsoleOptions();
-            if (_engineOptions == null) _engineOptions = _context.EngineOptions; // TODO: CLONE?
+            if (_engineOptions == null) _engineOptions = _context.PythonOptions; // TODO: CLONE?
 
             base.Parse(args);
 

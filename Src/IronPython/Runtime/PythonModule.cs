@@ -13,8 +13,8 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
 using System;
+using Microsoft.Scripting;
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
@@ -31,6 +31,20 @@ namespace IronPython.Runtime {
     public class PythonModule : ScopeExtension {
         private bool _trueDivision;
         private bool _isPythonCreatedModule;
+        private bool _showCls;
+
+        internal PythonModule(Scope scope)
+            : base(scope) {
+        }
+        
+        /// <summary>
+        /// Copy constructor.
+        /// </summary>
+        protected PythonModule(PythonModule module)
+            : base(module) {
+            _trueDivision = module._trueDivision;
+            _isPythonCreatedModule = module._isPythonCreatedModule;
+        }
 
         public bool TrueDivision {
             get {
@@ -50,17 +64,13 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal PythonModule(Scope scope)
-            : base(scope) {
-        }
-
-        /// <summary>
-        /// Copy constructor.
-        /// </summary>
-        protected PythonModule(PythonModule module)
-            : base(module) {
-            _trueDivision = module._trueDivision;
-            _isPythonCreatedModule = module._isPythonCreatedModule;
+        public bool ShowCLS {
+            get {
+                return _showCls;
+            }
+            set {
+                _showCls = value;
+            }
         }
 
         protected override void ModuleReloading() {

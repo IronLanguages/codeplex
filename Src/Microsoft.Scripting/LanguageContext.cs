@@ -72,7 +72,10 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal ScriptDomainManager/*!*/ DomainManager {
+        /// <summary>
+        /// Gets the ScriptDomainManager that this LanguageContext is running within.
+        /// </summary>
+        public ScriptDomainManager/*!*/ DomainManager {
             get { return _domainManager; }
         }
 
@@ -365,15 +368,6 @@ namespace Microsoft.Scripting {
             return false;
         }
 
-        /// <summary>
-        /// Gets the value or throws an exception when the provided MethodCandidate cannot be called.
-        /// </summary>
-        /// <returns></returns>
-        public virtual object GetNotImplemented(params MethodCandidate[] candidates) {
-            throw new MissingMemberException("the specified operator is not implemented");
-        }
-
-
         // used by DynamicHelpers.GetDelegate
         /// <summary>
         /// Checks whether the target is callable with given number of arguments.
@@ -493,20 +487,56 @@ namespace Microsoft.Scripting {
             return GetDefaultCompilerOptions();
         }
 
-        public SourceUnit CreateFileUnit(string filename, Encoding encoding) {
-            return SourceUnit.CreateFileUnit(this, filename, encoding);
+        #region Source Units
+
+        public SourceUnit CreateSnippet(string/*!*/ code) {
+            return CreateSnippet(code, null, SourceCodeKind.Default);
         }
 
-        public SourceUnit CreateSnippet(string code) {
-            return SourceUnit.CreateSnippet(this, code);
+        public SourceUnit CreateSnippet(string/*!*/ code, SourceCodeKind kind) {
+            return CreateSnippet(code, null, kind);
         }
 
-        public SourceUnit CreateSnippet(string code, SourceCodeKind kind) {
-            return SourceUnit.CreateSnippet(this, code, code, kind);
+        public SourceUnit CreateSnippet(string/*!*/ code, string id) {
+            return CreateSnippet(code, id, SourceCodeKind.Default);
         }
 
-        public SourceUnit CreateSnippet(string code, string id, SourceCodeKind kind) {
-            return SourceUnit.CreateSnippet(this, code, id, kind);
+        public SourceUnit CreateSnippet(string/*!*/ code, string id, SourceCodeKind kind) {
+            Contract.RequiresNotNull(code, "code");
+
+            return CreateSourceUnit(new SourceStringContentProvider(code), id, kind);
+        }
+
+        public SourceUnit CreateFileUnit(string/*!*/ path) {
+            return CreateFileUnit(path, (Encoding)null);
+        }
+
+        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding encoding) {
+            Contract.RequiresNotNull(path, "path");
+
+            return CreateFileUnit(path, encoding, SourceCodeKind.File);
+        }
+
+        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding encoding, SourceCodeKind kind) {
+            Contract.RequiresNotNull(path, "path");
+
+            TextContentProvider provider = new EngineTextContentProvider(this, new FileStreamContentProvider(path), encoding ?? StringUtils.DefaultEncoding);
+            return CreateSourceUnit(provider, path, kind);
+        }
+
+        public SourceUnit CreateFileUnit(string/*!*/ path, string content) {
+            Contract.RequiresNotNull(path, "path");
+            Contract.RequiresNotNull(content, "content");
+
+            TextContentProvider provider = new SourceStringContentProvider(content);
+            return CreateSourceUnit(provider, path, SourceCodeKind.File);
+        }
+
+        public SourceUnit/*!*/ CreateSourceUnit(TextContentProvider/*!*/ contentProvider, string path, SourceCodeKind kind) {
+            Contract.RequiresNotNull(contentProvider, "contentProvider");
+            Contract.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
+
+            return new SourceUnit(this, contentProvider, path, kind);
         }
 
         public SourceUnit TryGetSourceFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
@@ -515,6 +545,8 @@ namespace Microsoft.Scripting {
 
             return _domainManager.Host.TryGetSourceFileUnit(_domainManager.GetEngine(this), path, encoding, kind);
         }
+
+        #endregion
 
         #endregion
 

@@ -45,7 +45,7 @@ namespace IronPython.Compiler.Ast {
             return _globals == null && _locals == null;
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             MSAst.MethodCallExpression call;
 
             if (_locals == null && _globals == null) {

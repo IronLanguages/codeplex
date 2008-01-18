@@ -30,6 +30,8 @@ namespace Microsoft.Scripting.Actions {
     public class BinderHelper {
         internal BinderHelper() { }
 
+        // This can produce a IsCallable rule that returns the immutable constant isCallable.
+        // Beware that objects can have a mutable callable property. Eg, in Python, assign or delete the __call__ attribute.
         public static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(CompilerHelpers.GetType(self));
@@ -159,33 +161,56 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {            
+        public static Expression MakeNecessaryTests(StandardRule<T> rule, Type[] testTypes, Expression[] arguments) {
             Expression typeTest = Ast.Constant(true);
-            if (necessaryTests.Count > 0) {
-                Type[] testTypes = null;
 
-                for (int i = 0; i < necessaryTests.Count; i++) {
-                    if (necessaryTests[i] == null) continue;
-                    if (testTypes == null) testTypes = new Type[necessaryTests[i].Length];
-
-                    for (int j = 0; j < necessaryTests[i].Length; j++) {
-                        if (testTypes[j] == null || testTypes[j].IsAssignableFrom(necessaryTests[i][j])) {
-                            // no test yet or more specific test
-                            testTypes[j] = necessaryTests[i][j];
-                        }
-                    }
-                }
-
-                if (testTypes != null) {
-                    for (int i = 0; i < testTypes.Length; i++) {
-                        if (testTypes[i] != null) {
-                            Debug.Assert(i < arguments.Length);
-                            typeTest = Ast.AndAlso(typeTest, rule.MakeTypeTest(testTypes[i], arguments[i]));
-                        }
+            if (testTypes != null) {
+                for (int i = 0; i < testTypes.Length; i++) {
+                    if (testTypes[i] != null) {
+                        Debug.Assert(i < arguments.Length);
+                        typeTest = Ast.AndAlso(typeTest, rule.MakeTypeTest(testTypes[i], arguments[i]));
                     }
                 }
             }
+
             return typeTest;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
+        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {
+            if (necessaryTests.Count == 0) {
+                return Ast.Constant(true);
+            }
+
+            Type[] mostSpecificTypes = null; // This is the final types that will be checked after inspecting all the sets
+
+            for (int i = 0; i < necessaryTests.Count; i++) {
+                Type[] currentSet = necessaryTests[i];
+                if (currentSet == null) {
+                    // The current set is missing. Ignore it
+                    continue;
+                }
+
+                // All the sets should be of the same size
+                Debug.Assert(currentSet.Length == arguments.Length);
+
+                if (mostSpecificTypes == null) {
+                    mostSpecificTypes = new Type[currentSet.Length];
+                }
+
+                // For each type in the current set, check the type with the corresponding type in the previous sets
+                for (int j = 0; j < currentSet.Length; j++) {
+                    if (mostSpecificTypes[j] == null || mostSpecificTypes[j].IsAssignableFrom(currentSet[j])) {
+                        // no test yet or more specific test
+                        mostSpecificTypes[j] = currentSet[j];
+                    } else {
+                        // All sets should have compatible types in each slot
+                        Debug.Assert(currentSet[j].IsAssignableFrom(mostSpecificTypes[j]));
+                    }
+                }
+            }
+
+            return MakeNecessaryTests(rule, mostSpecificTypes, arguments);
         }
     }
 }

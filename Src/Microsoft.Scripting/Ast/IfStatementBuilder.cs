@@ -19,22 +19,20 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Ast {
     public sealed class IfStatementBuilder {
         private readonly List<IfStatementTest> _clauses = new List<IfStatementTest>();
-        private SourceSpan _statementSpan;
 
-        internal IfStatementBuilder(SourceSpan statementSpan) {
-            _statementSpan = statementSpan;
+        internal IfStatementBuilder() {
         }
 
-        public IfStatementBuilder ElseIf(Expression test, params Statement[] body) {
+        public IfStatementBuilder ElseIf(Expression test, params Expression[] body) {
             Contract.RequiresNotNullItems(body, "body");
             return ElseIf(SourceSpan.None, test, SourceLocation.None, Ast.Block(body));
         }
 
-        public IfStatementBuilder ElseIf(Expression test, Statement body) {
+        public IfStatementBuilder ElseIf(Expression test, Expression body) {
             return ElseIf(SourceSpan.None, test, SourceLocation.None, body);
         }
 
-        public IfStatementBuilder ElseIf(SourceSpan span, Expression test, SourceLocation bodyLocation, Statement body) {
+        public IfStatementBuilder ElseIf(SourceSpan span, Expression test, SourceLocation bodyLocation, Expression body) {
             Contract.RequiresNotNull(test, "test");
             Contract.Requires(test.Type == typeof(bool), "test");
             Contract.RequiresNotNull(body, "body");
@@ -42,79 +40,80 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-        public IfStatement Else(params Statement[] body) {
+        public Expression Else(params Expression[] body) {
             Contract.RequiresNotNullItems(body, "body");
             return Else(Ast.Block(body));
         }
 
-        public IfStatement Else(Statement body) {
+        public Expression Else(Expression body) {
             Contract.RequiresNotNull(body, "body");
-            return new IfStatement(
-                _statementSpan,
-                CollectionUtils.ToReadOnlyCollection(_clauses.ToArray()),
-                body
-            );
+            return BuildConditions(_clauses, body);
         }
 
-        public IfStatement ToStatement() {
-            return new IfStatement(
-                _statementSpan,
-                CollectionUtils.ToReadOnlyCollection(_clauses.ToArray()),
-                null
-            );
+        internal static Expression BuildConditions(IList<IfStatementTest> clauses, Expression @else) {
+            Expression result = @else != null ? Ast.Void(@else) : Ast.Empty();
+
+            int index = clauses.Count;
+            while (index-- > 0) {
+                IfStatementTest ist = clauses[index];
+
+                Expression test = ist.Test;
+                if (ist.Start.IsValid && ist.Header.IsValid) {
+                    test = Ast.Statement(new SourceSpan(ist.Start, ist.Header), test);
+                }
+
+                result = Ast.Condition(
+                    test,
+                    Ast.Void(ist.Body),
+                    result
+                );
+            }
+
+            return result;
         }
 
-        public static implicit operator IfStatement(IfStatementBuilder builder) {
+        public Expression ToStatement() {
+            return BuildConditions(_clauses, null);
+        }
+
+        public static implicit operator Expression(IfStatementBuilder builder) {
             Contract.RequiresNotNull(builder, "builder");
             return builder.ToStatement();
         }
     }
 
     public static partial class Ast {
-        public static IfStatementBuilder If(SourceSpan span) {
-            return new IfStatementBuilder(span);
+        public static IfStatementBuilder If() {
+            return new IfStatementBuilder();
         }
 
-        public static IfStatementBuilder If(Expression test, params Statement[] body) {
-            return If(SourceSpan.None).ElseIf(test, body);
+        public static IfStatementBuilder If(Expression test, params Expression[] body) {
+            return If().ElseIf(test, body);
         }
 
-        public static IfStatementBuilder If(Expression test, Statement body) {
-            return If(SourceSpan.None).ElseIf(test, body);
+        public static IfStatementBuilder If(Expression test, Expression body) {
+            return If().ElseIf(test, body);
         }
 
-        public static IfStatementBuilder If(SourceSpan statementSpan, SourceSpan testSpan, Expression test, SourceLocation header, Statement body) {
-            return If(statementSpan).ElseIf(testSpan, test, header, body);
+        public static IfStatementBuilder If(SourceSpan testSpan, Expression test, SourceLocation header, Expression body) {
+            return If().ElseIf(testSpan, test, header, body);
         }
 
-        public static IfStatement If(IfStatementTest[] tests, Statement @else) {
-            return If(SourceSpan.None, tests, @else);
-        }
-
-        public static IfStatement If(SourceSpan span, IfStatementTest[] tests, Statement @else) {
+        public static Expression If(IfStatementTest[] tests, Expression @else) {
             Contract.RequiresNotNullItems(tests, "tests");
-            return new IfStatement(span, CollectionUtils.ToReadOnlyCollection(tests), @else);
+            return IfStatementBuilder.BuildConditions(tests, @else);
         }
 
-        public static IfStatement IfThen(Expression test, Statement body) {
-            return IfThenElse(SourceSpan.None, test, body, null);
+        public static Expression IfThen(Expression test, Expression body) {
+            return IfThenElse(test, body, null);
         }
 
-        public static IfStatement IfThen(Expression test, params Statement[] body) {
-            return IfThenElse(SourceSpan.None, test, Block(body), null);
+        public static Expression IfThen(Expression test, params Expression[] body) {
+            return IfThenElse(test, Block(body), null);
         }
 
-        public static IfStatement IfThen(SourceSpan statementSpan, Expression test, Statement body) {
-            return IfThenElse(statementSpan, test, body, null);
-        }
-
-        public static IfStatement IfThenElse(Expression test, Statement body, Statement @else) {
-            return IfThenElse(SourceSpan.None, test, body, @else);
-        }
-
-        public static IfStatement IfThenElse(SourceSpan span, Expression test, Statement body, Statement @else) {
+        public static Expression IfThenElse(Expression test, Expression body, Expression @else) {
             return If(
-                span,
                 new IfStatementTest[] {
                     Ast.IfCondition(SourceSpan.None, SourceLocation.None, test, body)
                 },
@@ -122,12 +121,8 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        public static IfStatement Unless(Expression test, Statement body) {
-            return IfThenElse(SourceSpan.None, test, Ast.Empty(), body);
-        }
-
-        public static IfStatement Unless(SourceSpan span, Expression test, Statement body) {
-            return IfThenElse(span, test, Ast.Empty(), body);
+        public static Expression Unless(Expression test, Expression body) {
+            return IfThenElse(test, Ast.Empty(), body);
         }
     }
 }

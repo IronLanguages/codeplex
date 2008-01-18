@@ -14,12 +14,9 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Generation;
-using MSAst = Microsoft.Scripting.Ast;
 using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
 
 using IronPython.Runtime;
@@ -138,6 +135,12 @@ namespace IronPython.Compiler.Ast {
             binder.Bind(ast);
         }
 
+        internal ModuleOptions Module {
+            get {
+                return ((PythonCompilerOptions)_context.Options).Module;
+            }
+        }
+
         #endregion
 
         private void Bind(PythonAst unboundAst) {
@@ -168,12 +171,6 @@ namespace IronPython.Compiler.Ast {
 
         internal PythonVariable DefineName(SymbolId name) {
             return _currentScope.EnsureVariable(name);
-        }
-
-        internal PythonVariable DefineModuleGlobal(SymbolId name) {
-            PythonVariable variable = _globalScope.EnsureVariable(name);
-            variable.Kind = VariableKind.Global;
-            return variable;
         }
 
         internal PythonVariable DefineParameter(SymbolId name) {
@@ -226,7 +223,7 @@ namespace IronPython.Compiler.Ast {
 
             PushScope(node);
 
-            node.ModuleNameVariable = _globalScope.EnsureGlobalVariable(Symbols.Name);
+            node.ModuleNameVariable = _globalScope.EnsureGlobalVariable(this, Symbols.Name);
 
             // define the __doc__ and the __module__
             node.DocVariable = DefineName(Symbols.Doc);

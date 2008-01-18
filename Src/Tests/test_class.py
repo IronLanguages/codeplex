@@ -554,68 +554,6 @@ def test_check_dictionary():
 
 
 ############################################################
-def test_metaclass():
-    global __metaclass__, recvArgs
-    
-    # verify we can use a function as a metaclass in the dictionary
-    recvArgs = None
-    def funcMeta(*args):
-        global recvArgs
-        recvArgs = args
-        
-    class foo:
-        __metaclass__ = funcMeta
-    
-    AreEqual(recvArgs, ('foo', (), {'__module__' : __name__, '__metaclass__' : funcMeta}))
-    
-    class foo(object):
-        __metaclass__ = funcMeta
-    
-    AreEqual(recvArgs, ('foo', (object, ), {'__module__' : __name__, '__metaclass__' : funcMeta}))
-            
-    
-    # verify setting __metaclass__ to default old-style type works
-    
-    class classType: pass
-    classType = type(classType)     # get classObj for tests
-    __metaclass__ = classType
-    class c: pass
-    AreEqual(type(c), classType)
-    del(__metaclass__)
-    
-    
-    # verify setting __metaclass__ to default new-style type works
-    __metaclass__ = type
-    class c: pass
-    AreEqual(type(c), type)
-    del(__metaclass__)
-    
-    # try setting it a different way - by getting it from a type
-    class c(object): pass
-    __metaclass__  = type(c)
-    class xyz: pass
-    AreEqual(type(xyz), type(c))
-    del(__metaclass__)
-    
-    # verify setting __metaclass__ at module scope to a function works
-    __metaclass__ = funcMeta
-    recvArgs = None
-    class foo: pass
-    AreEqual(recvArgs, ('foo', (), {'__module__' : __name__}))  # note no __metaclass__ becauses its not in our dict
-    
-    # clean up __metaclass__ for other tests
-    del(__metaclass__)
-
-def test_metaclass_call_override():
-	"""overriding __call__ on a metaclass should work"""
-	class mytype(type):
-		def __call__(self, *args):
-			return args
-	
-	class myclass(object):
-		__metaclass__ = mytype
-		
-	AreEqual(myclass(1,2,3), (1,2,3))
 
 def test_call_type_call():
     for stuff in [object, int, str, bool, float]:
@@ -626,7 +564,44 @@ def test_call_type_call():
     
     AreEqual(type.__call__(bool, True), True)
     AreEqual(type.__call__(bool), False)
-	
+
+def test_cp8246():
+    
+    #...
+    class K(object):
+        def __call__(self):
+            return ((), {})
+    AreEqual(K()(), ((), {}))
+    
+    #...
+    class K(object):
+        def __call__(self, **kwargs):
+            return ((), kwargs)
+    AreEqual(K()(), ((), {}))
+    AreEqual(K()(**{}), ((), {}))
+    AreEqual(K()(**{'a':None}), ((), {'a':None}))
+    
+    #...
+    class K(object):
+        def __call__(self, *args):
+            return (args, {})
+    AreEqual(K()(), ((), {}))
+    AreEqual(K()(*()), ((), {}))
+    AreEqual(K()(*(None,)), ((None,), {}))
+    
+    #...
+    class K(object):
+        def __call__(self, *args, **kwargs):
+            return (args, kwargs)
+    AreEqual(K()(), ((), {}))
+    AreEqual(K()(*()), ((), {}))
+    AreEqual(K()(**{}), ((), {}))
+    AreEqual(K()(*(), **{}), ((), {}))
+    AreEqual(K()(*(None,)), ((None,), {}))
+    AreEqual(K()(**{'a':None}), ((), {'a':None}))
+    AreEqual(K()(*(None,), **{'a':None}), ((None,), {'a':None}))
+    
+    
 ############################################################
 def text_mixed_inheritance():
     """inheritance from both old & new style classes..."""
@@ -1146,33 +1121,22 @@ def test_slots():
     
     for slotType in [foo, bar, baz]:
         a = slotType()
-        try:
-            x = a.abc
-            AssertUnreachable()
-        except AttributeError: pass
-        
+        AssertError(AttributeError, lambda: a.abc)
         AreEqual(hasattr(a, 'abc'), False)
         
         a.abc = 'xyz'
         AreEqual(a.abc, 'xyz')
-        
         AreEqual(hasattr(a, 'abc'), True)
+
         del(a.abc)
         AreEqual(hasattr(a, 'abc'), False)
+        AssertError(AttributeError, lambda: a.abc)
         
         # slot classes don't have __dict__
-        try:
-            x = a.abc
-            AssertUnreachable()
-        except AttributeError: pass
-        
         AreEqual(hasattr(a, '__dict__'), False)
-        try:
-            x = a.__dict__
-        except AttributeError: pass
+        AssertError(AttributeError, lambda: a.__dict__)
     
-    # sub-class of slots class, has no slots, has a __dict__
-    
+    # sub-class of slots class, has no slots, has a __dict__    
     class foo(object):
         __slots__ = 'abc'
         def __init__(self):
@@ -1184,6 +1148,7 @@ def test_slots():
         
     a = bar()
     AreEqual(a.abc, 23)
+    
     del(a.abc)
     AreEqual(hasattr(a, 'abc'), False)
     a.abc = 42
@@ -1197,7 +1162,6 @@ def test_slots():
     # subclass of not-slots class defining slots:
     
     class A(object): pass
-    
     class B(A): __slots__ = 'c'
     
     AreEqual(hasattr(B(), '__dict__'), True)
@@ -1609,25 +1573,6 @@ def test_new_old_slots():
         __slots__ = ['a','b']
 
 
-def test_slots_identifiers1():
-    # Validate only identifiers are accepted as __slots__
-    try:
-        class C(object):
-            __slots__ = [None]
-    except TypeError: pass
-    else: Fail("__slots__ allow [None]")
-
-    try:
-        class C(object):
-            __slots__ = ["foo bar"]
-    except TypeError: pass
-    else: Fail("__slots__ allow ['foo bar']")
-    try:
-        class C(object):
-            __slots__ = ["1"]
-    except TypeError: pass
-    else: Fail("__slots__ allow ['1']")
-
 def test_slots_counter():
     import gc
     class Counter(object):
@@ -1654,39 +1599,6 @@ def test_slots_counter():
         gc.collect()    
         AreEqual(Counter.c, 0)
 
-def test_slots_inherit():
-    class C(object):
-        __slots__ = ['a', 'b', 'c']
-
-    class D(C):
-        pass
-
-    x = D()
-    x.z = 32   # validate z can still be set
-
-    class E(D):
-        __slots__ = ['e']
-
-    x = E()
-    x.a = 1
-    x.z = 2
-    x.e = 3
-
-def test_slots_weakref():
-    class D(object):
-        __slots__ = ["__dict__"]
-    a = D()
-    Assert(not hasattr(a, "__weakref__"))
-
-def test_slots_multiple():
-    class A(object):
-        __slots__=()
-    class B(object):
-        pass
-    class C(A,B) :
-        __slots__=()
-    C().x = "hello"
-    
 def test_override_container_contains():
     for x in (dict, list, tuple):
         class C(x):
@@ -2079,6 +1991,7 @@ def test_getattr_exceptions():
         y = x.throws
     except AttributeError, ex:
         AreEqual(ex.args, ('catch me',))
+    else: Fail("should have thrown")
 
 def test_descriptor_meta_magic():
     class valueDescriptor(object):
@@ -2148,6 +2061,17 @@ def test_descriptors_custom_attrs():
         def __getattr__(self, name): return 42
     
     AreEqual(f().x, 42)
+
+@runonly("win32")
+def test_cp5801():
+    class Foo(object):
+        __slots__ = ['bar']
+        def __getattr__(self, n):
+            return n.upper()
+        
+    foo = Foo()
+    AreEqual(foo.bar, "BAR")
+
 
 def test_property_always_set_descriptor():
     """verifies that set descriptors take precedence over dictionary entries and 

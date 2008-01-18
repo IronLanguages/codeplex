@@ -18,11 +18,15 @@ using System;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class ThrowStatement : Statement {
+    public sealed class ThrowStatement : Expression, ISpan {
         private readonly Expression _val;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
-        internal ThrowStatement(SourceSpan span, Expression value)
-            : base(AstNodeType.ThrowStatement, span) {
+        internal ThrowStatement(SourceLocation start, SourceLocation end, Expression value)
+            : base(AstNodeType.ThrowStatement, typeof(void)) {
+            _start = start;
+            _end = end;
             _val = value;
         }
 
@@ -36,6 +40,14 @@ namespace Microsoft.Scripting.Ast {
             get {
                 return _val;
             }
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -56,7 +68,7 @@ namespace Microsoft.Scripting.Ast {
             if (value != null) {
                 Contract.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
             }
-            return new ThrowStatement(span, value);
+            return new ThrowStatement(span.Start, span.End, value);
         }
     }
 }

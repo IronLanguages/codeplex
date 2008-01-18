@@ -45,25 +45,31 @@ namespace Microsoft.Scripting.Ast {
                     AddresOf((BoundExpression)node, type);
                     break;
 
-                case AstNodeType.CommaExpression:
-                    AddresOf((CommaExpression)node, type);
+                case AstNodeType.Block:
+                    AddresOf((Block)node, type);
                     break;
 
                 case AstNodeType.MemberExpression:
                     AddresOf((MemberExpression)node, type);
+                    break;
+
+                case AstNodeType.Convert:
+                    AddresOf((UnaryExpression)node, type);
                     break;
             }
         }
 
         private void AddresOf(BoundAssignment node) {
             EmitExpression(node.Value);
-            node.Ref.Slot.EmitSet(this);
-            node.Ref.Slot.EmitGetAddr(this);
+            Slot slot = GetVariableSlot(node.Variable);
+            slot.EmitSet(this);
+            slot.EmitGetAddr(this);
         }
 
         private void AddresOf(BoundExpression node, Type type) {
             if (type == node.Type) {
-                node.Ref.Slot.EmitGetAddr(this);
+                Slot slot = GetVariableSlot(node.Variable);
+                slot.EmitGetAddr(this);
             } else {
                 EmitExpressionAddress(node, type);
             }
@@ -81,14 +87,19 @@ namespace Microsoft.Scripting.Ast {
             MarkLabel(eoi);
         }
 
-        private void AddresOf(CommaExpression node, Type type) {
+        private void AddresOf(Block node, Type type) {
             ReadOnlyCollection<Expression> expressions = node.Expressions;
+
+            // TODO: Do something better
+            if (node.Type == typeof(void)) {
+                throw new NotSupportedException("Cannot emit address of void-typed block");
+            }
 
             for (int index = 0; index < expressions.Count; index++) {
                 Expression current = expressions[index];
 
                 // Emit the expression
-                if (index == node.ValueIndex) {
+                if (index == expressions.Count - 1) {
                     EmitAddress(current, type);
                 } else {
                     EmitExpression(current);
@@ -107,6 +118,17 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 EmitInstance(node.Expression, node.Member.DeclaringType);
                 EmitFieldAddress((FieldInfo)node.Member);
+            }
+        }
+
+        private void AddresOf(UnaryExpression node, Type type) {
+            Debug.Assert(node.NodeType == AstNodeType.Convert);
+
+            if (node.Operand.Type == typeof(object) && type.IsValueType) {
+                EmitExpression(node.Operand);
+                Emit(OpCodes.Unbox, type);
+            } else {
+                EmitExpressionAddress(node, type);
             }
         }
 

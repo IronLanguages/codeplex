@@ -4,7 +4,7 @@ namespace Microsoft.Scripting.Ast {
     class CommaAddress : EvaluationAddress {
         private List<EvaluationAddress> _addrs;
 
-        public CommaAddress(CommaExpression address, List<EvaluationAddress> addresses)
+        public CommaAddress(Block address, List<EvaluationAddress> addresses)
             : base(address) {
             _addrs = addresses;
         }
@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Ast {
 
         private int Index {
             get {
-                return ((CommaExpression)Expression).ValueIndex;
+                return ((Block)Expression).Expressions.Count - 1;
             }
         }
     }

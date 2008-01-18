@@ -27,6 +27,13 @@ else:
     TryLoadExcelInteropAssembly()
     from Microsoft.Office.Interop import Excel
 
+def CreateApplication():
+    if preferComDispatch:
+        from System import Type, Activator
+        applicationType = Type.GetTypeFromProgID("Excel.Application")
+        return Activator.CreateInstance(applicationType)
+    else:
+        return Excel.ApplicationClass()
 
 #------------------------------------------------------------------------------
 #--HELPERS
@@ -55,8 +62,9 @@ def _test_excel():
     ex = None
     
     try: 
-        ex = Excel.ApplicationClass() 
-        ex.DisplayAlerts = False 
+        ex = CreateApplication() 
+        ex.DisplayAlerts = False
+        AreEqual(ex.DisplayAlerts, False)
         #ex.Visible = True
         nb = ex.Workbooks.Add()
         ws = nb.Worksheets[1]
@@ -93,7 +101,7 @@ def _test_excel():
 def test_excelevents():
     ex = None
     try: 
-        ex = Excel.ApplicationClass() 
+        ex = CreateApplication() 
         ex.DisplayAlerts = False 
         #ex.Visible = True
         wb = ex.Workbooks.Add()

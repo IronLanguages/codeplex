@@ -18,59 +18,76 @@
 from lib.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
+from clr import StrongBox
+from System.Runtime.InteropServices import DispatchWrapper
 
-if not file_exists(agentsvr_path):
-    from sys import exit
-    print "Cannot test AgentServerObjects.dll when it doesn't exist."
-    exit(0)
+def CreateAgentServer():
+    if preferComDispatch:
+        from System import Type, Activator
+        agentServerType = Type.GetTypeFromProgID("Agent.Server")
+        return Activator.CreateInstance(agentServerType)
+    else:
+        if not file_exists(agentsvr_path):
+            from sys import exit
+            print "Cannot test AgentServerObjects.dll when it doesn't exist."
+            exit(0)
+        
+        if not file_exists_in_path("tlbimp.exe"):
+            from sys import exit
+            print "tlbimp.exe is not in the path!"
+            exit(1)
+        else:
+            import clr
+            run_tlbimp(agentsvr_path)
+            Assert(file_exists("AgentServerObjects.dll"))
+            clr.AddReference("AgentServerObjects.dll")
+            from AgentServerObjects import AgentServerClass
+            return AgentServerClass()
 
-if not file_exists_in_path("tlbimp.exe"):
-    from sys import exit
-    print "tlbimp.exe is not in the path!"
-    exit(1)
-else:
-    import clr
-    run_tlbimp(agentsvr_path)
-    Assert(file_exists("AgentServerObjects.dll"))
-    clr.AddReference("AgentServerObjects.dll")
-    from AgentServerObjects import * 
 #------------------------------------------------------------------------------
 #--GLOBALS
-com_obj = AgentServerClass()
+com_obj = CreateAgentServer()
 
 #------------------------------------------------------------------------------
 #--TESTS
 def test_merlin():
     from time import sleep
     
-    a = AgentServerClass()    
-    Assert('Equals' in dir(a))
-    cid = com_obj.Load('Merlin.acs')[0]
+    Assert('Equals' in dir(com_obj))
+    charID = StrongBox[int](0)
+    reqID = StrongBox[int](0)
+    com_obj.Load('Merlin.acs', charID, reqID)
+    cid = charID.Value
 
-    c = com_obj.GetCharacter(cid)
+    character = StrongBox[object](DispatchWrapper(None))
+    com_obj.GetCharacter(cid, character)
+    c = character.Value
     sleep(1)
     
     if is_snap or testpath.basePyDir.lower()=='src':
-        c.Show(0)
+        c.Show(0, reqID)
         sleep(1)
-        while c.GetVisible()==0:
+        visible = StrongBox[int](0)
+        while visible.Value == 0:
+            c.GetVisible(visible)
             sleep(1)
             
-    c.Think('IronPython...')
-    c.Play('Read')
-    c.GestureAt(True, False)
-    c.GestureAt(100, 200)
+    c.Think('IronPython...', reqID)
+    c.Play('Read', reqID)
+    c.GestureAt(True, False, reqID)
+    c.GestureAt(100, 200, reqID)
     if not preferComDispatch:
-        AssertError(OverflowError, c.GestureAt, 65537.34, 32) # Cannot convert float(11.34) to Int16
+        AssertError(OverflowError, c.GestureAt, 65537.34, 32) # It should be an error to convert a float to Int16 since it will not fit
 
-    c.Speak('hello world', None)
+    c.Speak('hello world', None, reqID)
 
     c.StopAll(0)
-    c.Hide(0)
+    c.Hide(0, reqID)
     sleep(1)
     com_obj.Unload(cid)
         
-    delete_files("AgentServerObjects.dll")
+    if not preferComDispatch:
+        delete_files("AgentServerObjects.dll")
     
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

@@ -69,8 +69,10 @@ namespace IronPython.Runtime.Operations {
         private static FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
         private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
         private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();               
+        private static Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();
 
+        // Site for implementing callable() builtin function and Python.IsCallable.
+        private static DynamicSite<object, bool> _isCallableSites = DynamicSite<object, bool>.Create(DoOperationAction.Make(Operators.IsCallable));
 
         #endregion
 
@@ -106,12 +108,20 @@ namespace IronPython.Runtime.Operations {
             return IsCallable(DefaultContext.Default, o);
         }
 
-        public static bool IsCallable(CodeContext context, object o) {
-            if (o is ICallableWithCodeContext) {
-                return true;
-            }
+        
 
-            return PythonOps.HasAttr(context, o, Symbols.Call);
+        public static bool IsCallable(CodeContext context, object o) {
+            // This tells if an object can be called, but does not make a claim about the parameter list.
+            // In 1.x, we could check for certain interfaces like ICallable*, but those interfaces were deprecated
+            // in favor of dynamic sites. 
+            // This is difficult to infer because we'd need to simulate the entire callbinder, which can include
+            // looking for [SpecialName] call methods and checking for a rule from IDynamicObject. But even that wouldn't
+            // be complete since sites require the argument list of the call, and we only have the instance here. 
+            // Thus check a dedicated IsCallable operator. This lets each object describe if it's callable.
+
+
+            // Invoke Operator.IsCallable on the object. 
+            return _isCallableSites.Invoke(context, o);
         }
 
         public static bool IsTrue(object o) {
@@ -821,8 +831,14 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.ValueError("complex modulo");
             }
 
-            if (DynamicHelpers.GetPythonType(x).TryInvokeTernaryOperator(DefaultContext.Default, Operators.Power, x, y, z, out ret) && ret != PythonOps.NotImplemented)
-                return ret;
+            if (DynamicHelpers.GetPythonType(x).TryInvokeTernaryOperator(DefaultContext.Default, Operators.Power, x, y, z, out ret)) {
+                if(ret != PythonOps.NotImplemented) {
+                    return ret;
+                } else if (!IsNumericObject(y) || !IsNumericObject(z)) {
+                    // special error message in this case...
+                    throw TypeError("pow() 3rd argument not allowed unless all arguments are integers");
+                }
+            }
 
             throw PythonOps.TypeErrorForBinaryOp("power with modulus", x, y);
         }
@@ -1104,14 +1120,8 @@ namespace IronPython.Runtime.Operations {
         /// and a normal call is made.
         /// </summary>
         public static object CallWithContextAndThis(CodeContext context, object func, object instance, params object[] args) {
-
-            ICallableWithThis icc = func as ICallableWithThis;
-            if (icc != null) {
-                return icc.Call(context, instance, args);
-            } else {
-                // drop the 'this' and make the call
-                return CallWithContext(context, func, args);
-            }
+            // drop the 'this' and make the call
+            return CallWithContext(context, func, args);            
         }
 
         public static object ToPythonType(PythonType dt) {
@@ -1180,12 +1190,6 @@ namespace IronPython.Runtime.Operations {
                         lnames.Add((string)ide.Key);
                         largs.Add(ide.Value);
                     }
-                }
-
-                // fast path
-                IFancyCallable ic = func as IFancyCallable;
-                if (ic != null) {
-                    return ic.Call(context, largs.ToArray(), lnames.ToArray());
                 }
 
                 return PythonCalls.CallWithKeywordArgs(func, largs.ToArray(), lnames.ToArray());
@@ -1799,16 +1803,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception KeyError(object key) {
-            // create the .NET & Python exception, setting the Arguments on the
-            // python exception to the invalid key
-            Exception res = new KeyNotFoundException(string.Format("{0}", key));
-            
-            PythonOps.SetAttr(DefaultContext.Default,
-                ExceptionConverter.ToPython(res),
-                Symbols.Arguments,
-                PythonTuple.MakeTuple(key));
-
-            return res;
+            return PythonExceptions.CreateThrowable(PythonExceptions.KeyError, key);
         }
 
         public static Exception KeyError(string format, params object[] args) {
@@ -1895,7 +1890,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static Exception SystemExit() {
-            return new PythonSystemExitException();
+            return new SystemExitException();
         }
 
         public static Exception SyntaxWarning(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
@@ -1912,10 +1907,10 @@ namespace IronPython.Runtime.Operations {
         public static SyntaxErrorException SyntaxError(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode) {
             switch (errorCode & ErrorCodes.ErrorMask) {
                 case ErrorCodes.IndentationError:
-                    return new PythonIndentationError(message, sourceUnit, span, errorCode, Severity.FatalError);
+                    return new IndentationException(message, sourceUnit, span, errorCode, Severity.FatalError);
 
                 case ErrorCodes.TabError:
-                    return new PythonTabError(message, sourceUnit, span, errorCode, Severity.FatalError);
+                    return new TabException(message, sourceUnit, span, errorCode, Severity.FatalError);
 
                 default:
                     return new SyntaxErrorException(message, sourceUnit, span, errorCode, Severity.FatalError);
@@ -2470,7 +2465,7 @@ namespace IronPython.Runtime.Operations {
             PythonFile pf;
             Stream cs;
 
-            bool line_feed = true;
+            bool lineFeed = true;
             bool tryEvaluate = false;
 
             // TODO: use SourceUnitReader when available
@@ -2489,15 +2484,15 @@ namespace IronPython.Runtime.Operations {
                     code = reader.ReadToEnd();
                 }
 
-                line_feed = false;
+                lineFeed = false;
             }
 
-            string str_code = code as string;
+            string strCode = code as string;
 
-            if (str_code != null) {
-                SourceUnit code_unit = context.LanguageContext.CreateSnippet(str_code);                
+            if (strCode != null) {
+                SourceUnit code_unit = context.LanguageContext.CreateSnippet(strCode);                
                 // in accordance to CPython semantics:
-                code_unit.DisableLineFeedLineSeparator = line_feed;
+                code_unit.DisableLineFeedLineSeparator = lineFeed;
 
 
                 ScriptCode sc = context.LanguageContext.CompileSourceCode(code_unit, Builtin.GetDefaultCompilerOptions(context, true, 0));
@@ -2573,7 +2568,7 @@ namespace IronPython.Runtime.Operations {
             ExceptionHelpers.AssociateDynamicStackFrames(clrException);
             RawException = clrException;
             GetExceptionInfo(); // force update of non-thread static exception info...
-            return ExceptionConverter.ToPython(clrException);
+            return PythonExceptions.ToPython(clrException);
         }
 
         // Clear the current exception. Most callers should restore the exception.
@@ -2612,6 +2607,8 @@ namespace IronPython.Runtime.Operations {
             Debug.Assert(exception != null);
 
             StringException strex;
+            ObjectException objex;
+
             if (test is PythonTuple) {
                 // we handle multiple exceptions, we'll check them one at a time.
                 PythonTuple tt = test as PythonTuple;
@@ -2627,15 +2624,23 @@ namespace IronPython.Runtime.Operations {
                     return strex.Value;
                 }
                 return null;
+            } else if ((objex = exception as ObjectException) != null) {
+                if (PythonOps.IsSubClass(objex.Type, test)) {
+                    return objex.Instance;
+                }
+                return null;
             } else if (test is OldClass) {
                 if (PythonOps.IsInstance(exception, test)) {
                     // catching a Python type.
                     return exception;
                 }
-            } else if (test is PythonType) {
-                if (PythonOps.IsSubClass(test as PythonType, DynamicHelpers.GetPythonTypeFromType(typeof(Exception)))) {
+            } else if (test is PythonType) {                
+                if (PythonOps.IsSubClass(test as PythonType, DynamicHelpers.GetPythonTypeFromType(typeof(PythonExceptions.BaseException)))) {
+                    // catching a Python exception type explicitly.
+                    if (PythonOps.IsInstance(exception, test)) return exception;
+                } else if (PythonOps.IsSubClass(test as PythonType, DynamicHelpers.GetPythonTypeFromType(typeof(Exception)))) {
                     // catching a CLR exception type explicitly.
-                    Exception clrEx = ExceptionConverter.ToClr(exception);
+                    Exception clrEx = PythonExceptions.ToClr(exception);
                     if (PythonOps.IsInstance(clrEx, test)) return clrEx;
                 }
             }
@@ -2689,7 +2694,7 @@ namespace IronPython.Runtime.Operations {
                 return PythonTuple.MakeTuple(null, null, null);
             }
 
-            object pyExcep = ExceptionConverter.ToPython(ex);
+            object pyExcep = PythonExceptions.ToPython(ex);
 
             TraceBack tb = CreateTraceBack(ex);
             SystemState.Instance.ExceptionTraceBack = tb;
@@ -2748,20 +2753,24 @@ namespace IronPython.Runtime.Operations {
                 traceback = t[2];
             }
 
+            PythonType pt;
+
             if (type is Exception) {
                 throwable = type as Exception;
-            } else if (PythonOps.IsInstance(type, DefaultContext.DefaultPythonContext.ExceptionType)) {
-                throwable = ExceptionConverter.ToClr(type);
+            } else if (type is PythonExceptions.BaseException) {
+                throwable = PythonExceptions.ToClr(type);
+            } else if ((pt = type as PythonType) != null && typeof(PythonExceptions.BaseException).IsAssignableFrom(pt.UnderlyingSystemType)) {
+                throwable = PythonExceptions.CreateThrowableForRaise(pt, value);
             } else if (type is string) {
                 throwable = new StringException(type.ToString(), value);
             } else if (type is OldClass) {
                 if (value == null) {
-                    throwable = ExceptionConverter.CreateThrowable(type);
+                    throwable = new OldInstanceException((OldInstance)PythonCalls.Call(type));
                 } else {
-                    throwable = ExceptionConverter.CreateThrowable(type, value);
+                    throwable = PythonExceptions.CreateThrowableForRaise((OldClass)type, value);
                 }
             } else if (type is OldInstance) {
-                throwable = ExceptionConverter.ToClr(type);
+                throwable = new OldInstanceException((OldInstance)type);
             } else {
                 throwable = MakeExceptionTypeError(type);
             }

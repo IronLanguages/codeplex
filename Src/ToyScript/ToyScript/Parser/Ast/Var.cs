@@ -29,7 +29,7 @@ namespace ToyScript.Parser.Ast {
             _value = value;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             MSAst.Variable var = tg.GetOrMakeLocal(_name);
 
             if (_value != null) {

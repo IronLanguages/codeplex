@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1043:UseIntegralOrStringArgumentForIndexers")]
         public object this[CodeContext context, params object[] args] {
             get {
-                return UnoptimizedInvoke(context, args); 
+                return UnoptimizedInvoke(context, SymbolId.EmptySymbols, args); 
             }
         }
     }

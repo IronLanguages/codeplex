@@ -31,6 +31,8 @@ namespace Microsoft.Scripting {
                 if (to.IsValueType) {
                     if (to.IsGenericType && to.GetGenericTypeDefinition() == NullableType) {
                         return NewNullableInstance(to.GetGenericArguments()[0]);
+                    } else if (to == typeof(void)) {
+                        return null;
                     } else {
                         throw new InvalidCastException(String.Format("Cannot cast null to a value type {0}", to.Name));
                     }

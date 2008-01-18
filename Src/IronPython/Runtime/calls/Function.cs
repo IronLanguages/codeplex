@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Calls {
     /// Created for a user-defined function.  
     /// </summary>
     [PythonSystemType("function")]
-    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable  {
+    public sealed class PythonFunction : PythonTypeSlot, IWeakReferenceable, IMembersList, IDynamicObject, ICodeFormattable {
         private FunctionCode _code;
         private FunctionAttributes _flags;
         // Given "foo(a, b, c=3, *argList, **argDist), only a, b, and c are considered "normal" parameters
@@ -164,7 +164,7 @@ namespace IronPython.Runtime.Calls {
             get { return _name; }
             set {
                 if (_name == null) throw PythonOps.TypeError("func_name must be set to a string object");
-                _name = value; 
+                _name = value;
             }
         }
 
@@ -178,7 +178,7 @@ namespace IronPython.Runtime.Calls {
             set {
                 if (value == null) throw PythonOps.TypeError("setting function's dictionary to non-dict");
 
-                _dict = value; 
+                _dict = value;
             }
         }
 
@@ -201,7 +201,7 @@ namespace IronPython.Runtime.Calls {
             get { return _code; }
             set {
                 if (value == null) throw PythonOps.TypeError("func_code must be set to a code object");
-                _code = value; 
+                _code = value;
             }
         }
 
@@ -372,7 +372,7 @@ namespace IronPython.Runtime.Calls {
             throw PythonOps.TypeError("no parameter for " + name);
         }
 
-        #endregion       
+        #endregion
 
         #region Custom member lookup operators
 
@@ -394,7 +394,7 @@ namespace IronPython.Runtime.Calls {
 
         [SpecialNameAttribute, PythonHidden]
         public bool DeleteMember(CodeContext context, string name) {
-            switch(name) {
+            switch (name) {
                 case "func_dict":
                 case "__dict__":
                     throw PythonOps.TypeError("function's dictionary may not be deleted");
@@ -508,7 +508,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            switch(action.Kind) {
+            switch (action.Kind) {
                 case DynamicActionKind.Call:
                     return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
                 case DynamicActionKind.DoOperation:
@@ -518,7 +518,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
-            switch(doOperationAction.Operation) {
+            switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
                 case Operators.CallSignatures:
@@ -564,7 +564,7 @@ namespace IronPython.Runtime.Calls {
             private PythonFunction _func;                           // the function we're calling
             private StandardRule<T> _rule = new StandardRule<T>();  // the rule we're producing
             private Variable _dict, _params, _paramsLen;            // splatted dictionary & params + the initial length of the params array, null if not provided.
-            private List<Statement> _init;                          // a set of initialization code (e.g. creating a list for the params array)
+            private List<Expression> _init;                          // a set of initialization code (e.g. creating a list for the params array)
             private Expression _error;                              // a custom error expression if the default needs to be overridden.
             private bool _extractedParams;                          // true if we needed to extract a parameter from the parameter list.
             private bool _extractedKeyword;                         // true if we needed to extract a parameter from the kw list.
@@ -592,7 +592,7 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Makes the target for our rule.
             /// </summary>
-            private Statement MakeTarget(object[] args) {
+            private Expression MakeTarget(object[] args) {
                 Expression[] invokeArgs = GetArgumentsForRule(args);
 
                 if (invokeArgs != null) {
@@ -618,7 +618,7 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             private Expression MakeSimpleTest() {
                 return Ast.AndAlso(
-                    _rule.MakeTypeTestExpression(_func.GetType(), 0),                    
+                    _rule.MakeTypeTestExpression(_func.GetType(), 0),
                     Ast.AndAlso(
                         Ast.TypeIs(
                             Ast.Call(
@@ -869,7 +869,7 @@ namespace IronPython.Runtime.Calls {
             /// all the parameters) to ensure that we don't have any extra params or kw-params
             /// when we don't have a params array or params dict to expand them into.
             /// </summary>
-            private void AddCheckForNoExtraParameters(Expression[] exprArgs) {                
+            private void AddCheckForNoExtraParameters(Expression[] exprArgs) {
                 List<Expression> tests = new List<Expression>(3);
 
                 // test we've used all of the extra parameters
@@ -906,15 +906,18 @@ namespace IronPython.Runtime.Calls {
                     );
                 }
 
-                if (tests.Count != 0) {                    
+                if (tests.Count != 0) {
                     if (exprArgs.Length != 0) {
                         // if we have arguments run the tests after the last arg is evaluated.
-                        tests.Insert(0, exprArgs[exprArgs.Length - 1]);
-                        exprArgs[exprArgs.Length - 1] = Ast.Comma(0, tests.ToArray());
+                        Expression last = exprArgs[exprArgs.Length - 1];
+                        Variable temp = _rule.GetTemporary(last.Type, "$temp");
+                        tests.Insert(0, Ast.Assign(temp, last));
+                        tests.Add(Ast.Read(temp));
+                        exprArgs[exprArgs.Length - 1] = Ast.Comma(tests.ToArray());
                     } else {
                         // otherwise run them right before the method call
                         _paramlessCheck = Ast.Comma(tests.ToArray());
-                    }                        
+                    }
                 }
             }
 
@@ -1139,15 +1142,16 @@ namespace IronPython.Runtime.Calls {
                 Debug.Assert(_dict == null);
                 _dict = _rule.GetTemporary(typeof(PythonDictionary), "$dict");
 
-                int argCount = 2;
+                int count = 2;
                 if (namedArgs != null) {
-                    argCount += namedArgs.Count;
+                    count += namedArgs.Count;
                 }
 
-                Expression[] dictCreator = new Expression[argCount];
+                Expression[] dictCreator = new Expression[count];
                 BoundExpression dictRef = Ast.ReadDefined(_dict);
 
-                dictCreator[0] = Ast.Assign(
+                count = 0;
+                dictCreator[count++] = Ast.Assign(
                     _dict,
                     Ast.Call(
                         typeof(PythonOps).GetMethod("MakeDict"),
@@ -1155,12 +1159,9 @@ namespace IronPython.Runtime.Calls {
                     )
                 );
 
-                dictCreator[1] = dictRef;
-
                 if (namedArgs != null) {
-                    int index = 2;
                     foreach (KeyValuePair<SymbolId, Expression> kvp in namedArgs) {
-                        dictCreator[index++] = Ast.Call(
+                        dictCreator[count++] = Ast.Call(
                             dictRef,
                             typeof(PythonDictionary).GetMethod("set_Item", new Type[] { typeof(object), typeof(object) }),
                             Ast.Constant(SymbolTable.IdToString(kvp.Key), typeof(object)),
@@ -1169,7 +1170,9 @@ namespace IronPython.Runtime.Calls {
                     }
                 }
 
-                return Ast.Comma(1, dictCreator);
+                dictCreator[count] = dictRef;
+
+                return Ast.Comma(dictCreator);
             }
 
             /// <summary>
@@ -1191,7 +1194,7 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Creates the code to invoke the target delegate function w/ the specified arguments.
             /// </summary>
-            private Statement MakeFunctionInvoke(Expression[] invokeArgs) {
+            private Expression MakeFunctionInvoke(Expression[] invokeArgs) {
                 Expression invoke = Ast.SimpleCallHelper(
                     Ast.Convert(
                         Ast.Call(
@@ -1205,7 +1208,7 @@ namespace IronPython.Runtime.Calls {
                 );
 
                 if (_paramlessCheck != null) {
-                    invoke = Ast.Comma(1, _paramlessCheck, invoke);
+                    invoke = Ast.Comma(_paramlessCheck, invoke);
                 }
                 return _rule.MakeReturn(Context.LanguageContext.Binder, invoke);
             }
@@ -1213,10 +1216,10 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Appends the initialization code for the call to the function if any exists.
             /// </summary>
-            private Statement AddInitialization(Statement body) {
+            private Expression AddInitialization(Expression body) {
                 if (_init == null) return body;
 
-                List<Statement> res = new List<Statement>(_init);
+                List<Expression> res = new List<Expression>(_init);
                 res.Add(body);
                 return Ast.Block(res);
             }
@@ -1239,7 +1242,7 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Adds a try/finally which enforces recursion limits around the target method.
             /// </summary>
-            private Statement AddRecursionCheck(Statement stmt) {
+            private Expression AddRecursionCheck(Expression stmt) {
                 if (EnforceRecursion) {
                     stmt = Ast.Block(
                         Ast.Statement(
@@ -1270,7 +1273,7 @@ namespace IronPython.Runtime.Calls {
                 );
             }
 
-            private Statement MakeBadArgumentRule() {
+            private Expression MakeBadArgumentRule() {
                 if (_error != null) {
                     return _rule.MakeError(_error);
                 }
@@ -1285,7 +1288,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             private void EnsureInit() {
-                if (_init == null) _init = new List<Statement>();
+                if (_init == null) _init = new List<Expression>();
             }
         }
 
@@ -1299,7 +1302,7 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
     }
-  
+
     [PythonType("cell")]
     public class ClosureCell : ICodeFormattable, IValueEquality {
         private object _value;

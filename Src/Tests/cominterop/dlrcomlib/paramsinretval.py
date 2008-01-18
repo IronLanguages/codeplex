@@ -28,13 +28,6 @@ com_obj = getRCWFromProgID(com_type_name)
 
 #------------------------------------------------------------------------------
 
-#**kwargs is broken under -X:PreferComDispatch
-print "Merlin Work Item 324009"
-def AssertError(exc, func, *args):
-    try:        func(*args)
-    except exc: return
-    else :      Fail("Expected %r but got no exception" % exc)
-
 def pythonToCOM(in_type):
     '''
     Given a COM type (in string format), this helper function returns a list of

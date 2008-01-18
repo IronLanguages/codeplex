@@ -37,7 +37,7 @@ namespace ToyScript.Parser.Ast {
             _body = body;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             // Push a new Scope for evaluating the functions body in
             ToyScope scope = tg.PushNewScope(_name);
 
@@ -47,7 +47,7 @@ namespace ToyScript.Parser.Ast {
                 names.Add(Ast.Constant(parameter));
             }
 
-            MSAst.Statement body = _body.Generate(tg);
+            MSAst.Expression body = _body.Generate(tg);
             MSAst.CodeBlock block = scope.FinishScope(body);
 
             tg.PopScope();

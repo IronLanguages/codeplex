@@ -15,14 +15,21 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
 using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting {
+    /// <summary>
+    /// ParameterWrapper represents the logical view of a parameter. For eg. the byref-reduced signature
+    /// of a method with byref parameters will be represented using a ParameterWrapper of the underlying
+    /// element type, since the logical view of the byref-reduced signature is that the argument will be
+    /// passed by value (and the updated value is included in the return value).
+    /// 
+    /// Contrast this with ArgBuilder which represents the real physical argument passed to the method.
+    /// </summary>
     class ParameterWrapper {
         private Type _type;
         private bool _prohibitNull, _isParams, _isParamsDict;
@@ -51,11 +58,16 @@ namespace Microsoft.Scripting {
         }
 
         public ParameterWrapper(ActionBinder binder, ParameterInfo info)
-            : this(binder, info.ParameterType) {
-            _name = SymbolTable.StringToId(info.Name ?? "<unknown>");
-            _prohibitNull = info.IsDefined(typeof(NotNullAttribute), false);
-            _isParams = info.IsDefined(typeof(ParamArrayAttribute), false);
-            _isParamsDict = info.IsDefined(typeof(ParamDictionaryAttribute), false);
+            : this(binder, info.ParameterType) {            
+            _prohibitNull = CompilerHelpers.ProhibitsNull(info);
+            _isParams = CompilerHelpers.IsParamArray(info);
+            _isParamsDict = CompilerHelpers.IsParamDictionary(info);
+            if (_isParams || _isParamsDict) {
+                // params arrays & dictionaries don't allow assignment by keyword
+                _name = SymbolTable.StringToId("<unknown>");
+            } else {
+                _name = SymbolTable.StringToId(info.Name ?? "<unknown>");
+            }
         }
 
         public static int? CompareParameters(IList<ParameterWrapper> parameters1, IList<ParameterWrapper> parameters2, Type[] actualTypes) {
@@ -101,7 +113,7 @@ namespace Microsoft.Scripting {
                 if (Type.IsGenericType && Type.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                     return true;
                 }
-                return !Type.IsValueType;
+                return !Type.IsValueType || _binder.CanConvertFrom(ty, Type, allowNarrowing);
             } else {
                 return _binder.CanConvertFrom(ty, Type, allowNarrowing);
             }
@@ -149,21 +161,13 @@ namespace Microsoft.Scripting {
             if (t1 == t2) return 0;
             int? ret = null;
 
-            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.None);
-            if (ret != null) {
-                return ret;
+            for (NarrowingLevel curLevel = NarrowingLevel.None; curLevel <= NarrowingLevel.All; curLevel++) {
+                ret = SelectBestConversionFor(actualType, t1, t2, curLevel);
+                if (ret != null) {
+                    return ret;
+                }
             }
-
-            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.Preferred);
-            if (ret != null) {
-                return ret;
-            }
-
-            ret = SelectBestConversionFor(actualType, t1, t2, NarrowingLevel.All);
-            if (ret != null) {
-                return ret;
-            }
-
+            
             return CompareTo(other);
         }
 

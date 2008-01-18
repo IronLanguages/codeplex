@@ -47,10 +47,14 @@ namespace IronPython.Modules {
 
         private const string Newline = "\n";
 
-        public static OldClass PickleError = ExceptionConverter.CreatePythonException("PickleError", "cPickle");
-        public static OldClass PicklingError = ExceptionConverter.CreatePythonException("PicklingError", "cPickle", PickleError);
-        public static OldClass UnpicklingError = ExceptionConverter.CreatePythonException("UnpicklingError", "cPickle", PickleError);
-        public static OldClass BadPickleGet = ExceptionConverter.CreatePythonException("BadPickleGet", "cPickle", UnpicklingError);
+        #region Exceptions
+
+        public static PythonType PickleError = PythonExceptions.CreateSubType(PythonExceptions.Exception, "PickleError", "cPickle", "");
+        public static PythonType PicklingError = PythonExceptions.CreateSubType(PickleError, "PicklingError", "cPickle", "");
+        public static PythonType UnpicklingError = PythonExceptions.CreateSubType(PickleError, "UnpicklingError", "cPickle", "");
+        public static PythonType BadPickleGet = PythonExceptions.CreateSubType(UnpicklingError, "BadPickleGet", "cPickle", ""); 
+        
+        #endregion
 
         #region Public module-level functions
 
@@ -414,7 +418,7 @@ namespace IronPython.Modules {
                 if (_file is PythonReadableFileOutput) {
                     return ((PythonReadableFileOutput)_file).GetValue();
                 }
-                throw ExceptionConverter.CreateThrowable(PicklingError, "Attempt to getvalue() a non-list-based pickler");
+                throw PythonExceptions.CreateThrowable(PicklingError, "Attempt to getvalue() a non-list-based pickler");
             }
 
             #endregion
@@ -1167,7 +1171,7 @@ namespace IronPython.Modules {
                     msgBuilder.Append(": ");
                     msgBuilder.Append(String.Format(format, args));
                 }
-                return ExceptionConverter.CreateThrowable(PicklingError, msgBuilder.ToString());
+                return PythonExceptions.CreateThrowable(PicklingError, msgBuilder.ToString());
             }
 
             private void Memoize(object obj) {
@@ -1355,7 +1359,7 @@ namespace IronPython.Modules {
             }
 
             private Exception CannotUnpickle(string format, params object[] args) {
-                return ExceptionConverter.CreateThrowable(UnpicklingError, String.Format(format, args));
+                return PythonExceptions.CreateThrowable(UnpicklingError, String.Format(format, args));
             }
 
             public IDictionary<object, object> memo {
@@ -1375,7 +1379,7 @@ namespace IronPython.Modules {
             private object MemoGet(long key) {
                 object value;
                 if (_memo.TryGetValue(key, out value)) return value;
-                throw ExceptionConverter.CreateThrowable(BadPickleGet, String.Format("memo key {0} not found", key));
+                throw PythonExceptions.CreateThrowable(BadPickleGet, String.Format("memo key {0} not found", key));
             }
 
             private void MemoPut(long key, object value) {
@@ -1648,7 +1652,7 @@ namespace IronPython.Modules {
                 try {
                     _stack.Append(MemoGet((long)(int)ReadIntFromString(context)));
                 } catch (ArgumentException) {
-                    throw ExceptionConverter.CreateThrowable(BadPickleGet, "while executing GET: invalid integer value");
+                    throw PythonExceptions.CreateThrowable(BadPickleGet, "while executing GET: invalid integer value");
                 }
             }
 

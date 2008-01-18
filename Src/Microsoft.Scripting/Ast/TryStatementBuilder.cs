@@ -19,34 +19,34 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class TryStatementBuilder {
-        private Statement _tryStatement;
+        private Expression _try;
         private List<CatchBlock> _catchBlocks;
-        private Statement _finallyStatement;
+        private Expression _finally;
         private bool _skipNext;
-        private SourceSpan _statementSpan;
+        private SourceSpan _span;
         private SourceLocation _header;
 
-        internal TryStatementBuilder(SourceSpan statementSpan, SourceLocation bodyLocation, Statement body) {
+        internal TryStatementBuilder(SourceSpan span, SourceLocation bodyLocation, Expression body) {
             Contract.RequiresNotNull(body, "body");
 
-            _tryStatement = body;
+            _try = body;
             _header = bodyLocation;
-            _statementSpan = statementSpan;
+            _span = span;
         }
 
-        public TryStatementBuilder Catch(Type type, Statement body) {
+        public TryStatementBuilder Catch(Type type, Expression body) {
             return Catch(type, (Variable)null, body);
         }
 
-        public TryStatementBuilder Catch(Type type, params Statement[] body) {
+        public TryStatementBuilder Catch(Type type, params Expression[] body) {
             return Catch(type, null, body);
         }
 
-        public TryStatementBuilder Catch(Type type, Variable holder, params Statement[] body) {
+        public TryStatementBuilder Catch(Type type, Variable holder, params Expression[] body) {
             return Catch(type, holder, Ast.Block(body));
         }
 
-        public TryStatementBuilder Catch(Type type, Variable holder, Statement body) {
+        public TryStatementBuilder Catch(Type type, Variable holder, Expression body) {
             if (_skipNext) {
                 _skipNext = false;
                 return this;
@@ -55,7 +55,9 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(type, "type");
             Contract.RequiresNotNull(body, "body");
 
-            if (_finallyStatement != null) throw new InvalidOperationException("Finally statement already defined");
+            if (_finally != null) {
+                throw new InvalidOperationException("Finally already defined");
+            }
             
             if (_catchBlocks == null) {
                 _catchBlocks = new List<CatchBlock>();
@@ -65,11 +67,11 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, params Statement[] body) {
+        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, params Expression[] body) {
             return Filter(type, holder, condition, Ast.Block(body));
         }
 
-        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, Statement body) {
+        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, Expression body) {
             if (_skipNext) {
                 _skipNext = false;
                 return this;
@@ -88,7 +90,7 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-        public TryStatementBuilder Finally(params Statement[] body) {
+        public TryStatementBuilder Finally(params Expression[] body) {
             // we need to skip befor creating Ast.Block (body might be null):
             if (_skipNext) {
                 _skipNext = false;
@@ -98,16 +100,18 @@ namespace Microsoft.Scripting.Ast {
             return Finally(Ast.Block(body));
         }
 
-        public TryStatementBuilder Finally(Statement body) {
+        public TryStatementBuilder Finally(Expression body) {
             if (_skipNext) {
                 _skipNext = false;
                 return this;
             }
 
             Contract.RequiresNotNull(body, "body");
-            if (_finallyStatement != null) throw new InvalidOperationException("Finally statement already defined");
+            if (_finally != null) {
+                throw new InvalidOperationException("Finally already defined");
+            }
 
-            _finallyStatement = body;
+            _finally = body;
             return this;
         }
 
@@ -123,56 +127,57 @@ namespace Microsoft.Scripting.Ast {
         public static TryStatement ToStatement(TryStatementBuilder builder) {
             Contract.RequiresNotNull(builder, "builder");
             return new TryStatement(
-                builder._statementSpan,
+                builder._span.Start,
+                builder._span.End,
                 builder._header,
-                builder._tryStatement, 
+                builder._try, 
                 (builder._catchBlocks != null) ? CollectionUtils.ToReadOnlyCollection(builder._catchBlocks.ToArray()) : null, 
-                builder._finallyStatement
+                builder._finally
             ); 
         }
     }
 
     public static partial class Ast {
 
-        public static TryStatementBuilder Try(params Statement[] body) {
+        public static TryStatementBuilder Try(params Expression[] body) {
             return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, Ast.Block(body));
         }
         
-        public static TryStatementBuilder Try(Statement body) {
+        public static TryStatementBuilder Try(Expression body) {
             return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, body);
         }
 
-        public static TryStatementBuilder Try(SourceSpan statementSpan, SourceLocation bodyLocation, Statement body) {
+        public static TryStatementBuilder Try(SourceSpan statementSpan, SourceLocation bodyLocation, Expression body) {
             return new TryStatementBuilder(statementSpan, bodyLocation, body);
         }
 
-        public static TryStatementBuilder Try(SourceSpan span, SourceLocation location, params Statement[] body) {
+        public static TryStatementBuilder Try(SourceSpan span, SourceLocation location, params Expression[] body) {
             return new TryStatementBuilder(span, location, Ast.Block(body));
         }
 
-        public static TryStatement TryCatch(SourceSpan span, SourceLocation header, Statement body, params CatchBlock[] handlers) {
+        public static TryStatement TryCatch(SourceSpan span, SourceLocation header, Expression body, params CatchBlock[] handlers) {
             return TryCatchFinally(span, header, body, handlers, null);
         }
 
-        public static TryStatement TryFinally(Statement body, Statement @finally) {
+        public static TryStatement TryFinally(Expression body, Expression @finally) {
             return TryCatchFinally(SourceSpan.None, SourceLocation.None, body, null, @finally);
         }
 
-        public static TryStatement TryFinally(SourceSpan span, SourceLocation header, Statement body, Statement @finally) {
+        public static TryStatement TryFinally(SourceSpan span, SourceLocation header, Expression body, Expression @finally) {
             return TryCatchFinally(span, header, body, null, @finally);
         }
 
-        public static TryStatement TryCatchFinally(Statement body, CatchBlock[] handlers, Statement @finally) {
+        public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally) {
             return new TryStatement(
-                SourceSpan.None, SourceLocation.None,
+                SourceLocation.None, SourceLocation.None, SourceLocation.None,
                 body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
             );
         }
 
-        public static TryStatement TryCatchFinally(SourceSpan span, SourceLocation header, Statement body, CatchBlock[] handlers, Statement @finally) {
+        public static TryStatement TryCatchFinally(SourceSpan span, SourceLocation header, Expression body, CatchBlock[] handlers, Expression @finally) {
             return new TryStatement(
-                span, header,
-                 body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
+                span.Start, span.End, header,
+                body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
             );
         }
     }

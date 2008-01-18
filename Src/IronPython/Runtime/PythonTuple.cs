@@ -30,7 +30,7 @@ using Microsoft.Scripting.Math;
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("tuple")]
     public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
-        private static PythonTuple EMPTY = new PythonTuple();
+        internal static PythonTuple EMPTY = new PythonTuple();
 
         #region Python Constructors
 

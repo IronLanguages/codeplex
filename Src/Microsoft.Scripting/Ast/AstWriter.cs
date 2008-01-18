@@ -34,11 +34,11 @@ namespace Microsoft.Scripting.Ast {
             Break = 0x8000      // newline if column > MaxColumn
         };
 
-        private struct Block {
+        private struct CodeBlockId {
             CodeBlock _block;
             int _id;
 
-            public Block(CodeBlock block, int id) {
+            public CodeBlockId(CodeBlock block, int id) {
                 _block = block;
                 _id = id;
             }
@@ -52,16 +52,16 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private struct Alignment {
-            private readonly Statement _statement;
+            private readonly Expression _expression;
             private readonly int _depth;
 
-            public Alignment(Statement statement, int depth) {
-                _statement = statement;
+            public Alignment(Expression expression, int depth) {
+                _expression = expression;
                 _depth = depth;
             }
 
-            public Statement Statement {
-                get { return _statement; }
+            public Expression Statement {
+                get { return _expression; }
             }
             public int Depth {
                 get { return _depth; }
@@ -74,13 +74,14 @@ namespace Microsoft.Scripting.Ast {
         private TextWriter _out;
         private int _column;
 
-        private Queue<Block> _blocks;
+        private Queue<CodeBlockId> _blocks;
         private int _blockid;
         private Stack<Alignment> _stack = new Stack<Alignment>();
         private int _delta;
         private Flow _flow;
 
-        private AstWriter() {
+        private AstWriter(TextWriter file) {
+            _out = file;
         }
 
         private int Base {
@@ -168,16 +169,25 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        private static void Dump(CodeBlock/*!*/ block, string/*!*/ descr, TextWriter/*!*/ writer) {
+            Debug.Assert(block != null);
+            Debug.Assert(descr != null);
+            Debug.Assert(writer != null);
+
+            AstWriter dv = new AstWriter(writer);
+            dv.DoDump(block, descr);
+        }
+
         /// <summary>
         /// Write out the given AST
         /// </summary>
-        internal static void Dump(Node/*!*/ node, string/*!*/ descr, TextWriter/*!*/ writer) {
+        internal static void Dump(Expression/*!*/ node, string/*!*/ descr, TextWriter/*!*/ writer) {
             Debug.Assert(node != null);
             Debug.Assert(descr != null);
             Debug.Assert(writer != null);
 
-            AstWriter dv = new AstWriter();
-            dv.DoDump(node, descr, writer);
+            AstWriter dv = new AstWriter(writer);
+            dv.DoDump(node, descr);
         }
 
         private static string GetFilePath(string/*!*/ path) {
@@ -192,19 +202,36 @@ namespace Microsoft.Scripting.Ast {
             return path + ".ast";
         }
 
-        private void DoDump(Node node, string name, TextWriter outFile) {
-            _out = outFile;
+        private void DoDump(CodeBlock node, string name) {
+            WritePrologue(name);
 
+            WalkNode(node);
+
+            WriteBlocks();
+            WriteLine();
+        }
+
+        private void DoDump(Expression node, string name) {
+            WritePrologue(name);
+
+            WalkNode(node);
+
+            WriteBlocks();
+            WriteLine();
+        }
+
+        private void WritePrologue(string name) {
             WriteLine("//");
             WriteLine("// AST {0}", name);
             WriteLine("//");
             WriteLine();
+        }
 
-            WalkNode(node);
+        private void WriteBlocks() {
             Debug.Assert(_stack.Count == 0);
 
             while (_blocks != null && _blocks.Count > 0) {
-                Block b = _blocks.Dequeue();
+                CodeBlockId b = _blocks.Dequeue();
                 WriteLine();
                 WriteLine("//");
                 WriteLine("// CODE BLOCK: {0} ({1})", b.CodeBlock.Name, b.Id);
@@ -215,15 +242,13 @@ namespace Microsoft.Scripting.Ast {
 
                 Debug.Assert(_stack.Count == 0);
             }
-
-            WriteLine();
         }
 
         private int Enqueue(CodeBlock block) {
             if (_blocks == null) {
-                _blocks = new Queue<Block>();
+                _blocks = new Queue<CodeBlockId>();
             }
-            _blocks.Enqueue(new Block(block, ++_blockid));
+            _blocks.Enqueue(new CodeBlockId(block, ++_blockid));
             return _blockid;
         }
 
@@ -303,7 +328,7 @@ namespace Microsoft.Scripting.Ast {
 
         #region The AST Output
 
-        private void WalkNode(Node node) {
+        private void WalkNode(Expression node) {
             if (node == null) {
                 return;
             }
@@ -357,8 +382,8 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ArrayIndexAssignment:
                     Dump((ArrayIndexAssignment)node);
                     break;
-                case AstNodeType.BlockStatement:
-                    Dump((BlockStatement)node);
+                case AstNodeType.Block:
+                    Dump((Block)node);
                     break;
                 case AstNodeType.BoundAssignment:
                     Dump((BoundAssignment)node);
@@ -369,9 +394,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.BreakStatement:
                     Dump((BreakStatement)node);
                     break;
-                case AstNodeType.CodeBlock:
-                    Dump((CodeBlock)node);
-                    break;
                 case AstNodeType.CodeBlockExpression:
                     Dump((CodeBlockExpression)node);
                     break;
@@ -380,10 +402,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.GeneratorIntrinsic:
                     Out(".gen_intrinsic");
-                    break;
-
-                case AstNodeType.CommaExpression:
-                    Dump((CommaExpression)node);
                     break;
                 case AstNodeType.ContinueStatement:
                     Dump((ContinueStatement)node);
@@ -405,12 +423,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.ExpressionStatement:
                     Dump((ExpressionStatement)node);
-                    break;
-                case AstNodeType.GeneratorCodeBlock:
-                    Dump((GeneratorCodeBlock)node);
-                    break;
-                case AstNodeType.IfStatement:
-                    Dump((IfStatement)node);
                     break;
                 case AstNodeType.LabeledStatement:
                     Dump((LabeledStatement)node);
@@ -451,22 +463,22 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.UnboundExpression:
                     Dump((UnboundExpression)node);
                     break;
-                case AstNodeType.VoidExpression:
-                    Dump((VoidExpression)node);
-                    break;
                 case AstNodeType.YieldStatement:
                     Dump((YieldStatement)node);
                     break;
-
-                // These are handled within their respective statements
-                case AstNodeType.CatchBlock:
-                case AstNodeType.IfStatementTest:
-                case AstNodeType.SwitchCase:
                 default:
                     throw new InvalidOperationException("Unexpected node type: " + node.NodeType.ToString());
             }
         }
 
+        public void WalkNode(CodeBlock node) {
+            GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
+            if (gcb != null) {
+                Dump(gcb);
+            } else {
+                Dump(node);
+            }
+        }
 
         // More proper would be to make this a virtual method on Action
         private static string FormatAction(DynamicAction action) {
@@ -503,7 +515,7 @@ namespace Microsoft.Scripting.Ast {
             Out(")", Flow.Space);
 
             Out(FormatAction(node.Action));
-            Out("(");
+            Out("( // " + node.Action.ToString());
             Indent();
             NewLine();
             foreach (Expression arg in node.Arguments) {
@@ -588,27 +600,15 @@ namespace Microsoft.Scripting.Ast {
             Out(nl ? Flow.NewLine : Flow.None, ")");
         }
 
-        // CommaExpression
-        private void Dump(CommaExpression node) {
-            Out(String.Format(".comma ({0}) {{", node.ValueIndex), Flow.NewLine);
-            Indent();
-            for (int i = 0; i < node.Expressions.Count; i++) {
-                WalkNode(node.Expressions[i]);
-                Out(",", Flow.NewLine);
-            }
-            Dedent();
-            Out("}", Flow.NewLine);
-        }
-
         // ConditionalExpression
         private void Dump(ConditionalExpression node) {
-            Out("(");
+            Out(".if (", Flow.Break);
             WalkNode(node.Test);
-            Out(" ? ");
+            Out(" ) {", Flow.Break);
             WalkNode(node.IfTrue);
-            Out(" : ");
+            Out(Flow.Break, "} .else {", Flow.Break);
             WalkNode(node.IfFalse);
-            Out(")");
+            Out("}", Flow.Break);
         }
 
         private static string Constant(object value) {
@@ -757,20 +757,11 @@ namespace Microsoft.Scripting.Ast {
             Out(".unbound " + SymbolTable.IdToString(node.Name));
         }
 
-        // VoidExpression
-        private void Dump(VoidExpression node) {
-            Out(".void {");
-            Indent();
-            WalkNode(node.Statement);
-            Dedent();
-            Out("}");
-        }
-
-        // BlockStatement
-        private void Dump(BlockStatement node) {
-            Out("{");
+        // Block
+        private void Dump(Block node) {
+            Out(node.Type != typeof(void) ? ".comma {" : "{");
             NewLine(); Indent();
-            foreach (Statement s in node.Statements) {
+            foreach (Expression s in node.Expressions) {
                 WalkNode(s);
                 NewLine();
             }
@@ -817,27 +808,6 @@ namespace Microsoft.Scripting.Ast {
         private void Dump(ExpressionStatement node) {
             WalkNode(node.Expression);
             Out(";", Flow.NewLine);
-        }
-
-        // IfStatement
-        private void Dump(IfStatement node) {
-            for (int i = 0; i < node.Tests.Count; i++) {
-                IfStatementTest test = node.Tests[i];
-                Out(i == 0 ? ".if (" : "} .elif (");
-                WalkNode(test.Test);
-                Out(") {", Flow.NewLine);
-                Indent();
-                WalkNode(test.Body);
-                Dedent();
-            }
-
-            if (node.ElseStatement != null) {
-                Out("} .else {", Flow.NewLine);
-                Indent();
-                WalkNode(node.ElseStatement);
-                Dedent();
-            }
-            Out("}", Flow.NewLine);
         }
 
         // LabeledStatement

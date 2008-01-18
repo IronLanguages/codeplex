@@ -91,19 +91,19 @@ namespace Microsoft.Scripting.Ast {
 
         private struct ExitState {
             readonly BitArray _exit;
-            readonly Statement _statement;
+            readonly Expression _expression;
 
             public ExitState(BitArray exit)
                 : this(exit, null) {
             }
 
-            public ExitState(BitArray exit, Statement statement) {
+            public ExitState(BitArray exit, Expression expression) {
                 _exit = exit;
-                _statement = statement;
+                _expression = expression;
             }
 
-            public Statement Statement {
-                get { return _statement; }
+            public Expression Statement {
+                get { return _expression; }
             }
 
             public BitArray Exit {
@@ -209,20 +209,20 @@ namespace Microsoft.Scripting.Ast {
             PushStatement(ba, null);
         }
 
-        private void PushStatement(BitArray ba, Statement statement) {
+        private void PushStatement(BitArray ba, Expression expression) {
             if (_exit == null) {
                 _exit = new List<ExitState>();
             }
-            _exit.Add(new ExitState(ba, statement));
+            _exit.Add(new ExitState(ba, expression));
         }
 
-        private ExitState PeekStatement(Statement statement) {
+        private ExitState PeekStatement(Expression expression) {
             Debug.Assert(_exit != null && _exit.Count > 0);
-            if (statement == null) {
+            if (expression == null) {
                 return _exit[_exit.Count - 1];
             } else {
                 for (int i = _exit.Count - 1; i >= 0; i--) {
-                    if (_exit[i].Statement == statement) {
+                    if (_exit[i].Statement == expression) {
                         return _exit[i];
                     }
                 }
@@ -291,6 +291,28 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
+        protected internal override bool Walk(ConditionalExpression node) {
+            // Flow the test
+            WalkNode(node.Test);
+
+            BitArray result = _bits;
+            BitArray ifTrue, ifFalse;
+            // Flow the true branch
+            _bits = ifTrue = new BitArray(result);
+            WalkNode(node.IfTrue);
+
+            // Flow the false branch
+            _bits = ifFalse = new BitArray(result);
+            WalkNode(node.IfFalse);
+
+            result.SetAll(true);
+            result.And(ifTrue);
+            result.And(ifFalse);
+
+            _bits = result;
+            return false;
+        }
+
         // GeneratorCodeBlock
         protected internal override bool Walk(GeneratorCodeBlock node) {
             return Walk((CodeBlock)node);
@@ -321,46 +343,6 @@ namespace Microsoft.Scripting.Ast {
             _bits = save;
             _bits.And(loop);
 
-            return false;
-        }
-
-        // IfStatement
-        protected internal override bool Walk(IfStatement node) {
-            BitArray result = new BitArray(_bits.Length, true);
-            BitArray save = _bits;
-
-            _bits = new BitArray(_bits.Length);
-
-            foreach (IfStatementTest ist in node.Tests) {
-                // Set the initial branch value to bits
-                _bits.SetAll(false);
-                _bits.Or(save);
-
-                // Flow the test first
-                WalkNode(ist.Test);
-                // Flow the body
-                WalkNode(ist.Body);
-                // Intersect
-                result.And(_bits);
-            }
-
-            // Set the initial branch value to bits
-            _bits.SetAll(false);
-            _bits.Or(save);
-
-            if (node.ElseStatement != null) {
-                // Flow the else_
-                WalkNode(node.ElseStatement);
-            }
-
-            // Intersect
-            result.And(_bits);
-
-            _bits = save;
-
-            // Remember the result
-            _bits.SetAll(false);
-            _bits.Or(result);
             return false;
         }
 

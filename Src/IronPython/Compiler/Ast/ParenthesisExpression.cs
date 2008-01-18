@@ -34,11 +34,11 @@ namespace IronPython.Compiler.Ast {
             return ag.Transform(_expression, type);
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             return _expression.TransformSet(ag, span, right, op);
         }
 
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             return _expression.TransformDelete(ag);
         }
 

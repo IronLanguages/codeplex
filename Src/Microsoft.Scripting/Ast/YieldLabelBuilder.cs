@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
                 Finally
             };
 
-            private readonly TryStatement _statement;
+            private readonly TryStatement _try;
             private TryStatementState _state;
             private int _handler;
 
@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(statement != null);
 
                 _state = TryStatementState.Try;
-                _statement = statement;
+                _try = statement;
             }
 
             internal TryStatementState State {
@@ -54,11 +54,11 @@ namespace Microsoft.Scripting.Ast {
             internal TargetLabel AddYieldTarget(TargetLabel label, int index) {
                 switch (State) {
                     case TryStatementState.Try:
-                        return _statement.AddTryYieldTarget(label, index);
+                        return _try.AddTryYieldTarget(label, index);
                     case TryStatementState.Handler:
-                        return _statement.AddCatchYieldTarget(label, index, _handler);
+                        return _try.AddCatchYieldTarget(label, index, _handler);
                     case TryStatementState.Finally:
-                        return _statement.AddFinallyYieldTarget(label, index);
+                        return _try.AddFinallyYieldTarget(label, index);
 
                     default:
                         Debug.Assert(false, "Invalid try statement state " + State.ToString());

@@ -100,7 +100,7 @@ def test_conditional_in_lambda():
         list = [f for f in 1, lambda x: (x if x >= 0 else -1)] 
         list = [f for f in 1, (lambda x: x if x >= 0 else -1)]
     except e:
-        Assert(False, e.msg)
+        Assert(False, e.message)
 
 def test_conditional_return_types():
     '''

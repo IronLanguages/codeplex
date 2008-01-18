@@ -15,11 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
 using System.Reflection;
+
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -33,45 +32,55 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     public sealed class BindingTarget {
         private readonly BindingResult _result;                                           // the result of the binding
+        private readonly string _name;                                                    // the name of the method being bound to
         private readonly MethodTarget _target;                                            // the MethodTarget if the binding was successful 
         private readonly Type[] _argTests;                                                // if successful tests needed to disambiguate between overloads
         private readonly NarrowingLevel _level;                                           // the NarrowingLevel at which the target succeeds on conversion
-        private readonly Dictionary<MethodBase, ConversionFailure[]> _conversionFailures; // if failed on conversion the various conversion failures for all overloads
-        private readonly MethodBase[] _ambigiousMatches;                                  // list of methods which are ambigious to bind to.
+        private readonly CallFailure[] _callFailures;                                     // if failed on conversion the various conversion failures for all overloads
+        private readonly MethodTarget[] _ambigiousMatches;                                // list of methods which are ambigious to bind to.
         private readonly int[] _expectedArgs;                                             // gets the acceptable number of parameters which can be passed to the method.
+        private readonly int _actualArgs;                                                 // gets the actual number of arguments provided
 
         /// <summary>
         /// Creates a new BindingTarget when the method binding has succeeded
         /// </summary>
-        internal BindingTarget(MethodTarget target, NarrowingLevel level, Type[] argTests) {
+        internal BindingTarget(string name, int actualArgumentCount, MethodTarget target, NarrowingLevel level, Type[] argTests) {
+            _name = name;
             _target = target;
             _argTests = argTests;
             _level = level;
+            _actualArgs = actualArgumentCount;
         }
 
         /// <summary>
         /// Creates a new BindingTarget when the method binding has failed due to an incorrect argument count
         /// </summary>
-        internal BindingTarget(int[] expectedArgCount) {
+        internal BindingTarget(string name, int actualArgumentCount, int[] expectedArgCount) {
+            _name = name;
             _result = BindingResult.IncorrectArgumentCount;
             _expectedArgs = expectedArgCount;
+            _actualArgs = actualArgumentCount;
         }
 
         /// <summary>
         /// Creates a new BindingTarget when the method binding has failued due to 
         /// one or more parameters which could not be converted.
         /// </summary>
-        internal BindingTarget(Dictionary<MethodBase, ConversionFailure[]> failures) {
-            _result = BindingResult.ConversionFailure;
-            _conversionFailures = failures;
+        internal BindingTarget(string name, int actualArgumentCount, CallFailure[] failures) {
+            _name = name;
+            _result = BindingResult.CallFailure;
+            _callFailures = failures;
+            _actualArgs = actualArgumentCount;
         }
 
         /// <summary>
         /// Creates a new BindingTarget when the match was ambigious
         /// </summary>
-        internal BindingTarget(MethodBase[] ambigiousMatches) {
+        internal BindingTarget(string name, int actualArgumentCount, MethodTarget[] ambigiousMatches) {
+            _name = name;
             _result = BindingResult.AmbigiousMatch;
             _ambigiousMatches = ambigiousMatches;
+            _actualArgs = actualArgumentCount;
         }
 
         /// <summary>
@@ -88,12 +97,20 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
-        public Expression/*!*/ MakeExpression(StandardRule/*!*/ rule, Expression/*!*/[]/*!*/ parameters, Type[] knownTypes) {
+        public Expression/*!*/ MakeExpression(StandardRule/*!*/ rule, Expression/*!*/[]/*!*/ parameters) {
             if (_target == null) {
                 throw new InvalidOperationException();
             }
 
-            return _target.MakeExpression(rule, parameters, knownTypes);
+            return _target.MakeExpression(rule, parameters, ArgumentTests);
+        }
+
+        public object Call(CodeContext context, object[] args) {
+            return GetTargetThrowing().CallReflected(context, args);
+        }
+
+        public AbstractValue/*!*/ AbstractCall(AbstractContext/*!*/ context, IList<AbstractValue/*!*/>/*!*/ args) {
+            return GetTargetThrowing().AbstractCall(context, args);
         }
 
         /// <summary>
@@ -110,20 +127,38 @@ namespace Microsoft.Scripting.Generation {
         }
 
         /// <summary>
+        /// Gets the name of the method as supplied to the MethodBinder.
+        /// </summary>
+        public string Name {
+            get {
+                return _name;
+            }
+        }
+
+        /// <summary>
+        /// Returns the MethodTarget if the binding succeeded, or null if no method was applicable.
+        /// </summary>
+        public MethodTarget MethodTarget {
+            get {
+                return _target;
+            }
+        }
+
+        /// <summary>
         /// Returns the methods which don't have any matches or null if Result == BindingResult.AmbigiousMatch
         /// </summary>
-        public IEnumerable<MethodBase> AmbigiousMatches {
+        public IEnumerable<MethodTarget> AmbigiousMatches {
             get {
                 return _ambigiousMatches;
             }
         }
 
         /// <summary>
-        /// Returns the methods and their associated conversion failures if Result == BindingResult.ConversionFailure.
+        /// Returns the methods and their associated conversion failures if Result == BindingResult.CallFailure.
         /// </summary>
-        public IEnumerable<KeyValuePair<MethodBase, ConversionFailure[]>> ConversionFailures {
+        public ICollection<CallFailure> CallFailures {
             get {
-                return _conversionFailures;
+                return _callFailures;
             }
         }
 
@@ -133,6 +168,16 @@ namespace Microsoft.Scripting.Generation {
         public IList<int> ExpectedArgumentCount {
             get {
                 return _expectedArgs;
+            }
+        }
+
+        /// <summary>
+        /// Returns the number of arguments provided to the call.  0 if the call succeeded or failed for a reason other
+        /// than argument count mismatch.
+        /// </summary>
+        public int ActualArgumentCount {
+            get {
+                return _actualArgs;
             }
         }
 
@@ -170,6 +215,23 @@ namespace Microsoft.Scripting.Generation {
             get {                
                 return _level;
             }
-        }        
+        }
+
+        /// <summary>
+        /// Returns true if the binding was succesful, false if it failed.
+        /// 
+        /// This is an alias for BindingTarget.Result == BindingResult.Success.
+        /// </summary>
+        public bool Success {
+            get {
+                return _result == BindingResult.Success;
+            }
+        }
+
+        internal MethodTarget GetTargetThrowing() {
+            if (_target == null) throw new InvalidOperationException();
+
+            return _target;
+        }
     }
 }

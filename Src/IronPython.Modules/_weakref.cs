@@ -92,11 +92,10 @@ namespace IronPython.Modules {
         public static object CallableProxyType;
         public static object ProxyType;
         public static object ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakReference));
-        public static object ReferenceError = ExceptionConverter.GetPythonException("ReferenceError");
-
 
         [PythonType("ref")]
-        public class PythonWeakReference : ICallableWithCodeContext, IValueEquality {
+        public class PythonWeakReference : IValueEquality {
+
             WeakHandle target;
             int hashVal;
             bool fHasHash;
@@ -195,11 +194,8 @@ namespace IronPython.Modules {
 
             #endregion
 
-            #region ICallableWithCodeContext Members
-
-            public object Call(CodeContext context, params object[] args) {
-                if (args.Length > 0) throw PythonOps.TypeError("__call__() takes exactly 0 arguments ({0} given)", args.Length);
-
+            [SpecialName]
+            public object Call(CodeContext context) {
                 if (!target.IsAlive) {
                     throw PythonOps.ReferenceError("weak object has gone away");
                 }
@@ -211,8 +207,6 @@ namespace IronPython.Modules {
                     throw PythonOps.ReferenceError("weak object has gone away");
                 }
             }
-
-            #endregion
 
             #region IValueEquality Members
 
@@ -492,9 +486,7 @@ namespace IronPython.Modules {
         [PythonType("weakcallableproxy")]
         public sealed class PythonCallableWeakRefProxy :
             IPythonObject,
-            ICodeFormattable,
-            ICallableWithCodeContext,
-            IFancyCallable,
+            ICodeFormattable,            
             IProxyObject,
             IValueEquality,
             ICustomMembers {
@@ -573,7 +565,7 @@ namespace IronPython.Modules {
             }
             #endregion
 
-            #region ISuperDynamicObject Members
+            #region IPythonObject Members
 
             IAttributesCollection IPythonObject.Dict {
                 get {
@@ -598,10 +590,6 @@ namespace IronPython.Modules {
             void IPythonObject.SetPythonType(PythonType newType) {
                 (GetObject() as IPythonObject).SetPythonType(newType);
             }
-
-            #endregion
-
-            #region IDynamicObject Members
 
             PythonType IPythonObject.PythonType {
                 get {
@@ -630,21 +618,15 @@ namespace IronPython.Modules {
 
             #endregion
 
-            #region ICallableWithCodeContext Members
-
-            object ICallableWithCodeContext.Call(CodeContext context, object[] args) {
+            [SpecialName]
+            public object Call(CodeContext context, params object[] args) {
                 return _site.Invoke(GetObject(), args);
             }
-
-            #endregion
-
-            #region IFancyCallable Members
-
-            object IFancyCallable.Call(CodeContext context, object[] args, string[] names) {
-                return PythonOps.CallWithKeywordArgs(context, GetObject(), args, names);
+                        
+            [SpecialName]
+            public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
+                return PythonCalls.CallWithKeywordArgs(GetObject(), args, dict);
             }
-
-            #endregion
 
             #region ICustomMembers Members
 
@@ -799,7 +781,7 @@ namespace IronPython.Modules {
     }
 
     [PythonType("method-wrapper")]
-    public class GenericMethodWrapper : ICallableWithCodeContext, IFancyCallable {
+    public class GenericMethodWrapper {
         SymbolId name;
         IProxyObject target;
 
@@ -808,29 +790,22 @@ namespace IronPython.Modules {
             target = proxyTarget;
         }
 
-        #region ICallableWithCodeContext Members
-
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
             return PythonOps.InvokeWithContext(context, target.Target, name, args);
         }
 
-        #endregion
-
-        #region IFancyCallable Members
 
         [SpecialName]
-        public object Call(CodeContext context, object[] args, string[] names) {
+        public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
             object targetMethod;
             if (!DynamicHelpers.GetPythonType(target.Target).TryGetBoundMember(context, target.Target, name, out targetMethod))
                 throw PythonOps.AttributeError("type {0} has no attribute {1}",
                     DynamicHelpers.GetPythonType(target.Target),
                     SymbolTable.IdToString(name));
 
-            return PythonOps.CallWithKeywordArgs(context, targetMethod, args, names);
+            return PythonCalls.CallWithKeywordArgs(targetMethod, args, dict);
         }
-
-        #endregion
     }
 }
 

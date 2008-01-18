@@ -23,12 +23,26 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
+    /// <summary>
+    /// Richly represents the signature of a callsite.
+    /// </summary>
     public struct CallSignature : IEquatable<CallSignature> {
         // TODO: invariant _infos != null ==> _argumentCount == _infos.Length
         
+        /// <summary>
+        /// Array of additional meta information about the arguments, such as named arguments.
+        /// Null for a simple signature that's just an expression list. eg: foo(a*b,c,d)
+        /// </summary>
         private readonly ArgumentInfo[] _infos;
+
+        /// <summary>
+        /// Number of arguments in the signature.
+        /// </summary>
         private readonly int _argumentCount;
 
+        /// <summary>
+        /// All arguments are unnamed and matched by position. 
+        /// </summary>
         public bool IsSimple {
             get { return _infos == null; }
         }

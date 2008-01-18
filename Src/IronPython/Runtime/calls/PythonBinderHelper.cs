@@ -16,17 +16,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
-using System.Text;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime.Calls {
     static class PythonBinderHelper {
@@ -254,9 +251,9 @@ namespace IronPython.Runtime.Calls {
         //
         // Various helpers related to calling Python __*__ conversion methods 
         //
-        internal static Statement GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, StandardRule<T> rule) {
+        internal static Expression GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, StandardRule<T> rule) {
             ErrorInfo error = context.LanguageContext.Binder.MakeConversionError(convertToAction.ToType, rule.Parameters[0]);
-            Statement failed;
+            Expression failed;
             switch (convertToAction.ResultKind) {
                 case ConversionResultKind.ImplicitTry:
                 case ConversionResultKind.ExplicitTry:
@@ -286,9 +283,43 @@ namespace IronPython.Runtime.Calls {
                 Ast.Constant(0)
             );
         }
-
+        
+        // Make a rule for objects that have immutable isCallable property (like functions).
         internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
             return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
+        }
+
+        // Rule to dynamically check for __call__ attribute.
+        // Needed for instances whos call status can change over the lifetime of the instance.
+        // For example, if we del(c.__call__) on a oldinstance, it's no longer callable.
+        internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self) {
+            // Certain non-python types (encountered during interop) are callable, but don't have 
+            // a __call__ attribute. The default base binder also checks these, but since we're overriding
+            // the base binder, we check them here.
+            Type tSelf = CompilerHelpers.GetType(self);
+            if (typeof(Delegate).IsAssignableFrom(tSelf) ||
+                typeof(MethodGroup).IsAssignableFrom(tSelf)) {
+                return MakeIsCallableRule<T>(context, self, true);
+            }
+
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.MakeTest(tSelf);
+
+            // Rule is:
+            //    getmember(self, __call__) != OperationFailed.Value
+            rule.SetTarget(
+                rule.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.NotEqual(
+                        Ast.Action.GetMember(
+                            Symbols.Call,
+                            GetMemberBindingFlags.Bound | GetMemberBindingFlags.NoThrow,
+                            typeof(System.Object),
+                            rule.Parameters[0]),
+                        Ast.Constant(OperationFailed.Value))
+                )
+            );
+            return rule;
         }
     }
 }

@@ -16,9 +16,12 @@
 import toimport
 
 from lib.assert_util import *
+
 if not is_silverlight:
     from lib.file_util import *
     from lib.process_util import *
+    import nt
+
 
 try:
     import this_module_does_not_exist
@@ -663,11 +666,33 @@ def test___import___and_packages():
         
     finally:
         sys.modules = mod_backup
-        import nt
         nt.unlink(_f_module)
         nt.unlink(_f_init)
         nt.unlink(_f_pkg_y)
         nt.unlink(_f_y)
+
+
+#This cannot be placed in a test_* function as it uses 'from mod import *'
+if not is_silverlight: #cp3194
+    try:
+        mod_backup = dict(sys.modules)
+        _f_module = path_combine(testpath.public_testdir, 'the_test.py')
+        
+        # write the files
+        write_to_file(_f_module, '''def foo(some_obj): return 3.14''')
+        
+        from the_test import *
+        AreEqual(foo(None), 3.14)
+        
+        class Bar:
+            foo = foo
+        AreEqual(foo(None), Bar().foo())
+        
+    finally:
+        sys.modules = mod_backup
+        import nt
+        nt.unlink(_f_module)
+        
         
 run_test(__name__)
 

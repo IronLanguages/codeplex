@@ -108,8 +108,8 @@ namespace IronPython.Compiler {
             if ((ReflectionUtils.IsNested(t) && !t.IsNestedPublic) || (t.IsNestedAssembly && !t.IsNestedFamORAssem)) {
                 if (!ScriptDomainManager.Options.PrivateBinding) {
                     return NameType.None;
-                } else {
-                    namePrefix = "_" + PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(t.DeclaringType)) + "__";
+                } else if (!t.IsGenericParameter) {
+                    namePrefix = "_" + DynamicHelpers.GetPythonTypeFromType(t.DeclaringType).Name + "__";
                 }
             }
 

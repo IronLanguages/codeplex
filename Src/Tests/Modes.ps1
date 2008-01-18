@@ -503,8 +503,8 @@ function test-dlrmodes($dlrexe)
 	
 	#------------------------------------------------------------------------------
 	## -X:SaveAssemblies
-	echo "Testing -X:SaveAssemblies ..."	
-	saveassemblies-helper $dlrexe 
+	#echo "Testing -X:SaveAssemblies ..."	
+	#saveassemblies-helper $dlrexe 
 	
 	#------------------------------------------------------------------------------
 	## -X:ExceptionDetail

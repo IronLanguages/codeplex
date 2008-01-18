@@ -177,7 +177,7 @@ clrRefInt = clr.Reference[int]()
 def test_arg_ClrReference():
     target = COverloads_ClrReference()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(lambda :                         None, _merge(_first('M100 M107 '), _second('M104 M105 M106 ')), 'M101 M102 M103 ', '', ),
+(lambda :                         None, _merge(_first('M100 M101 M107 '), _second('M102 M104 M105 M106 ')), 'M103 ', '', ),
 (lambda :      clr.Reference[object](), _second('M100 M104 M105 M107 '), 'M101 M102 M103 M104 M106 ', '', ),
 (lambda :  clr.Reference[object](None), _second('M100 M104 M105 M107 '), 'M101 M102 M103 M106 ', '', ),
 (lambda :        clr.Reference[int](9), _merge(_first('M100 M102 M103 M104 '), _second('M105 M107 ')), 'M101 M106 ', '', ),
@@ -334,12 +334,12 @@ def test_arg_Collections():
     target = COverloads_Collections()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (    arrayInt, _merge(_first('M100 '), _second('M101 M102 M103 M104 ')), '', '', ),
-(    tupleInt, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
-(     listInt, _merge(_first('M102 '), _second('M100 M103 ')), 'M101 M104 ', '', ),
-(  tupleLong1, _merge(_first('M102 '), _second('M100 M101 M103 M104 ')), '', '', ),
-(  tupleLong2, _merge(_first('M102 '), _second('M100 M103 ')), '', 'M101 M104 ', ),
-(   arrayByte, _first('M101 '), 'M100 M102 M103 M104 ', '', ),
-(    arrayObj, _merge(_first('M101 M102 '), _second('M100 M103 ')), 'M104 ', '', ),
+(    tupleInt, _merge(_first(''), _second('M100 M101 M102 M103 M104 ')), '', '', ),
+(     listInt, _merge(_first('M102 M104 '), _second('M100 M103 ')), 'M101 ', '', ),
+(  tupleLong1, _merge(_first(''), _second('M100 M101 M102 M103 M104 ')), '', '', ),
+(  tupleLong2, _merge(_first(''), _second('M100 M103 ')), '', 'M101 M102 M104 ', ),
+(   arrayByte, _first('M101 M103 M104 '), 'M100 M102 ', '', ),
+(    arrayObj, _merge(_first('M101 M102 M104 '), _second('M100 M103 ')), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 

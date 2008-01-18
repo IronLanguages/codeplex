@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         public object CallAsProperty(CodeContext context) {
-            return UnoptimizedInvoke(context);
+            return UnoptimizedInvoke(context, SymbolId.EmptySymbols);
         }
     }
 }

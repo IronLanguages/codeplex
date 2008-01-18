@@ -16,27 +16,41 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class ExpressionStatement : Statement {
+    // TODO: Rename or remove?
+    // Essentially only useful to add spans to an expression.
+    public sealed class ExpressionStatement : Expression, ISpan {
         private readonly Expression /*!*/ _expression;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
-        internal ExpressionStatement(SourceSpan span, Expression /*!*/ expression)
-            : base(AstNodeType.ExpressionStatement, span) {
+        internal ExpressionStatement(SourceLocation start, SourceLocation end, Expression /*!*/ expression)
+            : base(AstNodeType.ExpressionStatement, expression.Type) {
+            _start = start;
+            _end = end;
             _expression = expression;
         }
 
         public Expression Expression {
             get { return _expression; }
         }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
     }
 
     public static partial class Ast {
-        public static Statement Statement(Expression expression) {
+        public static Expression Statement(Expression expression) {
             return Statement(SourceSpan.None, expression);
         }
 
-        public static Statement Statement(SourceSpan span, Expression expression) {
+        public static Expression Statement(SourceSpan span, Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
-            return new ExpressionStatement(span, expression);
+            return new ExpressionStatement(span.Start, span.End, expression);
         }
     }
 }

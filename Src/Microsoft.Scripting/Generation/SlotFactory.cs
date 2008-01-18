@@ -24,25 +24,10 @@ namespace Microsoft.Scripting.Generation {
     /// slots or slots that are always of type object.
     /// </summary>
     public abstract class SlotFactory {
-        private Dictionary<SymbolId, Slot> _fields = new Dictionary<SymbolId, Slot>();
-
-        /// <summary>
-        /// Gets or creates a new slot with the given name of the specified type.
-        /// </summary>
-        public Slot MakeSlot(SymbolId name, Type type) {
-            Slot res;
-
-            if (!_fields.TryGetValue(name, out res)) {
-                _fields[name] = res = CreateSlot(name, type);
-            }
-
-            return res;
-        }
- 
         /// <summary>
         /// Overriden by the base type.  Creates a new slot of the given name and type.  Only called once for each name.
         /// </summary>
-        protected abstract Slot CreateSlot(SymbolId name, Type type);
+        public abstract Slot CreateSlot(SymbolId name, Type type);
 
         /// <summary>
         /// Called before emitting code into the specified Compiler.  Provides an opportunity to setup any
@@ -50,15 +35,6 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="cg"></param>
         public virtual void PrepareForEmit(Compiler cg) {
-        }
-
-        /// <summary>
-        /// Provides all the fields created by the SlotFactory.
-        /// </summary>
-        public Dictionary<SymbolId, Slot> Fields {
-            get {
-                return _fields;
-            }
         }
     }
 }

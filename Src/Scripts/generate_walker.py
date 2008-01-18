@@ -61,17 +61,6 @@ def gen_walker(cw, nodes, method, value):
         cw.write("%s void PostWalk(%s node) { }" % (method, node))
         space = 1
 
-def gen_scripting_walker(cw):
-    nodes = get_ast(
-        clr.LoadAssemblyByPartialName("Microsoft.Scripting"),
-        [
-            "Microsoft.Scripting.Ast.Expression",
-            "Microsoft.Scripting.Ast.Statement",
-            "Microsoft.Scripting.Ast.Node"
-        ]
-    )
-    gen_walker(cw, nodes, "protected internal virtual", "true")
-
 def get_python_nodes():
     nodes = get_ast(
         clr.LoadAssemblyByPartialName("IronPython"),
@@ -89,6 +78,5 @@ def gen_python_walker(cw):
 def gen_python_walker_nr(cw):
     gen_walker(cw, get_python_nodes(), "public override", "false")
 
-generate.CodeGenerator("DLR AST Walker", gen_scripting_walker).doit()
 generate.CodeGenerator("Python AST Walker", gen_python_walker).doit()
 generate.CodeGenerator("Python AST Walker Nonrecursive", gen_python_walker_nr).doit()

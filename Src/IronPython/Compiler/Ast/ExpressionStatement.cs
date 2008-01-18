@@ -29,7 +29,7 @@ namespace IronPython.Compiler.Ast {
             get { return _expression; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             MSAst.Expression expression = ag.Transform(_expression);
 
             if (ag.PrintExpressions) {
@@ -39,7 +39,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Statement(_expression.Span, expression);
+            return Ast.Statement(_expression.Span, Ast.Void(expression));
         }
 
         public override void Walk(PythonWalker walker) {

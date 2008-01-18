@@ -83,7 +83,7 @@ namespace IronPython.Runtime.Calls {
             if ((rf = slot as ReflectedField) != null) {
                 AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, rf.info)));
             } else if ((rep = slot as ReflectedExtensionProperty) != null) {
-                Statement body;
+                Expression body;
                 if (TryMakePropertyGet(rep.ExtInfo.Getter, arg, out body)) {
                     AddToBody(AddClsCheck(parent, clsOnly, body));
                     Rule.SetTarget(Body);
@@ -136,7 +136,7 @@ namespace IronPython.Runtime.Calls {
             return true;
         }
 
-        private Statement MakeMethodCallRule(BuiltinFunction target, bool bound) {
+        private Expression MakeMethodCallRule(BuiltinFunction target, bool bound) {
             target = GetCachedTarget(target);
 
             if (((target.FunctionType & FunctionType.FunctionMethodMask) != FunctionType.Function) || bound) {
@@ -188,7 +188,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private Statement AddClsCheck(PythonType argType, bool clsOnly, Statement body) {
+        private Expression AddClsCheck(PythonType argType, bool clsOnly, Expression body) {
             if (clsOnly) {
                 body =
                     Ast.Block(
@@ -205,7 +205,7 @@ namespace IronPython.Runtime.Calls {
             return body;
         }
 
-        private Statement MakeError(PythonType argType) {
+        private Expression MakeError(PythonType argType) {
             if (Action.IsNoThrow) {
                 return Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value")));
             } else {
@@ -219,7 +219,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private bool TryMakePropertyGet(MethodInfo getter, Expression arg, out Statement body) {
+        private bool TryMakePropertyGet(MethodInfo getter, Expression arg, out Expression body) {
             if (getter != null && CompilerHelpers.CanOptimizeMethod(getter)) {
                 Expression call = Binder.MakeCallExpression(getter, arg);
                 if (call != null) {

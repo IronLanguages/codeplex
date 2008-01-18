@@ -86,6 +86,15 @@ namespace IronPython.Compiler.Generation {
 
             Type ret = _newTypes.GetOrCreateValue(typeInfo,
                 delegate() {
+                    if (typeInfo.InterfaceTypes.Count == 0 && typeInfo.Slots == null) {
+                        // types that the have DynamicBaseType attribute can be used as NewType's directly, no 
+                        // need to create a new type unless we're adding interfaces or slots...
+                        object[] attrs = typeInfo.BaseType.GetCustomAttributes(typeof(DynamicBaseTypeAttribute), false);
+                        if (attrs.Length > 0) {
+                            return typeInfo.BaseType;
+                        }
+                    }
+                
                     // creation code                    
                     return GetTypeMaker(bases, typeInfo).CreateNewType();
                 });
@@ -196,17 +205,11 @@ namespace IronPython.Compiler.Generation {
             Type baseCLIType = typeof(object); // Pure Python object instances inherit from System.Object
             PythonType basePythonType = null;
 
-            foreach (object curBaseType in bases) {
-                PythonType curBasePythonType = curBaseType as PythonType;
-
-                if (curBasePythonType == null) {
-                    if (curBaseType is OldClass)
-                        continue;
-                    throw PythonOps.TypeError(typeName + ": unsupported base type for new-style class: " + baseCLIType);
-                }
-
+            foreach (PythonType curBasePythonType in GetPythonTypes(typeName, bases)) {
+                // discover the initial base/interfaces
                 IList<Type> baseInterfaces = ArrayUtils.EmptyTypes;
                 Type curTypeToExtend = curBasePythonType.ExtensionType;
+
                 if (curBasePythonType.ExtensionType.IsInterface) {
                     baseInterfaces = new Type[] { curTypeToExtend };
                     curTypeToExtend = typeof(object);
@@ -216,6 +219,10 @@ namespace IronPython.Compiler.Generation {
                         baseInterfaces = new List<Type>();
                         if (!curBasePythonType.TryLookupSlot(DefaultContext.Default, Symbols.Slots, out dummy) &&
                             (slots == null || slots.Count == 0)) {
+                            // user did:
+                            // class foo(object): __slots__ = 'abc'  (creates object_x)
+                            // class bar(foo): pass                  
+                            // rather than creating a new object_x_y type we re-use the object_x type.
                             curTypeToExtend = GetBaseTypeFromUserType(curBasePythonType, baseInterfaces, curTypeToExtend.BaseType);
                         }
                     }
@@ -230,10 +237,13 @@ namespace IronPython.Compiler.Generation {
                     if (interfaceType.ContainsGenericParameters)
                         throw PythonOps.TypeError(typeName + ": cannot inhert from open generic instantiation {0}. Only closed instantiations are supported.", interfaceType);
 
+                    // collecting all the interfaces because we override them all.
                     interfaceTypes.Add(interfaceType);
                 }
 
-                if (curTypeToExtend != typeof(object)) {
+                // if we're not extending something already in our existing base classes type hierarchy
+                // then we better be in some esoteric __slots__ situation
+                if (!baseCLIType.IsSubclassOf(curTypeToExtend)) {
                     if (baseCLIType != typeof(object) && baseCLIType != curTypeToExtend) {
                         bool isOkConflit = false;
                         if (IsInstanceType(baseCLIType) && IsInstanceType(curTypeToExtend)) {
@@ -259,6 +269,7 @@ namespace IronPython.Compiler.Generation {
                                              baseCLIType.FullName, basePythonType, curTypeToExtend.FullName, curBasePythonType);
                     }
 
+                    // we have a new base type
                     baseCLIType = curTypeToExtend;
                     basePythonType = curBasePythonType;
                 }
@@ -268,6 +279,22 @@ namespace IronPython.Compiler.Generation {
             return new NewTypeInfo(baseCLIType, interfaceTypes, slots);
         }
 
+        /// <summary>
+        /// Filters out old-classes and throws if any non-types are included, returning a
+        /// yielding the remaining PythonType objects.
+        /// </summary>
+        private static IEnumerable<PythonType> GetPythonTypes(string typeName, ICollection<object> bases) {
+            foreach (object curBaseType in bases) {
+                PythonType curBasePythonType = curBaseType as PythonType;
+                if (curBasePythonType == null) {
+                    if (curBaseType is OldClass)
+                        continue;
+                    throw PythonOps.TypeError(typeName + ": unsupported base type for new-style class " + curBaseType);
+                }
+
+                yield return curBasePythonType;
+            }
+        }
         private static Type GetBaseTypeFromUserType(PythonType curBasePythonType, IList<Type> baseInterfaces, Type curTypeToExtend) {
             Queue<PythonType> processing = new Queue<PythonType>();
             processing.Enqueue(curBasePythonType);

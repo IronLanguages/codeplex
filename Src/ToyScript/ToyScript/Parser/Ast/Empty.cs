@@ -24,7 +24,7 @@ namespace ToyScript.Parser.Ast {
             : base(span) {
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return Ast.Empty(Span);
         }
     }

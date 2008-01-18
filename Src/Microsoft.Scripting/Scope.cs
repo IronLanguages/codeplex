@@ -580,6 +580,7 @@ namespace Microsoft.Scripting {
             return false;
         }
 
+        // Emitted by TupleSlotFactory
         /// <summary>
         /// Gets the outer-most scope associated with this scope.  
         /// </summary>
@@ -972,11 +973,6 @@ namespace Microsoft.Scripting {
         }
 
         #endregion
-
-        // TODO:
-        public ScriptScope/*!*/ ToScriptScope() {
-            return new ScriptScope(this);
-        }
     }
 
 }

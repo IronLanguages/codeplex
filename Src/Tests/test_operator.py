@@ -18,115 +18,145 @@ from lib.assert_util import *
 if sys.platform!="win32":
     load_iron_python_test()
     from IronPythonTest import *
-
-if is_cli:
+    
     import clr
-    clr.AddReferenceByPartialName("System.Drawing")
-    from System.Drawing import Point, Size, PointF, SizeF, Rectangle, RectangleF
+    if not is_silverlight:
+        clr.AddReferenceByPartialName("System.Drawing")
+    
 
-    def test_sys_drawing():
-        x = Point()
-        Assert(x == Point(0,0))
-        x = Size()
-        Assert(x == Size(0,0))
-        x = PointF()
-        Assert(x == PointF(0,0))
-        x = SizeF()
-        Assert(x == SizeF(0,0))
-        x = Rectangle()
-        Assert(x == Rectangle(0,0,0,0))
-        x = RectangleF()
-        Assert(x == RectangleF(0,0,0,0))
+@skip("win32 silverlight")        
+def test_sys_drawing():
+    from System.Drawing import Point, Size, PointF, SizeF, Rectangle, RectangleF
+    x = Point()
+    Assert(x == Point(0,0))
+    x = Size()
+    Assert(x == Size(0,0))
+    x = PointF()
+    Assert(x == PointF(0,0))
+    x = SizeF()
+    Assert(x == SizeF(0,0))
+    x = Rectangle()
+    Assert(x == Rectangle(0,0,0,0))
+    x = RectangleF()
+    Assert(x == RectangleF(0,0,0,0))
+
+    p = Point(3,4)
+    s = Size(2,9)
     
-        p = Point(3,4)
-        s = Size(2,9)
-        
-        q = p + s
-        Assert(q == Point(5,13))
-        Assert(q != Point(13,5))
-        q = p - s
-        Assert(q == Point(1,-5))
-        Assert(q != Point(0,4))
-        q += s
-        Assert(q == Point(3,4))
-        Assert(q != Point(2,4))
-        q -= Size(1,2)
-        Assert(q == Point(2,2))
-        Assert(q != Point(1))
-        
-        t = s
-        Assert(t == s)
-        Assert(t != s - Size(1,0))
-        t += Size(3,1)
-        Assert(t == Size(5,10))
-        Assert(t != Size(5,0))
-        t -= Size(2,8)
-        Assert(t == Size(3,2))
-        Assert(t != Size(0,2))
-        t = s + Size(-1,-2)
-        Assert(t == Size(1,7))
-        Assert(t != Size(1,5))
-        t = s - Size(1,2)
-        Assert(t == Size(1,7))
-        Assert(t != Size(1,3))
+    q = p + s
+    Assert(q == Point(5,13))
+    Assert(q != Point(13,5))
+    q = p - s
+    Assert(q == Point(1,-5))
+    Assert(q != Point(0,4))
+    q += s
+    Assert(q == Point(3,4))
+    Assert(q != Point(2,4))
+    q -= Size(1,2)
+    Assert(q == Point(2,2))
+    Assert(q != Point(1))
     
-        def weekdays(enum):
-            return enum.Mon|enum.Tue|enum.Wed|enum.Thu|enum.Fri
+    t = s
+    Assert(t == s)
+    Assert(t != s - Size(1,0))
+    t += Size(3,1)
+    Assert(t == Size(5,10))
+    Assert(t != Size(5,0))
+    t -= Size(2,8)
+    Assert(t == Size(3,2))
+    Assert(t != Size(0,2))
+    t = s + Size(-1,-2)
+    Assert(t == Size(1,7))
+    Assert(t != Size(1,5))
+    t = s - Size(1,2)
+    Assert(t == Size(1,7))
+    Assert(t != Size(1,3))
+
+    def weekdays(enum):
+        return enum.Mon|enum.Tue|enum.Wed|enum.Thu|enum.Fri
+
+    def weekend(enum):
+        return enum.Sat|enum.Sun
+
+    def enum_helper(enum):
+        days = [enum.Mon,enum.Tue,enum.Wed,enum.Thu,enum.Fri,enum.Sat,enum.Sun]
+        x = enum.Mon|enum.Tue|enum.Wed|enum.Thu|enum.Fri|enum.Sat|enum.Sun
+        y = enum.Mon
+        for day in days:
+            y |= day
+        Assert(x == y)
+        Assert((x <> y) == False)
+        if x == y:  # EqualRetBool
+            b = True
+        else :
+            b = False
+        Assert(b)
     
-        def weekend(enum):
-            return enum.Sat|enum.Sun
+        Assert(x == weekdays(enum)|weekend(enum))
+        Assert(x == (weekdays(enum)^weekend(enum)))
+        Assert((weekdays(enum)&weekend(enum)) == enum.None)
+        Assert(weekdays(enum) == enum.Weekdays)
+        Assert(weekend(enum) == enum.Weekend)
+        Assert(weekdays(enum) != enum.Weekend)
+        Assert(weekdays(enum) != weekend(enum))
     
-        def enum_helper(enum):
-            days = [enum.Mon,enum.Tue,enum.Wed,enum.Thu,enum.Fri,enum.Sat,enum.Sun]
-            x = enum.Mon|enum.Tue|enum.Wed|enum.Thu|enum.Fri|enum.Sat|enum.Sun
-            y = enum.Mon
-            for day in days:
-                y |= day
-            Assert(x == y)
-            Assert((x <> y) == False)
-            if x == y:  # EqualRetBool
-                b = True
-            else :
-                b = False
-            Assert(b)
-        
-            Assert(x == weekdays(enum)|weekend(enum))
-            Assert(x == (weekdays(enum)^weekend(enum)))
-            Assert((weekdays(enum)&weekend(enum)) == enum.None)
-            Assert(weekdays(enum) == enum.Weekdays)
-            Assert(weekend(enum) == enum.Weekend)
-            Assert(weekdays(enum) != enum.Weekend)
-            Assert(weekdays(enum) != weekend(enum))
-        
-        for e in [DaysInt, DaysShort, DaysLong, DaysSByte, DaysByte, DaysUShort, DaysUInt, DaysULong]:
-            enum_helper(e)
+    for e in [DaysInt, DaysShort, DaysLong, DaysSByte, DaysByte, DaysUShort, DaysUInt, DaysULong]:
+        enum_helper(e)
+
+    for e in [DaysInt, DaysShort, DaysLong, DaysSByte]:
+        z = operator.inv(e.Mon)
+        AreEqual(type(z), e)
+        AreEqual(z.ToString(), "-2")
+
+    for (e, v) in [ (DaysByte,254), (DaysUShort,65534), (DaysUInt,4294967294), (DaysULong,18446744073709551614) ]:
+        z = operator.inv(e.Mon)
+        AreEqual(type(z), e)
+        AreEqual(z.ToString(), str(v))
     
-        for e in [DaysInt, DaysShort, DaysLong, DaysSByte]:
-            z = operator.inv(e.Mon)
-            AreEqual(type(z), e)
-            AreEqual(z.ToString(), "-2")
+    AssertError(ValueError, lambda: DaysInt.Mon == DaysShort.Mon)
+    AssertError(ValueError, lambda: DaysInt.Mon & DaysShort.Mon)
+    AssertError(ValueError, lambda: DaysInt.Mon | DaysShort.Mon)
+    AssertError(ValueError, lambda: DaysInt.Mon ^ DaysShort.Mon)
+    AssertError(ValueError, lambda: DaysInt.Mon == 1)
+    AssertError(ValueError, lambda: DaysInt.Mon & 1)
+    AssertError(ValueError, lambda: DaysInt.Mon | 1)
+    AssertError(ValueError, lambda: DaysInt.Mon ^ 1)
     
-        for (e, v) in [ (DaysByte,254), (DaysUShort,65534), (DaysUInt,4294967294), (DaysULong,18446744073709551614) ]:
-            z = operator.inv(e.Mon)
-            AreEqual(type(z), e)
-            AreEqual(z.ToString(), str(v))
-        
-        AssertError(ValueError, lambda: DaysInt.Mon == DaysShort.Mon)
-        AssertError(ValueError, lambda: DaysInt.Mon & DaysShort.Mon)
-        AssertError(ValueError, lambda: DaysInt.Mon | DaysShort.Mon)
-        AssertError(ValueError, lambda: DaysInt.Mon ^ DaysShort.Mon)
-        AssertError(ValueError, lambda: DaysInt.Mon == 1)
-        AssertError(ValueError, lambda: DaysInt.Mon & 1)
-        AssertError(ValueError, lambda: DaysInt.Mon | 1)
-        AssertError(ValueError, lambda: DaysInt.Mon ^ 1)
-        
-        def f():
-            if DaysInt.Mon == DaysShort.Mon: return True
-        
-        AssertError(ValueError, f)
-        
-        Assert(not DaysInt.Mon == None)
-        Assert(DaysInt.Mon != None)
+    def f():
+        if DaysInt.Mon == DaysShort.Mon: return True
+    
+    AssertError(ValueError, f)
+    
+    Assert(not DaysInt.Mon == None)
+    Assert(DaysInt.Mon != None)
+
+@skip("win32 silverlight")        
+def test_cp3982():
+    from System.Drawing import Color
+    test_funcs = [  lambda x: x,
+                    lambda x: [x],
+                    lambda x: (x),
+                    lambda x: [[x]],
+                    lambda x: [(x)],
+                    lambda x: ((x)),
+                    lambda x: ([x]),
+                    lambda x: [[[x]]],
+                    lambda x: (((x))),
+                    lambda x: [x, x],
+                    lambda x: (x, x),
+                    lambda x: [(x), [x, x]],
+                    lambda x: ([x, x], (x)), 
+                   ]
+
+    for test_func in test_funcs:
+        Assert(test_func(Color.Red)==test_func(Color.Red))
+        Assert(test_func(Color.Red)!=test_func(Color.Green))
+        Assert(test_func(Color.Green)!=test_func(Color.Red))
+
+    Assert( [Color.Green, Color.Red]  == [Color.Green, Color.Red])
+    Assert([(Color.Green, Color.Red)] == [(Color.Green, Color.Red)])
+    Assert( [Color.Green, Color.Red]  != (Color.Green, Color.Red))
+    Assert( [Color.Green, Color.Red]  != [Color.Green, Color.Black])
 
 #------------------------------------------------------------------------------    
 import operator
@@ -523,15 +553,15 @@ def test_sanity():
     
     #__contains__
     #CodePlex Work Item 5083
-    #Assert(operator.__contains__("abc", "c"))
+    Assert(operator.__contains__("abc", "c"))
     Assert(not operator.__contains__("abc", "d"))
     #CodePlex Work Item 5083
-    #Assert(operator.__contains__("abc", ""))
+    Assert(operator.__contains__("abc", ""))
     #CodePlex Work Item 5083
-    #Assert(not operator.__contains__("", "c"))
+    Assert(not operator.__contains__("", "c"))
     #CodePlex Work Item 5083
-    #Assert(operator.__contains__([1,2,3], 1))
-    #Assert(not operator.__contains__([1,2,3], 4))
+    Assert(operator.__contains__([1,2,3], 1))
+    Assert(not operator.__contains__([1,2,3], 4))
     
     #__getitem__
     AreEqual(operator.__getitem__("abc", 2), "c")

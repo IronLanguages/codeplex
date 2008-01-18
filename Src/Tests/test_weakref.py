@@ -39,7 +39,10 @@ if not is_silverlight:
                 
                 AreEqual(dir(a), dir(b))
                 
-                del(a)
+                #Merlin 366014
+                keep_alive(a)
+                
+                del(a)               
                 
                 return b
                 
@@ -104,6 +107,8 @@ if not is_silverlight:
         if is_cli:      # cli accepts kw-args everywhere
             res = type(x).__add__.__get__(x, None)(other = 'xyz')
             AreEqual(res, "abcxyz")
+        res = type(x).__add__.__get__(x, None)('xyz') # test success-case without keyword args
+        AreEqual(res, "abcxyz")
         
         # calling non-existent method should raise attribute error
         try:

@@ -191,7 +191,7 @@ namespace IronPython.Runtime.Types {
             //    if(hasattr(this, '__getitem__')) return ItemEnumerator.Create(this)
             // }
             // return or throw errorValue
-            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
 
             Expression call = Ast.Call(
                 typeof(ItemEnumerator).GetMethod("Create"),
@@ -200,7 +200,7 @@ namespace IronPython.Runtime.Types {
 
             call = WrapGenericEnumerator<T>(convertToAction, rule, call);
 
-            Statement body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
+            Expression body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
             call = Ast.Call(
                 typeof(PythonEnumerator).GetMethod("Create"),
                 rule.Parameters[0]
@@ -208,7 +208,7 @@ namespace IronPython.Runtime.Types {
 
             call = WrapGenericEnumerator<T>(convertToAction, rule, call);
 
-            Statement body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
+            Expression body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
             rule.SetTarget(body1);
             return rule;
         }
@@ -237,25 +237,25 @@ namespace IronPython.Runtime.Types {
             //    if(hasattr(this, '__getitem__')) return ItemEnumerable.Create(this)
             // }
             // return or throw errorValue
-            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
 
             Expression call = Ast.Call(
                 typeof(ItemEnumerable).GetMethod("Create"),
                 rule.Parameters[0]
             );
 
-            Statement body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
+            Expression body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
             call = Ast.Call(
                 typeof(PythonEnumerable).GetMethod("Create"),
                 rule.Parameters[0]
             );
 
-            Statement body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
+            Expression body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
             rule.SetTarget(body1);
             return rule;
         }
 
-        private static Statement MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, Variable tmp, Statement @else, Expression call) {
+        private static Expression MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, Variable tmp, Expression @else, Expression call) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(res.Parameters[0], typeof(OldInstance)),
@@ -277,8 +277,8 @@ namespace IronPython.Runtime.Types {
             // this favors less code generation.
             Variable tmp = rule.GetTemporary(typeof(object), "callFunc"); // , Symbols.ConvertToComplex, "ConvertToComplex"
 
-            Statement failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
-            Statement tryFloat = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat", rule, tmp, failed);
+            Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            Expression tryFloat = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat", rule, tmp, failed);
             rule.SetTarget(
                 MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToComplex, "ConvertToComplex", rule, tmp, tryFloat)
             );
@@ -294,7 +294,7 @@ namespace IronPython.Runtime.Types {
             // this favors less code generation.
             Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
 
-            Statement failed =  PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
+            Expression failed =  PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
             rule.SetTarget(
                 MakeConvertCallBody<T>(context, convertToAction, symbolId, returner, rule, tmp, failed)
             );
@@ -303,7 +303,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static IfStatement MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, Variable tmp, Statement @else) {
+        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, Variable tmp, Expression @else) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
@@ -335,7 +335,7 @@ namespace IronPython.Runtime.Types {
 
             // Python anything can be converted to a bool (by default if it's not null it's true).  If we don't
             // find the conversion methods, and the request comes from Python, the result is true.
-            Statement error;
+            Expression error;
             if (context.LanguageContext.Binder is PythonBinder) {
                 error = rule.MakeReturn(
                     context.LanguageContext.Binder,
@@ -562,6 +562,8 @@ namespace IronPython.Runtime.Types {
                 case Operators.SetSlice:
                 case Operators.DeleteSlice:
                     return MakeSliceRule<T>(context, action);
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, args[0]);
                 default:
                     return null;
             }
@@ -571,7 +573,7 @@ namespace IronPython.Runtime.Types {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldInstance));
 
-            Statement normalSlice = GetNormalSliceStatement<T>(context, action, rule);
+            Expression normalSlice = GetNormalSliceStatement<T>(context, action, rule);
 
             if (TryCallSliceMethod<T>(action, rule)) {
                 // we need to check for the presence of __getslice__, __setslice__, or __delslice__
@@ -623,14 +625,14 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Statement GetNormalSliceStatement<T>(CodeContext context, DoOperationAction action, StandardRule<T> rule) {
+        private static Expression GetNormalSliceStatement<T>(CodeContext context, DoOperationAction action, StandardRule<T> rule) {
             Expression[] normalSliceArgs = new Expression[2 + (action.Operation == Operators.SetSlice ? 1 : 0)];
             normalSliceArgs[0] = Ast.CodeContext();
             normalSliceArgs[1] = GetSliceObject<T>(action, rule);
             if (normalSliceArgs.Length == 3) {
                 normalSliceArgs[2] = rule.Parameters[rule.Parameters.Length - 1];
             }
-            Statement normalSlice = rule.MakeReturn(
+            Expression normalSlice = rule.MakeReturn(
                 context.LanguageContext.Binder,
                 Ast.SimpleCallHelper(
                     rule.Parameters[0],

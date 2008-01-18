@@ -20,11 +20,12 @@ using System.Text;
 using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("binascii", typeof(IronPython.Modules.PythonBinaryAscii))]
 namespace IronPython.Modules {
     public static class PythonBinaryAscii {
-        public static object Error = ExceptionConverter.CreatePythonException("Error", "binascii");
+        public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "binascii", "");       
 
         [PythonName("a2b_uu")]
         public static string DecodeUUEncoding(string data) {

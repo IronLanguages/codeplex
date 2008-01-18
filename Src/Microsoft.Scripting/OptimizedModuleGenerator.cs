@@ -32,21 +32,17 @@ namespace Microsoft.Scripting.Generation {
     /// Creates the code for an optimized module.  
     /// </summary>
     public abstract class OptimizedModuleGenerator {
-        private ScriptCode[] _scriptCodes;
-        private Dictionary<LanguageContext, ScopeAllocator> _allocators = new Dictionary<LanguageContext, ScopeAllocator>();
-        private List<CodeContext> _codeContexts = new List<CodeContext>();
+        private readonly ScriptCode _scriptCode;
+        private ScopeAllocator _allocator;
+        private CodeContext _codeContext;
 
-        protected OptimizedModuleGenerator(params ScriptCode[] scriptCodes) {
-            Assert.NotNullItems(scriptCodes);
+        protected OptimizedModuleGenerator(ScriptCode scriptCode) {
+            Assert.NotNull(scriptCode);
 
-            _scriptCodes = scriptCodes;
+            _scriptCode = scriptCode;
         }
 
-        public static OptimizedModuleGenerator Create(params ScriptCode[] scriptCodes) {
-            Contract.RequiresNotEmpty(scriptCodes, "scriptCodes");
-            
-            if (scriptCodes.Length != 1) throw new NotSupportedException("Only one ScriptCode currently supported");
-
+        public static OptimizedModuleGenerator Create(ScriptCode scriptCode) {
             // Silverlight: can't access SecurityPermission
             if (!ScriptDomainManager.Options.GenerateModulesAsSnippets) {
 #if !SILVERLIGHT
@@ -58,150 +54,116 @@ namespace Microsoft.Scripting.Generation {
                     new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Demand();
 
 #endif
-                    return new StaticFieldModuleGenerator(scriptCodes);
+                    return new StaticFieldModuleGenerator(scriptCode);
 #if !SILVERLIGHT
                 } catch (SecurityException) {
                 }
 #endif
             }
 
-            return new TupleModuleGenerator(scriptCodes);
+            return new TupleModuleGenerator(scriptCode);
         }
 
         /// <summary>
         /// Creates the methods and optimized Scope's which get associated with each ScriptCode.
         /// </summary>
         public Scope GenerateScope() {
-            List<Compiler> cgs = GenerateScriptMethods();
-            List<Scope> scopes = GenerateScriptScopes();
+            Compiler compiler = GenerateScriptMethod();
+            Scope scope = GenerateScriptScope();
 
-            Debug.Assert(cgs.Count == scopes.Count);
-            Debug.Assert(scopes.Count == _scriptCodes.Length);
-            Debug.Assert(_codeContexts.Count == _scriptCodes.Length);
-
-            List<CallTargetWithContext0> targets = new List<CallTargetWithContext0>();
-            foreach (Compiler cg in cgs) {
-                targets.Add((CallTargetWithContext0)cg.CreateDelegate(typeof(CallTargetWithContext0)));
-            }
+            CallTargetWithContext0 target;
+            target = (CallTargetWithContext0)compiler.CreateDelegate(typeof(CallTargetWithContext0));
 
             // TODO: clean this up after clarifying dynamic site initialization logic
-            for (int i = 0; i < _scriptCodes.Length; i++) {
-                Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContexts[i], cgs[i].Method.DeclaringType);
-            }
+            Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContext, compiler.Method.DeclaringType);
 
             // everything succeeded, commit the results
-            for (int i = 0; i < _scriptCodes.Length; i++) {
-                ScriptCode sc = _scriptCodes[i];
+            _scriptCode.OptimizedTarget = target;
+            _scriptCode.OptimizedScope = scope;
 
-                sc.OptimizedTarget = targets[i];
-                sc.OptimizedScope = scopes[i];
-            }
-
-            return scopes[0];
+            return scope;
         }
 
-        private List<Scope> GenerateScriptScopes() {
-            List<Scope> scopes = new List<Scope>(_scriptCodes.Length);
-            for (int i = 0; i < _scriptCodes.Length; i++) {
-                ScriptCode scriptCode = _scriptCodes[i];
+        private Scope GenerateScriptScope() {
+            // Force creation of names used in other script codes into all optimized dictionaries
+            IAttributesCollection iac = CreateLanguageDictionary(_allocator);
+            Scope scope = new Scope(_scriptCode.LanguageContext, iac);
 
-                // Force creation of names used in other script codes into all optimized dictionaries
-                ScopeAllocator allocator = _allocators[scriptCode.LanguageContext];
-                IAttributesCollection iac = CreateLanguageDictionary(scriptCode.LanguageContext, allocator);
-                Scope scope = new Scope(scriptCode.LanguageContext, iac);
+            // module context is filled later:
+            _codeContext = new CodeContext(scope, _scriptCode.LanguageContext);
 
-                // module context is filled later:
-                CodeContext codeContext = new CodeContext(scope, scriptCode.LanguageContext);
-
-                IModuleDictionaryInitialization ici = iac as IModuleDictionaryInitialization;
-                if (ici != null) {
-                    ici.InitializeModuleDictionary(codeContext);
-                }
-
-                scopes.Add(scope);
-                _codeContexts.Add(codeContext);
+            IModuleDictionaryInitialization ici = iac as IModuleDictionaryInitialization;
+            if (ici != null) {
+                ici.InitializeModuleDictionary(_codeContext);
             }
-            return scopes;
+
+            return scope;
         }
 
-        private List<Compiler> GenerateScriptMethods() {
-            List<Compiler> cgs = new List<Compiler>(_scriptCodes.Length);
-            foreach (ScriptCode sc in _scriptCodes) {
-                ScopeAllocator sa = CreateStorageAllocator(sc);
-                Compiler cg = CreateCodeGen(sc);
-                cg.Allocator = sa;
+        private Compiler GenerateScriptMethod() {
+            _allocator = CreateStorageAllocator(_scriptCode);
+            Compiler compiler = CreateCodeGen(_scriptCode);
+            compiler.Allocator = _allocator;
 
-                // every module can hand it's environment to anything embedded in it.
-                cg.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(
-                    new PropertySlot(cg.ContextSlot, 
-                        typeof(CodeContext).GetProperty("Scope")),
-                    typeof(Scope).GetProperty("Dict"))
-                );
-                                       
-                cg.Context = sc.CompilerContext;
-                cg.EmitFunctionImplementation(sc.CodeBlock);
+            // every module can hand it's environment to anything embedded in it.
+            compiler.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(
+                new PropertySlot(compiler.ContextSlot, 
+                    typeof(CodeContext).GetProperty("Scope")),
+                typeof(Scope).GetProperty("Dict"))
+            );
 
-                cg.Finish();
+            compiler.Context = _scriptCode.CompilerContext;
+            compiler.EmitFunctionImplementation(_scriptCode.CodeBlock);
 
-                cgs.Add(cg);
-            }
-            return cgs;
+            compiler.Finish();
+
+            return compiler;
         }
 
         private ScopeAllocator CreateStorageAllocator(ScriptCode scriptCode) {
-            ScopeAllocator allocator;
-            if (!_allocators.TryGetValue(scriptCode.LanguageContext, out allocator)) {
-                SlotFactory sf = CreateSlotFactory(scriptCode);
-                ModuleGlobalFactory mgf = new ModuleGlobalFactory(sf);
-                GlobalFieldAllocator gfa = new GlobalFieldAllocator(mgf);
+            SlotFactory sf = CreateSlotFactory(scriptCode);
+            ModuleGlobalFactory mgf = new ModuleGlobalFactory(sf);
+            GlobalFieldAllocator gfa = new GlobalFieldAllocator(mgf);
 
-                // Locals and globals are allocated from the same namespace for optimized modules
-                ScopeAllocator global = new ScopeAllocator(null, gfa);
-                allocator = new ScopeAllocator(global, gfa);
-
-                _allocators[scriptCode.LanguageContext] = allocator;
-            }
-
-            return allocator;
+            // Locals and globals are allocated from the same namespace for optimized modules
+            ScopeAllocator global = new ScopeAllocator(null, gfa);
+            return  new ScopeAllocator(global, gfa);
         }
 
         #region Protected Members
 
-        protected abstract Compiler CreateCodeGen(ScriptCode scriptCode);
-        protected abstract IAttributesCollection CreateLanguageDictionary(LanguageContext context, ScopeAllocator allocator);
-        protected abstract SlotFactory CreateSlotFactory(ScriptCode scriptCode);
+        protected abstract Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode);
+        protected abstract IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator);
+        protected abstract SlotFactory/*!*/ CreateSlotFactory(ScriptCode/*!*/ scriptCode);
 
         #endregion
     }
 
     class TupleModuleGenerator : OptimizedModuleGenerator {
-        private Dictionary<LanguageContext, TupleSlotFactory> _languages = new Dictionary<LanguageContext, TupleSlotFactory>();
+        private TupleSlotFactory _slotFactory;
 
-        public TupleModuleGenerator(params ScriptCode[] scriptCodes)
-            : base(scriptCodes) {
+        public TupleModuleGenerator(ScriptCode scriptCode)
+            : base(scriptCode) {
         }
 
         #region Abstract overrides
 
         protected override SlotFactory CreateSlotFactory(ScriptCode scriptCode) {
-            return _languages[scriptCode.LanguageContext] = new TupleSlotFactory(typeof(ModuleGlobalDictionary<>));
+            return _slotFactory = new TupleSlotFactory(typeof(ModuleGlobalDictionary<>));
         }
 
-        protected override IAttributesCollection CreateLanguageDictionary(LanguageContext context, ScopeAllocator allocator) {
-            TupleSlotFactory tsf = _languages[context];
-            object tuple = tsf.CreateTupleInstance();
-
-            // TODO: Force all dictionaries to share same object data (for multi-module)
+        protected override IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator) {
+            object tuple = _slotFactory.CreateTupleInstance();
 
             IAttributesCollection res = (IAttributesCollection)Activator.CreateInstance(
-                tsf.DictionaryType.MakeGenericType(tsf.TupleType),
+                _slotFactory.DictionaryType.MakeGenericType(_slotFactory.TupleType),
                 tuple,
-                tsf.Names);
+                _slotFactory.Names);
 
             return res;
         }
 
-        protected override Compiler CreateCodeGen(ScriptCode scriptCode) {
+        protected override Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
             return CompilerHelpers.CreateDynamicCodeGenerator(scriptCode.CompilerContext);
         }
 
@@ -210,49 +172,29 @@ namespace Microsoft.Scripting.Generation {
 
     class StaticFieldModuleGenerator : OptimizedModuleGenerator {
         private static int _Counter;
-        private Dictionary<LanguageContext, LanguageInfo> _languages = new Dictionary<LanguageContext, LanguageInfo>();
+        private TypeGen _typeGen;
 
-        private class LanguageInfo {
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
-            public StaticFieldSlotFactory SlotFactory;
-            public TypeGen TypeGen;
-
-            public LanguageInfo(StaticFieldSlotFactory slotFactory, TypeGen tg) {
-                TypeGen = tg;
-                SlotFactory = slotFactory;
-            }
-        }
-
-        public StaticFieldModuleGenerator(params ScriptCode[] scriptCodes)
-            : base(scriptCodes) {
+        public StaticFieldModuleGenerator(ScriptCode scriptCode)
+            : base(scriptCode) {
         }
 
         #region Abstract overrides
 
         protected override SlotFactory CreateSlotFactory(ScriptCode scriptCode) {
-            AssemblyGen ag = CreateModuleAssembly(scriptCode);
-
-            TypeGen tg = GenerateModuleGlobalsType(ag);
-            StaticFieldSlotFactory factory = new StaticFieldSlotFactory(tg);
-
-            _languages[scriptCode.LanguageContext] = new LanguageInfo(factory, tg);
-
-            return factory;
+            _typeGen = GenerateModuleGlobalsType(scriptCode.SourceUnit);
+            return new StaticFieldSlotFactory(_typeGen);
         }
 
-        protected override IAttributesCollection CreateLanguageDictionary(LanguageContext context, ScopeAllocator allocator) {
-            LanguageInfo li = _languages[context];
-
+        protected override IAttributesCollection CreateLanguageDictionary(ScopeAllocator/*!*/ allocator) {
             // TODO: Force all dictionaries to share same object data (for multi-module)
 
             GlobalFieldAllocator gfa = allocator.LocalAllocator as GlobalFieldAllocator;
             if (gfa != null) {
-                Dictionary<SymbolId, Slot> fields = gfa.SlotFactory.Fields;
+                Dictionary<SymbolId, Slot> fields = gfa.Fields;
 
-                BuildDictionary(li, fields);
+                BuildDictionary(fields);
 
-                Type t = li.TypeGen.FinishType();
-                li.TypeGen.AssemblyGen.DumpAndLoad();
+                Type t = _typeGen.FinishType();
 
                 return (IAttributesCollection)Activator.CreateInstance(t);
             } else {
@@ -260,102 +202,31 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        protected override Compiler CreateCodeGen(ScriptCode scriptCode) {
-            LanguageInfo li = _languages[scriptCode.LanguageContext];
-
-            return li.TypeGen.DefineMethod("Initialize", typeof(object), new Type[] { typeof(CodeContext) }, null, null);
+        protected override Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
+            Compiler compiler = _typeGen.DefineMethod("Initialize", typeof(object), new Type[] { typeof(CodeContext) }, null, null);
+            compiler.ContextSlot = compiler.GetArgumentSlot(0);
+            compiler.Context = scriptCode.CompilerContext;
+            return compiler;
         }
 
         #endregion
 
-        /// <summary>
-        /// Creates a new assembly for generating a module, ensuring a unique filename like "filename.N.exe" for the generated assembly
-        /// </summary>
-        private AssemblyGen CreateModuleAssembly(ScriptCode scriptCode) {
-            //scriptCode.CompilerContext.Options
-            AssemblyGenAttributes genAttrs = ScriptDomainManager.Options.AssemblyGenAttributes;
 
-            if (scriptCode.SourceUnit.HasPath)
-                genAttrs |= AssemblyGenAttributes.EmitDebugInfo;
-            
-            if (ScriptDomainManager.Options.DebugCodeGeneration)
-                genAttrs |= AssemblyGenAttributes.DisableOptimizations;
-
-            string outDir, fileName;
-            GetCompiledSourceUnitAssemblyLocation(scriptCode.CompilerContext.SourceUnit, out outDir, out fileName);
-
-            AssemblyGen ag;
-            string ext = ".exe";
-            // Try to create a file called "filename.<cnt>.exe", ensuring that the filename does not clash with an existing file
-            int cnt = 0;
-            for (; ; ) {
-                try {
-                    ag = new AssemblyGen(fileName, outDir, fileName + ext, genAttrs);
-                    break;
-                } catch (IOException) {
-                    // If a file already exits with the same name, try the next name in the sequence.
-                    ext = "_" + cnt.ToString() + ext;
-                }
-            }
-
-            ag.SetSourceUnit(scriptCode.CompilerContext.SourceUnit);
-
-            return ag;
+        private TypeGen GenerateModuleGlobalsType(SourceUnit sourceUnit) {
+            return ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(
+                "OptimizedScope$" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary), sourceUnit);
         }
 
-        private static void GetCompiledSourceUnitAssemblyLocation(SourceUnit sourceUnit, out string outDir, out string fileName) {
-            outDir = ScriptDomainManager.Options.BinariesDirectory;
-
-            if (!sourceUnit.HasPath) {
-                fileName = Guid.NewGuid().ToString();
-                return;
-            }
-
-            string path = IOUtils.ToValidPath(sourceUnit.Id);
-
-            if (outDir == null) {
-                try {
-                    outDir = Path.GetDirectoryName(path);
-                } catch (PathTooLongException) {
-                    outDir = null;
-                }
-            }
-
-            fileName = Path.GetFileNameWithoutExtension(path);
-            Debug.Assert(!String.IsNullOrEmpty(fileName));
+        private void BuildDictionary(Dictionary<SymbolId, Slot> fields) {
+            MakeGetMethod(fields);
+            MakeSetMethod(fields);
+            MakeRawKeysMethod(fields);
+            MakeInitialization(fields);
         }
 
-        private TypeGen GenerateModuleGlobalsType(AssemblyGen ag) {
-            TypeGen tg = ag.DefinePublicType("$mod_" + Interlocked.Increment(ref _Counter).ToString(), typeof(CustomSymbolDictionary));
-            tg.AddCodeContextField();
-            tg.DefaultConstructor = tg.TypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
-
-            return tg;
-        }
-
-        private void BuildDictionary(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            MakeGetMethod(li, fields);
-            MakeSetMethod(li, fields);
-            MakeRawKeysMethod(li, fields);
-            MakeInitialization(li, fields);
-        }
-
-        private static void MakeInitialization(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            li.TypeGen.TypeBuilder.AddInterfaceImplementation(typeof(IModuleDictionaryInitialization));
-            Compiler cg = li.TypeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
-
-            Label ok = cg.DefineLabel();
-            cg.ContextSlot.EmitGet(cg);
-            cg.EmitNull();
-            cg.Emit(OpCodes.Ceq);
-            cg.Emit(OpCodes.Brtrue_S, ok);
-            cg.EmitNew(typeof(InvalidOperationException), ArrayUtils.EmptyTypes);
-            cg.Emit(OpCodes.Throw);
-            cg.MarkLabel(ok);
-
-            // MyModuleDictType.ContextSlot = arg0
-            cg.EmitArgGet(0);
-            cg.ContextSlot.EmitSet(cg);
+        private void MakeInitialization(Dictionary<SymbolId, Slot> fields) {
+            _typeGen.TypeBuilder.AddInterfaceImplementation(typeof(IModuleDictionaryInitialization));
+            Compiler cg = _typeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
 
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 Slot slot = kv.Value;
@@ -363,7 +234,7 @@ namespace Microsoft.Scripting.Generation {
 
                 Debug.Assert(builtin != null);
 
-                cg.EmitCodeContext();
+                cg.EmitArgGet(0);
                 cg.EmitSymbolId(kv.Key);
                 builtin.EmitWrapperAddr(cg);
                 cg.EmitCall(typeof(RuntimeHelpers), "InitializeModuleField");
@@ -389,8 +260,8 @@ namespace Microsoft.Scripting.Generation {
         //      return false
         //  }
 
-        private void MakeGetMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+        private void MakeGetMethod(Dictionary<SymbolId, Slot> fields) {
+            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
@@ -436,8 +307,8 @@ namespace Microsoft.Scripting.Generation {
         //      return 0
         //  }
 
-        private void MakeSetMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+        private void MakeSetMethod(Dictionary<SymbolId, Slot> fields) {
+            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
             Slot valueSlot = cg.GetArgumentSlot(1);
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
@@ -460,9 +331,9 @@ namespace Microsoft.Scripting.Generation {
             cg.Finish();
         }
 
-        private Compiler MakeRawKeysMethod(LanguageInfo li, Dictionary<SymbolId, Slot> fields) {
-            Slot rawKeysCache = li.TypeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
-            Compiler init = li.TypeGen.TypeInitializer;
+        private Compiler MakeRawKeysMethod(Dictionary<SymbolId, Slot> fields) {
+            Slot rawKeysCache = _typeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
+            Compiler init = _typeGen.TypeInitializer;
 
             init.EmitInt(fields.Count);
             init.Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -479,7 +350,7 @@ namespace Microsoft.Scripting.Generation {
 
             rawKeysCache.EmitSet(init);
 
-            Compiler cg = li.TypeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
+            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
             rawKeysCache.EmitGet(cg);
             cg.EmitReturn();
             cg.Finish();

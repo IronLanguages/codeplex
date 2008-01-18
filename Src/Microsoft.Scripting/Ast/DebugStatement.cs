@@ -19,7 +19,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public static partial class Ast {
-        public static Statement DebugMarker(string marker) {
+        public static Expression DebugMarker(string marker) {
             Contract.RequiresNotNull(marker, "marker");
 #if DEBUG
             return Statement(

@@ -32,41 +32,47 @@ namespace Microsoft.Scripting.Ast {
     /// 
     /// TODO - This should probably not be a Node but that will require some substantial walker changes.
     /// </summary>
-    public partial class CodeBlock : Node {
-        private SourceLocation _start;
-        private SourceLocation _end;
-
+    public partial class CodeBlock {
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
         private readonly Type _returnType;
-        private string _name;
+        private readonly string _name;
         private CodeBlock _parent;
-        private Statement _body;
+        private Expression _body;
 
         private readonly List<Variable> _parameters = new List<Variable>();
         private readonly List<Variable> _variables = new List<Variable>();
-        private IList<VariableReference> _references;
 
-        private EnvironmentFactory _environmentFactory;
+        #region Flags
 
-        private int _generatorTemps;
-
-        private bool _isClosure;
-        private bool _hasEnvironment;
         private bool _emitLocalDictionary;
         private bool _isGlobal;
         private bool _visibleScope = true;
         private bool _parameterArray;
 
-        private InterpreterData _interpreter;
+        #endregion
+
+        // TODO: Remove !!!
+        private Expression _explicitCodeContextExpression;
+
+        #region Compiler state - TODO: remove from here!
+
+        private bool _isClosure;
+        private bool _hasEnvironment;
+
+        private Dictionary<Variable, VariableReference> _references;
+        private EnvironmentFactory _environmentFactory;
+
+        private int _generatorTemps;
 
         /// <summary>
         /// True, if the block is referenced by a declarative reference (CodeBlockExpression).
         /// </summary>
         private bool _declarativeReferenceExists;
 
-        private Expression _explicitCodeContextExpression;
+        #endregion
 
-        internal CodeBlock(AstNodeType nodeType, SourceSpan span, string name, Type returnType)
-            : base(nodeType) {
+        internal CodeBlock(SourceSpan span, string name, Type returnType) {
             Assert.NotNull(returnType);
 
             _name = name;
@@ -99,9 +105,9 @@ namespace Microsoft.Scripting.Ast {
 
         public string Name {
             get { return _name; }
-            set { _name = value; }
         }
 
+        // TODO: Remove !!!
         public Expression ExplicitCodeContextExpression {
             get { return _explicitCodeContextExpression; }
             set { _explicitCodeContextExpression = value; }
@@ -170,12 +176,12 @@ namespace Microsoft.Scripting.Ast {
             get { return _visibleScope; }
             set { _visibleScope = value; }
         }
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
             set { _body = value; }
         }
 
-        internal IList<VariableReference> References {
+        internal Dictionary<Variable, VariableReference> References {
             get { return _references; }
             set { _references = value; }
         }
@@ -235,24 +241,12 @@ namespace Microsoft.Scripting.Ast {
             return variable;
         }
 
-        public virtual Variable CreateTemporaryVariable(SymbolId name, Type type) {
-            // Since yield can be at an expression point, practically any spot that we make a Temp could be across yield statements/
-            // This Generators can't safely make non-generator temps. So GeneratorCodeBlock can override this to create temporaries
-            // that cooperate with generator code-gen. 
-            Debug.Assert(!(this is GeneratorCodeBlock));
-
+        public Variable CreateTemporaryVariable(SymbolId name, Type type) {
             Variable variable = Variable.Temporary(name, this, type);
             _variables.Add(variable);
             return variable;
         }
         
-        // A derived generator class can call this to make a generator temp variable.
-        protected Variable CreateGeneratorTempVariable(SymbolId name, Type type) {
-            Variable variable = Variable.GeneratorTemp(name, this, type);
-            _variables.Add(variable);
-            return variable;
-        }
-
         // TODO: Move away from here!!!
         internal void AddGeneratorTemps(int count) {
             _generatorTemps += count;
@@ -270,19 +264,6 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
             return hasThis;
-        }
-
-        // TODO: Remove !!!
-        internal InterpreterData GetInterpreterData() {
-            if (_interpreter == null) {
-                lock (this) {
-                    if (_interpreter == null) {
-                        _interpreter = new InterpreterData();
-                    }
-                }
-            }
-
-            return _interpreter;
         }
     }
 
@@ -314,7 +295,7 @@ namespace Microsoft.Scripting.Ast {
         public static CodeBlock CodeBlock(SourceSpan span, string name, Type returnType) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(returnType, "returnType");
-            return new CodeBlock(AstNodeType.CodeBlock, span, name, returnType);
+            return new CodeBlock(span, name, returnType);
         }
 
         public static CodeBlock EventHandlerBlock(string name, EventInfo eventInfo) {

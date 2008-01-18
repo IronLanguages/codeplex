@@ -24,7 +24,9 @@ namespace ToyScript {
     class ToyConsole : ConsoleHost {
         protected override void Initialize() {
             base.Initialize();
-            //RuntimeHelpers.TopNamespace.LoadAssembly(typeof(System.Diagnostics.Stopwatch).Assembly);
+
+            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(string).Assembly);
+
             this.Options.ScriptEngine =
                 ScriptEnvironment.GetEnvironment().GetEngine(typeof(ToyLanguageContext));
         }

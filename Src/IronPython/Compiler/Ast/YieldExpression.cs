@@ -42,8 +42,8 @@ namespace IronPython.Compiler.Ast {
         // This needs to be injected at any yield suspension points, mainly:
         // - at the start of the generator body
         // - after each yield statement.
-        static internal MSAst.Statement CreateCheckThrowStatement(AstGenerator ag, SourceSpan span) {
-            MSAst.Statement s2 = Ast.Statement(CreateCheckThrowExpression(ag, span));
+        static internal MSAst.Expression CreateCheckThrowStatement(AstGenerator ag, SourceSpan span) {
+            MSAst.Expression s2 = Ast.Statement(CreateCheckThrowExpression(ag, span));
             return s2;
         }
 
@@ -78,13 +78,10 @@ namespace IronPython.Compiler.Ast {
             //    $gen.CheckThrowable() // <-- has return result from send            
             //  }
 
-             MSAst.Statement s1 = Ast.Yield(Span, ag.Transform(_expression));
-
-            MSAst.Expression e = Ast.Comma(1, 
-                Ast.Void(s1),
+            return Ast.Comma(
+                Ast.Yield(Span, ag.Transform(_expression)),
                 CreateCheckThrowExpression(ag, this.Span) // emits ($gen.CheckThrowable())
-                );
-            return e;
+            );
         }
 
         public override void Walk(PythonWalker walker) {

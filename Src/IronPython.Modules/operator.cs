@@ -311,7 +311,7 @@ namespace IronPython.Modules {
         }
 
         public static object __contains__(object a, object b) {
-            return PythonOps.In(a, b);
+            return PythonOps.In(b, a);
         }
 
         public static object countOf(object a, object b) {

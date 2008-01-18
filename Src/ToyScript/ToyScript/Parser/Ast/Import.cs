@@ -27,7 +27,7 @@ namespace ToyScript.Parser.Ast {
             _name = name;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             MSAst.Variable var = tg.GetOrMakeLocal(_name);
             return Ast.Statement(
                 Span,
@@ -35,6 +35,7 @@ namespace ToyScript.Parser.Ast {
                     var,
                     Ast.Call(
                         typeof(ToyHelpers).GetMethod("Import"),
+                        Ast.CodeContext(),
                         Ast.Constant(_name)
                     )
                 )

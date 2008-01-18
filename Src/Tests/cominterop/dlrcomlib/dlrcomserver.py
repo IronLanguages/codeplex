@@ -19,12 +19,37 @@ skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
 from System.Runtime.InteropServices import COMException
 from System import InvalidOperationException
+from System.Reflection import TargetParameterCountException
+from Microsoft.Scripting import ArgumentTypeException
 
 com_type_name = "DlrComLibrary.DlrComServer"
 
 #------------------------------------------------------------------------------
 # Create a COM object
 com_obj = getRCWFromProgID(com_type_name)
+
+def test_DlrComServerArrays():
+    dlrComServer = com_obj
+
+    data = dlrComServer.GetObjArray() # returns 2 objects - one is itself, another one is something else
+    Assert(data.Length == 2)
+    Assert(dlrComServer.Equals(data[0]) == True)
+    Assert(dlrComServer.Equals(data[1]) == False)
+
+    data = dlrComServer.GetIntArray() # returns 5 ints - 1, 2, 3, 4, 5
+    Assert(data.Length == 5)
+    Assert(data[0] == 1)
+    Assert(data[1] == 2)
+    Assert(data[2] == 3)
+    Assert(data[3] == 4)
+    Assert(data[4] == 5)
+
+    data = dlrComServer.GetByteArray() # return byte string "GetByteArrayTestData"
+
+    stream = System.IO.MemoryStream(data, False)
+    reader = System.IO.StreamReader(stream, System.Text.UnicodeEncoding())
+    s = reader.ReadToEnd()
+    Assert(s == "GetByteArrayTestData")
 
 def test_perfScenarios():
     AreEqual(com_obj.SimpleMethod(), None)
@@ -44,6 +69,30 @@ def test_documentation():
     AssertResults("void IntArguments(Int32 arg1, Int32 arg2)",
                   InvalidOperationException, # Not implemented yet
                   ops.GetDocumentation, com_obj.IntArguments)
+
+def test_namedArgs():
+    # Named arguments
+    AreEqual(12345, com_obj.SumArgs(1, 2, 3, 4, 5))
+    AreEqual(12345, com_obj.SumArgs(1, 2, 3, 4, a5=5))
+    AreEqual(12345, com_obj.SumArgs(1, 2, 3, a4=4, a5=5))
+    AreEqual(12345, com_obj.SumArgs(a1=1, a2=2, a3=3, a4=4, a5=5))
+    AreEqual(12345, com_obj.SumArgs(a5=5, a4=4, a3=3, a2=2, a1=1))
+    
+    # kwargs
+    AreEqual(12345, com_obj.SumArgs(1, 2, 3, 4, **{"a5":5}))
+    AreEqual(12345, com_obj.SumArgs(1, 2, 3, **{"a4":4, "a5":5}))
+    AreEqual(12345, com_obj.SumArgs(**{"a1":1, "a2":2, "a3":3, "a4":4, "a5":5}))
+    AreEqual(12345, com_obj.SumArgs(**{"a5":5, "a4":4, "a3":3, "a2":2, "a1":1}))
+
+    # Named arguments and kwargs
+    AreEqual(12345, com_obj.SumArgs(1, 2, a5=5, **{"a4":4, "a3":3}))
+    
+    AssertResults(COMException, # DISP_E_UNKNOWNNAME
+        ArgumentTypeException, 
+        com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6})
+    AssertResults(TargetParameterCountException, 
+        ArgumentTypeException, 
+        com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5})
 
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

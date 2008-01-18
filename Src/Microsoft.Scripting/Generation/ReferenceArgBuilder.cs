@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
@@ -23,12 +24,17 @@ namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Diagnostics;
 
+    /// <summary>
+    /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
+    /// The user passes a StrongBox[T] object whose value will get updated when the call returns.
+    /// </summary>
     class ReferenceArgBuilder : SimpleArgBuilder {
         private Type _elementType;
         private Variable _tmp;
 
         public ReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {
+            Debug.Assert(parameterType.GetGenericTypeDefinition() == typeof(StrongBox<>));
             _elementType = parameterType.GetGenericArguments()[0];
         }
 
@@ -58,31 +64,34 @@ namespace Microsoft.Scripting.Generation {
                     ),
                     Ast.Read(_tmp)
                 ),
-                // Condition requires types of both expressions to be identical.
-                // Putting the cast here is a temporary workaround until the
-                // emit address and reference argument passing is finished.
-                Ast.Convert(
-                    Ast.Call(
-                        typeof(BinderOps).GetMethod("IncorrectBoxType"),
-                        Ast.Constant(BoxType),
-                        Ast.ConvertHelper(parameters[Index], typeof(object))
-                    ),
-                    _elementType
+                Ast.Call(
+                    typeof(BinderOps).GetMethod("IncorrectBoxType").MakeGenericMethod(_elementType),
+                    Ast.ConvertHelper(parameters[Index], typeof(object))
                 )
             );
         }
 
-        private Type BoxType {
+        protected Type BoxType {
             get {
-                return typeof(StrongBox<>).MakeGenericType(_elementType);
+                return this.Type;
             }
+        }
+
+        internal Type ElementType {
+            get {
+                return _elementType;
+            }
+        }
+
+        protected virtual Expression UpdatedValue() {
+            return Ast.Read(_tmp);
         }
 
         internal override Expression UpdateFromReturn(MethodBinderContext context, Expression[] parameters) {
             return Ast.Call(
                 typeof(BinderOps).GetMethod("UpdateBox").MakeGenericMethod(_elementType),
                 Ast.Convert(parameters[Index], BoxType),
-                Ast.Read(_tmp)
+                UpdatedValue()
             );
         }
 

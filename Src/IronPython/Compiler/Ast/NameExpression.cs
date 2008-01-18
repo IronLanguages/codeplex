@@ -51,7 +51,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             MSAst.Variable variable = _reference.Variable;
             MSAst.Expression assignment;
 
@@ -72,11 +72,11 @@ namespace IronPython.Compiler.Ast {
 
             return Ast.Statement(
                 span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None,
-                assignment
+                Ast.Void(assignment)
             );
         }
 
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             MSAst.Variable variable;
             if ((variable = _reference.Variable) != null) {
                 return Ast.Delete(Span, variable);

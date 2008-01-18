@@ -29,9 +29,9 @@ namespace IronPython.Compiler.Ast {
             get { return _expressions; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // Transform to series of individual del statements.
-            MSAst.Statement[] statements = new MSAst.Statement[_expressions.Length];
+            MSAst.Expression[] statements = new MSAst.Expression[_expressions.Length];
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _expressions[i].TransformDelete(ag);
             }

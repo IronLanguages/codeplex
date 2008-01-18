@@ -91,8 +91,8 @@ namespace Microsoft.Scripting {
             return res;
         }
 
-        public static object IncorrectBoxType(Type expected, object received) {
-            throw new ArgumentTypeException(String.Format("Expected type {0}, got {1}", expected, CompilerHelpers.GetType(received)));
+        public static T IncorrectBoxType<T>(object received) {
+            throw new ArgumentTypeException(String.Format("Expected type StrongBox<{0}>, got {1}", typeof(T).Name, CompilerHelpers.GetType(received).Name));
         }
 
         public static void UpdateBox<T>(StrongBox<T> box, T value) {

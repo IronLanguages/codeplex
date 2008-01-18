@@ -44,7 +44,7 @@ namespace IronPython.Compiler.Ast {
             get { return _right; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // Transform right
             MSAst.Expression right = ag.Transform(_right);
 
@@ -65,7 +65,7 @@ namespace IronPython.Compiler.Ast {
                 //   b[c] = $temp
                 //   d = $temp
 
-                List<MSAst.Statement> statements = new List<MSAst.Statement>();
+                List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
                 // 1. Create temp variable for the right value
                 MSAst.BoundExpression right_temp = ag.MakeTempExpression("assignment");
@@ -82,7 +82,7 @@ namespace IronPython.Compiler.Ast {
                     }
 
                     // 3. e = right_temp
-                    MSAst.Statement transformed = e.TransformSet(ag, Span, right_temp, Operators.None);
+                    MSAst.Expression transformed = e.TransformSet(ag, Span, right_temp, Operators.None);
                     if (transformed != null) {
                         statements.Add(transformed);
                     }

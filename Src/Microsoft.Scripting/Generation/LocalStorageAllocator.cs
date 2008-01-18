@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Storage AllocateStorage(SymbolId name, Type type) {
-            return new LocalStorage(_factory.MakeSlot(name, type));
+            return new LocalStorage(_factory.CreateSlot(name, type));
         }
     }
 }

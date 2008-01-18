@@ -43,6 +43,10 @@ namespace Microsoft.Scripting {
         public override string/*!*/ ToString() {
             return _value.ToString();
         }
+
+        public static implicit operator T(Extensible<T> extensible) {
+            return extensible.Value;
+        }
     }
 
 }

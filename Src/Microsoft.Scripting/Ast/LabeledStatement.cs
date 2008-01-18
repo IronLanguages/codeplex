@@ -16,32 +16,45 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class LabeledStatement : Statement {
-        private Statement _statement;
+    public sealed class LabeledStatement : Expression, ISpan {
+        private Expression _expression;
 
-        internal LabeledStatement(SourceSpan span, Statement statement)
-            : base(AstNodeType.LabeledStatement, span) {
-            _statement = statement;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
+
+        internal LabeledStatement(SourceLocation start, SourceLocation end, Expression expression)
+            : base(AstNodeType.LabeledStatement, typeof(void)) {
+            _start = start;
+            _end = end;
+            _expression = expression;
         }
 
-        public Statement Statement {
-            get { return _statement; }
+        public Expression Statement {
+            get { return _expression; }
         }
 
-        public LabeledStatement Mark(Statement statement) {
-            Contract.RequiresNotNull(statement, "statement");
-            _statement = statement;
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
+
+        public LabeledStatement Mark(Expression expression) {
+            Contract.RequiresNotNull(expression, "expression");
+            _expression = expression;
             return this;
         }
     }
 
     public static partial class Ast {
-        public static LabeledStatement Labeled(Statement statement) {
-            return Labeled(SourceSpan.None, statement);
+        public static LabeledStatement Labeled(Expression expression) {
+            return Labeled(SourceSpan.None, expression);
         }
 
-        public static LabeledStatement Labeled(SourceSpan span, Statement statement) {
-            return new LabeledStatement(span, statement);
+        public static LabeledStatement Labeled(SourceSpan span, Expression expression) {
+            return new LabeledStatement(span.Start, span.End, expression);
         }
     }
 }

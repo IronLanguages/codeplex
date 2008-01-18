@@ -47,7 +47,7 @@ namespace IronPython.Modules {
 
         [PythonName("chdir")]
         public static void ChangeDirectory(string path) {
-            if (String.IsNullOrEmpty(path)) throw ExceptionConverter.CreateThrowable(error, "Invalid argument");
+            if (String.IsNullOrEmpty(path)) throw PythonExceptions.CreateThrowable(PythonExceptions.OSError, "Invalid argument");
 
             try {
                 Directory.SetCurrentDirectory(path);
@@ -76,7 +76,7 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object error = ExceptionConverter.GetPythonException("OSError", "exceptions");
+        public static object error = Builtin.OSError;
 
         [PythonName("_exit")]
         public static void ExitProcess(int code) {
@@ -844,7 +844,7 @@ namespace IronPython.Modules {
                 message = "[Errno " + (hr & 0xfff).ToString() + "] " + e.Message;
             }
 
-            return ExceptionConverter.CreateThrowable(error, e.Message);
+            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, e.Message);
         }
 
         private const int S_IWRITE = 0x80;

@@ -143,7 +143,13 @@ namespace IronPython.Runtime.Operations {
             string name = GetName(self);
 
             if (self.IsSystemType) {
-                return string.Format("<type '{0}'>", name);
+                if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(self.UnderlyingSystemType)) {
+                    string module = GetModule(self);
+                    if (module != "__builtin__") {
+                        return string.Format("<type '{0}.{1}'>", module, self.Name);
+                    }
+                } 
+                return string.Format("<type '{0}'>", self.Name);                
             } else {
                 PythonTypeSlot dts;
                 string module = "unknown";
@@ -191,11 +197,11 @@ namespace IronPython.Runtime.Operations {
 
         /// <summary>
         /// Helper slot for performing calls on types.    This class is here to both speed
-        /// things up (hitting the ICallable* fast paths) and ensure correctness.  W/o this
+        /// things up (hitting the [SpecialName] Call fast paths) and ensure correctness.  W/o this
         /// we hit issues w/ FastCallable unwrapping the object[] arrays if a user explicitly
         /// passses one from Python code.        
         /// </summary>
-        internal class TypeCaller : PythonTypeSlot, ICallableWithCodeContext, IFancyCallable {
+        public class TypeCaller : PythonTypeSlot {
             private PythonType _type;
             public TypeCaller() {
             }
@@ -204,13 +210,19 @@ namespace IronPython.Runtime.Operations {
                 _type = type;
             }
 
-            #region ICallableWithCodeContext Members
-
-            public object Call(CodeContext context, object[] args) {
+            [SpecialName]
+            public object Call(CodeContext context, params object[] args) {
                 if (_type == null) {
                     return CallWithoutType(context, args);
                 }
                 return PythonTypeOps.CallWorker(context, _type, args ?? ArrayUtils.EmptyObjects);
+            }
+            
+            [SpecialName]
+            public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
+                // This is not symmetric with the simple Call() overload.
+                // (Bug 365660: handle the case when _type == null)
+                return PythonCalls.CallWithKeywordArgs(_type, args, dict);
             }
 
             private static object CallWithoutType(CodeContext context, object[] args) {
@@ -226,20 +238,10 @@ namespace IronPython.Runtime.Operations {
                 return PythonTypeOps.CallWorker(context, dt, ArrayUtils.RemoveFirst(args));
             }
 
-            #endregion
-
             internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
                 value = new TypeCaller((PythonType)instance);
                 return true;
             }
-
-            #region IFancyCallable Members
-
-            public object Call(CodeContext context, object[] args, string[] names) {
-                return PythonTypeOps.CallWorker(context, _type, new KwCallInfo(args, names));
-            }
-
-            #endregion
         }
 
         internal static object CallParams(CodeContext context, PythonType cls, params object[] args\u03c4) {
@@ -368,14 +370,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static string GetName(PythonType dt) {
-            string name;
-            if (dt.IsSystemType) {
-                return GetName(dt.UnderlyingSystemType);
-            } else {
-                name = dt.Name;
-            }
-
-            return name;
+            return dt.Name;
         }
 
         internal static string GetName(object o) {

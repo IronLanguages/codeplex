@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -22,9 +23,9 @@ namespace Microsoft.Scripting.Ast {
     /// In the future, we may consider using heuristics based on size, presence of loops, etc.
     /// </summary>
     class InterpretChecker : Walker {
-        private bool _hasUnsupportedNodes = false;
-        private bool _hasLoops = false;
-        private int _voidExpressionsDepth = 0;
+        private bool _hasUnsupportedNodes;
+        private bool _hasLoops;
+        private int _expressionDepth;
 
         public bool EvaluationOK(bool useHeuristics) {
             if (useHeuristics) {
@@ -38,41 +39,42 @@ namespace Microsoft.Scripting.Ast {
         public static bool CanEvaluate(CodeBlock node, bool useHeuristics) {
             InterpretChecker walker = new InterpretChecker();
             walker.WalkNode(node);
-            Debug.Assert(walker._voidExpressionsDepth == 0);
+            Debug.Assert(walker._expressionDepth == 0);
             return walker.EvaluationOK(useHeuristics);
         }
 
-        //
-        // Nodes we don't support.
-        // Rather than adding to this category, consider implementing Evaluate() on the node!
-        //
+        #region Walker Overrides
 
-        protected internal override bool Walk(IntrinsicExpression node) {
-            switch (node.NodeType) {
-                case AstNodeType.ParamsExpression:
-                case AstNodeType.EnvironmentExpression:
-                    _hasUnsupportedNodes = true;
-                    break;
-            }
+        // ActionExpression
+        protected internal override bool Walk(ActionExpression node) { Push();  return true; }
+        protected internal override void PostWalk(ActionExpression node) { Pop(); }
+
+        // ArrayIndexAssignment
+        protected internal override bool Walk(ArrayIndexAssignment node) { Push(); return true; }
+        protected internal override void PostWalk(ArrayIndexAssignment node) { Pop(); }
+
+        // BinaryExpression
+        protected internal override bool Walk(BinaryExpression node) { Push(); return true; }
+        protected internal override void PostWalk(BinaryExpression node) { Pop(); }
+
+        // BoundAssignment
+        protected internal override bool Walk(BoundAssignment node) { Push(); return true; }
+        protected internal override void PostWalk(BoundAssignment node) { Pop(); }
+
+        // BoundExpression
+        protected internal override bool Walk(BoundExpression node) { Push(); return true; }
+        protected internal override void PostWalk(BoundExpression node) { Pop(); }
+
+        // BreakStatement
+        protected internal override bool Walk(BreakStatement node) {
+            return DisallowControlFlowInExpression();
+        }
+
+        // CodeBlockExpression
+        protected internal override bool Walk(CodeBlockExpression node) {
+            // Do not recurse into nested code blocks
             return false;
         }
-
-        protected internal override bool Walk(SwitchStatement node) {
-            _hasUnsupportedNodes = true;
-            return false;
-        }
-
-        protected internal override bool Walk(UnboundExpression node) {
-            // Right now, locals() fails for nested functions.
-            // This is a crude test, but at least it errs on the side of disabling evaluation.
-            if (SymbolTable.IdToString(node.Name) == "locals") {
-                _hasUnsupportedNodes = true;
-                return false;
-            } else {
-                return true;
-            }
-        }
-
         protected internal override void PostWalk(CodeBlockExpression node) {
             // We use PostWalk here since Walk is only called for IsDeclarative=true
 
@@ -86,43 +88,109 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // Normally, expressions do not affect control-flow significantly. Only statements do.
-        // Only statements check whether they should keep executing more statements or if
-        // they should return a value. However, VoidExpression is a way to mix up expressions 
-        // and statements. If a VoidExpression contains control flow, that causes a problem
+        // ConditionalExpression
+        protected internal override bool Walk(ConditionalExpression node) { Push(); return true; }
+        protected internal override void PostWalk(ConditionalExpression node) { Pop(); }
 
-        protected internal override bool Walk(VoidExpression node) {
-            _voidExpressionsDepth++;
-            return true;
+        // ConstantExpression
+        protected internal override bool Walk(ConstantExpression node) { Push(); return true; }
+        protected internal override void PostWalk(ConstantExpression node) { Pop(); }
+
+        // ContinueStatement
+        protected internal override bool Walk(ContinueStatement node) {
+            return DisallowControlFlowInExpression();
         }
 
-        protected internal override void PostWalk(VoidExpression node) {
-            _voidExpressionsDepth--;
+        // DeleteUnboundExpression
+        protected internal override bool Walk(DeleteUnboundExpression node) { Push(); return true; }
+        protected internal override void PostWalk(DeleteUnboundExpression node) { Pop(); }
+
+        // DoStatement
+        protected internal override bool Walk(DoStatement node) {
+            _hasLoops = true;
+            return false;
         }
 
-        private bool DisallowControlFlowInVoidExpression() { 
-            if (_voidExpressionsDepth > 0) {
-                _hasUnsupportedNodes = true;
-                return false;
+        // IntrinsicExpression
+        protected internal override bool Walk(IntrinsicExpression node) {
+            // No need to push/pop sinte this is a leaf node
+            switch (node.NodeType) {
+                case AstNodeType.ParamsExpression:
+                case AstNodeType.EnvironmentExpression:
+                    _hasUnsupportedNodes = true;
+                    break;
             }
-            return true;
+            return false;
         }
-        
-        protected internal override bool Walk(ReturnStatement node) { return DisallowControlFlowInVoidExpression(); }
-        protected internal override bool Walk(ContinueStatement node) { return DisallowControlFlowInVoidExpression(); }
-        protected internal override bool Walk(BreakStatement node) { return DisallowControlFlowInVoidExpression(); }
 
-        //
-        // Nodes that may take a long time to execute
-        //
+        // LoopStatement
         protected internal override bool Walk(LoopStatement node) {
             _hasLoops = true;
             return false;
         }
 
-        protected internal override bool Walk(DoStatement node) {
-            _hasLoops = true;
-            return false;
+        // MemberAssignment
+        protected internal override bool Walk(MemberAssignment node) { Push(); return true; }
+        protected internal override void PostWalk(MemberAssignment node) { Pop(); }
+
+        // MemberExpression
+        protected internal override bool Walk(MemberExpression node) { Push(); return true; }
+        protected internal override void PostWalk(MemberExpression node) { Pop(); }
+
+        // MethodCallExpression
+        protected internal override bool Walk(MethodCallExpression node) { Push(); return true; }
+        protected internal override void PostWalk(MethodCallExpression node) { Pop(); }
+
+        // NewArrayExpression
+        protected internal override bool Walk(NewArrayExpression node) { Push(); return true; }
+        protected internal override void PostWalk(NewArrayExpression node) { Pop(); }
+
+        // NewExpression
+        protected internal override bool Walk(NewExpression node) { Push(); return true; }
+        protected internal override void PostWalk(NewExpression node) { Pop(); }
+
+        // ReturnStatement
+        protected internal override bool Walk(ReturnStatement node) {
+            return DisallowControlFlowInExpression();
+        }
+
+        // TypeBinaryExpression
+        protected internal override bool Walk(TypeBinaryExpression node) { Push(); return true; }
+        protected internal override void PostWalk(TypeBinaryExpression node) { Pop(); }
+
+        // UnaryExpression
+        protected internal override bool Walk(UnaryExpression node) { Push(); return true; }
+        protected internal override void PostWalk(UnaryExpression node) { Pop(); }
+
+        // UnboundAssignment
+        protected internal override bool Walk(UnboundAssignment node) { Push(); return true; }
+        protected internal override void PostWalk(UnboundAssignment node) { Pop(); }
+
+        // UnboundExpression
+        protected internal override bool Walk(UnboundExpression node) {
+            Push();
+            // Right now, locals() fails for nested functions.
+            // This is a crude test, but at least it errs on the side of disabling evaluation.
+            if (SymbolTable.IdToString(node.Name) == "locals") {
+                _hasUnsupportedNodes = true;
+                return false;
+            } else {
+                return true;
+            }
+        }
+        protected internal override void PostWalk(UnboundExpression node) { Pop(); }
+
+        #endregion
+
+        private void Push() { _expressionDepth++; }
+        private void Pop() { _expressionDepth--; }
+
+        private bool DisallowControlFlowInExpression() { 
+            if (_expressionDepth > 0) {
+                _hasUnsupportedNodes = true;
+                return false;
+            }
+            return true;
         }
     }
 }

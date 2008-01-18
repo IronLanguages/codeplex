@@ -105,7 +105,7 @@ def test_open_generic():
         class Foo(System.Collections.Generic.IEnumerable): pass
     except TypeError:
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
-        Assert(exc_value.msg.__contains__("cannot inhert from open generic instantiation"))
+        Assert(exc_value.message.__contains__("cannot inhert from open generic instantiation"))
 
 def test_interface_slots():
     import System
@@ -925,10 +925,18 @@ def test_generic_getitem():
     # but we can call type.__getitem__ with the instance    
     AreEqual(type.__getitem__(System.Collections.Generic.List, int), System.Collections.Generic.List[int])
     
+
+@skip("silverlight") # no WinForms on Silverlight
+def test_multiple_inheritance():
+    """multiple inheritance from two types in the same hierarchy should work, this is similar to class foo(int, object)"""
+    clr.AddReference("System.Windows.Forms")
+    import System
+    class foo(System.Windows.Forms.Form, System.Windows.Forms.Control): pass
     
 def test_struct_no_ctor_kw_args():
-    s = Structure(a=3)
-    AreEqual(s.a, 3)
+    for x in range(2):
+        s = Structure(a=3)
+        AreEqual(s.a, 3)
 
 def test_nullable_new():
     from System import Nullable

@@ -22,6 +22,6 @@ namespace ToyScript.Parser.Ast {
             : base(span) {
         }
 
-        internal protected abstract MSAst.Statement Generate(ToyGenerator tg);
+        internal protected abstract MSAst.Expression Generate(ToyGenerator tg);
     }
 }

@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Generation {
         public Nullable<Label> leaveLabel;
         private TargetBlockType _blockType;
         public readonly Slot finallyReturns;
-        public Statement statement;
+        public Expression expression;
 
         public TargetBlockType BlockType {
             get {
@@ -45,13 +45,13 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public Targets(Nullable<Label> breakLabel, Nullable<Label> continueLabel, TargetBlockType blockType, Slot finallyReturns, Statement statement) {
+        public Targets(Nullable<Label> breakLabel, Nullable<Label> continueLabel, TargetBlockType blockType, Slot finallyReturns, Expression expression) {
             this.breakLabel = breakLabel;
             this.continueLabel = continueLabel;
             this._blockType = blockType;
             this.finallyReturns = finallyReturns;
             this.leaveLabel = null;
-            this.statement = statement;
+            this.expression = expression;
         }
     }
 }

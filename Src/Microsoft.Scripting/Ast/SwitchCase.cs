@@ -16,14 +16,13 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class SwitchCase : Node {
+    public sealed class SwitchCase {
         private readonly SourceLocation _header;
         private readonly bool _default;
         private readonly int _value;
-        private readonly Statement _body;
+        private readonly Expression _body;
 
-        internal SwitchCase(SourceLocation header, bool @default, int value, Statement body)
-            : base(AstNodeType.SwitchCase) {
+        internal SwitchCase(SourceLocation header, bool @default, int value, Expression body) {
             _header = header;
             _default = @default;
             _value = value;
@@ -38,7 +37,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _value; }
         }
 
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
         }
 
@@ -48,20 +47,20 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static SwitchCase DefaultCase(Statement body) {
+        public static SwitchCase DefaultCase(Expression body) {
             return DefaultCase(SourceLocation.None, body);
         }
 
-        public static SwitchCase DefaultCase(SourceLocation header, Statement body) {
+        public static SwitchCase DefaultCase(SourceLocation header, Expression body) {
             Contract.RequiresNotNull(body, "body");
             return new SwitchCase(header, true, 0, body);
         }
 
-        public static SwitchCase SwitchCase(int value, Statement body) {
+        public static SwitchCase SwitchCase(int value, Expression body) {
             return SwitchCase(SourceLocation.None, value, body);
         }
 
-        public static SwitchCase SwitchCase(SourceLocation header, int value, Statement body) {
+        public static SwitchCase SwitchCase(SourceLocation header, int value, Expression body) {
             Contract.RequiresNotNull(body, "body");
             return new SwitchCase(header, false, value, body);
         }

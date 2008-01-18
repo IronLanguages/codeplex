@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
     class ClosureBinder : Walker {
         class Block {
             private CodeBlock _block;
-            private Dictionary<Variable, VariableReference> _references;
+            private readonly Dictionary<Variable, VariableReference> _references = new Dictionary<Variable,VariableReference>();
 
             internal Block(CodeBlock block) {
                 _block = block;
@@ -36,33 +36,14 @@ namespace Microsoft.Scripting.Ast {
                 get { return _block; }
             }
 
-            internal IList<VariableReference> GetReferences() {
-                if (_references != null) {
-                    Dictionary<Variable, VariableReference>.ValueCollection values = _references.Values;
-                    VariableReference[] refs = new VariableReference[values.Count];
-                    int index = 0;
-                    foreach (VariableReference vr in values) {
-                        refs[index++] = vr;
-                    }
-                    return refs;
-                } else {
-                    return new VariableReference[0];
+            internal void Reference(Variable variable) {
+                if (!_references.ContainsKey(variable)) {
+                    _references[variable] = new VariableReference(variable);
                 }
-            }
-
-            internal VariableReference Reference(Variable variable) {
-                if (_references == null) {
-                    _references = new Dictionary<Variable, VariableReference>();
-                }
-                VariableReference reference;
-                if (!_references.TryGetValue(variable, out reference)) {
-                    _references[variable] = reference = new VariableReference(variable);
-                }
-                return reference;
             }
 
             internal void PublishReferences() {
-                _block.References = GetReferences();
+                _block.References = _references;
             }
 
             internal void AddGeneratorTemps(int count) {
@@ -93,17 +74,17 @@ namespace Microsoft.Scripting.Ast {
         #region AstWalker overrides
 
         protected internal override bool Walk(BoundAssignment node) {
-            node.Ref = Reference(node.Variable);
+            Reference(node.Variable);
             return true;
         }
 
         protected internal override bool Walk(BoundExpression node) {
-            node.Ref = Reference(node.Variable);
+            Reference(node.Variable);
             return true;
         }
 
         protected internal override bool Walk(DeleteStatement node) {
-            node.Ref = Reference(node.Variable);
+            Reference(node.Variable);
             return true;
         }
 
@@ -144,7 +125,7 @@ namespace Microsoft.Scripting.Ast {
         protected internal override bool Walk(CatchBlock node) {
             // CatchBlock is not required to have target variable
             if (node.Variable != null) {
-                node.Ref = Reference(node.Variable);
+                Reference(node.Variable);
             }
             return true;            
         }
@@ -192,9 +173,9 @@ namespace Microsoft.Scripting.Ast {
             BindTheScopes();
         }
 
-        private VariableReference Reference(Variable variable) {
+        private void Reference(Variable variable) {
             Debug.Assert(variable != null);
-            return _stack.Peek().Reference(variable);
+            _stack.Peek().Reference(variable);
         }
 
         // TODO: Alternatively, this can be virtual method on ScopeStatement
@@ -232,7 +213,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void ResolveClosure(CodeBlock block) {
-            foreach (VariableReference r in block.References) {
+            foreach (VariableReference r in block.References.Values) {
                 Debug.Assert(r.Variable != null);
 
                 if (r.Variable.Block == block) {

@@ -22,15 +22,20 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class SwitchStatement : Statement {
+    public sealed class SwitchStatement : Expression, ISpan {
         private readonly SourceLocation _header;
         private readonly Expression _testValue;
         private readonly ReadOnlyCollection<SwitchCase> _cases;
 
-        internal SwitchStatement(SourceSpan span, SourceLocation header, Expression/*!*/ testValue, ReadOnlyCollection<SwitchCase>/*!*/ cases)
-            : base(AstNodeType.SwitchStatement, span) {
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
+
+        internal SwitchStatement(SourceLocation start, SourceLocation end, SourceLocation header, Expression/*!*/ testValue, ReadOnlyCollection<SwitchCase>/*!*/ cases)
+            : base(AstNodeType.SwitchStatement, typeof(void)) {
             Assert.NotNullItems(cases);
 
+            _start = start;
+            _end = end;
             _testValue = testValue;
             _cases = cases;
             _header = header;
@@ -46,6 +51,14 @@ namespace Microsoft.Scripting.Ast {
 
         public SourceLocation Header {
             get { return _header; }
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -75,7 +88,7 @@ namespace Microsoft.Scripting.Ast {
 
             Contract.Requires(UniqueCaseValues(cases, min, max), "cases", "Case values must be unique");
 
-            return new SwitchStatement(span, header, value, CollectionUtils.ToReadOnlyCollection(cases));
+            return new SwitchStatement(span.Start, span.End, header, value, CollectionUtils.ToReadOnlyCollection(cases));
         }
 
         // Below his threshold we'll use brute force N^2 algorithm

@@ -16,12 +16,17 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class YieldStatement : Statement {
+    public sealed class YieldStatement : Expression, ISpan {
         private readonly Expression /*!*/ _expr;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
+
         private YieldTarget _target;
 
-        internal YieldStatement(SourceSpan span, Expression /*!*/ expression)
-            : base(AstNodeType.YieldStatement, span) {
+        internal YieldStatement(SourceLocation start, SourceLocation end, Expression /*!*/ expression)
+            : base(AstNodeType.YieldStatement, typeof(void)) {
+            _start = start;
+            _end = end;
             _expr = expression;
         }
 
@@ -29,6 +34,13 @@ namespace Microsoft.Scripting.Ast {
             get { return _expr; }
         }
 
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
+        }
 
         // TODO: Remove !!!
         internal YieldTarget Target {
@@ -47,7 +59,7 @@ namespace Microsoft.Scripting.Ast {
 
         public static YieldStatement Yield(SourceSpan span, Expression expression) {
             Contract.Requires(expression != null, "expression");
-            return new YieldStatement(span, expression);
+            return new YieldStatement(span.Start, span.End, expression);
         }
     }
 }

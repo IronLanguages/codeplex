@@ -27,6 +27,19 @@ namespace Microsoft.Scripting.Ast {
     /// Interpreter partial class. This part contains interpretation code for code blocks.
     /// </summary>
     public static partial class Interpreter {
+        private static WeakHash<CodeBlock, InterpreterData> _Hashtable = new WeakHash<CodeBlock, InterpreterData>();
+
+        private static InterpreterData GetBlockInterpreterData(CodeBlock block) {
+            InterpreterData data;
+            lock (_Hashtable) {
+                if (!_Hashtable.TryGetValue(block, out data)) {
+                    _Hashtable[block] = data = new InterpreterData();
+                }
+            }
+            Debug.Assert(data != null);
+            return data;
+        }
+
         private static object DoExecute(CodeContext context, CodeBlock block) {
             object ret;
 
@@ -40,13 +53,13 @@ namespace Microsoft.Scripting.Ast {
             }
 
             context.Scope.SourceLocation = block.Start;
-            ret = Interpreter.ExecuteStatement(context, block.Body);
+            ret = Interpreter.EvaluateExpression(context, block.Body);
 
-            if (ret == Interpreter.NextStatement) {
-                return null;
+            ControlFlow cf = ret as ControlFlow;
+            if (cf != null) {
+                return cf.Value;
             } else {
-                Debug.Assert(!(ret is ControlFlow));
-                return ret;
+                return null;
             }
         }
 
@@ -73,13 +86,9 @@ namespace Microsoft.Scripting.Ast {
             FlowChecker.Check(block);
             return Interpreter.Execute(context, block);
         }
+
         private static bool ShouldCompile(InterpreterData id) {
             return id.CallCount++ > InterpreterData.MaxInterpretedCalls;
-        }
-
-        internal static InterpreterData GetBlockInterpreterData(CodeBlock block) {
-            // TODO: Make a dictionary!!!
-            return block.GetInterpreterData();
         }
 
         internal static object ExecuteWithChildContext(CodeContext parent, CodeBlock block, params object[] args) {
@@ -135,14 +144,12 @@ namespace Microsoft.Scripting.Ast {
             return Execute(child, block);
         }
 
-        internal static Delegate GetDelegateForInterpreter(CodeBlock block, CodeContext context, Type delegateType, bool forceWrapperMethod) {
-            switch (block.NodeType) {
-                case AstNodeType.CodeBlock:
-                    return GetCodeBlockDelegateForInterpreter(block, context, delegateType, forceWrapperMethod);
-                case AstNodeType.GeneratorCodeBlock:
-                    return GetGeneratorDelegateForInterpreter((GeneratorCodeBlock)block, context, delegateType, forceWrapperMethod);
-                default:
-                    throw new InvalidOperationException();
+        private static Delegate GetDelegateForInterpreter(CodeBlock block, CodeContext context, Type delegateType, bool forceWrapperMethod) {
+            GeneratorCodeBlock gcb = block as GeneratorCodeBlock;
+            if (gcb != null) {
+                return GetGeneratorDelegateForInterpreter(gcb, context, delegateType, forceWrapperMethod);
+            } else {
+                return GetCodeBlockDelegateForInterpreter(block, context, delegateType, forceWrapperMethod);
             }
         }
 
@@ -202,7 +209,7 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException(String.Format("failed to make delegate for type {0}", delegateType.FullName));
         }
 
-        internal static Delegate GetCompiledDelegate(CodeBlock block, CompilerContext context, Type delegateType, bool forceWrapperMethod) {
+        private static Delegate GetCompiledDelegate(CodeBlock block, CompilerContext context, Type delegateType, bool forceWrapperMethod) {
             bool createWrapperMethod = block.ParameterArray ? false : forceWrapperMethod || Compiler.NeedsWrapperMethod(block, true, false);
             bool hasThis = block.HasThis();
 
@@ -269,7 +276,7 @@ namespace Microsoft.Scripting.Ast {
             return impl;
         }
 
-        internal static Delegate GetGeneratorDelegateForInterpreter(GeneratorCodeBlock block, CodeContext context, Type delegateType, bool forceWrapperMethod) {
+        private static Delegate GetGeneratorDelegateForInterpreter(GeneratorCodeBlock block, CodeContext context, Type delegateType, bool forceWrapperMethod) {
             // For now, always return a compiled delegate (since yield is not implemented)
             InterpreterData id = GetBlockInterpreterData(block);
             lock (id) {

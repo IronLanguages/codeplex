@@ -23,6 +23,7 @@ using Microsoft.Scripting.Math;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime.Types {
     public static class TypeCache {
@@ -30,7 +31,35 @@ namespace IronPython.Runtime.Types {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static PythonType array, builtinfunction, pythondictionary, frozensetcollection, pythonfunction, builtin, generator, obj, setcollection, pythontype, str, systemstate, pythontuple, weakreference, list, pythonfile, scriptmodule, method, enumerate, intType, doubleType, biginteger, complex64, super, oldclass, oldinstance, noneType, boolType;
+        private static PythonType array;
+        private static PythonType builtinfunction;
+        private static PythonType pythondictionary;
+        private static PythonType frozensetcollection;
+        private static PythonType pythonfunction;
+        private static PythonType builtin;
+        private static PythonType generator;
+        private static PythonType obj;
+        private static PythonType setcollection;
+        private static PythonType pythontype;
+        private static PythonType str;
+        private static PythonType systemstate;
+        private static PythonType pythontuple;
+        private static PythonType weakreference;
+        private static PythonType list;
+        private static PythonType pythonfile;
+        private static PythonType scope;
+        private static PythonType method;
+        private static PythonType enumerate;
+        private static PythonType intType;
+        private static PythonType doubleType;
+        private static PythonType biginteger;
+        private static PythonType complex64;
+        private static PythonType super;
+        private static PythonType oldclass;
+        private static PythonType oldinstance;
+        private static PythonType noneType;
+        private static PythonType boolType;
+        private static PythonType baseException;
 
         // *** END GENERATED CODE ***
 
@@ -154,8 +183,8 @@ namespace IronPython.Runtime.Types {
 
         public static PythonType Module {
             get {
-                if (scriptmodule == null) scriptmodule = DynamicHelpers.GetPythonTypeFromType(typeof(Scope));
-                return scriptmodule;
+                if (scope == null) scope = DynamicHelpers.GetPythonTypeFromType(typeof(Scope));
+                return scope;
             }
         }
 
@@ -233,6 +262,13 @@ namespace IronPython.Runtime.Types {
             get {
                 if (boolType == null) boolType = DynamicHelpers.GetPythonTypeFromType(typeof(Boolean));
                 return boolType;
+            }
+        }
+
+        public static PythonType BaseException {
+            get {
+                if (baseException == null) baseException = DynamicHelpers.GetPythonTypeFromType(typeof(PythonExceptions.BaseException));
+                return baseException;
             }
         }
 

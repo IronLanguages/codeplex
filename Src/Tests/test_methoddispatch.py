@@ -155,10 +155,11 @@ def test_system_drawing():
     # calling the instance
     i = r.Intersect(s)
     AreEqual(i, None)
-    AreEqual(r, Rectangle(0, 0, 3, 7))
+    AreEqual(r, Rectangle(3, 0, 0, 7))
     AreEqual(s, Rectangle(3, 0, 8, 14))
     
     # calling instance w/ StrongBox
+    r = Rectangle(0, 0, 3, 7)
     box = clr.StrongBox[Rectangle](r)
     i = box.Intersect(s)
     AreEqual(i, None)
@@ -1393,7 +1394,7 @@ def test_windows_forms():
     try:
     	font = x.DefaultFont
     except AttributeError, e:
-    	Assert(e.msg.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
+    	Assert(e.message.find("static property 'DefaultFont' of 'Control' can only be read through a type, not an instance") != -1)
     else: AssertUnreachable()
 
 @skip("silverlight") #no AssertErrorWithMessage

@@ -20,7 +20,7 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     public enum BindingResult {
         /// <summary>
-        /// The binding succeeded
+        /// The binding succeeded.  Only one method was applicable or had the best conversion.  
         /// </summary>
         Success,
         /// <summary>
@@ -32,8 +32,12 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         IncorrectArgumentCount,
         /// <summary>
-        /// One or more of the arguments cannot be converted
+        /// None of the target method(s) can successfully be called.  The failure can be due to:
+        ///     1. Arguments could not be successfully converted for the call
+        ///     2. Keyword arguments could not be assigned to positional arguments
+        ///     3. Keyword arguments could be assigned but would result in an argument being assigned 
+        ///        multiple times (keyword and positional arguments conflit or dupliate keyword arguments).
         /// </summary>
-        ConversionFailure,
+        CallFailure,
     }
 }

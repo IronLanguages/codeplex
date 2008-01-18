@@ -164,21 +164,13 @@ def gen_uninitialized_type(cw):
     cw.exit_block()
 
 
-executor = """MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
-
-try {
-    return target.Invoke(binder, new object[] { context, action, args });
-} catch (TargetInvocationException ex) {
-    throw ExceptionHelpers.UpdateForRethrow(ex.InnerException);
-}"""
-
 def gen_execute(cw):
-    cw.enter_block("public static object Execute(CodeContext context, ActionBinder binder, DynamicAction action, Type[] types, object[] args)")
+    cw.enter_block("public static Type MakeDynamicSiteTargetType(Type/*!*/[] types)")
     cw.write('Type siteType;')
     cw.write('')
-    cw.enter_block("switch (args.Length)")
-    for i in range(MaxSiteArity):
-        cw.case_label("case %d: siteType = typeof(DynamicSiteTarget<%s>).MakeGenericType(types); break;" % (i+1, ','*(i+1)))
+    cw.enter_block("switch (types.Length)")
+    for i in range(1, MaxSiteArity + 1):
+        cw.case_label("case %d: siteType = typeof(DynamicSiteTarget<%s>).MakeGenericType(types); break;" % (i+1, ','*(i)))
         cw.dedent()
     cw.case_label("default:")
     cw.write('Type tupleType = Tuple.MakeTupleType(ArrayUtils.RemoveLast(types));')
@@ -186,7 +178,7 @@ def gen_execute(cw):
     cw.write('break;')
     cw.dedent()
     cw.exit_block()
-    cw.write(executor)
+    cw.write("return siteType;")
     cw.exit_block()
     cw.write('')
 

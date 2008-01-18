@@ -338,10 +338,15 @@ namespace IronPython.Runtime {
         [PythonName("exit")]
         public void Exit(object code) {
             if (code == null) {
-                throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonException("SystemExit"));
+                throw new PythonExceptions.SystemExit().InitAndGetClrException();
             } else {
+                PythonTuple pt = code as PythonTuple;
+                if(pt != null && pt.Count == 1) {
+                    code = pt[0];
+                }
+                
                 // throw as a python exception here to get the args set.
-                throw ExceptionConverter.CreateThrowable(ExceptionConverter.GetPythonException("SystemExit"), code);
+                throw new PythonExceptions.SystemExit().InitAndGetClrException(code);
             }
         }
 
@@ -448,23 +453,10 @@ namespace IronPython.Runtime {
         public object __stderr__;
 
         private void SetStandardIO() {
-            ConsoleStream s;
-            bool buffered = ScriptDomainManager.Options.BufferedStandardOutAndError;
-
-            s = new ConsoleStream(ConsoleStreamType.Input);
-            __stdin__ = stdin = MakeConsoleIo(s, s.Encoding, "<stdin>");
-            
-            s = new ConsoleStream(ConsoleStreamType.Output, buffered);
-            __stdout__ = stdout = MakeConsoleIo(s, s.Encoding, "<stdout>");
-           
-            s = new ConsoleStream(ConsoleStreamType.ErrorOutput, buffered);
-            __stderr__ = stderr = MakeConsoleIo(s, s.Encoding, "<stderr>");
-        }
-
-        private static PythonFile MakeConsoleIo(ConsoleStream stream, Encoding encoding, string name) {
-            PythonFile res = PythonFile.Create(stream, encoding, name, "w");
-            res.IsConsole = true;
-            return res;
+            SharedIO io = ScriptDomainManager.CurrentManager.SharedIO;
+            __stdin__ = stdin = PythonFile.CreateConsole(io, ConsoleStreamType.Input, "<stdin>");
+            __stdout__ = stdout = PythonFile.CreateConsole(io, ConsoleStreamType.Output, "<stdout>");
+            __stderr__ = stderr = PythonFile.CreateConsole(io, ConsoleStreamType.ErrorOutput, "<stderr>");
         }
 
         internal void CloseStandardIOStreams() {
@@ -537,16 +529,10 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        public ClrModule ClrModule {
-            get {
-                return ClrModule.GetInstance();
-            }
-        }
-        
         /// <summary>
         /// Dictionary from name to type of all known built-in module names.
         /// </summary>
-        public Dictionary<string, Type> Builtins {
+        internal Dictionary<string, Type> Builtins {
             get {
                 return _builtinsDict;
             }
@@ -567,7 +553,7 @@ namespace IronPython.Runtime {
             // We should register builtins, if any, from IronPython.dll
             _autoLoadBuiltins.Add(typeof(SystemState).Assembly);
 
-            RuntimeHelpers.TopNamespace.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
+            _languageContext.DomainManager.AssemblyLoaded += new EventHandler<AssemblyLoadedEventArgs>(TopPackage_AssemblyLoaded);
 
             PythonExtensionTypeAttribute._sysState = this;
             // Load builtins from IronPython.Modules
@@ -627,7 +613,7 @@ namespace IronPython.Runtime {
             return baseName + ", Version=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ", Culture=neutral, PublicKeyToken=31bf3856ad364e35";
 #else
         return baseName;
-#endif
-        }
+#endif            
+        }        
     }
 }

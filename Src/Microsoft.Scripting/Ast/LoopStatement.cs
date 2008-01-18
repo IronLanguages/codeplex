@@ -16,18 +16,22 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class LoopStatement : Statement {
+    public sealed class LoopStatement : Expression, ISpan {
         private readonly SourceLocation _header;
         private readonly Expression _test;
         private readonly Expression _increment;
-        private readonly Statement /*!*/ _body;
-        private readonly Statement _else;
+        private readonly Expression /*!*/ _body;
+        private readonly Expression _else;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
         /// <summary>
         /// Null test means infinite loop.
         /// </summary>
-        internal LoopStatement(SourceSpan span, SourceLocation header, Expression test, Expression increment, Statement /*!*/ body, Statement @else)
-            : base(AstNodeType.LoopStatement, span) {
+        internal LoopStatement(SourceLocation start, SourceLocation end, SourceLocation header, Expression test, Expression increment, Expression /*!*/ body, Expression @else)
+            : base(AstNodeType.LoopStatement, typeof(void)) {
+            _start = start;
+            _end = end;
             _test = test;
             _increment = increment;
             _body = body;
@@ -47,12 +51,20 @@ namespace Microsoft.Scripting.Ast {
             get { return _increment; }
         }
 
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
         }
 
-        public Statement ElseStatement {
+        public Expression ElseStatement {
             get { return _else; }
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -60,30 +72,30 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public static partial class Ast {
-        public static LoopStatement While(Expression test, Statement body, Statement @else) {
+        public static LoopStatement While(Expression test, Expression body, Expression @else) {
             return Loop(SourceSpan.None, SourceLocation.None, test, null, body, @else);
         }
 
-        public static LoopStatement While(SourceSpan span, SourceLocation header, Expression test, Statement body, Statement @else) {
+        public static LoopStatement While(SourceSpan span, SourceLocation header, Expression test, Expression body, Expression @else) {
             return Loop(span, header, test, null, body, @else);
         }
 
-        public static LoopStatement Loop(Statement body) {
+        public static LoopStatement Infinite(Expression body) {
             return Loop(SourceSpan.None, SourceLocation.None, null, null, body, null);
         }
 
-        public static LoopStatement Loop(params Statement[] body) {
+        public static LoopStatement Infinite(params Expression[] body) {
             return Loop(SourceSpan.None, SourceLocation.None, null, null, Block(body), null);
         }
         
-        public static LoopStatement Loop(Expression test, Expression increment, Statement body, Statement @else) {
+        public static LoopStatement Loop(Expression test, Expression increment, Expression body, Expression @else) {
             return Loop(SourceSpan.None, SourceLocation.None, test, increment, body, @else);
         }
 
-        public static LoopStatement Loop(SourceSpan span, SourceLocation header, Expression test, Expression increment, Statement body, Statement @else) {
+        public static LoopStatement Loop(SourceSpan span, SourceLocation header, Expression test, Expression increment, Expression body, Expression @else) {
             Contract.RequiresNotNull(body, "body");
             Contract.Requires(test == null || test.Type == typeof(bool), "test");
-            return new LoopStatement(span, header, test, increment, body, @else);
+            return new LoopStatement(span.Start, span.End, header, test, increment, body, @else);
         }
     }
 }

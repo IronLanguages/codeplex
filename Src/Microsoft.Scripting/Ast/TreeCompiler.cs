@@ -41,13 +41,13 @@ namespace Microsoft.Scripting.Ast {
             return CompileBlock<T>(cb);
         }
 
-        public static T CompileStatement<T>(Statement statement) {
+        public static T CompileStatement<T>(Expression expression) {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
-            Contract.RequiresNotNull(statement, "statement");
+            Contract.RequiresNotNull(expression, "expression");
 
             CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void));
             cb.Body = Ast.Block(
-                statement,
+                expression,
                 Ast.Return()
             );
             return CompileBlock<T>(cb);

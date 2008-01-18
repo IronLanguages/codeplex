@@ -59,7 +59,6 @@ namespace IronPython.Runtime.Operations {
     /// 
     ///     next: Defined when a type is an enumerator to expose the Python iter protocol.
     /// 
-    ///     call: Added for types that implement ICallable but don't define __call__
     /// 
     ///     repr: Added for types that override ToString
     /// 
@@ -320,24 +319,6 @@ namespace IronPython.Runtime.Operations {
 
             // context is hiding __get__
             throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
-        }
-
-        public static object CallMethod(CodeContext context, object self, params object[] args\u00F8) {
-            return ((ICallableWithCodeContext)self).Call(context, args\u00F8);
-        }
-
-        public static object CallMethod(CodeContext context, object self, [ParamDictionary] IAttributesCollection dict\u00F8, params object[] args\u00F8) {
-            object[] allArgs = new object[dict\u00F8.Count + args\u00F8.Length];
-            string[] names = new string[dict\u00F8.Count];
-
-            Array.Copy(args\u00F8, allArgs, args\u00F8.Length);
-            int i = 0;
-            foreach(KeyValuePair<object, object> kvp in dict\u00F8) {
-                allArgs[i + args\u00F8.Length] = kvp.Value;
-                names[i++] = (string)kvp.Key;
-            }
-
-            return ((IFancyCallable)self).Call(context, allArgs, names);
         }
 
         private static void CheckInitArgs(CodeContext context, IAttributesCollection dict, object[] args, PythonType pt) {

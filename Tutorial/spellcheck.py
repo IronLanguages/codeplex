@@ -54,7 +54,8 @@ atexit.register(_cleanup)
 
 ### Returns True if word is spelled correctly, otherwise false.
 def check_word (word):
-    return w.CheckSpelling(word)
+    w = _get_word_object()
+    return _word_object.CheckSpelling(word)
 
 
 ### Returns a list of possible corrections for word.  Returns an empty list

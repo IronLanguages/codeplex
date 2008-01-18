@@ -14,12 +14,13 @@
  * ***************************************************************************/
 
 using System;
-using System.Reflection;
 using System.Diagnostics;
+using System.Reflection;
 
 using Microsoft.Scripting;
-using Utils = Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+
+using Utils = Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -64,7 +65,7 @@ namespace IronPython.Runtime.Types {
                 return base.TryDeleteValue(context, instance, owner);
             }
 
-            MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { _deleter }, BinderType.Normal).CallInstanceReflected(context, instance);
+            MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { _deleter }).CallInstanceReflected(context, instance);
             return true;
         }
 

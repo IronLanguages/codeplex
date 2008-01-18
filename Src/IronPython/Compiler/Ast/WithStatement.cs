@@ -41,6 +41,14 @@ namespace IronPython.Compiler.Ast {
             get { return _var; }
         }
 
+        public Expression ContextManager {
+            get { return _contextManager; }
+        }
+
+        public Statement Body {
+            get { return _body; }
+        }
+
         /// <summary>
         /// WithStatement is translated to the DLR AST equivalent to
         /// the following Python code snippet (from with statement spec):
@@ -64,9 +72,9 @@ namespace IronPython.Compiler.Ast {
         ///         exit(None, None, None)
         /// 
         /// </summary>
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // Five statements in the result...
-            MSAst.Statement[] statements = new MSAst.Statement[5];
+            MSAst.Expression[] statements = new MSAst.Expression[5];
 
             //******************************************************************
             // 1. mgr = (EXPR)

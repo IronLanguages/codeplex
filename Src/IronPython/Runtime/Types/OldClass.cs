@@ -52,9 +52,7 @@ namespace IronPython.Runtime.Types {
     [PythonType("classobj")]
     [Serializable]
     public sealed class OldClass :
-        ICallableWithCodeContext,
         IConstructorWithCodeContext,
-        IFancyCallable,
 #if !SILVERLIGHT // ICustomTypeDescriptor
  ICustomTypeDescriptor,
 #endif
@@ -262,38 +260,40 @@ namespace IronPython.Runtime.Types {
             return FullName;
         }
 
-        #region ICallableWithCodeContext Members
+        #region Calls
+        // Calling an OldClass instance means instantiating that class and invoking the __init__() member if 
+        // it's defined.
+
+        // OldClass impls IDynamicObject. But May wind up here still if IDynamicObj doesn't provide a rule (such as for list sigs).
+        // If our IDynamicObject implementation is complete, we can then remove these Call methods.
         [SpecialName]
-        public object Call(CodeContext context, params object[] args) {
+        public object Call(CodeContext context, params object[] args\u00F8) {
             OldInstance inst = new OldInstance(this);
             object value;
             // lookup the slot directly - we don't go through __getattr__
             // until after the instance is created.
             if (TryLookupSlot(Symbols.Init, out value)) {
-                PythonOps.CallWithContext(context, GetOldStyleDescriptor(context, value, inst, this), args);
-            } else if (args.Length > 0) {
-                throw PythonOps.TypeError("this constructor takes no arguments");
+                PythonOps.CallWithContext(context, GetOldStyleDescriptor(context, value, inst, this), args\u00F8);
+            } else if (args\u00F8.Length > 0) {
+                MakeCallError();
             }
             return inst;
         }
 
-        #endregion
-
-        #region IFancyCallable Members
-
-        public object Call(CodeContext context, object[] args, string[] names) {
+        [SpecialName]
+        public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict\u00F8, params object[] args\u00F8) {
             OldInstance inst = new OldInstance(this);
             object meth;
             if (PythonOps.TryGetBoundAttr(inst, Symbols.Init, out meth)) {
-                PythonOps.CallWithKeywordArgs(context, meth, args, names);
-            } else {
-                throw PythonOps.TypeError("this constructor takes no arguments");
+                PythonCalls.CallWithKeywordArgs(meth, args\u00F8, dict\u00F8);
+            } else if (dict\u00F8.Count > 0 || args\u00F8.Length > 0) {
+                MakeCallError();
             }
             return inst;
         }
+        #endregion // calls
 
-        #endregion
-
+        
         internal PythonType TypeObject {
             get {
                 if (_type == null) {
@@ -524,12 +524,24 @@ namespace IronPython.Runtime.Types {
                 case DynamicActionKind.CreateInstance:
                 case DynamicActionKind.Call:
                     return MakeCallRule<T>((CallAction)action, context, args);
+                case DynamicActionKind.DoOperation:
+                    return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
                 default: return null;
             }
         }
 
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch (doOperationAction.Operation) {
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
+            }
+            return null;
+        }
+
         private static StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            if (!action.Signature.IsSimple) return null;
+            // This rule only handles simple signatures. Fallback on MethodBinder to handle complex signatures 
+            // such as keyword args.
+            if (!action.Signature.IsSimple) return null; 
 
             StandardRule<T> rule = new StandardRule<T>();
 
@@ -544,7 +556,7 @@ namespace IronPython.Runtime.Types {
             rule.SetTest(rule.MakeTypeTest(typeof(OldClass), 0));
             rule.SetTarget(
                 rule.MakeReturn(context.LanguageContext.Binder,
-                    Ast.Comma(0,
+                    Ast.Comma(
                         Ast.Assign(
                             instTmp,
                             Ast.New(
@@ -560,16 +572,21 @@ namespace IronPython.Runtime.Types {
                                 Ast.Read(tmp)
                             ),
                             Ast.Action.Call(
+                                action,
                                 typeof(object),
                                 ArrayUtils.Insert((Expression)Ast.Read(tmp), ArrayUtils.RemoveFirst(rule.Parameters))
                             ),
+                            // Checking the Parameter array directly here only works for simple signatures.
+                            // It would get confused by cases like C(*()), C(**{}), or C(*E(), **{}), which could all
+                            // bind against C(). 
                             rule.Parameters.Length != 1 ?
                                 (Expression)Ast.Call(
                                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                                     typeof(OldClass).GetMethod("MakeCallError")
                                     ) :
                                 Ast.Null()
-                        )
+                        ),
+                        Ast.Read(instTmp)
                     )
                 )
             );
@@ -587,6 +604,10 @@ namespace IronPython.Runtime.Types {
         }
 
         public object MakeCallError() {
+            // Normally, if we have an __init__ method, the method binder detects signature mismatches.
+            // This can happen when a class does not define __init__ and therefore does not take any arguments.
+            // Beware that calls like F(*(), **{}) have 2 arguments but they're empty and so it should still
+            // match against def F(). 
             throw PythonOps.TypeError("this constructor takes no arguments");
         }
 
@@ -675,14 +696,14 @@ namespace IronPython.Runtime.Types {
             Expression target;
 
             if (action.Name == Symbols.Dict) {
-                target = Ast.Comma(0,
-                    Ast.ReadField(
-                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
-                        typeof(OldClass).GetField("__dict__")
-                    ),
+                target = Ast.Comma(
                     Ast.Call(
                         Ast.Convert(rule.Parameters[0], typeof(OldClass)),
                         typeof(OldClass).GetMethod("DictionaryIsPublic")
+                    ),
+                    Ast.ReadField(
+                        Ast.Convert(rule.Parameters[0], typeof(OldClass)),
+                        typeof(OldClass).GetField("__dict__")
                     )
                 );
             } else if (action.Name == Symbols.Bases) {

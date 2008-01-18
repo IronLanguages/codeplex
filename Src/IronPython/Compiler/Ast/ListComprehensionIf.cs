@@ -30,9 +30,8 @@ namespace IronPython.Compiler.Ast {
             get { return _test; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body) {
+        internal override MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body) {
             return Ast.If(
-                Span,
                 Ast.IfConditions(
                     Ast.IfCondition(
                         Span, Span.End,

@@ -42,7 +42,7 @@ namespace IronPython.Compiler.Ast {
             get { return _right; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             return _left.TransformSet(ag, Span, ag.Transform(_right), PythonOperatorToAction(_op));
         }
 

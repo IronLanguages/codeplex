@@ -26,6 +26,7 @@ using IronPython.Runtime.Exceptions;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("re", typeof(IronPython.Modules.PythonRegex))]
 namespace IronPython.Modules {
@@ -61,7 +62,7 @@ namespace IronPython.Modules {
             try {
                 return new RE_Pattern(ValidatePattern(pattern));
             } catch (ArgumentException e) {
-                throw ExceptionConverter.CreateThrowable(error, e.Message);
+                throw PythonExceptions.CreateThrowable(error, e.Message);
             }
         }
 
@@ -70,12 +71,12 @@ namespace IronPython.Modules {
             try {
                 return new RE_Pattern(ValidatePattern(pattern), Converter.ConvertToInt32(flags));
             } catch (ArgumentException e) {
-                throw ExceptionConverter.CreateThrowable(error, e.Message);
+                throw PythonExceptions.CreateThrowable(error, e.Message);
             }
         }
         public static string engine = "cli reg ex";
 
-        public static object error = ExceptionConverter.CreatePythonException("error", "re");
+        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "re", "");
 
         [PythonName("escape")]
         public static string Escape(string text) {
@@ -248,7 +249,7 @@ namespace IronPython.Modules {
                     RegexOptions opts = FlagsToOption(flags);
                     this._re = new Regex(_pre.Pattern, opts);
                 } catch (ArgumentException e) {
-                    throw ExceptionConverter.CreateThrowable(error, e.Message);
+                    throw PythonExceptions.CreateThrowable(error, e.Message);
                 }
                 this._compileFlags = flags;
             }
@@ -855,7 +856,7 @@ namespace IronPython.Modules {
                 switch (pattern[++nameIndex]) {
                     case '?':
                         // extension syntax
-                        if (nameIndex == pattern.Length - 1) throw ExceptionConverter.CreateThrowable(error, "unexpected end of regex");
+                        if (nameIndex == pattern.Length - 1) throw PythonExceptions.CreateThrowable(error, "unexpected end of regex");
                         switch (pattern[++nameIndex]) {
                             case 'P':
                                 //  named regex, .NET doesn't expect the P so we'll remove it;
@@ -875,7 +876,7 @@ namespace IronPython.Modules {
                                     while (tmpIndex < pattern.Length && pattern[tmpIndex] != ')')
                                         tmpIndex++;
 
-                                    if (tmpIndex == pattern.Length) throw ExceptionConverter.CreateThrowable(error, "unexpected end of regex");
+                                    if (tmpIndex == pattern.Length) throw PythonExceptions.CreateThrowable(error, "unexpected end of regex");
 
                                     pattern = pattern.Substring(0, tmpIndex) + ">" + pattern.Substring(tmpIndex + 1);
                                 } else {
@@ -895,7 +896,7 @@ namespace IronPython.Modules {
                             case '!': break; // negative look ahead assertion
                             case '#': break; // inline comment
                             case '(':  // yes/no if group exists, we don't support this
-                            default: throw ExceptionConverter.CreateThrowable(error, "Unrecognized extension " + pattern[nameIndex]);
+                            default: throw PythonExceptions.CreateThrowable(error, "Unrecognized extension " + pattern[nameIndex]);
                         }
                         break;
                     default:

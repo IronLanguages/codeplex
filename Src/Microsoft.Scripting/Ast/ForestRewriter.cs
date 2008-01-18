@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Ast {
         /// List of blocks identified in the AST
         /// </summary>
         private List<CodeBlock> _blocks;
-        private bool _rewrite;
+        private bool _rewrite = true;           // TODO: For now, rewrite always
 
         #region Forest rewriter entry point
 
@@ -50,11 +50,6 @@ namespace Microsoft.Scripting.Ast {
         }
 
         #endregion
-
-        // Void expression triggers rewrite
-        protected internal override void PostWalk(VoidExpression node) {
-            _rewrite = true;
-        }
 
         // Yield statement triggers rewrite
         protected internal override void PostWalk(YieldStatement node) {
@@ -76,7 +71,8 @@ namespace Microsoft.Scripting.Ast {
         bool CommonCodeBlock(CodeBlock node) {
             // Simple stack of flags
             bool backup = _rewrite;
-            _rewrite = false;
+            // Rewrite always for now
+            //_rewrite = false;
 
             // Walk the code block body
             WalkNode(node.Body);

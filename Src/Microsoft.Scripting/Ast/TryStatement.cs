@@ -19,11 +19,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class TryStatement : Statement {
+    public sealed class TryStatement : Expression, ISpan {
         private readonly SourceLocation _header;
-        private readonly Statement _body;
+        private readonly Expression _body;
         private readonly ReadOnlyCollection<CatchBlock> _handlers;
-        private readonly Statement _finally;
+        private readonly Expression _finally;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
         private TargetLabel _target;    // The entry point into the try statement
 
@@ -62,8 +64,10 @@ namespace Microsoft.Scripting.Ast {
         /// The elseSuite runs if no exception is thrown.
         /// The finallySuite runs regardless of how control exits the body.
         /// </summary>
-        internal TryStatement(SourceSpan span, SourceLocation header, Statement body, ReadOnlyCollection<CatchBlock> handlers, Statement @finally)
-            : base(AstNodeType.TryStatement, span) {
+        internal TryStatement(SourceLocation start, SourceLocation end, SourceLocation header, Expression body, ReadOnlyCollection<CatchBlock> handlers, Expression @finally)
+            : base(AstNodeType.TryStatement, typeof(void)) {
+            _start = start;
+            _end = end;
             _body = body;
             _handlers = handlers;
             _finally = @finally;
@@ -74,7 +78,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _header; }
         }
 
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
         }
 
@@ -82,8 +86,16 @@ namespace Microsoft.Scripting.Ast {
             get { return _handlers; }
         }
 
-        public Statement FinallyStatement {
+        public Expression FinallyStatement {
             get { return _finally; }
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
 
         // TODO: Move to Compiler

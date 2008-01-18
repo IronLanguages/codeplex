@@ -113,10 +113,10 @@ namespace Microsoft.Scripting.Actions {
         private bool TryNumericComparison(OperatorInfo info) {
             MethodInfo[] targets = FilterNonMethods(_types[0], Binder.GetMember(Action, _types[0], "Compare"));
             if (targets.Length > 0) {
-                MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
-                MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
-                if (mc != null) {
-                    Expression call = Ast.Convert(mc.Target.MakeExpression(_rule, _rule.Parameters, _types), typeof(int));
+                MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets);
+                BindingTarget target = mb.MakeBindingTarget(CallType.None, _types);
+                if (target.Success) {
+                    Expression call = Ast.Convert(target.MakeExpression(_rule, _rule.Parameters), typeof(int));
                     switch (info.Operator) {
                         case Operators.GreaterThan: call = Ast.GreaterThan(call, Ast.Constant(0)); break;
                         case Operators.LessThan: call = Ast.LessThan(call, Ast.Constant(0)); break;
@@ -283,6 +283,11 @@ namespace Microsoft.Scripting.Actions {
                     MakeCallSignatureResult(CompilerHelpers.GetMethodTargets(_args[0]));
                     break;
                 case Operators.IsCallable:
+                    // IsCallable() is tightly tied to Call actions. So in general, we need the call-action providers to also
+                    // provide IsCallable() status. 
+                    // This is just a rough fallback. We could also attempt to simulate the default CallBinder logic to see
+                    // if there are any applicable calls targets, but that would be complex (the callbinder wants the argument list, 
+                    // which we don't have here), and still not correct. 
                     bool callable = false;
                     if (typeof(Delegate).IsAssignableFrom(_types[0]) ||
                         typeof(MethodGroup).IsAssignableFrom(_types[0])) {
@@ -366,25 +371,24 @@ namespace Microsoft.Scripting.Actions {
             if (defaults.Length != 0) {
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
                     oper == Operators.GetItem ? "get_Item" : "set_Item",
-                    defaults,
-                    BinderType.Normal);
+                    defaults);
 
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, _types);
+                BindingTarget target = binder.MakeBindingTarget(CallType.ImplicitInstance, _types);
 
-                if (cand != null) {
+                if (target.Success) {
                     if (oper == Operators.GetItem) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, cand.Target.MakeExpression(_rule, _rule.Parameters, _types)));
+                        _rule.SetTarget(_rule.MakeReturn(Binder, target.MakeExpression(_rule, _rule.Parameters)));
                     } else {
 
                         _rule.SetTarget(_rule.MakeReturn(Binder,
-                            Ast.Comma(0,
-                                _rule.Parameters[2],
-                                cand.Target.MakeExpression(_rule, _rule.Parameters, _types)
+                            Ast.Comma(
+                                target.MakeExpression(_rule, _rule.Parameters),
+                                _rule.Parameters[2]
                             )
                         ));
                     }
                 } else {
-                    _rule.SetTarget(Binder.MakeInvalidParametersError(binder, Action, CallType.None, defaults, _rule, _args));
+                    _rule.SetTarget(Binder.MakeInvalidParametersError(target).MakeErrorForRule(_rule, Binder));
                 }
                 return true;
             }
@@ -450,10 +454,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private bool TryMakeBindingTarget(MethodInfo[] targets) {
-            MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
-            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
-            if (mc != null) {
-                Expression call = mc.Target.MakeExpression(_rule, _rule.Parameters, _types);
+            MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets);
+            BindingTarget target = mb.MakeBindingTarget(CallType.None, _types);
+            if (target.Success) {
+                Expression call = target.MakeExpression(_rule, _rule.Parameters);
                 _rule.SetTarget(_rule.MakeReturn(Binder, call));
                 return true;
             }
@@ -461,10 +465,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private bool TryMakeInvertedBindingTarget(MethodInfo[] targets) {
-            MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets, BinderType.Normal);
-            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, _types);
-            if (mc != null) {
-                Expression call = mc.Target.MakeExpression(_rule, _rule.Parameters, _types);
+            MethodBinder mb = MethodBinder.MakeBinder(Binder, targets[0].Name, targets);
+            BindingTarget target = mb.MakeBindingTarget(CallType.None, _types);
+            if (target.Success) {
+                Expression call = target.MakeExpression(_rule, _rule.Parameters);
                 _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(call)));
                 return true;
             }

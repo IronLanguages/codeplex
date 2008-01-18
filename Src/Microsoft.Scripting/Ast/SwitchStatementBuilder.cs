@@ -38,32 +38,32 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-        public SwitchStatementBuilder Default(Statement body) {
+        public SwitchStatementBuilder Default(Expression body) {
             return Default(SourceLocation.None, body);
         }
 
-        public SwitchStatementBuilder Default(SourceLocation header, Statement body) {
+        public SwitchStatementBuilder Default(SourceLocation header, Expression body) {
             Contract.Requires(_default == false, "body", "Already has default clause");
             _cases.Add(Ast.DefaultCase(header, body));
             _default = true;
             return this;
         }
 
-        public SwitchStatementBuilder Case(int value, Statement body) {
+        public SwitchStatementBuilder Case(int value, Expression body) {
             return Case(SourceLocation.None, value, body);
         }
 
-        public SwitchStatementBuilder Case(SourceLocation header, int value, Statement body) {
+        public SwitchStatementBuilder Case(SourceLocation header, int value, Expression body) {
             _cases.Add(Ast.SwitchCase(header, value, body));
             return this;
         }
 
-        public Statement ToStatement() {
+        public Expression ToStatement() {
             Contract.Requires(_test != null);
             return Ast.Switch(_span, _header, _test, _cases.ToArray());
         }
 
-        public static implicit operator Statement(SwitchStatementBuilder builder) {
+        public static implicit operator Expression(SwitchStatementBuilder builder) {
             return builder.ToStatement();
         }
     }
