@@ -56,7 +56,7 @@ namespace IronPython.Compiler.Ast {
             get { return _else; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // Temporary variable for the IEnumerator object
             MSAst.Variable enumerator = ag.MakeTemp(SymbolTable.StringToId("foreach_enumerator"), typeof(IEnumerator));
 
@@ -86,14 +86,14 @@ namespace IronPython.Compiler.Ast {
             walker.PostWalk(this);
         }
 
-        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
+        internal static MSAst.Expression TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
                                                     Expression list, Expression left, Statement body,
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             return TransformForStatement(ag, enumerator, list, left, ag.Transform(body), else_, span, header);
         }
 
-        internal static MSAst.Statement TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
-                                                    Expression list, Expression left, MSAst.Statement body,
+        internal static MSAst.Expression TransformForStatement(AstGenerator ag, MSAst.Variable enumerator,
+                                                    Expression list, Expression left, MSAst.Expression body,
                                                     Statement else_, SourceSpan span, SourceLocation header) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
             MSAst.BoundAssignment init = Ast.Assign(

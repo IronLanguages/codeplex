@@ -16,9 +16,20 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class ScopeStatement : Statement {
+    public sealed class ScopeStatement : Expression, ISpan {
         private readonly Expression _scope;
-        private readonly Statement/*!*/ _body;
+        private readonly Expression/*!*/ _body;
+
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
+
+        internal ScopeStatement(SourceLocation start, SourceLocation end, Expression scope, Expression/*!*/ body)
+            : base(AstNodeType.ScopeStatement, typeof(void)) {
+            _start = start;
+            _end = end;
+            _scope = scope;
+            _body = body;
+        }
 
         public Expression Scope {
             get {
@@ -26,16 +37,18 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public Statement/*!*/ Body {
+        public Expression/*!*/ Body {
             get {
                 return _body;
             }
         }
 
-        internal ScopeStatement(SourceSpan span, Expression scope, Statement/*!*/ body)
-            : base(AstNodeType.ScopeStatement, span) {
-            _scope = scope;
-            _body = body;
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -43,16 +56,16 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// </summary>
     public static partial class Ast {
-        public static ScopeStatement Scope(Expression/*!*/ scope, Statement/*!*/ body) {
+        public static ScopeStatement Scope(Expression/*!*/ scope, Expression/*!*/ body) {
             return Scope(SourceSpan.None, scope, body);
         }
 
-        public static ScopeStatement Scope(SourceSpan span, Expression/*!*/ scope, Statement/*!*/ body) {
+        public static ScopeStatement Scope(SourceSpan span, Expression/*!*/ scope, Expression/*!*/ body) {
 // TODO:            Contract.RequiresNotNull(scope, "scope");
             Contract.RequiresNotNull(body, "body");
 // TODO:            Contract.Requires(TypeUtils.CanAssign(typeof(LocalScope), scope.Type), "scope", "Scope must of type LocalScope");
 
-            return new ScopeStatement(span, scope, body);
+            return new ScopeStatement(span.Start, span.End, scope, body);
         }
     }
 }

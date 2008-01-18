@@ -17,91 +17,31 @@ using System;
 using System.Diagnostics;
 using System.Reflection.Emit;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     // TODO: Make internal, don't allow direct callers
     public partial class Compiler {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public void EmitStatement(Statement node) {
-            Debug.Assert(node != null);
-
-            switch (node.NodeType) {
-                case AstNodeType.BlockStatement:
-                    Emit((BlockStatement)node);
-                    break;
-
-                case AstNodeType.BreakStatement:
-                    Emit((BreakStatement)node);
-                    break;
-
-                case AstNodeType.ContinueStatement:
-                    Emit((ContinueStatement)node);
-                    break;
-
-                case AstNodeType.DeleteStatement:
-                    Emit((DeleteStatement)node);
-                    break;
-
-                case AstNodeType.DoStatement:
-                    Emit((DoStatement)node);
-                    break;
-
-                case AstNodeType.EmptyStatement:
-                    Emit((EmptyStatement)node);
-                    break;
-
-                case AstNodeType.ExpressionStatement:
-                    Emit((ExpressionStatement)node);
-                    break;
-
-                case AstNodeType.IfStatement:
-                    Emit((IfStatement)node);
-                    break;
-
-                case AstNodeType.LabeledStatement:
-                    Emit((LabeledStatement)node);
-                    break;
-
-                case AstNodeType.LoopStatement:
-                    Emit((LoopStatement)node);
-                    break;
-
-                case AstNodeType.ReturnStatement:
-                    Emit((ReturnStatement)node);
-                    break;
-
-                case AstNodeType.ScopeStatement:
-                    Emit((ScopeStatement)node);
-                    break;
-
-                case AstNodeType.SwitchStatement:
-                    Emit((SwitchStatement)node);
-                    break;
-
-                case AstNodeType.ThrowStatement:
-                    Emit((ThrowStatement)node);
-                    break;
-
-                case AstNodeType.TryStatement:
-                    Emit((TryStatement)node);
-                    break;
-
-                case AstNodeType.YieldStatement:
-                    Emit((YieldStatement)node);
-                    break;
-
-                default:
-                    throw new InvalidOperationException();
-            }
+        private void Emit(Block node) {
+            EmitPosition(node.Start, node.End);
+            EmitBlockPrefix(node, node.Expressions.Count);
         }
 
-        private void Emit(BlockStatement node) {
-            EmitPosition(node.Start, node.End);
+        private void EmitBlockPrefix(Block node, int count) {
+            ReadOnlyCollection<Expression> expressions = node.Expressions;
+            for (int index = 0; index < count; index++) {
+                Expression current = expressions[index];
 
-            foreach (Statement stmt in node.Statements) {
-                EmitStatement(stmt);
+                // Emit the expression
+                EmitExpression(current);
+
+                // If we don't want the expression just emitted as the result,
+                // pop it off of the stack, unless it is a void expression.
+                if ((index != expressions.Count - 1 || node.Type == typeof(void)) && current.Type != typeof(void)) {
+                    Emit(OpCodes.Pop);
+                }
             }
         }
 
@@ -135,7 +75,8 @@ namespace Microsoft.Scripting.Ast {
 
         private void Emit(DeleteStatement node) {
             EmitPosition(node.Start, node.End);
-            node.Ref.Slot.EmitDelete(this, node.Variable.Name, !node.IsDefined);
+            Slot slot = GetVariableSlot(node.Variable);
+            slot.EmitDelete(this, node.Variable.Name, !node.IsDefined);
         }
 
         private void Emit(DoStatement node) {
@@ -146,7 +87,7 @@ namespace Microsoft.Scripting.Ast {
             MarkLabel(startTarget);
             PushTargets(breakTarget, continueTarget, node);
 
-            EmitStatement(node.Body);
+            EmitExpressionAndPop(node.Body);
 
             MarkLabel(continueTarget);
             // TODO: Check if we need to emit position somewhere else also.
@@ -166,28 +107,7 @@ namespace Microsoft.Scripting.Ast {
 
         private void Emit(ExpressionStatement node) {
             EmitPosition(node.Start, node.End);
-            EmitExpressionAndPop(node.Expression);
-        }
-
-        private void Emit(IfStatement node) {
-            Label eoi = DefineLabel();
-            foreach (IfStatementTest t in node.Tests) {
-                Label next = DefineLabel();
-                EmitPosition(t.Start, t.Header);
-
-                EmitBranchFalse(t.Test, next);
-
-                EmitStatement(t.Body);
-
-                // optimize no else case                
-                EmitSequencePointNone();     // hide compiler generated branch.
-                Emit(OpCodes.Br, eoi);
-                MarkLabel(next);
-            }
-            if (node.ElseStatement != null) {
-                EmitStatement(node.ElseStatement);
-            }
-            MarkLabel(eoi);
+            EmitExpression(node.Expression);
         }
 
         private void Emit(LabeledStatement node) {
@@ -199,7 +119,7 @@ namespace Microsoft.Scripting.Ast {
             Label label = DefineLabel();
             PushTargets(label, label, node);
 
-            EmitStatement(node.Statement);
+            EmitExpressionAndPop(node.Statement);
 
             MarkLabel(label);
             PopTargets();
@@ -233,7 +153,7 @@ namespace Microsoft.Scripting.Ast {
 
             PushTargets(breakTarget, continueTarget, node);
 
-            EmitStatement(node.Body);
+            EmitExpressionAndPop(node.Body);
 
             Emit(OpCodes.Br, continueTarget);
 
@@ -241,7 +161,7 @@ namespace Microsoft.Scripting.Ast {
 
             MarkLabel(eol);
             if (node.ElseStatement != null) {
-                EmitStatement(node.ElseStatement);
+                EmitExpressionAndPop(node.ElseStatement);
             }
             MarkLabel(breakTarget);
         }
@@ -257,9 +177,9 @@ namespace Microsoft.Scripting.Ast {
 
             // TODO: should work with LocalScope
             if (node.Scope != null) {
-                EmitExpression(node.Scope);  //Locals dictionary
-                EmitCodeContext();       //CodeContext
-                EmitBoolean(true);       //Visible = true
+                EmitExpression(node.Scope);     //Locals dictionary
+                EmitCodeContext();              //CodeContext
+                EmitBoolean(true);              //Visible = true
                 EmitCall(typeof(RuntimeHelpers), "CreateNestedCodeContext");
             } else {
                 EmitCodeContext();
@@ -270,7 +190,7 @@ namespace Microsoft.Scripting.Ast {
 
             ContextSlot = newContext;
 
-            EmitStatement(node.Body);
+            EmitExpressionAndPop(node.Body);
 
             ContextSlot = tempContext;
         }
@@ -315,7 +235,7 @@ namespace Microsoft.Scripting.Ast {
                 // First put the corresponding labels
                 MarkLabel(labels[i]);
                 // And then emit the Body!!
-                EmitStatement(node.Cases[i].Body);
+                EmitExpressionAndPop(node.Cases[i].Body);
             }
 
             PopTargets();
@@ -502,7 +422,7 @@ namespace Microsoft.Scripting.Ast {
             EmitYieldDispatch(node.TryYields);
 
             // Then, emit the actual body
-            EmitStatement(node.Body);
+            EmitExpressionAndPop(node.Body);
             EmitSequencePointNone();
 
             //******************************************************************
@@ -526,7 +446,7 @@ namespace Microsoft.Scripting.Ast {
                         // Save the exception (if the catch block asked for it) or pop
                         EmitSaveExceptionOrPop(cb);
                         // Emit the body right now, since it doesn't contain yield
-                        EmitStatement(cb.Body);
+                        EmitExpressionAndPop(cb.Body);
                     }
                 }
 
@@ -543,12 +463,13 @@ namespace Microsoft.Scripting.Ast {
                     EmitNull();
                     Emit(OpCodes.Beq, next);
 
-                    if (cr.Block.Slot != null) {
-                        cr.Block.Slot.EmitSet(this, cr.Slot);
+                    if (cr.Block.Variable != null) {
+                        Slot slot = GetVariableSlot(cr.Block.Variable);
+                        slot.EmitSet(this, cr.Slot);
                     }
 
                     FreeLocalTmp(cr.Slot);
-                    EmitStatement(cr.Block.Body);
+                    EmitExpressionAndPop(cr.Block.Body);
                     MarkLabel(next);
                     EmitSequencePointNone();
                 }
@@ -580,7 +501,7 @@ namespace Microsoft.Scripting.Ast {
 
                 // Emit the finally body
 
-                EmitStatement(node.FinallyStatement);
+                EmitExpressionAndPop(node.FinallyStatement);
 
                 // Rethrow the exception, if any
 
@@ -630,10 +551,10 @@ namespace Microsoft.Scripting.Ast {
 
         private void EmitSaveExceptionOrPop(CatchBlock cb) {
             if (cb.Variable != null) {
-                Debug.Assert(cb.Slot != null);
                 // If the variable is present, store the exception
                 // in the variable.
-                cb.Slot.EmitSet(this);
+                Slot slot = GetVariableSlot(cb.Variable);
+                slot.EmitSet(this);
             } else {
                 // Otherwise, pop it off the stack.
                 Emit(OpCodes.Pop);
@@ -745,7 +666,7 @@ namespace Microsoft.Scripting.Ast {
             // 2. Emit the try statement body
             //******************************************************************
 
-            EmitStatement(node.Body);
+            EmitExpressionAndPop(node.Body);
             EmitSequencePointNone();
 
             //******************************************************************
@@ -765,7 +686,7 @@ namespace Microsoft.Scripting.Ast {
                     //
                     // Emit the catch block body
                     //
-                    EmitStatement(cb.Body);
+                    EmitExpressionAndPop(cb.Body);
                 }
 
                 PopTargets(TargetBlockType.Catch);
@@ -802,7 +723,7 @@ namespace Microsoft.Scripting.Ast {
                 //
                 // Emit the finally block body
                 //
-                EmitStatement(node.FinallyStatement);
+                EmitExpressionAndPop(node.FinallyStatement);
 
                 if (flow.Any) {
                     Debug.Assert(rethrow != null);

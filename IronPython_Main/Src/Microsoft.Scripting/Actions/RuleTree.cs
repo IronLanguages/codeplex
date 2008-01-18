@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Actions {
                         
                     CodeContext tmpCtx = callerContext.Scope.GetTemporaryVariableContext(callerContext, rule.ParamVariables, args);
                     try {
-                        if ((bool)Interpreter.EvaluateExpression(tmpCtx, rule.Test)) {
+                        if ((bool)Interpreter.Evaluate(tmpCtx, rule.Test)) {
                             // Tentative optimization of moving rule to front of list when found
                             ruleList.Remove(node);
                             ruleList.AddFirst(node);

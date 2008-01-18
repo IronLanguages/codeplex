@@ -54,85 +54,20 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         public IDispatchObject DispatchObject { get { return _dispatch; } }
         public ComMethodDesc ComMethodDesc { get { return _methodDesc; } }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        private object[] GetArgsForCall(CodeContext context, object[] originalArgs, out ParameterModifier parameterModifiers) {
-
-            int countOfArgsForCall = originalArgs.Length;
-
-            VarEnumSelector varEnumSelector = new VarEnumSelector(context.LanguageContext.Binder, originalArgs);
-            originalArgs = varEnumSelector.ConvertArguments();
-
-            ComDispatch.ComParamDesc[] paramsDesc = _methodDesc.Parameters;
-
-            // TODO: Redo this code
-            if (paramsDesc != null) {
-                for (int i = countOfArgsForCall; i < paramsDesc.Length; i++) {
-                    // Find number of required user arguments (some of which may be out params)
-                    if (paramsDesc[i].IsOptional == false) {
-                        countOfArgsForCall = i + 1;
-                    }
-                }
-            }
-
-            if (countOfArgsForCall == 0) {
-                parameterModifiers = new ParameterModifier();
-                return originalArgs;
-            }
-
-            object[] argsForCall = new object[countOfArgsForCall];
-
-            parameterModifiers = new ParameterModifier(countOfArgsForCall);
-
-            // TODO: we should throw exception when number of expected params
-            // TODO: is smaller than the number of parameters passed by user to
-            // TODO: the call.
-
-            for (int i = 0; i < countOfArgsForCall; i++) {
-                if (i < originalArgs.Length) {
-                    object arg = originalArgs[i];
-                    if (arg is IStrongBox) {
-                        argsForCall[i] = (arg as IStrongBox).Value;
-                        parameterModifiers[i] = true;
-                    } else {
-                        argsForCall[i] = arg;
-                        if (paramsDesc != null && i < paramsDesc.Length && paramsDesc[i].ByReference) {
-                            parameterModifiers[i] = true;
-                        }
-                    }
-                } else {
-                    // we need to fill in some params that were not 
-                    // provided by the user.
-                    // We will fill in parameters according to what
-                    // we know from its ITypeInfo description.
-                    if (paramsDesc[i].IsOptional) {
-                        argsForCall[i] = System.Type.Missing;
-                    } else if (paramsDesc[i].IsOut) {
-                        argsForCall[i] = Activator.CreateInstance(paramsDesc[i].ParameterType);
-                        parameterModifiers[i] = true;
-                    }
-                }
-            }
-
-            return argsForCall;
-        }
-
-        public static void UpdateByrefArguments(object[] originalArgs, object[] argsForCall, ParameterModifier parameterModifiers) {
-
-            for (int i = 0; i < originalArgs.Length; i++) {
-                if (parameterModifiers[i]) {
-                    IStrongBox strongBox = originalArgs[i] as IStrongBox;
-                    if (strongBox != null) {
-                        strongBox.Value = argsForCall[i];
-                    }
-                }
+        internal void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
+            VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
+            object[] allArgs = ArrayUtils.Insert<object>(this, explicitArgs);
+            for (int i = 0; i < variantBuilders.Length; i++) {
+                variantBuilders[i].ArgBuilder.UpdateFromReturn(argsForCall[i], allArgs);
             }
         }
 
-        public object UnoptimizedInvoke(CodeContext context, params object[] args) {
+        public object UnoptimizedInvoke(CodeContext context, SymbolId[] keywordArgNames, params object[] explicitArgs) {
             try {
+                VarEnumSelector varEnumSelector = new VarEnumSelector(context.LanguageContext.Binder, typeof(object), explicitArgs);
+                object[] allArgs = ArrayUtils.Insert<object>(this, explicitArgs);
                 ParameterModifier parameterModifiers;
-
-                object[] argsForCall = GetArgsForCall(context, args, out parameterModifiers);
+                object[] argsForCall = varEnumSelector.BuildArguments(context, allArgs, out parameterModifiers);
 
                 BindingFlags bindingFlags = BindingFlags.Instance;
                 if (_methodDesc.IsPropertyGet) {
@@ -143,21 +78,31 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     bindingFlags |= BindingFlags.InvokeMethod;
                 }
 
+                string memberName = _methodDesc.DispIdString; // Use the "[DISPID=N]" format to avoid a call to GetIDsOfNames
+                string[] namedParams = null;
+                if (keywordArgNames.Length > 0) {
+                    // InvokeMember does not allow the method name to be in "[DISPID=N]" format if there are namedParams
+                    memberName = _methodDesc.Name;
+
+                    namedParams = SymbolTable.IdsToStrings(keywordArgNames);
+                    argsForCall = ArrayUtils.RotateRight(argsForCall, namedParams.Length);
+                }
+
                 // We use Type.InvokeMember instead of IDispatch.Invoke so that we do not
                 // have to worry about marshalling the arguments. Type.InvokeMember will use
                 // IDispatch.Invoke under the hood.
                 object retVal = _dispatch.DispatchObject.GetType().InvokeMember(
-                    _methodDesc.DispIdOrName,
+                    memberName,
                     bindingFlags,
                     Type.DefaultBinder,
                     _dispatch.DispatchObject,
                     argsForCall,
                     new ParameterModifier[] { parameterModifiers },
                     null,
-                    null
+                    namedParams
                     );
 
-                UpdateByrefArguments(args, argsForCall, parameterModifiers);
+                UpdateByrefArguments(explicitArgs, argsForCall, varEnumSelector);
 
                 return retVal;
             } catch (TargetInvocationException e) {
@@ -210,8 +155,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return rule;
         }
 
-        private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] currentInstanceAndArgs) {
-            IDispatchCallBinderHelper<T> helper = new IDispatchCallBinderHelper<T>(context, action, currentInstanceAndArgs);
+        private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+            IDispatchCallBinderHelper<T> helper = new IDispatchCallBinderHelper<T>(context, action, args);
             return helper.MakeRule();
         }
 

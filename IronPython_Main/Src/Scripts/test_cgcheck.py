@@ -34,6 +34,7 @@ def test_main(level='full'):
         'generate_walker',
         'generate_typecache',
         'generate_comdispatch',
+        'generate_tree',
         ]
 
     for gen in generators:

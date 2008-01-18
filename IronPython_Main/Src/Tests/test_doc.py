@@ -161,7 +161,7 @@ def test_func_meth_class():
 @skip('win32')
 def test_clr_doc():
     import System
-    Assert(System.Collections.Generic.List.__doc__.find("List`1()") != -1)
+    Assert(System.Collections.Generic.List.__doc__.find("List[T]()") != -1)
     Assert(System.Collections.Generic.List.__doc__.find("IEnumerable[T] collection") != -1)
 
     # static (bool, float) TryParse(str s)

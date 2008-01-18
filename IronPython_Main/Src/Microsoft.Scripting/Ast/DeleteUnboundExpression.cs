@@ -17,7 +17,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class DeleteUnboundExpression : Expression {
-        private SymbolId _name;
+        private readonly SymbolId _name;
 
         internal DeleteUnboundExpression(SymbolId name)
             : base(AstNodeType.DeleteUnboundExpression, typeof(object)) {

@@ -104,12 +104,13 @@ def test_generic_types():
     AreEqual(G2[int].A, 30)
     AreEqual(G2[int, int].A, 40)
 
+    AssertErrorWithMessage(ValueError, "The type or method has 1 generic parameter(s), but 0 generic argument(s) were provided. A generic argument must be provided for each generic parameter.", lambda: G3[()])
     AssertErrorWithMessage(ValueError, "GenericArguments[0], 'System.Exception', on 'NSwGeneric.G3`1[T]' violates the constraint of type 'T'.", lambda: G3[System.Exception])
     AreEqual(G3[int].A, 50)
     
     AssertErrorWithMessage(SystemError, "MakeGenericType on non-generic type", lambda: G4[()])
     AssertErrorWithMessage(SystemError, "MakeGenericType on non-generic type", lambda: G4[int])
-
+    
 def test_type_without_namespace():
     from PublicRefTypeWithoutNS import *    # warning expected
     AreEqual(Nested.A, 10)

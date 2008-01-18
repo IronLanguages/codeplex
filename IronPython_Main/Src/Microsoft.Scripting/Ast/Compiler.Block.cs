@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Ast {
                     size += block.GeneratorTemps;
 
                     foreach (Variable var in block.Variables) {
-                        if (var.Kind == Variable.VariableKind.GeneratorTemporary) {
+                        if (var.IsTemporary) {
                             size++;
                         }
                     }
@@ -174,7 +174,7 @@ namespace Microsoft.Scripting.Ast {
             foreach (Variable var in block.Variables) {
                 var.Allocate(cg);
             }
-            foreach (VariableReference r in block.References) {
+            foreach (VariableReference r in block.References.Values) {
                 r.CreateSlot(cg);
                 Debug.Assert(r.Slot != null);
             }
@@ -244,7 +244,7 @@ namespace Microsoft.Scripting.Ast {
 
             while (allocator != null) {
                 if (allocator.Block != null) {
-                    foreach (VariableReference reference in block.References) {
+                    foreach (VariableReference reference in block.References.Values) {
                         if (!reference.Variable.Lift && reference.Variable.Block == allocator.Block) {
                             Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Block);
                             if (accessSlot != null) {
@@ -418,6 +418,9 @@ namespace Microsoft.Scripting.Ast {
             impl = outer.DefineMethod(implName, block.ReturnType,
                 paramTypes, SymbolTable.IdsToStrings(paramNames), GetStaticDataForBody(outer));
 
+            // TODO: Cleanup!
+            impl.References = block.References;
+
             if (block.ExplicitCodeContextExpression != null) {
                 Slot localContextSlot = impl.GetLocalTmp(typeof(CodeContext));
 
@@ -532,6 +535,9 @@ namespace Microsoft.Scripting.Ast {
         internal void EmitFunctionImplementation(CodeBlock block) {
             CompilerHelpers.EmitStackTraceTryBlockStart(this);
 
+            // TODO: Cleanup!
+            _references = block.References;
+
             // emit the actual body
             EmitBody(this, block);
 
@@ -548,25 +554,21 @@ namespace Microsoft.Scripting.Ast {
 
         // Used by TreeCompiler
         internal static void EmitBody(Compiler cg, CodeBlock block) {
-            switch (block.NodeType) {
-                case AstNodeType.CodeBlock:
-                    EmitCodeBlockBody(cg, block);
-                    break;
-                case AstNodeType.GeneratorCodeBlock:
-                    EmitGeneratorCodeBlockBody(cg, (GeneratorCodeBlock)block);
-                    break;
-                default:
-                    throw new InvalidOperationException();
+            GeneratorCodeBlock gcb = block as GeneratorCodeBlock;
+            if (gcb != null) {
+                EmitGeneratorCodeBlockBody(cg, gcb);
+            } else {
+                EmitCodeBlockBody(cg, block);
             }
         }
 
         private static void EmitCodeBlockBody(Compiler cg, CodeBlock block) {
-            Debug.Assert(block.NodeType == AstNodeType.CodeBlock);
+            Debug.Assert(block.GetType() == typeof(CodeBlock));
 
             CreateEnvironmentFactory(block, false);
             CreateSlots(cg, block);
             if (cg.InterpretedMode) {
-                foreach (VariableReference vr in block.References) {
+                foreach (VariableReference vr in block.References.Values) {
                     if (vr.Variable.Kind == Variable.VariableKind.Local && vr.Variable.Block == block) {
                         vr.Slot.EmitSetUninitialized(cg);
                     }
@@ -575,7 +577,7 @@ namespace Microsoft.Scripting.Ast {
 
             cg.EmitBlockStartPosition(block);
 
-            cg.EmitStatement(block.Body);
+            cg.EmitExpression(block.Body);
 
             cg.EmitBlockEndPosition(block);
 
@@ -598,16 +600,18 @@ namespace Microsoft.Scripting.Ast {
                 return;
             }
 
-            if (block.Body.Start.IsValid) {
-                if (block.Body.Start != block.Start) {
+            ISpan span = block.Body as ISpan;
+            if (span != null && span.Start.IsValid) {
+                if (span.Start != block.Start) {
                     EmitPosition(block.Start, block.Start);
                 }
             } else {
-                BlockStatement body = block.Body as BlockStatement;
+                Block body = block.Body as Block;
                 if (block != null) {
-                    for (int i = 0; i < body.Statements.Count; i++) {
-                        if (body.Statements[i].Start.IsValid) {
-                            if (body.Statements[i].Start != block.Start) {
+                    for (int i = 0; i < body.Expressions.Count; i++) {
+                        span = body.Expressions[i] as ISpan;
+                        if (span != null && span.Start.IsValid) {
+                            if (span.Start != block.Start) {
                                 EmitPosition(block.Start, block.Start);
                             }
                             break;
@@ -632,6 +636,9 @@ namespace Microsoft.Scripting.Ast {
             where T : class {
             Compiler cg = CompilerHelpers.CreateDynamicCodeGenerator(context);
             cg.Allocator = CompilerHelpers.CreateFrameAllocator();
+
+            // TODO: Cleanup!
+            cg.References = block.References;
 
             cg.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
@@ -707,22 +714,25 @@ namespace Microsoft.Scripting.Ast {
         /// Emits the body of the function that creates a Generator object.  Also creates another
         /// Compiler for the inner method which implements the user code defined in the generator.
         /// </summary>
-        private static void EmitGeneratorBody(Compiler _impl, GeneratorCodeBlock block) {
-            Compiler ncg = CreateMethod(_impl, block);
-            ncg.EmitLineInfo = _impl.EmitLineInfo;
+        private static void EmitGeneratorBody(Compiler impl, GeneratorCodeBlock block) {
+            Compiler ncg = CreateMethod(impl, block);
+            ncg.EmitLineInfo = impl.EmitLineInfo;
+
+            // TODO: Cleanup!
+            ncg.References = block.References;
 
             ncg.Allocator.GlobalAllocator.PrepareForEmit(ncg);
 
-            Slot flowedContext = _impl.ContextSlot;
+            Slot flowedContext = impl.ContextSlot;
             // If there are no locals in the generator than we don't need the environment
             if (block.HasEnvironment) {
                 // Environment creation is emitted into outer function that returns the generator
                 // function and then flowed into the generator method on each call via the Generator
                 // instance.
-                _impl.EnvironmentSlot = EmitEnvironmentAllocation(_impl, block);
-                flowedContext = CreateEnvironmentContext(_impl, block);
+                impl.EnvironmentSlot = EmitEnvironmentAllocation(impl, block);
+                flowedContext = CreateEnvironmentContext(impl, block);
 
-                InitializeGeneratorEnvironment(_impl, block);
+                InitializeGeneratorEnvironment(impl, block);
 
                 // Promote env storage to local variable
                 // envStorage = ((FunctionEnvironment)context.Locals).Tuple
@@ -739,9 +749,9 @@ namespace Microsoft.Scripting.Ast {
             // Emit the generator body 
             EmitGenerator(ncg, block);
 
-            flowedContext.EmitGet(_impl);
-            _impl.EmitDelegateConstruction(ncg, block.DelegateType);
-            _impl.EmitNew(block.GeneratorType, new Type[] { typeof(CodeContext), block.DelegateType });
+            flowedContext.EmitGet(impl);
+            impl.EmitDelegateConstruction(ncg, block.DelegateType);
+            impl.EmitNew(block.GeneratorType, new Type[] { typeof(CodeContext), block.DelegateType });
         }
 
         private static string GetGeneratorMethodName(string name) {
@@ -750,7 +760,7 @@ namespace Microsoft.Scripting.Ast {
 
         private static void CreateReferenceSlots(Compiler cg, GeneratorCodeBlock block) {
             CreateAccessSlots(cg, block);
-            foreach (VariableReference r in block.References) {
+            foreach (VariableReference r in block.References.Values) {
                 r.CreateSlot(cg);
                 Debug.Assert(r.Slot != null);
             }
@@ -798,7 +808,7 @@ namespace Microsoft.Scripting.Ast {
             // fall-through on first pass
             // yield statements will insert the needed labels after their returns
 
-            ncg.EmitStatement(block.Body);
+            ncg.EmitExpression(block.Body);
 
             // fall-through is almost always possible in generators, so this
             // is almost always needed

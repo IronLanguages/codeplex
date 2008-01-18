@@ -29,9 +29,13 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     public delegate PythonType TypeBuilderDelegate(Type t);
+        
+
+
 
     /// <summary>
     /// ReflectedTypeBuilder creates PythonType's for staticly defined .NET types.  These include:
@@ -109,7 +113,7 @@ namespace IronPython.Runtime.Types {
 
                 return DoBuild(pta.Name, t, null, pta.ImpersonateType, ((ScriptTypeAttribute)attrs[0]).Context);
             } else { 
-                Builder = new PythonTypeBuilder(t.Name, t);
+                Builder = new PythonTypeBuilder(PythonTypeOps.GetName(t), t);
             }
 
             return DoBuildWorker(t);
@@ -232,29 +236,6 @@ namespace IronPython.Runtime.Types {
                 value = new DelegateInvoker(instance, _invoker);
                 return true;
             }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
-        public class DelegateInvoker : ICallableWithCodeContext {
-            private BuiltinFunction _invoker;
-            private object _instance;
-            private DynamicSite<object, object[], object> _site;
-
-            public DelegateInvoker(object instance, BuiltinFunction invoker) {
-                _instance = instance;
-                _invoker = invoker;
-            }
-
-            #region ICallableWithCodeContext Members
-
-            [SpecialName]
-            public object Call(CodeContext context, object[] args) {
-                if (_site == null) _site = DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
-
-                return _site.Invoke(context, _invoker, args);
-            }
-
-            #endregion
         }
 
         private IList<Type> GetTypesForAdd() {
@@ -944,22 +925,7 @@ namespace IronPython.Runtime.Types {
         }
         #endregion
 
-        class DelegateBuilder : ICallableWithCodeContext {
-            private Type _type;
+    } // end ReflectedTypeBuilder
 
-            public DelegateBuilder(Type type) {
-                _type = type;
-            }
-
-            #region ICallableWithCodeContext Members
-
-            public object Call(CodeContext context, object[] args) {
-                Assert.NotNull(args);
-                return Microsoft.Scripting.RuntimeHelpers.GetDelegate(args[0], _type);
-            }
-
-            #endregion
-        }
-    }
 }
 

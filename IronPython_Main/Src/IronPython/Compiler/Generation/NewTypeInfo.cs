@@ -49,7 +49,7 @@ namespace IronPython.Compiler.Generation {
             }
         }
 
-        public IEnumerable<Type> InterfaceTypes {
+        public IList<Type> InterfaceTypes {
             get { return _interfaceTypes; }
         }
 

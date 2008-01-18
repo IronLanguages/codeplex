@@ -22,6 +22,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
 
@@ -176,9 +177,8 @@ namespace IronPython.Runtime {
     /// </summary>
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true, Inherited = false)]
     public sealed class PythonModuleAttribute : Attribute {
-        private readonly string name; 
-        private readonly Type type;
-        public static ConstructorInfo CtorInfo = typeof(PythonModuleAttribute).GetConstructor(new Type[] { typeof(string), typeof(Type) });
+        private readonly string/*!*/ _name; 
+        private readonly Type/*!*/ _type;
 
         /// <summary>
         /// Creates a new PythonModuleAttribute that can be used to specify a built-in module that exists
@@ -186,23 +186,26 @@ namespace IronPython.Runtime {
         /// </summary>
         /// <param name="name">The built-in module name</param>
         /// <param name="type">The type that implements the built-in module.</param>
-        public PythonModuleAttribute(string name, Type type) {
-            this.name = name;
-            this.type = type;
+        public PythonModuleAttribute(string/*!*/ name, Type/*!*/ type) {
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(type, "type");
+
+            this._name = name;
+            this._type = type;
         }
 
         /// <summary>
         /// The built-in module name
         /// </summary>
         public string Name {
-            get { return name; }
+            get { return _name; }
         }
 
         /// <summary>
         /// The type that implements the built-in module
         /// </summary>
         public Type Type {
-            get { return type; }
+            get { return _type; }
         }
 
     }

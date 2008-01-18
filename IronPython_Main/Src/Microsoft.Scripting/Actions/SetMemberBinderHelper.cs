@@ -244,7 +244,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Expression MakeReturnValue(Expression expression) {
-            return Ast.Comma(0, Rule.Parameters[1], expression);
+            return Ast.Comma(
+                expression,
+                Rule.Parameters[1]
+            );
         }
 
         /// <summary> if a member-injector is defined-on or registered-for this type call it </summary>
@@ -252,12 +255,12 @@ namespace Microsoft.Scripting.Actions {
             MethodInfo setMem = GetMethod(type, name);
             if (setMem != null && setMem.IsSpecialName) {
                 Expression call = Binder.MakeCallExpression(setMem, Rule.Parameters[0], Ast.Constant(StringName), Rule.Parameters[1]);
-                Statement ret;
+                Expression ret;
 
                 if (setMem.ReturnType == typeof(bool)) {
                     ret = Ast.If(call, Rule.MakeReturn(Binder, Rule.Parameters[1]));
                 } else {
-                    ret = Rule.MakeReturn(Binder, Ast.Comma(1, call, Rule.Parameters[1]));
+                    ret = Rule.MakeReturn(Binder, Ast.Comma(call, Rule.Parameters[1]));
                 }
                 AddToBody(ret);
                 return setMem.ReturnType != typeof(bool);

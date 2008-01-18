@@ -249,6 +249,7 @@ namespace Microsoft.Scripting {
 #if !SILVERLIGHT                            
                 { "-X:ColorfulConsole",          "Enable ColorfulConsole" },
 #endif
+                { "-X:DumpASTs",                 "Dump all ASTs generated to a file"},
                 { "-X:ExceptionDetail",          "Enable ExceptionDetail mode" },
                 { "-X:Interpret",                "Enable interpreted mode" },
                 { "-X:Frames",                   "Generate custom frames" },
@@ -260,7 +261,9 @@ namespace Microsoft.Scripting {
                 { "-X:PassExceptions",           "Do not catch exceptions that are unhandled by script code" },
                 { "-X:PrivateBinding",           "Enable binding to private members" },
                 { "-X:SaveAssemblies",           "Save generated assemblies" },
+                { "-X:ShowASTs",                 "Print all ASTs to the console" }, 
                 { "-X:ShowClrExceptions",        "Display CLS Exception information" },
+                { "-X:ShowRules",                "Show the AST for rules generated" },
                 { "-X:SlowOps",                  "Enable fast ops" },
                 { "-X:StaticMethods",            "Generate static methods only" },
 #if !SILVERLIGHT

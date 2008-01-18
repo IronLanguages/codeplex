@@ -100,7 +100,6 @@ def test_reflected_extension_property_ops():
     t_list = [  (complex.__dict__['real'], 'complex', 'float', 'Real'),
                 (complex.__dict__['imag'], 'complex', 'float', 'Imaginary'),
                 (object.__dict__['__class__'], 'object', 'type', '__class__'),
-                (object.__dict__['__module__'], 'object', 'str', '__module__'),
                 ]
     
     for stuff, typename, returnType, propName in t_list:

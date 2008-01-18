@@ -19,16 +19,36 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Summary description for Expr.
     /// </summary>
-    public abstract class Expression : Node {
+    public abstract class Expression {
+        private readonly AstNodeType _nodeType;
         private readonly Type /*!*/ _type;
 
-        protected Expression(AstNodeType nodeType, Type type)
-            : base(nodeType) {
+        protected Expression(AstNodeType nodeType, Type type) {
+            _nodeType = nodeType;
             _type = type;
+        }
+
+        public AstNodeType NodeType {
+            get { return _nodeType; }
         }
 
         public Type Type {
             get { return _type; }
         }
+
+ #if DEBUG
+        public string Dump {
+            get {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                    AstWriter.Dump(this, GetType().Name, writer);
+                    return writer.ToString();
+                }
+            }
+        }
+#endif
+    }
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
+    public static partial class Ast {
     }
 }

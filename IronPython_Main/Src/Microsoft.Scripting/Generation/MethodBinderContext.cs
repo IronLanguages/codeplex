@@ -14,8 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 
@@ -36,11 +35,7 @@ namespace Microsoft.Scripting.Generation {
             return _actionBinder.ConvertExpression(expr, type);
         }
 
-        public Expression CheckExpression(Expression expr, Type type) {
-            return _actionBinder.CheckExpression(expr, type);
-        }
-
-        public Variable GetTemporary(Type type, string name) {
+        public Variable GetTemporary(Type type, string name) {            
             return _rule.GetTemporary(type, name);
         }
 

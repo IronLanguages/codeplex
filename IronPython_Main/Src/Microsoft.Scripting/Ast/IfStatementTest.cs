@@ -16,21 +16,22 @@
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class IfStatementTest : Node {
+
+    // TODO: Remove???
+    public sealed class IfStatementTest {
         private readonly SourceLocation _start;
         private readonly SourceLocation _header;
         private readonly SourceLocation _end;
 
         private readonly Expression /*!*/ _test;
-        private readonly Statement /*!*/ _body;
+        private readonly Expression /*!*/ _body;
 
-        internal IfStatementTest(SourceSpan span, SourceLocation header, Expression /*!*/ test, Statement /*!*/ body)
-            : base(AstNodeType.IfStatementTest) {
+        internal IfStatementTest(SourceLocation start, SourceLocation end, SourceLocation header, Expression /*!*/ test, Expression /*!*/ body) {
             _test = test;
             _body = body;
             _header = header;
-            _start = span.Start;
-            _end = span.End;
+            _start = start;
+            _end = end;
         }
 
         public SourceLocation Start {
@@ -45,32 +46,26 @@ namespace Microsoft.Scripting.Ast {
             get { return _end; }
         }
 
-        public SourceSpan Span {
-            get {
-                return new SourceSpan(_start, _end);
-            }
-        }
-
         public Expression Test {
             get { return _test; }
         }
 
-        public Statement Body {
+        public Expression Body {
             get { return _body; }
         }
     }
 
     public static partial class Ast {
-        public static IfStatementTest IfCondition(Expression test, Statement body) {
+        public static IfStatementTest IfCondition(Expression test, Expression body) {
             return IfCondition(SourceSpan.None, SourceLocation.None, test, body);
         }
 
-        public static IfStatementTest IfCondition(SourceSpan span, SourceLocation header, Expression test, Statement body) {
+        public static IfStatementTest IfCondition(SourceSpan span, SourceLocation header, Expression test, Expression body) {
             Contract.RequiresNotNull(test, "test");
             Contract.RequiresNotNull(body, "body");
             Contract.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
 
-            return new IfStatementTest(span, header, test, body);
+            return new IfStatementTest(span.Start, span.End, header, test, body);
         }
 
         public static IfStatementTest[] IfConditions(params IfStatementTest[] tests) {

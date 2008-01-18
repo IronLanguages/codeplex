@@ -22,16 +22,16 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     class RuleBinder : Walker {
-        private Dictionary<Variable, VariableReference> _refs;
+        private readonly Dictionary<Variable, VariableReference> _refs = new Dictionary<Variable,VariableReference>();
         private readonly Type _result;
 
-        public static VariableReference[] Bind(Expression test, Statement target, Type result) {
+        public static Dictionary<Variable, VariableReference> Bind(Expression test, Expression target, Type result) {
             Assert.NotNull(test, target);
 
             RuleBinder rb = new RuleBinder(result);
             rb.WalkNode(test);
             rb.WalkNode(target);
-            return rb.GetReferences();
+            return rb._refs;
         }
 
         private RuleBinder(Type result) {
@@ -39,17 +39,17 @@ namespace Microsoft.Scripting.Actions {
         }
 
         protected internal override bool Walk(BoundAssignment node) {
-            node.Ref = GetOrMakeRef(node.Variable);
+            GetOrMakeRef(node.Variable);
             return true;
         }
 
         protected internal override bool Walk(BoundExpression node) {
-            node.Ref = GetOrMakeRef(node.Variable);
+            GetOrMakeRef(node.Variable);
             return true;
         }
 
         protected internal override bool Walk(DeleteStatement node) {
-            node.Ref = GetOrMakeRef(node.Variable);
+            GetOrMakeRef(node.Variable);
             return true;
         }
 
@@ -71,30 +71,15 @@ namespace Microsoft.Scripting.Actions {
 
         protected internal override bool Walk(CatchBlock node) {
             if (node.Variable != null) {
-                node.Ref = GetOrMakeRef(node.Variable);
+                GetOrMakeRef(node.Variable);
             }
             return true;
         }
 
-        private VariableReference GetOrMakeRef(Variable variable) {
+        private void GetOrMakeRef(Variable variable) {
             Debug.Assert(variable != null);
-            if (_refs == null) {
-                _refs = new Dictionary<Variable, VariableReference>();
-            }
-            VariableReference reference;
-            if (!_refs.TryGetValue(variable, out reference)) {
-                _refs[variable] = reference = new VariableReference(variable);
-            }
-            return reference;
-        }
-
-        private VariableReference[] GetReferences() {
-            if (_refs != null) {
-                VariableReference[] references = new VariableReference[_refs.Values.Count];
-                _refs.Values.CopyTo(references, 0);
-                return references;
-            } else {
-                return new VariableReference[0];
+            if (!_refs.ContainsKey(variable)) {
+                _refs[variable] = new VariableReference(variable);
             }
         }
     }

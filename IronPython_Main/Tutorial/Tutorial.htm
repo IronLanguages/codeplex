@@ -674,38 +674,31 @@
 	<p class="TypedExample">clr.AddReferenceByPartialName(&quot;System.Xml&quot;)</p>
 	<ol start="4">
 		<li>
-		<p class="Step">Load the XML file &quot;Releases.xml&quot; into the XmlDocument. The 
-		xml file contains the release dates of all versions of IronPython between 
-		0.7 and 0.9.4. For direct viewing, the Releases.xml file is located in &quot;Releases.xml&quot;</p>
+		<p class="Step">Load the XML file &quot;load.xml&quot; into the XmlDocument. The 
+		xml file contains sample savegame data from the IronPython sample &quot;Puzzle&quot; . 
+		For direct viewing, the load.xml file is located in the Tutorial folder</p>
 		</li>
 	</ol>
 	<p class="TypedExample">d = XmlDocument()</p>
-	<p class="TypedExample">d.Load(&quot;Releases.xml&quot;)</p>
+	<p class="TypedExample">d.Load(&quot;load.xml&quot;)</p>
 	<ol start="5">
 		<li>
-		<p class="Step">We can now query the document. Query for all released versions 
-		of IronPython using the query below:</p>
+		<p class="Step">We can now query the document. Query for all the saved games using the query below:</p>
 		</li>
 	</ol>
-	<p class="TypedExample">n = d.SelectNodes(&quot;//@Version&quot;)</p>
+	<p class="TypedExample">n = d.SelectNodes(&quot;//Puzzle/SavedGames/Game/@caption&quot;)</p>
 	<p class="TypedExample">for e in n: print e.Value</p>
 	<p class="Stepnonumbering">&nbsp;</p>
 	<p class="Stepnonumbering">The output in the console window will be:</p>
-	<p class="Code-Highlighted">&gt;&gt;&gt; n = d.SelectNodes(&quot;//@Version&quot;)<br />
+	<p class="Code-Highlighted">&gt;&gt;&gt; n = d.SelectNodes(&quot;//Puzzle/SavedGames/Game/@caption&quot;)<br />
 	&gt;&gt;&gt; for e in n: print e.Value</p>
 	<p class="Code-Highlighted">...</p>
-	<p class="Code-Background">0.7<br />
-	0.7.1<br />
-	0.7.2<br />
-	0.7.3<br />
-	0.7.4<br />
-	0.7.5<br />
-	0.7.6<br />
-	0.9<br />
-	0.9.1<br />
-	0.9.2<br />
-	0.9.3<br />
-	0.9.4</p>
+	<p class="Code-Background">
+	   Seattle (default game)<br />
+       New York<br />
+       World<br />
+       North America<br />
+    </p>
 	<ol start="6">
 		<li>
 		<p class="Step">(Optional) Import the &quot;xmlutil.py&quot; module located in the 
@@ -785,9 +778,9 @@
 	</ol>
 	<p class="TypedExample">print Matrix.__new__.__doc__</p>
 	<p class="Code-Highlighted">&gt;&gt;&gt; print Matrix.__new__.__doc__</p>
-	<p class="Code-Background">__new__(int, int)<br />
-	__new__(int, int, float)<br />
-	__new__(System.Double[][])</p>
+	<p class="Code-Background">__new__(cls, int, int)<br />
+	__new__(cls, int, int, float)<br />
+	__new__(cls, System.Double[][])</p>
 	<ol start="5">
 		<li>
 		<p class="Step">Create instances of the Matrix class using the correct constructors 
@@ -858,7 +851,7 @@
 		<p class="Step">Download the latest Python installer from
 		<a href="http://www.python.org/download/">http://www.python.org/download/</a> 
 		and install Python.&nbsp; The rest of this exercise will assume you used 
-		defaults (and installed to c:\python24, for example).</p>
+		defaults (and installed to c:\python25, for example).</p>
 		</li>
 		<li>
 		<p class="Step">Create a file named &quot;site.py&quot; and place it into your 
@@ -867,11 +860,11 @@
 		you run IronPython.&nbsp; To tell IronPython where the Python standard library 
 		is, you can add the &quot;lib&quot; directory of Python to IronPython's path.&nbsp; To 
 		do so, put the following code into IronPython's &quot;site.py&quot; file (replace 
-		c:\python24\lib with your actual path to the Python lib directory):</p>
+		c:\python25\lib with your actual path to the Python lib directory):</p>
 		</li>
 	</ol>
 	<p class="Code-Highlighted">import sys</p>
-<p class="Code-Highlighted">sys.path.append(<i>r&quot;c:\python24\lib&quot;</i>)</p>
+<p class="Code-Highlighted">sys.path.append(<i>r&quot;c:\python25\lib&quot;</i>)</p>
 	<ol start="3">
 		<li>
 		<p class="Step">Start the IronPython console from the tutorial directory 
@@ -1677,7 +1670,7 @@
 	</ol>
 	<p class="TypedExample">def suggestions(word):<br>
 &nbsp;&nbsp; res_objects = w.GetSpellingSuggestions(word)<br>
-&nbsp;&nbsp; return [x.Name for x in res_objects]</p>
+&nbsp;&nbsp; return [x.Name for x in res_objects.GetEnumerator()]</p>
 	<ol start="7">
 		<li>
 		<p class="Step">Now, let's shut down Word and exit the IronPython 

@@ -19,8 +19,8 @@ load_iron_python_test()
 import IronPythonTest
 
 import System
-from IronPython.Runtime.Exceptions import ExceptionConverter as EC
-from IronPython.Runtime.Exceptions import ExceptionMapping
+#from IronPython.Runtime.Exceptions import ExceptionConverter as EC
+#from IronPython.Runtime.Exceptions import ExceptionMapping
 
 # CreatePythonException
 
@@ -136,6 +136,6 @@ def test_CreateExceptionMapping_CLR2Py_WithMapping():
 
     Assert(success, "Python version of CLR exception not caught, despite mapping")
 
-run_test(__name__)
+#run_test(__name__)
 
 

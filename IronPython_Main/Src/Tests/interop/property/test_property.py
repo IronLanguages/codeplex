@@ -146,14 +146,14 @@ def test_basic():
         
         p = t.InstanceSimpleStructProperty
         p.SetValue(x, b)
-        #AreEqual(p.GetValue(x).Flag, b.Flag)   # bug 362939
+        AreEqual(p.GetValue(x).Flag, b.Flag)
         
         p.__set__(y, b)
         #AreEqual(p.__get__(y).Flag, b.Flag)
         
         p = t.InstanceSimpleClassProperty
         p.SetValue(x, c)
-        #AreEqual(p.GetValue(x), c)             # bug 362939
+        AreEqual(p.GetValue(x), c) 
         
         p.__set__(y, c)
         #AreEqual(p.__get__(y), c)

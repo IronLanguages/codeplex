@@ -285,7 +285,7 @@ if is_cli:
                         return 'def'
                     return super(self, dictType).__getitem__(key)
         except TypeError, ex:
-            Assert(ex.msg.find('cannot derive from sealed or value types') != -1)
+            Assert(ex.message.find('cannot derive from sealed or value types') != -1)
         else:
             try:
                 nd = newDict()

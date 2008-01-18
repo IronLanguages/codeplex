@@ -272,7 +272,7 @@ namespace IronPython.Modules {
         }
 
         private static Scope/*!*/ LoadPythonSource(PythonContext/*!*/ context, string/*!*/ name, PythonFile/*!*/ file, string/*!*/ fileName) {
-            SourceUnit sourceUnit = context.CreateSnippet(file.Read(), fileName, SourceCodeKind.File);
+            SourceUnit sourceUnit = context.CreateSnippet(file.Read(), String.IsNullOrEmpty(fileName) ? null : fileName, SourceCodeKind.File);
             return context.CompileAndInitializeModule(name, fileName, sourceUnit).Scope;
         }
 

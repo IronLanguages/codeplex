@@ -60,6 +60,9 @@ namespace Microsoft.Scripting.Generation {
             List<Expression> sets = new List<Expression>();
 
             Variable tmp = context.GetTemporary(ret.Type, "val");
+            sets.Add(
+                Ast.Assign(tmp, ret)
+            );
 
             for (int i = 0; i < _indexesUsed.Length; i++) {
                 Expression value = parameters[parameters.Count - _kwArgCount + _indexesUsed[i]];
@@ -71,7 +74,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignField(
                                     Ast.Read(tmp),
                                     fi,
-                                    Ast.Action.ConvertTo(fi.FieldType, value)
+                                    ConvertToHelper(value, fi.FieldType)
                                 )
                             );
                         } else {
@@ -95,7 +98,7 @@ namespace Microsoft.Scripting.Generation {
                                 Ast.AssignProperty(
                                     Ast.Read(tmp),
                                     pi,
-                                    Ast.Action.ConvertTo(pi.PropertyType, value)
+                                    ConvertToHelper(value, pi.PropertyType)
                                 )
                             );
                         } else {
@@ -115,15 +118,22 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
 
+            sets.Add(
+                Ast.Read(tmp)
+            );
+
             Expression newCall = Ast.Comma(
-                0,
-                ArrayUtils.Insert<Expression>(
-                    Ast.Assign(tmp, ret),
-                    sets.ToArray()
-                )
+                sets.ToArray()
             );
 
             return _builder.ToExpression(context, args, parameters, newCall);
+        }
+
+        private static Expression ConvertToHelper(Expression value, Type type) {
+            if (type == value.Type) return value;
+            if (type.IsAssignableFrom(value.Type)) return Ast.ConvertHelper(value, type);
+
+            return Ast.Action.ConvertTo(type, value);
         }
     }
 }

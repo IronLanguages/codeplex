@@ -34,6 +34,7 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Hosting;
+using System.Threading;
 
 namespace IronPython.Runtime {
     
@@ -43,6 +44,7 @@ namespace IronPython.Runtime {
     /// </summary>
     public sealed class Importer {
         private readonly PythonContext/*!*/ _context;
+        private PythonModule _clrModule;
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> _importSite = MakeImportSite();
 
@@ -154,14 +156,6 @@ namespace IronPython.Runtime {
             if (newmod == null) {
                 newmod = ImportTopAbsolute(context, parts[0]);
                 
-                // fallback to DLR way of resolving source units:
-                if (newmod == null) {
-                    ScriptScope scope = ScriptDomainManager.CurrentManager.UseModule(modName);
-                    if (scope != null) {
-                        return scope.Scope;
-                    }
-                }
-
                 if (newmod == null) {
                     return null;
                 }
@@ -402,17 +396,31 @@ namespace IronPython.Runtime {
 
         internal object ImportBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
             Assert.NotNull(context, name);
-            RuntimeHelpers.TopNamespace.Initialize();
 
-            if (name.Equals("sys")) {
+            if (name == "sys") {
                 return _context.SystemState;
-            }
+            } else if (name == "clr") {
+                if (_clrModule == null) {
+                    Interlocked.CompareExchange<PythonModule>(
+                        ref _clrModule,
+                        CreateBuiltinModule(name),
+                        null);
+                }
 
-            if (name.Equals("clr")) {
                 context.ModuleContext.ShowCls = true;
-                return _context.SystemState.ClrModule;
+                return _clrModule.Scope;
+            } else {
+                PythonModule mod = CreateBuiltinModule(name);
+                if (mod != null) {
+                    _context.PublishModule(name, mod);
+                    return mod.Scope;
+                }
             }
+                                 
+            return null;
+        }
 
+        private PythonModule CreateBuiltinModule(string name) {
             Type type;
             if (_context.SystemState.Builtins.TryGetValue(name, out type)) {
                 // RuntimeHelpers.RunClassConstructor
@@ -422,15 +430,19 @@ namespace IronPython.Runtime {
                 // cctor runs after we've done a bunch of reflection over the type that doesn't
                 // force the cctor to run.
                 System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
-                PythonModule module = _context.CreateBuiltinModule(name, type);
-                _context.PublishModule(name, module);
-                return module.Scope;
+                return _context.CreateBuiltinModule(name, type);
             }
+
             return null;
         }
 
         private object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {
-            MemberTracker res = RuntimeHelpers.TopNamespace.TryGetPackageAny(name);
+            object ret;
+            if (!context.LanguageContext.DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
+                ret = ScriptDomainManager.CurrentManager.UseModule(name);
+            }
+
+            MemberTracker res = ret as MemberTracker;
             if (res != null) {
                 context.ModuleContext.ShowCls = true;
                 object realRes = res;
@@ -445,10 +457,9 @@ namespace IronPython.Runtime {
                         break;
                 }
              
-                _context.SystemState.modules[name] = realRes;                
                 return realRes;
             }
-            return res;
+            return ret;
         }
 
         private static bool IsReflected(object module) {

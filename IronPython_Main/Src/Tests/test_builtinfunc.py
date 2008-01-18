@@ -37,7 +37,39 @@ def test_callable():
     Assert(callable(C))
     Assert(not callable(C.x))
     Assert(not callable(__builtins__))
-    
+
+def test_callable_oldclass():
+    # for class instances, callable related to whether the __call__ attribute is defined.
+    # This can be mutated at runtime.
+    class Dold:
+        pass
+    d=Dold()
+    #
+    AreEqual(callable(d), False)
+    #
+    d.__call__ = None # This defines the attr, even though it's None
+    AreEqual(callable(d), True) # True for oldinstance, False for new classes.
+    #
+    del (d.__call__) # now remove the attr, no longer callable
+    AreEqual(callable(d), False)
+
+def test_callable_newclass():
+    class D(object):
+      pass
+    AreEqual(callable(D), True)
+    d=D()
+    AreEqual(callable(d), False)
+    #
+    # New class with a __call__ defined is callable()
+    class D2(object):
+      def __call__(self): pass
+    d2=D2()
+    AreEqual(callable(d2), True)
+    # Inherit callable
+    class D3(D2):
+      pass
+    d3=D3()
+    AreEqual(callable(d3), True)
 
 def test_cmp():
     x = {}

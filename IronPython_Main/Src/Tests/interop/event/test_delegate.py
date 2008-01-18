@@ -172,9 +172,10 @@ def test_interface_method():
         "MVoidInt32() takes exactly 2 arguments (1 given)",
         lambda: x(1))
 
+    # !!!
     x = InterfaceInt32Delegate(InterfaceWithTargetMethods.MVoidInt32)
-    AssertErrorWithMessage(SystemError, 
-        "Operation is not valid due to the current state of the object.",
+    AssertErrorWithMessage(TypeError, 
+        "expected InterfaceWithTargetMethods, got NoneType",
         lambda: x(None, 2))
 
 def test_methods_from_value_type():
@@ -208,7 +209,7 @@ def test_explicit_invocation():
     y = x.Invoke(432)
     Flag.Check(432)
 
-    #y = x.BeginInvoke(543, None, None)
+    #y = x.BeginInvoke(543, None, None)   # bug 363772
     #y.AsyncWaitHandle.WaitOne()
     #Flag.Check(543)
     

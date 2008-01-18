@@ -42,7 +42,7 @@ namespace IronPython.Compiler.Ast {
             get { return _traceback; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             return Ast.Throw(
                 Span,
                 Ast.Call(AstGenerator.GetHelperMethod("MakeException"),

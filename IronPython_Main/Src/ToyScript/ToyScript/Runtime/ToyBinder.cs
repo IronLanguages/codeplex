@@ -87,10 +87,6 @@ namespace ToyScript.Runtime {
             return Ast.ConvertHelper(expr, toType);
         }
 
-        public override Expression CheckExpression(Expression expr, Type toType) {
-            throw new NotImplementedException();
-        }
-
         #endregion
     }
 }

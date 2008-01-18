@@ -17,6 +17,7 @@
 
 namespace Microsoft.Scripting.Hosting {
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1027:MarkEnumsWithFlags")]
     public enum TokenCategory {
         None,
 
@@ -100,7 +101,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         Error,
 
-        LanguageDefined
+        LanguageDefined = 0x100
     }
 
     // not currently used, just for info

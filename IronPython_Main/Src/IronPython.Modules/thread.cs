@@ -37,8 +37,7 @@ namespace IronPython.Modules {
 
         #region Public API Surface
         public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(Lock));
-        public static object error = ExceptionConverter.CreatePythonException("error", "thread");
-
+        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "thread", "");
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
         [PythonName("start_new_thread")]
@@ -157,7 +156,7 @@ namespace IronPython.Modules {
             [PythonName("release")]
             public void Release() {
                 if (Interlocked.Exchange<Thread>(ref curHolder, null) == null) {
-                    throw PythonOps.MakeException(error, "lock isn't help", null);
+                    throw PythonExceptions.CreateThrowable(error, "lock isn't held", null);
                 }
                 if (blockEvent != null) {
                     // if this isn't set yet we race, it's handled in Acquire()
@@ -208,7 +207,7 @@ namespace IronPython.Modules {
                     } else {
                         PythonOps.CallWithArgsTuple(_func, ArrayUtils.EmptyObjects, _args);
                     }
-                } catch (PythonSystemExitException) {
+                } catch (SystemExitException) {
                     // ignore and quit
                 } catch (Exception e) {
                     PythonOps.Print("Unhandled exception on thread");

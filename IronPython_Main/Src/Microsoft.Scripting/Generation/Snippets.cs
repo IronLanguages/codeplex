@@ -103,10 +103,10 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public TypeGen DefineDebuggableType(string typeName, SourceUnit sourceUnit) {
+        public TypeGen DefineDebuggableType(string typeName, Type parent, SourceUnit sourceUnit) {
             typeName = typeName.Replace(Type.Delimiter, '_'); // '.' is for separating the namespace and the type name.
             DebugAssembly.SetSourceUnit(sourceUnit);
-            TypeGen tg = DebugAssembly.DefinePublicType(typeName + "$" + _debugTypeIndex++, typeof(object));
+            TypeGen tg = DebugAssembly.DefinePublicType(typeName + "$" + _debugTypeIndex++, parent);
             tg.TypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
             return tg;
         }

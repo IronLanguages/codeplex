@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Actions {
         private StandardRule<T> _rule;              // the rule being produced
         private Type _strongBoxType;                // null or the specific instantiated type of StrongBox
         private object[] _args;                     // the arguments we're creating a rule for 
-        private Statement _body = Ast.Empty();      // the body of the rule as it's built up
+        private Expression _body = Ast.Empty();      // the body of the rule as it's built up
         private object _target;
 
         public MemberBinderHelper(CodeContext context, TActionKind action, object []args)
@@ -150,7 +150,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// There is no setter on Body.  Use AddToBody to extend it instead.
         /// </summary>
-        protected Statement Body {
+        protected Expression Body {
             get {
                 return _body;
             }
@@ -159,12 +159,12 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Use this method to extend the Body.  It will create BlockStatements as needed.
         /// </summary>
-        /// <param name="statement"></param>
-        protected void AddToBody(Statement statement) {
+        /// <param name="expression"></param>
+        protected void AddToBody(Expression expression) {
             if (_body is EmptyStatement) {
-                _body = statement;
+                _body = expression;
             } else {
-                _body = Ast.Block(_body, statement);
+                _body = Ast.Block(_body, expression);
             }
         }
 

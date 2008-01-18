@@ -25,8 +25,11 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using System.Diagnostics;
 
 namespace IronPython.Runtime {
+
+    #region Readers
 
     // The following set of classes is used to translate between pythonic file stream semantics and those of
     // the runtime and the underlying system.
@@ -67,16 +70,13 @@ namespace IronPython.Runtime {
     // The abstract reader API.
     internal abstract class PythonStreamReader {
 
-        // All the readers use a stream as input and most (except the binary reader) use an encoding to define
-        // the mapping from bytes into characters. So we factor that out in the base class.
-        protected Stream _stream;
         protected Encoding _encoding;
 
         public Encoding Encoding { get { return _encoding; } }
+        public abstract TextReader TextReader { get; }
 
-        public PythonStreamReader(Stream stream, Encoding encoding) {
-            this._stream = stream;
-            this._encoding = encoding;
+        public PythonStreamReader(Encoding encoding) {
+            _encoding = encoding;
         }
 
         // Read at most size characters and return the result as a string.
@@ -108,21 +108,26 @@ namespace IronPython.Runtime {
     // inspect the data).
     internal class PythonBinaryReader : PythonStreamReader {
 
+        private readonly Stream/*!*/ _stream;
+        public override TextReader TextReader { get { return null; } }
+
         // Buffer size (in bytes) used when reading until the end of the stream.
         private const int BufferSize = 4096;
-        private byte[] buffer;
+        private byte[] _buffer;
 
-        public PythonBinaryReader(Stream stream)
-            : base(stream, null) {
+        public PythonBinaryReader(Stream/*!*/ stream)
+            : base(null) {
+            Assert.NotNull(stream);
+            _stream = stream;
         }
 
         // Read at most size characters (bytes in this case) and return the result as a string.
         public override String Read(int size) {
             byte[] data;
             if (size <= BufferSize) {
-                if (buffer == null)
-                    buffer = new byte[BufferSize];
-                data = buffer;
+                if (_buffer == null)
+                    _buffer = new byte[BufferSize];
+                data = _buffer;
             } else
                 data = new byte[size];
             int leftCount = size;
@@ -144,13 +149,13 @@ namespace IronPython.Runtime {
         public override String ReadToEnd() {
             StringBuilder sb = new StringBuilder();
             int totalcount = 0;
-            if (buffer == null)
-                buffer = new byte[BufferSize];
+            if (_buffer == null)
+                _buffer = new byte[BufferSize];
             while (true) {
-                int count = _stream.Read(buffer, 0, BufferSize);
+                int count = _stream.Read(_buffer, 0, BufferSize);
                 if (count == 0)
                     break;
-                sb.Append(PackDataIntoString(buffer, count));
+                sb.Append(PackDataIntoString(_buffer, count));
                 totalcount += count;
             }
             if (sb.Length == 0)
@@ -213,24 +218,53 @@ namespace IronPython.Runtime {
                 sb.Append((char)data[i]);
             return sb.ToString();
         }
-
     }
 
+    internal abstract class PythonTextReader : PythonStreamReader {
+        
+        // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
+        // translate incoming bytes into characters.  This requires us to keep control of our own position.
+        protected readonly TextReader/*!*/ _reader;
+        protected long _position;
+
+        public override TextReader TextReader { get { return _reader; } }
+
+        public override long Position {
+            get {
+                return _position;
+            }
+            internal set {
+                _position = value;
+            }
+        }
+
+        public PythonTextReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long position)
+            : base(encoding) {
+            _reader = reader;
+            _position = position;
+        }
+
+        // Discard any data we may have buffered based on the current stream position. Called after seeking in
+        // the stream.
+        public override void DiscardBufferedData() {
+            StreamReader streamReader = _reader as StreamReader;
+            if (streamReader != null) {
+                streamReader.DiscardBufferedData();
+            }
+        }
+    }
+    
     // Read data as text with lines terminated with '\r\n' (the Windows convention). Such terminators will be
     // translated to '\n' in the strings returned.
-    internal class PythonTextCRLFReader : PythonStreamReader {
+    internal class PythonTextCRLFReader : PythonTextReader {
 
         // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
         // translate incoming bytes into characters.  This requires us to keep track of our own position.
-        private StreamReader _reader;
-        private long _position;
         private char[] _buffer = new char[20];
         private int _bufPos, _bufLen;
 
-        public PythonTextCRLFReader(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            if (stream.CanSeek) _position = stream.Position;
-            _reader = new StreamReader(stream, encoding);            
+        public PythonTextCRLFReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long position)
+            : base(reader, encoding, position) {
         }
 
         private int Read() {
@@ -251,7 +285,7 @@ namespace IronPython.Runtime {
         }
 
         private int ReadBuffer() {
-            _bufLen = _reader.ReadBlock(_buffer, 0, _buffer.Length);
+            _bufLen = _reader.Read(_buffer, 0, _buffer.Length);
             _bufPos = 0;
             return _bufLen;
         }        
@@ -268,8 +302,9 @@ namespace IronPython.Runtime {
                 }
                 sb.Append((char)c);
             }
-            if (sb.Length == 0)
+            if (sb.Length == 0) {
                 return String.Empty;
+            }
             return sb.ToString();
         }
 
@@ -363,36 +398,20 @@ namespace IronPython.Runtime {
             }
         }
 
-        public override long Position {
-            get {
-                return _position;
-            }
-            internal set {
-                _position = value;
-            }
-        }
-
         // Discard any data we may have buffered based on the current stream position. Called after seeking in
         // the stream.
         public override void DiscardBufferedData() {
             _bufPos = _bufLen = 0;
-            _reader.DiscardBufferedData();
+            base.DiscardBufferedData();
         }
     }
 
     // Read data as text with lines terminated with '\r' (the Macintosh convention). Such terminators will be
     // translated to '\n' in the strings returned.
-    internal class PythonTextCRReader : PythonStreamReader {
+    internal class PythonTextCRReader : PythonTextReader {
 
-        // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
-        // translate incoming bytes into characters.  This requires us to keep control of our own position.
-        private StreamReader _reader;
-        private long _position;
-
-        public PythonTextCRReader(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            if (stream.CanSeek) _position = stream.Position;
-            _reader = new StreamReader(stream, encoding);
+        public PythonTextCRReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long position)
+            : base(reader, encoding, position) {
         }
 
         // Read at most size characters and return the result as a string.
@@ -468,35 +487,13 @@ namespace IronPython.Runtime {
                 return String.Empty;
             return sb.ToString();
         }
-
-        public override long Position {
-            get {
-                return _position;
-            }
-            internal set {
-                _position = value;
-            }
-        }
-
-        // Discard any data we may have buffered based on the current stream position. Called after seeking in
-        // the stream.
-        public override void DiscardBufferedData() {
-            _reader.DiscardBufferedData();
-        }
     }
 
     // Read data as text with lines terminated with '\n' (the Unix convention).
-    internal class PythonTextLFReader : PythonStreamReader {
+    internal class PythonTextLFReader : PythonTextReader {
 
-        // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
-        // translate incoming bytes into characters.  This requires us to keep track of our own position.
-        private StreamReader _reader;
-        private long _position;
-
-        public PythonTextLFReader(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            if (stream.CanSeek) _position = stream.Position;
-            _reader = new StreamReader(stream, encoding);
+        public PythonTextLFReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long position)
+            : base(reader, encoding, position) {
         }
 
         // Read at most size characters and return the result as a string.
@@ -554,27 +551,12 @@ namespace IronPython.Runtime {
                 return String.Empty;
             return sb.ToString();
         }
-
-        public override long Position {
-            get {
-                return _position;
-            }
-            internal set {
-                _position = value;
-            }
-        }
-
-        // Discard any data we may have buffered based on the current stream position. Called after seeking in
-        // the stream.
-        public override void DiscardBufferedData() {
-            _reader.DiscardBufferedData();
-        }
     }
 
     // Read data as text with lines terminated with any of '\n', '\r' or '\r\n'. Such terminators will be
     // translated to '\n' in the strings returned. This class also records whcih of these have been seen so
     // far in the stream to support python semantics (see the Terminators property).
-    internal class PythonUniversalReader : PythonStreamReader {
+    internal class PythonUniversalReader : PythonTextReader {
 
         // Symbols for the different styles of newline terminator we might have seen in this stream so far.
         public enum TerminatorStyles {
@@ -586,14 +568,10 @@ namespace IronPython.Runtime {
 
         // We read the stream through a StreamReader to take advantage of stream buffering and encoding to
         // translate incoming bytes into characters.  This requires that we keep track of our own position.
-        private StreamReader _reader;
         private TerminatorStyles _terminators;
-        private long _position;
 
-        public PythonUniversalReader(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            if (stream.CanSeek) _position = stream.Position;
-            _reader = new StreamReader(stream, encoding);
+        public PythonUniversalReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long position)
+            : base(reader, encoding, position) {
             _terminators = TerminatorStyles.None;
         }
 
@@ -677,62 +655,49 @@ namespace IronPython.Runtime {
             return sb.ToString();
         }
 
-        // Discard any data we may have buffered based on the current stream position. Called after seeking in
-        // the stream.
-        public override void DiscardBufferedData() {
-            _reader.DiscardBufferedData();
-        }
-
-        public override long Position {
-            get {
-                return _position;
-            }
-            internal set {
-                _position = value;
-            }
-        }
-
         // PythonUniversalReader specific property that returns a bitmask of all the newline termination
         // styles seen in the stream so far.
         public TerminatorStyles Terminators { get { return _terminators; } }
     }
 
+    #endregion
+
+    #region Writers
+
     // The abstract writer API.
     internal abstract class PythonStreamWriter {
 
-        // All the writers use a stream as output and most (except the binary writer) use an encoding to
-        // define the mapping from characters into bytes. So we factor that out in the base class.
-        protected Stream _stream;
         protected Encoding _encoding;
 
         public Encoding Encoding { get { return _encoding; } }
+        public abstract TextWriter TextWriter { get; } 
         
-        public PythonStreamWriter(Stream stream, Encoding encoding) {
-            this._stream = stream;
-            this._encoding = encoding;
+        public PythonStreamWriter(Encoding encoding) {
+            _encoding = encoding;
         }
 
         // Write the data in the input string to the output stream, converting line terminators ('\n') into
         // the output format as necessary.  Returns the number of bytes written
-        public abstract int Write(String data);
+        public abstract int Write(String/*!*/ data);
 
         // Flush any buffered data to the file.
         public abstract void Flush();
-
-        public void Seek(long index) {
-            _stream.Seek(index, SeekOrigin.Begin);
-        }
     }
 
     // Write binary data embedded in the low-order byte of each string character to the output stream with no
     // other translation.
     internal class PythonBinaryWriter : PythonStreamWriter {
-        public PythonBinaryWriter(Stream stream)
-            : base(stream, null) {
+        private Stream/*!*/ _stream;
+
+        public override TextWriter TextWriter { get { return null; } }
+        
+        public PythonBinaryWriter(Stream/*!*/ stream)
+            : base(null) {
+            _stream = stream;
         }
 
         // Write the data in the input string to the output stream. No newline conversion is performed.
-        public override int Write(String data) {
+        public override int Write(string/*!*/ data) {
             int count = data.Length;
             for (int i = 0; i < count; i++)
                 _stream.WriteByte((byte)data[i]);
@@ -745,73 +710,28 @@ namespace IronPython.Runtime {
         }
     }
 
-    // Write data with '\r\n' line termination.
-    internal class PythonTextCRLFWriter : PythonStreamWriter {
+    // Write data with '\r', '\n' or '\r\n' line termination.
+    internal class PythonTextWriter : PythonStreamWriter {
 
         // We write the stream through a StreamWriter to take advantage of stream buffering and encoding to
         // translate outgoing characters into bytes.
-        protected StreamWriter _writer;
+        private TextWriter/*!*/ _writer;
+        private readonly string _eoln;
 
-        public PythonTextCRLFWriter(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            _writer = new StreamWriter(stream, encoding);
+        public override TextWriter TextWriter { get { return _writer; } }
+        
+        public PythonTextWriter(TextWriter/*!*/ writer, string eoln)
+            : base(writer.Encoding) {
+            _writer = writer;
+            _eoln = eoln;
         }
 
         // Write the data in the input string to the output stream, converting line terminators ('\n') into
-        // '\r\n' as necessary.
-        public override int Write(String data) {
-            string writeData = data.Replace("\n", "\r\n");
-            _writer.Write(writeData);
-            return writeData.Length;
-        }
-
-        // Flush any buffered data to the file.
-        public override void Flush() {
-            _writer.Flush();
-        }
-    }
-
-    // Write data with '\r' line termination.
-    internal class PythonTextCRWriter : PythonStreamWriter {
-
-        // We write the stream through a StreamWriter to take advantage of stream buffering and encoding to
-        // translate outgoing characters into bytes.
-        protected StreamWriter _writer;
-
-        public PythonTextCRWriter(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            _writer = new StreamWriter(stream, encoding);
-        }
-
-        // Write the data in the input string to the output stream, converting line terminators ('\n') into
-        // '\r' as necessary.
-        public override int Write(String data) {
-            string writeData = data.Replace("\n", "\r");
-            _writer.Write(writeData);
-            return writeData.Length;
-        }
-
-        // Flush any buffered data to the file.
-        public override void Flush() {
-            _writer.Flush();
-        }
-    }
-
-    // Write data with '\n' line termination.
-    internal class PythonTextLFWriter : PythonStreamWriter {
-
-        // We write the stream through a StreamWriter to take advantage of stream buffering and encoding to
-        // translate outgoing characters into bytes.
-        protected StreamWriter _writer;
-
-        public PythonTextLFWriter(Stream stream, Encoding encoding)
-            : base(stream, encoding) {
-            _writer = new StreamWriter(stream, encoding);
-        }
-
-        // Write the data in the input string to the output stream. No conversion of newline terminators is
-        // necessary.
-        public override int Write(String data) {
+        // _eoln as necessary.
+        public override int Write(string/*!*/ data) {
+            if (_eoln != null) {
+                data = data.Replace("\n", _eoln);
+            }
             _writer.Write(data);
             return data.Length;
         }
@@ -821,6 +741,10 @@ namespace IronPython.Runtime {
             _writer.Flush();
         }
     }
+
+    #endregion
+
+    #region File Manager
 
     internal static class PythonFileManager {
         static HybridMapping<PythonFile> mapping = new HybridMapping<PythonFile>();
@@ -849,35 +773,51 @@ namespace IronPython.Runtime {
         }
     }
 
+    #endregion
+
     [PythonType("file")]
     public class PythonFile : IDisposable, ICodeFormattable, IEnumerable<string>, IEnumerable, IWeakReferenceable {
-        private bool _isConsole;
-        private Stream stream;
-        private string mode;
-        private string name;
+        private ConsoleStreamType _consoleStreamType;
+        private SharedIO _io;   // null for non-console
+        private Stream _stream; // null for console
+        private string _mode;
+        private string _name;
+        private PythonFileMode _fileMode;
 
-        private PythonStreamReader reader;
-        private PythonStreamWriter writer;
-        private bool isopen;
-        private Nullable<long> reseekPosition;
+        private PythonStreamReader _reader;
+        private PythonStreamWriter _writer;
+        private bool _isOpen;
+        private Nullable<long> _reseekPosition; // always null for console
         private WeakRefTracker _weakref;
 
         public bool softspace;
 
-        public PythonFile() {
+        public bool IsConsole {
+            get {
+                return _stream == null;
+            }
         }
 
-        internal static PythonFile Create(Stream stream, string name, string mode) {
+        public PythonFile() {
+        }
+        
+        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode) {
             return Create(stream, SystemState.Instance.DefaultEncoding, name, mode);
         }
 
-        internal static PythonFile Create(Stream stream, Encoding encoding, string name, string mode) {
+        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, Encoding/*!*/ encoding, string/*!*/ name, string/*!*/ mode) {
             PythonFile res = new PythonFile();
             res.Initialize(stream, encoding, name, mode);
             return res;
         }
 
-        internal static PythonFile Create(Stream stream, string name, string mode, bool weakMapping) {
+        internal static PythonFile/*!*/ CreateConsole(SharedIO/*!*/ io, ConsoleStreamType type, string/*!*/ name) {
+            PythonFile res = new PythonFile();
+            res.InitializeConsole(io, type, name);
+            return res;
+        }
+
+        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode, bool weakMapping) {
             PythonFile res = new PythonFile();
             res.InternalInitialize(stream, SystemState.Instance.DefaultEncoding, name, mode, weakMapping);
             return res;
@@ -891,11 +831,6 @@ namespace IronPython.Runtime {
 
         #region Python initialization
 
-        [PythonName("__init__")]
-        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
-            Initialize(name, mode, bufsize, null);
-        }
-
         //
         // Here are the mode rules for IronPython "file":
         //          (r|a|w|rU|U|Ur) [ [+][b|t] | [b|t][+] ]
@@ -903,7 +838,7 @@ namespace IronPython.Runtime {
         // Seems C-Python allows "b|t" at the beginning too.
         // 
         [PythonName("__init__")]
-        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize, [ParamDictionary]IAttributesCollection dict) {
+        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
@@ -964,7 +899,7 @@ namespace IronPython.Runtime {
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
                 Initialize(stream, SystemState.Instance.DefaultEncoding, name, inMode);
-                this.isopen = true;
+                this._isOpen = true;
             } catch (UnauthorizedAccessException e) {
                 throw new IOException(e.Message, e);
             }
@@ -1000,67 +935,108 @@ namespace IronPython.Runtime {
             InternalInitialize(stream, encoding, name, mode, true);
         }
 
-        internal void InternalInitialize(Stream stream, Encoding encoding, string mode, bool weakMapping) {
-            this.stream = stream;
-            this.mode = mode;
-            this.isopen = true;
+        private PythonTextReader/*!*/ CreateTextReader(TextReader/*!*/ reader, Encoding/*!*/ encoding, long initPosition) {
+            switch (_fileMode) {
+                case PythonFileMode.TextCrLf:
+                    return new PythonTextCRLFReader(reader, encoding, initPosition);
 
-            PythonFileMode filemode = MapFileMode(mode);
+                case PythonFileMode.TextCr:
+                    return new PythonTextCRReader(reader, encoding, initPosition);
+
+                case PythonFileMode.TextLf:
+                    return new PythonTextLFReader(reader, encoding, initPosition);
+
+                case PythonFileMode.UniversalNewline:
+                    return new PythonUniversalReader(reader, encoding, initPosition);
+            }
+
+            throw Assert.Unreachable;
+        }
+
+        private PythonTextReader/*!*/ CreateConsoleReader(SharedIO/*!*/ io) {
+            Encoding encoding;
+            return CreateTextReader(io.GetReader(out encoding), encoding, 0);
+        }
+
+        private PythonTextWriter/*!*/ CreateTextWriter(TextWriter/*!*/ writer) {
+            switch (_fileMode) {
+                case PythonFileMode.TextCrLf:
+                    return new PythonTextWriter(writer, "\r\n");
+
+                case PythonFileMode.TextCr:
+                    return new PythonTextWriter(writer, "\r");
+
+                case PythonFileMode.TextLf:
+                    return new PythonTextWriter(writer, null);
+            }
+
+            throw Assert.Unreachable;
+        }
+
+        internal void InternalInitialize(Stream/*!*/ stream, Encoding/*!*/ encoding, string/*!*/ mode, bool weakMapping) {
+            Assert.NotNull(stream, encoding, mode);
+
+            _stream = stream;
+            _mode = mode;
+            _isOpen = true;
+            _io = null;
+            _fileMode = MapFileMode(mode);
 
             if (stream.CanRead) {
-                switch (filemode) {
-                    case PythonFileMode.Binary:
-                        reader = new PythonBinaryReader(stream);
-                        break;
-                    case PythonFileMode.TextCrLf:
-                        reader = new PythonTextCRLFReader(stream, encoding);
-                        break;
-                    case PythonFileMode.TextCr:
-                        reader = new PythonTextCRReader(stream, encoding);
-                        break;
-                    case PythonFileMode.TextLf:
-                        reader = new PythonTextLFReader(stream, encoding);
-                        break;
-                    case PythonFileMode.UniversalNewline:
-                        reader = new PythonUniversalReader(stream, encoding);
-                        break;
+                if (_fileMode == PythonFileMode.Binary) {
+                    _reader = new PythonBinaryReader(stream);
+                } else {
+                    long initPosition = (stream.CanSeek) ? stream.Position : 0;
+                    _reader = CreateTextReader(new StreamReader(stream, encoding), encoding, initPosition);
                 }
             }
+
             if (stream.CanWrite) {
-                switch (filemode) {
-                    case PythonFileMode.Binary:
-                        writer = new PythonBinaryWriter(stream);
-                        break;
-                    case PythonFileMode.TextCrLf:
-                        writer = new PythonTextCRLFWriter(stream, encoding);
-                        break;
-                    case PythonFileMode.TextCr:
-                        writer = new PythonTextCRWriter(stream, encoding);
-                        break;
-                    case PythonFileMode.TextLf:
-                        writer = new PythonTextLFWriter(stream, encoding);
-                        break;
+                if (_fileMode == PythonFileMode.Binary) {
+                    _writer = new PythonBinaryWriter(stream);
+                } else {
+                    _writer = CreateTextWriter(new StreamWriter(stream, encoding));
                 }
             }
+
 #if !SILVERLIGHT
             // only possible if the user provides us w/ the stream directly
             FileStream fs = stream as FileStream;
             if (fs != null) {
-                this.name = fs.Name;
+                _name = fs.Name;
             } else {
-                this.name = "nul";
+                _name = "nul";
             }
 #else
-            this.name = "stream";
+            _name = "stream";
 #endif
 
-            if (weakMapping)
+            if (weakMapping) {
                 PythonFileManager.AddToWeakMapping(this);
+            }
+        }
+
+        internal void InitializeConsole(SharedIO/*!*/ io, ConsoleStreamType type, string/*!*/ name) {
+            _consoleStreamType = type;
+            _io = io;
+            _stream = null;
+            _mode = (type == ConsoleStreamType.Input) ? "r" : "w";
+            _isOpen = true;
+            _fileMode = MapFileMode(_mode);
+            _name = name;
+
+            if (type == ConsoleStreamType.Input) {
+                _reader = CreateConsoleReader(io);
+            } else {
+                _writer = CreateTextWriter(io.GetWriter(type));
+            }
+
+            PythonFileManager.AddToWeakMapping(this);
         }
 
         internal void InternalInitialize(Stream stream, Encoding encoding, string name, string mode, bool weakMapping) {
             InternalInitialize(stream, encoding, mode, weakMapping);
-            this.name = name;
+            _name = name;
         }
 
         #endregion
@@ -1099,7 +1075,7 @@ namespace IronPython.Runtime {
 
         public Encoding Encoding {
             get {
-                return (reader != null) ? reader.Encoding : (writer != null) ? writer.Encoding : null;
+                return (_reader != null) ? _reader.Encoding : (_writer != null) ? _writer.Encoding : null;
             }
         }            
 
@@ -1109,14 +1085,16 @@ namespace IronPython.Runtime {
         }
 
         protected virtual void Dispose(bool disposing) {
-            if (!isopen) return;
+            if (!_isOpen) return;
 
             if (disposing) {
                 Flush();
-                stream.Close();
+                if (!IsConsole) {
+                    _stream.Close();
+                }
             }
 
-            isopen = false;
+            _isOpen = false;
             PythonFileManager.Remove(this);
         }
 
@@ -1131,21 +1109,23 @@ namespace IronPython.Runtime {
         public bool IsClosed {
             [PythonName("closed")]
             get {
-                return !isopen;
+                return !_isOpen;
             }
         }
 
         void ThrowIfClosed() {
-            if (!isopen)
+            if (!_isOpen)
                 throw PythonOps.ValueError("I/O operation on closed file");
         }
 
         [PythonName("flush")]
         public void Flush() {
             ThrowIfClosed();
-            if (writer != null) {
-                writer.Flush();
-                stream.Flush();
+            if (_writer != null) {
+                _writer.Flush();
+                if (!IsConsole) {
+                    _stream.Flush();
+                }
             }
         }
 
@@ -1159,7 +1139,7 @@ namespace IronPython.Runtime {
         public string FileName {
             [PythonName("name")]
             get {
-                return name;
+                return _name;
             }
         }
 
@@ -1170,35 +1150,22 @@ namespace IronPython.Runtime {
 
         [PythonName("read")]
         public string Read(int size) {
-            ThrowIfClosed();
-
-            if (reader == null) {
-                throw PythonOps.IOError("Can not read from " + this.name);
-            }
-            if (size < 0)
+            PythonStreamReader reader = GetReader();
+            if (size < 0) {
                 return reader.ReadToEnd();
-            else
+            } else {
                 return reader.Read(size);
+            }
         }
 
         [PythonName("readline")]
         public string ReadLine() {
-            ThrowIfClosed();
-
-            if (reader == null) {
-                throw PythonOps.IOError("Can not read from " + this.name);
-            }
-            return reader.ReadLine();
+            return GetReader().ReadLine();
         }
 
         [PythonName("readline")]
         public string ReadLine(int size) {
-            ThrowIfClosed();
-
-            if (reader == null) {
-                throw PythonOps.IOError("Can not read from " + this.name);
-            }
-            return reader.ReadLine(size);
+            return GetReader().ReadLine(size);
         }
 
         [PythonName("readlines")]
@@ -1233,12 +1200,12 @@ namespace IronPython.Runtime {
 
         [PythonName("seek")]
         public void Seek(long offset, int whence) {
-            if (mode == "a") return;    // nop when seeking on stream's opened for append.
+            if (_mode == "a") return;    // nop when seeking on stream's opened for append.
 
             ThrowIfClosed();
 
-            if (!stream.CanSeek) {
-                throw PythonOps.IOError("Can not seek on file " + name);
+            if (IsConsole || !_stream.CanSeek) {
+                throw PythonOps.IOError("Can not seek on file " + _name);
             }
 
             // flush before saving our position to ensure it's accurate.
@@ -1258,35 +1225,32 @@ namespace IronPython.Runtime {
                     origin = SeekOrigin.End;
                     break;
             }
-            long newPos = stream.Seek(offset, origin);
-            if (reader != null) {
-                reader.DiscardBufferedData();
-                reader.Position = newPos;
+            long newPos = _stream.Seek(offset, origin);
+            if (_reader != null) {
+                _reader.DiscardBufferedData();
+                _reader.Position = newPos;
             }
         }
 
         [PythonName("tell")]
         public object Tell() {
-            long l = (reader != null) ? reader.Position : stream.Position;
+            if (IsConsole) {
+                throw PythonOps.IOError("Bad file descriptor");
+            }
+
+            long l = (_reader != null) ? _reader.Position : _stream.Position;
             if (l <= Int32.MaxValue) return l;
             return Microsoft.Scripting.Math.BigInteger.Create(l);
         }
 
         [PythonName("write")]
         public void Write(string s) {
-            ThrowIfClosed();
-
-            if (writer != null) {
-                ResetForWrite();
-
-                int bytesWritten = writer.Write(s);
-                if (reader != null && stream.CanSeek)
-                    reader.Position += bytesWritten;
-                if (IsConsole) {
-                    Flush();
-                } 
-            } else {
-                throw PythonOps.IOError("Can not write to " + this.name);
+            PythonStreamWriter writer = GetWriter();
+            int bytesWritten = _writer.Write(s);
+            if (IsConsole) {
+                Flush();
+            } else if (_reader != null && _stream.CanSeek) {
+                _reader.Position += bytesWritten;
             }
         }
 
@@ -1310,10 +1274,10 @@ namespace IronPython.Runtime {
         public Object Newlines {
             [PythonName("newlines")]
             get {
-                if (reader == null || !(reader is PythonUniversalReader))
+                if (_reader == null || !(_reader is PythonUniversalReader))
                     return null;
 
-                PythonUniversalReader.TerminatorStyles styles = ((PythonUniversalReader)reader).Terminators;
+                PythonUniversalReader.TerminatorStyles styles = ((PythonUniversalReader)_reader).Terminators;
                 switch (styles) {
                     case PythonUniversalReader.TerminatorStyles.None:
                         return null;
@@ -1337,17 +1301,55 @@ namespace IronPython.Runtime {
         }
 
         private void SavePositionPreSeek() {
-            if (mode == "a+") {
-                reseekPosition = stream.Position;
+            if (_mode == "a+") {
+                Debug.Assert(!IsConsole);
+                _reseekPosition = _stream.Position;
             }
         }
 
-        private void ResetForWrite() {
-            if (reseekPosition != null) {
-                writer.Seek(reseekPosition.Value);
-                reader.Position = reseekPosition.Value;
-                reseekPosition = null;
+        // called before each read operation
+        private PythonStreamReader/*!*/ GetReader() {
+            ThrowIfClosed();
+            if (_reader == null) {
+                throw PythonOps.IOError("Can not read from " + _name);
             }
+
+            if (IsConsole) {
+                // update reader if redirected:
+                SharedIO io = ScriptDomainManager.CurrentManager.SharedIO;
+
+                if (!ReferenceEquals(io.InputReader, _reader.TextReader)) {
+                    _reader = CreateConsoleReader(io);
+                }
+            }
+
+            return _reader;
+        }
+
+        // called before each write operation
+        private PythonStreamWriter/*!*/ GetWriter() {
+            ThrowIfClosed();
+
+            if (_writer == null) {
+                throw PythonOps.IOError("Can not write to " + _name);
+            }
+
+            if (IsConsole) {
+                // update writer if redirected:
+                TextWriter currentWriter = ScriptDomainManager.CurrentManager.SharedIO.GetWriter(_consoleStreamType);
+
+                if (!ReferenceEquals(currentWriter, _writer.TextWriter)) {
+                    _writer.Flush();
+                    _writer = CreateTextWriter(currentWriter);
+                }
+
+            } else if (_reseekPosition != null) {
+                _stream.Seek(_reseekPosition.Value, SeekOrigin.Begin);
+                _reader.Position = _reseekPosition.Value;
+                _reseekPosition = null;
+            }
+
+            return _writer;
         }
 
         [PythonName("next")]
@@ -1367,7 +1369,7 @@ namespace IronPython.Runtime {
 
         [PythonName("isatty")]
         public bool IsTty() {
-            return _isConsole;
+            return IsConsole;
         }
 
         [PythonName("__enter__")]
@@ -1381,20 +1383,11 @@ namespace IronPython.Runtime {
             Close();
         }
 
-        public bool IsConsole {
-            get {
-                return _isConsole;
-            }
-            set {
-                _isConsole = value;
-            }
-        }
-
         public override string ToString() {
             return string.Format("<{0} file '{1}', mode '{2}' at 0x{3:X8}>",
-                isopen ? "open" : "closed",
-                name ?? "<uninitialized file>",
-                mode ?? "<uninitialized file>",
+                _isOpen ? "open" : "closed",
+                _name ?? "<uninitialized file>",
+                _mode ?? "<uninitialized file>",
                 this.GetHashCode()
                 );
         }

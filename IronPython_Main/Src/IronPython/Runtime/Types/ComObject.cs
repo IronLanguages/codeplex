@@ -49,7 +49,8 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static object GetBoundMember([StaticThis]object self, string name) {
             if (!ComObject.Is__ComObject(self.GetType())) {
-                return PythonOps.NotImplemented;
+                Debug.Assert(self.GetType().IsCOMObject); // // Strongly-typed RCWs are subtypes of System.__ComObject
+                return PythonOps.NotImplemented; // The caller should fall back to other means to resolve the member
             }
 
             ComObject com = ComObject.ObjectToComObject(self);
@@ -63,11 +64,15 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public static void SetMember([StaticThis]object self, string name, object value) {
             if (!ComObject.Is__ComObject(self.GetType())) {
+                Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
+                PythonType pyType = DynamicHelpers.GetPythonTypeFromType(self.GetType());
+                pyType.SetMember(DefaultContext.Default, self, SymbolTable.StringToId(name), value);
                 return;
             }
 
             ComObject com = ComObject.ObjectToComObject(self);
             com.SetAttr(DefaultContext.Default, SymbolTable.StringToId(name), value);
+            return;
         }
 
         [SpecialName]
@@ -75,6 +80,12 @@ namespace IronPython.Runtime.Types {
             List<SymbolId> ret = new List<SymbolId>();
 
             if (!ComObject.Is__ComObject(self.GetType())) {
+                Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
+                Microsoft.Scripting.Actions.TypeTracker type = ReflectionCache.GetTypeTracker(self.GetType());
+                IList<object> members = type.GetMemberNames(DefaultContext.Default);
+                foreach (string memberName in members) {
+                    ret.Add(SymbolTable.StringToId(memberName));
+                }
                 return ret;
             }
 
@@ -93,7 +104,10 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName, PythonName("__repr__")]
         public static string ComObjectToString(object self) {
-            if (!ComObject.Is__ComObject(self.GetType())) return self.ToString();  // subtype of ComObject
+            if (!ComObject.Is__ComObject(self.GetType())) {
+                Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
+                return self.ToString();
+            }
 
             ComObject com = ComObject.ObjectToComObject(self);
 
@@ -804,6 +818,7 @@ namespace IronPython.Runtime.Types {
 
             EnsureScanDefinedFunctions();
             EnsureScanDefinedEvents();
+            // TODO: Need to filter out ComTypes.FUNCFLAGS.FUNCFLAG_FHIDDEN and ComTypes.FUNCFLAGS.FUNCFLAG_FNONBROWSABLE
             List<SymbolId> list = new List<SymbolId>(_comTypeDesc.Funcs.Keys);
 
             if (_comTypeDesc.Events != null && _comTypeDesc.Events.Count > 0) {
@@ -1149,11 +1164,10 @@ namespace IronPython.Runtime.Types {
                     ComTypes.FUNCDESC funcDesc;
                     GetFuncDescForDescIndex(typeInfo, definedFuncIndex, out funcDesc, out funcDescHandleToRelease);
 
-                    // we are not interested in hidden or restricted functions for now.
-                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FHIDDEN) != 0)
+                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0) {
+                        // This function is not meant for the script user to use.
                         continue;
-                    if ((funcDesc.wFuncFlags & (int)ComTypes.FUNCFLAGS.FUNCFLAG_FRESTRICTED) != 0)
-                        continue;
+                    }
 
                     ComDispatch.ComMethodDesc methodDesc;
                     SymbolId name;

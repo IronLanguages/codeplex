@@ -17,11 +17,11 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class DoStatementBuilder {
-        private readonly Statement _body;
+        private readonly Expression _body;
         private readonly SourceLocation _doLocation;
         private readonly SourceSpan _statementSpan;
 
-        internal DoStatementBuilder(SourceSpan statementSpan, SourceLocation location, Statement body) {
+        internal DoStatementBuilder(SourceSpan statementSpan, SourceLocation location, Expression body) {
             Contract.RequiresNotNull(body, "body");
 
             _body = body;
@@ -33,21 +33,21 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(condition, "condition");
             Contract.Requires(condition.Type == typeof(bool), "condition", "Condition must be boolean");
 
-            return new DoStatement(_statementSpan, _doLocation, condition, _body);
+            return new DoStatement(_statementSpan.Start, _statementSpan.End, _doLocation, condition, _body);
         }
     }
 
     public static partial class Ast {
-        public static DoStatementBuilder Do(params Statement[] body) {
+        public static DoStatementBuilder Do(params Expression[] body) {
             Contract.RequiresNotNullItems(body, "body");
             return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, Block(body));
         }
 
-        public static DoStatementBuilder Do(Statement body) {
+        public static DoStatementBuilder Do(Expression body) {
             return new DoStatementBuilder(SourceSpan.None, SourceLocation.None, body);
         }
 
-        public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, Statement body) {
+        public static DoStatementBuilder Do(SourceSpan statementSpan, SourceLocation location, Expression body) {
             return new DoStatementBuilder(statementSpan, location, body);
         }
     }

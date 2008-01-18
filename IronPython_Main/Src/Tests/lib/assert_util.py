@@ -432,6 +432,10 @@ def run_test(mod_name, noOutputPlease=False):
                     print ">>> skipping %-40s" % name
     if failures:
         print_failures(failures)
+        if is_cli:
+            cmd_line = System.Environment.CurrentDirectory + "> " + System.Environment.CommandLine
+            print "Please run the following command to repro:"
+            print "\t" + cmd_line
         
         sys.exit(len(failures))
 

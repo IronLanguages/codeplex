@@ -558,7 +558,9 @@ namespace IronPython.Modules {
 
             [PythonName("ctime")]
             public string GetCTime() {
-                return _dateTime.ToString("ddd MMM ") + string.Format("{0,2}", _dateTime.Day) + _dateTime.ToString(" HH:mm:ss yyyy");
+                return _dateTime.ToString("ddd MMM ", CultureInfo.InvariantCulture) + 
+                    string.Format(CultureInfo.InvariantCulture, "{0,2}", _dateTime.Day) + 
+                    _dateTime.ToString(" HH:mm:ss yyyy", CultureInfo.InvariantCulture);
             }
 
             [PythonName("strftime")]

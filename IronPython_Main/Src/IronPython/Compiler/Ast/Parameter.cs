@@ -86,7 +86,7 @@ namespace IronPython.Compiler.Ast {
             return parameter;
         }
 
-        internal virtual void Init(AstGenerator inner, List<MSAst.Statement> init) {
+        internal virtual void Init(AstGenerator inner, List<MSAst.Expression> init) {
             // Regular parameter has no initialization
         }
 
@@ -112,8 +112,8 @@ namespace IronPython.Compiler.Ast {
             get { return _tuple; }
         }
 
-        internal override void Init(AstGenerator inner, List<MSAst.Statement> init) {
-            MSAst.Statement stmt = _tuple.TransformSet(
+        internal override void Init(AstGenerator inner, List<MSAst.Expression> init) {
+            MSAst.Expression stmt = _tuple.TransformSet(
                 inner,
                 Span,
                 Ast.Read(Variable.Variable),

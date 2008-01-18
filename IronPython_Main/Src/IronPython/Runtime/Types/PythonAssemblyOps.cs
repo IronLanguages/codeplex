@@ -78,7 +78,7 @@ namespace IronPython.Runtime.Types {
                 if (assemblyMap.TryGetValue(assem, out reflectedAssembly))
                     return reflectedAssembly;
 
-                reflectedAssembly = new TopNamespaceTracker(true);
+                reflectedAssembly = new TopNamespaceTracker();
                 reflectedAssembly.LoadAssembly(assem);
                 assemblyMap[assem] = reflectedAssembly;
 

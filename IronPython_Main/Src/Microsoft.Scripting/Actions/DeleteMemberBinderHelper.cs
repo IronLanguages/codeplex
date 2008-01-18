@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Actions {
             return Rule;            
         }
 
-        private Statement MakeDeleteMemberTarget() {
+        private Expression MakeDeleteMemberTarget() {
             Type type = CompilerHelpers.GetType(Target);
             // This goes away when ICustomMembers goes away.
             if (typeof(ICustomMembers).IsAssignableFrom(type)) {
@@ -103,7 +103,7 @@ namespace Microsoft.Scripting.Actions {
             MethodInfo delMem = GetMethod(type, name);
             if (delMem != null && delMem.IsSpecialName) {
                 Expression call = Binder.MakeCallExpression(delMem, Rule.Parameters[0], Ast.Constant(StringName));
-                Statement ret;
+                Expression ret;
 
                 if (delMem.ReturnType == typeof(bool)) {
                     ret = Ast.If(call, Rule.MakeReturn(Binder, Ast.Null()));

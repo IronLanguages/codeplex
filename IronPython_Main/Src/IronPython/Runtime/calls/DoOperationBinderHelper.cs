@@ -23,7 +23,6 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
@@ -133,7 +132,13 @@ namespace IronPython.Runtime.Calls {
         }
 
         protected StandardRule<T> MakeNewRule(PythonType[] types) {
-            if (Action.Operation == Operators.IsCallable) return null;  // let the base binder handle this...
+            if (Action.Operation == Operators.IsCallable) {
+                // This will break in cross-language cases. Eg, if this rule applies to x,
+                // then Python's callable(x) will invoke this rule, but Ruby's callable(x) 
+                // will use the Ruby language binder instead and miss this rule, and thus 
+                // may get a different result than python.
+                return PythonBinderHelper.MakeIsCallableRule<T>(this.Context, _args[0]);
+            }
 
             for (int i = 0; i < types.Length; i++) {
                 if (types[i].Version == PythonType.DynamicVersion) {
@@ -250,18 +255,23 @@ namespace IronPython.Runtime.Calls {
             SymbolId rop = Symbols.OperatorToReversedSymbol(oper);
 
             MethodBinder fbinder, rbinder;
+            PythonTypeSlot fSlot = null, rSlot = null;
             if (!TryGetBinder(types, op, SymbolId.Empty, out fbinder)) {
-                return MakeDynamicMatchRule(types);
+                types[0].TryResolveSlot(Context, op, out fSlot);
             }
 
             if (!TryGetBinder(types, SymbolId.Empty, rop, out rbinder)) {
-                return MakeDynamicMatchRule(types);
+                types[1].TryResolveSlot(Context, rop, out rSlot);
+                if (types[1].IsSubclassOf(types[0])) {
+                    // Python says if x + subx and subx defines __r*__ we should call r*.
+                    fbinder = null;
+                }
             }
 
-            MethodCandidate fCand = ComparisonTargetFromBinder(fbinder, types);
-            MethodCandidate rCand = ComparisonTargetFromBinder(rbinder, types);
+            BindingTarget fCand = ComparisonTargetFromBinder(fbinder, types);
+            BindingTarget rCand = ComparisonTargetFromBinder(rbinder, types);
 
-            return MakeRuleForBinaryOperator(types, oper, fCand, rCand);
+            return MakeRuleForBinaryOperator(types, oper, fCand, rCand, fSlot, rSlot);
         }
 
         private StandardRule<T> MakeComparisonRule(PythonType[] types, Operators op) {
@@ -298,21 +308,21 @@ namespace IronPython.Runtime.Calls {
 
             // fallback binder, depending on what comparison call a helper
             // which always yields a value.
-            MethodCandidate forward = ComparisonTargetFromBinder(fbind, types);
-            MethodCandidate reverse = ComparisonTargetFromBinder(rbind, rTypes);
-            MethodCandidate fcmp = ComparisonTargetFromBinder(cbind, types);
-            MethodCandidate rcmp = ComparisonTargetFromBinder(rcbind, rTypes);
+            BindingTarget forward = ComparisonTargetFromBinder(fbind, types);
+            BindingTarget reverse = ComparisonTargetFromBinder(rbind, rTypes);
+            BindingTarget fcmp = ComparisonTargetFromBinder(cbind, types);
+            BindingTarget rcmp = ComparisonTargetFromBinder(rcbind, rTypes);
 
-            MethodTarget fTarget, rTarget, fCmpTarget, rCmpTarget;
+            BindingTarget fTarget, rTarget, fCmpTarget, rCmpTarget;
             GetCombinedTargets(forward, reverse, out fTarget, out rTarget);
             GetCombinedTargets(fcmp, rcmp, out fCmpTarget, out rCmpTarget);
 
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
-            List<Statement> stmts = new List<Statement>();
-            if (MakeOneTarget(fTarget, rule, stmts, false, null)) {
-                if (MakeOneTarget(rTarget, rule, stmts, true, null)) {
+            List<Expression> stmts = new List<Expression>();
+            if (MakeOneTarget(fTarget, rule, stmts, false, types)) {
+                if (MakeOneTarget(rTarget, rule, stmts, true, types)) {
                     if (MakeOneCompare(fCmpTarget, rule, stmts, false, types)) {
                         if (MakeOneCompare(rCmpTarget, rule, stmts, true, types)) {
                             stmts.Add(MakeFallbackCompare(rule));
@@ -354,17 +364,17 @@ namespace IronPython.Runtime.Calls {
             if (!TryGetBinder(rTypes, Symbols.OperatorLessThan, SymbolId.Empty, out rltbind)) return MakeDynamicMatchRule(types);
 
             // then resolve any overloads down to candidates based upon our argument types...
-            MethodCandidate fcand = ComparisonTargetFromBinder(cbind, types);
-            MethodCandidate rcand = ComparisonTargetFromBinder(rcbind, rTypes);
-            MethodCandidate eqcand = ComparisonTargetFromBinder(eqbind, types);
-            MethodCandidate reqcand = ComparisonTargetFromBinder(reqbind, rTypes);
-            MethodCandidate ltcand = ComparisonTargetFromBinder(ltbind, types);
-            MethodCandidate rgtcand = ComparisonTargetFromBinder(rgtbind, rTypes);
-            MethodCandidate gtcand = ComparisonTargetFromBinder(gtbind, types);
-            MethodCandidate rltcand = ComparisonTargetFromBinder(rltbind, rTypes);
+            BindingTarget fcand = ComparisonTargetFromBinder(cbind, types);
+            BindingTarget rcand = ComparisonTargetFromBinder(rcbind, rTypes);
+            BindingTarget eqcand = ComparisonTargetFromBinder(eqbind, types);
+            BindingTarget reqcand = ComparisonTargetFromBinder(reqbind, rTypes);
+            BindingTarget ltcand = ComparisonTargetFromBinder(ltbind, types);
+            BindingTarget rgtcand = ComparisonTargetFromBinder(rgtbind, rTypes);
+            BindingTarget gtcand = ComparisonTargetFromBinder(gtbind, types);
+            BindingTarget rltcand = ComparisonTargetFromBinder(rltbind, rTypes);
 
             // inspect forward and reverse versions so we can pick one or both.
-            MethodTarget cTarget, rcTarget, eqTarget, reqTarget, ltTarget, rgtTarget, gtTarget, rltTarget;
+            BindingTarget cTarget, rcTarget, eqTarget, reqTarget, ltTarget, rgtTarget, gtTarget, rltTarget;
             GetCombinedTargets(fcand, rcand, out cTarget, out rcTarget);
             GetCombinedTargets(eqcand, reqcand, out eqTarget, out reqTarget);
             GetCombinedTargets(ltcand, rgtcand, out ltTarget, out rgtTarget);
@@ -388,18 +398,18 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            List<Statement> stmts = new List<Statement>();
+            List<Expression> stmts = new List<Expression>();
 
             bool tryRich = true, more = true;
             if (xType == yType && cTarget != null) {
                 // if the types are equal try __cmp__ first
                 more = more &&
-                    MakeOneComparisonTarget(cTarget, rule, stmts, false);
+                    MakeOneComparisonTarget(cTarget, rule, stmts, types, false);
 
                 if (xType != TypeCache.OldInstance) {
                     // try __cmp__ backwards for new-style classes and don't fallback to
                     // rich comparisons if available
-                    more = more && MakeOneComparisonTarget(rcTarget, rule, stmts, true);
+                    more = more && MakeOneComparisonTarget(rcTarget, rule, stmts, types, true);
                     tryRich = false;
                 }
             }
@@ -407,24 +417,24 @@ namespace IronPython.Runtime.Calls {
             if (tryRich) {
                 // try eq
                 more = more &&
-                    MakeOneComparisonTarget(eqTarget, rule, stmts, false, 0) &&
-                    MakeOneComparisonTarget(reqTarget, rule, stmts, true, 0);
+                    MakeOneComparisonTarget(eqTarget, rule, stmts, types, false, 0) &&
+                    MakeOneComparisonTarget(reqTarget, rule, stmts, types, true, 0);
 
                 // try less than & reverse
                 more = more &&
-                    MakeOneComparisonTarget(ltTarget, rule, stmts, false, -1) &&
-                    MakeOneComparisonTarget(rgtTarget, rule, stmts, true, -1);
+                    MakeOneComparisonTarget(ltTarget, rule, stmts, types, false, -1) &&
+                    MakeOneComparisonTarget(rgtTarget, rule, stmts, types, true, -1);
 
                 // try greater than & reverse
                 more = more &&
-                    MakeOneComparisonTarget(gtTarget, rule, stmts, false, 1) &&
-                    MakeOneComparisonTarget(rltTarget, rule, stmts, true, 1);
+                    MakeOneComparisonTarget(gtTarget, rule, stmts, types, false, 1) &&
+                    MakeOneComparisonTarget(rltTarget, rule, stmts, types, true, 1);
             }
 
             if (xType != yType) {
                 more = more &&
-                    MakeOneComparisonTarget(cTarget, rule, stmts, false) &&
-                    MakeOneComparisonTarget(rcTarget, rule, stmts, true);
+                    MakeOneComparisonTarget(cTarget, rule, stmts, types, false) &&
+                    MakeOneComparisonTarget(rcTarget, rule, stmts, types, true);
             }
 
             if (more) {
@@ -436,19 +446,24 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeRuleForBinaryOperator(PythonType[] types, Operators oper, MethodCandidate fCand, MethodCandidate rCand) {
-            MethodTarget fTarget, rTarget;
+        private StandardRule<T> MakeRuleForBinaryOperator(PythonType[] types, Operators oper, BindingTarget fCand, BindingTarget rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
+            BindingTarget fTarget, rTarget;
 
-            if (!GetCombinedTargets(fCand, rCand, out fTarget, out rTarget)) {
+            if (!GetCombinedTargets(fCand, rCand, out fTarget, out rTarget) &&
+                fSlot == null &&
+                rSlot == null) {
                 return MakeRuleForNoMatch(types);
             }
 
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
-            List<Statement> stmts = new List<Statement>();
-            if (MakeOneTarget(fTarget, rule, stmts, false, types)) {
-                if (MakeOneTarget(rTarget, rule, stmts, false, types)) {
+            List<Expression> stmts = new List<Expression>();
+            if (MakeOneTarget(fTarget, fSlot, rule, stmts, false, types)) {
+                if (rSlot != null) {
+                    stmts.Add(MakeSlotCall(rSlot, rule, true));
+                    stmts.Add(MakeBinaryThrow(rule));
+                } else if (MakeOneTarget(rTarget, rSlot, rule, stmts, false, types)) {
                     stmts.Add(MakeBinaryThrow(rule));
                 }
             }
@@ -474,38 +489,46 @@ namespace IronPython.Runtime.Calls {
                 bf != null) {
 
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
-                    "index",
-                    bf.Targets,
-                    BinderType.Normal);
+                    IsIndexGet ? "__getitem__" : "__setitem__",
+                    bf.Targets);
 
                 StandardRule<T> ret = new StandardRule<T>();
                 PythonBinderHelper.MakeTest(ret, types);
 
                 Type[] callTypes = GetIndexerCallTypes(types);
-                Type[] testedTypes;
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes, out testedTypes);
-                if (cand != null) {
+                BindingTarget target = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes);
+                if (target.Success) {
                     Expression call;
 
-                    if (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) {
-                        call = cand.Target.MakeExpression(ret,
-                            GetIndexArguments(ret),
-                            testedTypes);
+                    if (IsIndexGet) {
+                        call = target.MakeExpression(
+                            ret,
+                            GetIndexArguments(ret)
+                        );
                     } else {
-                        call = Ast.Comma(0,
-                            ret.Parameters[ret.Parameters.Length - 1],
-                            cand.Target.MakeExpression(
+                        call = Ast.Comma(
+                            target.MakeExpression(
                                 ret,
-                                GetIndexArguments(ret),
-                                testedTypes)
+                                GetIndexArguments(ret)
+                            ),
+                            ret.Parameters[ret.Parameters.Length - 1]
                         );
                     }
                     ret.SetTarget(ret.MakeReturn(Binder, call));
+                    return ret;
+                } else {
+                    ret.SetTarget(Binder.MakeInvalidParametersError(target).MakeErrorForRule(ret, Binder));
                     return ret;
                 }
             }
 
             return MakeDynamicIndexRule(Action, Context, types);
+        }
+
+        private bool IsIndexGet {
+            get {
+                return Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice;
+            }
         }
 
         private Type[] GetIndexerCallTypes(PythonType[] types) {
@@ -642,41 +665,49 @@ namespace IronPython.Runtime.Calls {
             return ArrayUtils.RemoveFirst(ret.Parameters);
         }
 
-        private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse) {
+        private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse) {
             return MakeCall(target, block, reverse, null);
         }
 
-        private Expression MakeCall(MethodTarget target, StandardRule<T> block, bool reverse, PythonType[] types) {
+        private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse, PythonType[] types) {
             Expression[] vars = block.Parameters;
             if (reverse) {
                 Expression[] newVars = new Expression[2];
                 newVars[0] = vars[1];
                 newVars[1] = vars[0];
                 vars = newVars;
-            }
 
-            Type[] clrtypes = null;
+                if (types != null) {
+                    PythonType[] newTypes = new PythonType[2];
+                    newTypes[0] = types[1];
+                    newTypes[1] = types[0];
+                    types = newTypes;
+                }
+            } 
+
+            // add casts to the known types to avoid full conversions that MakeExpression will emit.
             if (types != null) {
-                clrtypes = PythonTypeOps.ConvertToTypes(types);
-                if (reverse) {
-                    Type temp = clrtypes[0];
-                    clrtypes[0] = clrtypes[1];
-                    clrtypes[1] = temp;
+                vars = (Expression[])vars.Clone();
+                for (int i = 0; i < types.Length; i++) {
+                    if (types[i] != null) {
+                        vars[i] = Ast.ConvertHelper(vars[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
+                    }
                 }
             }
-            return target.MakeExpression(block, vars, clrtypes);
+
+            return target.MakeExpression(block, vars);
         }
 
-        private bool MakeOneComparisonTarget(MethodTarget target, StandardRule<T> rule, List<Statement> stmts, bool reverse) {
-            return MakeOneComparisonTarget(target, rule, stmts, reverse, null);
+        private bool MakeOneComparisonTarget(BindingTarget target, StandardRule<T> rule, List<Expression> stmts, PythonType[] types, bool reverse) {
+            return MakeOneComparisonTarget(target, rule, stmts, types, reverse, null);
         }
 
-        private bool MakeOneComparisonTarget(MethodTarget target, StandardRule<T> rule, List<Statement> stmts, bool reverse, int? val) {
+        private bool MakeOneComparisonTarget(BindingTarget target, StandardRule<T> rule, List<Expression> stmts, PythonType[] types, bool reverse, int? val) {
             if (target == null) return true;
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = rule.GetTemporary(target.ReturnType, "tmp");
-                Statement body;
+                Expression body;
                 if (val != null) {
                     body = MakeValueCheck(rule, val, tmp);
                 } else {
@@ -709,10 +740,11 @@ namespace IronPython.Runtime.Calls {
                 stmts.Add(Ast.Statement(Ast.Assign(var, call)));
                 stmts.Add(MakeValueCheck(rule, val, var));
             }
+
             return true;
         }
 
-        private IfStatement MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
+        private Expression MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
             Expression test = Ast.ReadDefined(var);
             if (test.Type != typeof(bool)) {
                 test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
@@ -723,16 +755,23 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private bool MakeOneTarget(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, PythonType[] types) {
-            if (target == null) return true;
+        private bool MakeOneTarget(BindingTarget target, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
+            return MakeOneTarget(target,
+                null,
+                block,
+                stmts,
+                reverse,
+                types);
+        }
 
-            if (ReturnsNotImplemented(target)) {
-                Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
-                stmts.Add(Ast.IfThen(
-                    Ast.NotEqual(
-                        Ast.Assign(tmp, MakeCall(target, block, reverse, types)),
-                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
-                    block.MakeReturn(Binder, Ast.ReadDefined(tmp))));
+        private bool MakeOneTarget(BindingTarget target, PythonTypeSlot slotTarget, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
+            if (target == null && slotTarget == null) return true;
+
+            if (slotTarget != null) {
+                stmts.Add(MakeSlotCall(slotTarget, block, reverse));
+                return true;
+            } else if (ReturnsNotImplemented(target)) {
+                stmts.Add(CheckNotImplemented(block, MakeCall(target, block, reverse, types)));
                 return true;
             } else {
                 stmts.Add(block.MakeReturn(Binder, MakeCall(target, block, reverse, types)));
@@ -740,7 +779,56 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private static bool ReturnsNotImplemented(MethodTarget target) {
+        private Expression MakeSlotCall(PythonTypeSlot/*!*/ slotTarget, StandardRule<T>/*!*/ block, bool reverse) {
+            Debug.Assert(slotTarget != null);
+            Debug.Assert(block != null);
+
+            Variable callable = block.GetTemporary(typeof(object), "slot");
+            Expression self, other;
+            if (reverse) {
+                self = block.Parameters[1];
+                other = block.Parameters[0];
+            } else {
+                self = block.Parameters[0];
+                other = block.Parameters[1];
+            }
+
+            return Ast.IfThen(
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("SlotTryGetValue"),
+                    Ast.CodeContext(),
+                    Ast.ConvertHelper(Ast.WeakConstant(slotTarget), typeof(PythonTypeSlot)),
+                    Ast.ConvertHelper(self, typeof(object)),
+                    Ast.Call(
+                        typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                        Ast.ConvertHelper(self, typeof(object))
+                    ),
+                    Ast.Read(callable)
+                ),
+                CheckNotImplemented(
+                    block,
+                    Ast.Action.Call(
+                        typeof(object),
+                        Ast.Read(callable),
+                        other
+                    )
+                )
+            );
+        }
+
+        private Expression CheckNotImplemented(StandardRule<T> block, Expression call) {
+            Variable tmp = block.GetTemporary(call.Type, "tmp");
+
+            Expression notImplCheck = Ast.IfThen(
+                Ast.NotEqual(
+                    Ast.Assign(tmp, call),
+                    Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
+                block.MakeReturn(Binder, Ast.ReadDefined(tmp)));
+
+            return notImplCheck;
+        }
+
+        private static bool ReturnsNotImplemented(BindingTarget target) {
             if (target.ReturnType == typeof(object)) {
                 MethodInfo mi = target.Method as MethodInfo;
                 if (mi != null) {
@@ -751,7 +839,7 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
 
-        private Statement MakeUnaryThrow(StandardRule<T> block) {
+        private Expression MakeUnaryThrow(StandardRule<T> block) {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
@@ -761,7 +849,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private Statement MakeBinaryThrow(StandardRule<T> block) {
+        private Expression MakeBinaryThrow(StandardRule<T> block) {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
@@ -772,8 +860,8 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private bool MakeOneCompare(MethodTarget target, StandardRule<T> block, List<Statement> stmts, bool reverse, PythonType[] types) {
-            if (target == null) return true;
+        private bool MakeOneCompare(BindingTarget target, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
+            if (target == null || !target.Success) return true;
 
             if (ReturnsNotImplemented(target)) {
                 Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
@@ -789,7 +877,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private Statement MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
+        private Expression MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
             if (expr.Type == typeof(int)) {
                 // fast path, just do a compare in IL
                 return block.MakeReturn(Binder,
@@ -836,7 +924,7 @@ namespace IronPython.Runtime.Calls {
             return typeof(PythonOps).GetMethod(name);
         }
 
-        private Statement MakeFallbackCompare(StandardRule<T> block) {
+        private Expression MakeFallbackCompare(StandardRule<T> block) {
             return block.MakeReturn(Binder,
                 Ast.Call(
                     GetComparisonFallbackMethod(Action.Operation),
@@ -852,30 +940,30 @@ namespace IronPython.Runtime.Calls {
         /// Gets the logically combined targets.  If the 1st target is preferred over the 2nd one 
         /// we'll return both.
         /// </summary>
-        private static bool GetCombinedTargets(MethodCandidate fCand, MethodCandidate rCand, out MethodTarget fTarget, out MethodTarget rTarget) {
+        private static bool GetCombinedTargets(BindingTarget fCand, BindingTarget rCand, out BindingTarget fTarget, out BindingTarget rTarget) {
             fTarget = rTarget = null;
 
-            if (fCand != null) {
-                if (rCand != null) {
+            if (fCand != null && fCand.Success) {
+                if (rCand != null && rCand.Success) {
                     if (fCand.NarrowingLevel <= rCand.NarrowingLevel) {
-                        fTarget = fCand.Target;
-                        rTarget = rCand.Target;
+                        fTarget = fCand;
+                        rTarget = rCand;
                     } else {
                         fTarget = null;
-                        rTarget = rCand.Target;
+                        rTarget = rCand;
                     }
                 } else {
-                    fTarget = fCand.Target;
+                    fTarget = fCand;
                 }
-            } else if (rCand != null) {
-                rTarget = rCand.Target;
+            } else if (rCand != null && rCand.Success) {
+                rTarget = rCand;
             } else {
                 return false;
             }
             return true;
         }
 
-        private MethodCandidate ComparisonTargetFromBinder(MethodBinder binder, PythonType[] types) {
+        private BindingTarget ComparisonTargetFromBinder(MethodBinder binder, PythonType[] types) {
             if (binder == null) return null;
             return binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
         }
@@ -895,7 +983,15 @@ namespace IronPython.Runtime.Calls {
             return typeof(PythonOps).GetMethod(name);
         }
 
-        // TODO: Remove rop
+        /// <summary>
+        /// Trys to geta MethodBinder associated the slot for the specified type.
+        /// 
+        /// If a method is found the binder is set and true is returned.
+        /// If nothing is found binder is null and true is returned.
+        /// If something other than a method is found false is returned.
+        /// 
+        /// TODO: Remove rop
+        /// </summary>
         private bool TryGetBinder(PythonType[] types, SymbolId op, SymbolId rop, out MethodBinder binder) {
             PythonType xType = types[0];
             PythonType yType = types[1];
@@ -921,21 +1017,18 @@ namespace IronPython.Runtime.Calls {
                 if (yBf == null) {
                     binder = null;
                 } else {
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(),
-                        yBf.Targets, MethodBinderType);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), yBf.Targets, NarrowingLevel.None, NarrowingLevel.Three);
                 }
             } else {
                 if (yBf == null) {
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(),
-                        xBf.Targets, MethodBinderType);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), xBf.Targets, NarrowingLevel.None, NarrowingLevel.Three);
                 } else {
                     List<MethodBase> targets = new List<MethodBase>();
                     targets.AddRange(xBf.Targets);
                     foreach (MethodBase mb in yBf.Targets) {
                         if (!ContainsMethodSignature(targets, mb)) targets.Add(mb);
                     }
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(),
-                        targets.ToArray(), MethodBinderType);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), targets.ToArray(), NarrowingLevel.None, NarrowingLevel.Three);
                 }
             }
             return true;
@@ -1186,17 +1279,14 @@ namespace IronPython.Runtime.Calls {
                 return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), "{0}"), types);
             }
 
-            MethodBinder binder = MethodBinder.MakeBinder(Binder,
-                op.ToString(),
-                func.Targets,
-                MethodBinderType);
+            MethodBinder binder = MethodBinder.MakeBinder(Binder, op.ToString(), func.Targets, NarrowingLevel.None, NarrowingLevel.All);
 
             Debug.Assert(binder != null);
 
-            MethodCandidate cand = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
+            BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
-            rule.SetTarget(rule.MakeReturn(Binder, MakeCall(cand.Target, rule, false)));
+            rule.SetTarget(rule.MakeReturn(Binder, MakeCall(target, rule, false)));
             return rule;
         }
 
@@ -1222,11 +1312,12 @@ namespace IronPython.Runtime.Calls {
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
                     "Not",
                     nonzero != null ? nonzero.Targets : len.Targets,
-                    MethodBinderType);
+                    NarrowingLevel.None,
+                    NarrowingLevel.All);
 
                 Debug.Assert(binder != null);
-                MethodCandidate cand = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
-                notExpr = MakeCall(cand.Target, rule, false);
+                BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
+                notExpr = MakeCall(target, rule, false);
 
                 if (nonzero != null) {
                     // call non-zero and negate it

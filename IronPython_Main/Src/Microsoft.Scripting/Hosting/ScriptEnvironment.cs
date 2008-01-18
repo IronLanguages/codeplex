@@ -29,11 +29,8 @@ namespace Microsoft.Scripting.Hosting {
 
     public interface IScriptEnvironment : IRemotable {
         IScriptHost Host { get; }
-        
-        // convenience API:
-#if !SILVERLIGHT
-        void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput);
-#endif
+
+        ScriptIO/*!*/ IO { get; }
 
         // language providers (TODO: register):
         string[] GetRegisteredFileExtensions();
@@ -56,20 +53,23 @@ namespace Microsoft.Scripting.Hosting {
         IScriptScope CompileModule(string name, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, SourceUnit sourceCode);
 #endif
 
-        Delegate GetDelegate(object callableObject, Type delegateType);
-        
         // TODO:
         // Delegate CreateDelegate(IObjectHandle remoteCallableObject, Type delegateType);
 
         // TODO: remove
         ScriptDomainOptions GlobalOptions { get; set; }
 
+        IScriptScope ExecuteFile(string path);
+
+        void LoadAssembly(Assembly asm);
     }
 
     public sealed class ScriptEnvironment : IScriptEnvironment, ILocalObject {
 
-        private readonly ScriptDomainManager _manager;
-        
+        private readonly ScriptDomainManager/*!*/ _manager;
+        private readonly ScriptIO/*!*/ _io;
+        private ScriptScope/*!*/ _globals;
+            
         public IScriptHost Host {
             get { return _manager.Host; }
         }
@@ -80,9 +80,14 @@ namespace Microsoft.Scripting.Hosting {
             set { _manager.GlobalOptions = value; }
         }
 
-        internal ScriptEnvironment(ScriptDomainManager manager) {
+        public ScriptIO/*!*/ IO {
+            get { return _io; }
+        }
+
+        internal ScriptEnvironment(ScriptDomainManager/*!*/ manager) {
             Debug.Assert(manager != null);
             _manager = manager;
+            _io = new ScriptIO(_manager.SharedIO);
         }
 
         public static IScriptEnvironment Create(ScriptEnvironmentSetup setup) {
@@ -165,61 +170,77 @@ namespace Microsoft.Scripting.Hosting {
         #region Compilation, Module Creation
 
         public IScriptScope/*!*/ CreateScope() {
-            return _manager.CreateScope(null);
+            return InvariantEngine.CreateScope();
         }
         
         public IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
             Contract.RequiresNotNull(dictionary, "dictionary");
-            return _manager.CreateScope(dictionary);
+            return InvariantEngine.CreateScope(dictionary);
         }
 
         public IScriptScope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
-            return _manager.ExecuteSourceUnit(sourceUnit);
+            return GetEngine(sourceUnit.LanguageContext.GetType()).CreateScope(_manager.ExecuteSourceUnit(sourceUnit).Dict);
         }
 
         #endregion
 
-        #region Variables // TODO: remove
+        #region TODO: New API
 
-        public IAttributesCollection Variables { 
-            get { return _manager.Variables; } 
-            set { _manager.Variables = value; } 
+        // TODO: file IO exceptions, parse exceptions, execution exceptions, etc.
+        /// <exception cref="ArgumentException">
+        /// path is empty, contains one or more of the invalid characters defined in GetInvalidPathChars or doesn't have an extension.
+        /// </exception>
+        public IScriptScope/*!*/ ExecuteFile(string/*!*/ path) {
+            Contract.RequiresNotEmpty(path, "path");
+            string extension = Path.GetExtension(path);
+            
+            ScriptEngine engine;
+            if(!_manager.TryGetEngineByFileExtension(extension, out engine)) {
+                throw new ArgumentException(String.Format("File extension '{0}' is not associated with any language.", extension));
+            }
+
+            SourceUnit unit = engine.CreateScriptSourceFromFile(path, StringUtils.DefaultEncoding);
+            IScriptScope scope = engine.CreateScope();
+            engine.Execute(scope, unit);
+
+            return scope;
         }
 
-        public void SetVariables(IAttributesCollection dictionary) {
-            Contract.RequiresNotNull(dictionary, "dictionary");
-            _manager.Variables = dictionary;
+        /// <summary>
+        /// This property returns the "global object" or name bindings of the ScriptRuntime as a ScriptScope.  
+        /// 
+        /// You can set the globals scope, which you might do if you created a ScriptScope with an 
+        /// IAttributesCollection so that your host could late bind names.
+        /// </summary>
+        public ScriptScope Globals {
+            get { return _globals; }
+            set {
+                Contract.RequiresNotNull(value, "value");
+
+                _globals = value;
+                _manager.SetGlobalsDictionary(_globals.Scope.Dict);
+            }
         }
 
-        public object GetVariable(CodeContext context, SymbolId name) {
-            return _manager.GetVariable(context, name);
-        }
-
-        public void SetVariable(CodeContext context, SymbolId name, object value) {
-            _manager.SetVariable(context, name, value);
+        /// <summary>
+        /// This method walks the assembly's namespaces and name bindings to ScriptRuntime.Globals 
+        /// to represent the types available in the assembly.  Each top-level namespace name gets 
+        /// bound in Globals to a dynamic object representing the namespace.  Within each top-level 
+        /// namespace object, nested namespace names are bound to dynamic objects representing each 
+        /// tier of nested namespaces.  When this method encounters the same namespace-qualified name, 
+        /// it merges names together objects representing the namespaces.
+        /// </summary>
+        /// <param name="assembly"></param>
+        public void LoadAssembly(Assembly assembly) {
+            _manager.LoadAssembly(assembly);
         }
 
         #endregion
 
-        #region Object Operations
-
-        public Delegate GetDelegate(object callableObject, Type delegateType) {
-            return RuntimeHelpers.GetDelegate(callableObject, delegateType);            
+        internal IScriptEngine InvariantEngine {
+            get {
+                return GetEngine(typeof(InvariantContext));
+            }
         }
-
-        #endregion
-
-        #region Convenience API (not available for Silverlight to make the assembly smaller)
-
-#if !SILVERLIGHT
-
-        public void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput) {
-            if (input != null) Console.SetIn(input);
-            if (output != null) Console.SetOut(output);
-            if (errorOutput != null) Console.SetError(errorOutput);
-        }
-#endif
-        
-        #endregion
     }
 }

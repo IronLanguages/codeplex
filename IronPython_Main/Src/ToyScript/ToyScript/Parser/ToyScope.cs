@@ -87,7 +87,7 @@ namespace ToyScript.Parser {
             return _block.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
         }
 
-        public MSAst.CodeBlock FinishScope(MSAst.Statement body) {
+        public MSAst.CodeBlock FinishScope(MSAst.Expression body) {
             _block.Body = body;
             return _block;
         }

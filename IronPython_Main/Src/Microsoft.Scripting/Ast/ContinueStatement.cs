@@ -14,17 +14,29 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class ContinueStatement : Statement {
-        private Statement _statement;
+    public sealed class ContinueStatement : Expression, ISpan {
+        private Expression _expression;
+        private readonly SourceLocation _start;
+        private readonly SourceLocation _end;
 
-        internal ContinueStatement(SourceSpan span, Statement statement)
-            : base(AstNodeType.ContinueStatement, span) {
-            _statement = statement;
+        internal ContinueStatement(SourceLocation start, SourceLocation end, Expression expression)
+            : base(AstNodeType.ContinueStatement, typeof(void)) {
+            _start = start;
+            _end = end;
+            _expression = expression;
         }
 
-        public Statement Statement {
-            get { return _statement; }
-            set { _statement = value; }
+        public Expression Statement {
+            get { return _expression; }
+            set { _expression = value; }
+        }
+
+        public SourceLocation Start {
+            get { return _start; }
+        }
+
+        public SourceLocation End {
+            get { return _end; }
         }
     }
 
@@ -37,13 +49,13 @@ namespace Microsoft.Scripting.Ast {
             return Continue(span, null);
         }
 
-        /// <param name="statement">The statement the label is pointing to (not the label itself).</param>
-        public static ContinueStatement Continue(Statement statement) {
-            return Continue(SourceSpan.None, statement);
+        /// <param name="expression">The statement the label is pointing to (not the label itself).</param>
+        public static ContinueStatement Continue(Expression expression) {
+            return Continue(SourceSpan.None, expression);
         }
 
-        public static ContinueStatement Continue(SourceSpan span, Statement statement) {
-            return new ContinueStatement(span, statement);
+        public static ContinueStatement Continue(SourceSpan span, Expression expression) {
+            return new ContinueStatement(span.Start, span.End, expression);
         }
     }
 }

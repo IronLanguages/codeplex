@@ -14,7 +14,9 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
@@ -63,6 +65,7 @@ namespace Microsoft.Scripting.Generation {
 
     sealed class GlobalFieldAllocator : StorageAllocator {
         private readonly SlotFactory _slotFactory;
+        private readonly Dictionary<SymbolId, Slot> _fields = new Dictionary<SymbolId, Slot>();
 
         public GlobalFieldAllocator(SlotFactory sfsf) {
             _slotFactory = sfsf;
@@ -72,12 +75,25 @@ namespace Microsoft.Scripting.Generation {
             get { return _slotFactory; }
         }
 
+        public Dictionary<SymbolId, Slot> Fields {
+            get {
+                return _fields;
+            }
+        }
+
         public override void PrepareForEmit(Compiler cg) {
             _slotFactory.PrepareForEmit(cg);
         }
 
         public override Storage AllocateStorage(SymbolId name, Type type) {
-            return new GlobalFieldStorage(_slotFactory.MakeSlot(name, type));
+            Slot slot;
+            if (_fields.TryGetValue(name, out slot)) {
+                // Throw invalid operation - duplicate name on global level
+                throw new InvalidOperationException("Duplicate global name");
+            }
+
+            _fields[name] = slot = _slotFactory.CreateSlot(name, type);
+            return new GlobalFieldStorage(slot);
         }
     }
 }

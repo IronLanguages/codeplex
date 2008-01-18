@@ -15,6 +15,7 @@
 
 using System;
 using IronPython.Hosting;
+using IronPython.Runtime;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
@@ -32,6 +33,7 @@ namespace IronPython.Compiler {
     [Serializable]
     public sealed class PythonCompilerOptions : CompilerOptions {
         private PythonLanguageFeatures _languageFeatures;
+        private ModuleOptions _module = ModuleOptions.Optimized;
         private bool _skipFirstLine;
 
         public PythonLanguageFeatures LanguageFeatures {
@@ -56,6 +58,15 @@ namespace IronPython.Compiler {
             set {
                 if (value) _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
                 else _languageFeatures &= ~PythonLanguageFeatures.AllowWithStatement;
+            }
+        }
+
+        public ModuleOptions Module {
+            get {
+                return _module;
+            }
+            set {
+                _module = value;
             }
         }
 

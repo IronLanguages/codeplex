@@ -50,15 +50,17 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op == Operators.None) {
                 return Ast.Statement(
                     span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None,
-                    Ast.Action.SetMember(
-                        _name,
-                        typeof(object),
-                        ag.Transform(_target),
-                        right
+                    Ast.Void(
+                        Ast.Action.SetMember(
+                            _name,
+                            typeof(object),
+                            ag.Transform(_target),
+                            right
+                        )
                     )
                 );
             } else {
@@ -85,7 +87,7 @@ namespace IronPython.Compiler.Ast {
             }
         }
 
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             return Ast.Statement(
                 Span,
                 Ast.Action.DeleteMember(

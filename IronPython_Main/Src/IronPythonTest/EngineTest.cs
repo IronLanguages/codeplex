@@ -496,7 +496,7 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("clsPart.Property = clsPart.Field * 5");
                 sw.WriteLine("clsPart.Event += (lambda x: x*x)");
 
-                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), SourceCodeKind.File);
             }
 
             ClsPart clsPart = new ClsPart();
@@ -511,7 +511,7 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("var2 = clsPart.Method(var1[0])");
                 sw.WriteLine("if var2 != 10 * 10: raise AssertionError('test failed')");
 
-                tempFile2 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile2 = _pe.CreateScriptSourceFromString(sw.ToString(), SourceCodeKind.File);
             }
 
             _pe.Execute(scope, tempFile2); 
@@ -538,7 +538,7 @@ del customSymbol", SourceCodeKind.Statements));
                 sw.WriteLine("class C2:");
                 sw.WriteLine("    def M(): return +1");
 
-                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), "", SourceCodeKind.File);
+                tempFile1 = _pe.CreateScriptSourceFromString(sw.ToString(), SourceCodeKind.File);
             }
 
             _pe.Execute(scope, tempFile1);
@@ -598,7 +598,7 @@ del customSymbol", SourceCodeKind.Statements));
                 try {
                     _pe.Execute(scope, _pe.CreateScriptSourceFromFile(tempFile1));
                     throw new Exception("Scenario7");
-                } catch (IronPython.Runtime.Exceptions.PythonImportErrorException) { }
+                } catch (IronPython.Runtime.Exceptions.ImportException) { }
 
                 File.WriteAllText(tempFile1, "from lib.assert_util import *");
 
@@ -679,44 +679,54 @@ del customSymbol", SourceCodeKind.Statements));
             AreEqual(20, clsPart.Field);
         }
 
-#if !SILVERLIGHT
         public void ScenarioStreamRedirect() {
             MemoryStream stdout = new MemoryStream();
             MemoryStream stdin = new MemoryStream();
             MemoryStream stderr = new MemoryStream();
-            ASCIIEncoding encoding = new ASCIIEncoding();
-            byte[] buffer = new byte[15];
+            Encoding encoding = Encoding.UTF8;
 
-            TextReader oldIn = Console.In;
-            TextWriter oldOut = Console.Out;
-            TextWriter oldErr = Console.Error;
-            _pe.Runtime.RedirectIO(new StreamReader(stdin), new StreamWriter(stdout), new StreamWriter(stderr));
+            byte[] buffer = new byte[50];
+
+            _pe.Runtime.IO.SetInput(stdin, encoding);
+            _pe.Runtime.IO.SetOutput(stdout, encoding);
+            _pe.Runtime.IO.SetErrorOutput(stderr, encoding);
+ 
+            const string str = "This is stdout";
+            byte[] bytes = encoding.GetBytes(str);
+
             try {
                 IScriptScope scope = _pe.Runtime.CreateScope();
                 _pe.Execute(scope, _pe.CreateScriptSourceFromString("import sys", SourceCodeKind.Statements));
 
-                stdin.Write(encoding.GetBytes("This is stdout"), 0, 14);
+                stdin.Write(bytes, 0, bytes.Length);
                 stdin.Position = 0;
                 _pe.Execute(scope, _pe.CreateScriptSourceFromString("output = sys.__stdin__.readline()", SourceCodeKind.Statements));
-                AreEqual("This is stdout", _pe.Execute<string>(scope, _pe.CreateScriptSourceFromString("output")));
+                AreEqual(str, _pe.Execute<string>(scope, _pe.CreateScriptSourceFromString("output")));
+
                 _pe.Execute(scope, _pe.CreateScriptSourceFromString("sys.__stdout__.write(output)", SourceCodeKind.Statements));
                 stdout.Flush();
                 stdout.Position = 0;
-                int len = stdout.Read(buffer, 0, 14);
-                AreEqual(14, len);
-                AreEqual("This is stdout", encoding.GetString(buffer, 0, len));
+
+                // deals with BOM:
+                using (StreamReader reader = new StreamReader(stdout, true)) {
+                    string s = reader.ReadToEnd();
+                    AreEqual(str, s);
+                }
 
                 _pe.Execute(scope, _pe.CreateScriptSourceFromString("sys.__stderr__.write(\"This is stderr\")", SourceCodeKind.Statements));
+
                 stderr.Flush();
                 stderr.Position = 0;
-                len = stderr.Read(buffer, 0, 14);
-                AreEqual(14, len);
-                AreEqual("This is stderr", encoding.GetString(buffer, 0, len));
+                
+                // deals with BOM:
+                using (StreamReader reader = new StreamReader(stderr, true)) {
+                    string s = reader.ReadToEnd();
+                    AreEqual("This is stderr", s);
+                }
             } finally {
-                _pe.Runtime.RedirectIO(oldIn, oldOut, oldErr);
+                _pe.Runtime.IO.RedirectToConsole();
             }
         }
-#endif
 
         public void ScenarioNullArguments() {
             try {

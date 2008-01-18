@@ -35,7 +35,6 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
     [PythonType("__builtin__"), Documentation("")]  // Documentation suppresses XML Doc on startup.
@@ -96,7 +95,7 @@ namespace IronPython.Runtime {
                     if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null && strAttrName != "*") {
                         try {
                             attrValue = PythonContext.GetImporter(context).ImportFrom(context, mod, strAttrName);
-                        } catch (PythonImportErrorException) {
+                        } catch (ImportException) {
                             continue;
                         }
                     }
@@ -221,11 +220,12 @@ namespace IronPython.Runtime {
             CompileFlags cflags = GetCompilerFlags(flags);
             CompilerOptions opts = GetDefaultCompilerOptions(context, inheritContext, cflags);
             SourceUnit sourceUnit;
+            string unitPath = String.IsNullOrEmpty(filename) ? null : filename;
 
             switch (kind) {
-                case "exec": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.Default); break;
-                case "eval": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.Expression); break;
-                case "single": sourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.SingleStatement); break;
+                case "exec": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.Default); break;
+                case "eval": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.Expression); break;
+                case "single": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.SingleStatement); break;
                 default: 
                     throw PythonOps.ValueError("compile() arg 3 must be 'exec' or 'eval' or 'single'");
             }
@@ -233,7 +233,7 @@ namespace IronPython.Runtime {
             if ((cflags & CompileFlags.CO_DONT_IMPLY_DEDENT) != 0) {
                 // re-parse in interactive code mode to see if this is valid
                 ErrorSink es = new CompilerErrorSink();
-                SourceUnit altSourceUnit = context.LanguageContext.CreateSnippet(source, filename, SourceCodeKind.InteractiveCode);
+                SourceUnit altSourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.InteractiveCode);
                 CompilerContext compilerContext = new CompilerContext(altSourceUnit, null, es);
                 Parser p = Parser.CreateParser(compilerContext, PythonContext.GetPythonOptions(context), false, false);
                 SourceCodeProperties prop;
@@ -1035,7 +1035,7 @@ namespace IronPython.Runtime {
         }
 
         public static object property = DynamicHelpers.GetPythonTypeFromType(typeof(PythonProperty));
-
+        
         public static List range(int stop) {
             return rangeWorker(stop);
         }
@@ -1156,6 +1156,31 @@ namespace IronPython.Runtime {
                 return ret;
             }
             throw PythonOps.OverflowError("too many items for list");
+        }
+
+        /// <summary>
+        /// float overload of range - reports TypeError if the float is outside the range of normal integers.
+        /// 
+        /// The method binder would usally report an OverflowError in this case.
+        /// </summary>
+        public static List range(double stop) {
+            return range(GetRangeAsInt(stop, "stop"));
+        }
+
+        /// <summary>
+        /// float overload of range - reports TypeError if the float is outside the range of normal integers.
+        /// 
+        /// The method binder would usally report an OverflowError in this case.
+        /// </summary>
+        public static List range(double start, double stop, [DefaultParameterValue(1.0)]double step) {
+            return range(GetRangeAsInt(start, "start"), GetRangeAsInt(stop, "stop"), GetRangeAsInt(step, "step"));
+        }
+
+        private static int GetRangeAsInt(double index, string name) {
+            if (index < Int32.MaxValue || index > Int32.MaxValue) {
+                throw PythonOps.TypeError("expected integer for " + name + " argument, got float");
+            }
+            return (int)index;
         }
 
         public static string raw_input(CodeContext context) {
@@ -1371,23 +1396,29 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static object Exception = ExceptionConverter.GetPythonException("Exception");
+        public static object BaseException = DynamicHelpers.GetPythonTypeFromType(typeof(PythonExceptions.BaseException));
 
         /// <summary>
         /// Gets the appropriate LanguageContext to be used for code compiled with Python's compile built-in
         /// </summary>
         internal static CompilerOptions GetDefaultCompilerOptions(CodeContext/*!*/ context, bool inheritContext, CompileFlags cflags) {
+            PythonCompilerOptions pco;
             if (inheritContext) {
                 if (((PythonModule)context.ModuleContext).TrueDivision) {
-                    return new PythonCompilerOptions(true);
+                    pco = new PythonCompilerOptions(true);
                 } else {
-                    return new PythonCompilerOptions(false);
+                    pco = new PythonCompilerOptions(false);
                 }                
             } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
-                return new PythonCompilerOptions(true);
+                pco = new PythonCompilerOptions(true);
             } else {
-                return context.LanguageContext.GetDefaultCompilerOptions();
+                pco = DefaultContext.DefaultPythonContext.CreateDefaultCompilerOptions();
             }
+
+            // The options created this way never creates
+            // optimized module (exec, compile)
+            pco.Module &= ~ModuleOptions.Optimized;
+            return pco;
         }
 
         /// <summary> Returns true if we should inherit our callers context (true division, etc...), false otherwise </summary>

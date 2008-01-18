@@ -22,7 +22,7 @@ namespace Microsoft.Scripting {
     /// </summary>
     public class InvariantContext : LanguageContext {
         // friend: ScriptDomainManager
-        internal InvariantContext(ScriptDomainManager/*!*/ manager)
+        public InvariantContext(ScriptDomainManager/*!*/ manager)
             : base(manager) {
             // TODO: use InvariantBinder
             Binder = new DefaultActionBinder(new CodeContext(new Scope(this), this), Type.EmptyTypes);

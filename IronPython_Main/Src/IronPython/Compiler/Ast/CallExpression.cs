@@ -81,7 +81,7 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
             ag.AddError("can't delete function call", Span);
             return null;
         }

@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public virtual object GetValue(CodeContext context, bool outParam) {
-            return Interpreter.EvaluateExpression(context, _expr);
+            return Interpreter.Evaluate(context, _expr);
         }
 
         public virtual object AssignValue(CodeContext context, object value) {

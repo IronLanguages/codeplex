@@ -29,8 +29,8 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.OrElse:
                     EmitBranchTrueOrElse((BinaryExpression)node, label);
                     break;
-                case AstNodeType.CommaExpression:
-                    EmitBranchTrue((CommaExpression)node, label);
+                case AstNodeType.Block:
+                    EmitBranchTrue((Block)node, label);
                     break;
                 case AstNodeType.Equal:
                     EmitBranchTrueEqual((BinaryExpression)node, label);
@@ -53,8 +53,8 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.OrElse:
                     EmitBranchFalseOrElse((BinaryExpression)node, label);
                     break;
-                case AstNodeType.CommaExpression:
-                    EmitBranchFalse((CommaExpression)node, label);
+                case AstNodeType.Block:
+                    EmitBranchFalse((Block)node, label);
                     break;
                 case AstNodeType.Equal:
                     EmitBranchTrueNotEqual((BinaryExpression)node, label);
@@ -196,24 +196,14 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private void EmitBranchTrue(CommaExpression node, Label label) {
-            if (node.ValueIndex == node.Expressions.Count - 1) {
-                EmitCommaPrefix(node, node.ValueIndex);
-                EmitBranchTrue(node.Expressions[node.ValueIndex], label);
-            } else {
-                // Default behavior
-                EmitExpressionBranchTrue(node, label);
-            }
+        private void EmitBranchTrue(Block node, Label label) {
+            EmitBlockPrefix(node, node.Expressions.Count - 1);
+            EmitBranchTrue(node.Expressions[node.Expressions.Count - 1], label);
         }
 
-        private void EmitBranchFalse(CommaExpression node, Label label) {
-            if (node.ValueIndex== node.Expressions.Count - 1) {
-                EmitCommaPrefix(node, node.ValueIndex);
-                EmitBranchFalse(node.Expressions[node.ValueIndex], label);
-            } else {
-                // Default behavior
-                EmitExpressionBranchFalse(node, label);
-            }
+        private void EmitBranchFalse(Block node, Label label) {
+            EmitBlockPrefix(node, node.Expressions.Count - 1);
+            EmitBranchFalse(node.Expressions[node.Expressions.Count - 1], label);
         }
 
         /// <summary>

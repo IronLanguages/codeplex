@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Actions {
                 Expression call = Ast.SimpleCallHelper(
                     Rule.Parameters[0],
                     typeof(IConstructorWithCodeContext).GetMethod("Construct"),
-                    GetICallableParameters(t, Rule)
+                    GetICallableParameters(Rule)
                 );
 
                 Rule.SetTarget(Rule.MakeReturn(Binder, call));

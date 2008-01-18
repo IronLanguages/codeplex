@@ -44,7 +44,6 @@ namespace Microsoft.Scripting {
         public static readonly object True = true;
         /// <summary> Singleton boxed instance of False  We should never box additional instances. </summary>
         public static readonly object False = false;
-        private static TopNamespaceTracker _topNamespace;
 
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
         private static Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
@@ -116,14 +115,16 @@ namespace Microsoft.Scripting {
             string nonKeyword = keywordArgumentsProvided ? "non-keyword " : "";
 
             if (defaultArgumentCount > 0 || hasArgList || minFormalNormalArgumentCount != maxFormalNormalArgumentCount) {
-                if (providedArgumentCount < minFormalNormalArgumentCount) {
+                if (providedArgumentCount < minFormalNormalArgumentCount || maxFormalNormalArgumentCount == Int32.MaxValue) {
                     formalCountQualifier = "at least";
                     formalCount = minFormalNormalArgumentCount - defaultArgumentCount;
                 } else {
                     formalCountQualifier = "at most";
                     formalCount = maxFormalNormalArgumentCount;
                 }
-            } else {
+            } else if (minFormalNormalArgumentCount == 0) {
+                return RuntimeHelpers.SimpleTypeError(string.Format("{0}() takes no arguments ({1} given)", methodName, providedArgumentCount));
+            } else {            
                 formalCountQualifier = "exactly";
                 formalCount = minFormalNormalArgumentCount;
             }
@@ -148,6 +149,10 @@ namespace Microsoft.Scripting {
 
         public static ArgumentTypeException TypeErrorForExtraKeywordArgument(string name, string argumentName) {
             return SimpleTypeError(String.Format("{0}() got an unexpected keyword argument '{1}'", name, argumentName));
+        }
+
+        public static ArgumentTypeException TypeErrorForDuplicateKeywordArgument(string name, string argumentName) {
+            return SimpleTypeError(String.Format("{0}() got multiple values for keyword argument '{1}'", name, argumentName));
         }
 
         public static ArgumentTypeException SimpleTypeError(string message) {
@@ -484,14 +489,6 @@ namespace Microsoft.Scripting {
 #else 
             return frames.ToArray();
 #endif
-        }
-        public static TopNamespaceTracker TopNamespace {
-            get {
-                if (_topNamespace == null)
-                    Interlocked.CompareExchange<TopNamespaceTracker>(ref _topNamespace, new TopNamespaceTracker(), null);
-
-                return _topNamespace;
-            }
         }
 
         /// <summary>

@@ -282,7 +282,7 @@ namespace IronPython.Runtime {
                 this.Throw(new GeneratorExitException());
 
                 // Generator should not have exited normally. 
-                throw new PythonRuntimeErrorException("generator ignored GeneratorExit");
+                throw new RuntimeException("generator ignored GeneratorExit");
             } catch (StopIterationException) {
                 // Ignore
             } catch (GeneratorExitException) {

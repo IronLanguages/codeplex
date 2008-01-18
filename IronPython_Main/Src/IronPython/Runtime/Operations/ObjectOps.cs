@@ -35,6 +35,7 @@ using IronPython.Runtime.Operations;
 [assembly: PythonExtensionType(typeof(object), typeof(ObjectOps))]
 namespace IronPython.Runtime.Operations {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using IronPython.Runtime.Exceptions;
 
     public static class ObjectOps {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
@@ -50,11 +51,6 @@ namespace IronPython.Runtime.Operations {
             if (!new PythonTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetPythonType(self), value)) {
                 throw PythonOps.TypeError("__class__ assignment can only be performed on user defined types");
             }
-        }
-
-        [PropertyMethod, PythonName("__module__")]
-        public static string Get__module__(object self) {
-            return "__builtin__";
         }
 
         [SpecialName]

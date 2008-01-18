@@ -31,6 +31,8 @@ using IronPython.Runtime.Types;
 namespace IronPython.Runtime {
 
     public static partial class Converter {
+        #region Conversion Sites
+
         private static FastDynamicSite<object, int> _intSite = MakeExplicitConvertSite<int>();
         private static FastDynamicSite<object, double> _doubleSite = MakeExplicitConvertSite<double>();
         private static FastDynamicSite<object, Complex64> _complexSite = MakeExplicitConvertSite<Complex64>();
@@ -91,6 +93,8 @@ namespace IronPython.Runtime {
         private static FastDynamicSite<object, object> MakeTrySite<T>(ConversionResultKind kind) {
             return FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(T), kind));
         }
+
+        #endregion
 
         #region Conversion entry points
 
@@ -250,12 +254,7 @@ namespace IronPython.Runtime {
         public static T Convert<T>(object value) {
             return (T)Convert(value, typeof(T));
         }
-
-        internal static bool CanConvert(object value, Type to) {
-            object dummy;
-            return TryConvert(value, to, out dummy);
-        }
-
+        
         /// <summary>
         /// General conversion routine TryConvert - tries to convert the object to the desired type.
         /// Try to avoid using this method, the goal is to ultimately remove it!
@@ -284,88 +283,7 @@ namespace IronPython.Runtime {
                 throw MakeTypeError(to, value);
             }
             return res;
-        }
-
-        internal static bool TrySlowConvert(object value, Type to, out object result) {
-            // check for implicit conversions 
-            PythonType tt = DynamicHelpers.GetPythonTypeFromType(to);
-            PythonType dt = DynamicHelpers.GetPythonType(value);
-
-            if (tt.IsSystemType && dt.IsSystemType) {
-                if (dt.TryConvertTo(value, tt, out result)) {
-                    return true;
-                }
-
-                if (tt.TryConvertFrom(value, out result)) {
-                    return true;
-                }
-            }
-
-            if (to.IsGenericType) {
-                Type genTo = to.GetGenericTypeDefinition();
-                if (genTo == NullableOfTType) {
-                    result = ConvertToNullableT(value, to.GetGenericArguments());
-                    return true;
-                }
-
-                if (genTo == IListOfTType) {
-                    result = ConvertToIListT(value, to.GetGenericArguments());
-                    return true;
-                }
-
-                if (genTo == IDictOfTType) {
-                    result = ConvertToIDictT(value, to.GetGenericArguments());
-                    return true;
-                }
-
-                if (genTo == IEnumerableOfTType) {
-                    result = ConvertToIEnumerableT(value, to.GetGenericArguments());
-                    return true;
-                }
-            }
-
-            if (value.GetType().IsValueType) {
-                if (to == ValueTypeType) {
-                    result = (System.ValueType)value;
-                    return true;
-                }
-            }
-
-#if !SILVERLIGHT
-            if (value != null) {
-                // try available type conversions...
-                object[] tcas = to.GetCustomAttributes(typeof(TypeConverterAttribute), true);
-                foreach (TypeConverterAttribute tca in tcas) {
-                    TypeConverter tc = GetTypeConverter(tca);
-
-                    if (tc == null) continue;
-
-                    if (tc.CanConvertFrom(value.GetType())) {
-                        result = tc.ConvertFrom(value);
-                        return true;
-                    }
-                }
-            }
-#endif
-
-            result = null;
-            return false;
-        }
-
-        internal static bool TryConvertObject(object value, Type to, out object result) {
-            //This is the fallback call for every fast path converter. If we land here,
-            //then 'value' has to be a reference type which might have a custom converter
-            //defined on its dynamic type. (Value Type conversions if any would have 
-            //already taken place during the fast conversions and should not occur through
-            //the dynamic types). 
-            
-            if (value == null || value.GetType().IsValueType) {
-                result = null;
-                return false;
-            }
-
-            return TrySlowConvert(value, to, out result);
-        }
+        }        
 
         /// <summary>
         /// This function tries to convert an object to IEnumerator, or wraps it into an adapter
@@ -392,47 +310,7 @@ namespace IronPython.Runtime {
         public static IEnumerable ConvertToIEnumerable(object o) {
             return _ienumerableSite.Invoke(o);
         }
-
-        public static object ConvertToIEnumerableT(object value, Type[] enumOf) {
-            Type type = IEnumerableOfTType.MakeGenericType(enumOf);
-            if (type.IsInstanceOfType(value)) {
-                return value;
-            }
-
-            IEnumerable ie = value as IEnumerable;
-            if (ie == null) {
-                ie = ConvertToIEnumerable(value);
-            }
-
-            type = IEnumerableOfTWrapperType.MakeGenericType(enumOf);
-            object res = Activator.CreateInstance(type, ie);
-            return res;
-        }
-
-        private static object ConvertToArray(object value, Type to) {
-            int rank = to.GetArrayRank();
-
-            if (rank == 1) {
-                PythonTuple tupleVal = value as PythonTuple;
-                if (tupleVal != null) {
-                    Type elemType = to.GetElementType();
-                    Array ret = Array.CreateInstance(elemType, tupleVal.Count);
-                    try {
-                        tupleVal.CopyTo(ret, 0);
-                        return ret;
-                    } catch (InvalidCastException) {
-                        // invalid conversion
-                        for (int i = 0; i < tupleVal.Count; i++) {
-                            ret.SetValue(Convert(tupleVal[i], elemType), i);
-                        }
-                        return ret;
-                    }
-                }
-            }
-
-            throw MakeTypeError(PythonTypeOps.GetName(to), value);
-        }
-
+        
         internal static int ConvertToSliceIndex(object value) {
             int val;
             if (TryConvertToInt32(value, out val))
@@ -445,11 +323,7 @@ namespace IronPython.Runtime {
 
             throw PythonOps.TypeError("slice indices must be integers");
         }
-
-        internal static Exception CannotConvertTo(string name, object value) {
-            return PythonOps.TypeError("Cannot convert {0}({1}) to {2}", PythonTypeOps.GetName(value), value, name);
-        }
-
+        
         internal static Exception CannotConvertOverflow(string name, object value) {
             return PythonOps.OverflowError("Cannot convert {0}({1}) to {2}", PythonTypeOps.GetName(value), value, name);
         }
@@ -498,6 +372,7 @@ namespace IronPython.Runtime {
         private static readonly Type IEnumerableOfTWrapperType = typeof(IEnumerableOfTWrapper<>);
         private static readonly Type DictWrapperForIDictType = typeof(DictWrapperForIDict<,>);
         private static readonly Type IListOfObjectType = typeof(System.Collections.Generic.IList<object>);
+        private static readonly Type IEnumerableOfObjectType = typeof(IEnumerable<object>);
         private static readonly Type IDictionaryOfObjectType = typeof(System.Collections.Generic.IDictionary<object, object>);
         private static readonly Type ListGenericWrapperType = typeof(ListGenericWrapper<>);
         private static readonly Type DictionaryGenericWrapperType = typeof(DictionaryGenericWrapper<,>);
@@ -583,7 +458,9 @@ namespace IronPython.Runtime {
             if (HasImplicitNumericConversion(fromType, toType)) return true;
 
             // Handling the hole that Type is the only object that we 'box'
-            if (toType == TypeType && typeof(PythonType).IsAssignableFrom(fromType)) return true;
+            if (toType == TypeType && 
+                (typeof(PythonType).IsAssignableFrom(fromType) ||
+                typeof(TypeGroup).IsAssignableFrom(fromType))) return true;
 
             // Support extensible types with simple implicit conversions to their base types
             if (typeof(Extensible<int>).IsAssignableFrom(fromType) && CanConvertFrom(Int32Type, toType, allowNarrowing)) {
@@ -836,8 +713,9 @@ namespace IronPython.Runtime {
         }
 
         private static bool HasNarrowingConversion(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
-            if (allowNarrowing == NarrowingLevel.Operator) {
+            if (allowNarrowing == NarrowingLevel.All) {
                 if (toType == CharType && fromType == StringType) return true;
+                if (toType == StringType && fromType == CharType) return true;
                 //if (toType == Int32Type && fromType == BigIntegerType) return true;
                 //if (IsIntegral(fromType) && IsIntegral(toType)) return true;
 
@@ -850,12 +728,13 @@ namespace IronPython.Runtime {
             if (toType == DoubleType && fromType == DecimalType) return true;
             if (toType == SingleType && fromType == DecimalType) return true;
 
+            if (toType.IsArray) {
+                return typeof(PythonTuple).IsAssignableFrom(fromType);
+            }
+
             if (allowNarrowing == NarrowingLevel.All) {
                 if (IsNumeric(fromType) && IsNumeric(toType)) return true;
-
-                if (toType.IsArray) {
-                    return typeof(PythonTuple).IsAssignableFrom(fromType);
-                }
+                if (fromType == typeof(bool) && IsNumeric(toType)) return true;
 
                 if (toType == CharType && fromType == StringType) return true;
                 if (toType == Int32Type && fromType == BooleanType) return true;
@@ -870,14 +749,28 @@ namespace IronPython.Runtime {
                 if (toType == Int32Type && HasPythonProtocol(fromType, Symbols.ConvertToInt)) return true;
                 if (toType == DoubleType && HasPythonProtocol(fromType, Symbols.ConvertToFloat)) return true;
                 if (toType == BigIntegerType && HasPythonProtocol(fromType, Symbols.ConvertToLong)) return true;
+
+                if (toType == typeof(IEnumerator)) {
+                    if (IsPythonType(fromType)) return true;
+                } else if (toType.IsGenericType) {
+                    Type genTo = toType.GetGenericTypeDefinition();
+                    if (genTo == IEnumerableOfTType) {
+                        return IEnumerableOfObjectType.IsAssignableFrom(fromType) ||
+                            IEnumerableType.IsAssignableFrom(fromType);
+                    } else if (genTo == typeof(System.Collections.Generic.IEnumerator<>)) {
+                        if (IsPythonType(fromType)) return true;
+                    }
+                }
             }
 
             if (toType.IsGenericType) {
                 Type genTo = toType.GetGenericTypeDefinition();
                 if (genTo == IListOfTType) {
                     return IListOfObjectType.IsAssignableFrom(fromType);
-                } else if (genTo == typeof(System.Collections.Generic.IEnumerator<>)) {
-                    if (IsPythonType(fromType)) return true;
+                } else if (genTo == NullableOfTType) {
+                    if (fromType == typeof(None) || CanConvertFrom(fromType, toType.GetGenericArguments()[0], allowNarrowing)) {
+                        return true;
+                    }                
                 } else if (genTo == IDictOfTType) {
                     return IDictionaryOfObjectType.IsAssignableFrom(fromType);
                 }
@@ -889,12 +782,21 @@ namespace IronPython.Runtime {
         }
 
         private static bool HasImplicitConversion(Type fromType, Type toType) {
-            foreach (MethodInfo method in fromType.GetMethods()) {
-                if (method.Name == "op_Implicit" &&
-                    method.GetParameters()[0].ParameterType == fromType &&
-                    method.ReturnType == toType) {
-                    return true;
+            return 
+                HasImplicitConversionWorker(fromType, fromType, toType) ||
+                HasImplicitConversionWorker(toType, fromType, toType);
+        }
+
+        private static bool HasImplicitConversionWorker(Type lookupType, Type fromType, Type toType) {
+            while (lookupType != null) {
+                foreach (MethodInfo method in lookupType.GetMethods()) {
+                    if (method.Name == "op_Implicit" &&
+                        method.GetParameters()[0].ParameterType.IsAssignableFrom(fromType) &&
+                        toType.IsAssignableFrom(method.ReturnType)) {
+                        return true;
+                    }
                 }
+                lookupType = lookupType.BaseType;
             }
             return false;
         }

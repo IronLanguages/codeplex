@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Generation {
             return _concreteSlots[cg][data];
         }
 
-        protected override Slot CreateSlot(SymbolId name, Type type) {
+        public override Slot CreateSlot(SymbolId name, Type type) {
             if (_tupleType != null) throw new InvalidOperationException("cannot add slots after tuple type has been determined");
 
             Slot res = new LazySlot<int>(this, type, _slots.Count);

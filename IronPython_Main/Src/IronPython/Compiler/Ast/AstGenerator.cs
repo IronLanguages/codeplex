@@ -18,18 +18,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-using IronPython.Runtime;
-
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 using MSAst = Microsoft.Scripting.Ast;
+
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
-    using Microsoft.Scripting.Actions;
 
     internal class AstGenerator {
         private readonly MSAst.CodeBlock _block;
@@ -117,11 +115,11 @@ namespace IronPython.Compiler.Ast {
             _temps.Add(temp);
         }
 
-        internal static MSAst.Statement MakeAssignment(MSAst.Variable variable, MSAst.Expression right) {
+        internal static MSAst.Expression MakeAssignment(MSAst.Variable variable, MSAst.Expression right) {
             return MakeAssignment(variable, right, SourceSpan.None);
         }
 
-        internal static MSAst.Statement MakeAssignment(MSAst.Variable variable, MSAst.Expression right, SourceSpan span) {
+        internal static MSAst.Expression MakeAssignment(MSAst.Variable variable, MSAst.Expression right, SourceSpan span) {
             return Ast.Statement(
                 span,
                 Ast.Assign(variable, Ast.Convert(right, variable.Type))
@@ -195,8 +193,16 @@ namespace IronPython.Compiler.Ast {
             return null;
         }
 
-        public MSAst.Statement Transform(Statement from) {
-            return from != null ? from.Transform(this) : null;
+        public MSAst.Expression Transform(Statement from) {
+            if (from == null) {
+                return null;
+            } else {
+                MSAst.Expression expression = from.Transform(this);
+                if (expression.Type != typeof(void)) {
+                    expression = Ast.Convert(expression, typeof(void));
+                }
+                return expression;
+            }
         }
 
         internal MSAst.CodeBlock Transform(PythonAst from) {
@@ -233,19 +239,9 @@ namespace IronPython.Compiler.Ast {
             return to;
         }
 
-        internal MSAst.Statement[] Transform(Statement[] from) {
+        internal MSAst.Expression[] Transform(Statement[] from) {
             Debug.Assert(from != null);
-            MSAst.Statement[] to = new MSAst.Statement[from.Length];
-            for (int i = 0; i < from.Length; i++) {
-                Debug.Assert(from[i] != null);
-                to[i] = from[i].Transform(this);
-            }
-            return to;
-        }
-
-        internal MSAst.IfStatementTest[] Transform(IfStatementTest[] from) {
-            Debug.Assert(from != null);
-            MSAst.IfStatementTest[] to = new MSAst.IfStatementTest[from.Length];
+            MSAst.Expression[] to = new MSAst.Expression[from.Length];
             for (int i = 0; i < from.Length; i++) {
                 Debug.Assert(from[i] != null);
                 to[i] = from[i].Transform(this);

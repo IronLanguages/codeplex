@@ -28,6 +28,7 @@ namespace Microsoft.Scripting.Ast {
         /// This method will leave the value of the expression
         /// on the top of the stack typed as Type.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public void EmitExpression(Expression node) {
@@ -117,10 +118,6 @@ namespace Microsoft.Scripting.Ast {
                     EmitGeneratorIntrinsic();
                     break;
 
-                case AstNodeType.CommaExpression:
-                    Emit((CommaExpression)node);
-                    break;
-
                 case AstNodeType.DeleteUnboundExpression:
                     Emit((DeleteUnboundExpression)node);
                     break;
@@ -153,8 +150,64 @@ namespace Microsoft.Scripting.Ast {
                     Emit((UnboundExpression)node);
                     break;
 
-                case AstNodeType.VoidExpression:
-                    Emit((VoidExpression)node);
+                case AstNodeType.Block:
+                    Emit((Block)node);
+                    break;
+
+                case AstNodeType.BreakStatement:
+                    Emit((BreakStatement)node);
+                    break;
+
+                case AstNodeType.ContinueStatement:
+                    Emit((ContinueStatement)node);
+                    break;
+
+                case AstNodeType.DeleteStatement:
+                    Emit((DeleteStatement)node);
+                    break;
+
+                case AstNodeType.DoStatement:
+                    Emit((DoStatement)node);
+                    break;
+
+                case AstNodeType.EmptyStatement:
+                    Emit((EmptyStatement)node);
+                    break;
+
+                case AstNodeType.ExpressionStatement:
+                    Emit((ExpressionStatement)node);
+                    break;
+
+                case AstNodeType.LabeledStatement:
+                    Emit((LabeledStatement)node);
+                    break;
+
+                case AstNodeType.LoopStatement:
+                    Emit((LoopStatement)node);
+                    break;
+
+                case AstNodeType.ReturnStatement:
+                    Emit((ReturnStatement)node);
+                    break;
+
+                case AstNodeType.ScopeStatement:
+                    Emit((ScopeStatement)node);
+                    break;
+
+                case AstNodeType.SwitchStatement:
+                    Emit((SwitchStatement)node);
+                    break;
+
+                case AstNodeType.ThrowStatement:
+                    Emit((ThrowStatement)node);
+                    break;
+
+                case AstNodeType.TryStatement:
+                    Emit((TryStatement)node);
+                    break;
+
+                case AstNodeType.YieldStatement:
+                    Emit((YieldStatement)node);
                     break;
 
                 default:
@@ -327,9 +380,10 @@ namespace Microsoft.Scripting.Ast {
         private void Emit(ConditionalExpression node) {
             Label eoi = DefineLabel();
             Label next = DefineLabel();
-            EmitExpression(node.Test);
-            Emit(OpCodes.Brfalse, next);
+            EmitBranchFalse(node.Test, next);
+            //Emit(OpCodes.Brfalse, next);
             EmitExpression(node.IfTrue);
+            EmitSequencePointNone();
             Emit(OpCodes.Br, eoi);
             MarkLabel(next);
             EmitExpression(node.IfFalse);
@@ -470,14 +524,14 @@ namespace Microsoft.Scripting.Ast {
         private void Emit(BoundAssignment node) {
             EmitExpression(node.Value);
             Emit(OpCodes.Dup);
-            node.Ref.Slot.EmitSet(this);
+            GetVariableSlot(node.Variable).EmitSet(this);
         }
 
         private void Emit(BoundExpression node) {
             // Do not emit CheckInitialized for variables that are defined, or for temp variables.
             // Only emit CheckInitialized for variables of type object
             bool check = !node.IsDefined && !node.Variable.IsTemporary && node.Variable.Type == typeof(object);
-            EmitGet(node.Ref.Slot, node.Name, check);
+            EmitGet(GetVariableSlot(node.Variable), node.Name, check);
         }
 
         private void Emit(CodeBlockExpression node) {
@@ -498,30 +552,6 @@ namespace Microsoft.Scripting.Ast {
 
             ContextSlot.EmitGet(this);
         }
-
-        #region CommaExpression
-
-        private void Emit(CommaExpression node) {
-            EmitCommaPrefix(node, node.Expressions.Count);
-        }
-
-        private void EmitCommaPrefix(CommaExpression node, int count) {
-            ReadOnlyCollection<Expression> expressions = node.Expressions;
-            for (int index = 0; index < count; index++) {
-                Expression current = expressions[index];
-
-                // Emit the expression
-                EmitExpression(current);
-
-                // If we don't want the expression just emitted as the result,
-                // pop it off of the stack, unless it is a void expression.
-                if (index != node.ValueIndex && current.Type != typeof(void)) {
-                    Emit(OpCodes.Pop);
-                }
-            }
-        }
-
-        #endregion
 
         private void Emit(DeleteUnboundExpression node) {
             // RuntimeHelpers.RemoveName(CodeContext, name)
@@ -609,10 +639,6 @@ namespace Microsoft.Scripting.Ast {
             EmitCall(typeof(RuntimeHelpers), "LookupName");
         }
 
-        private void Emit(VoidExpression node) {
-            EmitStatement(node.Statement);
-        }
-
         #region Expression helpers
 
         private void EmitExpressionAsObjectOrNull(Expression node) {
@@ -622,6 +648,7 @@ namespace Microsoft.Scripting.Ast {
                 EmitExpressionAsObject(node);
             }
         }
+
 
         private void EmitExpressionAndPop(Expression node) {
             EmitExpression(node);

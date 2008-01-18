@@ -28,6 +28,7 @@ using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Hosting;
 
     public static class CompilerHelpers {
         public static readonly MethodAttributes PublicStatic = MethodAttributes.Public | MethodAttributes.Static;
@@ -117,6 +118,10 @@ namespace Microsoft.Scripting.Generation {
             if (pi.ParameterType.IsByRef) return true;
 
             return (pi.Attributes & (ParameterAttributes.Out)) == ParameterAttributes.Out;
+        }
+
+        public static bool ProhibitsNull(ParameterInfo parameter) {
+            return parameter.IsDefined(typeof(NotNullAttribute), false);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
@@ -288,8 +293,8 @@ namespace Microsoft.Scripting.Generation {
 
         #region Compiler Creation Support
 
-        internal static Compiler CreateDebuggableDynamicCodeGenerator(CompilerContext context, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
-            TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, context.SourceUnit);
+        internal static Compiler CreateDebuggableDynamicCodeGenerator(SourceUnit sourceUnit, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
+            TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, typeof(object), sourceUnit);
             Compiler cg = tg.DefineMethod("Initialize", retType, paramTypes, paramNames, constantPool);
 
             tg.AddCodeContextField();
@@ -320,9 +325,9 @@ namespace Microsoft.Scripting.Generation {
             }
 #endif
 
-            if (NeedDebuggableDynamicCodeGenerator(context)) {
+            if (NeedDebuggableDynamicCodeGenerator(context.SourceUnit)) {
                 cg = CreateDebuggableDynamicCodeGenerator(
-                    context,
+                    context.SourceUnit,
                     typeName,
                     typeof(object),
                     new Type[] { typeof(CodeContext) },
@@ -348,8 +353,8 @@ namespace Microsoft.Scripting.Generation {
             return cg;
         }
 
-        internal static bool NeedDebuggableDynamicCodeGenerator(CompilerContext context) {
-            return context != null && context.SourceUnit.LanguageContext.Options.ClrDebuggingEnabled && context.SourceUnit.HasPath;
+        internal static bool NeedDebuggableDynamicCodeGenerator(SourceUnit/*!*/ sourceUnit) {
+            return sourceUnit.LanguageContext.Options.ClrDebuggingEnabled && sourceUnit.HasPath;
         }
 
         #endregion
@@ -611,8 +616,8 @@ namespace Microsoft.Scripting.Generation {
         /// Returns a value which indicates failure when a ConvertToAction of ImplicitTry or
         /// ExplicitTry.
         /// </summary>
-        public static Statement GetTryConvertReturnValue(CodeContext context, StandardRule rule) {
-            Statement failed;
+        public static Expression GetTryConvertReturnValue(CodeContext context, StandardRule rule) {
+            Expression failed;
             if (rule.ReturnType == typeof(BigInteger)) {
                 failed = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(BigInteger), "Zero"));
             } else if (rule.ReturnType.IsInterface || rule.ReturnType.IsClass) {

@@ -25,16 +25,10 @@ namespace IronPython.Runtime.Operations {
         private static DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite = MakeDictSplatSite();
 
         public static object Call(object func, params object[] args) {
-            ICallableWithCodeContext icc = func as ICallableWithCodeContext;
-            if (icc != null) return icc.Call(DefaultContext.Default, args);
-
             return _splatSite.Invoke(DefaultContext.Default, func, args);
         }
 
         public static object CallWithKeywordArgs(object func, object[] args, string[] names) {
-            IFancyCallable ic = func as IFancyCallable;
-            if (ic != null) return ic.Call(DefaultContext.Default, args, names);
-
             PythonDictionary dict = new PythonDictionary();
             for (int i = 0; i < names.Length; i++) {
                 dict[names[i]] = args[args.Length - names.Length + i];

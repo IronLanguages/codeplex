@@ -31,7 +31,7 @@ namespace IronPython.Compiler.Ast {
             get { return _items; }
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op != Operators.None) {
                 ag.AddError("augmented assign to sequence prohibited", Span);
                 return null;
@@ -70,7 +70,7 @@ namespace IronPython.Compiler.Ast {
                     SourceSpan.None;
             }
 
-            List<MSAst.Statement> statements = new List<MSAst.Statement>();
+            List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             // 1. Evaluate the expression and assign the value to the temp.
             MSAst.BoundExpression right_temp = ag.MakeTempExpression("unpacking");
@@ -97,7 +97,7 @@ namespace IronPython.Compiler.Ast {
                 AstGenerator.MakeAssignment(array_temp.Variable, enumeratorValues, rightSpan)
                 );
 
-            List<MSAst.Statement> sets = new List<MSAst.Statement>();            
+            List<MSAst.Expression> sets = new List<MSAst.Expression>();            
             for (int i = 0; i < _items.Length; i ++) {
                 // target = array_temp[i]
 
@@ -139,8 +139,8 @@ namespace IronPython.Compiler.Ast {
             return !(expr is NameExpression);
         }
 
-        internal override MSAst.Statement TransformDelete(AstGenerator ag) {
-            MSAst.Statement[] statements = new MSAst.Statement[_items.Length];
+        internal override MSAst.Expression TransformDelete(AstGenerator ag) {
+            MSAst.Expression[] statements = new MSAst.Expression[_items.Length];
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _items[i].TransformDelete(ag);
             }

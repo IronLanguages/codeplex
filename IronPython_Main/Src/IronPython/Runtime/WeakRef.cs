@@ -26,6 +26,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -124,7 +125,16 @@ namespace IronPython.Runtime {
                             (!ci.IsFinalizing ||
                             ci.LongRef.Target is InstanceFinalizer)) {
 
-                            PythonCalls.Call(ci.Callback, ci.LongRef.Target);
+                            InstanceFinalizer fin = ci.Callback as InstanceFinalizer;
+                            if (fin != null) {
+                                // Going through PythonCalls / Rules requires the types be public.
+                                // Explicit check so that we can keep InstanceFinalizer internal.
+                                fin.CallDirect(DefaultContext.Default);
+                                
+                            } else {
+                                // Non-instance finalizer goes through normal call mechanism.
+                                PythonCalls.Call(ci.Callback, ci.LongRef.Target);
+                            }
                         }
                     } catch (Exception) {
                     }
@@ -146,19 +156,19 @@ namespace IronPython.Runtime {
     /// only reference to this object is the instance so when that goes out of context
     /// this does as well and this will get finalized.  
     /// </summary>
-    internal sealed class InstanceFinalizer : ICallableWithCodeContext {
+    internal sealed class InstanceFinalizer {
         private object _instance;
         private DynamicSite<object, object> _site = RuntimeHelpers.CreateSimpleCallSite<object, object>();
 
-        public InstanceFinalizer(object inst) {
+        internal InstanceFinalizer(object inst) {
             Debug.Assert(inst != null);
 
             _instance = inst;
         }
 
-        #region ICallableWithCodeContext Members
-
-        public object Call(CodeContext context, params object[] args) {
+        // This corresponds to a __del__ method on a class. 
+        // Callers will do a direct invoke so that instanceFinalizer can stay non-public.
+        internal object CallDirect(CodeContext context) {
             object o;
 
             IronPython.Runtime.Types.OldInstance oi = _instance as IronPython.Runtime.Types.OldInstance;
@@ -172,7 +182,5 @@ namespace IronPython.Runtime {
 
             return null;
         }
-
-        #endregion
     }
 }

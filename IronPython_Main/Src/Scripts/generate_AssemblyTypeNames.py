@@ -18,10 +18,6 @@ reload(generate)
 from generate import CodeGenerator, CodeWriter
 
 import sys
-# skip checking - even if we're out of date (new types added) the code still does the right thing.  If we
-# are out of date then we shouldn't fail tests.
-if 'checkonly' in sys.argv: sys.exit(0)
-
 import clr
 import System
 
@@ -143,9 +139,14 @@ def do_generate(cw):
     for assemName in default_assemblies:
         PrintTypeNames(cw, assemName)
 
-is_orcas = System.Type.GetType("System.Object").Assembly.GetType("System.DateTimeOffset", False) != None
+def GenerateAssemblyTypeNames():
+    is_orcas = System.Type.GetType("System.Object").Assembly.GetType("System.DateTimeOffset", False) != None
+    if is_orcas:
+        print "Skipping generate_AssemblyTypeNames on Orcas"
+    else:
+        CodeGenerator("Well-known assembly type names", do_generate).doit()
 
-if is_orcas:
-    print "Skipping generate_AssemblyTypeNames on Orcas"
-else:
-    CodeGenerator("Well-known assembly type names", do_generate).doit()
+# skip checking - even if we're out of date (new types added) the code still does the right thing.  If we
+# are out of date then we shouldn't fail tests.
+if 'checkonly' not in sys.argv:
+    GenerateAssemblyTypeNames()

@@ -22,7 +22,7 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class NewArrayExpression : Expression {
-        private ReadOnlyCollection<Expression> _expressions;
+        private readonly ReadOnlyCollection<Expression> _expressions;
 
         // TODO: Remove!!!
         private readonly ConstructorInfo _constructor;

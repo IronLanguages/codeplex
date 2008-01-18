@@ -74,13 +74,13 @@ namespace IronPython.Compiler.Ast {
         }
 
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
-            MSAst.Statement body = ag.Transform(_body);
-            MSAst.Statement @else = ag.Transform(_else);
-            MSAst.Statement @finally = ag.Transform(_finally);
+        internal override MSAst.Expression Transform(AstGenerator ag) {
+            MSAst.Expression body = ag.Transform(_body);
+            MSAst.Expression @else = ag.Transform(_else);
+            MSAst.Expression @finally = ag.Transform(_finally);
 
             MSAst.Variable exception;
-            MSAst.Statement @catch = TransformHandlers(ag, out exception);
+            MSAst.Expression @catch = TransformHandlers(ag, out exception);
 
             // We have else clause, must generate guard around it
             if (@else != null) {
@@ -98,7 +98,7 @@ namespace IronPython.Compiler.Ast {
                 //  if (run_else) {
                 //      else_body
                 //  }
-                MSAst.Statement result =
+                MSAst.Expression result =
                     Ast.Block(
                         Ast.Write(runElse.Variable, Ast.True()),
                         Ast.Try(
@@ -148,7 +148,7 @@ namespace IronPython.Compiler.Ast {
         /// <param name="ag"></param>
         /// <param name="variable">The variable for the exception in the catch block.</param>
         /// <returns>Null if there are no except handlers. Else the statement to go inside the catch handler</returns>
-        private MSAst.Statement TransformHandlers(AstGenerator ag, out MSAst.Variable variable) {
+        private MSAst.Expression TransformHandlers(AstGenerator ag, out MSAst.Variable variable) {
             if (_handlers == null || _handlers.Length == 0) {
                 variable = null;
                 return null;
@@ -162,7 +162,7 @@ namespace IronPython.Compiler.Ast {
 
             List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
             MSAst.BoundExpression converted = null;
-            MSAst.Statement catchAll = null;
+            MSAst.Expression catchAll = null;
 
             for (int index = 0; index < _handlers.Length; index++) {
                 TryStatementHandler tsh = _handlers[index];
@@ -253,7 +253,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            MSAst.Statement body = null;
+            MSAst.Expression body = null;
 
             if (tests.Count > 0) {
                 // rethrow the exception if we have no catch-all block
@@ -297,7 +297,7 @@ namespace IronPython.Compiler.Ast {
             );
         }
 
-        private static MSAst.Statement ClearDynamicStackFramesAst(SourceSpan span) {
+        private static MSAst.Expression ClearDynamicStackFramesAst(SourceSpan span) {
             return Ast.Statement(
                 span,
                 Ast.Call(AstGenerator.GetHelperMethod("ClearDynamicStackFrames"))

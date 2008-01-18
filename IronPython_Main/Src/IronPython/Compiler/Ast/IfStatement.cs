@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
@@ -35,12 +36,31 @@ namespace IronPython.Compiler.Ast {
             get { return _else; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
-            return Ast.If(
-                Span,
-                ag.Transform(_tests),
-                ag.Transform(_else)
-            );
+        internal override MSAst.Expression Transform(AstGenerator ag) {
+            MSAst.Expression result;
+
+            if (_else != null) {
+                result = ag.Transform(_else);
+            } else {
+                result = Ast.Empty();
+            }
+
+            // Now build from the inside out
+            int i = _tests.Length;
+            while (i-- > 0) {
+                IfStatementTest ist = _tests[i];
+
+                result = Ast.Statement(
+                    new SourceSpan(ist.Start, ist.Header),
+                    result = Ast.Condition(
+                        ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
+                        ag.Transform(ist.Body),
+                        result
+                    )
+                );
+            }
+
+            return result;
         }
 
         public override void Walk(PythonWalker walker) {

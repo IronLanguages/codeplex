@@ -23,7 +23,7 @@ namespace IronPython.Compiler.Ast {
     using Microsoft.Scripting.Utils;
 
     public abstract class ListComprehensionIterator : Node {
-        internal abstract MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body);
+        internal abstract MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body);
     }
 
     public class ListComprehension : Expression {
@@ -56,7 +56,7 @@ namespace IronPython.Compiler.Ast {
                 );
 
             // 2. Create body from _item:   list.Append(_item)
-            MSAst.Statement body = Ast.Statement(
+            MSAst.Expression body = Ast.Statement(
                 _item.Span,
                 Ast.Call(
                     list,
@@ -73,9 +73,8 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Comma(
-                2,                          // index of list (result)
                 initialize,
-                Ast.Void(body),
+                body,
                 list                        // result
             );
         }

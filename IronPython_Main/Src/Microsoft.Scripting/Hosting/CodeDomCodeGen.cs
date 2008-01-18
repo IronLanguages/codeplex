@@ -38,9 +38,10 @@ namespace Microsoft.Scripting.Hosting {
         abstract protected void WriteFunctionDefinition(CodeMemberMethod func);
         abstract protected string QuoteString(string val);
 
-        public SourceUnit/*!*/ GenerateCode(CodeMemberMethod codeDom, LanguageContext context, string id, SourceCodeKind kind) {
+        public SourceUnit/*!*/ GenerateCode(CodeMemberMethod/*!*/ codeDom, LanguageContext/*!*/ context, string path, SourceCodeKind kind) {
             Contract.RequiresNotNull(codeDom, "codeDom");
             Contract.RequiresNotNull(context, "context");
+            Contract.Requires(path == null || path.Length > 0, "path");
 
             // Convert the CodeDom to source code
             if (_writer != null) {
@@ -50,10 +51,10 @@ namespace Microsoft.Scripting.Hosting {
 
             WriteFunctionDefinition(codeDom);
 
-            return CreateSourceUnit(context, id, kind);
+            return CreateSourceUnit(context, path, kind);
         }
 
-        private SourceUnit/*!*/ CreateSourceUnit(LanguageContext context, string id, SourceCodeKind kind) {
+        private SourceUnit/*!*/ CreateSourceUnit(LanguageContext context, string path, SourceCodeKind kind) {
             KeyValuePair<int, string>[] fileMap = _writer.GetFileMap();
             string sourcePath = null;
             if (fileMap != null && fileMap.Length > 0) {
@@ -63,7 +64,7 @@ namespace Microsoft.Scripting.Hosting {
 
             string code = _writer.ToString();
 
-            SourceUnit src = context.CreateSnippet(code, id, kind);
+            SourceUnit src = context.CreateSnippet(code, path, kind);
             src.SetLineMapping(_writer.GetLineMap());
             src.SetDocumentMapping(fileMap);
             return src;

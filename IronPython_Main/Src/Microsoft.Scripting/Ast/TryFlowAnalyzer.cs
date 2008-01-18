@@ -92,13 +92,13 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private int _switch;
 
-        public static TryFlowResult Analyze(Statement statement) {
-            if (statement == null) {
+        public static TryFlowResult Analyze(Expression expression) {
+            if (expression == null) {
                 return new TryFlowResult();
             } else {
                 // find it now.
                 TryFlowAnalyzer tfa = new TryFlowAnalyzer();
-                tfa.WalkNode(statement);
+                tfa.WalkNode(expression);
 
                 Debug.Assert(tfa._nesting == 0);
                 Debug.Assert(tfa._switch == 0);

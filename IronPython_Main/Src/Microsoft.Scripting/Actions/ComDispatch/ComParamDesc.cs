@@ -24,6 +24,9 @@ using Marshal = System.Runtime.InteropServices.Marshal;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+    /// <summary>
+    /// The parameter description of a method defined in a type library
+    /// </summary>
     public class ComParamDesc {
         # region private fields
 
@@ -34,21 +37,24 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private readonly VarEnum _vt;
         private readonly string _name;
         private readonly Type _type;
+        private readonly object _defaultValue;
 
         # endregion
 
         # region ctor
 
         /// <summary>
-        /// Creates a representation for the paramter or return value of a COM method
+        /// Creates a representation for the paramter of a COM method
         /// </summary>
-        /// <param name="elemDesc"></param>
-        /// <param name="name">This can be String.Empty for return values</param>
-        public ComParamDesc(ELEMDESC elemDesc, string name) {
-            _name = name;
-            this._isOut = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOUT) != 0;
-            this._isOpt = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOPT) != 0;
+        internal ComParamDesc(ref ELEMDESC elemDesc, string name) {
+            if (!String.IsNullOrEmpty(name)) {
+                // This is a parameter, not a return value
+                this._isOut = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOUT) != 0;
+                this._isOpt = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOPT) != 0;
+                _defaultValue = PARAMDESCEX.GetDefaultValue(ref elemDesc.desc.paramdesc);
+            }
 
+            _name = name;
             _vt = (VarEnum)elemDesc.tdesc.vt;
             TYPEDESC typeDesc = elemDesc.tdesc;
             while (true) {
@@ -72,6 +78,37 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
 
             _type = GetTypeForVarEnum(vtWithoutByref);
+        }
+
+        /// <summary>
+        /// Creates a representation for the return value of a COM method
+        /// TODO: Return values should be represented by a different type
+        /// </summary>
+        internal ComParamDesc(ref ELEMDESC elemDesc)
+            : this(ref elemDesc, String.Empty) {
+        }
+
+        internal struct PARAMDESCEX {
+            private ulong _cByte;
+            private Variant _varDefaultValue;
+
+            internal void Dummy() {
+                _cByte = 0;
+                throw new InvalidOperationException("This method exists only to keep the compiler happy");
+            }
+
+            internal static object GetDefaultValue(ref PARAMDESC paramdesc) {
+                if ((paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FHASDEFAULT) == 0) {
+                    return DBNull.Value;
+                }
+
+                PARAMDESCEX varValue = (PARAMDESCEX)Marshal.PtrToStructure(paramdesc.lpVarValue, typeof(PARAMDESCEX));
+                if (varValue._cByte != (ulong)(Marshal.SizeOf((typeof(PARAMDESCEX))))) {
+                    throw new InvalidProgramException("Default value of COM parameter cannot be read properly");
+                }
+
+                return varValue._varDefaultValue.ToObject();
+            }
         }
 
         private Type GetTypeForVarEnum(VarEnum vt) {
@@ -154,6 +191,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             result.Append(" ");
             result.Append(_name);
 
+            if (_defaultValue != DBNull.Value) {
+                result.Append("=");
+                result.Append(_defaultValue.ToString());
+            }
+
             return result.ToString();
         }
 
@@ -180,6 +222,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         public Type ParameterType {
             get {
                 return _type;
+            }
+        }
+
+        /// <summary>
+        /// DBNull.Value if there is no default value
+        /// </summary>
+        internal object DefaultValue {
+            get {
+                return _defaultValue;
             }
         }
 

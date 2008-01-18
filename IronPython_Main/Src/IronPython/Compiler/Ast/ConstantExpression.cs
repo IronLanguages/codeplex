@@ -44,7 +44,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Constant(_value);
         }
 
-        internal override MSAst.Statement TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             ag.AddError(_value == null ? "assignment to None" : "can't assign to literal", Span);
             return null;
         }

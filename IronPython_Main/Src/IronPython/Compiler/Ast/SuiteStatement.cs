@@ -32,7 +32,7 @@ namespace IronPython.Compiler.Ast {
             get { return _statements; }
         } 
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             return Ast.Block(ag.Transform(_statements));
         }
        

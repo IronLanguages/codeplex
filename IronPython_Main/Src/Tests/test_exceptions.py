@@ -467,10 +467,8 @@ def test_user_syntax_error_exception():
     x = SyntaxError()
     AreEqual(x.lineno, None)
     AreEqual(x.filename, None)
-    print "CodePlex Work Item 11283 - SyntaxError.msg should be None under 2.5"
-    #AreEqual(x.msg, None)
-    print "CodePlex Work Item 11283"
-    #AreEqual(x.message, '')
+    AreEqual(x.msg, None)
+    AreEqual(x.message, '')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, None)    
@@ -479,8 +477,7 @@ def test_user_syntax_error_exception():
     AreEqual(x.lineno, None)
     AreEqual(x.filename, None)
     AreEqual(x.msg, 'hello')
-    print "CodePlex Work Item 11283"
-    #AreEqual(x.message, 'hello')
+    AreEqual(x.message, 'hello')
     AreEqual(x.offset, None)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, None)    
@@ -489,8 +486,7 @@ def test_user_syntax_error_exception():
     AreEqual(x.lineno, 2)
     AreEqual(x.filename, 1)
     AreEqual(x.msg, 'hello')
-    print "CodePlex Work Item 11283"
-    #AreEqual(x.message, '')
+    AreEqual(x.message, '')
     AreEqual(x.offset, 3)
     AreEqual(x.print_file_and_line, None)
     AreEqual(x.text, 4) 
@@ -715,10 +711,7 @@ def test_sanity():
     
     #run a few sanity checks
     for exception_type in exception_types:
-        if is_cli or is_silverlight:
-            except_list = [exception_type(), exception_type("a single param"), exception_type("a single param", "another param")]
-        else:
-            except_list = [exception_type(), exception_type("a single param")]
+        except_list = [exception_type(), exception_type("a single param")]
         
         for t_except in except_list:
             try:
@@ -728,9 +721,8 @@ def test_sanity():
             
             str_except = str(t_except)
             
-            #there is no __getstate__ method of CPython exceptions...
-            if is_cli or is_silverlight:
-                t_except.__getstate__()
+            #there is no __getstate__ method of exceptions...
+            Assert(not hasattr(t_except, '__getstate__'))
     
     if not is_silverlight:
         #special cases
@@ -767,5 +759,16 @@ def test_swallow_from_else():
             return 4
             
     AreEqual(f(), 4)
-            
+
+def test_newstyle_raise():
+    # raise a new style exception via raise type, value that returns an arbitrary object
+    class MyException(Exception):
+        def __new__(cls, *args): return 42
+        
+    try:
+        raise MyException, 'abc'
+        AssertUnreachable()
+    except Exception, e:
+        AreEqual(e, 42)
+        
 run_test(__name__)

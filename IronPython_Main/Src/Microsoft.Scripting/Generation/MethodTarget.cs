@@ -17,19 +17,24 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Reflection.Emit;
+using System.Text;
 
-using Microsoft.Scripting.Ast;
+using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
-    using Microsoft.Contracts;
 
+    /// <summary>
+    /// MethodTarget represents how a method is bound to the arguments of the call-site
+    /// 
+    /// Contrast this with MethodCandidate which represents the logical view of the invocation of a method
+    /// </summary>
     public sealed class MethodTarget  {
         private MethodBinder _binder;
-        private MethodBase _method;
+        private readonly MethodBase _method;
         private int _parameterCount;
         private IList<ArgBuilder> _argBuilders;
         private ArgBuilder _instanceBuilder;
@@ -46,60 +51,55 @@ namespace Microsoft.Scripting.Generation {
             //argBuilders.TrimExcess();
         }
 
-        public MethodBase Method {
+        public MethodBase/*!*/ Method {
             get { return _method; }
-            internal set { _method = value; }
         }
 
-        internal int ParameterCount {
+        public int ParameterCount {
             get { return _parameterCount; }
         }
 
-        /// <summary>
-        /// Checks to see if this MethodTarget can be called with the specified types at the specified narrowing level.
-        /// 
-        /// The ActionBinder provided will be used for determining if the required type conversions are possible.
-        /// 
-        /// If any of the conversions cannot be performed and failures is non-null then it is populated with the types that 
-        /// cannot be converted.
-        /// </summary>
-        public bool CanCall(Type/*!*/[]/*!*/ types, NarrowingLevel level, IList<ConversionFailure> failures) {
-            Contract.RequiresNotNull(types, "types");
-            Contract.RequiresNotNullItems(types, "types");
-
-            MethodBinderContext ctx = new MethodBinderContext(_binder.ActionBinder, null);
-            if (_instanceBuilder.CanConvert(ctx, types, level, failures)) {
-                for (int i = 0; i < _argBuilders.Count; i++) {
-                    if (!_argBuilders[i].CanConvert(ctx, types, level, failures)) {
-                        if (failures == null) {
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            return failures == null || failures.Count == 0;
-        }
-
-        internal bool CheckArgs(CodeContext context, object[] args) {
-            //if (!instanceBuilder.Check(context, args)) return false;
-            //foreach (ArgBuilder arg in argBuilders) {
-            //    if (!arg.Check(context, args)) return false;
-            //}
-            //return true;
-            try {
-                _instanceBuilder.Build(context, args);
-                for (int i = 0; i < _argBuilders.Count; i++) {
-                    _argBuilders[i].Build(context, args);
-                }
-                return true;
-            } catch (OverflowException) {
-                return false;
-            } catch (ArgumentTypeException) {
-                return false;
+        public Type/*!*/ ReturnType {
+            get {
+                return _returnBuilder.ReturnType;
             }
         }
 
+        public Type/*!*/[]/*!*/ GetParameterTypes() {
+            List<Type> res = new List<Type>(_argBuilders.Count);
+            for(int i = 0; i<_argBuilders.Count; i++) {
+                Type t = _argBuilders[i].Type;
+                if (t != null) {
+                    res.Add(t);
+                }
+            }
+
+            return res.ToArray();
+        }
+
+        public string GetSignatureString(CallType callType) {
+            StringBuilder buf = new StringBuilder();
+            Type[] types = GetParameterTypes();
+            if (callType == CallType.ImplicitInstance) {
+                types = ArrayUtils.RemoveFirst(types);
+            }
+
+            string comma = "";
+            buf.Append("(");
+            foreach (Type t in types) {
+                buf.Append(comma);
+                buf.Append(t.Name);
+                comma = ", ";
+            }
+            buf.Append(")");
+            return buf.ToString();
+        }
+        
+        [Confined]
+        public override string/*!*/ ToString() {
+            return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
+        }
+        
         internal object CallReflected(CodeContext context, object[] args) {
             if (ScriptDomainManager.Options.EngineDebug) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Methods, this);
@@ -135,21 +135,10 @@ namespace Microsoft.Scripting.Generation {
             return _returnBuilder.Build(context, callArgs, args, result);
         }
 
-        public Expression MakeExpression(StandardRule rule, Expression[] parameters) {
-            MethodBinderContext context = new MethodBinderContext(_binder.ActionBinder, rule);
+        internal Expression MakeExpression(StandardRule rule, Expression[] parameters) {
+            MethodBinderContext context = new MethodBinderContext(_binder._binder, rule);
 
             Expression check = Ast.True();
-            if (_binder.IsBinaryOperator) {
-                // TODO: only if we have a narrowing level
-
-                // need to emit check to see if args are convertible...
-                for (int i = 0; i < _argBuilders.Count; i++) {
-                    Expression checkedExpr = _argBuilders[i].CheckExpression(context, parameters);
-                    if(checkedExpr != null) {
-                        check = Ast.AndAlso(check, checkedExpr);
-                    }
-                }
-            }
 
             Expression[] args = new Expression[_argBuilders.Count];
             for (int i = 0; i < _argBuilders.Count; i++) {
@@ -201,14 +190,26 @@ namespace Microsoft.Scripting.Generation {
             for (int i = 0; i < _argBuilders.Count; i++) {                
                 Expression next = _argBuilders[i].UpdateFromReturn(context, parameters);
                 if (next != null) {
-                    if (updates == null) updates = new List<Expression>();
+                    if (updates == null) {
+                        updates = new List<Expression>();
+                    }
                     updates.Add(next);
                 }
             }
 
             if (updates != null) {
-                updates.Insert(0, ret);
-                ret = Ast.Comma(0, updates.ToArray());
+                if (ret.Type != typeof(void)) {
+                    Variable temp = rule.GetTemporary(ret.Type, "$ret");
+                    updates.Insert(0, Ast.Assign(temp, ret));
+                    updates.Add(Ast.Read(temp));
+                    ret = Ast.Comma(updates.ToArray());
+                } else {
+                    updates.Insert(0, ret);
+                    ret = Ast.Convert(
+                        Ast.Comma(updates.ToArray()),
+                        typeof(void)
+                    );
+                }
             }
 
             if (!ConstantCheck.IsConstant(check, true)) {
@@ -237,11 +238,13 @@ namespace Microsoft.Scripting.Generation {
         /// Creates a call to this MethodTarget with the specified parameters.  Casts are inserted to force
         /// the types to the provided known types.
         /// </summary>
-        /// <param name="rule"></param>
-        /// <param name="parameters"></param>
-        /// <param name="knownTypes"></param>
+        /// <param name="rule">The rule being generated for the call</param>
+        /// <param name="parameters">The explicit arguments</param>
+        /// <param name="knownTypes">If non-null, the type for each element in parameters</param>
         /// <returns></returns>
-        public Expression MakeExpression(StandardRule rule, Expression[] parameters, Type[] knownTypes) {
+        internal Expression MakeExpression(StandardRule rule, Expression[] parameters, IList<Type> knownTypes) {
+            Debug.Assert(knownTypes == null || parameters.Length == knownTypes.Count);
+
             Expression[] args = parameters;
             if (knownTypes != null) {
                 args = new Expression[parameters.Length];
@@ -338,17 +341,6 @@ namespace Microsoft.Scripting.Generation {
             if (x < y) return -1;
             else if (x > y) return +1;
             else return 0;
-        }
-
-        [Confined]
-        public override string/*!*/ ToString() {
-            return string.Format("MethodTarget({0} on {1})", Method, Method.DeclaringType.FullName);
-        }
-
-        public Type ReturnType {
-            get {
-                return _returnBuilder.ReturnType;
-            }
         }
 
         internal MethodTarget MakeParamsExtended(int argCount, SymbolId[] names, int[] nameIndexes) {

@@ -309,10 +309,6 @@ namespace IronPython.Runtime.Types {
                 AddProtocolMethod(Symbols.GetDescriptor, "GetMethod");
                 // TODO: Set & delete
             }
-
-            if (typeof(ICallableWithCodeContext).IsAssignableFrom(type)) {
-                AddProtocolMethod(Symbols.Call, FunctionType.SkipThisCheck, GetMethodSet("CallMethod", 2));
-            }
         }
 
         /// <summary>

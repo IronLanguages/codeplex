@@ -39,7 +39,7 @@ namespace IronPython.Compiler.Ast {
             get { return _message; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             // If debugging is off, return empty statement
             if (!ScriptDomainManager.Options.DebugMode) {
                 return Ast.Empty(Span);
@@ -51,7 +51,6 @@ namespace IronPython.Compiler.Ast {
             //     RaiseAssertionError(_message);
             // }
             return Ast.Unless(                                      // if
-                Span,                                   
                 ag.TransformAndDynamicConvert(_test, typeof(bool)), // _test
                 Ast.Statement(
                     Ast.Call(                                       // else branch

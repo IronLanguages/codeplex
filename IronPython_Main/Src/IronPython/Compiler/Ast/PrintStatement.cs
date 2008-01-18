@@ -39,7 +39,11 @@ namespace IronPython.Compiler.Ast {
             get { return _expressions; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        public bool TrailingComma {
+            get { return _trailingComma; }
+        }
+
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             MSAst.Expression destination = ag.TransformAsObject(_dest);
 
             if (_expressions.Length == 0) {
@@ -61,7 +65,7 @@ namespace IronPython.Compiler.Ast {
                 }
             } else {
                 // Create list for the individual statements
-                List<MSAst.Statement> statements = new List<MSAst.Statement>();
+                List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
                 // Store destination in a temp, if we have one
                 if (destination != null) {

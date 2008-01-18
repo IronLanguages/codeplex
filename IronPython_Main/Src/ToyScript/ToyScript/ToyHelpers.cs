@@ -22,15 +22,19 @@ using ToyScript.Runtime;
 namespace ToyScript {
     public static class ToyHelpers {
         public static void Print(object o) {
-            Console.WriteLine(o ?? "<null>");
+            ScriptDomainManager.CurrentManager.SharedIO.OutputWriter.WriteLine(o ?? "<null>");
         }
 
         public static Type DateTime {
             get { return typeof(DateTime); }
         }
 
-        public static object Import(string name) {
-            return RuntimeHelpers.TopNamespace.TryGetPackage(name);
+        public static object Import(CodeContext context, string name) {
+            object value;
+            if (context.LanguageContext.DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out value)) {
+                return value;
+            }
+            return null;
         }
 
         public static object GetItem(object target, object index) {

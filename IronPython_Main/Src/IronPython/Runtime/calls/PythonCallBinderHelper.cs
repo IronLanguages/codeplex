@@ -15,17 +15,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -79,7 +78,7 @@ namespace IronPython.Runtime.Calls {
             Expression tmpRead = Ast.Read(allocatedInst);
             Expression initCall = initAdapter.MakeInitCall(Binder, Rule, tmpRead);
 
-            List<Statement> body = new List<Statement>();
+            List<Expression> body = new List<Expression>();
 
             // then get the call to __del__ if we need one
             if (HasFinalizer(creating)) {
@@ -99,7 +98,7 @@ namespace IronPython.Runtime.Calls {
             if (initCall != tmpRead) {
                 // init can fail but if __new__ returns a different type
                 // no exception is raised.
-                Statement initStmt = initCall != null ?
+                Expression initStmt = initCall != null ?
                     Ast.Statement(initCall) :
                     initAdapter.GetError(Binder, Rule);
 
@@ -277,7 +276,7 @@ namespace IronPython.Runtime.Calls {
                     );
             }
 
-            public virtual Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+            public virtual Expression GetError(ActionBinder binder, StandardRule<T> rule) {
                 throw new InvalidOperationException();
             }
 
@@ -302,15 +301,15 @@ namespace IronPython.Runtime.Calls {
             }
 
             public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
-                MethodCandidate cand = _creating.IsSystemType ?
+                BindingTarget target = _creating.IsSystemType ?
                     GetTypeConstructor(binder, _creating, ArrayUtils.EmptyTypes) :
                     GetTypeConstructor(binder, _creating, new Type[] { typeof(PythonType) });
 
-                Debug.Assert(cand != null);
-                return cand.Target.MakeExpression(
+                Debug.Assert(target.Success);
+                return target.MakeExpression(
                     rule,
-                    _creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] },
-                    _creating.IsSystemType ? Type.EmptyTypes : new Type[] { typeof(PythonType) });
+                    _creating.IsSystemType ? new Expression[0] : new Expression[] { rule.Parameters[0] }
+                );
             }
 
             public override object TemplateKey {
@@ -324,6 +323,7 @@ namespace IronPython.Runtime.Calls {
         private class ConstructorNewAdapter : NewAdapter {
             private PythonType _creating;
             private ConstructorFunction _ctor;
+            private BindingTarget _target;
 
             public ConstructorNewAdapter(ArgumentValues ai, CallAction action, ConstructorFunction ctor)
                 : base(ai, action) {
@@ -335,10 +335,14 @@ namespace IronPython.Runtime.Calls {
                 Type[] types = _creating.IsSystemType ? Arguments.Types : ArrayUtils.Insert(typeof(PythonType), Arguments.Types);
 
                 MethodBinder mb = GetMethodBinder(binder);
-                MethodCandidate cand = mb.MakeBindingTarget(CallType.None, types);
+                _target = mb.MakeBindingTarget(CallType.None, types);
 
-                if (cand != null) {
-                    return cand.Target.MakeExpression(
+                if (_target.Success) {
+                    if (_target.ArgumentTests != null) {
+                        TestTypes = _creating.IsSystemType ? ArrayUtils.ToArray(_target.ArgumentTests) :
+                            ArrayUtils.RemoveFirst(ArrayUtils.ToArray(_target.ArgumentTests));
+                    }
+                    return _target.MakeExpression(
                         rule,
                         _creating.IsSystemType ? Arguments.Expressions : ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions));
                 }
@@ -346,12 +350,11 @@ namespace IronPython.Runtime.Calls {
             }
 
             private MethodBinder GetMethodBinder(ActionBinder binder) {
-                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _creating.UnderlyingSystemType.GetConstructors(), BinderType.Normal, Arguments.Names);
+                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _creating.UnderlyingSystemType.GetConstructors(), Arguments.Names);
             }
 
-            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
-                MethodBinder mb = GetMethodBinder(binder);
-                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _creating.UnderlyingSystemType.GetConstructors(), rule, Arguments.Arguments);
+            public override Expression GetError(ActionBinder binder, StandardRule<T> rule) {
+                return binder.MakeInvalidParametersError(_target).MakeErrorForRule(rule, binder);
             }
 
             public override object TemplateKey {
@@ -365,6 +368,7 @@ namespace IronPython.Runtime.Calls {
         private class BuiltinNewAdapter : NewAdapter {
             private PythonType _creating;
             private BuiltinFunction _ctor;
+            private BindingTarget _target;
 
             public BuiltinNewAdapter(ArgumentValues ai, CallAction action, BuiltinFunction ctor)
                 : base(ai, action) {
@@ -377,24 +381,24 @@ namespace IronPython.Runtime.Calls {
 
                 MethodBinder mb = GetMethodBinder(binder);
 
-                Type[] testTypes;
-                MethodCandidate mc = mb.MakeBindingTarget(CallType.None, types, out testTypes);
-                Expression[] parameters = ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions);
-                if (mc != null) {
-                    if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
-                    return mc.Target.MakeExpression(rule, parameters);
+                _target = mb.MakeBindingTarget(CallType.None, types);
+                if (_target.Success) {
+                    Expression[] parameters = ArrayUtils.Insert(rule.Parameters[0], Arguments.Expressions);
+                    if (_target.ArgumentTests != null) {
+                        TestTypes = ArrayUtils.RemoveFirst(ArrayUtils.ToArray(_target.ArgumentTests));
+                    }
+                    return _target.MakeExpression(rule, parameters);
                 }
                 return null;
 
             }
 
-            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
-                MethodBinder mb = GetMethodBinder(binder);
-                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _ctor.Targets, rule, Arguments.Arguments);
+            public override Expression GetError(ActionBinder binder, StandardRule<T> rule) {
+                return binder.MakeInvalidParametersError(_target).MakeErrorForRule(rule, binder);
             }
 
             private MethodBinder GetMethodBinder(ActionBinder binder) {
-                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _ctor.Targets, BinderType.Normal, Arguments.Names);
+                return MethodBinder.MakeBinder(binder, PythonTypeOps.GetName(_creating), _ctor.Targets, Arguments.Names);
             }
 
             public override object TemplateKey {
@@ -455,7 +459,7 @@ namespace IronPython.Runtime.Calls {
                     );
             }
 
-            public virtual Statement GetError(ActionBinder binder, StandardRule<T> rule) {
+            public virtual Expression GetError(ActionBinder binder, StandardRule<T> rule) {
                 throw new InvalidOperationException();
             }
 
@@ -488,6 +492,7 @@ namespace IronPython.Runtime.Calls {
         private class BuiltinInitAdapter : InitAdapter {
             private BuiltinFunction _method;
             private PythonType _creating;
+            private BindingTarget _target;
 
             public BuiltinInitAdapter(ArgumentValues ai, CallAction action, BuiltinFunction method)
                 : base(ai, action) {
@@ -501,32 +506,30 @@ namespace IronPython.Runtime.Calls {
                     return createExpr;
                 }
 
-                Type[] testTypes;
                 MethodBinder mb = GetMethodBinder(binder);
-                MethodCandidate mc = mb.MakeBindingTarget(CallType.None, ArrayUtils.Insert(_creating.UnderlyingSystemType, Arguments.Types), out testTypes);
+                _target = mb.MakeBindingTarget(CallType.None, ArrayUtils.Insert(_creating.UnderlyingSystemType, Arguments.Types));
 
-                if (mc != null) {
-                    if (testTypes != null) TestTypes = ArrayUtils.RemoveFirst(testTypes);
-                    return mc.Target.MakeExpression(
+                if (_target.Success) {
+                    if (_target.ArgumentTests != null) {
+                        TestTypes = ArrayUtils.RemoveFirst(ArrayUtils.MakeArray(_target.ArgumentTests, 0, 0));
+                    }
+
+                    return _target.MakeExpression(
                             rule,
                             ArrayUtils.Insert<Expression>(createExpr, Arguments.Expressions)
                         );
 
-                } else {
-                    testTypes = Arguments.Types;
-                }
+                } 
 
                 return null;
             }
 
-            public override Statement GetError(ActionBinder binder, StandardRule<T> rule) {
-                MethodBinder mb = GetMethodBinder(binder);
-
-                return binder.MakeInvalidParametersError(mb, Action, CallType.None, _method.Targets, rule, Arguments.Arguments);
+            public override Expression GetError(ActionBinder binder, StandardRule<T> rule) {
+                return binder.MakeInvalidParametersError(_target).MakeErrorForRule(rule, binder);
             }
 
             private MethodBinder GetMethodBinder(ActionBinder binder) {
-                return MethodBinder.MakeBinder(binder, "__init__", _method.Targets, BinderType.Normal, Arguments.Names);
+                return MethodBinder.MakeBinder(binder, "__init__", _method.Targets, Arguments.Names);
             }
 
             public override object TemplateKey {
@@ -687,16 +690,15 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Generates an expression which calls a .NET constructor directly.
         /// </summary>
-        public static MethodCandidate GetTypeConstructor(ActionBinder binder, PythonType creating, Type[] argTypes) {
+        public static BindingTarget GetTypeConstructor(ActionBinder binder, PythonType creating, Type[] argTypes) {
             // type has no __new__ override, call .NET ctor directly
             MethodBinder mb = MethodBinder.MakeBinder(binder,
                 PythonTypeOps.GetName(creating),
-                creating.UnderlyingSystemType.GetConstructors(),
-                BinderType.Normal);
+                creating.UnderlyingSystemType.GetConstructors());
 
-            MethodCandidate mc = mb.MakeBindingTarget(CallType.None, argTypes);
-            if (mc != null && mc.Target.Method.IsPublic) {
-                return mc;
+            BindingTarget target = mb.MakeBindingTarget(CallType.None, argTypes);
+            if (target.Success && target.Method.IsPublic) {
+                return target;
             }
             return null;
         }

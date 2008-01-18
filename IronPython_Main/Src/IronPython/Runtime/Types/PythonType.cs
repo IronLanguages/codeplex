@@ -26,8 +26,11 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
+
 
     public delegate bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value);
     public delegate void SetMemberCustomizer(CodeContext context, object instance, SymbolId name, object value);
@@ -144,7 +147,7 @@ namespace IronPython.Runtime.Types {
         }
 
         /// <summary>
-        /// Creats an instance of the object using keyword parameters.
+        /// Creates an instance of the object using keyword parameters.
         /// </summary>
         public object CreateInstance(CodeContext context, object[] args, string[] names) {
             Contract.RequiresNotNull(names, "names");
@@ -152,14 +155,7 @@ namespace IronPython.Runtime.Types {
 
             Initialize();
 
-            IFancyCallable ifc = _ctor as IFancyCallable;
-            if (ifc == null) throw new InvalidOperationException(
-                String.Format(
-                    CultureInfo.CurrentCulture,
-                    IronPython.Resources.KeywordCreateUnavailable,
-                    _ctor.GetType()));
-
-            return ifc.Call(context, args, names);
+            return PythonOps.CallWithKeywordArgs(context, _ctor, args, names);
         }
 
         public bool CanConvertTo(Type to) {
@@ -368,14 +364,6 @@ namespace IronPython.Runtime.Types {
             //Python doesn't have value types inheriting from ValueType, but we fake this for interop
             if (other.UnderlyingSystemType == typeof(ValueType) && UnderlyingSystemType.IsValueType) {
                 return true;
-            }
-
-            // check for a match on UnderlyingSystemType if other is
-            // a system type.
-            if ((other._attrs & PythonTypeAttributes.SystemType) != 0) {
-                if (UnderlyingSystemType == other.UnderlyingSystemType) {
-                    return true;
-                }
             }
 
             // check the type hierarchy

@@ -54,9 +54,8 @@ namespace Microsoft.Scripting.Hosting {
             get { return _id; }
         }
 
-        // TODO: maybe we could disallow empty id to ensure there is a single invalid value only
         public bool HasPath {
-            get { return !String.IsNullOrEmpty(_id); }
+            get { return _id != null; }
         }
 
         public SourceCodeKind Kind {
@@ -95,10 +94,9 @@ namespace Microsoft.Scripting.Hosting {
             set { _disableLineFeedLineSeparator = value; }
         }
 
-        #region Construction
-
-        private SourceUnit(LanguageContext context, TextContentProvider contentProvider, string id, SourceCodeKind kind) {
+        internal SourceUnit(LanguageContext/*!*/ context, TextContentProvider/*!*/ contentProvider, string id, SourceCodeKind kind) {
             Assert.NotNull(context, contentProvider);
+            Debug.Assert(id == null || id.Length > 0);
 
             _context = context;
             _contentProvider = contentProvider;
@@ -106,82 +104,9 @@ namespace Microsoft.Scripting.Hosting {
             _id = id;
         }
 
-        // move factories to ScriptEngine/ScriptHost?
-
-        internal static SourceUnit/*!*/ Create(LanguageContext context, TextContentProvider contentProvider, string id, SourceCodeKind kind) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(contentProvider, "contentProvider");
-
-            return new SourceUnit(context, contentProvider, id, kind);
-        }
-
-        internal static SourceUnit CreateSnippet(LanguageContext context, string code) {
-            return CreateSnippet(context, code, null, SourceCodeKind.Default);
-        }
-
-        internal static SourceUnit CreateSnippet(LanguageContext context, string code, SourceCodeKind kind) {
-            return CreateSnippet(context, code, null, kind);
-        }
-
-        internal static SourceUnit CreateSnippet(LanguageContext context, string code, string id) {
-            return CreateSnippet(context, code, id, SourceCodeKind.Default);
-        }
-
-        internal static SourceUnit CreateSnippet(LanguageContext context, string code, string id, SourceCodeKind kind) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(code, "code");
-
-            return Create(context, new SourceStringContentProvider(code), id, kind);
-        }
-
-        /// <summary>
-        /// Should be called by host only. TODO: move to the ScriptHost?
-        /// </summary>
-        public static SourceUnit CreateFileUnit(LanguageContext context, string path) {
-            return CreateFileUnit(context, path, (Encoding)null);
-        }
-
-        public static SourceUnit CreateFileUnit(LanguageContext context, string path, Encoding encoding) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(path, "path");
-
-            return CreateFileUnit(context, path, encoding, SourceCodeKind.File);
-        }
-
-        public static SourceUnit CreateFileUnit(LanguageContext context, string path, Encoding encoding, SourceCodeKind kind) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(path, "path");
-
-            TextContentProvider provider = new EngineTextContentProvider(context, new FileStreamContentProvider(path), encoding ?? StringUtils.DefaultEncoding);
-            return Create(context, provider, path, kind);
-        }
-
-        public static SourceUnit CreateFileUnit(LanguageContext context, string path, string content) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(content, "content");
-
-            TextContentProvider provider = new SourceStringContentProvider(content);
-            return Create(context, provider, path, SourceCodeKind.File);
-        }
-
-        #endregion
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public SourceUnitReader GetReader() {
             return new SourceUnitReader(this, _contentProvider.GetReader());
-        }
-
-        public void SetContent(string content) {
-            Contract.RequiresNotNull(content, "content");
-            _contentProvider = new SourceStringContentProvider(content);
-            ContentChanged();
-        }
-
-        private void ContentChanged() {
-            _codeProperties = null;
-            _lineMap = null;
-            _fileMap = null;
         }
         
         /// <summary>
@@ -273,6 +198,25 @@ namespace Microsoft.Scripting.Hosting {
             return match;
         }
 
+        class KeyComparer<T1> : IComparer<KeyValuePair<int, T1>> {
+            public int Compare(KeyValuePair<int, T1> x, KeyValuePair<int, T1> y) {
+                return x.Key - y.Key;
+            }
+        }
+
+        #endregion
+
+        #region TODO: SourceUnit only
+
+        public object Execute(Scope/*!*/ scope, ErrorSink errorSink) {
+            Contract.RequiresNotNull(scope, "scope");
+            return Compile(_context.GetModuleCompilerOptions(scope), errorSink).Run(scope);
+        }
+
+        public ScriptCode/*!*/ Compile(CompilerOptions options, ErrorSink errorSink) {
+            return _context.CompileSourceCode(this, options, errorSink);
+        }
+
         public void SetLineMapping(KeyValuePair<int, int>[] lineMap) {
             // implementation detail: so we don't always have to check for null and empty
             _lineMap = (lineMap.Length == 0) ? null : lineMap;
@@ -280,12 +224,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public void SetDocumentMapping(KeyValuePair<int, string>[] fileMap) {
             _fileMap = (fileMap.Length == 0) ? null : fileMap;
-        }
-
-        class KeyComparer<T1> : IComparer<KeyValuePair<int, T1>> {
-            public int Compare(KeyValuePair<int, T1> x, KeyValuePair<int, T1> y) {
-                return x.Key - y.Key;
-            }
         }
 
         #endregion

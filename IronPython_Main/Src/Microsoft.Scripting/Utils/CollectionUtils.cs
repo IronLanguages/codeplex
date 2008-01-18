@@ -154,7 +154,9 @@ namespace Microsoft.Scripting.Utils {
             } else if ((roc = list as ReadOnlyCollection<T>) != null) {
                 return roc;
             } else {
-                return new ReadOnlyCollection<T>(list);
+                T[] array = new T[list.Count];
+                list.CopyTo(array, 0);
+                return new ReadOnlyCollection<T>(array);
             }
         }
     }

@@ -26,10 +26,33 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using System.Collections.Generic;
 
 
 [assembly: PythonExtensionType(typeof(Array), typeof(ArrayOps))]
 namespace IronPython.Runtime.Operations {
+    // Since this uses [SpecialName] and the method binder, it must be publicly visible.
+    // This is conceptually nested in ArrayOps, but publicly visible types shouldn't be nested.
+    public class ArrayCallSlot : PythonTypeSlot {
+        private PythonType _type;
+
+        public ArrayCallSlot() { }
+
+        public ArrayCallSlot(PythonType type) {
+            _type = type;
+        }
+
+        internal override bool TryGetBoundValue(CodeContext context, object instance, PythonType owner, out object value) {
+            value = new ArrayCallSlot((PythonType)owner);
+            return true;
+        }
+
+        [SpecialName]
+        public object Call(CodeContext context, object sequence) {
+            return ArrayOps.CreateArray(context, _type, sequence);
+        }
+    }
+
     [PythonType("array")]
     public static class ArrayOps {
         #region Python APIs
@@ -37,40 +60,6 @@ namespace IronPython.Runtime.Operations {
         [OperatorSlot]
         public static PythonTypeSlot Call = new ArrayCallSlot();
 
-        internal class ArrayCallSlot : PythonTypeSlot, ICallableWithCodeContext, IFancyCallable {
-            private PythonType _type;
-
-            public ArrayCallSlot() { }
-
-            public ArrayCallSlot(PythonType type) {
-                _type = type;
-            }
-
-            internal override bool TryGetBoundValue(CodeContext context, object instance, PythonType owner, out object value) {
-                value = new ArrayCallSlot((PythonType)owner);
-                return true;
-            }
-
-            #region ICallableWithCodeContext Members
-
-            public object Call(CodeContext context, object[] args) {
-                if (args.Length != 1) throw new ArgumentException("Array: 1 argument expected, list of items");
-                return CreateArray(context, _type, args[0]);
-            }
-
-            #endregion
-
-            #region IFancyCallable Members
-
-            public object Call(CodeContext context, object[] args, string[] names) {
-                if (args.Length != 1) throw new ArgumentException("Array: 1 argument expected, list of items");
-                if (names[0] != "sequence") throw new ArgumentException(String.Format("unknown keyword argument: {0}, expected sequence", names[0]));
-
-                return Call(context, args);
-            }
-
-            #endregion
-        }
 
         [PythonName("__contains__")]
         public static bool Contains(object[] data, int size, object item) {
@@ -163,7 +152,7 @@ namespace IronPython.Runtime.Operations {
         public static object GetItem(Array data, int index) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
-            return GetIndex(data, index); // data[Ops.FixIndex(index, data.Length)];
+            return data.GetValue(PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
         }
 
         [SpecialName, PythonName("__getitem__")]
@@ -173,11 +162,71 @@ namespace IronPython.Runtime.Operations {
             return GetSlice(data, data.Length, slice);
         }
 
+        [SpecialName, PythonName("__getitem__")]
+        public static object GetItem(Array data, params object[] indices) {
+            if (indices == null || indices.Length < 1) throw PythonOps.TypeError("__getitem__ requires at least 1 parameter");
+
+            int iindex;
+            if (indices.Length == 1 && Converter.TryConvertToInt32(indices[0], out iindex)) {
+                return GetItem(data, iindex);
+            }
+
+            Type t = data.GetType();
+            Debug.Assert(t.HasElementType);
+
+            Type elm = t.GetElementType();
+
+            int[] iindices = TupleToIndices(data, indices);
+            if (data.Rank != indices.Length) throw PythonOps.ValueError("bad dimensions for array, got {0} expected {1}", indices.Length, data.Rank);
+
+            for (int i = 0; i < iindices.Length; i++) iindices[i] += data.GetLowerBound(i);
+            return data.GetValue(iindices);
+        }
+
         [SpecialName, PythonName("__setitem__")]
         public static void SetItem(Array data, int index, object value) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             data.SetValue(Converter.Convert(value, data.GetType().GetElementType()), PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
+        }
+
+        [SpecialName, PythonName("__setitem__")]
+        public static void SetItem(Array a, params object[] indexAndValue) {
+            if (indexAndValue == null || indexAndValue.Length < 2) throw PythonOps.TypeError("__setitem__ requires at least 2 parameters");
+
+            int iindex;
+            if (indexAndValue.Length == 2 && Converter.TryConvertToInt32(indexAndValue[0], out iindex)) {
+                SetItem(a, iindex, indexAndValue[1]);
+                return;
+            }
+
+            Type t = a.GetType();
+            Debug.Assert(t.HasElementType);
+
+            Type elm = t.GetElementType();
+
+            object[] args = ArrayUtils.RemoveLast(indexAndValue);
+
+            int[] indices = TupleToIndices(a, args);
+
+            if (a.Rank != args.Length) throw PythonOps.ValueError("bad dimensions for array, got {0} expected {1}", args.Length, a.Rank);
+
+            for (int i = 0; i < indices.Length; i++) indices[i] += a.GetLowerBound(i);
+            a.SetValue(indexAndValue[indexAndValue.Length - 1], indices);
+        }
+
+        [SpecialName, PythonName("__setitem__")]
+        public static void SetItem(Array a, Slice index, object value) {
+            if (a.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
+
+            Type elm = a.GetType().GetElementType();
+
+            index.DoSliceAssign(
+                delegate(int idx, object val) {
+                    a.SetValue(Converter.Convert(val, elm), idx + a.GetLowerBound(0));
+                },
+                a.Length,
+                value);
         }
 
         [SpecialName, PythonName("__repr__")]
@@ -326,7 +375,7 @@ namespace IronPython.Runtime.Operations {
 
             IParameterSequence ituple = index as IParameterSequence;
             if (ituple != null && ituple.IsExpandable) {
-                int[] indices = TupleToIndices(a, ituple);
+                int[] indices = TupleToIndices(a, ((IList<object>)ituple));
                 for (int i = 0; i < indices.Length; i++) indices[i] += a.GetLowerBound(i);
 
                 return a.GetValue(indices);
@@ -345,56 +394,14 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.TypeErrorForBadInstance("bad array index: {0}", index);
         }
 
-        [SpecialName, PythonName("__setitem__")]
-        public static void SetItem(Array a, object index, object value) {
-            Type t = a.GetType();
-            Debug.Assert(t.HasElementType);
-
-            Type elm = t.GetElementType();
-
-            int iindex;
-            if (index is int) {
-                iindex = (int)index;
-                a.SetValue(Converter.Convert(value, elm), PythonOps.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
-            }
-
-            IParameterSequence ituple = index as IParameterSequence;
-            if (ituple != null && ituple.IsExpandable) {
-                if (a.Rank != ituple.Count) throw PythonOps.ValueError("bad dimensions for array, got {0} expected {1}", ituple.Count, a.Rank);
-
-                int[] indices = TupleToIndices(a, ituple);
-                for (int i = 0; i < indices.Length; i++) indices[i] += a.GetLowerBound(i);
-                a.SetValue(value, indices);
-                return;
-            }
-
-            Slice slice = index as Slice;
-            if (slice != null) {
-                if (a.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
-
-                slice.DoSliceAssign(
-                    delegate(int idx, object val) {
-                        a.SetValue(Converter.Convert(val, elm), idx + a.GetLowerBound(0));
-                    },
-                    a.Length,
-                    value);
-                return;
-            }
-
-            // last-ditch effort, try it as a a converted int (this can throw & catch an exception)
-            if (Converter.TryConvertToInt32(index, out iindex)) {
-                a.SetValue(Converter.Convert(value, elm), PythonOps.FixIndex(iindex, a.Length) + a.GetLowerBound(0));
-                return;
-            }
-
-            throw PythonOps.TypeErrorForBadInstance("bad type for array index: {0}", value);
-        }
+        
 
         #endregion
 
         #region Private helpers
 
-        private static int[] TupleToIndices(Array a, IParameterSequence tuple) {
+
+        private static int[] TupleToIndices(Array a, IList<object> tuple) {
             int[] indices = new int[tuple.Count];
             for (int i = 0; i < indices.Length; i++) {
                 indices[i] = PythonOps.FixIndex(Converter.ConvertToInt32(tuple[i]), a.GetUpperBound(i) + 1);

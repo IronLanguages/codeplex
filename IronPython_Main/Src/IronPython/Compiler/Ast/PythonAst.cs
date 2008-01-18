@@ -40,12 +40,7 @@ namespace IronPython.Compiler.Ast {
         /// then need to be separated into their own dictionary so that
         /// free variables at module level do not bind to them
         /// </summary>
-        private Dictionary<SymbolId, PythonVariable> _moduleGlobals;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        private Dictionary<SymbolId, PythonVariable> _moduleLocals;
+        private Dictionary<SymbolId, PythonVariable> _globals;
 
         private MSAst.CodeBlock _block;
 
@@ -89,24 +84,23 @@ namespace IronPython.Compiler.Ast {
             get { return _block; }
         }
 
-        protected override void CreateVariables(MSAst.CodeBlock block) {
-            PublishGlobalVariables(block, _moduleLocals);
-            PublishGlobalVariables(block, _moduleGlobals);
-
-            base.CreateVariables(block);
+        internal override bool IsGlobal {
+            get { return true; }
         }
 
-        private void PublishGlobalVariables(MSAst.CodeBlock block, Dictionary<SymbolId, PythonVariable> variables) {
-            if (variables != null) {
-                foreach (KeyValuePair<SymbolId, PythonVariable> kv in variables) {
+        protected override void CreateVariables(MSAst.CodeBlock block) {
+            if (_globals != null) {
+                foreach (KeyValuePair<SymbolId, PythonVariable> kv in _globals) {
                     if (kv.Value.Scope == this) {
                         kv.Value.Transform(block);
                     }
                 }
             }
+
+            base.CreateVariables(block);
         }
 
-        internal PythonVariable EnsureGlobalVariable(SymbolId name) {
+        internal PythonVariable EnsureGlobalVariable(PythonNameBinder binder, SymbolId name) {
             PythonVariable variable;
             if (TryGetVariable(name, out variable)) {
                 // use the current one if it is global only
@@ -115,35 +109,26 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            return CreateModuleVariable(ref _moduleGlobals, name, VariableKind.Global);
-        }
-
-        internal override PythonVariable BindName(SymbolId name) {
-            PythonVariable variable;
-
-            // First try variables local to this scope
-            if (TryGetVariable(name, out variable)) {
-                return variable;
+            if ((binder.Module & ModuleOptions.Optimized) == 0) {
+                // For non-optimized modules, keep globals separate
+                if (_globals == null) {
+                    _globals = new Dictionary<SymbolId, PythonVariable>();
+                }
+                if (!_globals.TryGetValue(name, out variable)) {
+                    variable = new PythonVariable(name, VariableKind.Global, this);
+                    _globals[name] = variable;
+                }
+            } else {
+                variable = EnsureVariable(name);
             }
-
-            // Create module level local for the unbound name
-            return CreateModuleVariable(ref _moduleLocals, name, VariableKind.Local);
-        }
-
-        private PythonVariable CreateModuleVariable(ref Dictionary<SymbolId, PythonVariable> dict, SymbolId name, VariableKind kind) {
-            PythonVariable variable;
-            if (dict == null) {
-                dict = new Dictionary<SymbolId, PythonVariable>();
-            }
-            if (!dict.TryGetValue(name, out variable)) {
-                variable = new PythonVariable(name, kind, this);
-                dict[name] = variable;
-            }
-            Debug.Assert(variable.Kind == kind);
             return variable;
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
+            return EnsureVariable(name);
+        }
+
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             throw new InvalidOperationException();
         }
 
@@ -160,9 +145,9 @@ namespace IronPython.Compiler.Ast {
             // Use the PrintExpression value for the body (global level code)
             AstGenerator body = new AstGenerator(ast, ag.Context, _printExpressions);
 
-            MSAst.Statement bodyStmt = body.Transform(_body);            
+            MSAst.Expression bodyStmt = body.Transform(_body);            
 
-            MSAst.Statement docStmt;
+            MSAst.Expression docStmt;
 
             if (_isModule && _body.Documentation != null) {
                 docStmt = Ast.Statement(

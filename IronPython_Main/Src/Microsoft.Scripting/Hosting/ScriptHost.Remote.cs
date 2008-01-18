@@ -52,6 +52,8 @@ namespace Microsoft.Scripting.Hosting {
 
         internal void SetLocalHost(IScriptHost host) {
             Contract.Requires(host is ILocalObject, "host", "Host must be a local object.");
+            Contract.RequiresNotNull(host, "host");
+
             _host = host;
         }
 
@@ -88,6 +90,8 @@ namespace Microsoft.Scripting.Hosting {
         #region Notifications
 
         public void EngineCreated(IScriptEngine engine) {
+            Debug.Assert(_host != null);
+
             _host.EngineCreated(engine);
         }
 

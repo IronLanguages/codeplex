@@ -42,12 +42,24 @@ namespace IronPython.Hosting {
 
         protected override string Logo {
             get {
-                return String.Format("IronPython console: {0}{1}{2}{1}",
-                    Engine.LanguageVersion, Environment.NewLine, "Copyright (c) Microsoft Corporation. All rights reserved.");
+                return VersionString + 
+                    Environment.NewLine + 
+                    "Copyright (c) Microsoft Corporation. All rights reserved." + 
+                    Environment.NewLine;
             }
         }
-        
-        private int GetEffectiveExitCode(PythonSystemExitException e) {
+
+        private string VersionString {
+            get {
+                return String.Format("{0} ({1}) on .NET {2}",
+                    DefaultContext.Default.LanguageContext.DisplayName,
+                    Engine.LanguageVersion.ToString(),
+                    Environment.Version);
+                    
+            }
+        }
+
+        private int GetEffectiveExitCode(SystemExitException e) {
             object nonIntegerCode;
             int exitCode = e.GetExitCode(out nonIntegerCode);
             if (nonIntegerCode != null) {
@@ -102,6 +114,9 @@ namespace IronPython.Hosting {
                 }
             }
 
+            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(string).Assembly);
+            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
+
             InitializePath();
             InitializeArguments();
             InitializeModules();
@@ -127,11 +142,11 @@ namespace IronPython.Hosting {
             }
         }
 
-        private ScriptScope/*!*/ CreateMainModule() {
+        private IScriptScope/*!*/ CreateMainModule() {
             ModuleOptions trueDiv = (PythonContext.GetPythonOptions(null).DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
             PythonModule module = DefaultContext.DefaultPythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
             module.Scope.SetName(Symbols.Doc, null);
-            return module.Scope.ToScriptScope();
+            return Engine.CreateScope(module.Scope.Dict);
         }
 
         
@@ -162,7 +177,7 @@ namespace IronPython.Hosting {
         }
 
         private string InitializeModules() {
-            string version = Engine.LanguageVersion.ToString();
+            string version = VersionString;
             
             this.Module = CreateMainModule();
             
@@ -203,7 +218,7 @@ namespace IronPython.Hosting {
             try {
                 RunStartup();
                 result = 0;
-            } catch (PythonSystemExitException pythonSystemExit) {
+            } catch (SystemExitException pythonSystemExit) {
                 return GetEffectiveExitCode(pythonSystemExit);
             } catch (Exception) {
             }
@@ -224,7 +239,7 @@ namespace IronPython.Hosting {
                     try {
                         Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
                     } catch (Exception e) {
-                        if (e is PythonSystemExitException) throw;
+                        if (e is SystemExitException) throw;
                         Console.Write(Engine.FormatException(e), Style.Error);
                     } finally {
                         Engine.DumpDebugInfo();
@@ -249,7 +264,7 @@ namespace IronPython.Hosting {
                     // directly instead of using functions. So clear explicitly.
                     PythonOps.ClearCurrentException();
                 }
-            } catch (PythonSystemExitException se) {
+            } catch (SystemExitException se) {
                 return GetEffectiveExitCode(se);
             }
         }
@@ -286,13 +301,13 @@ namespace IronPython.Hosting {
         private int RunCommandWorker(string command) {
             int result = 1;
             try {
-                ScriptScope module = CreateMainModule();
+                IScriptScope module = CreateMainModule();
                 if (Options.Introspection)
                     Module = module;
 
                 Engine.Execute(module, Engine.CreateScriptSourceFromString(command, SourceCodeKind.File));
                 result = 0;
-            } catch (PythonSystemExitException pythonSystemExit) {
+            } catch (SystemExitException pythonSystemExit) {
                 result = GetEffectiveExitCode(pythonSystemExit);
             }
             return result;
@@ -338,12 +353,12 @@ namespace IronPython.Hosting {
                 PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized, Options.SkipFirstSourceLine, out compiledCode);
 
                 if (Options.Introspection) {
-                    Module = module.Scope.ToScriptScope();
+                    Module = Engine.CreateScope(module.Scope.Dict);
                 }
 
                 compiledCode.Run(module.Scope, module);
                 return 0;
-            } catch (PythonSystemExitException pythonSystemExit) {
+            } catch (SystemExitException pythonSystemExit) {
                 
                 // disable introspection when exited:
                 Options.Introspection = false;

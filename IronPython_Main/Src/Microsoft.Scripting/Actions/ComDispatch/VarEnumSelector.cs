@@ -45,26 +45,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// </summary>
     internal class VarEnumSelector {
 
-        /// <summary>
-        /// Describes how the user arguments should be represented as Variants for the late-bound COM call.
-        /// </summary>
-        internal struct DispatchArgumentInfo {
-            private VarEnum _marshalType;
-
-            internal VarEnum VariantType {
-                get {
-                    return _marshalType;
-                }
-                set {
-                    _marshalType = value;
-                }
-            }
-        }
-
-        private object[] _userArguments; // excluding the IDispatch instance
         ActionBinder _binder;
 
-        private DispatchArgumentInfo[] _dispatchArguments;
+        private VariantBuilder[] _variantBuilders;
+        private ReturnBuilder _returnBuilder;
         private bool _isSupportedByFastPath = true;
 
         private static readonly Dictionary<VarEnum, Type> _ComToManagedPrimitiveTypes = CreateComToManagedPrimitiveTypes();
@@ -74,15 +58,20 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// This constructor infers the COM types to marshal the arguments to based on
         /// the conversions supported for the given argument type.
         /// </summary>
-        internal VarEnumSelector(ActionBinder binder, object[] args) {
-            _userArguments = args;
+        internal VarEnumSelector(ActionBinder binder, Type returnType, object[] explicitArgs)
+            : this(binder, returnType, CompilerHelpers.GetTypes(explicitArgs)) {            
+        }
+
+        internal VarEnumSelector(ActionBinder binder, Type returnType, Type[] explicitArgTypes) {
             _binder = binder;
 
-            _dispatchArguments = new DispatchArgumentInfo[args.Length];
+            _variantBuilders = new VariantBuilder[explicitArgTypes.Length];
 
-            for (int i = 0; i < args.Length; i++) {
-                _dispatchArguments[i].VariantType = GetComType(args[i]);
+            for (int i = 0; i < explicitArgTypes.Length; i++) {                
+                _variantBuilders[i] = GetVariantBuilder(i, explicitArgTypes[i]);
             }
+
+            _returnBuilder = new ReturnBuilder(returnType);
         }
 
         /// <summary>
@@ -95,23 +84,40 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
-        internal DispatchArgumentInfo[] DispatchArguments {
+        internal ReturnBuilder ReturnBuilder {
             get {
-                return _dispatchArguments;
+                return _returnBuilder;
             }
+        }
+
+        internal VariantBuilder[] VariantBuilders {
+            get {
+                return _variantBuilders;
+            }
+        }
+
+       internal ArgBuilder[] GetArgBuilders() {
+            ArgBuilder[] argBuilders = new ArgBuilder[_variantBuilders.Length];
+            for (int i = 0; i < _variantBuilders.Length; i++) {
+                argBuilders[i] = _variantBuilders[i].ArgBuilder;
+            }
+            return argBuilders;
         }
 
         /// <summary>
         /// Gets the arguments ready for marshaling to COM
         /// </summary>
-        internal object[] ConvertArguments() {
-            object[] convertedArguments = new object[_userArguments.Length];
+        internal object[] BuildArguments(CodeContext context, object[] args, out ParameterModifier parameterModifiers) {
+            object[] convertedArguments = new object[_variantBuilders.Length];
+            if (_variantBuilders.Length != 0) {
+                parameterModifiers = new ParameterModifier(_variantBuilders.Length);
+            } else {
+                parameterModifiers = new ParameterModifier();
+            }
 
-            for (int i = 0; i < _userArguments.Length; i++) {
-                object userArgument = _userArguments[i];
-                VarEnum targetComType = _dispatchArguments[i].VariantType;
-                Type targetManagedType = GetManagedMarshalType(targetComType);
-                convertedArguments[i] = _binder.Convert(userArgument, targetManagedType);
+            for (int i = 0; i < _variantBuilders.Length; i++) {
+                convertedArguments[i] = _variantBuilders[i].ArgBuilder.Build(context, args);
+                parameterModifiers[i] = _variantBuilders[i].IsByRef;
             }
 
             return convertedArguments;
@@ -119,9 +125,19 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         /// <summary>
         /// Gets the managed type that an object needs to be coverted to in order for it to be able
-        /// to be represented as a Variant
+        /// to be represented as a Variant.
+        /// 
+        /// In general, there is a many-to-many mapping between Type and VarEnum. However, this method
+        /// returns a simple mapping that is needed for the current implementation. The reason for the 
+        /// many-to-many relation is:
+        /// 1. Int32 maps to VT_I4 as well as VT_ERROR, and Decimal maps to VT_DECIMAL and VT_CY. However,
+        ///    this changes if you throw the wrapper types into the mix.
+        /// 2. There is no Type to represent COM types. __ComObject is a private type, and Object is too
+        ///    general.
         /// </summary>
         internal static Type GetManagedMarshalType(VarEnum varEnum) {
+            Debug.Assert((varEnum & VarEnum.VT_BYREF) == 0);
+
             if (Variant.IsPrimitiveType(varEnum)) {
                 return _ComToManagedPrimitiveTypes[varEnum];
             }
@@ -240,6 +256,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             throw new AmbiguousMatchException(message);
         }
 
+        // We do not use NarrowingLevel.All as it can potentially return degenerate conversions.
+        static private readonly NarrowingLevel[] _ComNarrowingLevels = new NarrowingLevel[] { 
+            NarrowingLevel.None, 
+            NarrowingLevel.One
+        };
+
         /// <summary>
         /// Is there a unique primitive type that has the best conversion for the argument
         /// </summary>
@@ -255,7 +277,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             // Look for a unique type family that the argument can be converted to.
 
-            foreach (NarrowingLevel narrowingLevel in Enum.GetValues(typeof(NarrowingLevel))) {
+            // Assert the unused values. If the enum is changed, the logic below should be checked to ensure
+            // that it is using the approriate enum values.
+            Debug.Assert(((int)NarrowingLevel.Two) == 2 && ((int)NarrowingLevel.Three) == 3 && ((int)NarrowingLevel.All) == 4);
+
+            foreach (NarrowingLevel narrowingLevel in _ComNarrowingLevels) {
                 List<VarEnum> compatibleComTypes = GetConversionsToComPrimitiveTypeFamilies(argumentType, narrowingLevel);
                 CheckForAmbiguousMatch(argumentType, compatibleComTypes);
                 if (compatibleComTypes.Count == 1) {
@@ -296,7 +322,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return VarEnum.VT_CY;
             }
 
+            // Many languages require an explicit cast for an enum to be used as the underlying type.
+            // However, we want to allow this conversion for COM without requiring an explicit cast
+            // so that enums from interop assemblies can be used as arguments. 
+            // TODO: This will not be needed once we enable loading type libraries and using the enum
+            // definition from the type library. We need to revisit this and decide if we want to allow enums to be used as the underlying type even if the language does not support the conversion
             if (argumentType.IsEnum) {
+                // The slow path automatically supports such a conversion since Type.InvokeMember supports it.
+                _isSupportedByFastPath = false;
+
                 Type underlyingType = Enum.GetUnderlyingType(argumentType);
                 return GetComTypeNonArray(underlyingType);
             }
@@ -320,6 +354,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private VarEnum GetComType(Type argumentType) {
+            if (argumentType == typeof(Missing)) {
+                _isSupportedByFastPath = false;
+                return VarEnum.VT_ERROR;
+            }
+
             if (argumentType.IsArray) {
                 Type elementType = argumentType.GetElementType();
 
@@ -331,33 +370,47 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return (VarEnum.VT_ARRAY | elementComType);
             }
 
-            if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {
-                _isSupportedByFastPath = false;
-                Type boxedType = argumentType.GetGenericArguments()[0];
-                return GetComType(boxedType);
-            }
-
             return GetComTypeNonArray(argumentType);
         }
 
         /// <summary>
         /// Get the COM Variant type that argument should be marshaled as for a call to COM
         /// </summary>
-        private VarEnum GetComType(object argument) {
-            if (argument == null) {
+        private VarEnum GetComType(int argIndex, Type argumentType, out ArgBuilder argBuilder) {
+            if (argumentType == None.Type) {
+                argBuilder = new NullArgBuilder();
                 return VarEnum.VT_EMPTY;
             }
 
-            if (argument == DBNull.Value) {
+            if (argumentType == typeof(DBNull)) {
+                argBuilder = new NullArgBuilder();
                 return VarEnum.VT_NULL;
             }
 
-            if (argument == Type.Missing) {
-                _isSupportedByFastPath = false;
-                return VarEnum.VT_ERROR;
+            if (argumentType.IsGenericType && argumentType.GetGenericTypeDefinition() == typeof(StrongBox<>)) {                
+                Type elementType = argumentType.GetGenericArguments()[0];                
+                VarEnum elementVarEnum = GetComType(elementType);
+                if (elementType == typeof(string)) {
+                    argBuilder = new ComReferenceArgBuilder(argIndex, argumentType);
+                } else {
+                    if (!Variant.HasCommonLayout(elementVarEnum)) {
+                        _isSupportedByFastPath = false;
+                    }
+                    argBuilder = new ReferenceArgBuilder(argIndex, argumentType);
+                }
+                return (elementVarEnum | VarEnum.VT_BYREF);
             }
 
-            return GetComType(argument.GetType());
+            VarEnum varEnum = GetComType(argumentType);
+            argBuilder = new SimpleArgBuilder(argIndex, GetManagedMarshalType(varEnum));
+            return varEnum;
+        }
+
+        private VariantBuilder GetVariantBuilder(int explicitArgIndex, Type argumentType) {
+            ArgBuilder argBuilder;
+            VarEnum varEnum = GetComType(explicitArgIndex + 1, argumentType, out argBuilder); // + 1 for the IDispatch instance argument
+            VariantBuilder variantBuilder = new VariantBuilder(varEnum, argBuilder);
+            return variantBuilder;
         }
     }
 }

@@ -37,7 +37,7 @@ namespace IronPython.Modules {
 #endif
         #region Public API
 
-        public static OldClass error = ExceptionConverter.CreatePythonException("error", "select");
+        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "select", "");
 
         [Documentation("select(iwtd, owtd, ewtd[, timeout]) -> readlist, writelist, errlist\n\n"
             + "Block until sockets are available for reading or writing, until an error\n"
@@ -96,7 +96,7 @@ namespace IronPython.Modules {
         }
 
         private static Exception MakeException(object value) {
-            return ExceptionConverter.CreateThrowable(error, value);
+            return PythonExceptions.CreateThrowable(error, value);
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace IronPython.Modules {
             socket = PythonSocket.SocketObj.HandleToSocket(handle);
             if (socket == null) {
                 SocketException e = new SocketException((int)SocketError.NotSocket);
-                throw ExceptionConverter.CreateThrowable(error, PythonTuple.MakeTuple(e.ErrorCode, e.Message));
+                throw PythonExceptions.CreateThrowable(error, PythonTuple.MakeTuple(e.ErrorCode, e.Message));
             }
             return socket;
         }

@@ -140,12 +140,16 @@ namespace IronPython.Runtime.Types {
         }
 
         internal object CallHelper(CodeContext context, object[] args, string[] names, object instance) {
-            BinderType binderType = BinderType.Normal;
-            if (_targets[0].IsConstructor && !PythonTypeCustomizer.IsPythonType(_targets[0].DeclaringType)) {
-                binderType = BinderType.Constructor;
-            }
+            MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, _targets, SymbolTable.StringsToIds(names));
+            BindingTarget bt = mb.MakeBindingTarget(instance == null ? CallType.None : CallType.ImplicitInstance, CompilerHelpers.GetTypes(args));
 
-            MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, _targets, binderType, SymbolTable.StringsToIds(names));
+            if (bt.Success) {
+                return bt.Call(context, args);
+            } else if (IsBinaryOperator && args.Length == 2) {
+                return PythonOps.NotImplemented;
+            }
+            
+            // TODO: Could do better than this to report error messages
             if (instance != null) {
                 return mb.CallInstanceReflected(context, instance, args);
             } else {
@@ -344,9 +348,18 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
+        internal NarrowingLevel Level {
+            get {
+                return IsBinaryOperator ? NarrowingLevel.Three : NarrowingLevel.All;
+            }
+        }   
         private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[]args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Targets, IsBinaryOperator, IsReversedOperator);
+            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Targets, Level, IsReversedOperator);
             StandardRule<T> rule = helper.MakeRule();
+            if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
+                // BinaryOperators return NotImplemented on failure.
+                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented")));
+            }
             rule.AddTest(MakeFunctionTest(rule.Parameters[0]));
             return rule;
         }
@@ -436,23 +449,22 @@ namespace IronPython.Runtime.Types {
             return CallHelper(context, realArgs, argNames, null);
         }
 
+        public BuiltinFunction/*!*/ this[PythonTuple tuple] {
+            get {
+                return this[tuple.data];
+            }
+        }
+
         /// <summary>
         /// Use indexing on generic methods to provide a new reflected method with targets bound with
         /// the supplied type arguments.
         /// </summary>
-        public BuiltinFunction this[object key] {
+        public BuiltinFunction/*!*/ this[params object[] key] {
             get {
                 // Retrieve the list of type arguments from the index.
-                Type[] types;
-                PythonTuple typesTuple = key as PythonTuple;
-
-                if (typesTuple != null) {
-                    types = new Type[typesTuple.Count];
-                    for (int i = 0; i < types.Length; i++) {
-                        types[i] = Converter.ConvertToType(typesTuple[i]);
-                    }
-                } else {
-                    types = new Type[] { Converter.ConvertToType(key) };
+                Type[] types = new Type[key.Length];
+                for (int i = 0; i < types.Length; i++) {
+                    types[i] = Converter.ConvertToType(key[i]);
                 }
 
                 BuiltinFunction res = MakeGenericMethod(types);

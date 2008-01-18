@@ -15,19 +15,24 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    public class ReturnBuilder {
-        private Type _returnType;
+
+    class ReturnBuilder {
+        private readonly Type/*!*/ _returnType;
 
         /// <summary>
         /// Creates a ReturnBuilder
         /// </summary>
         /// <param name="returnType">the type the ReturnBuilder will leave on the stack</param>
-        public ReturnBuilder(Type returnType) { this._returnType = returnType; }
+        public ReturnBuilder(Type/*!*/ returnType) {
+            Debug.Assert(returnType != null);
+
+            this._returnType = returnType; 
+        }
 
         /// <summary>
         /// 
@@ -49,7 +54,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 0; }
         }
 
-        public Type ReturnType {
+        public Type/*!*/ ReturnType {
             get {
                 return _returnType;
             }

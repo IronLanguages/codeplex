@@ -57,6 +57,11 @@ namespace Microsoft.Scripting.Ast {
             return expression;
         }
 
+        public static Expression Void(Expression expression) {
+            Contract.RequiresNotNull(expression, "expression");
+            return ConvertHelper(expression, typeof(void));
+        }
+
         public static UnaryExpression Negate(Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
             Contract.Requires(TypeUtils.IsArithmetic(expression.Type) && !TypeUtils.IsUnsigned(expression.Type), "expression", "Expression must be signed numeric type");

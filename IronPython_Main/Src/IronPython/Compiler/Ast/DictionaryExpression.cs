@@ -83,7 +83,7 @@ namespace IronPython.Compiler.Ast {
             ag.FreeTemp(dictionary);
 
             // 6. Return the comma expression, return value is the dictionary creation (at index 0)
-            return Ast.Comma(parts.Length - 1, parts);
+            return Ast.Comma(parts);
         }
 
         public override void Walk(PythonWalker walker) {

@@ -127,6 +127,18 @@ namespace Microsoft.Scripting.Utils {
             return result;
         }
 
+        public static T[] RotateRight<T>(T[] array, int count) {
+            Contract.RequiresNotNull(array, "array");
+            if ((count < 0) || (count > array.Length)) throw new ArgumentOutOfRangeException("count");
+
+            T[] result = new T[array.Length];
+            // The head of the array is shifted, and the tail will be rotated to the head of the resulting array
+            int sizeOfShiftedArray = array.Length - count;
+            Array.Copy(array, 0, result, count, sizeOfShiftedArray);
+            Array.Copy(array, sizeOfShiftedArray, result, 0, count);
+            return result;
+        }
+
         public static T[] ShiftRight<T>(T[] array, int count) {
             Contract.RequiresNotNull(array, "array");
             if (count < 0) throw new ArgumentOutOfRangeException("count");

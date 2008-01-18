@@ -31,7 +31,7 @@ namespace ToyScript.Parser.Ast {
             _expression = expression;
         }
 
-        protected internal override MSAst.Statement Generate(ToyGenerator tg) {
+        protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return Ast.Return(
                 Span,
                 _expression != null ? _expression.Generate(tg) : null

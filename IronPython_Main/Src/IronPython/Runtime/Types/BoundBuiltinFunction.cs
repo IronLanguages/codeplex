@@ -94,7 +94,13 @@ namespace IronPython.Runtime.Types {
         }
 
         private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Target.Targets, Target.IsBinaryOperator, Target.IsReversedOperator);
+            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(
+                context, 
+                action, 
+                args, 
+                Target.Targets, 
+                Target.Level,
+                Target.IsReversedOperator);
             StandardRule<T> rule = helper.Rule;
             Expression instance = Ast.ReadProperty(
                 Ast.Convert(
@@ -111,19 +117,31 @@ namespace IronPython.Runtime.Types {
             if (CompilerHelpers.IsStrongBox(__self__)) {
                 instance = ReadStrongBoxValue(instance);
             } else if (!testType.IsEnum) {
-                // we don't want to cast the enum, it will unbox it and turn it into an int.  We
-                // presumably want to call a method on the Enum class though.  We also need to deal
-                // w/ wierd types like MarshalByRefObject.  We could have an MBRO whos DeclaringType
-                // is completely different.  Therefore we special case it here and cast to the declaring
-                // type
-#if SILVERLIGHT
-                instance = Ast.Convert(instance, CompilerHelpers.GetVisibleType(CompilerHelpers.GetType(__self__)));
-#else
-                Type selfType = CompilerHelpers.GetVisibleType(CompilerHelpers.GetType(__self__));
-                Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Target.DeclaringType) : selfType;
+                // We need to deal w/ wierd types like MarshalByRefObject.  
+                // We could have an MBRO whos DeclaringType is completely different.  
+                // Therefore we special case it here and cast to the declaring type
+                Type selfType = CompilerHelpers.GetType(__self__);
+                if (!selfType.IsVisible && ScriptDomainManager.Options.PrivateBinding) {
+                    helper.InstanceType = selfType;
+                } else {
+                    selfType = CompilerHelpers.GetVisibleType(selfType);
 
-                instance = Ast.Convert(instance, convType);
+                    if (selfType == typeof(object) && Target.DeclaringType.IsInterface) {
+                        selfType = Target.DeclaringType;
+                    }
+#if SILVERLIGHT
+                    instance = Ast.Convert(instance, selfType);
+#else
+                    Type convType = selfType == typeof(MarshalByRefObject) ? CompilerHelpers.GetVisibleType(Target.DeclaringType) : selfType;
+
+                    instance = Ast.Convert(instance, convType);
 #endif
+                }
+            } else {
+                // we don't want to cast the enum to it's real type, it will unbox it 
+                // and turn it into it's underlying type.  We presumably want to call 
+                // a method on the Enum class though - so we cast to Enum instead.
+                instance = Ast.Convert(instance, typeof(Enum));
             }
 
             helper.Instance = instance;
@@ -143,6 +161,12 @@ namespace IronPython.Runtime.Types {
                 );
                 rule.AddTest(rule.MakeTypeTest(testType, instanceVal));
             }
+
+            if (newRule.IsError && Target.IsBinaryOperator && args.Length == 2) { // 1 bound function + 1 args
+                // BinaryOperators return NotImplemented on failure.
+                newRule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented")));
+            }
+
             return newRule;
         }
 
@@ -188,7 +212,13 @@ namespace IronPython.Runtime.Types {
             return Target.CallHelper(context, ArrayUtils.Insert(__self__, realArgs), argNames, null);
         }
 
-        public object/*!*/ this[object key] {
+        public object/*!*/ this[PythonTuple key] {
+            get {
+                return new BoundBuiltinFunction(Target[key], __self__);
+            }
+        }
+
+        public object/*!*/ this[params object[] key] {
             get {
                 return new BoundBuiltinFunction(Target[key], __self__);
             }

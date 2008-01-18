@@ -84,7 +84,7 @@ def test_overload2():
 def test_basic():
     for t in [  
                 ClassWithIndexer,
-                #StructWithIndexer,   # bug 363412
+                StructWithIndexer,   
              ]:
         x = t()
         x.Init()
@@ -112,7 +112,7 @@ def test_basic():
         
         # bad arg count
         AssertErrorWithMatch(TypeError, "expected int, got tuple", lambda: x[()])
-        AssertErrorWithMatch(TypeError, "get_Item\(\) takes at most 3 arguments \(4 given\)", lambda: x[1, 2, 3, 4])
+        AssertErrorWithMatch(TypeError, "__getitem__\(\) takes at most 3 arguments \(4 given\)", lambda: x[1, 2, 3, 4])
         
         # bad arg type
         AssertErrorWithMatch(TypeError, "expected str, got int", lambda: x[1, 2, 3])

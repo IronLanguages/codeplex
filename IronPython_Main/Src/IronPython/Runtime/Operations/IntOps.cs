@@ -14,20 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Collections;
-using System.Reflection;
-using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 
-using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
-using IronPython.Compiler;
-using Microsoft.Scripting.Actions;
+
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Operations {
 
@@ -196,6 +191,11 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static object Power(int x, BigInteger power, BigInteger qmod) {
             return BigIntegerOps.Power((BigInteger)x, power, qmod);
+        }
+
+        [SpecialName]
+        public static object Power(int x, double power, double qmod) {
+            return PythonOps.NotImplemented;
         }
 
         [SpecialName]

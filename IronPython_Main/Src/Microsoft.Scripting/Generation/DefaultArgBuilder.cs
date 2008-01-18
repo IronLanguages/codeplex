@@ -16,7 +16,6 @@
 using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
 
@@ -124,13 +123,5 @@ namespace Microsoft.Scripting.Generation {
 
             return context.ConvertExpression(Ast.Constant(val), _argumentType);            
         }
-
-        internal override Expression CheckExpression(MethodBinderContext context, Expression[] parameters) {
-            return null;
-        }
-
-        internal override bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures) {
-            return true;
-        }        
     }
 }

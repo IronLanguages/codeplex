@@ -24,9 +24,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly Variable /*!*/ _variable;
         private bool _defined;
 
-        // Implementation detail
-        private VariableReference _vr;
-
         internal BoundExpression(Variable /*!*/ variable)
             : base(AstNodeType.BoundExpression, variable.Type) {
             _variable = variable;
@@ -34,16 +31,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Variable Variable {
             get { return _variable; }
-        }
-
-        internal VariableReference Ref {
-            get { return _vr; }
-            set {
-                Debug.Assert(value.Variable == _variable);
-                // the _vr == value is true for DAGs
-                Debug.Assert(_vr == null || _vr == value);
-                _vr = value;
-            }
         }
 
         public SymbolId Name {

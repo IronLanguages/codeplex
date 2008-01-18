@@ -85,6 +85,9 @@ namespace Microsoft.Scripting.Ast {
         // This flag should always be flowed through to other Compiler objects created from this one.
         private bool _interpretedMode = false;
 
+        // The variable references for the current block/rule
+        private Dictionary<Variable, VariableReference> _references;
+
         internal Compiler(TypeGen typeGen, AssemblyGen assemblyGen, MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
             Contract.Requires(typeGen == null || typeGen.AssemblyGen == assemblyGen, "assemblyGen");
             Contract.Requires(constantPool == null || mi.IsStatic, "constantPool");
@@ -143,6 +146,11 @@ namespace Microsoft.Scripting.Ast {
 
         internal ILGen IL {
             get { return _ilg; }
+        }
+
+        internal Dictionary<Variable, VariableReference> References {
+            get { return _references; }
+            set { _references = value; }
         }
 
         internal bool DynamicMethod {
@@ -416,16 +424,16 @@ namespace Microsoft.Scripting.Ast {
             PushExceptionBlock(TargetBlockType.Try, null);
         }
 
-        internal void PushTargets(Nullable<Label> breakTarget, Nullable<Label> continueTarget, Statement statement) {
+        internal void PushTargets(Nullable<Label> breakTarget, Nullable<Label> continueTarget, Expression expression) {
             if (_targets.Count == 0) {
-                _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, statement));
+                _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, expression));
             } else {
                 Targets t = _targets.Peek();
                 TargetBlockType bt = t.BlockType;
                 if (bt == TargetBlockType.Finally) {
                     bt = TargetBlockType.LoopInFinally;
                 }
-                _targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, statement));
+                _targets.Push(new Targets(breakTarget, continueTarget, bt, t.finallyReturns, expression));
             }
         }
 
@@ -440,9 +448,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // TODO: Cleanup, hacky!!!
-        internal void CheckAndPushTargets(Statement statement) {
+        internal void CheckAndPushTargets(Expression expression) {
             for (int i = _targets.Count - 1; i >= 0; i--) {
-                if (_targets[i].statement == statement) {
+                if (_targets[i].expression == expression) {
                     PushTargets(_targets[i].breakLabel, _targets[i].continueLabel, null);
                     return;
                 }
@@ -1133,8 +1141,8 @@ namespace Microsoft.Scripting.Ast {
             if (!DynamicMethod) {
                 res = _typeGen.DefineMethod(name, retType, paramTypes, paramNames, constantPool);
             } else {
-                if (CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_context)) {
-                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_context, name, retType, paramTypes, paramNames, constantPool);
+                if (_context != null && CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_context.SourceUnit)) {
+                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_context.SourceUnit, name, retType, paramTypes, paramNames, constantPool);
                 } else {
                     res = CompilerHelpers.CreateDynamicCodeGenerator(name, retType, paramTypes, constantPool);
                 }
@@ -1530,17 +1538,11 @@ namespace Microsoft.Scripting.Ast {
             return temp;
         }
 
-        internal void FreeTemporarySlot(Slot temp) {
-            if (!IsGenerator) {
-                FreeLocalTmp(temp);
-            }
-        }
-
         /// <summary>
         /// Returns the Compiler implementing the code block.
         /// Emits the code block implementation if it hasn't been emitted yet.
         /// </summary>
-        internal Compiler ProvideCodeBlockImplementation(CodeBlock block, bool hasContextParameter, bool hasThis) {
+        private Compiler ProvideCodeBlockImplementation(CodeBlock block, bool hasContextParameter, bool hasThis) {
             Assert.NotNull(block);
             Compiler impl;
 
@@ -1555,6 +1557,10 @@ namespace Microsoft.Scripting.Ast {
             }
 
             return impl;
+        }
+
+        private Slot GetVariableSlot(Variable variable) {
+            return _references[variable].Slot;
         }
 
         #region IDisposable Members

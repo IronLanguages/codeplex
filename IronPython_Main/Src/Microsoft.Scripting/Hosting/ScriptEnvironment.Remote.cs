@@ -100,6 +100,12 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
+        public ScriptIO/*!*/ IO {
+            get {
+                return _manager.Environment.IO;
+            }
+        }
+
         // TODO: remove
         public ScriptDomainOptions GlobalOptions {
             get { return _manager.GlobalOptions; }
@@ -126,10 +132,6 @@ namespace Microsoft.Scripting.Hosting {
             return new RemoteScriptEngine(_manager.GetEngine(languageContextType));
         }
 
-        public void RedirectIO(TextReader input, TextWriter output, TextWriter errorOutput) {
-            _manager.Environment.RedirectIO(input, output, errorOutput);
-        }
-
         public IScriptScope/*!*/ CreateScope() {
             return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.CreateScope());
         }
@@ -142,9 +144,12 @@ namespace Microsoft.Scripting.Hosting {
             return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.ExecuteSourceUnit(sourceUnit));
         }
         
-        public Delegate GetDelegate(object callableObject, Type delegateType) {
-            // TODO:
-            throw new NotImplementedException();
+        public IScriptScope ExecuteFile(string path) {
+            return RemoteWrapper.WrapRemotable<IScriptScope>(_manager.Environment.ExecuteFile(path));
+        }
+
+        public void LoadAssembly(Assembly asm) {
+            _manager.LoadAssembly(asm);
         }
     }
 }

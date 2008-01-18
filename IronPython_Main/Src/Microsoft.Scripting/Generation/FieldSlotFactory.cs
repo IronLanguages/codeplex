@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
             this._typeGen = typeGen;
             this._instance = instance;
         }
-        protected override Slot CreateSlot(SymbolId name, Type type) {
+        public override Slot CreateSlot(SymbolId name, Type type) {
             FieldBuilder fb = _typeGen.TypeBuilder.DefineField(SymbolTable.IdToString(name), type, FieldAttributes.Public);
             return new FieldSlot(_instance, fb);
         }

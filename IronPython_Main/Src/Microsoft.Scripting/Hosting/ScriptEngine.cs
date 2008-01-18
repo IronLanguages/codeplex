@@ -394,7 +394,7 @@ namespace Microsoft.Scripting.Hosting {
         public virtual ICompiledCode/*!*/ Compile(ScriptSource/*!*/ scriptSource) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource, null, null));
+            return new CompiledCode(this, _language.CompileSourceCode(scriptSource, null, null));
         }
 
         /// <summary>
@@ -405,7 +405,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
             Contract.RequiresNotNull(errorSink, "errorSink");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource, null, errorSink));
+            return new CompiledCode(this, _language.CompileSourceCode(scriptSource, null, errorSink));
         }
 
         /// <summary>
@@ -416,7 +416,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
             Contract.RequiresNotNull(compilerOptions, "compilerOptions");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource, compilerOptions, null));
+            return new CompiledCode(this, _language.CompileSourceCode(scriptSource, compilerOptions, null));
         }
 
         /// <summary>
@@ -428,7 +428,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(errorSink, "errorSink");
             Contract.RequiresNotNull(compilerOptions, "compilerOptions");
 
-            return new CompiledCode(_language.CompileSourceCode(scriptSource, compilerOptions, errorSink));
+            return new CompiledCode(this, _language.CompileSourceCode(scriptSource, compilerOptions, errorSink));
         }
 
         #endregion
@@ -485,12 +485,12 @@ namespace Microsoft.Scripting.Hosting {
         #region Scopes
 
         public IScriptScope/*!*/ CreateScope() {
-            return new ScriptScope(new Scope(_language));
+            return new ScriptScope(this, new Scope(_language));
         }
 
         public IScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
             Contract.RequiresNotNull(dictionary, "dictionary");
-            return new ScriptScope(new Scope(_language, dictionary));
+            return new ScriptScope(this, new Scope(_language, dictionary));
         }
 
         /// <summary>
@@ -509,7 +509,7 @@ namespace Microsoft.Scripting.Hosting {
         public IScriptScope GetScope(string/*!*/ path) {
             Contract.RequiresNotNull(path, "path");
             Scope scope = _language.GetScope(path);
-            return (scope != null) ? new ScriptScope(scope) : null;
+            return (scope != null) ? new ScriptScope(this, scope) : null;
         }
 
         // TODO: remove
@@ -645,7 +645,7 @@ namespace Microsoft.Scripting.Hosting {
         public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content) {
             Contract.RequiresNotNull(content, "content");
 
-            return _language.GenerateSourceCode(content, String.Empty, SourceCodeKind.File);
+            return _language.GenerateSourceCode(content, null, SourceCodeKind.File);
         }
 
         /// <summary>
@@ -662,10 +662,10 @@ namespace Microsoft.Scripting.Hosting {
         ///     CodeMethodInvokeExpression
         ///     CodeExpressionStatement (for holding MethodInvoke)
         /// </summary>
-        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string id) {
+        public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, string path) {
             Contract.RequiresNotNull(content, "content");
 
-            return _language.GenerateSourceCode(content, id, SourceCodeKind.File);
+            return _language.GenerateSourceCode(content, path, SourceCodeKind.File);
         }
 
         /// <summary>
@@ -685,7 +685,7 @@ namespace Microsoft.Scripting.Hosting {
         public ScriptSource/*!*/ CreateScriptSource(CodeObject/*!*/ content, SourceCodeKind kind) {
             Contract.RequiresNotNull(content, "content");
 
-            return _language.GenerateSourceCode(content, String.Empty, kind);
+            return _language.GenerateSourceCode(content, null, kind);
         }
 
         /// <summary>
@@ -756,7 +756,7 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(contentProvider, "contentProvider");
             Contract.Requires(Enum.IsDefined(typeof(ScriptSourceKind), kind), "kind");
 
-            return ScriptSource.Create(_language, contentProvider, id, kind);
+            return _language.CreateSourceUnit(contentProvider, id, kind);
         }
 
         #endregion

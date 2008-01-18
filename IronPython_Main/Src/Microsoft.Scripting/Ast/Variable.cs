@@ -29,17 +29,7 @@ namespace Microsoft.Scripting.Ast {
             Parameter,
             Temporary,              // Temporary variable (name not important/published)
 
-            Global,                 // Globals may need to go away and be handled on Python side only.
-
-            /// <summary>
-            /// Since we don't have the proper analysis at codegen time,
-            /// we need this variable kind - a temporary used in the generators.
-            /// To survive the yield, the temporary will be allocated in the environment.
-            /// 
-            /// When the analysis is added, these will become regular temps and will
-            /// be allocated in the environment only if their lifetime spans a yield.
-            /// </summary>
-            GeneratorTemporary
+            Global                  // Globals may need to go away and be handled on Python side only.
         };
 
         private readonly SymbolId _name;
@@ -102,7 +92,7 @@ namespace Microsoft.Scripting.Ast {
 
         public bool IsTemporary {
             get {
-                return _kind == VariableKind.Temporary || _kind == VariableKind.GeneratorTemporary;
+                return _kind == VariableKind.Temporary;
             }
         }
 
@@ -203,9 +193,6 @@ namespace Microsoft.Scripting.Ast {
                 case VariableKind.Temporary:
                     // Nothing to do here
                     break;
-                case VariableKind.GeneratorTemporary:
-                    // Do the work in CreateSlot
-                    break;
             }
         }
 
@@ -258,22 +245,19 @@ namespace Microsoft.Scripting.Ast {
                     }
 
                 case VariableKind.Temporary:
-                    return cg.GetNamedLocal(_type, SymbolTable.IdToString(_name));
-
-                case VariableKind.GeneratorTemporary:
-                    if (!cg.IsGenerator) {
-                        goto case VariableKind.Temporary;
+                    if (cg.IsGenerator) {
+                        // Allocate in environment if emitting generator.
+                        // This must be done here for now because the environment
+                        // allocation, which is generally done in Allocate(),
+                        // is done in the context of the outer generator codegen,
+                        // which is not marked IsGenerator so the generator temps
+                        // would go onto CLR stack rather than environment.
+                        // TODO: Fix this once we have lifetime analysis in place.
+                        _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+                        return CreateSlotForVariable(cg);
+                    } else {
+                        return cg.GetNamedLocal(_type, SymbolTable.IdToString(_name));
                     }
-
-                    // Allocate in environment if emitting generator.
-                    // This must be done here for now because the environment
-                    // allocation, which is generally done in Allocate(),
-                    // is done in the context of the outer generator codegen,
-                    // which is not marked IsGenerator so the generator temps
-                    // would go onto CLR stack rather than environment.
-                    // TODO: Fix this once we have lifetime analysis in place.
-                    _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
-                    return CreateSlotForVariable(cg);
             }
 
             Debug.Assert(false, "Unexpected variable kind: " + _kind.ToString());
@@ -304,7 +288,8 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(_storage != null);
             Slot access = null;
             if (_storage.RequireAccessSlot) {
-                access = _lift || _kind == VariableKind.GeneratorTemporary ?
+                // TODO: May need to check that the block is a generator here
+                access = _lift || _kind == VariableKind.Temporary ?
                     cg.Allocator.GetClosureAccessSlot(_block) :
                     cg.Allocator.GetScopeAccessSlot(_block);
             }
@@ -329,10 +314,6 @@ namespace Microsoft.Scripting.Ast {
 
         internal static Variable Temporary(SymbolId name, CodeBlock block, Type type) {
             return new Variable(name, VariableKind.Temporary, block, type, null);
-        }
-
-        internal static Variable GeneratorTemp(SymbolId name, CodeBlock block, Type type) {
-            return new Variable(name, VariableKind.GeneratorTemporary, block, type, null);
         }
 
         internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type) {

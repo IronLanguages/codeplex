@@ -90,7 +90,10 @@ namespace Microsoft.Scripting {
         }
 
         private object Run(CodeContext codeContext, bool tryEvaluate) {
+            
             codeContext.ModuleContext.CompilerContext =_compilerContext;
+
+            // Python only: assigns TrueDivision from _compilerContext to codeContext.ModuleContext
             _languageContext.ModuleContextEntering(codeContext.ModuleContext);
 
 

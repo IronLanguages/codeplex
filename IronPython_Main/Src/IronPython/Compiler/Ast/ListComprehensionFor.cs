@@ -35,7 +35,7 @@ namespace IronPython.Compiler.Ast {
             get { return _list; }
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag, MSAst.Statement body) {
+        internal override MSAst.Expression Transform(AstGenerator ag, MSAst.Expression body) {
             MSAst.Variable temp = ag.MakeTemp(SymbolTable.StringToId("list_comprehension_for"), typeof(IEnumerator));
             return ForStatement.TransformForStatement(ag, temp, _list, _lhs, body, null, Span, _lhs.End);
         }

@@ -260,8 +260,18 @@ namespace IronPython.Runtime.Calls {
             if (action.Kind == DynamicActionKind.Call) {
                 return GetCallRule<T>((CallAction)action, context);
             }
+            if (action.Kind == DynamicActionKind.DoOperation) {
+                return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
+            }
             
             // get default rule:
+            return null;
+        }
+        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+            switch (doOperationAction.Operation) {
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
+            }
             return null;
         }
 

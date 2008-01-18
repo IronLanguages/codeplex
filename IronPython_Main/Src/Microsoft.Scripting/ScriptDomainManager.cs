@@ -27,6 +27,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting {
 
@@ -82,14 +83,58 @@ namespace Microsoft.Scripting {
         private readonly Snippets/*!*/ _snippets;
         private readonly ScriptEnvironment/*!*/ _environment;
         private readonly InvariantContext/*!*/ _invariantContext;
+        private readonly SharedIO/*!*/ _sharedIO;
 
         private CommandDispatcher _commandDispatcher; // can be null
-        
+
+        // TODO: ReaderWriterLock (Silverlight?)
+        private readonly object _languageRegistrationLock = new object();
+        private readonly Dictionary<string, LanguageRegistration> _languageIds = new Dictionary<string, LanguageRegistration>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, LanguageRegistration> _languageTypes = new Dictionary<string, LanguageRegistration>();
+        private readonly List<LanguageContext> _registeredContexts = new List<LanguageContext>();
+
         // singletons:
         public PlatformAdaptationLayer/*!*/ PAL { get { return _pal; } }
         public Snippets/*!*/ Snippets { get { return _snippets; } }
         public ScriptEnvironment/*!*/ Environment { get { return _environment; } }
+        public SharedIO/*!*/ SharedIO { get { return _sharedIO; } }
+        private ScopeAttributesWrapper _scopeWrapper = new ScopeAttributesWrapper();
+        private Scope/*!*/ _globals;
+        
+        private static ScriptDomainOptions _options = new ScriptDomainOptions();// TODO: remove or reduce     
 
+        /// <summary>
+        /// Initializes environment according to the setup information.
+        /// </summary>
+        private ScriptDomainManager(ScriptEnvironmentSetup/*!*/ setup) {
+            Debug.Assert(setup != null);
+
+            _sharedIO = new SharedIO();
+
+            _invariantContext = new InvariantContext(this);
+
+            // create the initial default scope
+            _globals = new Scope(_invariantContext, _scopeWrapper);
+
+            // create local environment for the host:
+            _environment = new ScriptEnvironment(this);
+
+            // create PAL (default always available):
+            _pal = setup.CreatePAL();
+
+            // let setup register language contexts listed on it:
+            setup.RegisterLanguages(this);
+
+            // initialize snippets:
+            _snippets = new Snippets();
+
+            // create a local host unless a remote one has already been created:
+            _host = setup.CreateScriptHost(_environment);
+
+            // TODO: Belongs in ScriptEnvironment but can't go there yet
+            // because GetEngine is overhere for SourceUnit support
+            _environment.Globals = new ScriptScope(_environment.InvariantEngine, new Scope(_invariantContext, _scopeWrapper.Dict));
+        }
         /// <summary>
         /// Gets the <see cref="ScriptDomainManager"/> associated with the current AppDomain. 
         /// If there is none, creates and initializes a new environment using setup information associated with the AppDomain 
@@ -160,31 +205,7 @@ namespace Microsoft.Scripting {
 
             // default setup:
             return new ScriptEnvironmentSetup(true);
-        }
-
-        /// <summary>
-        /// Initializes environment according to the setup information.
-        /// </summary>
-        private ScriptDomainManager(ScriptEnvironmentSetup/*!*/ setup) {
-            Debug.Assert(setup != null);
-
-            _invariantContext = new InvariantContext(this);
-
-            // create local environment for the host:
-            _environment = new ScriptEnvironment(this);
-            
-            // create PAL (default always available):
-            _pal = setup.CreatePAL();
-
-            // let setup register language contexts listed on it:
-            setup.RegisterLanguages(this);
-
-            // initialize snippets:
-            _snippets = new Snippets();
-
-            // create a local host unless a remote one has already been created:
-            _host = setup.CreateScriptHost(_environment);
-        }
+        }        
 
         #endregion
        
@@ -259,12 +280,6 @@ namespace Microsoft.Scripting {
                 return _context;
             }
         }
-
-        // TODO: ReaderWriterLock (Silverlight?)
-        private readonly object _languageRegistrationLock = new object();
-        private readonly Dictionary<string, LanguageRegistration> _languageIds = new Dictionary<string, LanguageRegistration>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, LanguageRegistration> _languageTypes = new Dictionary<string, LanguageRegistration>();
-        private readonly List<LanguageContext> _registeredContexts = new List<LanguageContext>();
 
         public void RegisterLanguageContext(string assemblyName, string typeName, params string[] identifiers) {
             RegisterLanguageContext(assemblyName, typeName, false, identifiers);
@@ -384,7 +399,8 @@ namespace Microsoft.Scripting {
             return result;
         }
 
-        public ScriptEngine GetEngineByFileExtension(string extension) {
+        /// <exception cref="ArgumentException"></exception>
+        public ScriptEngine GetEngineByFileExtension(string/*!*/ extension) {
             LanguageContext lc;
             if (!TryGetLanguageContextByFileExtension(extension, out lc)) {
                 throw new ArgumentException(Resources.UnknownLanguageId);
@@ -429,18 +445,21 @@ namespace Microsoft.Scripting {
             return GetEngine(GetLanguageContext(languageContextType));
         }
 
-        internal ScriptEngine/*!*/ GetEngine(LanguageContext/*!*/ language) {
+        internal ScriptEngine GetEngine(LanguageContext/*!*/ language) {
             Assert.NotNull(language);
             ScriptEngine engine;
             if (!_engines.TryGetValue(language.GetType(), out engine)) {
                 engine = new ScriptEngine(_environment, language);
                 _engines[language.GetType()] = engine;
-                _host.EngineCreated(engine);
+
+                if (language.GetType() != typeof(InvariantContext)) {
+                    _host.EngineCreated(engine);
+                }
             }
             return engine;
         }
 
-        public bool TryGetLanguageContextByFileExtension(string extension, out LanguageContext languageContext) {
+        public bool TryGetLanguageContextByFileExtension(string/*!*/ extension, out LanguageContext languageContext) {
             if (String.IsNullOrEmpty(extension)) {
                 languageContext = null;
                 return false;
@@ -496,58 +515,39 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        #region Variables
-
-        private IAttributesCollection _variables;
+        #region Variables and Modules
 
         /// <summary>
-        /// A collection of environment variables or <c>null</c> for calling back to the host on each variable access.
-        /// It's up to the host to set the property via <see cref="ScriptEnvironment"/> and to ensure its correct behavior and thread safety.
+        /// A collection of environment variables.
         /// </summary>
-        internal IAttributesCollection Variables { get { return _variables; } set { _variables = value; } }
-
-        public void SetVariable(CodeContext context, SymbolId name, object value) {
-            IAttributesCollection variables = _variables;
-            
-            if (variables != null) {
-                variables[name] = value;
-            } else {
-                if (!_host.TrySetVariable(name, value)) {
-                    // TODO:
-                    throw context.LanguageContext.MissingName(name);
-                }
+        public Scope/*!*/ Globals { 
+            get { 
+                return _globals; 
             }
         }
 
-        public object GetVariable(CodeContext context, SymbolId name) {
-            IAttributesCollection variables = _variables;
+        public void SetGlobalsDictionary(IAttributesCollection dictionary) {
+            Contract.RequiresNotNull(dictionary, "dictionary");
 
-            if (variables != null) {
-                return variables[name];
-            } else {
-                object result;
-                
-                if (!_host.TryGetVariable(name, out result)) {
-                    // TODO:
-                    throw context.LanguageContext.MissingName(name);
-                }
-
-                return result;
-            }
+            _scopeWrapper.Dict = dictionary;
         }
 
-        #endregion
+        public event EventHandler<AssemblyLoadedEventArgs> AssemblyLoaded;
 
-        #region Modules // OBSOLETE
+        public bool LoadAssembly(Assembly assembly) {
+            EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
+            if (assmLoaded != null) {
+                assmLoaded(this, new AssemblyLoadedEventArgs(assembly));
+            }
+
+            return _scopeWrapper.LoadAssembly(assembly);
+        }
 
         public StringComparer/*!*/ PathComparer {
             get {
                 return StringComparer.Ordinal;
             }
         }
-
-        // TODO: remove
-        private Dictionary<string, ScriptScope> _modules = new Dictionary<string, ScriptScope>();
         
         /// <summary>
         /// Uses the hosts search path and semantics to resolve the provided name to a SourceUnit.
@@ -558,7 +558,7 @@ namespace Microsoft.Scripting {
         /// Returns null if a module could not be found.
         /// </summary>
         /// <param name="name">an opaque parameter which has meaning to the host.  Typically a filename without an extension.</param>
-        public ScriptScope UseModule(string name) {
+        public object UseModule(string name) {
             Contract.RequiresNotNull(name, "name");
             
             SourceUnit su = _host.ResolveSourceFileUnit(name);
@@ -567,16 +567,13 @@ namespace Microsoft.Scripting {
             }
         
             // TODO: remove (JS test in MerlinWeb relies on scope reuse)
-            ScriptScope result;
-            lock (_modules) {
-                if (_modules.TryGetValue(name, out result)) {
-                    return result;
-                }
-            }
+            object result;
+            if (Globals.TryGetName(SymbolTable.StringToId(name), out result)) {
+                return result;
+            }            
+            
             result = ExecuteSourceUnit(su);
-            lock (_modules) {
-                _modules[name] = result;
-            }
+            Globals.SetName(SymbolTable.StringToId(name), result);
 
             return result;
         }
@@ -593,7 +590,7 @@ namespace Microsoft.Scripting {
         /// <exception cref="ArgumentException">no language registered</exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
-        public ScriptScope UseModule(string/*!*/ path, string/*!*/ languageId) {
+        public Scope UseModule(string/*!*/ path, string/*!*/ languageId) {
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(languageId, "languageId");
 
@@ -608,23 +605,15 @@ namespace Microsoft.Scripting {
         }
 
         // TODO:
-        public ScriptScope ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
+        public Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
             ScriptCode compiledCode = sourceUnit.LanguageContext.CompileSourceCode(sourceUnit);
             Scope scope = compiledCode.MakeOptimizedScope();
             compiledCode.Run(scope);
-            return new ScriptScope(scope);
+            return scope;
         }
 
         #endregion
 
-        #region Scopes
-
-        public IScriptScope/*!*/ CreateScope(IAttributesCollection dictionary) {
-            return new Scope(_invariantContext, dictionary).ToScriptScope();
-        }
-
-        #endregion
-        
         #region Command Dispatching
 
         // This can be set to a method like System.Windows.Forms.Control.Invoke for Winforms scenario 
@@ -662,9 +651,6 @@ namespace Microsoft.Scripting {
                 _options = value;
             }
         }
-
-        // TODO: remove or reduce     
-        private static ScriptDomainOptions _options = new ScriptDomainOptions();
 
         // TODO: remove or reduce
         public static ScriptDomainOptions Options {
@@ -710,6 +696,141 @@ namespace Microsoft.Scripting {
 
                 return new ContextId(index + 1);
             }
+        }
+
+        private class ScopeAttributesWrapper : IAttributesCollection {
+            private IAttributesCollection/*!*/ _dict = new SymbolDictionary();
+            private TopNamespaceTracker/*!*/ _tracker = new TopNamespaceTracker();
+
+            public IAttributesCollection/*!*/ Dict {
+                get {
+                    return _dict;
+                }
+                set {
+                    Assert.NotNull(_dict);
+
+                    _dict = value;
+                }
+            }
+
+            public bool LoadAssembly(Assembly asm) {
+                return _tracker.LoadAssembly(asm);
+            }
+
+            #region IAttributesCollection Members
+
+            public void Add(SymbolId name, object value) {
+                _dict[name] = value;
+            }
+
+            public bool TryGetValue(SymbolId name, out object value) {
+                if (!_dict.TryGetValue(name, out value)) {
+                    value = _tracker.TryGetPackageAny(name);                    
+                }
+                return value != null;
+            }
+
+            public bool Remove(SymbolId name) {
+                return _dict.Remove(name);
+            }
+
+            public bool ContainsKey(SymbolId name) {
+                return _dict.ContainsKey(name) || _tracker.TryGetPackageAny(name) != null;
+            }
+
+            public object this[SymbolId name] {
+                get {
+                    object value;
+                    if (TryGetValue(name, out value)) {
+                        return value;
+                    }
+
+                    throw new KeyNotFoundException();
+                }
+                set {
+                    Add(name, value);
+                }
+            }
+
+            public IDictionary<SymbolId, object> SymbolAttributes {
+                get { return _dict.SymbolAttributes; }
+            }
+
+            public void AddObjectKey(object name, object value) {
+                _dict.AddObjectKey(name, value);
+            }
+
+            public bool TryGetObjectValue(object name, out object value) {
+                return _dict.TryGetObjectValue(name, out value);
+            }
+
+            public bool RemoveObjectKey(object name) {
+                return _dict.RemoveObjectKey(name);
+            }
+
+            public bool ContainsObjectKey(object name) {
+                return _dict.ContainsObjectKey(name);
+            }
+
+            public IDictionary<object, object> AsObjectKeyedDictionary() {
+                return _dict.AsObjectKeyedDictionary();
+            }
+
+            public int Count {
+                get {
+                    int count = _dict.Count + _tracker.Count;
+                    foreach (object o in _tracker.Keys) {
+                        if (ContainsObjectKey(o)) {
+                            count--;
+                        }
+                    }
+                    return count;
+                }
+            }
+
+            public ICollection<object> Keys {
+                get {
+                    List<object> keys = new List<object>(_dict.Keys);
+                    foreach (object o in _tracker.Keys) {
+                        if (!_dict.ContainsObjectKey(o)) {
+                            keys.Add(o);
+                        }
+                    }
+                    return keys; 
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable<KeyValuePair<object,object>> Members
+
+            public IEnumerator<KeyValuePair<object, object>> GetEnumerator() {
+                foreach(KeyValuePair<object, object> kvp in _dict) {
+                    yield return kvp;
+                }
+                foreach (KeyValuePair<object, object> kvp in _tracker) {
+                    if (!_dict.ContainsObjectKey(kvp.Key)) {
+                        yield return kvp;
+                    }
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable Members
+
+            IEnumerator IEnumerable.GetEnumerator() {
+                foreach (KeyValuePair<object, object> kvp in _dict) {
+                    yield return kvp.Key;
+                }
+                foreach (KeyValuePair<object, object> kvp in _tracker) {
+                    if (!_dict.ContainsObjectKey(kvp.Key)) {
+                        yield return kvp.Key;
+                    }
+                }
+            }
+
+            #endregion
         }
     }
 }

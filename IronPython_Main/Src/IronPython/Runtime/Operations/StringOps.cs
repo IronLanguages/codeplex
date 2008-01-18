@@ -1949,12 +1949,9 @@ namespace IronPython.Runtime.Operations {
 
             private bool DoPythonFallback(int index, int length) {
                 // create the exception object to hand to the user-function...
-                object exObj = PythonCalls.Call(ExceptionConverter.GetPythonException("UnicodeEncodeError"),
-                    _encoding,
-                    _strData,
-                    index,
-                    index + length,
-                    "unexpected code byte");
+                PythonExceptions.UnicodeEncodeError exObj = new PythonExceptions.UnicodeEncodeError();
+
+                exObj.__init__(_encoding, _strData, index, index + length, "unexpected code byte");
 
                 // call the user function...
                 object res = PythonCalls.Call(_function, exObj);
@@ -2030,12 +2027,9 @@ namespace IronPython.Runtime.Operations {
 
             public override bool Fallback(byte[] bytesUnknown, int index) {
                 // create the exception object to hand to the user-function...
-                object exObj = PythonCalls.Call(ExceptionConverter.GetPythonException("UnicodeDecodeError"),
-                    _encoding,
-                    _strData,
-                    index,
-                    index + bytesUnknown.Length,
-                    "unexpected code byte");
+                PythonExceptions.UnicodeDecodeError exObj = new PythonExceptions.UnicodeDecodeError();
+
+                exObj.__init__(_encoding, _strData, index, index + bytesUnknown.Length, "unexpected code byte");
 
                 // call the user function...
                 object res = PythonCalls.Call(_function, exObj);
@@ -2150,7 +2144,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override int MaxCharCount {
-                get { Console.WriteLine("MaxCharCount"); throw new NotImplementedException(); }
+                get { throw new NotImplementedException(); }
             }
         }
 
@@ -2198,7 +2192,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             public override int MaxCharCount {
-                get { Console.WriteLine("MaxCharCount");  throw new NotImplementedException(); }
+                get { throw new NotImplementedException(); }
             }
         }
 

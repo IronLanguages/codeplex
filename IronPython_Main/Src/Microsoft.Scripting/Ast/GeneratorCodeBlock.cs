@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Ast {
         private List<YieldTarget> _topTargets;
 
         internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
-            : base(AstNodeType.GeneratorCodeBlock, span, name, typeof(object)) {
+            : base(span, name, typeof(object)) {
             _generator = generator;
             Debug.Assert(generator.IsSubclassOf(typeof(Generator)));
             _next = next;
@@ -73,14 +73,6 @@ namespace Microsoft.Scripting.Ast {
             int temps;
             YieldLabelBuilder.BuildYieldTargets(this, out _topTargets, out temps);
             return temps;
-        }
-
-        // For generators, make all temps be generator-temps. A non-generator temp can't legally span a yield point,
-        // and yield points can be practically anywhere. 
-        // If we do flow analysis, then we could figure out which temps span yield points and which don't.
-        // For now, without the flow analysis, we err on the side of safety and just make everything generator temps.
-        public override Variable CreateTemporaryVariable(SymbolId name, Type type) {
-            return CreateGeneratorTempVariable(name, type);
         }
     }
 

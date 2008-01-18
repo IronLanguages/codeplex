@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Actions {
         /// Internal helper to produce the actual expression used for the error when emitting
         /// the error into a rule.
         /// </summary>
-        public Statement MakeErrorForRule(StandardRule rule, ActionBinder binder) {
+        public Expression MakeErrorForRule(StandardRule rule, ActionBinder binder) {
             switch(_kind) {
                 case ErrorInfoKind.Error:
                     rule.IsError = true;
@@ -96,6 +96,18 @@ namespace Microsoft.Scripting.Actions {
                 case ErrorInfoKind.Exception:
                     return rule.MakeError(_value);
                 default: throw new InvalidOperationException();
+            }
+        }
+
+        public object GetValue(CodeContext context) {
+            switch(_kind) {
+                case ErrorInfoKind.Error:
+                case ErrorInfoKind.Success:
+                    return Interpreter.Evaluate(context, _value);                    
+                case ErrorInfoKind.Exception:
+                    throw (Exception)Interpreter.Evaluate(context, _value);
+                default:
+                    throw new InvalidOperationException();
             }
         }
 

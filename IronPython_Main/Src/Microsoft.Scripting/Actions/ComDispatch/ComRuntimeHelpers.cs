@@ -17,12 +17,14 @@
 
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
@@ -63,19 +65,49 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             #region public members
 
-            public static IntPtr ConvertByrefToPtr(out Variant variant) {
-                IntPtr ptr = _ConvertByrefToPtr(out variant);
-#if DEBUG
-                // Ensure that "variant" is a local variable in some caller's frame. So converting
-                // the byref to an IntPtr is a safe operation. Alternatively, we could also allow 
-                // allowed "variant"  to be a pinned object.
-                Variant dummy;
-                IntPtr ptrToLocal = _ConvertByrefToPtr(out dummy);
-                Debug.Assert(ptrToLocal.ToInt64() < ptr.ToInt64());
-                Debug.Assert((ptr.ToInt64() - ptrToLocal.ToInt64()) < (16 * 1024));
-#endif
-                return ptr;
-            }
+            #region Generated ConvertByrefToPtr
+
+            // *** BEGIN GENERATED CODE ***
+
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertSByteByrefToPtr(ref SByte value) { return _ConvertSByteByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertInt16ByrefToPtr(ref Int16 value) { return _ConvertInt16ByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertInt32ByrefToPtr(ref Int32 value) { return _ConvertInt32ByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertInt64ByrefToPtr(ref Int64 value) { return _ConvertInt64ByrefToPtr(ref value); }
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertByteByrefToPtr(ref Byte value) { return _ConvertByteByrefToPtr(ref value); }
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertUInt16ByrefToPtr(ref UInt16 value) { return _ConvertUInt16ByrefToPtr(ref value); }
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertUInt32ByrefToPtr(ref UInt32 value) { return _ConvertUInt32ByrefToPtr(ref value); }
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertUInt64ByrefToPtr(ref UInt64 value) { return _ConvertUInt64ByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertIntPtrByrefToPtr(ref IntPtr value) { return _ConvertIntPtrByrefToPtr(ref value); }
+            [CLSCompliant(false)]
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertUIntPtrByrefToPtr(ref UIntPtr value) { return _ConvertUIntPtrByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertSingleByrefToPtr(ref Single value) { return _ConvertSingleByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertDoubleByrefToPtr(ref Double value) { return _ConvertDoubleByrefToPtr(ref value); }
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertDecimalByrefToPtr(ref Decimal value) { return _ConvertDecimalByrefToPtr(ref value); }
+
+            // *** END GENERATED CODE ***
+
+            #endregion
+
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference")]
+            public static IntPtr ConvertVariantByrefToPtr(ref Variant value) { return _ConvertVariantByrefToPtr(ref value); }
 
             public static int IUnknownRelease(IntPtr interfacePointer) {
                 return _IUnknownRelease(interfacePointer);
@@ -104,6 +136,26 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     out argErr);
             }
 
+            [CLSCompliant(false)]
+            public static IntPtr GetIdsOfNamedParameters(IDispatchObject dispatch, string[] names, int methodDispId, out GCHandle pinningHandle) {
+                pinningHandle = GCHandle.Alloc(null, GCHandleType.Pinned);
+                int[] dispIds = new int[names.Length];
+                Guid empty = Guid.Empty;
+                int hresult = dispatch.DispatchObject.TryGetIDsOfNames(ref empty, names, (uint)names.Length, 0, dispIds);
+                if (hresult < 0) {
+                    Marshal.ThrowExceptionForHR(hresult);
+                }
+
+                if (methodDispId != dispIds[0]) {
+                    throw new InvalidImplementationException(String.Format("IDispatch::GetIDsOfNames behaved unexpectedly for {0}", names[0]));
+                }
+
+                int[] keywordArgDispIds = ArrayUtils.RemoveFirst(dispIds); // Remove the dispId of the method name
+
+                pinningHandle.Target = keywordArgDispIds;
+                return Marshal.UnsafeAddrOfPinnedArrayElement(keywordArgDispIds, 0);
+            }
+
             #endregion
 
             #region non-public members
@@ -120,20 +172,70 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return asm;
             }
 
-            private delegate IntPtr ConvertByrefToPtrDelegate(out Variant variant);
-            private static ConvertByrefToPtrDelegate _ConvertByrefToPtr = Create_ConvertByrefToPtr();
+#if DEBUG
+            private const int _dummyMarker = 0x10101010;
+            /// <summary>
+            /// Ensure that "value" is a local variable in some caller's frame. So converting
+            /// the byref to an IntPtr is a safe operation. Alternatively, we could also allow 
+            /// allowed "value"  to be a pinned object.
+            /// </summary>
+            public static void AssertByrefPointsToStack(IntPtr ptr) {
+                if (Marshal.ReadInt32(ptr) == _dummyMarker) {
+                    // Prevent recursion
+                    return;
+                }
+                int dummy = _dummyMarker;
+                IntPtr ptrToLocal = ConvertInt32ByrefToPtr(ref dummy);
+                Debug.Assert(ptrToLocal.ToInt64() < ptr.ToInt64());
+                Debug.Assert((ptr.ToInt64() - ptrToLocal.ToInt64()) < (16 * 1024));
+            }
+#endif
 
-            private static ConvertByrefToPtrDelegate Create_ConvertByrefToPtr() {
+            private static MethodInfo _ConvertByrefToPtr = Create_ConvertByrefToPtr();
+            private delegate IntPtr ConvertByrefToPtrDelegate<T>(ref T value);
+
+            #region Generated ConvertByrefToPtrDelegates
+
+            // *** BEGIN GENERATED CODE ***
+
+            private static ConvertByrefToPtrDelegate<SByte> _ConvertSByteByrefToPtr = (ConvertByrefToPtrDelegate<SByte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<SByte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(SByte)));
+            private static ConvertByrefToPtrDelegate<Int16> _ConvertInt16ByrefToPtr = (ConvertByrefToPtrDelegate<Int16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int16)));
+            private static ConvertByrefToPtrDelegate<Int32> _ConvertInt32ByrefToPtr = (ConvertByrefToPtrDelegate<Int32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int32)));
+            private static ConvertByrefToPtrDelegate<Int64> _ConvertInt64ByrefToPtr = (ConvertByrefToPtrDelegate<Int64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int64)));
+            private static ConvertByrefToPtrDelegate<Byte> _ConvertByteByrefToPtr = (ConvertByrefToPtrDelegate<Byte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Byte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Byte)));
+            private static ConvertByrefToPtrDelegate<UInt16> _ConvertUInt16ByrefToPtr = (ConvertByrefToPtrDelegate<UInt16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt16)));
+            private static ConvertByrefToPtrDelegate<UInt32> _ConvertUInt32ByrefToPtr = (ConvertByrefToPtrDelegate<UInt32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt32)));
+            private static ConvertByrefToPtrDelegate<UInt64> _ConvertUInt64ByrefToPtr = (ConvertByrefToPtrDelegate<UInt64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt64)));
+            private static ConvertByrefToPtrDelegate<IntPtr> _ConvertIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<IntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<IntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(IntPtr)));
+            private static ConvertByrefToPtrDelegate<UIntPtr> _ConvertUIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<UIntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UIntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UIntPtr)));
+            private static ConvertByrefToPtrDelegate<Single> _ConvertSingleByrefToPtr = (ConvertByrefToPtrDelegate<Single>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Single>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Single)));
+            private static ConvertByrefToPtrDelegate<Double> _ConvertDoubleByrefToPtr = (ConvertByrefToPtrDelegate<Double>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Double>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Double)));
+            private static ConvertByrefToPtrDelegate<Decimal> _ConvertDecimalByrefToPtr = (ConvertByrefToPtrDelegate<Decimal>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Decimal>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Decimal)));
+
+            // *** END GENERATED CODE ***
+
+            #endregion
+            
+            private static ConvertByrefToPtrDelegate<Variant> _ConvertVariantByrefToPtr = (ConvertByrefToPtrDelegate<Variant>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Variant>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Variant)));
+
+            private static MethodInfo Create_ConvertByrefToPtr() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
                 TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$ConvertByrefToPtr", typeof(object));
                 Type[] paramTypes = new Type[] { typeof(Variant).MakeByRefType() };
                 Compiler method = type.DefineMethod("ConvertByrefToPtr", typeof(IntPtr), paramTypes, null, null);
+                GenericTypeParameterBuilder[] typeParams = ((MethodBuilder)method.Method).DefineGenericParameters("T");
+                typeParams[0].SetGenericParameterAttributes(GenericParameterAttributes.NotNullableValueTypeConstraint);
+                ((MethodBuilder)method.Method).SetSignature(typeof(IntPtr), null, null, new Type[] { typeParams[0].MakeByRefType() }, null, null);
 
                 method.Emit(OpCodes.Ldarg_0);
                 method.Emit(OpCodes.Conv_I);
+#if DEBUG
+                method.Emit(OpCodes.Dup);
+                method.Emit(OpCodes.Call, typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("AssertByrefPointsToStack"));
+#endif
                 method.EmitReturn();
 
-                return (ConvertByrefToPtrDelegate)method.CreateDelegate(typeof(ConvertByrefToPtrDelegate));
+                return type.TypeBuilder.CreateType().GetMethod("ConvertByrefToPtr");
             }
 
             /// <summary>

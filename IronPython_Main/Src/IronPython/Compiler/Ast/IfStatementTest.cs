@@ -31,6 +31,7 @@ namespace IronPython.Compiler.Ast {
 
         public SourceLocation Header {
             set { _header = value; }
+            get { return _header; }
         }
 
         public Expression Test {
@@ -40,15 +41,6 @@ namespace IronPython.Compiler.Ast {
         public Statement Body {
             get { return _body; }
             set { _body = value; }
-        }
-
-        internal MSAst.IfStatementTest Transform(AstGenerator ag) {
-            return Ast.IfCondition(
-                Span,
-                _header,
-                ag.TransformAndDynamicConvert(_test, typeof(bool)),
-                ag.Transform(_body)
-            );
         }
 
         public override void Walk(PythonWalker walker) {

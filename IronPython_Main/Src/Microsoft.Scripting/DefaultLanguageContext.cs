@@ -86,9 +86,5 @@ namespace Microsoft.Scripting {
             }
             return Ast.Ast.Convert(expr, toType);
         }
-
-        public override Expression CheckExpression(Expression expr, Type toType) {
-            throw new NotImplementedException();
-        }
     }
 }

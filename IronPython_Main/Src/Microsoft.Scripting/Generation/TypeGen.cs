@@ -102,17 +102,6 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public TypeGen DefineNestedType(string name, Type parent) {
-            TypeBuilder tb = _myType.DefineNestedType(name, TypeAttributes.NestedPublic);
-            tb.SetParent(parent);
-            TypeGen ret = new TypeGen(_myAssembly, tb);
-            _nestedTypeGens.Add(ret);
-
-            ret.AddCodeContextField();
-
-            return ret;
-        }
-
         public void AddCodeContextField() {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
                     typeof(CodeContext),
@@ -309,10 +298,6 @@ namespace Microsoft.Scripting.Generation {
 
         public TypeBuilder TypeBuilder {
             get { return _myType; }
-        }
-
-        public Slot ContextSlot {
-            get { return _contextSlot; }
         }
     }
 }

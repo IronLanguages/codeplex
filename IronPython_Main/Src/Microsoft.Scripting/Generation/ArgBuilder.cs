@@ -17,12 +17,13 @@ using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Actions;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder provides an argument value used by the MethodBinder.  One ArgBuilder exists for each
     /// physical parameter defined on a method.  
+    /// 
+    /// Contrast this with ParameterWrapper which represents the logical argument passed to the method.
     /// </summary>
     abstract class ArgBuilder {
         public abstract int Priority {
@@ -39,17 +40,14 @@ namespace Microsoft.Scripting.Generation {
         internal abstract Expression ToExpression(MethodBinderContext context, Expression[] parameters);
 
         /// <summary>
-        /// Provides an Expression which returns a Boolean determining whether or not the parameter is convertible
-        /// to the receiving arguments type.  This is currently only used for a MethodBinder of BinderType.BinaryOperator.
-        /// 
-        /// This function should be removed when BinaryOperator support is removed.
+        /// Returns the type required for the argument or null if the ArgBuilder
+        /// does not consume a type.
         /// </summary>
-        internal abstract Expression CheckExpression(MethodBinderContext context, Expression[] parameters);
-
-        /// <summary>
-        /// Tests to see if the argument can be converted
-        /// </summary>
-        internal abstract bool CanConvert(MethodBinderContext context, Type[] paramTypes, NarrowingLevel level, IList<ConversionFailure> failures);
+        public virtual Type Type {
+            get {
+                return null;
+            }
+        }
 
         /// <summary>
         /// Provides an Expression which will update the provided value after a call to the method.  May
@@ -75,8 +73,12 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// If the argument produces a return value (e.g. a ref or out value) this
         /// provides the additional value to be returned.
+        /// This will not be called if the method call throws an exception, and so it should not
+        /// be used for cleanup that is required to be done.
         /// </summary>
+        /// <param name="callArg">The (potentially updated) value of the byref argument</param>
+        /// <param name="args">The original argument list. One element of the list may get updated if it is
+        /// being passed as a byref parameter that needs to follow copy-in copy-out semantics</param>
         public virtual void UpdateFromReturn(object callArg, object[] args) { }
-
     }
 }

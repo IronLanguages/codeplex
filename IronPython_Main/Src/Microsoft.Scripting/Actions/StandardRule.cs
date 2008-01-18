@@ -39,13 +39,13 @@ namespace Microsoft.Scripting.Actions {
     public abstract class StandardRule {
         internal List<Validator> _validators;
         internal Expression _test;
-        internal Statement _target;
+        internal Expression _target;
 
         // TODO revisit these fields and their uses when CodeBlock moves down
         internal Expression[] _parameters;
         internal Variable[] _paramVariables;
         internal List<Variable> _temps;
-        internal VariableReference[] _references;
+        internal Dictionary<Variable, VariableReference> _references;
         internal List<object> _templateData;
         private bool _canInterpretTarget = true;
 
@@ -88,7 +88,7 @@ namespace Microsoft.Scripting.Actions {
             _test = test;
         }
 
-        public Statement MakeReturn(ActionBinder binder, Expression expr) {
+        public Expression MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.Type != typeof(void)) {
                 Variable variable = GetTemporary(expr.Type, "$retVal");
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Actions {
             return Ast.Return(binder.ConvertExpression(expr, ReturnType));
         }
 
-        public Statement MakeError(Expression expr) {
+        public Expression MakeError(Expression expr) {
             if (expr != null) {
                 // TODO: Change to ConvertHelper
                 if (!TypeUtils.CanAssign(typeof(Exception), expr.Type)) {
@@ -132,7 +132,7 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void SetTarget(Statement target) {
+        public void SetTarget(Expression target) {
             Contract.RequiresNotNull(target, "target");
             _target = target;
         }
@@ -167,7 +167,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// The code to execute if the Test is true.
         /// </summary>
-        public Statement Target {
+        public Expression Target {
             get { return _target; }
         }
 
@@ -273,7 +273,7 @@ namespace Microsoft.Scripting.Actions {
             _test = test;
         }
 
-        internal void RewriteTarget(Statement target) {
+        internal void RewriteTarget(Expression target) {
             Debug.Assert(target != null && (object)target != (object)_test);
             _target = target;
         }
@@ -371,7 +371,7 @@ namespace Microsoft.Scripting.Actions {
         internal object ExecuteTarget(object site, CodeContext context, object [] args) {
             if (CanInterpretTarget) {
                 // Interpret the target in the common case
-                return Interpreter.ExecuteStatement(context, Target);
+                return Interpreter.Execute(context, Target);
             }
 
             // The target cannot be interpreted. We will execute the compiled rule. However, this will
@@ -412,7 +412,9 @@ namespace Microsoft.Scripting.Actions {
                     _references = RuleBinder.Bind(_test, _target, ReturnType);
                 }
 
-                foreach (VariableReference vr in _references) {
+                cg.References = _references;
+
+                foreach (VariableReference vr in _references.Values) {
                     vr.CreateSlot(cg);
                 }
 
@@ -421,7 +423,7 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 // Now do the generation
-                cg.EmitStatement(_target);
+                cg.EmitExpression(_target);
 
                 // free any temps now that we're done generating
                 // TODO: Keep temp slots aside sot that they can be freed
@@ -485,10 +487,10 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
         public static StandardRule<T> Simple(ActionBinder binder, MethodBase target, params Type[] types) {
             StandardRule<T> ret = new StandardRule<T>();
-            MethodCandidate mc = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }, BinderType.Normal).MakeBindingTarget(CallType.None, types);
+            BindingTarget bindingTarget = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }).MakeBindingTarget(CallType.None, types);
 
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, mc.Target.MakeExpression(ret, ret.Parameters, types)));
+            ret.SetTarget(ret.MakeReturn(binder, bindingTarget.MakeExpression(ret, ret.Parameters)));
             return ret;
         }        
         

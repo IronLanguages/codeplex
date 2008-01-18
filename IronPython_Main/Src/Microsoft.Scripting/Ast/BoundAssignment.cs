@@ -23,10 +23,6 @@ namespace Microsoft.Scripting.Ast {
     public sealed class BoundAssignment : Expression {
         private readonly Variable /*!*/ _variable;
         private readonly Expression /*!*/ _value;
-        private bool _defined;
-
-        // implementation detail.
-        private VariableReference _vr;
 
         internal BoundAssignment(Variable /*!*/ variable, Expression /*!*/ value)
             : base(AstNodeType.BoundAssignment, variable.Type) {
@@ -38,23 +34,8 @@ namespace Microsoft.Scripting.Ast {
             get { return _variable; }
         }
 
-        internal VariableReference Ref {
-            get { return _vr; }
-            set {
-                Debug.Assert(value != null);
-                Debug.Assert(value.Variable == _variable);
-                Debug.Assert(_vr == null || (object)_vr == (object)value);
-                _vr = value;
-            }
-        }
-
         public Expression Value {
             get { return _value; }
-        }
-
-        internal bool IsDefined {
-            get { return _defined; }
-            set { _defined = value; }
         }
     }
 
@@ -62,42 +43,42 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Performs an assignment variable = value
         /// </summary>
-        public static Statement Write(Variable variable, Variable value) {
+        public static Expression Write(Variable variable, Variable value) {
             return Statement(Assign(variable, Ast.Read(value)));
         }
 
         /// <summary>
         /// Performs an assignment variable = value
         /// </summary>
-        public static Statement Write(Variable variable, Expression value) {
+        public static Expression Write(Variable variable, Expression value) {
             return Statement(Assign(variable, value));
         }
 
         /// <summary>
         /// Performs an assignment variable.field = value
         /// </summary>
-        public static Statement Write(Variable variable, FieldInfo field, Expression value) {
+        public static Expression Write(Variable variable, FieldInfo field, Expression value) {
             return Statement(AssignField(Read(variable), field, value));
         }
 
         /// <summary>
         /// Performs an assignment variable.field = value
         /// </summary>
-        public static Statement Write(Variable variable, FieldInfo field, Variable value) {
+        public static Expression Write(Variable variable, FieldInfo field, Variable value) {
             return Statement(AssignField(Read(variable), field, Read(value)));
         }
 
         /// <summary>
         /// Performs an assignment variable = right.field
         /// </summary>
-        public static Statement Write(Variable variable, Variable right, FieldInfo field) {
+        public static Expression Write(Variable variable, Variable right, FieldInfo field) {
             return Statement(Assign(variable, ReadField(Read(right), field)));
         }
 
         /// <summary>
         /// Performs an assignment variable.leftField = right.rightField
         /// </summary>
-        public static Statement Write(Variable variable, FieldInfo leftField, Variable right, FieldInfo rightField) {
+        public static Expression Write(Variable variable, FieldInfo leftField, Variable right, FieldInfo rightField) {
             return Statement(AssignField(Read(variable), leftField, ReadField(Read(right), rightField)));
         }
 

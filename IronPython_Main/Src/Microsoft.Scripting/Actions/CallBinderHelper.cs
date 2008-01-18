@@ -27,83 +27,79 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    
+
     /// <summary>
     /// Creates rules for performing method calls.  Currently supports calling built-in functions, built-in method descriptors (w/o 
     /// a bound value) and bound built-in method descriptors (w/ a bound value), delegates, types defining a "Call" method marked
-    /// with SpecialName, ICallableWithContext, IFancyCallable, and ICallableWithContextAndThis.
+    /// with SpecialName.
     /// </summary>
     /// <typeparam name="T">The type of the dynamic site</typeparam>
     /// <typeparam name="ActionType">The specific type of CallAction</typeparam>
     public class CallBinderHelper<T, ActionType> : BinderHelper<T, ActionType> where ActionType : CallAction {
         private object[] _args;                                     // the arguments the binder is binding to - args[0] is the target, args[1..n] are args to the target
         private Expression _instance;                               // the instance or null if this is a non-instance call
+        private Type _instanceType;                                 // the type of _instance, to override _instance.Type when doing private binding.
         private Expression _test;                                   // the test expression, built up and assigned at the end
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we end up producing
-        private readonly bool _binaryOperator, _reversedOperator;   // if we're producing a binary operator or a reversed operator (should go away, Python specific).
+        private readonly bool _reversedOperator;                    // if we're producing a binary operator or a reversed operator (should go away, Python specific).
         private readonly MethodBase[] _targets;
+        private readonly NarrowingLevel _maxLevel;                  // the maximum narrowing level allowed
 
         public CallBinderHelper(CodeContext/*!*/ context, ActionType/*!*/ action, object[]/*!*/ args)
             : base(context, action) {
             Contract.RequiresNotEmpty(args, "args");
 
-            _args = args;
-            _test = _rule.MakeTypeTest(CompilerHelpers.GetType(_args[0]), 0);
+            _maxLevel = NarrowingLevel.All;
+            _args = RemoveExplicitInstanceArgument(action, args);
+            _test = _rule.MakeTypeTest(CompilerHelpers.GetType(Callable), 0);
         }
 
         public CallBinderHelper(CodeContext context, ActionType action, object[] args, IList<MethodBase> targets)
             : this(context, action, args) {
             _targets = ArrayUtils.ToArray(targets);
+            _maxLevel = NarrowingLevel.All;
         }
 
-        public CallBinderHelper(CodeContext context, ActionType action, object[] args, IList<MethodBase> targets, bool isBinaryOperator, bool isReversedOperator)
+        public CallBinderHelper(CodeContext context, ActionType action, object[] args, IList<MethodBase> targets, NarrowingLevel maxLevel, bool isReversedOperator)
             : this(context, action, args) {
             _targets = ArrayUtils.ToArray(targets);
-            _binaryOperator = isBinaryOperator;
             _reversedOperator = isReversedOperator;
+            _maxLevel = maxLevel;
         }
 
         public virtual StandardRule<T> MakeRule() {
-            Type t = CompilerHelpers.GetType(_args[0]);
+            Type t = CompilerHelpers.GetType(Callable);
+
 
             MethodBase[] targets = GetTargetMethods();
             if (targets != null && targets.Length > 0) {
                 // we're calling a well-known MethodBase
                 MakeMethodBaseRule(targets);
-            } else if (typeof(ICallableWithCodeContext).IsAssignableFrom(t) || typeof(ICallableWithThis).IsAssignableFrom(t)) {
-                // Old paths: these go away when everyone implements IDynamicObject.
-                MakeICallableRule(t);
             } else {
                 // we can't call this object
                 MakeCannotCallRule(t);
-            }
+            }            
 
             // if we produced an ActionOnCall rule we don't replace the test w/ our own.
-            if (_rule.Test == null) _rule.SetTest(_test);
+            if (_rule.Test == null) {
+                _rule.SetTest(_test);
+            }
             return _rule;
         }
 
         #region Method Call Rule
 
         private void MakeMethodBaseRule(MethodBase[] targets) {
-            Type[] testTypes, argTypes;
-            SymbolId[] argNames;
+            Type[] argTypes; // will not include implicit instance argument (if any)
+            SymbolId[] argNames; // will include ArgumentKind.Dictionary keyword names
 
-            //If an instance is explicitly passed in as an argument, ignore it.
-            //Calls that need an instance will pick it up from the bound objects 
-            //passed in or the rule. CallType can differentiate between the type 
-            //of call during method binding.
-            int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
-            if (instanceIndex > -1) {
-                _args = ArrayUtils.RemoveAt(_args, instanceIndex + 1);
-            }
 
             GetArgumentNamesAndTypes(out argNames, out argTypes);
 
-            Type[] bindingArgs = argTypes;
+            Type[] bindingArgs = argTypes; // will include instance argument (if any)
             CallType callType = CallType.None;
             if (_instance != null) {
-                bindingArgs = ArrayUtils.Insert(_instance.Type, argTypes);
+                bindingArgs = ArrayUtils.Insert(InstanceType, argTypes);
                 callType = CallType.ImplicitInstance;
             }
 
@@ -116,12 +112,12 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // attempt to bind to an individual method
-            MethodBinder binder = MethodBinder.MakeBinder(Binder, GetTargetName(targets), targets, GetBinderType(targets), argNames);
-            MethodCandidate cand = binder.MakeBindingTarget(callType, bindingArgs, out testTypes);
+            MethodBinder binder = MethodBinder.MakeBinder(Binder, GetTargetName(targets), targets, argNames, NarrowingLevel.None, _maxLevel);
+            BindingTarget bt = binder.MakeBindingTarget(callType, bindingArgs);
 
-            if (cand != null) {
+            if (bt.Success) {
                 // if we succeed make the target for the rule
-                MethodBase target = cand.Target.Method;
+                MethodBase target = bt.Method;
                 MethodInfo targetMethod = target as MethodInfo;
 
                 if (targetMethod != null) {
@@ -129,52 +125,75 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 if (!MakeActionOnCallRule(target)) {
-                    Expression[] exprargs = FinishTestForCandidate(testTypes, argTypes);
+                    Expression[] exprargs = FinishTestForCandidate(bt.ArgumentTests, argTypes);
 
                     _rule.SetTarget(_rule.MakeReturn(
                         Binder,
-                        cand.Target.MakeExpression(_rule, exprargs, testTypes)));
+                        bt.MakeExpression(_rule, exprargs)));
                 }
             } else {
                 // make an error rule
-                MakeInvalidParametersRule(binder, callType, targets);
+                MakeInvalidParametersRule(bt);
             }
+        }
+
+        private static object[] RemoveExplicitInstanceArgument(ActionType action, object [] args) {
+            //If an instance is explicitly passed in as an argument, ignore it.
+            //Calls that need an instance will pick it up from the bound objects 
+            //passed in or the rule. CallType can differentiate between the type 
+            //of call during method binding.
+            int instanceIndex = action.Signature.IndexOf(ArgumentKind.Instance);
+            if (instanceIndex > -1) {
+                args = ArrayUtils.RemoveAt(args, instanceIndex + 1);
+            }
+            return args;
         }
 
         private static string GetTargetName(MethodBase[] targets) {
             return targets[0].IsConstructor ? targets[0].DeclaringType.Name : targets[0].Name;
         }
 
-        private Expression[] FinishTestForCandidate(Type[] testTypes, Type[] argTypes) {
-            Expression[] exprargs = MakeArgumentExpressions();
+        protected Expression[] FinishTestForCandidate(IList<Type> testTypes, Type[] explicitArgTypes) {
+            Expression[] exprArgs = MakeArgumentExpressions();
+            Debug.Assert(exprArgs.Length == (explicitArgTypes.Length + ((_instance == null) ? 0 : 1)));
+            Debug.Assert(testTypes == null || exprArgs.Length == testTypes.Count);
 
             MakeSplatTests();
 
             if (_reversedOperator) {
-                ArrayUtils.SwapLastTwo(exprargs);
+                ArrayUtils.SwapLastTwo(exprArgs);
             }
 
-            if (argTypes.Length > 0 && testTypes != null) {
-                // we've already tested the instance, no need to test it again...
-                Expression[] testArgs = exprargs;
-                Type[] types = testTypes;
-                for (int i = 0; i < testArgs.Length; i++) {
-                    if (testArgs[i] == _instance) {
-                        testArgs = ArrayUtils.RemoveAt(testArgs, i);
-                        types = ArrayUtils.RemoveAt(types, i);
+            if (explicitArgTypes.Length > 0 && testTypes != null) {
+                // We've already tested the instance, no need to test it again. So remove it before adding 
+                // rules for the arguments
+                Expression[] exprArgsWithoutInstance = exprArgs;
+                List<Type> testTypesWithoutInstance = new List<Type>(testTypes);
+                for (int i = 0; i < exprArgs.Length; i++) {
+                    if (exprArgs[i] == _instance) {
+                        // We found the instance, so remove it
+                        exprArgsWithoutInstance = ArrayUtils.RemoveAt(exprArgs, i);
+                        testTypesWithoutInstance.RemoveAt(i);
                         break;
                     }
                 }
                 
-                _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, new Type[][] { types }, testArgs));
+                _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, testTypesWithoutInstance.ToArray(), exprArgsWithoutInstance));
             }
 
-            return exprargs;
+            return exprArgs;
         }
 
+        /// <summary>
+        /// Gets expressions to access all the arguments. This includes the instance argument. Splat arguments are
+        /// unpacked in the output. The resulting array is similar to Rule.Parameters (but also different in some ways)
+        /// </summary>
         protected Expression[] MakeArgumentExpressions() {
             List<Expression> exprargs = new List<Expression>();
-            if (_instance != null) exprargs.Add(_instance);
+            if (_instance != null) {
+                exprargs.Add(_instance);
+            }
+
             for (int i = 0; i < Action.Signature.ArgumentCount; i++) { // ArgumentCount(Action, _rule)
                 switch (Action.Signature.GetArgumentKind(i)) {
                     case ArgumentKind.Simple:
@@ -248,44 +267,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region ICallable Rule
 
-        private void MakeICallableRule(Type t) {
-            Expression call = null;
-            if (!Action.Signature.HasKeywordArgument()) {
-                if (Action.Signature.HasInstanceArgument() && typeof(ICallableWithThis).IsAssignableFrom(t)) {
-                    call = Ast.SimpleCallHelper(
-                        _rule.Parameters[0],
-                        typeof(ICallableWithThis).GetMethod("Call"),
-                        GetICallableParameters(t, _rule)
-                    );
-                } else {
-                    call = Ast.SimpleCallHelper(
-                        _rule.Parameters[0],
-                        typeof(ICallableWithCodeContext).GetMethod("Call"),
-                        GetICallableParameters(t, _rule)
-                    );
-                }
-            } else if (typeof(IFancyCallable).IsAssignableFrom(t)) {
-                call = Ast.SimpleCallHelper(
-                    _rule.Parameters[0],
-                    typeof(IFancyCallable).GetMethod("Call"),
-                    GetICallableParameters(t, _rule)
-                );
-            } else {
-                _rule.SetTarget(_rule.MakeError(MakeICallableError(t)));
-                return;
-            }
-
-            _rule.SetTarget(_rule.MakeReturn(Binder, call));
-        }
-
-        private Expression MakeICallableError(Type t) {
-            return Ast.New(
-                typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
-                Ast.Constant(t.Name + " is not callable with keyword arguments")
-            );
-        }
-
-        protected Expression[] GetICallableParameters(Type t, StandardRule rule) {
+        // This is used by IConstructorWithCodeContext
+        protected Expression[] GetICallableParameters(StandardRule rule) {
             List<Expression> plainArgs = new List<Expression>();
             List<KeyValuePair<SymbolId, Expression>> named = new List<KeyValuePair<SymbolId, Expression>>();
             Expression splat = null, kwSplat = null;
@@ -354,11 +337,6 @@ namespace Microsoft.Scripting.Actions {
                 return new Expression[] { Ast.CodeContext(), argsArray, names };
             }
 
-            // ICallable.Call(context, args)
-            if (instance != null && typeof(ICallableWithThis).IsAssignableFrom(t)) {
-                return new Expression[] { Ast.CodeContext(), instance, argsArray };
-            }
-
             return new Expression[] { Ast.CodeContext(), argsArray };
         }
 
@@ -366,10 +344,11 @@ namespace Microsoft.Scripting.Actions {
 
         #region Target acquisition
 
+         
         protected virtual MethodBase[] GetTargetMethods() {
             if (_targets != null) return _targets;
 
-            object target = _args[0];
+            object target = Callable;
             MethodBase[] targets;
             Delegate d;
             MemberGroup mg;
@@ -407,13 +386,13 @@ namespace Microsoft.Scripting.Actions {
         private MethodBase[] GetBoundMemberTargets(BoundMemberTracker bmt) {
             Debug.Assert(bmt.Instance == null); // should be null for trackers that leak to user code
 
-            MethodBase[] targets;            
+            MethodBase[] targets;
             _instance = Ast.Convert(
                 Ast.ReadProperty(
                     Ast.Convert(Rule.Parameters[0], typeof(BoundMemberTracker)), 
                     typeof(BoundMemberTracker).GetProperty("ObjectInstance")
                 ),
-                CompilerHelpers.GetVisibleType(CompilerHelpers.GetType(bmt.ObjectInstance))
+                bmt.BoundTo.DeclaringType
             );
             _test = Ast.AndAlso(
                 _test, 
@@ -449,7 +428,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private MethodBase[] GetDelegateTargets(Delegate d) {
-            _instance = _rule.Parameters[0];
+            _instance = Ast.ConvertHelper(_rule.Parameters[0], d.GetType());
             return new MethodBase[] { d.GetType().GetMethod("Invoke") };
         }
 
@@ -459,25 +438,23 @@ namespace Microsoft.Scripting.Actions {
             // see if the type defines a well known Call method
             Type targetType = CompilerHelpers.GetType(target);
 
-            // some of these define SpecialName, work around that until the interfaces go away entirely...
-            if (!typeof(ICallableWithCodeContext).IsAssignableFrom(targetType) &&
-                !typeof(IFancyCallable).IsAssignableFrom(targetType)) {
 
-                MemberGroup callMembers = Binder.GetMember(Action, targetType, "Call");
-                List<MethodBase> callTargets = new List<MethodBase>();
-                foreach (MemberTracker mi in callMembers) {
-                    if (mi.MemberType == TrackerTypes.Method) {
-                        MethodInfo method = ((MethodTracker)mi).Method;
-                        if (method.IsSpecialName) {
-                            callTargets.Add(method);
-                        }
+
+            MemberGroup callMembers = Binder.GetMember(Action, targetType, "Call");
+            List<MethodBase> callTargets = new List<MethodBase>();
+            foreach (MemberTracker mi in callMembers) {
+                if (mi.MemberType == TrackerTypes.Method) {
+                    MethodInfo method = ((MethodTracker)mi).Method;
+                    if (method.IsSpecialName) {
+                        callTargets.Add(method);
                     }
                 }
-                if (callTargets.Count > 0) {
-                    targets = callTargets.ToArray();
-                    _instance = Ast.Convert(_rule.Parameters[0], CompilerHelpers.GetType(_args[0]));
-                }
             }
+            if (callTargets.Count > 0) {
+                targets = callTargets.ToArray();
+                _instance = Ast.Convert(_rule.Parameters[0], CompilerHelpers.GetType(Callable));
+            }
+            
             return targets;
         }
 
@@ -544,7 +521,7 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        private void MakeInvalidParametersRule(MethodBinder binder, CallType callType, MethodBase[] targets) {
+        private void MakeInvalidParametersRule(BindingTarget bt) {
             MakeSplatTests();
 
             if (_args.Length > 1) {
@@ -558,10 +535,10 @@ namespace Microsoft.Scripting.Actions {
                     argExpr = ArrayUtils.RemoveFirst(argExpr);
                 }
 
-                _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, new Type[][] { vals }, argExpr));
+                _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, vals, argExpr));
             }
 
-            _rule.SetTarget(Binder.MakeInvalidParametersError(binder, Action, callType, targets, _rule, _args));
+            _rule.SetTarget(Binder.MakeInvalidParametersError(bt).MakeErrorForRule(_rule, Binder));
         }
 
         #endregion
@@ -569,12 +546,19 @@ namespace Microsoft.Scripting.Actions {
         #region Misc. Helpers
 
         /// <summary>
-        /// Gets all of the argument names and types.  Non named arguments are returned at the beginning of the argTypes array
-        /// and named arguments line up w/ argTypes.
+        /// Gets all of the argument names and types. The instance argument is not included
         /// </summary>
+        /// <param name="argNames">The names correspond to the end of argTypes.
+        /// ArgumentKind.Dictionary is unpacked in the return value.
+        /// This is set to an array of size 0 if there are no keyword arguments</param>
+        /// <param name="argTypes">Non named arguments are returned at the beginning.
+        /// ArgumentKind.List is unpacked in the return value. </param>
         protected void GetArgumentNamesAndTypes(out SymbolId[] argNames, out Type[] argTypes) {
+            // Get names of named arguments
             argNames = Action.Signature.GetArgumentNames();
+
             argTypes = GetArgumentTypes(Action, _args);
+
             if (Action.Signature.HasDictionaryArgument()) {
                 // need to get names from dictionary argument...
                 GetDictionaryNamesAndTypes(ref argNames, ref argTypes);
@@ -602,22 +586,20 @@ namespace Microsoft.Scripting.Actions {
             argTypes = types.ToArray();
         }
 
-        private BinderType GetBinderType(MethodBase[] targets) {
-            if (_binaryOperator) return BinderType.BinaryOperator;
-
-            foreach (MethodBase mb in targets) {
-                if (CompilerHelpers.IsConstructor(mb)) {
-                    return BinderType.Constructor;
-                } 
-            }
-
-            return BinderType.Normal;
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
         protected object[] Arguments {
             get {
                 return _args;
+            }
+        }
+
+        protected object[] GetExplicitArguments() {
+            return ArrayUtils.RemoveFirst(_args);
+        }
+
+        protected object Callable {
+            get {
+                return _args[0];
             }
         }
 
@@ -627,12 +609,33 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        /// <summary>
+        /// The instance for the target method, or null if this is a non-instance call.
+        /// 
+        /// If it is set, it will typically be set to extract the instance from the Callable.
+        /// </summary>
         public Expression Instance {
             get {
                 return _instance;
             }
             set {
+                Debug.Assert(!Action.Signature.HasInstanceArgument());
                 _instance = value;
+            }
+        }
+
+        public Type InstanceType {
+            get {
+                if (_instanceType != null) {
+                    return _instanceType;
+                }
+                if (_instance != null) {
+                    return _instance.Type;
+                }
+                return null;
+            }
+            set {
+                _instanceType = value;
             }
         }
 

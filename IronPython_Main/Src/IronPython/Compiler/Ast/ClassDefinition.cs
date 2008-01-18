@@ -86,7 +86,7 @@ namespace IronPython.Compiler.Ast {
             get { return _block; }
         }
 
-        internal override PythonVariable BindName(SymbolId name) {
+        internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
             PythonVariable variable;
 
             // Python semantics: The variables bound local in the class
@@ -105,7 +105,7 @@ namespace IronPython.Compiler.Ast {
             return null;
         }
 
-        internal override MSAst.Statement Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {
             Debug.Assert(_block == null);
 
             MSAst.CodeBlock block = Ast.CodeBlock(_name);
@@ -124,8 +124,8 @@ namespace IronPython.Compiler.Ast {
 
             // Create the body
             AstGenerator body = new AstGenerator(block, ag.Context);
-            MSAst.Statement bodyStmt = body.Transform(_body);
-            MSAst.Statement modStmt =
+            MSAst.Expression bodyStmt = body.Transform(_body);
+            MSAst.Expression modStmt =
                 Ast.Statement(
                     Ast.Assign(
                         _modVariable.Variable,
@@ -133,7 +133,7 @@ namespace IronPython.Compiler.Ast {
                     )
                 );
 
-            MSAst.Statement docStmt;
+            MSAst.Expression docStmt;
             if (_body.Documentation != null) {
                 docStmt =
                     Ast.Statement(
@@ -146,7 +146,7 @@ namespace IronPython.Compiler.Ast {
                 docStmt = Ast.Empty();
             }
 
-            MSAst.Statement returnStmt = Ast.Return(Ast.CodeContext());
+            MSAst.Expression returnStmt = Ast.Return(Ast.CodeContext());
             block.Body = Ast.Block(
                 modStmt,
                 docStmt,

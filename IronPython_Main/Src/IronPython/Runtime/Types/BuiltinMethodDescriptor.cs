@@ -133,8 +133,12 @@ namespace IronPython.Runtime.Types {
         }
 
         private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
-            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Template.Targets, Template.IsBinaryOperator, Template.IsReversedOperator);
+            CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Template.Targets, Template.Level, Template.IsReversedOperator);
             StandardRule<T> rule = helper.MakeRule();
+            if (Template.IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 built-in method descriptor + 2 args
+                // BinaryOperators return NotImplemented on failure.
+                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented")));
+            }
             rule.AddTest(
                 Template.MakeFunctionTest(
                     Ast.Call(
