@@ -144,14 +144,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(CompilerHelpers.GetType(this));
             // return this.ComMethodDesc.Signature
-            rule.SetTarget(
+            rule.Target =
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.ReadProperty(
                         Ast.ReadProperty(
                             Ast.ConvertHelper(rule.Parameters[0], typeof(DispCallable)),
                             typeof(DispCallable).GetProperty("ComMethodDesc")),
-                        typeof(ComMethodDesc).GetProperty("Signature"))));
+                        typeof(ComMethodDesc).GetProperty("Signature")));
             return rule;
         }
 

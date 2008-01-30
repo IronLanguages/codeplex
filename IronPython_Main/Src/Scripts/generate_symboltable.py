@@ -143,6 +143,7 @@ fieldList = [
     ('extend', 'Extend'),
     ('update', 'Update'),
     ('this', 'ThisArgument'),
+    ('__index__', 'Index'),
     ]
 
 def generate_symbols(cw):

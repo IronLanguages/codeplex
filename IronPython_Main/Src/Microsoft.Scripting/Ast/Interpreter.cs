@@ -264,6 +264,8 @@ namespace Microsoft.Scripting.Ast {
                     // Return the singleton True or False object
                     if (node.Type == typeof(Boolean)) {
                         res = RuntimeHelpers.BooleanToObject((bool)res);
+                    } else if (node.Type == typeof(int)) {
+                        res = RuntimeHelpers.Int32ToObject((int)res);
                     }
                 } finally {
                     // expose by-ref args
@@ -364,7 +366,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalMultiply(object l, object r) {
-            if (l is int) return (int)l * (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l * (int)r);
             if (l is uint) return (uint)l * (uint)r;
             if (l is short) return (short)((short)l * (short)r);
             if (l is ushort) return (ushort)((ushort)l * (ushort)r);
@@ -376,7 +378,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalAdd(object l, object r) {
-            if (l is int) return (int)l + (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l + (int)r);
             if (l is uint) return (uint)l + (uint)r;
             if (l is short) return (short)((short)l + (short)r);
             if (l is ushort) return (ushort)((ushort)l + (ushort)r);
@@ -388,7 +390,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalSub(object l, object r) {
-            if (l is int) return (int)l - (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l - (int)r);
             if (l is uint) return (uint)l - (uint)r;
             if (l is short) return (short)((short)l - (short)r);
             if (l is ushort) return (ushort)((ushort)l - (ushort)r);
@@ -400,7 +402,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalMod(object l, object r) {
-            if (l is int) return (int)l % (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l % (int)r);
             if (l is uint) return (uint)l % (uint)r;
             if (l is short) return (short)((short)l % (short)r);
             if (l is ushort) return (ushort)((ushort)l % (ushort)r);
@@ -412,7 +414,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalDiv(object l, object r) {
-            if (l is int) return (int)l / (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l / (int)r);
             if (l is uint) return (uint)l / (uint)r;
             if (l is short) return (short)((short)l / (short)r);
             if (l is ushort) return (ushort)((ushort)l / (ushort)r);
@@ -424,7 +426,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalAnd(object l, object r) {
-            if (l is int) return (int)l & (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l & (int)r);
             if (l is uint) return (uint)l & (uint)r;
             if (l is short) return (short)((short)l & (short)r);
             if (l is ushort) return (ushort)((ushort)l & (ushort)r);
@@ -434,7 +436,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalOr(object l, object r) {
-            if (l is int) return (int)l | (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l | (int)r);
             if (l is uint) return (uint)l | (uint)r;
             if (l is short) return (short)((short)l | (short)r);
             if (l is ushort) return (ushort)((ushort)l | (ushort)r);
@@ -444,7 +446,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static object EvalXor(object l, object r) {
-            if (l is int) return (int)l ^ (int)r;
+            if (l is int) return RuntimeHelpers.Int32ToObject((int)l ^ (int)r);
             if (l is uint) return (uint)l ^ (uint)r;
             if (l is short) return (short)((short)l ^ (short)r);
             if (l is ushort) return (ushort)((ushort)l ^ (ushort)r);
@@ -476,7 +478,7 @@ namespace Microsoft.Scripting.Ast {
 
                 case AstNodeType.Not:
                     if (value is bool) return (bool)value ? RuntimeHelpers.False : RuntimeHelpers.True;
-                    if (value is int) return (int)~(int)value;
+                    if (value is int) return RuntimeHelpers.Int32ToObject((int)~(int)value);
                     if (value is long) return (long)~(long)value;
                     if (value is short) return (short)~(short)value;
                     if (value is uint) return (uint)~(uint)value;
@@ -487,7 +489,7 @@ namespace Microsoft.Scripting.Ast {
                     throw new InvalidOperationException("can't perform unary not on type " + CompilerHelpers.GetType(value).Name);
 
                 case AstNodeType.Negate:
-                    if (value is int) return (int)(-(int)value);
+                    if (value is int) return RuntimeHelpers.Int32ToObject((int)(-(int)value));
                     if (value is long) return (long)(-(long)value);
                     if (value is short) return (short)(-(short)value);
                     if (value is float) return -(float)value;

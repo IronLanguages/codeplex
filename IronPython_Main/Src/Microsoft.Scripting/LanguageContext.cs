@@ -171,27 +171,8 @@ namespace Microsoft.Scripting {
                 throw new SyntaxErrorException();
             }
 
-            DumpBlock(block, sourceUnit.Id);
-
-            AnalyzeBlock(block);
-
-            DumpBlock(block, sourceUnit.Id);
-
             // TODO: ParseSourceCode can update CompilerContext.Options
             return new ScriptCode(block, this, context);
-        }
-
-        [Conditional("DEBUG")]
-        private static void DumpBlock(CodeBlock block, string id) {
-#if DEBUG
-            AstWriter.Dump(block, id);
-#endif
-        }
-
-        public static void AnalyzeBlock(CodeBlock block) {
-            ForestRewriter.Rewrite(block);
-            ClosureBinder.Bind(block);
-            FlowChecker.Check(block);
         }
 
         public virtual StreamReader GetSourceReader(Stream stream, Encoding defaultEncoding) {

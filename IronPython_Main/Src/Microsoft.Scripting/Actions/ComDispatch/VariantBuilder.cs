@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             MethodBinderContext context, 
             Variable paramVariants, 
             int variantIndex,
-            Expression [] parameters) {
+            IList<Expression> parameters) {
             List<Expression> exprs = new List<Expression>();
             Expression expr;
 

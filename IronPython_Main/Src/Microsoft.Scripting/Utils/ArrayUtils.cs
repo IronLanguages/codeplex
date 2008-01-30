@@ -114,6 +114,16 @@ namespace Microsoft.Scripting.Utils {
             return (array.Length > 0) ? (T[])array.Clone() : array;
         }
 
+        public static T[] MakeArray<T>(IList<T> list) {
+            if (list.Count == 0) {
+                return new T[0];
+            }
+
+            T[] res = new T[list.Count];
+            list.CopyTo(res, 0);
+            return res;
+        }
+
         public static T[] MakeArray<T>(IList<T> elements, int reservedSlotsBefore, int reservedSlotsAfter) {
             if (reservedSlotsAfter < 0) throw new ArgumentOutOfRangeException("reservedSlotsAfter");
             if (reservedSlotsBefore < 0) throw new ArgumentOutOfRangeException("reservedSlotsBefore");
@@ -155,6 +165,13 @@ namespace Microsoft.Scripting.Utils {
             T[] result = new T[array.Length - count];
             System.Array.Copy(array, count, result, 0, result.Length);
             return result;
+        }
+
+        public static T[] Insert<T>(T item, IList<T> list) {
+            T[] res = new T[list.Count + 1];
+            res[0] = item;
+            list.CopyTo(res, 1);
+            return res;
         }
 
         public static T[] Insert<T>(T item, T[] array) {
@@ -230,6 +247,10 @@ namespace Microsoft.Scripting.Utils {
             array[array.Length - 2] = temp;
         }
 
+        public static T[] RemoveFirst<T>(IList<T> list) {
+            return ShiftLeft(MakeArray(list), 1);
+        }
+
         public static T[] RemoveFirst<T>(T[] array) {
             return ShiftLeft(array, 1);
         }
@@ -239,6 +260,10 @@ namespace Microsoft.Scripting.Utils {
 
             System.Array.Resize(ref array, array.Length - 1);
             return array;
+        }
+
+        public static T[] RemoveAt<T>(IList<T> list, int indexToRemove) {
+            return RemoveAt(MakeArray(list), indexToRemove);
         }
 
         public static T[] RemoveAt<T>(T[] array, int indexToRemove) {
@@ -254,6 +279,10 @@ namespace Microsoft.Scripting.Utils {
                 Array.Copy(array, array.Length - remaining, result, result.Length - remaining, remaining);
             }
             return result;
+        }
+
+        public static T[] InsertAt<T>(IList<T> list, int index, params T[] items) {
+            return InsertAt(MakeArray(list), index, items);
         }
 
         public static T[] InsertAt<T>(T[] array, int index, params T[] items) {

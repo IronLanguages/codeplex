@@ -595,6 +595,14 @@ namespace IronPython.Modules {
             return irepeat(a, b);
         }
 
+        public static object index(object a) {
+            return __index__(a);
+        }
+
+        public static int __index__(object a) {
+            return Converter.ConvertToIndex(a);
+        }
+
         private static void TestBothSequence(object a, object b) {
             if (!isSequenceType(a)) {
                 throw PythonOps.TypeError("'{0}' object cannot be concatenated", PythonTypeOps.GetName(a));

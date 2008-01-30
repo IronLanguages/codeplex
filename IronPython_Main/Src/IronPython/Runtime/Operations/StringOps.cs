@@ -262,6 +262,11 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName, PythonName("__getitem__")]
+        public static string GetItem(string s, object index) {
+            return GetItem(s, Converter.ConvertToIndex(index));
+        }
+
+        [SpecialName, PythonName("__getitem__")]
         public static string GetItem(string s, Slice slice) {
             if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
             int start, stop, step;
@@ -294,7 +299,10 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("__getslice__")]
         public static string GetSlice(string self, int x, int y) {
-            return GetItem(self, new Slice(x, y));
+            Slice.FixSliceArguments(self.Length, ref x, ref y);
+            if (x >= y) return String.Empty;
+
+            return self.Substring(x, y - x);
         }
 
         
@@ -519,6 +527,8 @@ namespace IronPython.Runtime.Operations {
 
         [PythonName("isnumeric")]
         public static bool IsNumeric(string self) {
+            if (String.IsNullOrEmpty(self)) return false;
+
             foreach (char c in self) {
                 if (!Char.IsDigit(c)) return false;
             }
@@ -560,7 +570,7 @@ namespace IronPython.Runtime.Operations {
             string v = self;
             bool prevCharCased = false, currCharCased = false, containsUpper = false;
             for (int i = 0; i < v.Length; i++) {
-                if (Char.IsUpper(v, i)) {
+                if (Char.IsUpper(v, i) || Char.GetUnicodeCategory(v, i) == UnicodeCategory.TitlecaseLetter) {
                     containsUpper = true;
                     if (prevCharCased)
                         return false;

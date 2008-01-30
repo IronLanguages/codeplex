@@ -19,7 +19,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Generation {
-    public class LocalNamedFrameSlot : Slot {
+    class LocalNamedFrameSlot : Slot {
         private readonly Slot _frame;
         private readonly SymbolId _name;
 

@@ -62,9 +62,9 @@ namespace Microsoft.Scripting {
             Debug.Assert(o != null);
             Debug.Assert(to.IsValueType);
 
-            if (to == Int32Type) return ExplicitCastToInt32(o);
+            if (to == Int32Type) return RuntimeHelpers.Int32ToObject(ExplicitCastToInt32(o));
             if (to == DoubleType) return ExplicitCastToDouble(o);
-            if (to == BooleanType) return ExplicitCastToBoolean(o);
+            if (to == BooleanType) return RuntimeHelpers.BooleanToObject(ExplicitCastToBoolean(o));
             if (to == ByteType) return ExplicitCastToByte(o);
             if (to == CharType) return ExplicitCastToChar(o);
             if (to == DecimalType) return ExplicitCastToDecimal(o);

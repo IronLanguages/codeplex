@@ -62,7 +62,7 @@ namespace IronPython.Runtime {
         public object Import(CodeContext/*!*/ context, string fullName, PythonTuple from) {
             Exception exLast = PythonOps.SaveCurrentException();
             try {
-                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.locals(context), from);
+                return _importSite.Invoke(context, FindImportFunction(context), fullName, Builtin.globals(context), Builtin.LocalsAsAttributesCollection(context), from);
             } finally {
                 PythonOps.RestoreCurrentException(exLast);
             }

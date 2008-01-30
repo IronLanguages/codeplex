@@ -23,7 +23,7 @@ using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-    public partial class Compiler {
+    partial class Compiler {
 
         private void EmitAddress(Expression node, Type type) {
             Debug.Assert(node != null);

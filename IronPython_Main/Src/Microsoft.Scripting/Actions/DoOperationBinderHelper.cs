@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Actions {
     using System.Diagnostics;
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
+    public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;                                     // arguments we were created with
         private Type[] _types;                                      // types of our arguments
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we're building and returning
@@ -127,7 +127,7 @@ namespace Microsoft.Scripting.Actions {
                         case Operators.Compare:
                             break;
                     }
-                    _rule.SetTarget(_rule.MakeReturn(Binder, call));
+                    _rule.Target = _rule.MakeReturn(Binder, call);
                     return true;
                 }
             }
@@ -148,7 +148,7 @@ namespace Microsoft.Scripting.Actions {
                     case Operators.LessThanOrEqual:    expr = Ast.LessThanEquals(Param0, Param1); break;
                     default: throw new InvalidOperationException();
                 }
-                _rule.SetTarget(_rule.MakeReturn(Binder, expr)); 
+                _rule.Target = _rule.MakeReturn(Binder, expr); 
                 return true;                
             }
             return false;
@@ -160,18 +160,18 @@ namespace Microsoft.Scripting.Actions {
         private bool TryMakeNullComparisonRule() {
             if (_types[0] == typeof(None)) {
                 if (!_types[1].IsValueType) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Equal(_rule.Parameters[1], Ast.Constant(null))));
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.Equal(_rule.Parameters[1], Ast.Constant(null)));
                 } else if (_types[1].GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.ReadProperty(Param1, _types[1].GetProperty("HasValue"))));
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.ReadProperty(Param1, _types[1].GetProperty("HasValue")));
                 } else {
                     return false;
                 }
                 return true;
             } else if (_types[1] == typeof(None)) {
                 if (!_types[0].IsValueType) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Equal(_rule.Parameters[0], Ast.Constant(null))));
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.Equal(_rule.Parameters[0], Ast.Constant(null)));
                 } else if (_types[0].GetGenericTypeDefinition() == typeof(Nullable<>)) {
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.ReadProperty(Param0, _types[1].GetProperty("HasValue"))));
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.ReadProperty(Param0, _types[1].GetProperty("HasValue")));
                 } else {
                     return false;
                 }
@@ -226,7 +226,7 @@ namespace Microsoft.Scripting.Actions {
                     case Operators.Xor: expr = Ast.ExclusiveOr(Param0, Param1); break;
                     default: throw new InvalidOperationException();
                 }
-                _rule.SetTarget(_rule.MakeReturn(Binder, expr));
+                _rule.Target = _rule.MakeReturn(Binder, expr);
                 return _rule;
             } else if(_types.Length == 1 && TryMakeDefaultUnaryRule(info)) {
                 return _rule;
@@ -240,26 +240,26 @@ namespace Microsoft.Scripting.Actions {
             switch (info.Operator) {
                 case Operators.IsTrue:
                     if (_types[0] == typeof(bool)) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Param0));
+                        _rule.Target = _rule.MakeReturn(Binder, Param0);
                         return true;
                     }
                     break;
                 case Operators.Negate:
                     if (TypeUtils.IsArithmetic(_types[0])) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Negate(Param0)));
+                        _rule.Target = _rule.MakeReturn(Binder, Ast.Negate(Param0));
                         return true;
                     }
                     break;
                 case Operators.Not:
                     if (TypeUtils.IsIntegerOrBool(_types[0])) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(Param0)));
+                        _rule.Target = _rule.MakeReturn(Binder, Ast.Not(Param0));
                         return true;
                     }
                     break;                
                 case Operators.Documentation:
                     object[] attrs = _types[0].GetCustomAttributes(typeof(DocumentationAttribute), true);
                     if (attrs.Length > 0) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Constant(((DocumentationAttribute)attrs[0]).Documentation)));
+                        _rule.Target = _rule.MakeReturn(Binder, Ast.Constant(((DocumentationAttribute)attrs[0]).Documentation));
                         return true;
                     }
                     break;
@@ -277,7 +277,7 @@ namespace Microsoft.Scripting.Actions {
 
                     string[] res = new string[mems.Count];
                     mems.Keys.CopyTo(res, 0);
-                    _rule.SetTarget(_rule.MakeReturn(Binder, Ast.RuntimeConstant(res)));
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.RuntimeConstant(res));
                     return true;
                 case Operators.CallSignatures:
                     MakeCallSignatureResult(CompilerHelpers.GetMethodTargets(_args[0]));
@@ -294,19 +294,14 @@ namespace Microsoft.Scripting.Actions {
                         callable = true;
                     }
 
-                    _rule.SetTarget(
-                        _rule.MakeReturn(
-                            Context.LanguageContext.Binder,
-                            Ast.Constant(callable)
-                        )
-                    );
+                    _rule.Target = _rule.MakeReturn(Context.LanguageContext.Binder, Ast.Constant(callable));
                     return true;
             }
             return false;
         }
 
         private void MakeIMembersListRule() {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder, 
                     Ast.Call(
@@ -316,8 +311,7 @@ namespace Microsoft.Scripting.Actions {
                             typeof(IMembersList).GetMethod("GetMemberNames")
                         )
                     )
-                )
-            );
+                );
         }
 
         private void MakeCallSignatureResult(MethodBase[] methods) {
@@ -337,7 +331,7 @@ namespace Microsoft.Scripting.Actions {
                 arrres.Add(res.ToString());
             }
 
-            _rule.SetTarget(_rule.MakeReturn(Binder, Ast.RuntimeConstant(arrres.ToArray())));
+            _rule.Target = _rule.MakeReturn(Binder, Ast.RuntimeConstant(arrres.ToArray()));
         }
 
         #endregion
@@ -348,20 +342,20 @@ namespace Microsoft.Scripting.Actions {
             if (_types[0].IsArray) {
                 if (Binder.CanConvertFrom(_types[1], typeof(int), NarrowingLevel.All)) {
                     if(oper == Operators.GetItem) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder,
+                        _rule.Target = _rule.MakeReturn(Binder,
                             Ast.ArrayIndex(
                                 Param0,
                                 ConvertIfNeeded(Param1, typeof(int))
                             )
-                        ));
+                        );
                     } else {
-                        _rule.SetTarget(_rule.MakeReturn(Binder,
+                        _rule.Target = _rule.MakeReturn(Binder,
                             Ast.AssignArrayIndex(
                                 Param0,
                                 ConvertIfNeeded(Param1, typeof(int)),
                                 ConvertIfNeeded(Param2, _types[0].GetElementType())
                             )
-                        ));
+                        );
                     }
                     return true;
                 }
@@ -377,18 +371,18 @@ namespace Microsoft.Scripting.Actions {
 
                 if (target.Success) {
                     if (oper == Operators.GetItem) {
-                        _rule.SetTarget(_rule.MakeReturn(Binder, target.MakeExpression(_rule, _rule.Parameters)));
+                        _rule.Target = _rule.MakeReturn(Binder, target.MakeExpression(_rule, _rule.Parameters));
                     } else {
 
-                        _rule.SetTarget(_rule.MakeReturn(Binder,
+                        _rule.Target = _rule.MakeReturn(Binder,
                             Ast.Comma(
                                 target.MakeExpression(_rule, _rule.Parameters),
                                 _rule.Parameters[2]
                             )
-                        ));
+                        );
                     }
                 } else {
-                    _rule.SetTarget(Binder.MakeInvalidParametersError(target).MakeErrorForRule(_rule, Binder));
+                    _rule.Target = Binder.MakeInvalidParametersError(target).MakeErrorForRule(_rule, Binder);
                 }
                 return true;
             }
@@ -458,7 +452,7 @@ namespace Microsoft.Scripting.Actions {
             BindingTarget target = mb.MakeBindingTarget(CallType.None, _types);
             if (target.Success) {
                 Expression call = target.MakeExpression(_rule, _rule.Parameters);
-                _rule.SetTarget(_rule.MakeReturn(Binder, call));
+                _rule.Target = _rule.MakeReturn(Binder, call);
                 return true;
             }
             return false;
@@ -469,7 +463,7 @@ namespace Microsoft.Scripting.Actions {
             BindingTarget target = mb.MakeBindingTarget(CallType.None, _types);
             if (target.Success) {
                 Expression call = target.MakeExpression(_rule, _rule.Parameters);
-                _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Not(call)));
+                _rule.Target = _rule.MakeReturn(Binder, Ast.Not(call));
                 return true;
             }
             return false;
@@ -489,20 +483,19 @@ namespace Microsoft.Scripting.Actions {
 
         private static Expression ConvertIfNeeded(Expression expression, Type type) {
             if (expression.Type != type) {
-                return Ast.Action.ConvertTo(type, expression);
+                return Ast.Action.ConvertTo(type, ConversionResultKind.ExplicitCast, expression);
             }
             return expression;
         }
 
         private void SetErrorTarget(OperatorInfo info) {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeError(
                     Ast.ComplexCallHelper(
                         typeof(RuntimeHelpers).GetMethod("BadArgumentsForOperation"),
                         ArrayUtils.Insert((Expression)Ast.Constant(info.Operator), _rule.Parameters)
                     )
-                )
-            );
+                );
         }
 
         private MethodInfo[] GetApplicableMembers(OperatorInfo info) {

@@ -41,7 +41,7 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Note that for module-level code, globals and locals are the same.
     /// </summary>
-    public class ScopeAllocator {// TODO: internal
+    class ScopeAllocator {
         private readonly ScopeAllocator _parent;
         private readonly StorageAllocator _allocator;
 

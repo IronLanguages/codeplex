@@ -165,8 +165,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         [SpecialName, PythonName("__coerce__")]
-        public static object Coerce(object x, object y) {
-            if (!(x is Complex64)) throw PythonOps.TypeError("__coerce__ requires a complex object, but got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(x)));
+        public static object Coerce(Complex64 x, object y) {
             Complex64 right;
             if (Converter.TryConvertToComplex64(y, out right)) return PythonTuple.MakeTuple(x, right);
 

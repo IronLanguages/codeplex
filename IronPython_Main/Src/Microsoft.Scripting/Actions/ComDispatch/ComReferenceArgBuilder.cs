@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             Debug.Assert(ElementType == typeof(string));
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_unmanagedTemp == null) {
                 _unmanagedTemp = context.GetTemporary(typeof(IntPtr), "unmanagedOutParam");
             }

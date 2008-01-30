@@ -19,6 +19,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -97,7 +98,9 @@ namespace Microsoft.Scripting.Generation {
         /// 
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
-        public Expression/*!*/ MakeExpression(StandardRule/*!*/ rule, Expression/*!*/[]/*!*/ parameters) {
+        public Expression/*!*/ MakeExpression(StandardRule/*!*/ rule, IList<Expression>/*!*/ parameters) {
+            Contract.RequiresNotNull(parameters, "parameters");
+
             if (_target == null) {
                 throw new InvalidOperationException();
             }

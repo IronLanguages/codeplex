@@ -68,7 +68,7 @@ namespace IronPython.Runtime.Calls {
             // get the expression for calling __new__
             Expression createExpr = newAdapter.GetExpression(Binder, Rule);
             if (createExpr == null) {
-                Rule.SetTarget(newAdapter.GetError(Binder, Rule));
+                Rule.Target = newAdapter.GetError(Binder, Rule);
                 MakeErrorTests(ai);
                 return Rule;
             }
@@ -127,15 +127,13 @@ namespace IronPython.Runtime.Calls {
             // and build the target from everything we have
             if (body.Count == 0) {
                 // no init or del
-                Rule.SetTarget(Rule.MakeReturn(Binder, createExpr));
+                Rule.Target = Rule.MakeReturn(Binder, createExpr);
             } else {
                 body.Add(
                     Rule.MakeReturn(Binder, Ast.Read(allocatedInst))
                 );
 
-                Rule.SetTarget(
-                    Ast.Block(body.ToArray())
-                );
+                Rule.Target = Ast.Block(body.ToArray());
             }
 
             MakeTests(ai, newAdapter, initAdapter);
@@ -571,23 +569,21 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeIncorrectArgumentsRule(ArgumentValues ai, PythonType creating) {
             if (creating.IsSystemType && creating.UnderlyingSystemType.GetConstructors().Length == 0) {
                 // this is a type we can't create ANY instances of, give the user a half-way decent error message
-                Rule.SetTarget(
+                Rule.Target = 
                     Rule.MakeError(
                         Ast.New(
                             typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                             Ast.Constant("cannot create instances of " + PythonTypeOps.GetName(creating))
                         )
-                    )
-                );
+                    );
             } else {
-                Rule.SetTarget(
+                Rule.Target = 
                     Rule.MakeError(
                         Ast.New(
                             typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                             Ast.Constant("default __new__ does not take parameters")
                         )
-                    )
-                );
+                    );
             }
             MakeErrorTests(ai);
             return Rule;
@@ -596,27 +592,23 @@ namespace IronPython.Runtime.Calls {
         private void MakeTests(ArgumentValues ai, NewAdapter newAdapter, InitAdapter initAdapter) {
             MakeSplatTests();
 
-            Rule.SetTest(
+            Rule.Test = Ast.AndAlso(
                 Ast.AndAlso(
-                    Ast.AndAlso(
-                        Test,
-                        MakeNecessaryTests(Rule, new Type[][] { newAdapter.TestTypes, initAdapter.TestTypes }, ai.Expressions)
-                    ),
-                    MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
-                )
+                    Test,
+                    MakeNecessaryTests(Rule, new Type[][] { newAdapter.TestTypes, initAdapter.TestTypes }, ai.Expressions)
+                ),
+                MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
             );
         }
 
         private void MakeErrorTests(ArgumentValues ai) {
             MakeSplatTests();
-            Rule.SetTest(
+            Rule.Test = Ast.AndAlso(
                 Ast.AndAlso(
-                    Ast.AndAlso(
-                        Test,
-                        MakeNecessaryTests(Rule, new Type[][] { ai.Types }, ai.Expressions)
-                    ),
-                    MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
-                )
+                    Test,
+                    MakeNecessaryTests(Rule, new Type[][] { ai.Types }, ai.Expressions)
+                ),
+                MakeTypeTestForCreateInstance((PythonType)Arguments[0], Rule)
             );
         }
 

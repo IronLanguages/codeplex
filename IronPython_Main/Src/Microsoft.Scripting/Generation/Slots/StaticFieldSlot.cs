@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// A slot backed by a static field in a type
     /// </summary>
-    public class StaticFieldSlot : Slot {
+    class StaticFieldSlot : Slot {
         private readonly FieldInfo _field;
 
         public StaticFieldSlot(FieldInfo field) {

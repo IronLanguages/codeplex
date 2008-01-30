@@ -19,6 +19,7 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
+using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -97,5 +98,13 @@ namespace Microsoft.Scripting.Hosting {
         public void RedirectToConsole() {
             _io.RedirectToConsole();
         }
+        
+#if !SILVERLIGHT
+        // TODO: Figure out what is the right lifetime
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
+        public override object InitializeLifetimeService() {
+            return null;
+        }
+#endif
     }
 }

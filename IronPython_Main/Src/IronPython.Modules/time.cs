@@ -482,39 +482,39 @@ namespace IronPython.Modules {
 
             public object Year {
                 [PythonName("tm_year")]
-                get { return data[0]; }
+                get { return _data[0]; }
             }
             public object Month {
                 [PythonName("tm_mon")]
-                get { return data[1]; }
+                get { return _data[1]; }
             }
             public object Day {
                 [PythonName("tm_mday")]
-                get { return data[2]; }
+                get { return _data[2]; }
             }
             public object Hour {
                 [PythonName("tm_hour")]
-                get { return data[3]; }
+                get { return _data[3]; }
             }
             public object Minute {
                 [PythonName("tm_min")]
-                get { return data[4]; }
+                get { return _data[4]; }
             }
             public object Second {
                 [PythonName("tm_sec")]
-                get { return data[5]; }
+                get { return _data[5]; }
             }
             public object DayOfWeek {
                 [PythonName("tm_wday")]
-                get { return data[6]; }
+                get { return _data[6]; }
             }
             public object DayOfYear {
                 [PythonName("tm_yday")]
-                get { return data[7]; }
+                get { return _data[7]; }
             }
             public object IsDaylightSavingTime {
                 [PythonName("tm_isdst")]
-                get { return data[8]; }
+                get { return _data[8]; }
             }
 
             internal StructTime(int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst)

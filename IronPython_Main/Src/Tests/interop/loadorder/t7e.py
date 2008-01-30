@@ -30,4 +30,4 @@ AreEqual(module.flag, "python")
 import module
 AreEqual(module.flag, "python")
 
-AssertError(AttributeError, lambda: module[int])
+AssertError(TypeError, lambda: module[int])

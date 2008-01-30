@@ -333,7 +333,7 @@ namespace Microsoft.Scripting.Actions {
                 default:
                     throw new InvalidOperationException(Action.ResultKind.ToString());
             }
-            _rule.SetTarget(target);
+            _rule.Target =target;
         }
 
         /// <summary>
@@ -341,12 +341,7 @@ namespace Microsoft.Scripting.Actions {
         /// input matches the type we're converting to)
         /// </summary>
         private void MakePerfectMatchTarget() {
-            _rule.SetTarget(
-                _rule.MakeReturn(
-                    Binder,
-                    _rule.Parameters[0]
-                )
-            );
+            _rule.Target = _rule.MakeReturn(Binder, _rule.Parameters[0]);
         }
 
         /// <summary>
@@ -368,7 +363,7 @@ namespace Microsoft.Scripting.Actions {
 
             ret = WrapForThrowingTry(isImplicit, ret);
 
-            _rule.SetTarget(ret);
+            _rule.Target = ret;
         }
         
         /// <summary>
@@ -382,7 +377,7 @@ namespace Microsoft.Scripting.Actions {
 
             ret = WrapForThrowingTry(isImplicit, ret);
             
-            _rule.SetTarget(ret);
+            _rule.Target = ret;
         }
 
         /// <summary>
@@ -405,19 +400,17 @@ namespace Microsoft.Scripting.Actions {
                 // boxed value type is being converted back to object.  We've done 
                 // the type check, there's no need to unbox & rebox the value.  infact 
                 // it breaks calls on instance methods so we need to avoid it.
-                _rule.SetTarget(
+                _rule.Target =
                     _rule.MakeReturn(
                         Binder,
                         _rule.Parameters[0]
-                    )
-                );
+                    );
             } else {
-                _rule.SetTarget(
+                _rule.Target =
                     _rule.MakeReturn(
                         Binder,
                         Ast.ConvertHelper(_rule.Parameters[0], CompilerHelpers.GetVisibleType(toType))
-                    )
-                );
+                    );
             }
         }
 
@@ -429,39 +422,36 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="toType"></param>
         private void MakeSimpleExtensibleConversionTarget(Type toType) {
             Type extType = typeof(Extensible<>).MakeGenericType(toType);
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder,
                     Ast.ConvertHelper(
                         GetExtensibleValue(extType),
                         toType
                     )
-                )
-            );            
+                );
         }       
 
         /// <summary>
         /// Helper to extract the value from an Extensible of T
         /// </summary>
         private void MakeExtensibleTarget(Type extensibleType) {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder,
                     Ast.ReadProperty(Ast.Convert(_rule.Parameters[0], extensibleType), extensibleType.GetProperty("Value"))
-                )
-            );
+                );
         }
 
         /// <summary>
         /// Helper to convert a null value to nullable of T
         /// </summary>
         private void MakeNullToNullableOfTTarget(Type toType) {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder,
                     Ast.Call(typeof(BinderOps).GetMethod("CreateInstance").MakeGenericMethod(toType))
-                )
-            );
+                );
         }
 
         /// <summary>
@@ -469,15 +459,14 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private void MakeTToNullableOfTTarget(Type toType, Type knownType) {
             // T -> Nullable<T>
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder,
                     Ast.New(
                         toType.GetConstructor(new Type[] { knownType }),
                         Ast.ConvertHelper(_rule.Parameters[0], knownType)
                     )
-                )
-            );            
+                );
         }
 
         /// <summary>
@@ -490,20 +479,19 @@ namespace Microsoft.Scripting.Actions {
             if (Action.ResultKind == ConversionResultKind.ExplicitCast) {
                 Expression conversion = Ast.Action.ConvertTo(ConvertToAction.Make(valueType, Action.ResultKind), _rule.Parameters[0]);
                 // if the conversion to T fails we just throw
-                _rule.SetTarget(
+                _rule.Target =
                     _rule.MakeReturn(
                         Binder,
                         Ast.New(
                             toType.GetConstructor(new Type[] { valueType }),
                             conversion
                         )
-                    )
-                );
+                    );
             } else {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
                 Expression conversion = Ast.Action.ConvertTo(valueType, Action.ResultKind, _rule.Parameters[0], typeof(object));
                 Variable tmp = _rule.GetTemporary(typeof(object), "tmp");
-                _rule.SetTarget(
+                _rule.Target =
                     Ast.If(
                         Ast.NotEqual(
                             Ast.Assign(tmp, conversion),
@@ -521,9 +509,8 @@ namespace Microsoft.Scripting.Actions {
                         )
                     ).Else(
                         CompilerHelpers.GetTryConvertReturnValue(Context, _rule)
-                    )
-                );
-            }
+                    );
+}
         }
 
         /// <summary>
@@ -562,14 +549,13 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         private bool MakeIEnumerableTarget(Type knownType) {
             if (typeof(IEnumerable).IsAssignableFrom(knownType)) {
-                _rule.SetTarget(
+                _rule.Target =
                     _rule.MakeReturn(Binder,
                         Ast.Call(
                             Ast.ConvertHelper(_rule.Parameters[0], typeof(IEnumerable)),
                             typeof(IEnumerable).GetMethod("GetEnumerator")
                         )
-                    )
-                );
+                    );
                 return true;
             }
             return false;
@@ -581,14 +567,13 @@ namespace Microsoft.Scripting.Actions {
         private bool MakeIEnumeratorOfTTarget(Type toType, Type knownType) {
             Type enumType = typeof(IEnumerable<>).MakeGenericType(toType.GetGenericArguments()[0]);
             if (enumType.IsAssignableFrom(knownType)) {
-                _rule.SetTarget(
+                _rule.Target =
                     _rule.MakeReturn(Binder,
                         Ast.Call(
                             Ast.ConvertHelper(_rule.Parameters[0], enumType),
                             toType.GetMethod("GetEnumerator")
                         )
-                    )
-                );
+                    );
                 return true;
             }
             return false;
@@ -599,7 +584,7 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         /// <param name="toType"></param>
         private void MakeNullTarget(Type toType) {
-            _rule.SetTarget(_rule.MakeReturn(Binder, Ast.Convert(Ast.Null(), toType)));
+            _rule.Target = _rule.MakeReturn(Binder, Ast.Convert(Ast.Null(), toType));
         }
 
         /// <summary>
@@ -607,7 +592,7 @@ namespace Microsoft.Scripting.Actions {
         /// dynamic site that invokes the callable object.
         /// </summary>
         private void MakeDelegateTarget(Type toType) {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeReturn(
                     Binder,
                     Ast.Call(
@@ -615,8 +600,7 @@ namespace Microsoft.Scripting.Actions {
                         _rule.Parameters[0],
                         Ast.Constant(toType)
                     )
-                )
-            );
+                );
         }
 
         #endregion

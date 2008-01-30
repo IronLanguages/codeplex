@@ -209,7 +209,7 @@ namespace IronPython.Runtime.Types {
             call = WrapGenericEnumerator<T>(convertToAction, rule, call);
 
             Expression body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
-            rule.SetTarget(body1);
+            rule.Target = body1;
             return rule;
         }
 
@@ -250,8 +250,7 @@ namespace IronPython.Runtime.Types {
                 rule.Parameters[0]
             );
 
-            Expression body1 = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
-            rule.SetTarget(body1);
+            rule.Target = MakeIterRule<T>(context, rule, Symbols.Iterator, tmp, body2, call);
             return rule;
         }
 
@@ -279,9 +278,8 @@ namespace IronPython.Runtime.Types {
 
             Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
             Expression tryFloat = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat", rule, tmp, failed);
-            rule.SetTarget(
-                MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToComplex, "ConvertToComplex", rule, tmp, tryFloat)
-            );
+            rule.Target = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToComplex, "ConvertToComplex", rule, tmp, tryFloat);
+            
 
             return rule;
         }
@@ -295,10 +293,7 @@ namespace IronPython.Runtime.Types {
             Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
 
             Expression failed =  PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
-            rule.SetTarget(
-                MakeConvertCallBody<T>(context, convertToAction, symbolId, returner, rule, tmp, failed)
-            );
-
+            rule.Target = MakeConvertCallBody<T>(context, convertToAction, symbolId, returner, rule, tmp, failed);
             
             return rule;
         }
@@ -345,7 +340,7 @@ namespace IronPython.Runtime.Types {
                 error = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
             }
 
-            rule.SetTarget(
+            rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
@@ -376,8 +371,7 @@ namespace IronPython.Runtime.Types {
                         ),
                         error
                     )
-                )
-            );
+                );
 
             return rule;
         }
@@ -389,9 +383,9 @@ namespace IronPython.Runtime.Types {
             // we could get better throughput w/ a more specific rule against our current custom old class but
             // this favors less code generation.
             Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
-            Expression [] callParams = (Expression[])rule.Parameters.Clone();
+            Expression[] callParams = ArrayUtils.MakeArray(rule.Parameters);
             callParams[0] = Ast.Read(tmp);
-            rule.SetTarget(
+            rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
                         Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
@@ -413,8 +407,7 @@ namespace IronPython.Runtime.Types {
                             Ast.ConvertHelper(rule.Parameters[0], typeof(object))
                         )
                     )
-                )
-            );
+                );
 
             return rule;
         }
@@ -456,7 +449,7 @@ namespace IronPython.Runtime.Types {
                 Ast.NotEqual(
                     tryGetValue, Ast.Null()));
 
-            rule.SetTest(test);
+            rule.Test = test;
             Expression target;
 
             switch (action.Kind) {
@@ -488,7 +481,7 @@ namespace IronPython.Runtime.Types {
                     throw new InvalidOperationException();
             }
 
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
             return rule;
         }
 
@@ -548,7 +541,7 @@ namespace IronPython.Runtime.Types {
                     throw new InvalidOperationException();
             }
 
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
             return rule;
         }
 
@@ -557,11 +550,12 @@ namespace IronPython.Runtime.Types {
                 case Operators.GetItem:
                 case Operators.SetItem:
                 case Operators.DeleteItem:
-                    return MakeIndexRule<T>(context, action, args);
                 case Operators.GetSlice:
                 case Operators.SetSlice:
                 case Operators.DeleteSlice:
-                    return MakeSliceRule<T>(context, action);
+                    // ask the default python DoOperationBinderHelper to produce the rule for the purpose
+                    // of interop - it knows how to handle all things indexing.
+                    return new PythonDoOperationBinderHelper<T>(context, action).MakeRule(args);
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, args[0]);
                 default:
@@ -569,213 +563,14 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static StandardRule<T> MakeSliceRule<T>(CodeContext context, DoOperationAction action) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(typeof(OldInstance));
-
-            Expression normalSlice = GetNormalSliceStatement<T>(context, action, rule);
-
-            if (TryCallSliceMethod<T>(action, rule)) {
-                // we need to check for the presence of __getslice__, __setslice__, or __delslice__
-                // if(PythonOps.TryGetBoundAttr(this, Symbols.GetSlice, out res))
-                //      res(adjustedSlice.Start, adjustedSlice.Stope)
-                Variable var = rule.GetTemporary(typeof(object), "sliceFunc");
-                Variable adjSlice = rule.GetTemporary(typeof(Slice), "adjustedSlice");
-                                
-                Expression []sliceArgs = (Expression[])rule.Parameters.Clone();
-                sliceArgs[0] = Ast.Comma(
-                    Ast.Assign(adjSlice, GetSliceObject<T>(action, rule)),
-                    Ast.Read(var)
-                );
-
-                Expression sliceTest = Ast.Call(
-                    typeof(PythonOps).GetMethod("TryGetBoundAttr", new Type[] { 
-                        typeof(CodeContext), 
-                        typeof(object), 
-                        typeof(SymbolId), 
-                        typeof(object).MakeByRefType() 
-                    }),
-                    Ast.CodeContext(),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                    Ast.Constant(GetDeprecatedSliceMethod(action)),
-                    Ast.Read(var)
-                );
-                sliceTest = AddNumericTest<T>(rule, sliceTest, rule.Parameters[1]);
-                sliceTest = AddNumericTest<T>(rule, sliceTest, rule.Parameters[2]);
-
-                sliceArgs[1] = Ast.ReadProperty(Ast.Read(adjSlice), typeof(Slice).GetProperty("Start"));
-                sliceArgs[2] = Ast.ReadProperty(Ast.Read(adjSlice), typeof(Slice).GetProperty("Stop"));
-                
-                rule.SetTarget(
-                    Ast.IfThenElse(
-                        sliceTest,
-                        rule.MakeReturn(
-                            context.LanguageContext.Binder,
-                            Ast.Action.Call(
-                                typeof(object),
-                                sliceArgs
-                            )
-                        ),
-                        normalSlice
-                    )
-                );
-            } else {
-                rule.SetTarget(normalSlice);
-            }
-            return rule;
-        }
-
-        private static Expression GetNormalSliceStatement<T>(CodeContext context, DoOperationAction action, StandardRule<T> rule) {
-            Expression[] normalSliceArgs = new Expression[2 + (action.Operation == Operators.SetSlice ? 1 : 0)];
-            normalSliceArgs[0] = Ast.CodeContext();
-            normalSliceArgs[1] = GetSliceObject<T>(action, rule);
-            if (normalSliceArgs.Length == 3) {
-                normalSliceArgs[2] = rule.Parameters[rule.Parameters.Length - 1];
-            }
-            Expression normalSlice = rule.MakeReturn(
-                context.LanguageContext.Binder,
-                Ast.SimpleCallHelper(
-                    rule.Parameters[0],
-                    typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
-                    normalSliceArgs
-                )
-            );
-            return normalSlice;
-        }
-
-        private static Expression AddNumericTest<T>(StandardRule<T> rule, Expression sliceTest, Expression parameter) {
-            if (!PythonOps.IsNumericType(parameter.Type) && parameter.Type != typeof(MissingParameter)) {
-                sliceTest = Ast.AndAlso(
-                        sliceTest,
-                        Ast.OrElse(
-                            Ast.Equal(
-                                parameter,
-                                Ast.ReadField(null, typeof(MissingParameter), "Value")
-                            ),
-                            Ast.Call(
-                                null, 
-                                typeof(PythonOps).GetMethod("IsNumericObject"),
-                                parameter
-                            )
-                        )
-                    );
-            }
-            return sliceTest;
-        }
-
-        private static bool TryCallSliceMethod<T>(DoOperationAction action, StandardRule<T> rule) {
-            int sliceArgCount = GetSliceArgumentCount<T>(action, rule);
-            if (sliceArgCount == 2) {
-                for (int i = 1; i < sliceArgCount + 1; i++) {
-                    if (!PythonOps.IsNumericType(rule.Parameters[i].Type) &&
-                        rule.Parameters[i].Type != typeof(MissingParameter) &&
-                        rule.Parameters[i].Type != typeof(object)) {
-                        // strongly typed parameter which isn't an integer, we won't call __*slice__
-                        return false;
-                    }
-                }
-                return true;
-            }
-            return false;
-        }
-
-        private static SymbolId GetDeprecatedSliceMethod(DoOperationAction action) {
-            SymbolId sliceMethod;
-            switch (action.Operation) {
-                case Operators.GetSlice: sliceMethod = Symbols.GetSlice; break;
-                case Operators.SetSlice: sliceMethod = Symbols.SetSlice; break;
-                case Operators.DeleteSlice: sliceMethod = Symbols.DeleteSlice; break;
-                default: throw new InvalidOperationException();
-            }
-            return sliceMethod;
-        }
-
-        private static Expression GetSliceObject<T>(DoOperationAction action, StandardRule<T> rule) {
-            Expression slice;
-            int sliceArgCount = GetSliceArgumentCount<T>(action, rule);
-            if (sliceArgCount <= 2) {
-                // no step is provided, we need a __len__ if either of the arguments are negative                
-                slice = Ast.Call(
-                     typeof(PythonOps).GetMethod("MakeOldStyleSlice"),
-                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldInstance)),
-                     sliceArgCount >= 1 ?
-                        Ast.ConvertHelper(rule.Parameters[1], typeof(object)) :
-                        Ast.Null(),
-                     sliceArgCount >= 2 ?
-                        Ast.ConvertHelper(rule.Parameters[2], typeof(object)) :
-                        Ast.Null()
-                 );
-            } else {
-                slice = Ast.Call(
-                    typeof(PythonOps).GetMethod("MakeSlice"),
-                    Ast.ConvertHelper(CheckMissing(rule.Parameters[1]), typeof(object)),
-                    Ast.ConvertHelper(CheckMissing(rule.Parameters[2]), typeof(object)),
-                    Ast.ConvertHelper(CheckMissing(rule.Parameters[3]), typeof(object))
-                );
-            }
-            return slice;
-        }
-
-        internal static Expression CheckMissing(Expression toCheck) {
-            if (toCheck.Type == typeof(MissingParameter)) {
-                return Ast.Null();
-            }
-            if (toCheck.Type != typeof(object)) {
-                return toCheck;
-            }
-
-            return Ast.Condition(
-                Ast.TypeIs(toCheck, typeof(MissingParameter)),
-                Ast.Null(),
-                toCheck
-            );
-        }
-
-        private static int GetSliceArgumentCount<T>(DoOperationAction action, StandardRule<T> rule) {
-            int sliceArgCount = action.Operation == Operators.SetSlice ? rule.Parameters.Length - 2 : rule.Parameters.Length - 1;
-            return sliceArgCount;
-        }
-
-        private static StandardRule<T> MakeIndexRule<T>(CodeContext context, DoOperationAction action, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
-            rule.MakeTest(typeof(OldInstance));
-
-            rule.SetTarget(
-                rule.MakeReturn(context.LanguageContext.Binder,
-                    Ast.SimpleCallHelper(
-                        rule.Parameters[0],
-                        typeof(OldInstance).GetMethod(GetIndexOrSliceMethod(action)),
-                        PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule)
-                    )
-                )
-            );
-
-            return rule;
-        }
-        private static string GetIndexOrSliceMethod(DoOperationAction action) {
-            string method;
-            switch (action.Operation) {
-                case Operators.GetItem:
-                case Operators.GetSlice: method = "GetItem"; break;
-                case Operators.SetItem:
-                case Operators.SetSlice: method = "SetItem"; break;
-                case Operators.DeleteItem:
-                case Operators.DeleteSlice: method = "DeleteItem"; break;
-                default: throw new InvalidOperationException();
-            }
-
-            return method;
-        }
-
         #endregion
 
         #region Object overrides
 
         public override string ToString() {
-            object ret;
+            object ret = InvokeOne(this, Symbols.String);
 
-            if (TryGetBoundCustomMember(DefaultContext.Default, Symbols.String, out ret)) {
-                ret = PythonCalls.Call(ret);
+            if (ret != PythonOps.NotImplemented) {
                 string strRet;
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
@@ -792,10 +587,8 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName, PythonName("__repr__")]
         public string ToCodeString(CodeContext context) {
-            object ret;
-
-            if (TryGetBoundCustomMember(context, Symbols.Repr, out ret)) {
-                ret = PythonOps.CallWithContext(context, ret);
+            object ret = InvokeOne(this, Symbols.Repr);
+            if(ret != PythonOps.NotImplemented) {
                 string strRet;
                 if (Converter.TryConvertToString(ret, out strRet) && strRet != null) {
                     return strRet;
@@ -885,6 +678,55 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.AttributeErrorForMissingAttribute(__class__.Name, Symbols.DelItem);
         }
 
+        [PythonName("__getslice__")]
+        public object GetSlice(CodeContext context, int i, int j) {
+            object callable;
+            if (TryRawGetAttr(context, Symbols.GetSlice, out callable)) {
+                return PythonCalls.Call(callable, i, j);
+            } else if (TryRawGetAttr(context, Symbols.GetItem, out callable)) {
+                return PythonCalls.Call(callable, new Slice(i, j));
+            }
+
+            throw PythonOps.TypeError("instance {0} does not have __getslice__ or __getitem__", __class__.Name);
+        }
+        
+        [PythonName("__setslice__")]
+        public void SetSlice(CodeContext context, int i, int j, object value) {
+            object callable;
+            if (TryRawGetAttr(context, Symbols.SetSlice, out callable)) {
+                PythonCalls.Call(callable, i, j, value);
+                return;
+            } else if (TryRawGetAttr(context, Symbols.SetItem, out callable)) {
+                PythonCalls.Call(callable, new Slice(i, j), value);
+                return;
+            }
+
+            throw PythonOps.TypeError("instance {0} does not have __setslice__ or __setitem__", __class__.Name);
+        }
+
+        [PythonName("__delslice__")]
+        public object DeleteSlice(CodeContext context, int i, int j) {
+            object callable;
+            if (TryRawGetAttr(context, Symbols.DeleteSlice, out callable)) {
+                return PythonCalls.Call(callable, i, j);
+            } else if (TryRawGetAttr(context, Symbols.DelItem, out callable)) {
+                return PythonCalls.Call(callable, new Slice(i, j));
+            }
+
+            throw PythonOps.TypeError("instance {0} does not have __delslice__ or __delitem__", __class__.Name);
+        }
+
+        [PythonName("__index__")]
+        public object GetIndexValue(CodeContext context) {
+            object value;
+
+            if (TryGetBoundCustomMember(context, Symbols.ConvertToInt, out value)) {
+                return PythonOps.CallWithContext(context, value);
+            }
+
+            throw PythonOps.TypeError("object cannot be converted to an index");
+        }
+
         [SpecialName, PythonName("__neg__")]
         public object Negate(CodeContext context) {
             object value;
@@ -952,17 +794,22 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, object args) {
-            object value;
+            PythonOps.FunctionPushFrame();
+            try {
+                object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
-                KwCallInfo kwInfo;
+                if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
+                    KwCallInfo kwInfo;
 
-                if (args is object[])
-                    return PythonOps.CallWithContext(context, value, (object[])args);
-                else if ((kwInfo = args as KwCallInfo) != null)
-                    return PythonOps.CallWithKeywordArgs(context, value, kwInfo.Arguments, kwInfo.Names);
+                    if (args is object[])
+                        return PythonOps.CallWithContext(context, value, (object[])args);
+                    else if ((kwInfo = args as KwCallInfo) != null)
+                        return PythonOps.CallWithKeywordArgs(context, value, kwInfo.Arguments, kwInfo.Names);
 
-                return PythonOps.CallWithContext(context, value, args);
+                    return PythonOps.CallWithContext(context, value, args);
+                }
+            } finally {
+                PythonOps.FunctionPopFrame();
             }
 
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
@@ -970,10 +817,15 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
-            object value;
+            PythonOps.FunctionPushFrame();
+            try {
+                object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
-                return PythonOps.CallWithContext(context, value, args);
+                if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
+                    return PythonOps.CallWithContext(context, value, args);
+                }
+            } finally {
+                PythonOps.FunctionPopFrame();
             }
 
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
@@ -981,10 +833,15 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, [ParamDictionary]IAttributesCollection dict, params object[] args) {
-            object value;
+            PythonOps.FunctionPushFrame();
+            try {
+                object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
-                return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, ArrayUtils.EmptyStrings, null, dict);
+                if (TryGetBoundCustomMember(context, Symbols.Call, out value)) {
+                    return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, value, args, ArrayUtils.EmptyStrings, null, dict);
+                }
+            } finally {
+                PythonOps.FunctionPopFrame();
             }
 
             throw PythonOps.AttributeError("{0} instance has no __call__ method", __class__.Name);
@@ -1034,7 +891,7 @@ namespace IronPython.Runtime.Types {
         public object ConvertToInt(CodeContext context) {
             object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.ConvertToInt, out value)) {
+            if (PythonOps.TryGetBoundAttr(context, this, Symbols.ConvertToInt, out value)) {
                 return PythonOps.CallWithContext(context, value);
             }
 
@@ -1045,7 +902,7 @@ namespace IronPython.Runtime.Types {
         public object ConvertToLong(CodeContext context) {
             object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.ConvertToLong, out value)) {
+            if (PythonOps.TryGetBoundAttr(context, Symbols.ConvertToLong, out value)) {
                 return PythonOps.CallWithContext(context, value);
             }
 
@@ -1056,7 +913,7 @@ namespace IronPython.Runtime.Types {
         public object ConvertToFloat(CodeContext context) {
             object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.ConvertToFloat, out value)) {
+            if (PythonOps.TryGetBoundAttr(context, this, Symbols.ConvertToFloat, out value)) {
                 return PythonOps.CallWithContext(context, value);
             }
 
@@ -1259,10 +1116,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private object InternalCompare(SymbolId cmp, object other) {
-            object meth;
-            if (TryGetBoundCustomMember(DefaultContext.Default, cmp, out meth)) 
-                return PythonOps.CallWithContext(DefaultContext.Default, meth, other);
-            return PythonOps.NotImplemented;
+            return InvokeOne(this, other, cmp);
         }
 
         #region ICustomTypeDescriptor Members
@@ -1342,12 +1196,12 @@ namespace IronPython.Runtime.Types {
         [SpecialName, PythonName("__hash__")]
         public object RichGetHashCode() {
             object func;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Hash, out func)) {
-                object res = PythonCalls.Call(func);
-                if (!(res is int))
-                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(res)));
+            object ret = InvokeOne(this, Symbols.Hash);
+            if(ret != PythonOps.NotImplemented) {
+                if (!(ret is int))
+                    throw PythonOps.TypeError("expected int from __hash__, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(ret)));
 
-                return (int)res;
+                return (int)ret;
             }
 
             if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.Cmp, out func) ||
@@ -1361,41 +1215,100 @@ namespace IronPython.Runtime.Types {
         [return: MaybeNotImplemented]
         [SpecialName, PythonName("__eq__")]
         public object RichEquals(object other) {
-            object func;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorEquals, out func)) {
-                object res = PythonOps.CallWithContext(DefaultContext.Default, func, other);
-                if (res != PythonOps.NotImplemented) {
-                    return res;
-                }
+            object res = InvokeBoth(other, Symbols.OperatorEquals);
+            if (res != PythonOps.NotImplemented) {
+                return res;
             }
 
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, other, Symbols.OperatorEquals, out func)) {
-                object res = PythonOps.CallWithContext(DefaultContext.Default, func, this);
-                if (res != PythonOps.NotImplemented) {
-                    return res;
+            // TODO: Remove coercion from this code path, add it to the 
+            try {
+                object coerce;
+                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
+                    coerce != PythonOps.NotImplemented &&
+                    !(coerce is OldInstance)) {
+                    return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
                 }
+            } catch (MissingMemberException) {
             }
 
-            object coerce;
-            if (TypeCache.OldInstance.TryInvokeBinaryOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
-                coerce != PythonOps.NotImplemented &&
-                !(coerce is OldInstance)) {
-                return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
+            try {
+                object coerce;
+                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, other, this, out coerce) &&
+                    coerce != PythonOps.NotImplemented &&
+                    !(coerce is OldInstance)) {
+                    return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
+                }
+            } catch (MissingMemberException) {
             }
 
             return PythonOps.NotImplemented;
         }
 
+        private object InvokeBoth(object other, SymbolId si) {
+            object res = InvokeOne(this, other, si);
+            if (res != PythonOps.NotImplemented) {
+                return res;
+            }
+            res = InvokeOne(other, this, si);
+            if (res != PythonOps.NotImplemented) {
+                return res;
+            }
+            return PythonOps.NotImplemented;
+        }
+
+        private static object InvokeOne(object self, object other, SymbolId si) {
+            object func;
+            try {
+                if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
+                    return PythonOps.NotImplemented;
+                }
+            } catch (MissingMemberException) {
+                return PythonOps.NotImplemented;
+            }
+
+            return PythonOps.CallWithContext(DefaultContext.Default, func, other);
+        }
+
+        private static object InvokeOne(object self, SymbolId si) {
+            object func;
+            try {
+                if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, self, si, out func)) {
+                    return PythonOps.NotImplemented;
+                }
+            } catch (MissingMemberException) {
+                return PythonOps.NotImplemented;
+            }
+
+            return PythonOps.CallWithContext(DefaultContext.Default, func);
+        }
+
         [return: MaybeNotImplemented]
         [SpecialName, PythonName("__ne__")]
         public object RichNotEquals(object other) {
-            object func;
-            if (PythonOps.TryGetBoundAttr(DefaultContext.Default, this, Symbols.OperatorNotEquals, out func)) {
-                return PythonOps.CallWithContext(DefaultContext.Default, func, other);
+            object res = InvokeBoth(other, Symbols.OperatorNotEquals);
+            if (res != PythonOps.NotImplemented) {
+                return res;
             }
 
-            object res = RichEquals(other);
-            if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
+            try {
+                object coerce;
+                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
+                    coerce != PythonOps.NotImplemented &&
+                    !(coerce is OldInstance)) {
+                    return PythonOps.Not(PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]));
+                }
+            } catch (MissingMemberException) {
+            }
+
+            try {
+                object coerce;
+                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, other, this, out coerce) &&
+                    coerce != PythonOps.NotImplemented &&
+                    !(coerce is OldInstance)) {
+                    return PythonOps.Not(PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]));
+                }
+            } catch (MissingMemberException) {
+            }
 
             return PythonOps.NotImplemented;
         }

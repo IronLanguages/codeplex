@@ -195,6 +195,10 @@
   <data name="NonKeywordAfterKeywordArg" xml:space="preserve">
     <value>non-keyword arg after keyword arg</value>
   </data>
+  <data name="NotAChance" xml:space="preserve">
+    <value>not a chance</value>
+    <comment>Reported when user does "from __future__ import braces"</comment>
+  </data>
   <data name="NotImplemented" xml:space="preserve">
     <value>The method or operation is not implemented.</value>
   </data>

@@ -645,10 +645,11 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            if (count is double || count is float || count is Extensible<double> || count is Extensible<float>) {
-                throw TypeError("can't multiply sequence by non-int of type 'float'");
+            int icount;
+            if(!Converter.TryConvertToIndex(count, out icount)) {
+                throw TypeError("can't multiply sequence by non-int of type '{0}'", DynamicHelpers.GetPythonType(count).Name);
             }
-            int icount = Converter.ConvertToInt32(count);
+
             if (icount < 0) icount = 0;
             return multiplier(sequence, icount);
         }
@@ -1217,92 +1218,10 @@ namespace IronPython.Runtime.Operations {
             return PythonCalls.Call(func, allArgs.GetObjectArray());
         }
 
+        private static FastDynamicSite<object, object, object> _getIndexSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.GetItem));
+
         public static object GetIndex(object o, object index) {
-            ISequence seq = o as ISequence;
-            if (seq != null) {
-                Slice slice;
-                if (index is int) return seq[(int)index];
-                else if ((slice = index as Slice) != null) {
-                    if (slice.Step == null) {
-                        int start, stop;
-                        slice.DeprecatedFixed(o, out start, out stop);
-
-                        return seq.GetSlice(start, stop);
-                    }
-
-                    return seq[slice];
-                }
-                //???
-            }
-
-            string s = o as string;
-            if (s != null) {
-                if (index is int) return StringOps.GetItem(s, (int)index);
-                else if (index is Slice) return StringOps.GetItem(s, (Slice)index);
-                //???
-            }
-
-            return SlowGetIndex(o, index);
-        }
-
-        private static object SlowGetIndex(object o, object index) {
-            object ret;
-            IDictionary<object, object> dict = o as IDictionary<object, object>;
-            if (dict != null) {
-                if (dict.TryGetValue(index, out ret)) return ret;
-            } 
-            
-            Array array = o as Array;
-            if (array != null) {
-                return ArrayOps.GetIndex(array, index);
-            }
-
-            IList list = o as IList;
-            if (list != null) {
-                int val;
-                if (Converter.TryConvertToInt32(index, out val)) {
-                    return list[val];
-                }
-            }
-
-            PythonType dt = o as PythonType;
-            if (dt != null) {
-                if (dt == TypeCache.Array) {
-                    Type[] types = TypeHelpers.GetTypesFromTuple(index);
-                    if (types.Length != 1) throw PythonOps.TypeError("expected single type");
-
-                    return DynamicHelpers.GetPythonTypeFromType(types[0].MakeArrayType());
-                } else {
-                    PythonTuple tindex = index as PythonTuple;
-                    if (tindex == null) {
-                        PythonType dti = index as PythonType;
-                        if (dti != null) {
-                            tindex = PythonTuple.MakeTuple(dti);
-                        } else {
-                            throw PythonOps.TypeError("__getitem__ expected tuple, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(index)));
-                        }
-                    }
-
-                    PythonType[] dta = new PythonType[tindex.Count];
-                    for (int i = 0; i < tindex.Count; i++) {
-                        dta[i] = (PythonType)tindex[i];
-                    }
-
-                    return DynamicHelpers.GetPythonTypeFromType(dt.MakeGenericType(dta));
-                }
-            }
-
-            BuiltinFunction bf = o as BuiltinFunction;
-            if (bf != null) {
-                return bf[index];
-            }
-
-            if (DynamicHelpers.GetPythonType(o).TryInvokeBinaryOperator(DefaultContext.Default, Operators.GetItem, o, index, out ret)) {
-                return ret;
-            }
-
-            throw PythonOps.AttributeError("{0} object has no attribute '__getitem__'",
-                PythonOps.StringRepr(PythonTypeOps.GetName(o)));
+            return _getIndexSite.Invoke(o, index);
         }
 
         public static void SetIndexId(object o, SymbolId index, object value) {
@@ -1746,7 +1665,7 @@ namespace IronPython.Runtime.Operations {
             if (step == null) {
                 ostep = 1;
             } else {
-                ostep = Converter.ConvertToSliceIndex(step);
+                ostep = Converter.ConvertToIndex(step);
                 if (ostep == 0) {
                     throw PythonOps.ValueError("step cannot be zero");
                 }
@@ -1755,7 +1674,7 @@ namespace IronPython.Runtime.Operations {
             if (start == null) {
                 ostart = ostep > 0 ? 0 : length - 1;
             } else {
-                ostart = Converter.ConvertToSliceIndex(start);
+                ostart = Converter.ConvertToIndex(start);
                 if (ostart < 0) {
                     ostart += length;
                     if (ostart < 0) {
@@ -1769,7 +1688,7 @@ namespace IronPython.Runtime.Operations {
             if (stop == null) {
                 ostop = ostep > 0 ? length : -1;
             } else {
-                ostop = Converter.ConvertToSliceIndex(stop);
+                ostop = Converter.ConvertToIndex(stop);
                 if (ostop < 0) {
                     ostop += length;
                     if (ostop < 0) {
@@ -2663,7 +2582,7 @@ namespace IronPython.Runtime.Operations {
 
                 TraceBackFrame tbf = new TraceBackFrame(
                     new GlobalsDictionary(frame.CodeContext.Scope),
-                    new LocalsDictionary(frame.CodeContext.Scope),
+                    LocalsDictionary.GetDictionaryFromScope(frame.CodeContext.Scope),
                     fx.func_code);
 
                 fx.func_code.SetFilename(frame.GetFileName());
@@ -3014,38 +2933,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        #region OldInstance slicing
-
-        /// <summary>
-        /// Helper to return a Slice object for OldInstance slicing when only a start & stop are provided.
-        /// </summary>
-        public static Slice MakeOldStyleSlice(OldInstance self, object start, object stop) {
-            Nullable<int> length = null;
-
-            if (start == MissingParameter.Value && stop == MissingParameter.Value) {
-                return new Slice(0, Int32.MaxValue);
-            }
-
-            object newStart = FixSliceIndex(self, start, ref length);
-            if (newStart == MissingParameter.Value) {
-                if (IsNumericObject(stop)) {
-                    newStart = 0;
-                } else {
-                    newStart = null;
-                }
-            }
-
-            object newStop = FixSliceIndex(self, stop, ref length);
-            if (newStop == MissingParameter.Value) {
-                if (IsNumericObject(start)) {
-                    newStop = Int32.MaxValue;
-                } else {
-                    newStop = null;
-                }
-            }
-
-            return new Slice(newStart, newStop);
-        }
+        #region Slicing support
 
         /// <summary>
         /// Helper to determine if the value is a simple numeric type (int or big int or bool) - used for OldInstance
@@ -3068,42 +2956,19 @@ namespace IronPython.Runtime.Operations {
         }
 
         /// <summary>
-        /// Fixes a single value to be used for slicing.
+        /// For slicing.  Fixes up a BigInteger and returns an integer w/ the length of the
+        /// object added if the value is negative.
         /// </summary>
-        private static object FixSliceIndex(OldInstance self, object index, ref Nullable<int> length) {
-            if (index != null) {
-                BigInteger bi;
-                ExtensibleInt ei;
-                Extensible<BigInteger> el;
-
-                if (index is int) {
-                    index = NormalizeInt(self, (int)index, ref length);
-                } else if (!Object.ReferenceEquals((bi = index as BigInteger), null)) {
-                    index = NormalizeBigInteger(self, bi, ref length);
-                } else if ((ei = index as ExtensibleInt) != null) {
-                    index = NormalizeInt(self, ei.Value, ref length);
-                } else if ((el = index as Extensible<BigInteger>) != null) {
-                    index = NormalizeBigInteger(self, el.Value, ref length);
-                } else if (index is bool) {
-                    return ((bool)index) ? 1 : 0;
-                }
-            }
-            return index;
-        }
-
-        /// <summary>
-        /// For OldInstance slicing.  Fixes up a BigInteger and returns an integer w/ the length of the
-        /// OldInstance added if the value is negative.
-        /// </summary>
-        private static object NormalizeBigInteger(OldInstance self, BigInteger bi, ref Nullable<int> length) {
+        public static int NormalizeBigInteger(object self, BigInteger bi, ref Nullable<int> length) {
             int val;
             if (bi < BigInteger.Zero) {
-                GetLength(self, ref length);
+                GetLengthOnce(self, ref length);
 
                 if (bi.AsInt32(out val)) {
-                    return val + length;
+                    Debug.Assert(length.HasValue);
+                    return val + length.Value;
                 } else {
-                    return Int32.MaxValue;
+                    return -1;
                 }
             } else if (bi.AsInt32(out val)) {
                 return val;
@@ -3111,27 +2976,15 @@ namespace IronPython.Runtime.Operations {
 
             return Int32.MaxValue;
         }
-
+        
         /// <summary>
-        /// For OldInstance slicing.  Returns a normalized integer w/ the length of the
-        /// OldInstance added if the value is negative.
+        /// For slicing.  Gets the length of the object, used to only get the length once.
         /// </summary>
-        private static object NormalizeInt(OldInstance self, int index, ref Nullable<int> length) {
-            if (index < 0) {
-                GetLength(self, ref length);
-                return index + length;
-            }
-            return index;
-        }
-
-        /// <summary>
-        /// For OldInstance slicing.  Gets the length of the OldInstance, only gets the length
-        /// once.
-        /// </summary>
-        private static void GetLength(OldInstance self, ref Nullable<int> length) {
-            if (length != null) return;
+        public static int GetLengthOnce(object self, ref Nullable<int> length) {
+            if (length != null) return length.Value;
 
             length = PythonOps.Length(self);
+            return length.Value;
         }
 
         #endregion

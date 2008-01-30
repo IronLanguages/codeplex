@@ -570,7 +570,22 @@ def test_ipy_dash_m():
         output = output.replace('\r\n', '\n')
         lines = output.split('\n')
         AreEqual(lines[0], 'hello')
-                 
+        
+        # Python packages work
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib")
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(res, True) # run should have worked
+        AreEqual(exit, 0)   # should have returned 0
+        AreEqual(output, "")
+        
+        # Bad module names should not work
+        ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m libxyz")
+        res, output, err, exit = ipi.StartAndRunToCompletion()
+        AreEqual(res, True) # run should have worked
+        AreEqual(exit, 1)   # should have returned 0
+        Assert("ImportError: No module named libxyz" in err, 
+               "stderr is:" + str(err))
+              
     finally:
         nt.unlink(filename)
         
@@ -584,6 +599,14 @@ def test_ipy_dash_m_negative():
         AreEqual(exit, 1)
         AreEqual(output, "")
         Assert("ImportError" in err)
+
+    # Modules within packages should not work
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " -m lib.assert_util")
+    res, output, err, exit = ipi.StartAndRunToCompletion()
+    AreEqual(res, True) # run should have worked
+    AreEqual(exit, 1)   # should have returned 0
+    Assert("SyntaxError: invalid syntax" in err, 
+           "stderr is:" + str(err))        
     
 def test_ipy_dash_c():
     """verify ipy -c cmd doesn't print expression statements"""
@@ -594,4 +617,17 @@ def test_ipy_dash_c():
     AreEqual(res[2], '')    # no std err
     AreEqual(res[3], 0)     # should return 0
 
+#############################################################################
+# CP11924 - verify 'from __future__ import division' works
+def test_future_division():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecuteLine("from __future__ import division")
+    response = ipi.ExecuteLine("11/4")
+    AreEqual(response, "2.75")
+    ipi.End()
+
+
+
+#------------------------------------------------------------------------------
 run_test(__name__)

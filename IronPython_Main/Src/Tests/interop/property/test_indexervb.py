@@ -33,7 +33,7 @@ def test_basic():
         x = t()
         x.Init()
 
-        AssertError(AttributeError, lambda: x[2])
+        AssertError(TypeError, lambda: x[2])
         
         x.PropertyName[2] = 9
         AreEqual(x.PropertyName[2], 9)

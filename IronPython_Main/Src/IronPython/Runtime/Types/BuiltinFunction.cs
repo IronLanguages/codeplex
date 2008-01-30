@@ -341,7 +341,7 @@ namespace IronPython.Runtime.Types {
         private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch(doOperationAction.Operation) {
                 case Operators.CallSignatures:
-                    return DoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Targets, DynamicHelpers.GetPythonType(args[0]));
+                    return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Targets, DynamicHelpers.GetPythonType(args[0]));
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
             }
@@ -350,7 +350,7 @@ namespace IronPython.Runtime.Types {
 
         internal NarrowingLevel Level {
             get {
-                return IsBinaryOperator ? NarrowingLevel.Three : NarrowingLevel.All;
+                return IsBinaryOperator ? PythonNarrowing.BinaryOperator : NarrowingLevel.All;
             }
         }   
         private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[]args) {
@@ -358,7 +358,7 @@ namespace IronPython.Runtime.Types {
             StandardRule<T> rule = helper.MakeRule();
             if (IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 function + 2 args
                 // BinaryOperators return NotImplemented on failure.
-                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented")));
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));
             }
             rule.AddTest(MakeFunctionTest(rule.Parameters[0]));
             return rule;
@@ -451,7 +451,7 @@ namespace IronPython.Runtime.Types {
 
         public BuiltinFunction/*!*/ this[PythonTuple tuple] {
             get {
-                return this[tuple.data];
+                return this[tuple._data];
             }
         }
 

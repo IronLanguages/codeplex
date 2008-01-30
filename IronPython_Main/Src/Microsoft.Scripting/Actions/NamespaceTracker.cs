@@ -550,7 +550,7 @@ namespace Microsoft.Scripting.Actions {
 
                 Expression target = context.LanguageContext.Binder.ReturnMemberTracker(memValue.DeclaringType, memValue);
 
-                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
                 return rule;
             }
             return null;

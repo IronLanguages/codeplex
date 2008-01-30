@@ -2128,5 +2128,100 @@ def test_unbound_class_method():
     AssertErrorWithPartialMessage(TypeError, "unbound method f() must be called with", lambda: C.f(C))
     AssertErrorWithPartialMessage(TypeError, "arguments (1 given)", lambda: C.f(x))
     AssertErrorWithPartialMessage(TypeError, "arguments (1 given)", lambda: x.f())
+
+def test_oldinstance_operator_exceptions():
+    global called
+    def fmaker(name, ex = None):
+        def f(self, *args):
+            global called
+            called.append(name)
+            if ex:
+                raise ex(name)
+            def g(*args):
+                return NotImplemented
+            return g
+        return f
+
+    def fthrowingmaker(name, ex):
+        def f(self):
+            global called
+            called.append(name)
+            def g(*args):
+                raise ex
+            return g
+        return f
+
+    class OC:
+        __eq__ = property(fmaker('oc_eq', AttributeError))
+        __ne__ = property(fmaker('oc_ne', AttributeError))
+    
+    class OC2:
+        __eq__ = property(fthrowingmaker('oc_eq', AttributeError))
+        __ne__ = property(fthrowingmaker('oc_ne', AttributeError))
+
+    class OC3:
+        def __getattr__(self, name):
+            return property(fmaker(name, AttributeError)).__get__(self, OC3)
+    
+    called = []
+    Assert(not OC() == OC())
+    AreEqual(called, ['oc_eq']*4)
+    
+    called = []
+    type(OC()).__eq__(OC(), OC())
+    AreEqual(called, ['oc_eq']*2)
+    
+    called =[]
+    Assert(OC() != OC())
+    AreEqual(called, ['oc_ne']*4)
+
+    called = []
+    type(OC()).__ne__(OC(), OC())
+    AreEqual(called, ['oc_ne']*2)
+
+
+    called = []
+    AssertError(AttributeError, lambda : not OC2() == OC2())
+    AreEqual(called, ['oc_eq'])
+    
+    called = []
+    AssertError(AttributeError, lambda : type(OC2()).__eq__(OC2(), OC2()))
+    AreEqual(called, ['oc_eq'])
+    
+    called =[]
+    AssertError(AttributeError, lambda : OC2() != OC2())
+    AreEqual(called, ['oc_ne'])
+
+    called = []
+    AssertError(AttributeError, lambda : type(OC2()).__ne__(OC2(), OC2()))
+    AreEqual(called, ['oc_ne'])
+    
+    called = []
+    AssertError(AttributeError, lambda : type(OC()).__getattribute__(OC(), '__eq__'))
+    AreEqual(called, ['oc_eq'])
+    
+    Assert(not hasattr(OC(), '__eq__'))
+
+    # IronPython still differs on these from CPython:
+    # verify other attributes work correctly
+    #for x in ['__abs__', '__float__', '__long__', '__int__', '__hex__', '__oct__', '__pos__', '__neg__', '__invert__']:
+    #    # unary operators which pass on AttributeError
+    #    print x
+    #    AssertError(AttributeError, getattr(type(OC3()), x), OC3())
+    
+    for x in ['__hash__', '__nonzero__', '__str__', '__repr__']:
+        # unary operators that catch AttributeError
+        getattr(type(OC3()), x)(OC3())
+    
+    # IronPython still differs on these from CPython:    
+    #for x in ['__iter__']:
+    #    # unary operators that call, catch, and report another error
+    #    called = []
+    #    AssertError(TypeError, getattr(type(OC3()), x), OC3())
+    #    Assert(x in called)
+    
+    for x in ['__add__', '__iadd__', '__radd__', '__cmp__', '__coerce__']:
+        # binary operators catch AttributeError
+        getattr(type(OC3()), x)(OC3(), OC3())
         
 run_test(__name__)

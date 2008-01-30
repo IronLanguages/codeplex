@@ -128,13 +128,17 @@ namespace IronPython.Runtime.Calls {
         }
 
         public override string ToString() {
+            object name;
+            if (!PythonOps.TryGetBoundAttr(DefaultContext.Default, _func, Symbols.Name, out name)) {
+                name = "?";
+            }
             if (_inst != null) {
                 return string.Format("<bound method {0}.{1} of {2}>",
                     DeclaringClassAsString(),
-                    PythonOps.GetBoundAttr(DefaultContext.Default, _func, Symbols.Name),
+                    name,
                     PythonOps.StringRepr(_inst));
             } else {
-                return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), Name);
+                return string.Format("<unbound method {0}.{1}>", DeclaringClassAsString(), name);
             }
         }
 
@@ -142,14 +146,17 @@ namespace IronPython.Runtime.Calls {
             Method other = obj as Method;
             if (other == null) return false;
 
-            return other._inst == _inst && other._func == _func;
+            return
+                PythonOps.EqualRetBool(_inst, other._inst) &&
+                PythonOps.EqualRetBool(_func, other._func);
         }
 
         public override int GetHashCode() {
-            if (_inst == null) return _func.GetHashCode();
+            if (_inst == null) return PythonOps.Hash(_func);
 
-            return _inst.GetHashCode() ^ _func.GetHashCode();
+            return PythonOps.Hash(_inst) ^ PythonOps.Hash(_func);
         }
+        
         #endregion
 
         #region IDescriptor Members
@@ -281,7 +288,7 @@ namespace IronPython.Runtime.Calls {
             
             Expression[] notNullArgs = GetNotNullInstanceArguments(rule);
             Expression nullSelf;
-            if (rule.Parameters.Length != 1) {
+            if (rule.Parameters.Count != 1) {
                 Expression[] nullArgs = GetNullInstanceArguments(rule, action);
                 nullSelf = Ast.Action.Call(action, typeof(object), nullArgs);
             } else {
@@ -289,28 +296,26 @@ namespace IronPython.Runtime.Calls {
                 nullSelf = CheckSelf(rule, Ast.Null());
             }
 
-            rule.SetTarget(
-                rule.MakeReturn(context.LanguageContext.Binder,
-                    Ast.Condition(
-                        Ast.NotEqual(
-                            Ast.ReadProperty(
-                                Ast.Convert(rule.Parameters[0], typeof(Method)),
-                                typeof(Method).GetProperty("Self")
-                            ),
-                            Ast.Null()
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
+                Ast.Condition(
+                    Ast.NotEqual(
+                        Ast.ReadProperty(
+                            Ast.Convert(rule.Parameters[0], typeof(Method)),
+                            typeof(Method).GetProperty("Self")
                         ),
-                        Ast.Action.Call(GetNotNullCallAction(action), typeof(object), notNullArgs),
-                        nullSelf
-                    )
+                        Ast.Null()
+                    ),
+                    Ast.Action.Call(GetNotNullCallAction(action), typeof(object), notNullArgs),
+                    nullSelf
                 )
             );
             return rule;
         }
 
         private static Expression[] GetNullInstanceArguments<T>(StandardRule<T> rule, CallAction action) {
-            Debug.Assert(rule.Parameters.Length > 1);
+            Debug.Assert(rule.Parameters.Count > 1);
 
-            Expression[] args = (Expression[])rule.Parameters.Clone();
+            Expression[] args = ArrayUtils.MakeArray(rule.Parameters);
             args[0] = Ast.ReadProperty(
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
                 typeof(Method).GetProperty("Function")

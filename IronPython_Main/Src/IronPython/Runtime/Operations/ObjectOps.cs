@@ -314,7 +314,7 @@ namespace IronPython.Runtime.Operations {
                     PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr), args);                    
                     
                     if (helper.TryMakeGetMemberRule(selfType, dts, GetTargetObject(helper.InternalRule, args))) {
-                        helper.InternalRule.SetTest(MakeTest(args, strAttr, helper.InternalRule));
+                        helper.InternalRule.Test = MakeTest(args, strAttr, helper.InternalRule);
                         return helper.InternalRule;
                     }
                 }
@@ -323,16 +323,14 @@ namespace IronPython.Runtime.Operations {
 
             private StandardRule<T> CreateCallRule<T>(CodeContext context, object[] args, string strAttr) {
                 StandardRule<T> res = new StandardRule<T>();
-                res.SetTest(MakeTest<T>(args, strAttr, res));
-                res.SetTarget(
-                    res.MakeReturn(
-                        context.LanguageContext.Binder,
-                        Ast.Call(
-                            typeof(ObjectOps).GetMethod("__getattribute__"),
-                            Ast.CodeContext(),
-                            Ast.ConvertHelper(GetTargetObject<T>(res, args), typeof(object)),
-                            Ast.Constant(strAttr, typeof(string))
-                        )
+                res.Test = MakeTest<T>(args, strAttr, res);
+                res.Target = res.MakeReturn(
+                    context.LanguageContext.Binder,
+                    Ast.Call(
+                        typeof(ObjectOps).GetMethod("__getattribute__"),
+                        Ast.CodeContext(),
+                        Ast.ConvertHelper(GetTargetObject<T>(res, args), typeof(object)),
+                        Ast.Constant(strAttr, typeof(string))
                     )
                 );
                 return res;

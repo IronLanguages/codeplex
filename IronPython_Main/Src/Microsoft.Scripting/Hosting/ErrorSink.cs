@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting.Generation;
+using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -73,6 +74,14 @@ namespace Microsoft.Scripting.Hosting {
             Add(exception.SourceUnit, exception.Message, exception.RawSpan, exception.ErrorCode, exception.Severity);
             return exception;
         }
+
+#if !SILVERLIGHT
+        // TODO: Figure out what is the right lifetime
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
+        public override object InitializeLifetimeService() {
+            return null;
+        }
+#endif
     }
 
 }

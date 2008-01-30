@@ -20,6 +20,7 @@ using Microsoft.Scripting.Ast;
 namespace Microsoft.Scripting.Generation {
     using Microsoft.Scripting.Utils;
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Collections.Generic;
 
     class ParamsArgBuilder : ArgBuilder {
         private int _start;
@@ -47,7 +48,7 @@ namespace Microsoft.Scripting.Generation {
             return paramsArray;
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             Expression[] elems = new Expression[_count];
             for (int i = 0; i < _count; i++) {
                 elems[i] = context.ConvertExpression(parameters[_start + i], _elementType);

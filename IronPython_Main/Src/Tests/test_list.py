@@ -347,4 +347,27 @@ def test_indexing():
     l[2.0] = 1
     AreEqual(l[2], 1)
 
+
+def test_getslice():
+    """overriding __len__ doesn't get called when doing __getslice__"""
+    class l(list):
+        def __len__(self):
+            raise Exception()            
+
+    x = l()
+    AreEqual(x.__getslice__(-1, -200), [])
+    
+    class mylist(list):
+        def __getslice__(self, i, j):
+            return i, j
+
+    class mylong(long): pass
+    class myint(int): pass
+    
+    # all indexes to __getslice__ should be ints
+    for listType in list, mylist:
+        for input in [0, 1, False, True, myint(0), myint(1), mylong(0), mylong(1), -1, myint(-1), mylong(-1)]:
+            for x in listType(range(5))[input:input]:
+                AreEqual(type(x), int)
+    
 run_test(__name__)

@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that indexes into an array
     /// </summary>
-    public class IndexSlot : Slot {
+    class IndexSlot : Slot {
         private Slot _instance;
         private int _index;
         private Type _type;

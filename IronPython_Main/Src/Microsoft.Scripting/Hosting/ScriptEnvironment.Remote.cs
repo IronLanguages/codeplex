@@ -83,6 +83,13 @@ namespace Microsoft.Scripting.Hosting {
                 environment = rd.Environment;
                 return rd.NewCreated;
             }
+
+#if !SILVERLIGHT
+            // TODO: Figure out what is the right lifetime
+            public override object InitializeLifetimeService() {
+                return null;
+            }
+#endif
         }
 
         #endregion

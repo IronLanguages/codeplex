@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Argument access
     /// </summary>
-    public class ArgSlot : Slot {
+    class ArgSlot : Slot {
         private Type _argType;
         private int _index;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix

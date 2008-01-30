@@ -103,6 +103,19 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
+        internal static bool CanAssign(Type to, Expression from) {
+            if (CanAssign(to, from.Type)) return true;
+
+            if (to.IsValueType && 
+                to.IsGenericType && 
+                to.GetGenericTypeDefinition() == typeof(Nullable<>) && 
+                ConstantCheck.IsConstant(from, null)) {
+                return true;
+            }
+
+            return false;
+        }
+
         internal static bool CanAssign(Type to, Type from) {
             if (to == from) {
                 return true;
@@ -118,7 +131,8 @@ namespace Microsoft.Scripting.Ast {
                     CanAssign(to.GetElementType(), from.GetElementType())) {
                     return true;
                 }
-            }
+            } 
+
             return false;
         }
 
@@ -186,6 +200,11 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
+            // Nullable<T> vs null
+            if (NullVsNullable(left, right) || NullVsNullable(right, left)) {
+                return true;
+            }
+
             if (left != right) {
                 return false;
             }
@@ -195,6 +214,10 @@ namespace Microsoft.Scripting.Ast {
             }
 
             return false;
+        }
+
+        private static bool NullVsNullable(Type left, Type right) {
+            return IsNullableType(left) && right == typeof(None);
         }
     }
 }

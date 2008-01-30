@@ -531,15 +531,13 @@ namespace IronPython.Runtime.Calls {
             string data = GetSignatureString();
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(PythonFunction));
-            rule.SetTarget(
-                rule.MakeReturn(
-                    context.LanguageContext.Binder,
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("GetFunctionSignature"),
-                        Ast.ConvertHelper(
-                            rule.Parameters[0],
-                            typeof(PythonFunction)
-                        )
+            rule.Target = rule.MakeReturn(
+                context.LanguageContext.Binder,
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("GetFunctionSignature"),
+                    Ast.ConvertHelper(
+                        rule.Parameters[0],
+                        typeof(PythonFunction)
                     )
                 )
             );
@@ -583,8 +581,8 @@ namespace IronPython.Runtime.Calls {
                     args = ArrayUtils.RemoveAt(args, instanceIndex);
                 }
 
-                _rule.SetTarget(MakeTarget(args));
-                _rule.SetTest(MakeTest());
+                _rule.Target = MakeTarget(args);
+                _rule.Test = MakeTest();
 
                 return _rule;
             }

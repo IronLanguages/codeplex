@@ -43,29 +43,26 @@ namespace ToyScript.Runtime {
                 StandardRule<T> rule = new StandardRule<T>();
 
                 // (arg0 is string && args1 is string)
-                rule.SetTest(
-                    Ast.AndAlso(
-                        Ast.TypeIs(
-                            rule.Parameters[0],
-                            typeof(string)
-                        ),
-                        Ast.TypeIs(
-                            rule.Parameters[1],
-                            typeof(string)
-                        )
+                rule.Test = Ast.AndAlso(
+                    Ast.TypeIs(
+                        rule.Parameters[0],
+                        typeof(string)
+                    ),
+                    Ast.TypeIs(
+                        rule.Parameters[1],
+                        typeof(string)
                     )
                 );
 
                 // string.Concat(string str0, string str1);
-                rule.SetTarget(
+                rule.Target =
                     rule.MakeReturn(this,
                         Ast.Call(
                             typeof(string).GetMethod("Concat", new Type[] { typeof(string), typeof(string) }),
                             Ast.Convert(rule.Parameters[0], typeof(string)),
                             Ast.Convert(rule.Parameters[1], typeof(string))
                         )
-                    )
-                );
+                    );
 
                 return rule;
             }

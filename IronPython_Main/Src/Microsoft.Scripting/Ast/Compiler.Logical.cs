@@ -18,7 +18,7 @@ using System.Reflection.Emit;
 
 namespace Microsoft.Scripting.Ast {
 
-    public partial class Compiler {
+    partial class Compiler {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         private void EmitBranchTrue(Expression node, Label label) {
@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        public void EmitBranchFalse(Expression node, Label label) {
+        internal void EmitBranchFalse(Expression node, Label label) {
             switch (node.NodeType) {
                 case AstNodeType.AndAlso:
                     EmitBranchFalseAndAlso((BinaryExpression)node, label);

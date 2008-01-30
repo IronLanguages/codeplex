@@ -32,8 +32,8 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Emits creation of the constant value into the Compiler object provided.
         /// </summary>
-        /// <param name="cg"></param>
-        public abstract void EmitCreation(Compiler cg);
+        /// <param name="il"></param>
+        public abstract void EmitCreation(ILGen il);
 
         /// <summary>
         /// Creates a new instance of the constant and returns it.

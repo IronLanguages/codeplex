@@ -39,7 +39,6 @@ namespace Microsoft.Scripting.Ast {
 
         private readonly VariableKind _kind;
         private readonly Type _type;
-        private readonly Expression _defaultValue;
 
         private int _parameter;                     // parameter index
         private bool _parameterArray;               // should be part of parameter array
@@ -49,11 +48,7 @@ namespace Microsoft.Scripting.Ast {
         private bool _unassigned;       // Variable ever referenced without being assigned
         private bool _uninitialized;    // Variable ever used either uninitialized or after deletion
         
-        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) 
-            : this ( name, kind, block, type, defaultValue, true) {
-        }
-
-        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue, bool parameterArray) {
+        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, bool parameterArray) {
             _name = name;
             _kind = kind;
             _block = block;
@@ -65,8 +60,6 @@ namespace Microsoft.Scripting.Ast {
             //
             // where Type is void.
             _type = (type != typeof(void)) ? type : typeof(object); 
-
-            _defaultValue = defaultValue;
             _parameterArray = parameterArray;
         }
 
@@ -84,10 +77,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Type Type {
             get { return _type; }
-        }
-
-        public Expression DefaultValue {
-            get { return _defaultValue; }
         }
 
         public bool IsTemporary {
@@ -144,11 +133,6 @@ namespace Microsoft.Scripting.Ast {
                     if (_block.IsGlobal) {
                         // Local on global level, simply allocate the storage
                         _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
-                        if (_defaultValue != null) {
-                            Slot slot = CreateSlotForVariable(cg);
-                            cg.EmitExpression(_defaultValue);
-                            slot.EmitSet(cg);
-                        } 
                     } else {
                         Slot slot;
                         // If lifting local into closure, allocate in the environment
@@ -162,15 +146,11 @@ namespace Microsoft.Scripting.Ast {
                             slot = _storage.CreateSlot(_storage.RequireAccessSlot ? cg.Allocator.GetScopeAccessSlot(_block) : null);
                             MarkLocal(slot);
                         }
-                        if (_uninitialized || _defaultValue != null) {
+                        // TODO: Remove!!!
+                        if (_uninitialized && _type == typeof(object)) {
                             // Emit initialization (environments will be initialized all at once)
-                            if (_defaultValue != null) {                                
-                                cg.EmitExpression(_defaultValue);
-                                slot.EmitSet(cg);
-                            } else if (_type == typeof(object)) {
-                                // Only set variables of type object to "Uninitialized"
-                                slot.EmitSetUninitialized(cg);
-                            }
+                            // Only set variables of type object to "Uninitialized"
+                            slot.EmitSetUninitialized(cg);
                         }
                     }
                     break;
@@ -301,29 +281,24 @@ namespace Microsoft.Scripting.Ast {
 
         // TODO: Make internal, currently used by Ruby.
         public static Variable Parameter(CodeBlock block, SymbolId name, Type type) {
-            return new Variable(name, VariableKind.Parameter, block, type, null);
+            return Parameter(block, name, type, true);
         }
 
         internal static Variable Parameter(CodeBlock block, SymbolId name, Type type, bool parameterArray) {
-            return new Variable(name, VariableKind.Parameter, block, type, null, parameterArray);
+            return new Variable(name, VariableKind.Parameter, block, type, parameterArray);
         }
 
         internal static Variable Local(SymbolId name, CodeBlock block, Type type) {
-            return new Variable(name,  VariableKind.Local, block, type, null);
+            return new Variable(name,  VariableKind.Local, block, type, false);
         }
 
         internal static Variable Temporary(SymbolId name, CodeBlock block, Type type) {
-            return new Variable(name, VariableKind.Temporary, block, type, null);
+            return new Variable(name, VariableKind.Temporary, block, type, false);
         }
 
         internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type) {
-            return Create(name, kind, block, type, null);
-        }
-
-        internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type, Expression defaultValue) {
-            Contract.Requires(defaultValue == null || TypeUtils.CanAssign(type, defaultValue.Type));
             Contract.Requires(kind != VariableKind.Parameter, "kind");
-            return new Variable(name, kind, block, type, defaultValue);
+            return new Variable(name, kind, block, type, false);
         }
 
         #endregion

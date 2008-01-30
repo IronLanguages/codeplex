@@ -19,85 +19,35 @@ using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// Ths ClosureBinder takes as an input a bound AST tree in which each Reference is initialized with respective Definition.
-    /// The ClosureBinder will then resolve Reference->Definition relationships which span multiple scopes and ensure that the
-    /// functions are properly marked with IsClosure and HasEnvironment flags.
+    /// The ClosureBinder resolves variable references across code blocks.
     /// </summary>
-    class ClosureBinder : Walker {
-        class Block {
-            private CodeBlock _block;
-            private readonly Dictionary<Variable, VariableReference> _references = new Dictionary<Variable,VariableReference>();
-
-            internal Block(CodeBlock block) {
-                _block = block;
-            }
-
-            internal CodeBlock CodeBlock {
-                get { return _block; }
-            }
-
-            internal void Reference(Variable variable) {
-                if (!_references.ContainsKey(variable)) {
-                    _references[variable] = new VariableReference(variable);
-                }
-            }
-
-            internal void PublishReferences() {
-                _block.References = _references;
-            }
-
-            internal void AddGeneratorTemps(int count) {
-                _block.AddGeneratorTemps(count);
-            }
-        }
+    class ClosureBinder : VariableBinder {
 
         /// <summary>
-        ///  The global codeblock
+        /// ClosureBinder entry point.
         /// </summary>
-        private readonly CodeBlock _global;
-
-        /// <summary>
-        /// List to store all context statements for further processing - storage allocation
-        /// </summary>
-        private readonly List<CodeBlock> _blocks = new List<CodeBlock>();
-        private readonly Stack<Block> _stack = new Stack<Block>();
-
-        public static void Bind(CodeBlock ast) {
-            ClosureBinder cb = new ClosureBinder(ast);
-            cb.Bind();
+        internal static void Bind(CodeBlock ast) {
+            ClosureBinder cb = new ClosureBinder();
+            // Collect the code blocks
+            cb.WalkNode(ast);
+            cb.BindTheScopes();
         }
 
-        private ClosureBinder(CodeBlock global) {
-            _global = global;
+        private ClosureBinder() {
         }
 
         #region AstWalker overrides
-
-        protected internal override bool Walk(BoundAssignment node) {
-            Reference(node.Variable);
-            return true;
-        }
-
-        protected internal override bool Walk(BoundExpression node) {
-            Reference(node.Variable);
-            return true;
-        }
-
-        protected internal override bool Walk(DeleteStatement node) {
-            Reference(node.Variable);
-            return true;
-        }
 
         // This may not belong here because it is checking for the
         // AST type consistency. However, since it is the only check
         // it seems unwarranted to make an extra walk of the AST just
         // to verify this condition.
         protected internal override bool Walk(ReturnStatement node) {
-            if (_stack.Count == 0) {
+            if (Stack.Count == 0) {
                 throw InvalidReturnStatement("Return outside of code block", node);
             }
 
-            Type returnType = _stack.Peek().CodeBlock.ReturnType;
+            Type returnType = Stack.Peek().CodeBlock.ReturnType;
 
             if (node.Expression != null) {
                 if (!returnType.IsAssignableFrom(node.Expression.Type)) {
@@ -122,140 +72,6 @@ namespace Microsoft.Scripting.Ast {
             );
         }
 
-        protected internal override bool Walk(CatchBlock node) {
-            // CatchBlock is not required to have target variable
-            if (node.Variable != null) {
-                Reference(node.Variable);
-            }
-            return true;            
-        }
-
-        protected internal override bool Walk(CodeBlock node) {
-            Push(node);
-            return true;
-        }
-        protected internal override void PostWalk(CodeBlock node) {
-            ProcessAndPop(node);
-        }
-
-        protected internal override bool Walk(GeneratorCodeBlock node) {
-            Push(node);
-            return true;
-        }
-
-        protected internal override void PostWalk(GeneratorCodeBlock node) {
-            int temps = node.BuildYieldTargets();
-            AddGeneratorTemps(temps);
-            ProcessAndPop(node);
-        }
-
-        private void Push(CodeBlock block) {
-            _stack.Push(new Block(block));
-        }
-
-        private void ProcessAndPop(CodeBlock block) {
-            _blocks.Add(block);
-            Block top = _stack.Pop();
-            Debug.Assert(top.CodeBlock == block);
-            top.PublishReferences();
-        }
-
-        private void AddGeneratorTemps(int count) {
-            Debug.Assert(_stack.Count > 0);
-            _stack.Peek().AddGeneratorTemps(count);
-        }
-
         #endregion
-
-        private void Bind() {
-            // Collect the context statements
-            WalkNode(_global);
-            BindTheScopes();
-        }
-
-        private void Reference(Variable variable) {
-            Debug.Assert(variable != null);
-            _stack.Peek().Reference(variable);
-        }
-
-        // TODO: Alternatively, this can be virtual method on ScopeStatement
-        // or also implemented directly in the walker (PostWalk)
-        private void BindTheScopes() {
-            for (int i = 0; i < _blocks.Count; i++) {
-                CodeBlock block = _blocks[i];
-                if (!block.IsGlobal) {
-                    BindCodeBlock((CodeBlock)block);
-                }
-            }
-        }
-
-        private void BindCodeBlock(CodeBlock block) {
-            // If the function is generator or needs custom frame,
-            // lift locals to closure
-            if (block is GeneratorCodeBlock || block.EmitLocalDictionary) {
-                LiftLocalsToClosure(block);
-            }
-            ResolveClosure(block);
-        }
-
-        private static void LiftLocalsToClosure(CodeBlock block) {
-            // Lift all parameters
-            foreach (Variable p in block.Parameters) {
-                p.LiftToClosure();
-            }
-            // Lift all locals
-            foreach (Variable d in block.Variables) {
-                if (d.Kind == Variable.VariableKind.Local) {
-                    d.LiftToClosure();
-                }
-            }
-            block.HasEnvironment = true;
-        }
-
-        private void ResolveClosure(CodeBlock block) {
-            foreach (VariableReference r in block.References.Values) {
-                Debug.Assert(r.Variable != null);
-
-                if (r.Variable.Block == block) {
-                    // local reference => no closure
-                    continue;
-                }
-
-                // Global variables as local
-                if (r.Variable.Kind == Variable.VariableKind.Global || 
-                    (r.Variable.Kind == Variable.VariableKind.Local && r.Variable.Block.IsGlobal)) {
-                    Debug.Assert(r.Variable.Block == _global);
-                    continue;
-                }
-
-                // Lift the variable into the closure
-                r.Variable.LiftToClosure();
-
-                // Mark all parent scopes between the use and the definition
-                // as closures/environment
-                CodeBlock current = block;
-                do {
-                    current.IsClosure = true;
-
-                    CodeBlock parent = current.Parent;
-                    if (parent == null) {
-                        throw new ArgumentException(
-                            String.Format(
-                                "Cannot resolve variable '{0}' " +
-                                "referenced from code block '{1}' " +
-                                "and defined in code block {2}).\n" +
-                                "Is CodeBlock.Parent set correctly?",
-                                SymbolTable.IdToString(r.Variable.Name),
-                                block.Name ?? "<unnamed>",
-                                r.Variable.Block != null ? (r.Variable.Block.Name ?? "<unnamed>") : "<unknown>"
-                            )
-                        );
-                    }
-
-                    parent.HasEnvironment = true;
-                    current = parent;
-                } while (current != r.Variable.Block);
-            }
-        }
     }
 }

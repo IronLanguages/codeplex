@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Calls {
                 Expression body;
                 if (TryMakePropertyGet(rep.ExtInfo.Getter, arg, out body)) {
                     AddToBody(AddClsCheck(parent, clsOnly, body));
-                    Rule.SetTarget(Body);
+                    Rule.Target = Body;
                     return true;
                 }
                 return false;
@@ -132,7 +132,7 @@ namespace IronPython.Runtime.Calls {
 
             MakeOperatorGetMemberBody(parent.UnderlyingSystemType, "GetBoundMember");
 
-            Rule.SetTarget(Body);
+            Rule.Target = Body;
             return true;
         }
 
@@ -175,7 +175,7 @@ namespace IronPython.Runtime.Calls {
 
         private StandardRule<T> MakePythonTypeRule(PythonTypeSlot slot, PythonType argType, bool clsOnly) {
             if (Arguments[0] is ICustomMembers) {
-                Rule.SetTarget(UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, PythonTypeOps.GetName(argType), Rule));
+                Rule.Target = UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, PythonTypeOps.GetName(argType), Rule);
                 PythonBinderHelper.MakeTest(Rule, argType);
                 return Rule;
             }

@@ -50,7 +50,7 @@ namespace Microsoft.Scripting.Actions {
                 MakeSetMemberRule(targetType);
             }
 
-            Rule.SetTarget(Body);
+            Rule.Target = Body;
 
             return Rule;
         }

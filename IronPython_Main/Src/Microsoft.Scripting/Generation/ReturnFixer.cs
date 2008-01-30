@@ -19,7 +19,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public sealed class ReturnFixer {
+    sealed class ReturnFixer {
         private readonly Slot _argSlot;
         private readonly Slot _refSlot;
 
@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
             this._argSlot = argSlot;
         }
 
-        public static ReturnFixer EmitArgument(Compiler cg, Slot argSlot) {
+        internal static ReturnFixer EmitArgument(Compiler cg, Slot argSlot) {
             argSlot.EmitGet(cg);
             if (argSlot.Type.IsByRef) {
                 Type elementType = argSlot.Type.GetElementType();
@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public void FixReturn(Compiler cg) {
+        internal void FixReturn(Compiler cg) {
             _argSlot.EmitGet(cg);
             _refSlot.EmitGet(cg);
             cg.EmitCall(typeof(BinderOps).GetMethod("GetBox").MakeGenericMethod(_argSlot.Type.GetElementType()));

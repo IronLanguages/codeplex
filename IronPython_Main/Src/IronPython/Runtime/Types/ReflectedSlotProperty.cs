@@ -16,14 +16,15 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Compiler = Microsoft.Scripting.Ast.Compiler;
-
+    
     /// <summary>
     /// Represents a member of a user-defined type which defines __slots__.  The names listed in
     /// __slots__ have storage allocated for them with the type and provide fast get/set access.
@@ -146,29 +147,31 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotGetValue, MethodInfo> CreateGetter() {
-            Compiler getter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+            DynamicILGen getter = CompilerHelpers.CreateDynamicMethod(
                 "get_" + _slotInfo.Index.ToString(),
                 typeof(object),
                 new Type[] { typeof(object) }
             );
 
-
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");
 
-            getter.EmitArgGet(0);
-            getter.EmitCast(typeof(object), _slotInfo.Type);
+            getter.EmitLoadArg(0);
+            getter.EmitExplicitCast(typeof(object), _slotInfo.Type);
             getter.EmitPropertyGet(slotTuple);
             foreach (PropertyInfo pi in Tuple.GetAccessPath(slotTuple.PropertyType, _slotInfo.Index)) {
                 getter.EmitPropertyGet(pi);
             }
-            getter.EmitReturn();
-            getter.Finish();
+            getter.Emit(OpCodes.Ret);
+            getter.CreateDelegate<SlotGetValue>();
 
-            return new KeyValuePair<SlotGetValue, MethodInfo>((SlotGetValue)getter.CreateDelegate(typeof(SlotGetValue)), getter.CreateDelegateMethodInfo());
+            MethodInfo mi;
+            SlotGetValue sgv = getter.CreateDelegate<SlotGetValue>(out mi);
+
+            return new KeyValuePair<SlotGetValue, MethodInfo>(sgv, mi);
         }
 
         private KeyValuePair<SlotSetValue, MethodInfo> CreateSetter() {
-            Compiler setter = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+            DynamicILGen setter = CompilerHelpers.CreateDynamicMethod(
                 "set_" + _slotInfo.Index.ToString(),
                 typeof(void),
                 new Type[] { typeof(object), typeof(object) }
@@ -176,8 +179,8 @@ namespace IronPython.Runtime.Types {
 
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");
 
-            setter.EmitArgGet(0);
-            setter.EmitCast(typeof(object), _slotInfo.Type);
+            setter.EmitLoadArg(0);
+            setter.EmitExplicitCast(typeof(object), _slotInfo.Type);
             setter.EmitPropertyGet(slotTuple);
 
             List<PropertyInfo> pis = new List<PropertyInfo>(1);
@@ -187,13 +190,15 @@ namespace IronPython.Runtime.Types {
             for (int i = 0; i < pis.Count - 1; i++) {
                 setter.EmitPropertyGet(pis[i]);
             }
-            setter.EmitArgGet(1);
+            setter.EmitLoadArg(1);
             setter.EmitPropertySet(pis[pis.Count - 1]);
 
-            setter.EmitReturn();
-            setter.Finish();
+            setter.Emit(OpCodes.Ret);
 
-            return new KeyValuePair<SlotSetValue, MethodInfo>((SlotSetValue)setter.CreateDelegate(typeof(SlotSetValue)), setter.CreateDelegateMethodInfo());
+            MethodInfo mi;
+            SlotSetValue ssv = setter.CreateDelegate<SlotSetValue>(out mi);
+
+            return new KeyValuePair<SlotSetValue, MethodInfo>(ssv, mi);
         }
 
         /// <summary>

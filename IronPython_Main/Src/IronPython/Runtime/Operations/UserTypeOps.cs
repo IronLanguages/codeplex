@@ -164,15 +164,13 @@ namespace IronPython.Runtime.Operations {
 
         private static StandardRule<T> MakeIterRule<T>(CodeContext context, Type t) {
             StandardRule<T> res = new StandardRule<T>();
-            res.SetTarget(
-                res.MakeReturn(
+            res.Target = res.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Call(
                         t.GetMethod("Create"),
                         res.Parameters[0]
                     )
-                )
-            );
+                );
             return res;
         }
 
@@ -184,18 +182,17 @@ namespace IronPython.Runtime.Operations {
                 StandardRule<T> rule = new StandardRule<T>();
                 Variable tmp = rule.GetTemporary(typeof(object), "func");
 
-                rule.SetTarget(
+                rule.Target =
                     Ast.Block(
                         Ast.If(
-                            MakeTryGetTypeMember<T>(rule, pts, tmp),
+                            PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
                                 PythonBinderHelper.GetConvertByLengthBody(tmp)
                             )
                         ),
                         PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule)
-                    )
-                );
+                    );
 
                 return rule;
             }
@@ -229,18 +226,17 @@ namespace IronPython.Runtime.Operations {
                     callExpr = AddExtensibleSelfCheck<T>(self, toType, rule, tmp, callExpr);
                 }
 
-                rule.SetTarget(
+                rule.Target = 
                     Ast.Block(
                         Ast.If(
-                            MakeTryGetTypeMember<T>(rule, pts, tmp),
+                            PythonBinderHelper.MakeTryGetTypeMember<T>(rule, pts, tmp),
                             rule.MakeReturn(
                                 context.LanguageContext.Binder,
                                 callExpr
                             )
                         ),
                         PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule)
-                    )
-                );
+                    );
 
                 return rule;
             }
@@ -306,7 +302,7 @@ namespace IronPython.Runtime.Operations {
 
             if (sdo.PythonType.TryResolveSlot(context, Symbols.Call, out callSlot)) {
                 Variable tmp = rule.GetTemporary(typeof(object), "callSlot");
-                Expression[] callArgs = (Expression[])rule.Parameters.Clone();
+                Expression[] callArgs = ArrayUtils.MakeArray(rule.Parameters);
                 callArgs[0] = Ast.Read(tmp);
 
                 body = Ast.Block(
@@ -337,7 +333,7 @@ namespace IronPython.Runtime.Operations {
                 );
             }
 
-            rule.SetTarget(body);
+            rule.Target = body;
             return rule;
         }
 
@@ -360,15 +356,14 @@ namespace IronPython.Runtime.Operations {
                 if (pi != null) {
                     MethodInfo getter = pi.GetGetMethod();
                     if (getter != null && getter.IsPublic) {
-                        rule.SetTarget(
+                        rule.Target =
                             rule.MakeReturn(
                                 context.LanguageContext.Binder, 
                                 Ast.Call(
                                     Ast.ConvertHelper(rule.Parameters[0], getter.DeclaringType),
                                     getter
                                 )
-                            )
-                        );
+                            );
                         return rule;
                     }
                 }
@@ -398,7 +393,7 @@ namespace IronPython.Runtime.Operations {
                 ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
                 if (rsp != null) {
                     // type has __slots__ defined for this member, call the getter directly
-                    rule.SetTarget(
+                    rule.Target =
                         rule.MakeReturn(
                             context.LanguageContext.Binder,
                             Ast.Comma(
@@ -417,8 +412,7 @@ namespace IronPython.Runtime.Operations {
                                 ),
                                 Ast.Read(tmp)
                             )
-                        )
-                    );
+                        );
                     return rule;      
                 }
 
@@ -457,14 +451,14 @@ namespace IronPython.Runtime.Operations {
                     body = MakeTypeError<T>(context, sdo.PythonType, action, rule, body);
                 }
 
-                rule.SetTarget(body);
+                rule.Target = body;
             } else {
                 // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
                 // we'll need to call the base GetRule instead and merge that with our normal lookup
                 // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
                 PythonBinderHelper.MakeTest(rule, sdo.PythonType);
 
-                rule.SetTarget(MakeCustomMembersGetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule));       
+                rule.Target = MakeCustomMembersGetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
             }
 
             return rule;
@@ -475,16 +469,14 @@ namespace IronPython.Runtime.Operations {
                 // share this rule amongst multiple types - this trades off a little
                 // perf for the __getattribute__ case while reducing the number of
                 // unique rules we generate).
-                rule.SetTest(
-                    Ast.AndAlso(
-                        Ast.TypeIs(rule.Parameters[0], typeof(IPythonObject)),
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("TypeHasGetAttribute"),
-                            Ast.ReadProperty(
-                                Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                                typeof(IPythonObject).GetProperty("PythonType")
-                            )                            
-                        )
+                rule.Test = Ast.AndAlso(
+                    Ast.TypeIs(rule.Parameters[0], typeof(IPythonObject)),
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("TypeHasGetAttribute"),
+                        Ast.ReadProperty(
+                            Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
+                            typeof(IPythonObject).GetProperty("PythonType")
+                        )                            
                     )
                 );
 
@@ -506,7 +498,7 @@ namespace IronPython.Runtime.Operations {
                             MakeGetAttrRule<T>(context, action, rule, Ast.Empty(), tmp, Ast.Read(slotTmp))
                         );
 
-                rule.SetTarget(body);
+                rule.Target = body;
         }
 
         internal static Expression MakeCustomMembersGetBody<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
@@ -721,7 +713,7 @@ namespace IronPython.Runtime.Operations {
                     Debug.Assert(setter != null);
                 }
 
-                Expression[] args = rule.Parameters;
+                IList<Expression> args = rule.Parameters;
                 if (setter.IsStatic && !(rp is ReflectedExtensionProperty)) {
                     args = new Expression[] { rule.Parameters[1] };
                 }
@@ -805,7 +797,7 @@ namespace IronPython.Runtime.Operations {
                     Debug.Assert(getter != null);
                 }
 
-                Expression[] args = rule.Parameters;
+                IList<Expression> args = rule.Parameters;
                 if (getter.IsStatic && !(rp is ReflectedExtensionProperty)) {
                     args = new Expression[0];
                 }
@@ -912,7 +904,7 @@ namespace IronPython.Runtime.Operations {
                     }
 
                     if (dts != null && dts.IsSetDescriptor(context, sdo.PythonType)) {
-                        rule.SetTarget(MakeSlotSet<T>(context, rule, dts, args[0].GetType()));
+                        rule.Target = MakeSlotSet<T>(context, rule, dts, args[0].GetType());
                         return rule;
                     }
 
@@ -931,7 +923,7 @@ namespace IronPython.Runtime.Operations {
                     }
 
                     // otherwise it's an error
-                    rule.SetTarget(MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule));
+                    rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
                     return rule;
                 } finally {
                     // make the test for the rule depending on if we support templating or not.
@@ -947,7 +939,7 @@ namespace IronPython.Runtime.Operations {
                 // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
                 PythonBinderHelper.MakeTest(rule, sdo.PythonType);
 
-                rule.SetTarget(MakeCustomMembersSetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule));
+                rule.Target = MakeCustomMembersSetBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
                 return rule;
             }
         }
@@ -959,14 +951,13 @@ namespace IronPython.Runtime.Operations {
 
             if (!(args[0] is ICustomMembers)) {
                 if (action.Name == Symbols.Class) {
-                    rule.SetTarget(
+                    rule.Target = 
                         rule.MakeError(
                             Ast.New(
                                 typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                                 Ast.Constant("can't delete __class__ attribute")
                             )
-                        )
-                    );
+                        );
                     return rule;
                 }
 
@@ -992,23 +983,23 @@ namespace IronPython.Runtime.Operations {
                         body = Ast.Block(MakeSlotDelete<T>(context, rule, dts), body);
                     }
 
-                    rule.SetTarget(body);
+                    rule.Target = body;
                     return rule;
                 }
 
                 if (dts != null) {
-                    rule.SetTarget(MakeSlotDelete<T>(context, rule, dts));
+                    rule.Target = MakeSlotDelete<T>(context, rule, dts);
                     return rule;
                 }
 
                 // otherwise it's an error
-                rule.SetTarget(MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule));
+                rule.Target = MakeThrowingAttributeError(context, action, sdo.PythonType.Name, rule);
                 return rule;
             } else {
                 // TODO: When ICustomMembers goes away, or as it slowly gets replaced w/ IDynamicObject,
                 // we'll need to call the base GetRule instead and merge that with our normal lookup
                 // rules somehow.  Today ICustomMembers always takes precedence, so it does here too.
-                rule.SetTarget(MakeCustomMembersDeleteBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule));
+                rule.Target = MakeCustomMembersDeleteBody(context, action, PythonTypeOps.GetName(sdo.PythonType), rule);
                 return rule;
             }
         }
@@ -1025,14 +1016,12 @@ namespace IronPython.Runtime.Operations {
             Variable tmp = rule.GetTemporary(typeof(object), "res");
 
             // type has __slots__ defined for this member, call the setter directly
-            rule.SetTarget(
-                rule.MakeReturn(
-                    context.LanguageContext.Binder,
-                    Ast.Assign(tmp,
-                        Ast.Convert(
-                            Ast.SimpleCallHelper(rsp.SetterMethod, rule.Parameters[0], value),
-                            tmp.Type
-                        )
+            rule.Target = rule.MakeReturn(
+                context.LanguageContext.Binder,
+                Ast.Assign(tmp,
+                    Ast.Convert(
+                        Ast.SimpleCallHelper(rsp.SetterMethod, rule.Parameters[0], value),
+                        tmp.Type
                     )
                 )
             );
@@ -1052,15 +1041,13 @@ namespace IronPython.Runtime.Operations {
 
         private static void MakeDictionarySetTarget<T>(CodeContext context, SetMemberAction action, StandardRule<T> rule) {
             // return UserTypeOps.SetDictionaryValue(rule.Parameters[0], name, value);
-            rule.SetTarget(
-                rule.MakeReturn(
-                    context.LanguageContext.Binder,
-                    Ast.Call(
-                        typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
-                        Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                        rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
-                        Ast.ConvertHelper(rule.Parameters[1], typeof(object))
-                    )
+            rule.Target = rule.MakeReturn(
+                context.LanguageContext.Binder,
+                Ast.Call(
+                    typeof(UserTypeOps).GetMethod("SetDictionaryValue"),
+                    Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
+                    rule.AddTemplatedConstant(typeof(SymbolId), action.Name),
+                    Ast.ConvertHelper(rule.Parameters[1], typeof(object))
                 )
             );
         }
@@ -1068,7 +1055,7 @@ namespace IronPython.Runtime.Operations {
         private static void MakeSetAttrTarget<T>(CodeContext context, SetMemberAction action, IPythonObject sdo, StandardRule<T> rule, PythonTypeSlot dts) {
             Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __setattr__
-            rule.SetTarget(
+            rule.Target = 
                 Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
@@ -1088,14 +1075,13 @@ namespace IronPython.Runtime.Operations {
                         )
                     ),
                     MakeThrowingAttributeError<T>(context, action, sdo.PythonType.Name, rule)
-                )
-            );
+                );
         }
 
         private static void MakeDeleteAttrTarget<T>(CodeContext context, DeleteMemberAction action, IPythonObject sdo, StandardRule<T> rule, PythonTypeSlot dts) {
             Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __delattr__
-            rule.SetTarget(
+            rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
                         typeof(PythonOps).GetMethod("SlotTryGetValue"),
@@ -1114,8 +1100,7 @@ namespace IronPython.Runtime.Operations {
                         )
                     ),
                     MakeThrowingAttributeError<T>(context, action, sdo.PythonType.Name, rule)
-                )
-            );
+                );
         }
 
         private static bool IsStandardObjectMethod(PythonTypeSlot dts) {
@@ -1128,19 +1113,17 @@ namespace IronPython.Runtime.Operations {
             bool altVersion = targetType.Version == PythonType.DynamicVersion;
             string vername = altVersion ? "GetAlternateTypeVersion" : "GetTypeVersion";
             int version = altVersion ? targetType.AlternateVersion : targetType.Version;
-            rule.SetTest(
-                Ast.AndAlso(
-                    StandardRule.MakeTypeTestExpression(targetType.UnderlyingSystemType, rule.Parameters[0]),
-                    Ast.Equal(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod(vername),
-                            Ast.ReadProperty(
-                                    Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
-                                    typeof(IPythonObject).GetProperty("PythonType")
-                            )
-                        ),
-                        rule.AddTemplatedConstant(typeof(int), version)
-                    )
+            rule.Test = Ast.AndAlso(
+                StandardRule.MakeTypeTestExpression(targetType.UnderlyingSystemType, rule.Parameters[0]),
+                Ast.Equal(
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod(vername),
+                        Ast.ReadProperty(
+                                Ast.Convert(rule.Parameters[0], typeof(IPythonObject)),
+                                typeof(IPythonObject).GetProperty("PythonType")
+                        )
+                    ),
+                    rule.AddTemplatedConstant(typeof(int), version)
                 )
             );
 
@@ -1179,122 +1162,22 @@ namespace IronPython.Runtime.Operations {
 
 
         private static StandardRule<T> MakeOperationRule<T>(CodeContext context, DoOperationAction action, object[] args) {
-            if (action.Operation == Operators.IsCallable) {
-                return PythonBinderHelper.MakeIsCallableRule<T>(context, args[0]);
+            switch (action.Operation) {
+                case Operators.GetItem:
+                case Operators.SetItem:
+                case Operators.DeleteItem:
+                case Operators.GetSlice:
+                case Operators.SetSlice:
+                case Operators.DeleteSlice:
+                    // ask the default python DoOperationBinderHelper to produce the rule for the purpose
+                    // of interop - it knows how to handle all things indexing.
+                    return new PythonDoOperationBinderHelper<T>(context, action).MakeRule(args);
+                case Operators.IsCallable:
+                    return PythonBinderHelper.MakeIsCallableRule<T>(context, args[0]);
             }
-            else if (action.Operation == Operators.GetItem || action.Operation == Operators.SetItem) {
-                IPythonObject sdo = args[0] as IPythonObject;
-                
-                if (sdo.PythonType.Version != PythonType.DynamicVersion &&
-                    !HasBadSlice(context, sdo.PythonType, action.Operation)) {
-                    StandardRule<T> rule = new StandardRule<T>();
-                    PythonTypeSlot dts;
-
-                    SymbolId item = action.Operation == Operators.GetItem ? Symbols.GetItem : Symbols.SetItem;
-
-                    PythonBinderHelper.MakeTest(rule, PythonTypeOps.ObjectTypes(args));
-
-                    if (sdo.PythonType.TryResolveSlot(context, item, out dts)) {
-
-                        BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
-                        if (bmd == null) {
-                            Variable tmp = rule.GetTemporary(typeof(object), "res");
-                            Expression[] exprargs = PythonBinderHelper.GetCollapsedIndexArguments<T>(action, args, rule);
-                            exprargs[0] = Ast.ReadDefined(tmp);
-                            rule.SetTarget(
-                                Ast.Block(
-                                    Ast.If(
-                                        MakeTryGetTypeMember<T>(rule, dts, tmp),
-                                        rule.MakeReturn(
-                                            context.LanguageContext.Binder,
-                                            Ast.Action.Call(
-                                                typeof(object),
-                                                exprargs
-                                            )
-                                        )
-                                    ),
-                                    rule.MakeError(MakeIndexerError<T>(rule, item))
-                                )
-                            );
-                        } else {
-                            // call to .NET function, don't collapse the arguments.
-                            MethodBinder mb = MethodBinder.MakeBinder(context.LanguageContext.Binder, SymbolTable.IdToString(item), bmd.Template.Targets);
-                            BindingTarget target = mb.MakeBindingTarget(CallType.ImplicitInstance, CompilerHelpers.GetTypes(args));
-                            if (target.Success) {
-                                Expression callExpr = target.MakeExpression(rule, rule.Parameters);
-
-                                rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, callExpr));
-                            } else {
-                                // go dynamic for error case
-                                return null;
-                            }
-                        }
-                    } else {
-                        rule.SetTarget(rule.MakeError(MakeIndexerError<T>(rule, item)));
-                    }
-
-                    return rule;
-                }
-            }
-
             return null;
         }
-
-        private static bool HasBadSlice(CodeContext context, PythonType type, Operators op) {
-            PythonTypeSlot dts;
-
-            if(!type.TryResolveSlot(context, op == Operators.GetItem ? Symbols.GetSlice : Symbols.SetSlice, out dts)){
-                return false;
-            }
-
-            BuiltinFunction bf = dts as BuiltinFunction;
-            if(bf == null) {
-                BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
-                if(bmd == null) {
-                    return true;
-                }
-                bf = bmd.Template;
-            }
-
-            return bf.DeclaringType != type.UnderlyingSystemType.BaseType;            
-        }
-
-        private static MethodCallExpression MakeIndexerError<T>(StandardRule<T> rule, SymbolId item) {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("AttributeErrorForMissingAttribute", new Type[] { typeof(object), typeof(SymbolId) }),
-                Ast.Convert(
-                    Ast.ReadProperty(
-                        Ast.Convert(
-                            rule.Parameters[0],
-                            typeof(IPythonObject)
-                        ),
-                        typeof(IPythonObject).GetProperty("PythonType")
-                    ),
-                    typeof(object)
-                ),
-                Ast.Constant(item)
-            );
-        }
-
-        private static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, Variable tmp) {
-            return Ast.Call(
-                typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
-                Ast.CodeContext(),
-                Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
-                Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                Ast.Convert(
-                    Ast.ReadProperty(
-                        Ast.Convert(
-                            rule.Parameters[0],
-                            typeof(IPythonObject)),
-                        typeof(IPythonObject).GetProperty("PythonType")
-                    ),
-                    typeof(PythonType)
-                ),
-                Ast.ReadDefined(tmp)
-            );
-        }
-
+        
         public static object SetDictionaryValue(IPythonObject self, SymbolId name, object value) {
             IAttributesCollection dict = GetDictionary(self);
 

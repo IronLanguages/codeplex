@@ -25,6 +25,12 @@ namespace IronPython.Runtime {
             _backing = backing;
         }
 
+        internal object Backing {
+            get {
+                return _backing;
+            }
+        }
+
         #region IAttributesCollection Members
 
         public void Add(SymbolId name, object value) {
@@ -110,7 +116,7 @@ namespace IronPython.Runtime {
         }
 
         public ICollection<object> Keys {
-            get { throw new Exception("The method or operation is not implemented."); }
+            get { return (ICollection<object>)Converter.Convert(PythonOps.Invoke(_backing, Symbols.Keys), typeof(ICollection<object>)); }
         }
 
         #endregion

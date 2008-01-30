@@ -137,7 +137,7 @@ namespace Microsoft.Scripting.Hosting {
         internal protected virtual IList<string/*!*/> SourceUnitResolutionPath {
             get {
 #if SILVERLIGHT
-                return new string[] { "." };
+                return new string[] { "" };
 #else
                 return (System.Environment.GetEnvironmentVariable(PathEnvironmentVariableName) ?? ".").Split(Path.PathSeparator);
 #endif

@@ -127,18 +127,14 @@ class Operator(Symbol):
         else:
             cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s([NotNull]OldInstance self, object other)" % self.title_name())
-        cw.writeline("object value;")
-        cw.writeline()
-        cw.enter_block("if (self.TryGetBoundCustomMember(DefaultContext.Default, Symbols.Operator%s, out value))" % self.title_name())
-        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if(res != PythonOps.NotImplemented) return res;")
-        cw.exit_block()	# end of TryGetBoundCustomMember
+        cw.writeline('object res = InvokeOne(self, other, Symbols.Operator%s);' % self.title_name())
+        cw.writeline('if (res != PythonOps.NotImplemented) return res;')
 
         cw.writeline()
         cw.writeline("OldInstance otherOc = other as OldInstance;")
-        cw.enter_block("if (otherOc != null && otherOc.TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorReverse%s, out value))" % self.title_name())
-        cw.writeline("return PythonOps.CallWithContext(DefaultContext.Default, value, self);")
-        cw.exit_block() # end of PythonOps.TryGetBoundCustomMember
+        cw.enter_block("if (otherOc != null)")
+        cw.writeline('return InvokeOne(other, self, Symbols.OperatorReverse%s);' % self.title_name())
+        cw.exit_block() # end of otherOc != null        
         
         cw.writeline("return PythonOps.NotImplemented;")
         cw.exit_block() # end method
@@ -150,26 +146,14 @@ class Operator(Symbol):
         else:
             cw.writeline('[SpecialName]')
             cw.enter_block("public static object %s(object other, [NotNull]OldInstance self)" % self.title_name())
-        cw.writeline("object value;")
-        cw.writeline()
-        cw.enter_block("if (self.TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorReverse%s, out value))" % self.title_name())
-        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if (res != PythonOps.NotImplemented) return res;")
-        cw.exit_block()	# end of TryGetBoundCustomMember
-        cw.writeline("return PythonOps.NotImplemented;")
+        cw.writeline("return InvokeOne(self, other, Symbols.OperatorReverse%s);" % self.title_name())
         cw.exit_block() # end method
         cw.writeline()
         
         cw.writeline('[return: MaybeNotImplemented]')
         cw.writeline('[SpecialName, PythonName("__i%s__")]' % self.name)
         cw.enter_block("public object InPlace%s(object other)" % self.title_name())
-        cw.writeline("object value;")
-        cw.writeline()
-        cw.enter_block("if (TryGetBoundCustomMember(DefaultContext.Default, Symbols.OperatorInPlace%s, out value))" % self.title_name())
-        cw.writeline("object res = PythonOps.CallWithContext(DefaultContext.Default, value, other);")
-        cw.writeline("if (res != PythonOps.NotImplemented) return res;")
-        cw.exit_block()	# end of TryGetBoundCustomMember
-        cw.writeline("return PythonOps.NotImplemented;")
+        cw.writeline("return InvokeOne(this, other, Symbols.OperatorInPlace%s);" % self.title_name())
         cw.exit_block() # end method
         cw.writeline()
 

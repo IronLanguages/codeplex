@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Gets the Compiler associated with the Type Initializer (cctor) creating it if necessary.
         /// </summary>
-        public Compiler TypeInitializer {
+        internal Compiler TypeInitializer {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
+        internal Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
             return CreateCodeGen(mi, ilg, paramTypes, null);
         }
 
@@ -110,21 +110,21 @@ namespace Microsoft.Scripting.Generation {
             _contextSlot = new StaticFieldSlot(contextField);
         }
 
-        public Slot AddField(Type fieldType, string name) {
+        internal Slot AddField(Type fieldType, string name) {
             FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public);
             return new FieldSlot(new ThisSlot(_myType), fb);
         }
-        public Slot AddStaticField(Type fieldType, string name) {
+        internal Slot AddStaticField(Type fieldType, string name) {
             FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public | FieldAttributes.Static);
             return new StaticFieldSlot(fb);
         }
 
-        public Slot AddStaticField(Type fieldType, FieldAttributes attributes, string name) {
+        internal Slot AddStaticField(Type fieldType, FieldAttributes attributes, string name) {
             FieldBuilder fb = _myType.DefineField(name, fieldType, attributes | FieldAttributes.Static);
             return new StaticFieldSlot(fb);
         }
 
-        public Compiler DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
+        internal Compiler DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
             Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
@@ -193,12 +193,12 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        public Compiler DefineConstructor(Type[] paramTypes) {
+        internal Compiler DefineConstructor(Type[] paramTypes) {
             ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
             return CreateCodeGen(cb, cb.GetILGenerator(), paramTypes);
         }
 
-        public Compiler DefineStaticConstructor() {
+        internal Compiler DefineStaticConstructor() {
             ConstructorBuilder cb = _myType.DefineTypeInitializer();
             return CreateCodeGen(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
         }
@@ -261,14 +261,14 @@ namespace Microsoft.Scripting.Generation {
             FieldBuilder fb = _myType.DefineField(name, value.Type, FieldAttributes.Static | FieldAttributes.InitOnly);
             ret = new StaticFieldSlot(fb);
 
-            value.EmitCreation(TypeInitializer);
+            value.EmitCreation(TypeInitializer.IL);
             _initGen.EmitFieldSet(fb);
 
             _constants[value] = ret;
             return ret;
         }
 
-        public void EmitIndirectedSymbol(Compiler cg, SymbolId id) {
+        internal void EmitIndirectedSymbol(Compiler cg, SymbolId id) {
             Slot value;
             if (!_indirectSymbolIds.TryGetValue(id, out value)) {
                 // create field, emit fix-up...

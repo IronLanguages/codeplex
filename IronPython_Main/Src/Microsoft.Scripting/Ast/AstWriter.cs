@@ -35,18 +35,18 @@ namespace Microsoft.Scripting.Ast {
         };
 
         private struct CodeBlockId {
-            CodeBlock _block;
-            int _id;
+            private readonly CodeBlock _block;
+            private readonly int _id;
 
-            public CodeBlockId(CodeBlock block, int id) {
+            internal CodeBlockId(CodeBlock block, int id) {
                 _block = block;
                 _id = id;
             }
 
-            public CodeBlock CodeBlock {
+            internal CodeBlock CodeBlock {
                 get { return _block; }
             }
-            public int Id {
+            internal int Id {
                 get { return _id; }
             }
         }
@@ -55,15 +55,15 @@ namespace Microsoft.Scripting.Ast {
             private readonly Expression _expression;
             private readonly int _depth;
 
-            public Alignment(Expression expression, int depth) {
+            internal Alignment(Expression expression, int depth) {
                 _expression = expression;
                 _depth = depth;
             }
 
-            public Expression Statement {
+            internal Expression Statement {
                 get { return _expression; }
             }
-            public int Depth {
+            internal int Depth {
                 get { return _depth; }
             }
         }
@@ -122,12 +122,8 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Write out the given AST (only if ShowASTs or DumpASTs is enabled)
         /// </summary>
-        public static void Dump(CodeBlock/*!*/ block, string descr) {
+        internal static void Dump(CodeBlock/*!*/ block) {
             Debug.Assert(block != null);
-
-            if (descr == null) {
-                descr = "unknown_ast";
-            }
 
             if (ScriptDomainManager.Options.ShowASTs) {
 #if !SILVERLIGHT
@@ -135,16 +131,16 @@ namespace Microsoft.Scripting.Ast {
                 try {
                     Console.ForegroundColor = GetAstColor();
 #endif
-                    Dump(block, descr, System.Console.Out);
+                    Dump(block, System.Console.Out);
 #if !SILVERLIGHT
                 } finally {
                     Console.ForegroundColor = color;
                 }
 #endif
             } else if (ScriptDomainManager.Options.DumpASTs) {
-                StreamWriter sw = new StreamWriter(GetFilePath(descr), true);
+                StreamWriter sw = new StreamWriter(GetFilePath(block.Name), true);
                 using (sw) {
-                    Dump(block, descr, sw);
+                    Dump(block, sw);
                 }
             }
         }
@@ -152,7 +148,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Write out the given rule's AST (only if ShowRules is enabled)
         /// </summary>
-        public static void Dump<T>(StandardRule<T> rule) {
+        internal static void Dump<T>(StandardRule<T> rule) {
             if (ScriptDomainManager.Options.ShowRules) {
 #if !SILVERLIGHT
                 ConsoleColor color = Console.ForegroundColor;
@@ -169,13 +165,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static void Dump(CodeBlock/*!*/ block, string/*!*/ descr, TextWriter/*!*/ writer) {
+        private static void Dump(CodeBlock/*!*/ block, TextWriter/*!*/ writer) {
             Debug.Assert(block != null);
-            Debug.Assert(descr != null);
             Debug.Assert(writer != null);
 
             AstWriter dv = new AstWriter(writer);
-            dv.DoDump(block, descr);
+            dv.DoDump(block);
         }
 
         /// <summary>
@@ -202,8 +197,8 @@ namespace Microsoft.Scripting.Ast {
             return path + ".ast";
         }
 
-        private void DoDump(CodeBlock node, string name) {
-            WritePrologue(name);
+        private void DoDump(CodeBlock node) {
+            WritePrologue(node.Name);
 
             WalkNode(node);
 
@@ -471,12 +466,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void WalkNode(CodeBlock node) {
+        private void WalkNode(CodeBlock node) {
             GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
             if (gcb != null) {
-                Dump(gcb);
+                DumpGeneratorCodeBlock(gcb);
             } else {
-                Dump(node);
+                DumpCodeBlock(node);
             }
         }
 
@@ -595,7 +590,6 @@ namespace Microsoft.Scripting.Ast {
             bool nl = false;
             if (node.ForceWrapperMethod) { nl = true; Out(Flow.NewLine, "ForceWrapper"); }
             if (node.IsStronglyTyped) { nl = true; Out(Flow.NewLine, "StronglyTyped"); }
-            if (node.IsDeclarative) { nl = true; Out(Flow.NewLine, "Declarative"); }
             Dedent();
             Out(nl ? Flow.NewLine : Flow.None, ")");
         }
@@ -945,10 +939,6 @@ namespace Microsoft.Scripting.Ast {
             }
             descr += ")";
             Out(descr);
-            if (v.DefaultValue != null) {
-                Out(" = ");
-                WalkNode(v.DefaultValue);
-            }
             NewLine();
         }
 
@@ -974,13 +964,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // CodeBlock
-        private void Dump(CodeBlock node) {
+        private void DumpCodeBlock(CodeBlock node) {
             Out(".codeblock", Flow.Space);
             DumpBlock(node);
         }
 
         // GeneratorCodeBlock
-        private void Dump(GeneratorCodeBlock node) {
+        private void DumpGeneratorCodeBlock(GeneratorCodeBlock node) {
             Out(".generator", Flow.Space);
             DumpBlock(node);
         }

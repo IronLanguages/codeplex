@@ -28,11 +28,11 @@ using IronPython.Runtime.Operations;
 //!!! for both md5 and sha.
 
 #if !SILVERLIGHT    // System.Cryptography.SHA1CryptoServiceProvider
-[assembly: PythonModule("sha", typeof(IronPython.Modules.PythonSha))]
+[assembly: PythonModule("_sha", typeof(IronPython.Modules.PythonSha))]
 namespace IronPython.Modules {
     [Documentation("SHA1 hash algorithm")]
     public static class PythonSha {
-        private static readonly SHA1CryptoServiceProvider hasher = new SHA1CryptoServiceProvider();
+        private static readonly SHA1CryptoServiceProvider hasher = new SHA1CryptoServiceProvider();        
         private static readonly int digestSize = hasher.HashSize / 8;
         private const int blockSize = 1;
 

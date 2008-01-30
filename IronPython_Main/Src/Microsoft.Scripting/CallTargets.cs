@@ -31,10 +31,11 @@ namespace Microsoft.Scripting {
 
         #endregion
 
-        public static Type GetTargetType(bool needsContext, int nargs, bool needsThis) {
+        // argumentCount doesn't include context or this parameter
+        public static Type GetTargetType(int argumentCount, bool needsContext, bool needsThis) {
             if (needsThis) {
                 if (needsContext) {
-                    switch (nargs) {
+                    switch (argumentCount) {
                         case 0: return typeof(CallTargetWithContextAndThis0);
                         case 1: return typeof(CallTargetWithContextAndThis1);
                         case 2: return typeof(CallTargetWithContextAndThis2);
@@ -43,7 +44,7 @@ namespace Microsoft.Scripting {
                         case 5: return typeof(CallTargetWithContextAndThis5);
                     }
                 } else {
-                    switch (nargs) {
+                    switch (argumentCount) {
                         case 0: return typeof(CallTargetWithThis0);
                         case 1: return typeof(CallTargetWithThis1);
                         case 2: return typeof(CallTargetWithThis2);
@@ -53,7 +54,7 @@ namespace Microsoft.Scripting {
                     }
                 }
             } else {
-                return GetTargetType(needsContext, nargs);
+                return GetTargetType(needsContext, argumentCount);
             }
             throw new NotImplementedException();
         }

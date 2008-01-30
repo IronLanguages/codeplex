@@ -83,7 +83,7 @@ namespace Microsoft.Scripting {
             if (_simpleTarget == null) {
                 lock (this) { // TODO: mutex object
                     if (_simpleTarget == null) {
-                        _simpleTarget = Compiler.CreateDelegate<CallTargetWithContext0>(_compilerContext, _code);
+                        _simpleTarget = Compiler.CompileTopLevelCodeBlock(SourceUnit, _code);
                     }
                 }
             }

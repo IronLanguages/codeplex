@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Operations {
                 return DynamicHelpers.GetPythonTypeFromType(self.NonGenericType);
             }
 
-            return GetItem(self, tuple.data);
+            return GetItem(self, tuple._data);
         }
 
         private static PythonType GetItemHelper(TypeGroup self, PythonType[] types) {

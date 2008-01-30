@@ -73,16 +73,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
-    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" $(SilverlightBuild) == 'true' ">
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="System, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" $(SilverlightBuild) == 'true' ">
+    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.XML" />
+    <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\Hosts\SilverLight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
@@ -226,8 +226,8 @@
     <Compile Include="Runtime\Calls\CompileFlags.cs" />
     <Compile Include="Runtime\Calls\DefaultContext.cs" />
     <Compile Include="Runtime\Calls\Descriptors.cs" />
-    <Compile Include="Runtime\Calls\DoOperationBinderHelper.cs" />
-    <Compile Include="Runtime\Calls\Function.cs" />
+    <Compile Include="Runtime\Calls\PythonDoOperationBinderHelper.cs" />
+    <Compile Include="Runtime\Calls\PythonFunction.cs" />
     <Compile Include="Runtime\Calls\FunctionAttributes.cs" />
     <Compile Include="Runtime\Calls\FunctionCode.cs" />
     <Compile Include="Runtime\Calls\PythonGetMemberBinderHelper.cs" />
@@ -282,6 +282,7 @@
     <Compile Include="Runtime\PythonContext.cs" />
     <Compile Include="Runtime\PythonFile.cs" />
     <Compile Include="Runtime\PythonModule.cs" />
+    <Compile Include="Runtime\PythonNarrowing.cs" />
     <Compile Include="Runtime\PythonTypeContext.cs" />
     <Compile Include="Runtime\ScopeDictionary.cs" />
     <Compile Include="Runtime\Set.cs" />

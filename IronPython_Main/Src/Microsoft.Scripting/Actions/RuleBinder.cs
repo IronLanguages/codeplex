@@ -21,36 +21,28 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    class RuleBinder : Walker {
-        private readonly Dictionary<Variable, VariableReference> _refs = new Dictionary<Variable,VariableReference>();
+    /// <summary>
+    /// Rule binder resolves variables in the rule and nested lambdas.
+    /// </summary>
+    class RuleBinder : VariableBinder {
+        private readonly Dictionary<Variable, VariableReference> _top = new Dictionary<Variable, VariableReference>();
         private readonly Type _result;
 
-        public static Dictionary<Variable, VariableReference> Bind(Expression test, Expression target, Type result) {
-            Assert.NotNull(test, target);
-
+        /// <summary>
+        /// RuleBinder entry point
+        /// </summary>
+        internal static Dictionary<Variable, VariableReference> Bind(Expression test, Expression target, Type result) {
             RuleBinder rb = new RuleBinder(result);
             rb.WalkNode(test);
             rb.WalkNode(target);
-            return rb._refs;
+
+            rb.BindTheScopes();
+
+            return rb._top;
         }
 
         private RuleBinder(Type result) {
             _result = result;
-        }
-
-        protected internal override bool Walk(BoundAssignment node) {
-            GetOrMakeRef(node.Variable);
-            return true;
-        }
-
-        protected internal override bool Walk(BoundExpression node) {
-            GetOrMakeRef(node.Variable);
-            return true;
-        }
-
-        protected internal override bool Walk(DeleteStatement node) {
-            GetOrMakeRef(node.Variable);
-            return true;
         }
 
         // This may not belong here because it is checking for the
@@ -69,17 +61,16 @@ namespace Microsoft.Scripting.Actions {
             return true;
         }
 
-        protected internal override bool Walk(CatchBlock node) {
-            if (node.Variable != null) {
-                GetOrMakeRef(node.Variable);
-            }
-            return true;
-        }
-
-        private void GetOrMakeRef(Variable variable) {
+        protected override void Reference(Variable variable) {
             Debug.Assert(variable != null);
-            if (!_refs.ContainsKey(variable)) {
-                _refs[variable] = new VariableReference(variable);
+            if (Stack == null || Stack.Count == 0) {
+                // Top level reference inside the rule.
+                if (!_top.ContainsKey(variable)) {
+                    _top[variable] = new VariableReference(variable);
+                }
+            } else {
+                // Call base class for reference within a code block.
+                base.Reference(variable);
             }
         }
     }

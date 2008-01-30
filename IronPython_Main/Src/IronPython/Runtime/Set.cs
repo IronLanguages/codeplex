@@ -530,7 +530,15 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         public IEnumerator GetEnumerator() {
-            return items.Keys.GetEnumerator();
+            int count = this.items.Count;
+
+            foreach (object o in items.Keys) {
+                if (count != this.items.Count) {
+                    throw PythonOps.RuntimeError("set changed during iteration");
+                }
+
+                yield return o;
+            }
         }
 
         #endregion
@@ -621,10 +629,18 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
-            return items.Keys.GetEnumerator();
+            int count = this.items.Count;
+
+            foreach (object o in items.Keys) {
+                if (count != this.items.Count) {
+                    throw PythonOps.RuntimeError("set changed during iteration");
+                }
+
+                yield return o;
+            }
         }
 
-        #endregion
+        #endregion        
 
         #region ICodeFormattable Members
 

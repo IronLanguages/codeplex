@@ -18,7 +18,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     // TODO: internal
-    public abstract class StorageAllocator {
+    abstract class StorageAllocator {
         public virtual void PrepareForEmit(Compiler cg) {
         }
 

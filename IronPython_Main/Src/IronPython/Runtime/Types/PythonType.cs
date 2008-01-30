@@ -565,14 +565,13 @@ namespace IronPython.Runtime.Types {
                         rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
                     } else {
                         rule = new StandardRule<T>();
-                        rule.SetTarget(
+                        rule.Target =
                            rule.MakeError(
                                Ast.New(
                                    typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                                    Ast.Constant("Cannot create instances of " + Name)
                                )
-                           )
-                       );
+                           );
                     }
                     rule.AddTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
                     return rule;
@@ -586,8 +585,8 @@ namespace IronPython.Runtime.Types {
                         ArrayUtils.Insert((Expression)Ast.CodeContext(), ArrayUtils.RemoveFirst(rule.Parameters))
                     );
 
-                    rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, call));
-                    rule.SetTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
+                    rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
+                    rule.Test = Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0]));
                     return rule;
                 }
             }

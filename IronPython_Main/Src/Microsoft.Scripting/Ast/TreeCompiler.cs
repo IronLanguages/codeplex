@@ -55,34 +55,13 @@ namespace Microsoft.Scripting.Ast {
 
         internal static bool DebugAssembly = true;
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "block")]
         public static T CompileBlock<T>(CodeBlock block) {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(block, "block");
 
-            LanguageContext.AnalyzeBlock(block);
-
-            List<Type> types;
-            List<SymbolId> names;
-            string name;
-
-            Compiler.ComputeSignature(block, false, false, out types, out names, out name);
-
-            AssemblyGen ag;
-            if (DebugAssembly) {
-                ag = ScriptDomainManager.CurrentManager.Snippets.DebugAssembly;
-            } else {
-                ag = ScriptDomainManager.CurrentManager.Snippets.Assembly;
-            }
-
-            Compiler cg = ag.DefineMethod(block.Name, block.ReturnType, types, null);
-            cg.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, cg);
-
-            Compiler.CreateSlots(cg, block);
-            Compiler.EmitBody(cg, block);
-
-            cg.Finish();
-
-            return (T)(object)cg.CreateDelegate(typeof(T));
+            // Call compiler to create the delegate.
+            return Compiler.CompileCodeBlock<T>(block);
         }
     }
 }

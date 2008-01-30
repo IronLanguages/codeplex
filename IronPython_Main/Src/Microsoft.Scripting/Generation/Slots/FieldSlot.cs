@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// FieldSlot is an access of an attribute of an object 
     /// </summary>
-    public class FieldSlot : Slot {
+    class FieldSlot : Slot {
         private readonly Slot _instance;
         private readonly FieldInfo _field;
 

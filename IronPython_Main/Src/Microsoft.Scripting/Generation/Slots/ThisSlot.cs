@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Accessing self
     /// </summary>
-    public class ThisSlot : Slot {
+    class ThisSlot : Slot {
         private readonly Type _type;
 
         public ThisSlot(Type type) {

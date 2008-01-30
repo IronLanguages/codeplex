@@ -770,5 +770,39 @@ def test_newstyle_raise():
         AssertUnreachable()
     except Exception, e:
         AreEqual(e, 42)
-        
+
+def test_enverror_init():
+    x = EnvironmentError()
+    AreEqual(x.message, '')
+    AreEqual(x.args, ())
+    
+    x.__init__('abc')
+    AreEqual(x.message, 'abc')
+    AreEqual(x.args, ('abc', ))
+    
+    x.__init__('123', '456')
+    AreEqual(x.message, 'abc')
+    AreEqual(x.errno, '123')
+    AreEqual(x.strerror, '456')    
+    AreEqual(x.args, ('123', '456'))
+    
+    x.__init__('def', 'qrt', 'foo')
+    AreEqual(x.message, 'abc')
+    AreEqual(x.errno, 'def')
+    AreEqual(x.strerror, 'qrt')
+    AreEqual(x.filename, 'foo')
+    AreEqual(x.args, ('def', 'qrt')) # filename not included in args
+    
+    x.__init__()
+    AreEqual(x.message, 'abc')
+    AreEqual(x.errno, 'def')
+    AreEqual(x.strerror, 'qrt')
+    AreEqual(x.filename, 'foo')
+    AreEqual(x.args, ())
+
+    AssertError(TypeError, x.__init__, '1', '2', '3', '4')
+
+    # OSError doesn't override __init__, message should be EnvError
+    AssertErrorWithPartialMessage(TypeError, "EnvironmentError", OSError, '1', '2', '3', '4')
+    
 run_test(__name__)

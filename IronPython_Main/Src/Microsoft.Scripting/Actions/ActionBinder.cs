@@ -406,6 +406,10 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
+        public ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression[]/*!*/ parameters) {
+            return MakeStaticPropertyInstanceAccessError(tracker, isAssignment, (IList<Expression>)parameters);
+        }
+
         /// <summary>
         /// Creates an ErrorInfo object when a static property is accessed from an instance member.  The default behavior is throw
         /// an exception indicating that static members properties be accessed via an instance.  Languages can override this to 
@@ -416,7 +420,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="parameters">The parameters being used to access the property.  This includes the instance as the first entry, any index parameters, and the
         /// value being assigned as the last entry if isAssignment is true.</param>
         /// <returns></returns>
-        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression[]/*!*/ parameters) {
+        public virtual ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression>/*!*/ parameters) {
             Contract.RequiresNotNull(tracker, "tracker");
             Contract.Requires(tracker.IsStatic, "expected only static property");
             Contract.RequiresNotNull(parameters, "parameters");
@@ -669,7 +673,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// If an incorrect number of parameters is provided MakeCallExpression returns null.
         /// </summary>
-        public Expression MakeCallExpression(MethodInfo method, params Expression[] parameters) {
+        public Expression MakeCallExpression(MethodInfo method, IList<Expression> parameters) {
             ParameterInfo[] infos = method.GetParameters();
             Expression callInst = null;
             int parameter = 0, startArg = 0;
@@ -685,7 +689,7 @@ namespace Microsoft.Scripting.Actions {
             }
 
             for (int arg = startArg; arg < infos.Length; arg++) {
-                if (parameter < parameters.Length) {
+                if (parameter < parameters.Count) {
                     callArgs[arg] = ConvertExpression(
                         parameters[parameter++],
                         infos[arg].ParameterType);
@@ -695,13 +699,17 @@ namespace Microsoft.Scripting.Actions {
             }
 
             // check that we used all parameters
-            if (parameter != parameters.Length) {
+            if (parameter != parameters.Count) {
                 return null;
             }
 
             return Ast.Ast.SimpleCallHelper(callInst, method, callArgs);
         }
 
+
+        public Expression MakeCallExpression(MethodInfo method, params Expression[] parameters) {
+            return MakeCallExpression(method, (IList<Expression>)parameters);
+        }
     }
 }
 

@@ -221,7 +221,7 @@ namespace Microsoft.Scripting.Ast {
 
         // CodeBlockExpression
         private void DefaultWalk(CodeBlockExpression node) {
-            if (node.IsDeclarative && Walk(node)) {
+            if (Walk(node)) {
                 WalkNode(node.Block);
             }
             PostWalk(node);

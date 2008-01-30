@@ -29,17 +29,17 @@ using IronPython.Runtime.Operations;
 
 #if !SILVERLIGHT // MD5
 
-[assembly: PythonModule("md5", typeof(IronPython.Modules.PythonMD5))]
+[assembly: PythonModule("_md5", typeof(IronPython.Modules.PythonMD5))]
 namespace IronPython.Modules {
     [Documentation("MD5 hash algorithm")]
     public static class PythonMD5 {
-        private static readonly MD5CryptoServiceProvider hasher = new MD5CryptoServiceProvider();
-        private static readonly int digestSize = hasher.HashSize / 8;
+        private static readonly MD5CryptoServiceProvider _hasher = new MD5CryptoServiceProvider();
+        private static readonly int _digestSize = _hasher.HashSize / 8;
 
         public static int DigestSize {
             [Documentation("Size of the resulting digest in bytes (constant)")]
             [PythonName("digest_size")]
-            get { return digestSize; }
+            get { return _digestSize; }
         }
 
         [Documentation("new([data]) -> object (new md5 object)")]
@@ -83,7 +83,7 @@ namespace IronPython.Modules {
                 Array.Copy(bytes, updatedBytes, bytes.Length);
                 Array.Copy(newBytes, 0, updatedBytes, bytes.Length, newBytes.Length);
                 bytes = updatedBytes;
-                hash = hasher.ComputeHash(bytes);
+                hash = _hasher.ComputeHash(bytes);
             }
 
             [Documentation("digest() -> int (current digest value)")]

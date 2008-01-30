@@ -52,7 +52,7 @@ namespace Microsoft.Scripting.Actions {
 
         public StandardRule<T> MakeNewRule() {
             Rule.MakeTest(StrongBoxType ?? CompilerHelpers.GetType(Target));
-            Rule.SetTarget(MakeGetMemberTarget());
+            Rule.Target = MakeGetMemberTarget();
 
             return Rule;
         }

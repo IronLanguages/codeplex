@@ -24,6 +24,8 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
+using IronPython.Runtime.Calls;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {
@@ -658,5 +660,85 @@ namespace IronPython.Modules {
             #endregion           
         }
 
+        [PythonType("defaultdict")] // necessary (plus the PythonName's below) because PythonDictionary is still a PythonType, not a PythonSystemType.
+        public class DefaultDict : PythonDictionary {
+            private object _factory;
+            private DynamicSite<object, object> _missingSite;
+
+            [PythonName("__init__")]
+            public void __init__(object default_factory) {
+                _factory = default_factory;
+            }
+
+            [PythonName("__init__")]
+            public void __init__(object default_factory, params object[] args) {
+                _factory = default_factory;
+                foreach (object o in args) {
+                    Update(o);
+                }
+            }
+
+            [PythonName("__init__")]
+            public void __init__(object default_factory, [ParamDictionary]IAttributesCollection dict, params object[] args) {
+                __init__(default_factory, args);
+
+                foreach (KeyValuePair<SymbolId, object> kvp in dict.SymbolAttributes) {
+                    this[SymbolTable.IdToString(kvp.Key)] = kvp.Value;
+                }
+            }
+
+            public object default_factory {
+                [PythonName("default_factory")] 
+                get {
+                    return _factory;
+                }
+                [PythonName("default_factory")]
+                set {
+                    _factory = value;
+                }
+            }
+
+            [SpecialName, PythonName("__missing__")]
+            public object GetMissingValue(CodeContext context, object key) {
+                object factory = _factory;
+
+                if (factory == null) throw PythonOps.KeyError(key);
+
+                if (_missingSite == null) {
+                    _missingSite = RuntimeHelpers.CreateSimpleCallSite<object, object>();
+                }
+
+                // get the default value, store it in the dictionary and return it
+                return this[key] = _missingSite.Invoke(context, factory);
+            }
+
+            public override string ToString() {
+                return "defaultdict(" + PythonOps.Repr(default_factory) + ", " + base.ToString() + ")";
+            }
+
+            [PythonName("__copy__")]
+            public object Copy() {
+                return Clone();
+            }
+
+            [PythonName("copy")]
+            public override object Clone() {
+                DefaultDict res = new DefaultDict();
+                res.default_factory = this.default_factory;
+                res.Update(this);
+                return res;
+            }
+
+            [PythonName("__reduce__")]
+            public PythonTuple __reduce__() {
+                return PythonTuple.MakeTuple(
+                    DynamicHelpers.GetPythonType(this),
+                    PythonTuple.MakeTuple(default_factory),
+                    null,
+                    null,
+                    IterItems()
+                );
+            }
+        }
     }
 }

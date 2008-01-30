@@ -21,28 +21,6 @@ from lib.cominterop_util import *
 from clr import StrongBox
 from System.Runtime.InteropServices import DispatchWrapper
 
-def CreateAgentServer():
-    if preferComDispatch:
-        from System import Type, Activator
-        agentServerType = Type.GetTypeFromProgID("Agent.Server")
-        return Activator.CreateInstance(agentServerType)
-    else:
-        if not file_exists(agentsvr_path):
-            from sys import exit
-            print "Cannot test AgentServerObjects.dll when it doesn't exist."
-            exit(0)
-        
-        if not file_exists_in_path("tlbimp.exe"):
-            from sys import exit
-            print "tlbimp.exe is not in the path!"
-            exit(1)
-        else:
-            import clr
-            run_tlbimp(agentsvr_path)
-            Assert(file_exists("AgentServerObjects.dll"))
-            clr.AddReference("AgentServerObjects.dll")
-            from AgentServerObjects import AgentServerClass
-            return AgentServerClass()
 
 #------------------------------------------------------------------------------
 #--GLOBALS

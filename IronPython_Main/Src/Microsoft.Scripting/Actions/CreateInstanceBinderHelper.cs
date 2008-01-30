@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions {
                     GetICallableParameters(Rule)
                 );
 
-                Rule.SetTarget(Rule.MakeReturn(Binder, call));
+                Rule.Target = Rule.MakeReturn(Binder, call);
                 Rule.MakeTest(t);
 
                 return Rule;
@@ -77,14 +77,13 @@ namespace Microsoft.Scripting.Actions {
             Type t = Arguments[0] as Type;
             if (t != null) name = t.Name;
 
-            Rule.SetTarget(
+            Rule.Target =
                 Rule.MakeError(
                     Ast.New(
                         typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                         Ast.Constant("Cannot create instances of " + name)
                     )
-                )
-            );
+                );
         }
     }
 }

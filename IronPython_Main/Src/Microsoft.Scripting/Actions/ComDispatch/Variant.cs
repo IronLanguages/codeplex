@@ -25,26 +25,37 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
     /// <summary>
     /// Variant is the basic COM type for late-binding. It can contain any other COM data type.
-    /// 
     /// This type definition precisely matches the unmanaged data layout so that the struct can be passed
-    /// to and from COM calls. Its size is the size of 4 pointers (16 bytes on a 32-bit processor, 
-    /// and 32 bytes on a 64-bit processor)
+    /// to and from COM calls.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
     public struct Variant {
 
 #if DEBUG
-        static Variant() { Debug.Assert(Marshal.SizeOf(typeof(Variant)) == (4 * Marshal.SizeOf(typeof(IntPtr)))); }
+        static Variant() {
+            // Variant size is the size of 4 pointers (16 bytes) on a 32-bit processor, 
+            // and 3 pointers (24 bytes) on a 64-bit processor.
+            int intPtrSize = Marshal.SizeOf(typeof(IntPtr));
+            int variantSize = Marshal.SizeOf(typeof(Variant));
+            if (intPtrSize == 4) {
+                Debug.Assert(variantSize == (4 * intPtrSize));
+            } else {
+                Debug.Assert(intPtrSize == 8);
+                Debug.Assert(variantSize == (3 * intPtrSize));
+            }
+        }
 #endif
 
-        [FieldOffset(0)]
-        private TypeUnion _typeUnion;
+        // Most of the data types in the Variant are carried in _typeUnion
+        [FieldOffset(0)] private TypeUnion _typeUnion;
 
-        [FieldOffset(0)]
-        private Decimal _decimal;
+        // Decimal is the largest data type and it needs to use the space that is normally unused in TypeUnion._wReserved1, etc.
+        // Hence, it is declared to completely overlap with TypeUnion. A Decimal does not use the first two bytes, and so
+        // TypeUnion._vt can still be used to encode the type.
+        [FieldOffset(0)] private Decimal _decimal;
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct TypeUnion {
+        private struct TypeUnion {
             internal ushort _vt;
             internal ushort _wReserved1;
             internal ushort _wReserved2;
@@ -54,14 +65,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct TwoIntPtrs {
-            internal IntPtr _intPtr1;
-            internal IntPtr _intPtr2;
+        private struct Record {
+            private IntPtr _record;
+            private IntPtr _recordInfo;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1049:TypesThatOwnNativeResourcesShouldBeDisposable")]
         [StructLayout(LayoutKind.Explicit)]
-        internal struct UnionTypes {
+        private struct UnionTypes {
             #region Generated Variant union types
 
             // *** BEGIN GENERATED CODE ***
@@ -95,7 +106,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             #endregion
 
             [FieldOffset(0)] internal IntPtr _byref;
-            [FieldOffset(0)] internal TwoIntPtrs _twoIntPtrs;
+            [FieldOffset(0)] internal Record _record;
         }
 
         public override string ToString() {
@@ -109,21 +120,22 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return false;
             }
 
-            Variant other = (Variant)obj;
-            return _typeUnion._vt == other._typeUnion._vt &&
-                _typeUnion._wReserved1 == other._typeUnion._wReserved1 &&
-                _typeUnion._wReserved2 == other._typeUnion._wReserved2 &&
-                _typeUnion._wReserved3 == other._typeUnion._wReserved3 &&
-                _typeUnion._unionTypes._twoIntPtrs._intPtr1 == other._typeUnion._unionTypes._twoIntPtrs._intPtr1 &&
-                _typeUnion._unionTypes._twoIntPtrs._intPtr2 == other._typeUnion._unionTypes._twoIntPtrs._intPtr2;
+            object toObject = ToObject();
+            object otherToObject = ((Variant)obj).ToObject();
+            if (toObject == null) {
+                return otherToObject == null;
+            } else {
+                return toObject.Equals(otherToObject);
+            }
         }
 
         public override int GetHashCode() {
-            return (int)(
-                (_typeUnion._vt | (_typeUnion._wReserved1 >> 16)) ^
-                (_typeUnion._wReserved2 ^ (_typeUnion._wReserved3 >> 16)) ^ 
-                _typeUnion._unionTypes._twoIntPtrs._intPtr1.ToInt32() ^
-                _typeUnion._unionTypes._twoIntPtrs._intPtr1.ToInt32());
+            object toObject = ToObject();
+            if (toObject == null) {
+                return 0;
+            } else {
+                return toObject.GetHashCode();
+            }
         }
 
         public static bool operator ==(Variant a, Variant b) {
@@ -131,6 +143,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
         public static bool operator !=(Variant a, Variant b) {
             return !a.Equals(b);
+        }
+
+        private int Dummy() {
+            int dummy = _typeUnion._unionTypes._byref.GetHashCode() ^ 
+                _typeUnion._unionTypes._bstr.GetHashCode() ^
+                _typeUnion._unionTypes._record.GetHashCode();
+            throw new InvalidOperationException("This method exists only to keep the compiler happy" + dummy);
         }
 
         #endregion

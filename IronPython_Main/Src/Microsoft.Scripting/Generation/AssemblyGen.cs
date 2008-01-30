@@ -213,6 +213,11 @@ namespace Microsoft.Scripting.Generation {
         public void Dump(string fileName) {
 #if !SILVERLIGHT // AssemblyBuilder.Save
             _myAssembly.Save(fileName ?? _outFileName, _peKind, _machine);
+#endif
+        }
+
+        public void Verify() {
+#if !SILVERLIGHT
             if (VerifyAssemblies) {
                 PeVerifyThis();
             }
@@ -363,21 +368,6 @@ namespace Microsoft.Scripting.Generation {
             return new TypeGen(this, tb);
         }
 
-        // TODO: Change to ILGen
-        public Compiler DefineMethod(string name, Type returnType, Type[] parameterTypes) {
-            Compiler cg;
-            if (GenerateStaticMethods) {
-                TypeGen tg = DefineHelperType();
-                cg = tg.DefineMethod("$" + name, returnType, parameterTypes, null, null);
-                cg.DynamicMethod = true;
-            } else {
-                //Type[] types = CompilerHelpers.MakeParamTypeArray(parameterTypes, constantPool);
-                DynamicMethod target = CreateDynamicMethod(returnType, parameterTypes, name);
-                cg = new Compiler(null, this, target, target.GetILGenerator(), parameterTypes, null);
-            }
-            return cg;
-        }
-
         internal Compiler DefineMethod(string methodName, Type returnType, IList<Type> paramTypes, ConstantPool constantPool) {
             Compiler cg;
             if (GenerateStaticMethods) {
@@ -392,30 +382,15 @@ namespace Microsoft.Scripting.Generation {
             return cg;
         }
 
-        private TypeGen DefineHelperType() {
+        internal TypeGen DefineHelperType() {
             int index = Interlocked.Increment(ref _index);
             return DefinePublicType("Type$" + index, typeof(object));
         }
 
-        // This overload is only available in CLR V2 SP1
-        private static readonly Type[] anonHostedDynamicMethodCtorSig = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
-        private static readonly ConstructorInfo anonHostedDynamicMethodCtor = typeof(DynamicMethod).GetConstructor(anonHostedDynamicMethodCtorSig);
-
         private DynamicMethod CreateDynamicMethod(Type returnType, Type[] parameterTypes, string name) {
             name = name + "##" + Interlocked.Increment(ref _index);
-
-#if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
-            return new DynamicMethod(name, returnType, parameterTypes);
-#else
-            if (anonHostedDynamicMethodCtor != null) {
-                object[] parameters = new object[] { name, returnType, parameterTypes };
-                return (DynamicMethod)anonHostedDynamicMethodCtor.Invoke(parameters);
-            } else {
-                return new DynamicMethod(name, returnType, parameterTypes, _myModule);
-            }
-#endif
+            return CompilerHelpers.ConstructNewDynamicMethod(name, returnType, parameterTypes, _myModule);
         }
-
 
 #if !SILVERLIGHT
         public void SetEntryPoint(MethodInfo mi, PEFileKinds kind) {

@@ -18,7 +18,7 @@ using System;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public class ModuleGlobalFactory : SlotFactory {
+    class ModuleGlobalFactory : SlotFactory {
         private SlotFactory _storage;
 
         public ModuleGlobalFactory(SlotFactory storage) {

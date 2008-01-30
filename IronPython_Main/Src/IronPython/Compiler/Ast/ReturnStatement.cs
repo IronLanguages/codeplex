@@ -13,11 +13,12 @@
  *
  * ***************************************************************************/
 
+using System;    
 using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;    
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     public class ReturnStatement : Statement {
         private readonly Expression _expression;
@@ -35,7 +36,18 @@ namespace IronPython.Compiler.Ast {
                 // Return statements in Generators can not have an expression.
                 // Generators only return values via the yield keyword.
                 ag.AddError("'return' with argument inside generator", this.Span);
-                return null;
+
+                // Statements can't return null, so return a rethrow. 
+                // Callers should detecet the ag.AddError and avoid trying to execute the tree, 
+                // but if they accidentally do, use Throw instead of empty so that
+                // we'll get an exception.
+                return Ast.Throw(
+                    Ast.New(
+                        typeof(InvalidOperationException).GetConstructor(Type.EmptyTypes)
+                    )
+                );
+
+
             }
             return Ast.Return(
                 Span,

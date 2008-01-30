@@ -75,8 +75,8 @@ namespace Microsoft.Scripting.Generation {
             return context.LanguageContext.Binder.Convert(args[_index], _parameterType);
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
-            Debug.Assert(_index < parameters.Length);
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
+            Debug.Assert(_index < parameters.Count);
             Debug.Assert(parameters[_index] != null);
             return context.ConvertExpression(parameters[_index], _parameterType);
         }

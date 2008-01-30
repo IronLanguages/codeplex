@@ -259,6 +259,14 @@ def test_subclassing():
     class D(C1): pass
     d = D()
     AreEqual([d.x, d.y], [100, 100])
+
+@disabled("bug 369042")
+def test_delete_getattribute():
+    class B(object): 
+        def __getattribute__(self, name): pass
+    class D(B): pass
     
-    
+    def f(): del D.__getattribute__
+    AssertError(AttributeError, f)
+
 run_test(__name__)

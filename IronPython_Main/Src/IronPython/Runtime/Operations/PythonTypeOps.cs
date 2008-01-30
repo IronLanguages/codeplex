@@ -184,15 +184,19 @@ namespace IronPython.Runtime.Operations {
             return self.UnderlyingSystemType.Namespace + " in " + self.UnderlyingSystemType.Assembly.FullName;
         }
 
-        public static PythonType __getitem__(PythonType self, params PythonType[] args) {
+        public static PythonType __getitem__(PythonType self, params Type[] args) {
             if (self.UnderlyingSystemType == typeof(Array)) {
                 if (args.Length == 1) {
-                    return DynamicHelpers.GetPythonTypeFromType(args[0].UnderlyingSystemType.MakeArrayType());
+                    return DynamicHelpers.GetPythonTypeFromType(args[0].MakeArrayType());
                 }
                 throw PythonOps.TypeError("expected one argument to make array type, got {0}", args.Length);
             }
 
-            return DynamicHelpers.GetPythonTypeFromType(self.MakeGenericType(args));
+            if (!self.UnderlyingSystemType.IsGenericTypeDefinition) {
+                throw new InvalidOperationException("MakeGenericType on non-generic type");
+            }
+
+            return DynamicHelpers.GetPythonTypeFromType(self.UnderlyingSystemType.MakeGenericType(args));
         }
 
         /// <summary>

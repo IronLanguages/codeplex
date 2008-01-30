@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Actions {
             
             // otherwise, make a generic rule with embedded dynamic sites
             StandardRule<T> rule = new StandardRule<T>();
-            rule.SetTest(Ast.True());
+            rule.Test = Ast.True();
             Expression getExpr = Ast.Action.GetMember(Action.Name, typeof(object), rule.Parameters[0]);
 
             Expression[] callArgs = new Expression[rule.ParameterCount];
@@ -57,9 +57,7 @@ namespace Microsoft.Scripting.Actions {
             //TODO support non-object return types
             Expression callExpr = Ast.Action.Call(callAction, typeof(object), callArgs);
 
-            rule.SetTarget(
-                rule.MakeReturn(Binder, callExpr)
-            );
+            rule.Target = rule.MakeReturn(Binder, callExpr);
 
             return rule;
         }

@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Slot that accesses a property off an object
     /// </summary>
-    public class PropertySlot : Slot {
+    class PropertySlot : Slot {
         private Slot _instance;
         private PropertyInfo _property;
 

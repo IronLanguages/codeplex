@@ -22,7 +22,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Creates slots that are backed by fields in a type.
     /// </summary>
-    public class FieldSlotFactory : SlotFactory {
+    class FieldSlotFactory : SlotFactory {
         private TypeGen _typeGen;
         private Slot _instance;
 

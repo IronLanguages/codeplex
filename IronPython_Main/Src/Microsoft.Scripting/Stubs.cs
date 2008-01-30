@@ -93,7 +93,7 @@ namespace System {
         White = 15,
     }
 
-    // BitArray, Queue<T>, Stack<T>, LinkedList<T> and LinkedListNode<T> were removed from CoreCLR
+    // BitArray, LinkedList<T> and LinkedListNode<T> were removed from CoreCLR
     // Recreating simple versions here.
 
     namespace Collections {
@@ -192,23 +192,8 @@ namespace System {
     }
 
     namespace Collections.Generic {
+        #region LinkedList<T>, LinkedListNode<T>
 
-#region Stack<T>
-
-        public class Stack<T> : ListStack<T> {
-            public Stack() : base() {
-            }
-
-            public Stack(int capacity) : base(capacity) {
-            }
-
-            public Stack(IEnumerable<T> collection) : base(collection) {
-            }
-        }
-
-#endregion
-
-#region LinkedList<T>, LinkedListNode<T>
         public class LinkedListNode<T> {
             internal LinkedList<T> _list;
             internal LinkedListNode<T> _previous, _next;
@@ -360,54 +345,7 @@ namespace System {
             }
         }
 
-#endregion
-
-#region Queue<T>
-
-        public class Queue<T> {
-            private readonly static T[] _EmptyArray = new T[0];
-            private T[] _array = _EmptyArray;
-            private int _head, _size;
-
-            public void Enqueue(T obj) {
-                // Expand the queue, if needed
-                if (_size == _array.Length) {
-                    int len = _array.Length * 2;
-                    if (len < 4) len = 4;
-                    T[] a = new T[len];
-
-                    for (int i = 0; i < _size; i++) {
-                        a[i] = _array[(_head + i) % _array.Length];
-                    }
-
-                    _array = a;
-                    _head = 0;
-                }
-
-                _array[(_head + _size) % _array.Length] = obj;
-                _size++;
-            }
-
-            public T Dequeue() {
-                if (_size == 0) {
-                    throw new InvalidOperationException("Queue is empty");
-                }
-
-                T obj = _array[_head];
-                _array[_head] = default(T); // release the reference to obj (T might be a class)
-                _size--;
-                _head = (_head + 1) % _array.Length;
-                return obj;
-            }
-
-            public int Count {
-                get {
-                    return _size;
-                }
-            }
-        }
-
-#endregion
+        #endregion
     }
 }
 

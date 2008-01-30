@@ -88,7 +88,7 @@ namespace Microsoft.Scripting.Ast {
         public static BoundAssignment Assign(Variable variable, Expression value) {
             Contract.RequiresNotNull(variable, "variable");
             Contract.RequiresNotNull(value, "value");
-            Contract.Requires(TypeUtils.CanAssign(variable.Type, value.Type));
+            Contract.Requires(TypeUtils.CanAssign(variable.Type, value));
             return new BoundAssignment(variable, value);
         }
     }

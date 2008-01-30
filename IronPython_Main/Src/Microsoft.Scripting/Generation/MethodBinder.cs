@@ -157,7 +157,7 @@ namespace Microsoft.Scripting.Generation {
             Contract.RequiresNotNullItems(types, "types");
 
             TargetSet ts = GetTargetSet(types.Length);
-            if (ts != null) {
+            if (ts != null && !ts.IsParamsDictionaryOnly()) {
                 return ts.MakeBindingTarget(callType, types, _kwArgs, _minLevel, _maxLevel);
             }
             
@@ -744,7 +744,16 @@ namespace Microsoft.Scripting.Generation {
                 _count = count;
                 _targets = new List<MethodCandidate>();
                 _binder = binder;
-            }            
+            }
+
+            public bool IsParamsDictionaryOnly() {
+                foreach (MethodCandidate target in _targets) {
+                    if (!target.HasParamsDictionary()) {
+                        return false;
+                    }
+                }
+                return true;
+            }
 
             public BindingTarget MakeBindingTarget(CallType callType, Type[] types, SymbolId[] names, NarrowingLevel minLevel, NarrowingLevel maxLevel) {
                 List<ConversionResult> lastFail = new List<ConversionResult>();
@@ -794,7 +803,7 @@ namespace Microsoft.Scripting.Generation {
                         return MakeAmbigiousBindingTarget(callType, types, result);
                     }                    
                 }
-
+                
                 Debug.Assert(failures != null);
                 return new BindingTarget(_binder.Name, callType == CallType.None ? types.Length : types.Length - 1, failures.ToArray());
             }            

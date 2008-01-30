@@ -112,6 +112,13 @@ namespace Microsoft.Scripting.Hosting {
                 return (T)remotable;
             }
         }
+
+#if !SILVERLIGHT
+        // TODO: Figure out what is the right lifetime
+        public override object InitializeLifetimeService() {
+            return null;
+        }
+#endif
     }
 #endif
 }
