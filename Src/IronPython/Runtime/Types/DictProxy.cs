@@ -150,7 +150,27 @@ namespace IronPython.Runtime.Types {
             }
 
             return res;
-        }        
+        }
+
+
+        [PythonName("items")]
+        public List GetItems(CodeContext context) {
+            List res = new List();
+            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
+                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
+
+                object val;
+                if (dts != null) {
+                    val = dts.Value;
+                } else {
+                    val = kvp.Value;
+                }
+
+                res.Add(PythonTuple.MakeTuple(kvp.Key, val));
+            }
+
+            return res;
+        }
 
         #region IEnumerable Members
 

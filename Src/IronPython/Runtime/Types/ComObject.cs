@@ -619,10 +619,10 @@ namespace IronPython.Runtime.Types {
     /// fails we will try to determine whether an event is requested. To do 
     /// so we will do the following set of steps:
     /// 1. Verify the COM object implements IConnectionPointContainer
-    /// 2. Attempt to find COM object?s coclass?s description
+    /// 2. Attempt to find COM object’s coclass’s description
     ///    a. Query the object for IProvideClassInfo interface. Go to 3, if found
-    ///    b. From object?s IDispatch retrieve primary interface description
-    ///    c. Scan coclasses declared in object?s type library.
+    ///    b. From object’s IDispatch retrieve primary interface description
+    ///    c. Scan coclasses declared in object’s type library.
     ///    d. Find coclass implementing this particular primary interface 
     /// 3. Scan coclass for all its source interfaces.
     /// 4. Check whether to any of the methods on the source interfaces matches 
@@ -647,7 +647,7 @@ namespace IronPython.Runtime.Types {
     /// multicast delegate that will be invoked when the event is raised.
     /// 4. ComEventSink implements IReflect interface which is exposed as
     /// custom IDispatch to COM consumers. This allows us to intercept calls
-    /// to IDispatch.Invoke and apply  custom logic ? in particular we will
+    /// to IDispatch.Invoke and apply  custom logic – in particular we will
     /// just find and invoke the multicast delegate corresponding to the invoked
     /// dispid.
     ///  </summary>

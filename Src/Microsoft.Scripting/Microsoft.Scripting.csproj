@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>9.0.21004</ProductVersion>
+    <ProductVersion>9.0.21022</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</ProjectGuid>
     <OutputType>Library</OutputType>
@@ -90,16 +90,16 @@
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.configuration" Condition=" $(SilverlightBuild) != 'true' " />
-    <Reference Include="mscorlib, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
+    <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="System, Version=1.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" Condition=" '$(SilverlightBuild)' == 'true' ">
+    <Reference Include="System, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
+    <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
@@ -185,6 +185,7 @@
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\CatchRecord.cs" />
+    <Compile Include="Ast\CodeBlockInfo.cs" />
     <Compile Include="Ast\CodeBlockInvoker.cs" />
     <Compile Include="Ast\CodeBlockWalker.cs" />
     <Compile Include="Ast\CommaAddress.cs" />
@@ -203,6 +204,7 @@
     <Compile Include="Ast\InterpreterData.cs" />
     <Compile Include="Ast\IntrinsicExpression.cs" />
     <Compile Include="Ast\ISpan.cs" />
+    <Compile Include="Ast\VariableBinder.cs" />
     <Compile Include="Ast\Walker.cs" />
     <Compile Include="Ast\AbstractValue.cs" />
     <Compile Include="Ast\AbstractContext.cs" />
@@ -226,6 +228,7 @@
     <Compile Include="Generation\CallFailure.cs" />
     <Compile Include="Generation\ConversionResult.cs" />
     <Compile Include="Generation\DebugILGen.cs" />
+    <Compile Include="Generation\DynamicILGen.cs" />
     <Compile Include="Generation\FrameStorageAllocator.cs" />
     <Compile Include="Generation\ILGen.cs" />
     <Compile Include="Generation\KeywordArgBuilder.cs" />
@@ -317,7 +320,6 @@
     <Compile Include="Generation\Slots\LocalNamedFrameSlot.cs" />
     <Compile Include="Generation\Slots\LocalSlot.cs" />
     <Compile Include="Generation\Slots\NamedFrameSlot.cs" />
-    <Compile Include="Generation\Slots\ParamArraySlot.cs" />
     <Compile Include="Generation\Slots\PropertySlot.cs" />
     <Compile Include="Generation\Slots\Slot.cs" />
     <Compile Include="Generation\Slots\StaticFieldSlot.cs" />

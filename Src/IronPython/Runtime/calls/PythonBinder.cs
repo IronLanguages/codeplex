@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
-                    return new DoOperationBinderHelper<T>(this, context, (DoOperationAction)action).MakeRule(args);
+                    return new PythonDoOperationBinderHelper<T>(context, (DoOperationAction)action).MakeRule(args);
                 case DynamicActionKind.GetMember:
                     return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
                 case DynamicActionKind.SetMember:
@@ -179,7 +179,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, Expression/*!*/[]/*!*/ parameters) {
+        public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression/*!*/>/*!*/ parameters) {
             Contract.RequiresNotNull(tracker, "tracker");
             Contract.RequiresNotNull(parameters, "parameters");
             Contract.RequiresNotNullItems(parameters, "parameters");

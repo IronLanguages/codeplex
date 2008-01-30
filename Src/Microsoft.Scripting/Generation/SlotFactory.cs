@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Generation {
     /// Base class for all other slot factories.  Supports creating either strongly typed
     /// slots or slots that are always of type object.
     /// </summary>
-    public abstract class SlotFactory {
+    abstract class SlotFactory {
         /// <summary>
         /// Overriden by the base type.  Creates a new slot of the given name and type.  Only called once for each name.
         /// </summary>

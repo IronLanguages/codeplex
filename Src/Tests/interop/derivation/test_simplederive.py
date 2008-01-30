@@ -35,7 +35,12 @@ def test_simply_derive():
     class C(AbstractNotEmptyClass): pass
     
     #class C(EmptyDelegate): pass
-    
+
+def test_multiple_typegroup():
+    class C(IInterfaceGroup1, IInterfaceGroup2): pass
+    class C(IInterfaceGroup1, IInterfaceGroup2, EmptyClass): pass
+    class C(EmptyTypeGroup2, IInterfaceGroup1, IInterfaceGroup2): pass    
+    class C(EmptyTypeGroup2, IInterfaceGroup1[int], IInterfaceGroup2): pass    
     
 def test_negative_simply_derive():
     # value type, sealed ref type
@@ -82,21 +87,42 @@ def test_negative_simply_derive():
     AssertErrorWithMessage(TypeError, 
         "C: can only extend one CLI or builtin type, not both Merlin.Testing.BaseClass.EmptyClass (for IronPython.Runtime.Types.PythonType) and Merlin.Testing.BaseClass.EmptyGenericClass`1[[System.Int32, mscorlib, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]] (for IronPython.Runtime.Types.PythonType)",
         f)
-
-
+    
+    class B:pass
+    b = B()
+    def f(): 
+        class C(object, b): pass
+    AssertErrorWithPartialMessage(TypeError, 
+        "C: unsupported base type for new-style class",
+        f)
+    
+    def f():
+        class C(EmptyGenericClass[()]): pass
+    AssertError(ValueError, f)
+    
 def test_system_type_cs0644():
     # http://msdn2.microsoft.com/en-us/library/hxds244y(VS.80).aspx
     # bug 363984
     #class C(System.Delegate): pass
     #class C(System.Array): pass
-    class C(System.ValueType): pass
+    #class C(System.ValueType): pass
     #class C(System.Enum): pass
+    pass
 
 
 def test_mbr():
     class C(System.MarshalByRefObject): pass
 
     #class C('abc'): pass
+
+
+# scenarios
+# C derive from interface I, D derive from C and I (again)
+
+# interface's base types: interfaces (implement them)
+# ctor: params/param_dict
+
+
 
 run_test(__name__)
 

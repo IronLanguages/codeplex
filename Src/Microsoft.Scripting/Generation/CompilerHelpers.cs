@@ -247,50 +247,6 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public static void EmitStackTraceTryBlockStart(Compiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
-
-            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
-                // push a try for traceback support
-                cg.PushTryBlock();
-                cg.BeginExceptionBlock();
-            }
-        }
-
-        public static void EmitStackTraceFaultBlock(Compiler cg, string name, string displayName) {
-            Contract.RequiresNotNull(cg, "cg");
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(displayName, "displayName");
-
-            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
-                // push a fault block (runs only if there's an exception, doesn't handle the exception)
-                cg.PopTargets();
-                if (cg.IsDynamicMethod) {
-                    cg.BeginCatchBlock(typeof(Exception));
-                } else {
-                    cg.BeginFaultBlock();
-                }
-
-                cg.EmitCodeContext();
-                if (cg.IsDynamicMethod) {
-                    cg.ConstantPool.AddData(cg.Method).EmitGet(cg);
-                } else {
-                    cg.Emit(OpCodes.Ldtoken, (MethodInfo)cg.Method);
-                    cg.EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
-                }
-                cg.EmitString(name);
-                cg.EmitString(displayName);
-                cg.EmitGetCurrentLine();
-                cg.EmitCall(typeof(ExceptionHelpers), "UpdateStackTrace");
-
-                // end the exception block
-                if (cg.IsDynamicMethod) {
-                    cg.Emit(OpCodes.Rethrow);
-                }
-                cg.EndExceptionBlock();
-            }
-        }
-
         #region Compiler Creation Support
 
         internal static Compiler CreateDebuggableDynamicCodeGenerator(SourceUnit sourceUnit, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
@@ -315,19 +271,19 @@ namespace Microsoft.Scripting.Generation {
         /// The CodeGenerator is usually tied to a dynamic method
         /// unless debugging has been enabled.
         /// </summary>
-        public static Compiler CreateDynamicCodeGenerator(CompilerContext context) {
+        internal static Compiler CreateDynamicCodeGenerator(SourceUnit source) {
             Compiler cg;
 
             string typeName = "";
 #if DEBUG
-            if (context.SourceUnit.HasPath) {
-                typeName = ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(context.SourceUnit.Id)));
+            if (source.HasPath) {
+                typeName = ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(source.Id)));
             }
 #endif
 
-            if (NeedDebuggableDynamicCodeGenerator(context.SourceUnit)) {
+            if (NeedDebuggableDynamicCodeGenerator(source)) {
                 cg = CreateDebuggableDynamicCodeGenerator(
-                    context.SourceUnit,
+                    source,
                     typeName,
                     typeof(object),
                     new Type[] { typeof(CodeContext) },
@@ -345,7 +301,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             cg.ContextSlot = cg.GetArgumentSlot(0);
-            cg.Context = context;
+            cg.SetSource(source);
 
             // Caller wanted dynamic method, we should produce it.
             Debug.Assert(cg.DynamicMethod);
@@ -673,6 +629,64 @@ namespace Microsoft.Scripting.Generation {
             ret[node.Arguments.Count] = node.Type;
             NonNullType.AssertInitialized(ret);
             return ret;
+        }
+
+
+        #region Creating ILGen for dynamic method
+
+        public static DynamicILGen CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
+            AssemblyGen asm = ScriptDomainManager.CurrentManager.Snippets.Assembly;
+
+            if (asm.GenerateStaticMethods) {
+                TypeGen tg = asm.DefineHelperType();
+                TypeBuilder tb = tg.TypeBuilder;
+                MethodBuilder mb = tb.DefineMethod(name, CompilerHelpers.PublicStatic, returnType, parameterTypes);
+                return new DynamicILGenType(tb, mb, mb.GetILGenerator());
+            } else {
+                DynamicMethod dm = ConstructNewDynamicMethod(name, returnType, parameterTypes, asm.ModuleBuilder);
+                return new DynamicILGenMethod(dm, dm.GetILGenerator());
+            }
+        }
+
+#if !SILVERLIGHT
+        // This overload is only available in CLR V2 SP1
+        private static readonly Type[] _DynamicMethodConstructorSignature = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
+        private static readonly ConstructorInfo _DynamicMethodConstructor = typeof(DynamicMethod).GetConstructor(_DynamicMethodConstructorSignature);
+#endif
+        // Module is used only for CLR before V2 SP1
+        internal static DynamicMethod ConstructNewDynamicMethod(string name, Type returnType, Type[] parameterTypes, Module m) {
+#if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
+            return new DynamicMethod(name, returnType, parameterTypes);
+#else
+            if (_DynamicMethodConstructor != null) {
+                object[] parameters = new object[] { name, returnType, parameterTypes };
+                return (DynamicMethod)_DynamicMethodConstructor.Invoke(parameters);
+            } else {
+                // Don't have the new constructor,
+                // let's put the dynamic method on the snippet module.
+                return new DynamicMethod(
+                    name,
+                    returnType,
+                    parameterTypes,
+                    m
+                );
+            }
+#endif
+        }
+
+        #endregion
+
+        public static Type/*!*/[]/*!*/ GetExpressionTypes(Expression/*!*/[]/*!*/ expressions) {
+            Contract.RequiresNotNull(expressions, "expressions");
+
+            Type[] res = new Type[expressions.Length];
+            for (int i = 0; i < res.Length; i++) {
+                Contract.RequiresNotNull(expressions[i], "expressions[i]");
+
+                res[i] = expressions[i].Type;
+            }
+
+            return res;
         }
     }
 }

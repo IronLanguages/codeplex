@@ -53,16 +53,20 @@ namespace IronPython.Runtime {
         #endregion
 
         [PythonName("indices")]
-        public PythonTuple Indicies(int len) {
-            int istart, istop, istep;
-            Indices(len, out istart, out istop, out istep);
-            return PythonTuple.MakeTuple(istart, istop, istep);
-        }
-
-        [PythonName("indices")]
         public void Indices(int len, out int ostart, out int ostop, out int ostep) {
             int count;
             PythonOps.FixSlice(len, start, stop, step, out ostart, out ostop, out ostep, out count);
+        }
+
+        [PythonName("indices")]
+        public void Indices(object len, out int ostart, out int ostop, out int ostep) {
+            int count;
+            PythonOps.FixSlice(Converter.ConvertToIndex(len), start, stop, step, out ostart, out ostop, out ostep, out count);
+        }
+
+        internal static void FixSliceArguments(int size, ref int start, ref int stop) {
+            start = start < 0 ? 0 : start > size ? size : start;
+            stop  = stop  < 0 ? 0 : stop  > size ? size : stop;
         }
 
         /// <summary>
@@ -79,7 +83,7 @@ namespace IronPython.Runtime {
             int length = 0;
 
             if (start != null) {
-                newStart = Converter.ConvertToSliceIndex(start);
+                newStart = Converter.ConvertToIndex(start);
                 if (newStart < 0) {
                     calcedLength = true;
                     length = PythonOps.Length(self);
@@ -91,7 +95,7 @@ namespace IronPython.Runtime {
             }
 
             if (stop != null) {
-                newStop = Converter.ConvertToSliceIndex(stop);
+                newStop = Converter.ConvertToIndex(stop);
                 if (newStop < 0) {
                     if (!calcedLength) length = PythonOps.Length(self);
 

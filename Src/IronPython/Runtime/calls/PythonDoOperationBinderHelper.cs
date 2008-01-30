@@ -23,18 +23,19 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    using Microsoft.Scripting.Utils;
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
+    public class PythonDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;
-        public DoOperationBinderHelper(ActionBinder binder, CodeContext context, DoOperationAction action)
+        public PythonDoOperationBinderHelper(CodeContext context, DoOperationAction action)
             : base(context, action) {
         }
 
@@ -83,8 +84,6 @@ namespace IronPython.Runtime.Calls {
                 } else {
                     MakeDynamicTarget(DynamicInvokeCompareOperation, ret);
                 }
-            } else if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem || Action.Operation == Operators.DeleteItem) {
-                return MakeDynamicIndexRule(Action, Context, types);
             } else {
                 MakeDynamicTarget(DynamicInvokeBinaryOperation, ret);
             }
@@ -104,7 +103,7 @@ namespace IronPython.Runtime.Calls {
                     rule.Parameters[0],
                     rule.Parameters[1]
                 );
-            rule.SetTarget(rule.MakeReturn(Binder, expr));
+            rule.Target = rule.MakeReturn(Binder, expr);
         }
 
         private void MakeDynamicTarget(DynamicUnaryOperationMethod action, StandardRule<T> rule) {
@@ -116,7 +115,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.Constant(Action.Operation),
                     rule.Parameters[0]
                 );
-            rule.SetTarget(rule.MakeReturn(Binder, expr));
+            rule.Target = rule.MakeReturn(Binder, expr);
         }
 
 
@@ -139,6 +138,15 @@ namespace IronPython.Runtime.Calls {
                 // may get a different result than python.
                 return PythonBinderHelper.MakeIsCallableRule<T>(this.Context, _args[0]);
             }
+
+            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem ||
+                Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice ||
+                Action.Operation == Operators.DeleteItem || Action.Operation == Operators.DeleteSlice) {
+                // Indexers need to see if the index argument is an expandable tuple.  This will
+                // be captured in the AbstractValue in the future but today is captured in the
+                // real value.
+                return MakeIndexerRule(types);
+            } 
 
             for (int i = 0; i < types.Length; i++) {
                 if (types[i].Version == PythonType.DynamicVersion) {
@@ -176,15 +184,7 @@ namespace IronPython.Runtime.Calls {
                 return MakeComparisonRule(types, op);
             }
 
-            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem ||
-                Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice) {
-                // Indexers need to see if the index argument is an expandable tuple.  This will
-                // be captured in the AbstractValue in the future but today is captured in the
-                // real value.
-                return MakeIndexerRule(types);
-            } else if (Action.Operation == Operators.DeleteItem || Action.Operation == Operators.DeleteSlice) {
-                return MakeDynamicIndexRule(Action, Context, types);
-            }
+            
 
             return MakeSimpleRule(types, op);
         }
@@ -228,7 +228,7 @@ namespace IronPython.Runtime.Calls {
             }
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
-            rule.SetTarget(rule.MakeReturn(binder, Ast.RuntimeConstant(arrres.ToArray())));
+            rule.Target = rule.MakeReturn(binder, Ast.RuntimeConstant(arrres.ToArray()));
             return rule;
         }
 
@@ -241,11 +241,9 @@ namespace IronPython.Runtime.Calls {
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.RuntimeConstant(SymbolTable.IdsToStrings(names))
-                )
+            rule.Target = rule.MakeReturn(
+                Binder,
+                Ast.RuntimeConstant(SymbolTable.IdsToStrings(names))
             );
             return rule;
         }
@@ -331,7 +329,7 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            rule.SetTarget(Ast.Block(stmts));
+            rule.Target = Ast.Block(stmts);
             return rule;
         }
 
@@ -390,10 +388,10 @@ namespace IronPython.Runtime.Calls {
             // bail if we're comparing to null and the rhs can't do anything special...
             if (xType.IsNull) {
                 if (yType.IsNull) {
-                    rule.SetTarget(rule.MakeReturn(Binder, Ast.Zero()));
+                    rule.Target = rule.MakeReturn(Binder, Ast.Zero());
                     return rule;
                 } else if (yType.UnderlyingSystemType.IsPrimitive || yType.UnderlyingSystemType == typeof(Microsoft.Scripting.Math.BigInteger)) {
-                    rule.SetTarget(rule.MakeReturn(Binder, Ast.Constant(-1)));
+                    rule.Target = rule.MakeReturn(Binder, Ast.Constant(-1));
                     return rule;
                 }
             }
@@ -442,7 +440,7 @@ namespace IronPython.Runtime.Calls {
                 stmts.Add(MakeFallbackCompare(rule));
             }
 
-            rule.SetTarget(Ast.Block(stmts));
+            rule.Target = Ast.Block(stmts);
             return rule;
         }
 
@@ -467,101 +465,586 @@ namespace IronPython.Runtime.Calls {
                     stmts.Add(MakeBinaryThrow(rule));
                 }
             }
-            rule.SetTarget(Ast.Block(stmts));
+            rule.Target = Ast.Block(stmts);
             return rule;
         }
 
+        #region Indexer rule support
+
+        /// <summary>
+        /// Python has three protocols for slicing:
+        ///    Simple Slicing x[i:j]
+        ///    Extended slicing x[i,j,k,...]
+        ///    Long Slice x[start:stop:step]
+        /// 
+        /// The first maps to __*slice__ (get, set, and del).  
+        ///    This takes indexes - i, j - which specify the range of elements to be
+        ///    returned.  In the slice variants both i, j must be numeric data types.  
+        /// The 2nd and 3rd are both __*item__.  
+        ///    This receives a single index which is either a Tuple or a Slice object (which 
+        ///    encapsulates the start, stop, and step values) 
+        /// 
+        /// This is in addition to a simple indexing x[y].
+        /// 
+        /// For simple slicing and long slicing Python generates Operators.*Slice.  For
+        /// the extended slicing and simple indexing Python generates a Operators.*Item
+        /// action.
+        /// 
+        /// Extended slicing maps to the normal .NET multi-parameter input.  
+        /// 
+        /// So our job here is to first determine if we're to call a __*slice__ method or
+        /// a __*item__ method.  
         private StandardRule<T> MakeIndexerRule(PythonType[] types) {
-            Debug.Assert(types.Length >= 1);
-
+            SymbolId item, slice;
             PythonType indexedType = types[0];
-            SymbolId getOrSet = (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) ? Symbols.GetItem : Symbols.SetItem;
-            SymbolId altAction = (Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice) ? Symbols.GetSlice : Symbols.SetSlice;
-            BuiltinFunction bf;
-            for (int i = 0; i < types.Length; i++) {
-                if (!types[i].UnderlyingSystemType.IsPublic && !types[i].UnderlyingSystemType.IsNestedPublic) {
-                    return MakeDynamicIndexRule(Action, Context, types);
+            BuiltinFunction itemFunc = null;
+            PythonTypeSlot itemSlot = null;
+            bool callSlice = false;
+            int mandatoryArgs;
+
+            GetIndexOperators(out item, out slice, out mandatoryArgs);
+
+            if (types.Length == mandatoryArgs + 1 && IsSlice && HasOnlyNumericTypes(types, Action.Operation == Operators.SetSlice)) {
+                // two slice indexes, all int arguments, need to call __*slice__ if it exists
+                callSlice = TryGetStaticFunction(slice, indexedType, out itemFunc);
+                if(itemFunc == null || !callSlice) {
+                    callSlice = indexedType.TryResolveSlot(Context, slice, out itemSlot);
                 }
             }
 
-            if (!HasBadSlice(indexedType, altAction) &&
-                TryGetStaticFunction(getOrSet, indexedType, out bf) &&
-                bf != null) {
-
-                MethodBinder binder = MethodBinder.MakeBinder(Binder,
-                    IsIndexGet ? "__getitem__" : "__setitem__",
-                    bf.Targets);
-
-                StandardRule<T> ret = new StandardRule<T>();
-                PythonBinderHelper.MakeTest(ret, types);
-
-                Type[] callTypes = GetIndexerCallTypes(types);
-                BindingTarget target = binder.MakeBindingTarget(CallType.ImplicitInstance, callTypes);
-                if (target.Success) {
-                    Expression call;
-
-                    if (IsIndexGet) {
-                        call = target.MakeExpression(
-                            ret,
-                            GetIndexArguments(ret)
-                        );
-                    } else {
-                        call = Ast.Comma(
-                            target.MakeExpression(
-                                ret,
-                                GetIndexArguments(ret)
-                            ),
-                            ret.Parameters[ret.Parameters.Length - 1]
-                        );
-                    }
-                    ret.SetTarget(ret.MakeReturn(Binder, call));
-                    return ret;
-                } else {
-                    ret.SetTarget(Binder.MakeInvalidParametersError(target).MakeErrorForRule(ret, Binder));
-                    return ret;
+            if (!callSlice) {
+                // 1 slice index (simple index) or multiple slice indexes or no __*slice__, call __*item__, 
+                if (!TryGetStaticFunction(item, indexedType, out itemFunc)) {
+                    indexedType.TryResolveSlot(Context, item, out itemSlot);
                 }
             }
 
-            return MakeDynamicIndexRule(Action, Context, types);
-        }
-
-        private bool IsIndexGet {
-            get {
-                return Action.Operation == Operators.GetItem || Action.Operation == Operators.GetSlice;
+            // make the Callable object which does the actual call to the function or slot
+            Callable callable = Callable.MakeCallable(Binder, Action.Operation, itemFunc, itemSlot);
+            if (callable == null) {
+                return PythonBinderHelper.TypeError<T>("'{0}' object is unsubscriptable", types[0]);
             }
-        }
+            
+            // prepare the arguments and make the builder which will
+            // call __*slice__ or __*item__
+            Expression[] args;
+            IndexBuilder builder;
+            StandardRule<T> rule = new StandardRule<T>();
+            if (callSlice) {
+                // we're going to call a __*slice__ method, we pass the args as is.
+                Debug.Assert(IsSlice);
 
-        private Type[] GetIndexerCallTypes(PythonType[] types) {
-            Type[] callTypes;
-            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem) {
-                callTypes = PythonTypeOps.ConvertToTypes(types);
-            } else if (Action.Operation == Operators.GetSlice) {
-                callTypes = new Type[] { types[0].UnderlyingSystemType, typeof(Slice) };
+                builder = new SliceBuilder(rule, types, callable);
+                args = ConvertArgs(types, rule.Parameters);
             } else {
-                Debug.Assert(Action.Operation == Operators.SetSlice);
-                callTypes = new Type[] { 
-                        types[0].UnderlyingSystemType, 
-                        typeof(Slice),
-                        types[types.Length-1].UnderlyingSystemType
-                    };
+                // we're going to call a __*item__ method.
+                builder = new ItemBuilder(rule, types, callable);
+                if (IsSlice) {
+                    // we need to create a new Slice object.
+                    args = GetItemSliceArguments(rule, types);
+                } else {
+                    // we just need to pass the arguments as they are
+                    args = ConvertArgs(types, rule.Parameters);
+                }
             }
-            return callTypes;
+
+            // finally make the rule
+            builder.MakeRule(args);
+            return rule;
         }
 
-        private Expression[] GetIndexArguments(StandardRule<T> ret) {
-            Expression[] args = ret.Parameters;
-            if (Action.Operation == Operators.GetSlice) {
-                Expression slice = GetGetOrDeleteSlice(ret);
+        /// <summary>
+        /// Helper to convert all of the arguments to their known types.
+        /// </summary>
+        private static Expression[] ConvertArgs(PythonType[] types, IList<Expression> args) {
+            Expression[] res = new Expression[args.Count];
+            for (int i = 0; i < args.Count; i++) {
+                res[i] = Ast.ConvertHelper(args[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
+            }
+            return res;
+        }
 
-                args = new Expression[] { ret.Parameters[0], slice };
-            } else if (Action.Operation == Operators.SetSlice) {
-                // construct a slice object from the arguments
-                Expression slice = GetSetSlice(ret);
+        /// <summary>
+        /// Gets the arguments that need to be provided to __*item__ when we need to pass a slice object.
+        /// </summary>
+        private Expression[] GetItemSliceArguments(StandardRule<T> rule, PythonType[] types) {
+            Expression[] args;
+            if (Action.Operation == Operators.SetSlice) {
+                args = new Expression[] { 
+                            Ast.ConvertHelper(rule.Parameters[0], types[0]), 
+                            GetSetSlice(rule), 
+                            Ast.ConvertHelper(rule.Parameters[rule.Parameters.Count - 1], types[types.Length - 1])
+                        };
+            } else {
+                Debug.Assert(Action.Operation == Operators.GetSlice || Action.Operation == Operators.DeleteSlice);
 
-                args = new Expression[] { ret.Parameters[0], slice, ret.Parameters[ret.Parameters.Length - 1] };
+                args = new Expression[] { 
+                    Ast.ConvertHelper(rule.Parameters[0], types[0]),
+                    GetGetOrDeleteSlice(rule)
+                };
             }
             return args;
         }
+
+        /// <summary>
+        /// Base class for calling indexers.  We have two subclasses that target built-in functions & user defined callable objects.
+        /// 
+        /// The Callable objects get handed off to ItemBuilder's which then call them with the appropriate arguments.
+        /// </summary>
+        abstract class Callable {
+            private readonly ActionBinder/*!*/ _binder;
+            private readonly Operators _op;
+
+            protected Callable(ActionBinder/*!*/ binder, Operators op) {
+                Assert.NotNull(binder);
+
+                _binder = binder;
+                _op = op;
+            }
+
+            /// <summary>
+            /// Creates a new CallableObject.  If BuiltinFunction is available we'll create a BuiltinCallable otherwise
+            /// we create a SlotCallable.
+            /// </summary>
+            public static Callable MakeCallable(ActionBinder binder, Operators op, BuiltinFunction itemFunc, PythonTypeSlot itemSlot) {
+                if (itemFunc != null) {
+                    // we'll call a builtin function to produce the rule
+                    return new BuiltinCallable(binder, op, itemFunc);
+                } else if (itemSlot != null) {
+                    // we'll call a PythonTypeSlot to produce the rule
+                    return new SlotCallable(binder, op, itemSlot);
+                } 
+
+                return null;
+            }
+
+            /// <summary>
+            /// Gets the arguments in a form that should be used for extended slicing.
+            /// 
+            /// Python defines that multiple tuple arguments received (x[1,2,3]) get 
+            /// packed into a Tuple.  For most .NET methods we just want to expand
+            /// this into the multiple index arguments.  For slots and old-instances
+            /// we want to pass in the tuple
+            /// </summary>
+            public virtual Expression[] GetTupleArguments(Expression[] arguments) {
+                if (IsSetter) {
+                    if (arguments.Length == 3) {
+                        // simple setter, no extended slicing, no need to pack arguments into tuple
+                        return arguments;
+                    }
+
+                    // we want self, (tuple, of, args, ...), value
+                    Expression[] tupleArgs = new Expression[arguments.Length - 2];
+                    for (int i = 1; i < arguments.Length - 1; i++) {
+                        tupleArgs[i - 1] = Ast.ConvertHelper(arguments[i], typeof(object));
+                    }
+                    return new Expression[] {
+                        arguments[0],
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("MakeTuple"),
+                            Ast.NewArray(typeof(object[]), tupleArgs)
+                        ),
+                        arguments[arguments.Length-1]
+                    };
+                } else if (arguments.Length == 2) {
+                    // simple getter, no extended slicing, no need to pack arguments into tuple
+                    return arguments;
+                } else {
+                    // we want self, (tuple, of, args, ...)
+                    Expression[] tupleArgs = new Expression[arguments.Length - 1];
+                    for (int i = 1; i < arguments.Length; i++) {
+                        tupleArgs[i - 1] = Ast.ConvertHelper(arguments[i], typeof(object));
+                    }
+                    return new Expression[] {
+                        arguments[0],
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("MakeTuple"),
+                            Ast.NewArray(typeof(object[]), tupleArgs)
+                        )
+                    };
+                }
+            }
+
+            /// <summary>
+            /// Adds the target of the call to the rule.
+            /// </summary>
+            public abstract void CompleteRuleTarget(StandardRule<T> rule, Expression[] args, Function<bool> customFailure);
+
+            protected ActionBinder Binder {
+                get { return _binder; }
+            }
+
+            protected Operators Operator {
+                get { return _op; }
+            }
+
+            protected bool IsSetter {
+                get { return _op == Operators.SetItem || _op == Operators.SetSlice; }
+            }
+        }
+
+        /// <summary>
+        /// Subclass of Callable for a built-in function.  This calls a .NET method performing
+        /// the appropriate bindings.
+        /// </summary>
+        class BuiltinCallable : Callable {
+            private readonly BuiltinFunction/*!*/ _bf;            
+
+            public BuiltinCallable(ActionBinder/*!*/ binder, Operators op, BuiltinFunction/*!*/ func)
+                : base(binder, op) {
+                Assert.NotNull(func);
+
+                _bf = func;
+            }
+
+            public override Expression[] GetTupleArguments(Expression[] arguments) {
+                if (arguments[0].Type == typeof(OldInstance)) {
+                    // old instances are special in that they take only a single parameter
+                    // in their indexer but accept multiple parameters as tuples.
+                    return base.GetTupleArguments(arguments);
+                }
+                return arguments;
+            }
+
+            public override void CompleteRuleTarget(StandardRule<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
+                Assert.NotNull(args);
+                Assert.NotNullItems(args);
+                Assert.NotNull(rule);
+
+                MethodBinder binder = MethodBinder.MakeBinder(Binder,
+                    Name,
+                    _bf.Targets,
+                    PythonNarrowing.None,
+                    PythonNarrowing.IndexOperator);
+
+                Type[] types = CompilerHelpers.GetExpressionTypes(args);
+                BindingTarget target = binder.MakeBindingTarget(CallType.ImplicitInstance, types);
+
+                if (target.Success) {
+                    Expression call = target.MakeExpression(rule, args);
+
+                    if (IsSetter) {
+                        call = Ast.Comma(call, rule.Parameters[rule.Parameters.Count - 1]);
+                    }
+
+                    rule.Target = rule.MakeReturn(Binder, call);
+                } else if (customFailure == null || !customFailure()) {
+                    rule.Target = Binder.MakeInvalidParametersError(target).MakeErrorForRule(rule, Binder);
+                }
+            }
+
+            private string Name {
+                get {
+                    switch (Operator) {
+                        case Operators.GetSlice: return "__getslice__";
+                        case Operators.SetSlice: return "__setslice__";
+                        case Operators.DeleteSlice: return "__delslice__";
+                        case Operators.GetItem: return "__getitem__";
+                        case Operators.SetItem: return "__setitem__";
+                        case Operators.DeleteItem: return "__delitem__";
+                        default: throw new InvalidOperationException();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Callable to a user-defined callable object.  This could be a Python function,
+        /// a class defining __call__, etc...
+        /// </summary>
+        class SlotCallable : Callable {
+            private PythonTypeSlot _slot;
+
+            public SlotCallable(ActionBinder binder, Operators op, PythonTypeSlot slot)
+                : base(binder, op) {
+                _slot = slot;
+            }
+
+            public override void CompleteRuleTarget(StandardRule<T> rule, Expression[] args, Function<bool> customFailure) {
+                Variable callable = rule.GetTemporary(typeof(object), "slot");
+
+                Expression retVal = Ast.Action.Call(
+                    typeof(object),
+                    ArrayUtils.Insert<Expression>(
+                        Ast.Read(callable),
+                        ArrayUtils.RemoveFirst(args)
+                    )
+                );
+
+                if (IsSetter) {
+                    retVal = Ast.Comma(retVal, rule.Parameters[rule.Parameters.Count - 1]);
+                }
+
+                rule.Target =
+                    Ast.Comma(
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("SlotTryGetValue"),
+                            Ast.CodeContext(),
+                            Ast.ConvertHelper(Ast.WeakConstant(_slot), typeof(PythonTypeSlot)),
+                            Ast.ConvertHelper(args[0], typeof(object)),
+                            Ast.Call(
+                                typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                                Ast.ConvertHelper(args[0], typeof(object))
+                            ),
+                            Ast.Read(callable)
+                        ),
+                        rule.MakeReturn(Binder, retVal)
+                    );
+            }
+        }
+
+        /// <summary>
+        /// Base class for building a __*item__ or __*slice__ call.
+        /// </summary>
+        abstract class IndexBuilder {
+            private StandardRule<T> _rule;
+            private Callable _callable;
+            private PythonType[] _types;
+
+            public IndexBuilder(StandardRule<T> rule, PythonType[] types, Callable callable) {
+                _rule = rule;
+                _callable = callable;
+                _types = types;
+                PythonBinderHelper.MakeTest(Rule, types);
+            }
+            
+            public abstract StandardRule<T> MakeRule(Expression[] args);
+
+            protected StandardRule<T> Rule {
+                get { return _rule; }
+            }
+
+            protected Callable Callable {
+                get { return _callable; }
+            }
+
+            protected PythonType[] Types {
+                get { return _types; }
+            }
+        }
+
+        /// <summary>
+        /// Derived IndexBuilder for calling __*slice__ methods
+        /// </summary>
+        class SliceBuilder : IndexBuilder {
+            private Variable _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
+
+            public SliceBuilder(StandardRule<T> rule, PythonType[] types, Callable callable)
+                : base(rule, types, callable) {
+            }
+
+            public override StandardRule<T> MakeRule(Expression[] args) {
+                // the semantics of simple slicing state that if the value
+                // is less than 0 then the length is added to it.  The default
+                // for unprovided parameters are 0 and maxint.  The callee
+                // is responsible for ignoring out of range values but slicing
+                // is responsible for doing this initial transformation.
+
+                Debug.Assert(args.Length > 2);  // index 1 and 2 should be our slice indexes, we might have another arg if we're a setter
+                for (int i = 1; i < 3; i++) {
+                    if (args[i].Type == typeof(MissingParameter)) {
+                        switch(i) {
+                            case 1: args[i] = Ast.Constant(0);  break;
+                            case 2: args[i] = Ast.Constant(Int32.MaxValue); break;
+                        }
+                    } else if (args[i].Type == typeof(int)) {
+                        args[i] = MakeIntTest(args[0], args[i]);
+                    } else if (args[i].Type.IsSubclassOf(typeof(Extensible<int>))) {
+                        args[i] = MakeIntTest(args[0], Ast.ReadProperty(args[i], args[i].Type.GetProperty("Value")));
+                    } else if (args[i].Type == typeof(BigInteger)) {
+                        args[i] = MakeBigIntTest(args[0], args[i]);
+                    } else if (args[i].Type.IsSubclassOf(typeof(Extensible<BigInteger>))) {
+                        args[i] = MakeBigIntTest(args[0], Ast.ReadProperty(args[i], args[i].Type.GetProperty("Value")));
+                    } else if (args[i].Type == typeof(bool)) {
+                        args[i] = Ast.Condition(args[i], Ast.Constant(1), Ast.Constant(0));
+                    } else {
+                        // this type defines __index__, otherwise we'd have an ItemBuilder constructing a slice
+                        args[i] = MakeIntTest(args[0],
+                            Ast.Action.Call(
+                                typeof(int),
+                                Ast.Action.GetMember(
+                                    Symbols.Index,
+                                    typeof(object),
+                                    args[i]
+                                )
+                            )
+                        );
+                    }
+                }
+                
+                if (_lengthVar != null) {
+                    // we need the length which we should only calculate once, calculate and
+                    // store it in a temporary.  Note we only calculate the length if we'll
+                    args[0] = Ast.Comma(
+                        Ast.Assign(_lengthVar, Ast.Constant(null)),
+                        args[0]
+                    );
+                }
+
+                Callable.CompleteRuleTarget(Rule, args, null);
+                return Rule;
+            }
+
+            private Expression MakeBigIntTest(Expression self, Expression bigInt) {
+                EnsureLengthVariable();
+
+                return Ast.Call(
+                    typeof(PythonOps).GetMethod("NormalizeBigInteger"),
+                    self,
+                    bigInt,
+                    Ast.Read(_lengthVar)
+                );
+            }
+
+            private Expression MakeIntTest(Expression self, Expression intVal) {
+                return Ast.Condition(
+                    Ast.LessThan(intVal, Ast.Constant(0)),
+                    Ast.Add(intVal, MakeGetLength(self)),
+                    intVal
+                );
+            }
+
+            private Expression MakeGetLength(Expression self) {
+                EnsureLengthVariable();
+
+                return Ast.Call(
+                    typeof(PythonOps).GetMethod("GetLengthOnce"),
+                    self,
+                    Ast.Read(_lengthVar)
+                );
+            }
+
+            private void EnsureLengthVariable() {
+                if (_lengthVar == null) {
+                    _lengthVar = Rule.GetTemporary(typeof(Nullable<int>), "objLength");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Derived IndexBuilder for calling __*item__ methods.
+        /// </summary>
+        class ItemBuilder : IndexBuilder {
+            public ItemBuilder(StandardRule<T> rule, PythonType[] types, Callable callable)
+                : base(rule, types, callable) {
+            }
+
+            public override StandardRule<T> MakeRule(Expression[] args) {                
+                Expression[] tupleArgs = Callable.GetTupleArguments(args);
+                Callable.CompleteRuleTarget(Rule, tupleArgs, delegate() {
+                    PythonTypeSlot indexSlot;
+                    if (args[1].Type != typeof(Slice) && Types[1].TryResolveSlot(DefaultContext.Default, Symbols.Index, out indexSlot)) {
+                        args[1] = Ast.Action.Call(
+                            typeof(int),
+                            Ast.Action.GetMember(Symbols.Index, typeof(object), args[1])
+                        );
+
+                        Callable.CompleteRuleTarget(Rule, tupleArgs, null);
+                        return true;
+                    }
+                    return false;
+                });
+                return Rule;
+            }
+        }
+
+        private bool HasOnlyNumericTypes(PythonType[] types, bool skipLast) {
+            bool onlyNumeric = true;
+
+            for (int i = 1; i < (skipLast ? types.Length - 1 : types.Length); i++) {
+                PythonTypeSlot dummy;
+
+                if (types[i].UnderlyingSystemType != typeof(MissingParameter) && 
+                    !PythonOps.IsNumericType(types[i].UnderlyingSystemType) &&
+                    !types[i].TryResolveSlot(Context, Symbols.Index, out dummy)) {
+                    onlyNumeric = false;
+                    break;
+                }
+            }
+            return onlyNumeric;
+        }
+
+        private bool IsSlice {
+            get {
+                return Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice || Action.Operation == Operators.DeleteSlice;
+            }
+        }
+
+        private void FixArgsForIndex(PythonType[] types, Expression[] args, Type[] callTypes) {
+            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem || Action.Operation == Operators.DeleteItem) {
+                Debug.Assert(args.Length == types.Length && types.Length == callTypes.Length);
+
+                for (int i = 1; i < types.Length; i++) {
+                    if (PythonOps.IsNumericType(types[i].UnderlyingSystemType)) continue;
+
+                    PythonTypeSlot indexSlot;
+                    if (types[i].TryResolveSlot(Context, Symbols.Index, out indexSlot)) {
+                        args[i] = Ast.Action.Call(
+                            typeof(int),
+                            Ast.Action.GetMember(Symbols.Index, typeof(object), args[i])
+                        );
+
+                        callTypes[i] = typeof(int);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper to get the symbols for __*item__ and __*slice__ based upon if we're doing
+        /// a get/set/delete and the minimum number of arguments required for each of those.
+        /// </summary>
+        private void GetIndexOperators(out SymbolId item, out SymbolId slice, out int mandatoryArgs) {
+            switch (Action.Operation) {
+                case Operators.GetItem:
+                case Operators.GetSlice:
+                    item = Symbols.GetItem;
+                    slice = Symbols.GetSlice;
+                    mandatoryArgs = 2;
+                    return;
+                case Operators.SetItem:
+                case Operators.SetSlice:
+                    item = Symbols.SetItem;
+                    slice = Symbols.SetSlice;
+                    mandatoryArgs = 3;
+                    return;
+                case Operators.DeleteItem:
+                case Operators.DeleteSlice:
+                    item = Symbols.DelItem;
+                    slice = Symbols.DeleteSlice;
+                    mandatoryArgs = 2;
+                    return;
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        /// <summary>
+        /// Checks to see if any of the index types define __index__ and updates the types to indicate this.  Returns
+        /// true if at least one __index__ is found, false otherwise.
+        /// </summary>
+        private bool ResolveOperatorIndex(PythonType[] types, StandardRule<T> ret, Expression[] indexArgs) {
+            bool foundIndexable = false;
+
+            for (int i = 1; i < types.Length; i++) {
+                if (types[i].IsSubclassOf(TypeCache.Int32) || types[i].IsSubclassOf(TypeCache.BigInteger)) {
+                    // these are inherently indexes...
+                    continue;
+                }
+
+                PythonTypeSlot pts;
+                if (types[i].TryResolveSlot(Context, Symbols.Index, out pts)) {
+                    foundIndexable = true;
+                    Variable tmp = ret.GetTemporary(typeof(object), "slotVal");
+                    indexArgs[i] = Ast.Comma(
+                        PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.RuntimeConstant(types[i])),
+                        Ast.Action.Call(typeof(int), Ast.Read(tmp))
+                    );
+                    types[i] = TypeCache.Int32;
+                }
+            }
+            return foundIndexable;
+        }                     
 
         private static Expression GetSetSlice(StandardRule<T> ret) {
             return Ast.Call(
@@ -582,95 +1065,43 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static Expression GetGetOrDeleteParameter(StandardRule<T> ret, int index) {
-            if (ret.Parameters.Length > index) {
-                return OldInstance.CheckMissing(ret.Parameters[index]);
+            if (ret.Parameters.Count > index) {
+                return CheckMissing(ret.Parameters[index]);
             }
             return Ast.Null();
         }
 
         private static Expression GetSetParameter(StandardRule<T> ret, int index) {
-            if (ret.Parameters.Length > (index + 1)) {
-                return OldInstance.CheckMissing(ret.Parameters[index]);
+            if (ret.Parameters.Count > (index + 1)) {
+                return CheckMissing(ret.Parameters[index]);
             }
 
             return Ast.Null();
         }
 
-        /// <summary>
-        /// Checks for __getslice__/__setslice__ which prevents an optimized index operation.
-        /// 
-        /// getslice/setslice are legacy operations but the user can still override them on a subclass
-        /// of a built-in type.  We just don't the optimized call on these types right now.
-        /// </summary>
-        private bool HasBadSlice(PythonType indexedType, SymbolId altAction) {
-            BuiltinFunction bf;
-            return !TryGetStaticFunction(altAction, indexedType, out bf) ||
-                        (bf != null &&
-                        DynamicHelpers.GetPythonTypeFromType(bf.DeclaringType) != indexedType);
-        }
-
-        internal static StandardRule<T> MakeDynamicIndexRule(DoOperationAction action, CodeContext context, PythonType[] types) {
-            StandardRule<T> ret = new StandardRule<T>();
-            PythonBinderHelper.MakeTest(ret, types);
-            Expression retExpr;
-            if (action.Operation == Operators.GetItem ||
-                action.Operation == Operators.DeleteItem ||
-                action.Operation == Operators.GetSlice ||
-                action.Operation == Operators.DeleteSlice) {
-                Expression arg;
-                if (action.Operation == Operators.GetSlice || action.Operation == Operators.DeleteSlice) {
-                    arg = GetGetOrDeleteSlice(ret);
-                } else if (types.Length == 2) {
-                    arg = ret.Parameters[1];
-                } else {
-                    arg = Ast.ComplexCallHelper(
-                        typeof(PythonOps).GetMethod("MakeExpandableTuple"), GetGetIndexParameters(ret)
-                    );
-                }
-
-                string call = (action.Operation == Operators.GetItem || action.Operation == Operators.GetSlice) ? "GetIndex" : "DelIndex";
-                retExpr = Ast.SimpleCallHelper(
-                    typeof(PythonOps).GetMethod(call),
-                    ret.Parameters[0],
-                    arg
-                );
-            } else {
-                Expression arg;
-                if (action.Operation == Operators.SetSlice) {
-                    arg = GetSetSlice(ret);
-                } else if (types.Length == 3) {
-                    arg = ret.Parameters[1];
-                } else {
-                    arg = Ast.ComplexCallHelper(
-                        typeof(PythonOps).GetMethod("MakeExpandableTuple"),
-                        GetSetIndexParameters(ret)
-                    );
-                }
-                retExpr = Ast.SimpleCallHelper(
-                    typeof(PythonOps).GetMethod("SetIndex"),
-                    ret.Parameters[0],
-                    arg,
-                    ret.Parameters[ret.Parameters.Length - 1]
-                );
+        internal static Expression CheckMissing(Expression toCheck) {
+            if (toCheck.Type == typeof(MissingParameter)) {
+                return Ast.Null();
             }
-            ret.SetTarget(ret.MakeReturn(context.LanguageContext.Binder, retExpr));
-            return ret;
+            if (toCheck.Type != typeof(object)) {
+                return toCheck;
+            }
+
+            return Ast.Condition(
+                Ast.TypeIs(toCheck, typeof(MissingParameter)),
+                Ast.Null(),
+                toCheck
+            );
         }
 
-        private static Expression[] GetSetIndexParameters(StandardRule<T> ret) {
-            return ArrayUtils.RemoveLast(ArrayUtils.RemoveFirst(ret.Parameters));
-        }
-
-        private static Expression[] GetGetIndexParameters(StandardRule<T> ret) {
-            return ArrayUtils.RemoveFirst(ret.Parameters);
-        }
+        #endregion
 
         private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse) {
             return MakeCall(target, block, reverse, null);
         }
 
         private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse, PythonType[] types) {
-            Expression[] vars = block.Parameters;
+            IList<Expression> vars = block.Parameters;
             if (reverse) {
                 Expression[] newVars = new Expression[2];
                 newVars[0] = vars[1];
@@ -687,7 +1118,7 @@ namespace IronPython.Runtime.Calls {
 
             // add casts to the known types to avoid full conversions that MakeExpression will emit.
             if (types != null) {
-                vars = (Expression[])vars.Clone();
+                vars = ArrayUtils.MakeArray(vars);
                 for (int i = 0; i < types.Length; i++) {
                     if (types[i] != null) {
                         vars[i] = Ast.ConvertHelper(vars[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
@@ -783,7 +1214,6 @@ namespace IronPython.Runtime.Calls {
             Debug.Assert(slotTarget != null);
             Debug.Assert(block != null);
 
-            Variable callable = block.GetTemporary(typeof(object), "slot");
             Expression self, other;
             if (reverse) {
                 self = block.Parameters[1];
@@ -793,6 +1223,11 @@ namespace IronPython.Runtime.Calls {
                 other = block.Parameters[1];
             }
 
+            return MakeSlotCallWorker(slotTarget, block, self, other);
+        }
+
+        private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, StandardRule<T> block, Expression self, params Expression[] args) {
+            Variable callable = block.GetTemporary(typeof(object), "slot");
             return Ast.IfThen(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryGetValue"),
@@ -809,8 +1244,10 @@ namespace IronPython.Runtime.Calls {
                     block,
                     Ast.Action.Call(
                         typeof(object),
-                        Ast.Read(callable),
-                        other
+                        ArrayUtils.Insert<Expression>(
+                            Ast.Read(callable),
+                            args
+                        )
                     )
                 )
             );
@@ -1017,18 +1454,18 @@ namespace IronPython.Runtime.Calls {
                 if (yBf == null) {
                     binder = null;
                 } else {
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), yBf.Targets, NarrowingLevel.None, NarrowingLevel.Three);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), yBf.Targets, PythonNarrowing.None, PythonNarrowing.BinaryOperator);
                 }
             } else {
                 if (yBf == null) {
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), xBf.Targets, NarrowingLevel.None, NarrowingLevel.Three);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), xBf.Targets, PythonNarrowing.None, PythonNarrowing.BinaryOperator);
                 } else {
                     List<MethodBase> targets = new List<MethodBase>();
                     targets.AddRange(xBf.Targets);
                     foreach (MethodBase mb in yBf.Targets) {
                         if (!ContainsMethodSignature(targets, mb)) targets.Add(mb);
                     }
-                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), targets.ToArray(), NarrowingLevel.None, NarrowingLevel.Three);
+                    binder = MethodBinder.MakeBinder(Binder, op.ToString(), targets.ToArray(), PythonNarrowing.None, PythonNarrowing.BinaryOperator);
                 }
             }
             return true;
@@ -1279,14 +1716,14 @@ namespace IronPython.Runtime.Calls {
                 return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), "{0}"), types);
             }
 
-            MethodBinder binder = MethodBinder.MakeBinder(Binder, op.ToString(), func.Targets, NarrowingLevel.None, NarrowingLevel.All);
+            MethodBinder binder = MethodBinder.MakeBinder(Binder, op.ToString(), func.Targets, PythonNarrowing.None, PythonNarrowing.All);
 
             Debug.Assert(binder != null);
 
             BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
-            rule.SetTarget(rule.MakeReturn(Binder, MakeCall(target, rule, false)));
+            rule.Target = rule.MakeReturn(Binder, MakeCall(target, rule, false));
             return rule;
         }
 
@@ -1312,8 +1749,8 @@ namespace IronPython.Runtime.Calls {
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,
                     "Not",
                     nonzero != null ? nonzero.Targets : len.Targets,
-                    NarrowingLevel.None,
-                    NarrowingLevel.All);
+                    PythonNarrowing.None,
+                    PythonNarrowing.All);
 
                 Debug.Assert(binder != null);
                 BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
@@ -1338,19 +1775,17 @@ namespace IronPython.Runtime.Calls {
                     }
                 }
             }
-            rule.SetTarget(rule.MakeReturn(Binder, notExpr));
+            rule.Target = rule.MakeReturn(Binder, notExpr);
             return rule;
         }
 
         private StandardRule<T> MakeDynamicNotRule(PythonType[] types) {
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
-            rule.SetTarget(
-                rule.MakeReturn(Binder,
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("Not"),
-                        Ast.ConvertHelper(rule.Parameters[0], typeof(object))
-                    )
+            rule.Target = rule.MakeReturn(Binder,
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("Not"),
+                    Ast.ConvertHelper(rule.Parameters[0], typeof(object))
                 )
             );
             return rule;

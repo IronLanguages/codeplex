@@ -323,8 +323,11 @@ namespace IronPython.Runtime.Operations {
             slice.Indices(data.Length, out start, out stop, out step);
 
             if (step == 1) return GetSlice(data, start, stop);
+            
+            int size = GetSliceSize(start, stop, step);
+            if (size <= 0) return ArrayUtils.EmptyObjects;
 
-            object[] res = new object[GetSliceSize(start, stop, step)];
+            object[] res = new object[size];
             for (int i = 0, index = start; i < res.Length; i++, index += step) {
                 res[i] = data[index];
             }

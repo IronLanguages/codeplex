@@ -19,7 +19,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public class ModuleGlobalSlot : Slot {
+    class ModuleGlobalSlot : Slot {
         private Slot _wrapper;
 
         public ModuleGlobalSlot(Slot builtinWrapper) {

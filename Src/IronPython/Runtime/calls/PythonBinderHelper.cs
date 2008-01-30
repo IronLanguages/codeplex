@@ -54,18 +54,18 @@ namespace IronPython.Runtime.Calls {
             }
 
             if (action.Operation == Operators.SetItem) {
-                exprargs[2] = rule.Parameters[rule.Parameters.Length - 1];
+                exprargs[2] = rule.Parameters[rule.Parameters.Count - 1];
             }
 
             return exprargs;
         }
 
         public static void MakeTest(StandardRule rule, bool templatable, params PythonType[] types) {
-            rule.SetTest(MakeTestForTypes(rule, types, templatable, 0));
+            rule.Test = MakeTestForTypes(rule, types, templatable, 0);
         }
 
         public static void MakeTest(StandardRule rule, params PythonType[] types) {
-            rule.SetTest(MakeTestForTypes(rule, types, 0));
+            rule.Test =MakeTestForTypes(rule, types, 0);
         }
 
         public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, int index) {
@@ -164,7 +164,7 @@ namespace IronPython.Runtime.Calls {
             Type[] typeArgs = CompilerHelpers.MakeRepeatedArray<Type>(typeof(object), types.Length + 1);
             typeArgs[0] = typeof(string);
 
-            ret.SetTarget(
+            ret.Target = 
                 Ast.Throw(
                     Ast.Call(
                         typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
@@ -174,8 +174,7 @@ namespace IronPython.Runtime.Calls {
                             formatArgs
                         )
                     )
-                )
-            );
+                );
 
             TemplatedRuleBuilder<T> builder;
             lock (_typeErrorTemplates) {
@@ -289,6 +288,33 @@ namespace IronPython.Runtime.Calls {
             return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
         }
 
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, Variable tmp) {
+            return MakeTryGetTypeMember(rule, dts, tmp,
+                rule.Parameters[0],
+                Ast.ReadProperty(
+                    Ast.Convert(
+                        rule.Parameters[0],
+                        typeof(IPythonObject)),
+                    typeof(IPythonObject).GetProperty("PythonType")
+                )
+            );
+        }
+
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, Variable tmp, Expression instance, Expression pythonType) {
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
+                Ast.CodeContext(),
+                Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
+                Ast.ConvertHelper(instance, typeof(object)),
+                Ast.ConvertHelper(
+                    pythonType,
+                    typeof(PythonType)
+                ),
+                Ast.ReadDefined(tmp)
+            );
+        }
+
+
         // Rule to dynamically check for __call__ attribute.
         // Needed for instances whos call status can change over the lifetime of the instance.
         // For example, if we del(c.__call__) on a oldinstance, it's no longer callable.
@@ -307,7 +333,7 @@ namespace IronPython.Runtime.Calls {
 
             // Rule is:
             //    getmember(self, __call__) != OperationFailed.Value
-            rule.SetTarget(
+            rule.Target =
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.NotEqual(
@@ -317,8 +343,8 @@ namespace IronPython.Runtime.Calls {
                             typeof(System.Object),
                             rule.Parameters[0]),
                         Ast.Constant(OperationFailed.Value))
-                )
-            );
+                );
+
             return rule;
         }
     }

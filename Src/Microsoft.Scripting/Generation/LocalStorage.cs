@@ -14,7 +14,7 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Generation {
-    public sealed class LocalStorage : Storage {
+    sealed class LocalStorage : Storage {
         private Slot _slot;
 
         internal LocalStorage(Slot slot) {

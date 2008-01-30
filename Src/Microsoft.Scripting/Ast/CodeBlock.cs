@@ -65,11 +65,6 @@ namespace Microsoft.Scripting.Ast {
 
         private int _generatorTemps;
 
-        /// <summary>
-        /// True, if the block is referenced by a declarative reference (CodeBlockExpression).
-        /// </summary>
-        private bool _declarativeReferenceExists;
-
         #endregion
 
         internal CodeBlock(SourceSpan span, string name, Type returnType) {
@@ -206,11 +201,6 @@ namespace Microsoft.Scripting.Ast {
             get { return _generatorTemps; }
         }
 
-        internal void DeclarativeReferenceAdded() {
-            if (_declarativeReferenceExists) throw new InvalidOperationException("Block cannot be declared twice");
-            _declarativeReferenceExists = true;
-        }
-
         public Variable CreateParameter(SymbolId name, Type type) {
             Variable variable = Variable.Parameter(this, name, type);
             _parameters.Add(variable);
@@ -224,13 +214,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type) {
-            return CreateVariable(name, kind, type, null);
-        }
-
-        public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type, Expression defaultValue) {
             Contract.Requires(kind != Variable.VariableKind.Parameter, "kind");
 
-            Variable variable = Variable.Create(name, kind, this, type, defaultValue);
+            Variable variable = Variable.Create(name, kind, this, type);
             _variables.Add(variable);
             return variable;
         }

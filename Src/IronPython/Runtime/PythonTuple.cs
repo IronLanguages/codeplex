@@ -83,7 +83,7 @@ namespace IronPython.Runtime {
         private static object[] MakeItems(object o) {
             object[] arr;
             if (o is PythonTuple) {
-                return ((PythonTuple)o).data;
+                return ((PythonTuple)o)._data;
             } else if (o is string) {
                 string s = (string)o;
                 object[] res = new object[s.Length];
@@ -110,28 +110,28 @@ namespace IronPython.Runtime {
             }
         }
 
-        internal readonly object[] data;
+        internal readonly object[] _data;
         private readonly bool expandable;
 
         public PythonTuple(object o) {
-            this.data = MakeItems(o);
+            this._data = MakeItems(o);
         }
 
         protected PythonTuple(object[] items) {
-            this.data = items;
+            this._data = items;
         }
 
         public PythonTuple() {
-            this.data = ArrayUtils.EmptyObjects;
+            this._data = ArrayUtils.EmptyObjects;
         }
 
         internal PythonTuple(bool expandable, object[] items) {
             this.expandable = expandable;
-            this.data = items;
+            this._data = items;
         }
 
         internal PythonTuple(IParameterSequence other, object o) {
-            this.data = other.Expand(o);
+            this._data = other.Expand(o);
         }
 
         bool IParameterSequence.IsExpandable {
@@ -144,15 +144,15 @@ namespace IronPython.Runtime {
         /// Return a copy of this tuple's data array.
         /// </summary>
         internal object[] ToArray() {
-            object[] copy = new object[data.Length];
-            Array.Copy(data, copy, data.Length);
+            object[] copy = new object[_data.Length];
+            Array.Copy(_data, copy, _data.Length);
             return copy;
         }
 
         #region ISequence Members
         [PythonName("__len__")]
         public virtual int GetLength() {
-            return data.Length;
+            return _data.Length;
         }
 
         public bool ContainsValueWrapper(object item) {
@@ -160,18 +160,18 @@ namespace IronPython.Runtime {
         }
 
         public virtual bool ContainsValue(object value) {
-            return ArrayOps.Contains(data, data.Length, value);
+            return ArrayOps.Contains(_data, _data.Length, value);
         }
 
         public virtual object this[int index] {
             get {
-                return data[PythonOps.FixIndex(index, data.Length)];
+                return _data[PythonOps.FixIndex(index, _data.Length)];
             }
         }
         
-        public virtual object this[double index] {
+        public virtual object this[object index] {
             get {
-                throw PythonOps.TypeError("tuple indices must be integers");
+                return this[Converter.ConvertToIndex(index)];
             }
         }
 
@@ -183,15 +183,14 @@ namespace IronPython.Runtime {
 
         [PythonName("__getslice__")]
         public virtual object GetSlice(int start, int stop) {
-            if (start < 0) start = 0;
-            if (stop > GetLength()) stop = GetLength();
+            Slice.FixSliceArguments(_data.Length, ref start, ref stop);
 
-            return MakeTuple(ArrayOps.GetSlice(data, start, stop));
+            return MakeTuple(ArrayOps.GetSlice(_data, start, stop));
         }
 
-        public object this[Slice slice] {
+        public virtual object this[Slice slice] {
             get {
-                return MakeTuple(ArrayOps.GetSlice(data, slice));
+                return MakeTuple(ArrayOps.GetSlice(_data, slice));
             }
         }
 
@@ -199,13 +198,13 @@ namespace IronPython.Runtime {
 
         #region binary operators
         public static PythonTuple operator +(PythonTuple x, PythonTuple y) {
-            return MakeTuple(ArrayOps.Add(x.data, x.data.Length, y.data, y.data.Length));
+            return MakeTuple(ArrayOps.Add(x._data, x._data.Length, y._data, y._data.Length));
         }
 
         private static PythonTuple MultiplyWorker(PythonTuple self, int count) {
             if (count <= 0) return EMPTY;
             if (count == 1) return self;
-            return MakeTuple(ArrayOps.Multiply(self.data, self.data.Length, count));
+            return MakeTuple(ArrayOps.Multiply(self._data, self._data.Length, count));
         }
 
         public static PythonTuple operator *(PythonTuple x, int n) {
@@ -237,7 +236,7 @@ namespace IronPython.Runtime {
         }
 
         public void CopyTo(Array array, int index) {
-            Array.Copy(data, 0, array, index, data.Length);
+            Array.Copy(_data, 0, array, index, _data.Length);
         }
 
         public object SyncRoot {
@@ -265,7 +264,15 @@ namespace IronPython.Runtime {
             #region IEnumerator Members
 
             public object Current {
-                get { return tuple[curIndex]; }
+                get { 
+                    // access _data directly because this is what CPython does:
+                    // class T(tuple):
+                    //     def __getitem__(self): return None
+                    // 
+                    // for x in T((1,2)): print x
+                    // prints 1 and 2
+                    return tuple._data[curIndex]; 
+                }
             }
 
             public bool MoveNext() {
@@ -305,25 +312,25 @@ namespace IronPython.Runtime {
         public override string ToString() {
             StringBuilder buf = new StringBuilder();
             buf.Append("(");
-            for (int i = 0; i < data.Length; i++) {
+            for (int i = 0; i < _data.Length; i++) {
                 if (i > 0) buf.Append(", ");
-                buf.Append(PythonOps.StringRepr(data[i]));
+                buf.Append(PythonOps.StringRepr(_data[i]));
             }
-            if (data.Length == 1) buf.Append(",");
+            if (_data.Length == 1) buf.Append(",");
             buf.Append(")");
             return buf.ToString();
         }
 
         object[] IParameterSequence.Expand(object value) {
             object[] args;
-            int length = data.Length;
+            int length = _data.Length;
             if (value == null)
                 args = new object[length];
             else
                 args = new object[length + 1];
 
             for (int i = 0; i < length; i++) {
-                args[i] = data[i];
+                args[i] = _data[i];
             }
 
             if (value != null) {
@@ -413,7 +420,7 @@ namespace IronPython.Runtime {
         #region Rich Comparison Members
 
         private int CompareTo(PythonTuple other) {
-            return PythonOps.CompareArrays(data, data.Length, other.data, other.data.Length);
+            return PythonOps.CompareArrays(_data, _data.Length, other._data, other._data.Length);
         }
 
         [return: MaybeNotImplemented]
@@ -470,7 +477,7 @@ namespace IronPython.Runtime {
 
         public override int GetHashCode() {
             int ret = 6551;
-            foreach (object o in data) {
+            foreach (object o in _data) {
                 ret = (ret << 5) ^ (ret >> 26) ^ (o == null ? 0 : o.GetHashCode());
             }
             return ret;
@@ -480,7 +487,7 @@ namespace IronPython.Runtime {
 
         int IValueEquality.GetValueHashCode() {
             int ret = 6551;
-            foreach (object o in data) {
+            foreach (object o in _data) {
                 ret = (ret << 5) ^ (ret >> 26) ^ PythonOps.Hash(o);
             }
             return ret;
@@ -492,9 +499,9 @@ namespace IronPython.Runtime {
             PythonTuple l = other as PythonTuple;
             if (l == null) return false;
 
-            if (data.Length != l.data.Length) return false;
-            for (int i = 0; i < data.Length; i++) {
-                if (!PythonOps.EqualRetBool(data[i], l.data[i])) return false;
+            if (_data.Length != l._data.Length) return false;
+            for (int i = 0; i < _data.Length; i++) {
+                if (!PythonOps.EqualRetBool(_data[i], l._data[i])) return false;
             }
             return true;
         }

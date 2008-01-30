@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Types {
         private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch(doOperationAction.Operation) {
                 case Operators.CallSignatures:
-                    return DoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Target.Targets, DynamicHelpers.GetPythonType(args[0]));
+                    return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Target.Targets, DynamicHelpers.GetPythonType(args[0]));
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
             }
@@ -164,7 +164,7 @@ namespace IronPython.Runtime.Types {
 
             if (newRule.IsError && Target.IsBinaryOperator && args.Length == 2) { // 1 bound function + 1 args
                 // BinaryOperators return NotImplemented on failure.
-                newRule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented")));
+                newRule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));
             }
 
             return newRule;

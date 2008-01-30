@@ -125,5 +125,18 @@ def test_indexing():
     t = mytuple(t)
     AreEqual(t[2.0], 4)
 
+def test_tuple_slicing():
+    l = [0, 1, 2, 3, 4]
+    u = tuple(l)
+    AreEqual(u[-100:100:-1], ())
+
+def test_tuple_iteration():
+    class T(tuple):
+        def __getitem__(self):
+            return None
+
+    for x in T((1,)):
+        AreEqual(x, 1)
+
 run_test(__name__)
 

@@ -22,24 +22,55 @@ from lib.assert_util  import *
 from lib.file_util    import *
 from lib.process_util import *
 
-import clr
+if is_cli:
+    import clr
 
-from System import Type
-from System import Activator
-from System import Exception as System_dot_Exception
+    from System import Type
+    from System import Activator
+    from System import Exception as System_dot_Exception
 
-remove_ironpython_dlls(testpath.public_testdir)
-load_iron_python_dll()
-import IronPython
+    remove_ironpython_dlls(testpath.public_testdir)
+    load_iron_python_dll()
+    import IronPython
 
-load_iron_python_test()
-import IronPythonTest
+    load_iron_python_test()
+    import IronPythonTest
+    
+    #--For asserts in IP/DLR assemblies----------------------------------------
+    from System.Diagnostics import Debug, DefaultTraceListener
+    
+    class MyTraceListener(DefaultTraceListener):
+        def Fail(self, msg, detailMsg=''):
+            print "ASSERT FAILED:", msg
+            if detailMsg!='':
+                print "              ", detailMsg
+            sys.exit(1)
+            
+    if is_snap:
+        Debug.Listeners.Clear()
+        Debug.Listeners.Add(MyTraceListener())
+    
+    
+is_pywin32 = False
+if sys.platform=="win32":
+    try:
+        import win32com.client
+        is_pywin32 = True
+        if sys.prefix not in nt.environ["Path"]:
+            nt.environ["Path"] += ";" + sys.prefix
+    except:
+        pass
+    
+    
 
 #------------------------------------------------------------------------------
 #--GLOBALS
     
-windir = get_environ_variable("windir")    
-preferComDispatch = IronPythonTest.TestHelpers.GetContext().Options.PreferComDispatchOverTypeInfo
+windir = get_environ_variable("windir")
+if is_cli:
+    preferComDispatch = IronPythonTest.TestHelpers.GetContext().Options.PreferComDispatchOverTypeInfo
+else:
+    preferComDispatch = False
 
 agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
@@ -75,6 +106,41 @@ def IsExcelInstalled():
     #make sure it's really installed on disk
     excel_path = excel.GetValue("Path") + "excel.exe"
     return File.Exists(excel_path)
+
+#------------------------------------------------------------------------------
+def CreateAgentServer():
+    if preferComDispatch:
+        from System import Type, Activator
+        agentServerType = Type.GetTypeFromProgID("Agent.Server")
+        return Activator.CreateInstance(agentServerType)
+    else:
+        if not file_exists(agentsvr_path):
+            from sys import exit
+            print "Cannot test AgentServerObjects.dll when it doesn't exist."
+            exit(0)
+        
+        if not file_exists_in_path("tlbimp.exe"):
+            from sys import exit
+            print "tlbimp.exe is not in the path!"
+            exit(1)
+        else:
+            import clr
+            run_tlbimp(agentsvr_path)
+            Assert(file_exists("AgentServerObjects.dll"))
+            clr.AddReference("AgentServerObjects.dll")
+            from AgentServerObjects import AgentServerClass
+            return AgentServerClass()
+
+#------------------------------------------------------------------------------
+def CreateDlrComServer():
+    com_type_name = "DlrComLibrary.DlrComServer"
+    
+    if is_cli:
+        com_obj = getRCWFromProgID(com_type_name)
+    else:
+        com_obj = win32com.client.Dispatch(com_type_name)
+        
+    return com_obj    
 
 #------------------------------------------------------------------------------    
 def getTypeFromProgID(prog_id):
@@ -127,29 +193,33 @@ def genPeverifyInteropAsm(file):
         "msagent" :        [agentsvr_path],
         "scriptpw" :       [scriptpw_path],
         "word" :           [],
-        "dlrcomserver" :   [testpath.rowan_root + "\\Test\\DlrComLibrary\\Debug\\DlrComLibrary.dll"],
-        "paramsinretval" : [testpath.rowan_root + "\\Test\\DlrComLibrary\\Debug\\DlrComLibrary.dll"],
     }
     
+    dlrcomlib_list = [  "dlrcomserver", "paramsinretval", "method", "obj", "prop",  ]
+    for mod_name in dlrcomlib_list: module_dll_dict[mod_name] = [ testpath.rowan_root + "\\Test\\DlrComLibrary\\Debug\\DlrComLibrary.dll" ]
     
-    if not module_dll_dict.has_key(mod_name):
-        print "ERROR: cannot determine which interop assemblies to install!"
-        sys.exit(1)
     
     if not file_exists_in_path("tlbimp.exe"):
         print "ERROR: tlbimp.exe is not in the path!"
         sys.exit(1)
     
     try:
-        nt.chdir(tempDir)
+        if not module_dll_dict.has_key(mod_name):
+            print "WARNING: cannot determine which interop assemblies to install!"
+            print "         This may affect peverify runs adversely."
+            print
+            return
+            
+        else:
+            nt.chdir(tempDir)
     
-        for com_dll in module_dll_dict[mod_name]:
-            if not file_exists(com_dll):
-                print "\tERROR: %s does not exist!" % (com_dll)
-                continue
+            for com_dll in module_dll_dict[mod_name]:
+                if not file_exists(com_dll):
+                    print "\tERROR: %s does not exist!" % (com_dll)
+                    continue
     
-            print "\trunning tlbimp on", com_dll
-            run_tlbimp(com_dll)
+                print "\trunning tlbimp on", com_dll
+                run_tlbimp(com_dll)
         
     finally:
         nt.chdir(cwd)   
@@ -172,7 +242,7 @@ def run_com_test(name, file):
     run_test(name)
     
     #Run this test with PreferComDispatch as well
-    if not preferComDispatch:
+    if not preferComDispatch and sys.platform!="win32":
         print "Re-running under '-X:PreferComDispatch' mode."
         AreEqual(launch_ironpython_changing_extensions(file, add=["-X:PreferComDispatch"]), 0)
     

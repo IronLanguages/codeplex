@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// All slots need to be created before accessing the TupleType property.
     /// </summary>
-    public class TupleSlotFactory : SlotFactory, ILazySlotFactory<int> {
+    class TupleSlotFactory : SlotFactory, ILazySlotFactory<int> {
         private List<Slot> _slots = new List<Slot>();
         private List<SymbolId> _names = new List<SymbolId>();
         private Type _dictType, _tupleType;

@@ -20,6 +20,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Builds the argument for an out argument when not passed a StrongBox.  The out parameter
@@ -39,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_isRef) {
                 if (_tmp == null) {
                     _tmp = context.GetTemporary(_parameterType, "outParam");

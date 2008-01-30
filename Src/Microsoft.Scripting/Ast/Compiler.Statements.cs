@@ -22,8 +22,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    // TODO: Make internal, don't allow direct callers
-    public partial class Compiler {
+    partial class Compiler {
         private void Emit(Block node) {
             EmitPosition(node.Start, node.End);
             EmitBlockPrefix(node, node.Expressions.Count);
@@ -541,7 +540,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // TODO: 
-        internal static void ClearLabels(List<YieldTarget> targets) {
+        private static void ClearLabels(List<YieldTarget> targets) {
             if (targets != null) {
                 foreach (YieldTarget yt in targets) {
                     yt.Clear();

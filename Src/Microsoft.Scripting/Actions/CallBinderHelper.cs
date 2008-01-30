@@ -82,7 +82,7 @@ namespace Microsoft.Scripting.Actions {
 
             // if we produced an ActionOnCall rule we don't replace the test w/ our own.
             if (_rule.Test == null) {
-                _rule.SetTest(_test);
+                _rule.Test = _test;
             }
             return _rule;
         }
@@ -127,9 +127,9 @@ namespace Microsoft.Scripting.Actions {
                 if (!MakeActionOnCallRule(target)) {
                     Expression[] exprargs = FinishTestForCandidate(bt.ArgumentTests, argTypes);
 
-                    _rule.SetTarget(_rule.MakeReturn(
+                    _rule.Target = _rule.MakeReturn(
                         Binder,
-                        bt.MakeExpression(_rule, exprargs)));
+                        bt.MakeExpression(_rule, exprargs));
                 }
             } else {
                 // make an error rule
@@ -227,7 +227,7 @@ namespace Microsoft.Scripting.Actions {
                             string strKey = de.Key as string;
                             if (strKey == null) continue;
 
-                            Expression dictExpr = _rule.Parameters[_rule.Parameters.Length - 1];
+                            Expression dictExpr = _rule.Parameters[_rule.Parameters.Count - 1];
                             exprargs.Add(
                                 Ast.Call(
                                     Ast.ConvertHelper(dictExpr, typeof(IDictionary)),
@@ -274,7 +274,7 @@ namespace Microsoft.Scripting.Actions {
             Expression splat = null, kwSplat = null;
             Expression instance = null;
 
-            for (int i = 1; i < rule.Parameters.Length; i++) {
+            for (int i = 1; i < rule.Parameters.Count; i++) {
                 switch (Action.Signature.GetArgumentKind(i - 1)) {
                     case ArgumentKind.Simple: plainArgs.Add(rule.Parameters[i]); break;
                     case ArgumentKind.List: splat = rule.Parameters[i]; break;
@@ -496,10 +496,10 @@ namespace Microsoft.Scripting.Actions {
             _test = Ast.AndAlso(
                 _test,
                 Ast.AndAlso(
-                    Ast.TypeIs(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
+                    Ast.TypeIs(_rule.Parameters[_rule.Parameters.Count - 1], typeof(IDictionary)),
                     Ast.Call(
                         typeof(BinderOps).GetMethod("CheckDictionaryMembers"),
-                        Ast.Convert(_rule.Parameters[_rule.Parameters.Length - 1], typeof(IDictionary)),
+                        Ast.Convert(_rule.Parameters[_rule.Parameters.Count - 1], typeof(IDictionary)),
                         _rule.AddTemplatedConstant(typeof(string[]), names)
                     )
                 )
@@ -511,14 +511,13 @@ namespace Microsoft.Scripting.Actions {
         #region Error support
 
         protected virtual void MakeCannotCallRule(Type type) {
-            _rule.SetTarget(
+            _rule.Target =
                 _rule.MakeError(
                     Ast.New(
                         typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
                         Ast.Constant(type.Name + " is not callable")
                     )
-                )
-            );
+                );
         }
 
         private void MakeInvalidParametersRule(BindingTarget bt) {
@@ -538,7 +537,7 @@ namespace Microsoft.Scripting.Actions {
                 _test = Ast.AndAlso(_test, MakeNecessaryTests(_rule, vals, argExpr));
             }
 
-            _rule.SetTarget(Binder.MakeInvalidParametersError(bt).MakeErrorForRule(_rule, Binder));
+            _rule.Target = Binder.MakeInvalidParametersError(bt).MakeErrorForRule(_rule, Binder);
         }
 
         #endregion

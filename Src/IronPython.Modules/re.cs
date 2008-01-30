@@ -257,23 +257,34 @@ namespace IronPython.Modules {
             [PythonName("match")]
             public RE_Match Match(object text) {
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(_re.Match(input), this, input, 0);
+                return RE_Match.makeMatch(_re.Match(input), this, input, 0, input.Length);
+            }
+
+            private static int FixPosition(string text, int position) {
+                if (position < 0) return 0;
+                if (position > text.Length) return text.Length;
+
+                return position;
             }
 
             [PythonName("match")]
             public RE_Match Match(object text, int pos) {
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(_re.Match(input, pos), this, input, pos);
+                pos = FixPosition(input, pos);
+                return RE_Match.makeMatch(_re.Match(input, pos), this, input, pos, input.Length);
             }
 
             [PythonName("match")]
             public RE_Match Match(object text, [DefaultParameterValue(0)]int pos, int endpos) {
                 string input = ValidateString(text, "text");
+                pos = FixPosition(input, pos);
+                endpos = FixPosition(input, endpos);
                 return RE_Match.makeMatch(
                     _re.Match(input.Substring(0, endpos), pos),
                     this,
                     input,
-                    pos);
+                    pos,
+                    endpos);
             }
 
             [PythonName("search")]
@@ -517,6 +528,7 @@ namespace IronPython.Modules {
             private Match _m;
             private string _text;
             private int _lastindex = -1;
+            private int _endPos;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
@@ -524,18 +536,27 @@ namespace IronPython.Modules {
                 return null;
             }
 
-            internal static RE_Match makeMatch(Match m, RE_Pattern pattern, string input, int offset) {
-                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input);
+            internal static RE_Match makeMatch(Match m, RE_Pattern pattern, string input, int offset, int endpos) {
+                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input, endpos);
                 return null;
             }
             #endregion
 
             #region Public ctors
+
             public RE_Match(Match m, RE_Pattern pattern, string text) {
-                this._m = m;
-                this._pattern = pattern;
-                this._text = text;
+                _m = m;
+                _pattern = pattern;
+                _text = text;
             }
+
+            public RE_Match(Match m, RE_Pattern pattern, string text, int endpos) {
+                _m = m;
+                _pattern = pattern;
+                _text = text;
+                _endPos = endpos;
+            }
+
             #endregion
 
             //			public override bool __nonzero__() {
@@ -656,6 +677,13 @@ namespace IronPython.Modules {
             public object GroupDict() {
                 return GroupDict(null);
             }
+            
+            private static bool IsGroupNumber(string name) {
+                foreach (char c in name) {
+                    if (!Char.IsNumber(c)) return false;
+                }
+                return true;
+            }
 
             [PythonName("groupdict")]
             public object GroupDict(object value) {
@@ -663,7 +691,7 @@ namespace IronPython.Modules {
                 Debug.Assert(groupNames.Length == this._m.Groups.Count);
                 PythonDictionary d = new PythonDictionary();
                 for (int i = 0; i < groupNames.Length; i++) {
-                    if (groupNames[i] == "0") continue; // python doesn't report this overarching group
+                    if (IsGroupNumber(groupNames[i])) continue; // python doesn't report group numbers
 
                     if (_m.Groups[i].Captures.Count != 0) {
                         d[groupNames[i]] = _m.Groups[i].Value;
@@ -694,7 +722,7 @@ namespace IronPython.Modules {
             public int EndPosition {
                 [PythonName("endpos")]
                 get {
-                    return _m.Index + _m.Length;
+                    return _endPos;
                 }
             }
 
@@ -708,8 +736,12 @@ namespace IronPython.Modules {
             public object Regs {
                 [PythonName("regs")]
                 get {
-                    // what is this?
-                    return PythonTuple.MakeTuple(PythonTuple.MakeTuple(0, 1), PythonTuple.MakeTuple(0, 1));
+                    object[] res = new object[_m.Groups.Count];
+                    for (int i = 0; i < res.Length; i++) {
+                        res[i] = PythonTuple.MakeTuple(Start(i), End(i));
+                    }
+
+                    return PythonTuple.MakeTuple(res);
                 }
             }
             public object Pattern {
@@ -992,7 +1024,6 @@ namespace IronPython.Modules {
                                 case 'r': sb.Append('\r'); break;
                                 case 't': sb.Append('\t'); break;
                                 case '\\': sb.Append('\\'); break;
-                                case '?': sb.Append('?'); break;
                                 case '\'': sb.Append('\''); break;
                                 case '"': sb.Append('"'); break;
                                 case 'b': sb.Append('\b'); break;

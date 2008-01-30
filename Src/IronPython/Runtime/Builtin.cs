@@ -278,7 +278,7 @@ namespace IronPython.Runtime {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public static List dir(CodeContext context) {
-            List res = List.Make(locals(context).Keys);
+            List res = List.Make(LocalsAsAttributesCollection(context).Keys);
 
             res.Sort();
             return res;
@@ -338,7 +338,7 @@ namespace IronPython.Runtime {
         public static IAttributesCollection GetAttrLocals(CodeContext context, object locals) {
             IAttributesCollection attrLocals;
             if (locals == null) {
-                attrLocals = Builtin.locals(context);
+                attrLocals = LocalsAsAttributesCollection(context);
             } else {
                 attrLocals = locals as IAttributesCollection ?? new ObjectAttributesAdapter(locals);
             }
@@ -417,30 +417,53 @@ namespace IronPython.Runtime {
 
         public static object file = DynamicHelpers.GetPythonTypeFromType(typeof(PythonFile));
 
-        public static object filter(object function, object list) {
-            string str = list as string;
-            if (str != null) {
-                if (function == null) return str;
-                StringBuilder sb = new StringBuilder();
-                foreach (char c in str) {
-                    if (PythonOps.IsTrue(PythonCalls.Call(function, RuntimeHelpers.CharToString(c)))) sb.Append(c);
-                }
-                return sb.ToString();
-            } else if (issubclass(DynamicHelpers.GetPythonType(list), TypeCache.String)) {
-                StringBuilder sb = new StringBuilder();
-                IEnumerator e = PythonOps.GetEnumerator(list);
-                while (e.MoveNext()) {
-                    object o = e.Current;
-                    object t = (function != null) ? PythonCalls.Call(function, o) : o;
+        public static string filter(object function, [NotNull]string list) {
+            if (function == null) return list;
+            if (list == null) throw PythonOps.TypeError("NoneType is not iterable");
 
-                    if (!PythonOps.IsTrue(t))
-                        continue;
-
-                    sb.Append(Converter.ConvertToString(o));
-                }
-                return sb.ToString();
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in list) {
+                if (PythonOps.IsTrue(PythonCalls.Call(function, RuntimeHelpers.CharToString(c)))) sb.Append(c);
             }
 
+            return sb.ToString();
+        }
+
+        public static string filter(object function, [NotNull]ExtensibleString list) {
+            StringBuilder sb = new StringBuilder();
+            IEnumerator e = PythonOps.GetEnumerator(list);
+            while (e.MoveNext()) {
+                object o = e.Current;
+                object t = (function != null) ? PythonCalls.Call(function, o) : o;
+
+                if (PythonOps.IsTrue(t)) {
+                    sb.Append(Converter.ConvertToString(o));
+                }
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Specialized version because enumerating tuples by Python's definition
+        /// doesn't call __getitem__, but filter does!
+        /// </summary>
+        public static PythonTuple filter(object function, [NotNull]PythonTuple tuple) {
+            List<object> res = new List<object>(tuple.Count);
+            
+            for (int i = 0; i < tuple.Count; i++) {
+                object obj = tuple[i];
+                object t = (function != null) ? PythonCalls.Call(function, obj) : obj;
+
+                if (PythonOps.IsTrue(t)) {
+                    res.Add(obj);
+                }
+            }
+
+            return PythonTuple.MakeTuple(res.ToArray());
+        }
+
+        public static List filter(object function, object list) {
+            if (list == null) throw PythonOps.TypeError("NoneType is not iterable");
             List ret = new List();
 
             IEnumerator i = PythonOps.GetEnumerator(list);
@@ -452,11 +475,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            if (isinstance(list, DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple)))) {
-                return PythonTuple.Make(ret);
-            } else {
-                return ret;
-            }
+            return ret;
         }
 
         public static object @float = DynamicHelpers.GetPythonTypeFromType(typeof(double));
@@ -756,8 +775,19 @@ namespace IronPython.Runtime {
         public static object list = DynamicHelpers.GetPythonTypeFromType(typeof(List));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
-        public static IAttributesCollection locals(CodeContext context) {
-            return new LocalsDictionary(context.Scope);
+        public static object locals(CodeContext context) {            
+            ObjectAttributesAdapter adapter = context.Scope.Dict as ObjectAttributesAdapter;
+            if(adapter != null) {
+                // we've wrapped Locals in an IAttributesCollection, give the user back the
+                // original object.
+                return adapter.Backing;
+            }
+
+            return LocalsAsAttributesCollection(context);
+        }
+
+        internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext context) {
+            return LocalsDictionary.GetDictionaryFromScope(context.Scope);
         }
 
         public static object @long = DynamicHelpers.GetPythonTypeFromType(typeof(BigInteger));

@@ -23,6 +23,7 @@ using Microsoft.Scripting.Actions;
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using System.Diagnostics;
+    using System.Collections.Generic;
 
     /// <summary>
     /// An argument that the user wants to explicitly pass by-reference (with copy-in copy-out semantics).
@@ -42,7 +43,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 5; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_tmp == null) {
                 _tmp = context.GetTemporary(_elementType, "outParam");
             }
@@ -87,7 +88,7 @@ namespace Microsoft.Scripting.Generation {
             return Ast.Read(_tmp);
         }
 
-        internal override Expression UpdateFromReturn(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
             return Ast.Call(
                 typeof(BinderOps).GetMethod("UpdateBox").MakeGenericMethod(_elementType),
                 Ast.Convert(parameters[Index], BoxType),

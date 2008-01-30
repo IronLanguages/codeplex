@@ -253,7 +253,6 @@ namespace IronPython.Runtime {
 
         #region ISequence Members
 
-
         internal void AddRange<T>(ICollection<T> otherList) {
             foreach (object o in otherList) Add(o);
         }
@@ -271,13 +270,6 @@ namespace IronPython.Runtime {
 
             return this;
         }
-
-        [SpecialName, PythonName("__delitem__")]
-        public virtual void DeleteItem(int index) {
-            lock (this) RawDelete(PythonOps.FixIndex(index, _size));
-        }
-
-
 
         [SpecialName, PythonName("__imul__")]
         public object InPlaceMultiply(int count) {
@@ -298,14 +290,19 @@ namespace IronPython.Runtime {
             return this;
         }
 
+        [SpecialName, PythonName("__imul__")]
+        public object InPlaceMultiply(object count) {
+            return InPlaceMultiply(Converter.ConvertToIndex(count));
+        }
+
         [PythonName("__getslice__")]
         public virtual object GetSlice(int start, int stop) {
-            if (start < 0) start = 0;
-            if (stop > GetLength()) stop = GetLength();
-
-            object[] ret;
-            lock (this) ret = ArrayOps.GetSlice(_data, start, stop);
-            return new List(ret);
+            lock (this) {
+                Slice.FixSliceArguments(_size, ref start, ref stop);
+                
+                object[] ret = ArrayOps.GetSlice(_data, start, stop);
+                return new List(ret);
+            }            
         }
 
         internal object[] GetSliceAsArray(int start, int stop) {
@@ -317,8 +314,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__setslice__")]
         public virtual void SetSlice(int start, int stop, object value) {
-            if (start < 0) start = 0;
-            if (stop > GetLength()) stop = GetLength();
+            Slice.FixSliceArguments(_size, ref start, ref stop);
             if (start > stop) return;
 
             SliceNoStep(start, stop, value);
@@ -326,19 +322,19 @@ namespace IronPython.Runtime {
 
         [PythonName("__delslice__")]
         public virtual void DeleteSlice(int start, int stop) {
-            if (start < 0) start = 0;
-            if (stop > GetLength()) stop = GetLength();
-            if (start > stop) return;
+            lock (this) {
+                Slice.FixSliceArguments(_size, ref start, ref stop);
+                if (start > stop) return;
 
-            int i = start;
-            for (int j = stop; j < _size; j++, i++) {
-                _data[i] = _data[j];
+                int i = start;
+                for (int j = stop; j < _size; j++, i++) {
+                    _data[i] = _data[j];
+                }
+                _size -= stop - start;
             }
-            _size -= stop - start;
-            return;
         }
 
-        public object this[Slice slice] {
+        public virtual object this[Slice slice] {
             get {
                 if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
 
@@ -424,7 +420,17 @@ namespace IronPython.Runtime {
             this[index] = value;
         }
 
-        [PythonName("__delitem__")]
+        [SpecialName, PythonName("__delitem__")]
+        public virtual void DeleteItem(int index) {
+            lock (this) RawDelete(PythonOps.FixIndex(index, _size));
+        }
+
+        [SpecialName, PythonName("__delitem__")]
+        public virtual void DeleteItem(object index) {
+            DeleteItem(Converter.ConvertToIndex(index));
+        }
+
+        [SpecialName, PythonName("__delitem__")]
         public void DeleteItem(Slice slice) {
             if (slice == null) throw PythonOps.TypeError("list indicies must be integers or slices");
 
@@ -618,12 +624,12 @@ namespace IronPython.Runtime {
 
         [PythonName("index")]
         public int Index(object item, object start) {
-            return Index(item, Converter.ConvertToSliceIndex(start), _size);
+            return Index(item, Converter.ConvertToIndex(start), _size);
         }
 
         [PythonName("index")]
         public int Index(object item, object start, object stop) {
-            return Index(item, Converter.ConvertToSliceIndex(start), Converter.ConvertToSliceIndex(stop));
+            return Index(item, Converter.ConvertToIndex(start), Converter.ConvertToIndex(stop));
         }
 
         [PythonName("insert")]
@@ -952,12 +958,15 @@ namespace IronPython.Runtime {
             }
         }
 
-        public virtual object this[double index] {
+        /// <summary>
+        /// Supports __index__ on arbitrary types, also prevents __float__
+        /// </summary>
+        public virtual object this[object index] {
             get {
-                throw PythonOps.TypeError("list indices must be integers");
+                return this[Converter.ConvertToIndex(index)];
             }
             set {
-                throw PythonOps.TypeError("list indices must be integers");
+                this[Converter.ConvertToIndex(index)] = value;
             }
         }
 

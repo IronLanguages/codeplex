@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Actions {
 
         public StandardRule<T> MakeRule() {
             Rule.MakeTest(StrongBoxType ?? CompilerHelpers.GetType(Target));
-            Rule.SetTarget(MakeDeleteMemberTarget());
+            Rule.Target = MakeDeleteMemberTarget();
 
             return Rule;            
         }

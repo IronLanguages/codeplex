@@ -839,13 +839,25 @@ namespace IronPython.Modules {
 
             string message = e.Message;
             int hr = System.Runtime.InteropServices.Marshal.GetHRForException(e);
-            if ((hr & ~0xfff) == 0x8007000) {
-                // win32 error code, present the user w/ the error code & message   
-                message = "[Errno " + (hr & 0xfff).ToString() + "] " + e.Message;
+            if ((hr & ~0xfff) == (unchecked((int)0x80070000))) {
+                // Win32 HR, translate HR to Python error code if possible, otherwise
+                // report the HR.
+                switch (hr & 0xfff) {
+                    case ERROR_FILE_EXISTS:
+                        hr = PythonErrorNumber.EEXIST;
+                        break;
+                    case ERROR_ACCESS_DENIED:
+                        hr = PythonErrorNumber.EACCES;
+                        break;                    
+                }
+                message = "[Errno " + hr.ToString() + "] " + e.Message;
             }
 
-            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, e.Message);
+            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, hr, message);
         }
+
+        private const int ERROR_FILE_EXISTS = 80;
+        private const int ERROR_ACCESS_DENIED = 5;
 
         private const int S_IWRITE = 0x80;
         private const int S_IREAD = 0x100;

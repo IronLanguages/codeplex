@@ -92,13 +92,23 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void Dump(string fileName) {
+            // first save both assemblies to disk
             if (_assembly != null && _assembly.SaveAndReloadAssemblies) {
                 _assembly.Dump(fileName);
-                _assembly = null;
             }
 
             if (_debugAssembly != null && _debugAssembly.SaveAndReloadAssemblies) {
                 _debugAssembly.Dump();
+            }
+
+            // then verify both assemblies
+            if (_assembly != null && _assembly.SaveAndReloadAssemblies) {
+                _assembly.Verify();
+                _assembly = null;
+            }
+
+            if (_debugAssembly != null && _debugAssembly.SaveAndReloadAssemblies) {
+                _debugAssembly.Verify();
                 _debugAssembly = null;
             }
         }

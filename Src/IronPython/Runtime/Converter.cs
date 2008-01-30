@@ -310,18 +310,72 @@ namespace IronPython.Runtime {
         public static IEnumerable ConvertToIEnumerable(object o) {
             return _ienumerableSite.Invoke(o);
         }
-        
-        internal static int ConvertToSliceIndex(object value) {
-            int val;
-            if (TryConvertToInt32(value, out val))
-                return val;
 
-            BigInteger bigval;
-            if (TryConvertToBigInteger(value, out bigval)) {
-                return bigval > 0 ? Int32.MaxValue : Int32.MinValue;
+        internal static bool TryConvertToIndex(object value, out int index) {
+            return TryConvertToIndex(value, true, out index);
+        }
+
+        /// <summary>
+        /// Attempts to convert value into a index usable for slicing and return the integer
+        /// value.  If the conversion fails false is returned.  
+        /// 
+        /// If throwOverflowError is true then BigInteger's outside the normal range of integers will
+        /// result in an OverflowError.
+        /// </summary>
+        internal static bool TryConvertToIndex(object value, bool throwOverflowError, out int index) {
+            int? res = ConvertToSliceIndexHelper(value, throwOverflowError);
+            if (!res.HasValue) {
+                object callable;
+                if (PythonOps.TryGetBoundAttr(value, Symbols.Index, out callable)) {
+                    res = ConvertToSliceIndexHelper(PythonCalls.Call(callable), throwOverflowError);
+                }
             }
 
-            throw PythonOps.TypeError("slice indices must be integers");
+            index = res.HasValue ? res.Value : 0;
+            return res.HasValue;
+        }
+
+        public static int ConvertToIndex(object value) {
+            int? res = ConvertToSliceIndexHelper(value, false);
+            if (res.HasValue) {
+                return res.Value;
+            }
+
+            object callable;
+            if (PythonOps.TryGetBoundAttr(value, Symbols.Index, out callable)) {
+                object index = PythonCalls.Call(callable);
+                res = ConvertToSliceIndexHelper(index, false);
+                if (res.HasValue) {
+                    return res.Value;
+                }
+
+                throw PythonOps.TypeError("__index__ returned bad value: {0}", DynamicHelpers.GetPythonType(index).Name);
+            }
+
+            throw PythonOps.TypeError("expected index value, got {0}", DynamicHelpers.GetPythonType(value).Name);
+        }
+
+        private static int? ConvertToSliceIndexHelper(object value, bool throwOverflowError) {
+            if (value is int) return (int)value;
+
+            BigInteger bi = null;
+            Extensible<BigInteger> ebi;
+            if (((object)(bi = value as BigInteger)) != null) { // we've stored the value in bi  
+            } else if ((ebi = value as Extensible<BigInteger>) != null) { bi = ebi.Value; 
+            } else if (value is Extensible<int>) return ((Extensible<int>)value).Value;
+
+            if (!Object.ReferenceEquals(bi, null)) {
+                int res;
+                if (bi.AsInt32(out res)) return res;
+
+                if (throwOverflowError) {
+                    throw PythonOps.OverflowError("can't fit long into index");
+                }
+
+                return bi == BigInteger.Zero ? 0 : bi > 0 ? Int32.MaxValue : Int32.MinValue;
+            }
+
+            return null;
         }
         
         internal static Exception CannotConvertOverflow(string name, object value) {
@@ -495,7 +549,7 @@ namespace IronPython.Runtime {
 
             //!!!do user-defined implicit conversions here
 
-            if (allowNarrowing == NarrowingLevel.None) return false;
+            if (allowNarrowing == PythonNarrowing.None) return false;
 
             return HasNarrowingConversion(fromType, toType, allowNarrowing);
         }
@@ -713,7 +767,7 @@ namespace IronPython.Runtime {
         }
 
         private static bool HasNarrowingConversion(Type fromType, Type toType, NarrowingLevel allowNarrowing) {
-            if (allowNarrowing == NarrowingLevel.All) {
+            if (allowNarrowing == PythonNarrowing.IndexOperator) {
                 if (toType == CharType && fromType == StringType) return true;
                 if (toType == StringType && fromType == CharType) return true;
                 //if (toType == Int32Type && fromType == BigIntegerType) return true;
@@ -732,8 +786,12 @@ namespace IronPython.Runtime {
                 return typeof(PythonTuple).IsAssignableFrom(fromType);
             }
 
-            if (allowNarrowing == NarrowingLevel.All) {
-                if (IsNumeric(fromType) && IsNumeric(toType)) return true;
+            if (allowNarrowing == PythonNarrowing.IndexOperator) {
+                if (IsNumeric(fromType) && IsNumeric(toType)) {
+                    if (fromType != typeof(float) && fromType != typeof(double) && fromType != typeof(decimal) && fromType != typeof(Complex64)) {
+                        return true;
+                    }
+                }
                 if (fromType == typeof(bool) && IsNumeric(toType)) return true;
 
                 if (toType == CharType && fromType == StringType) return true;
@@ -744,11 +802,6 @@ namespace IronPython.Runtime {
 
                 if (DelegateType.IsAssignableFrom(toType) && IsPythonType(fromType)) return true;
                 if (IEnumerableType == toType && IsPythonType(fromType)) return true;
-
-                //__int__, __float__, __long__
-                if (toType == Int32Type && HasPythonProtocol(fromType, Symbols.ConvertToInt)) return true;
-                if (toType == DoubleType && HasPythonProtocol(fromType, Symbols.ConvertToFloat)) return true;
-                if (toType == BigIntegerType && HasPythonProtocol(fromType, Symbols.ConvertToLong)) return true;
 
                 if (toType == typeof(IEnumerator)) {
                     if (IsPythonType(fromType)) return true;
@@ -761,6 +814,14 @@ namespace IronPython.Runtime {
                         if (IsPythonType(fromType)) return true;
                     }
                 }
+            }
+
+            if (allowNarrowing == PythonNarrowing.All) {
+                //__int__, __float__, __long__
+                if (IsNumeric(fromType) && IsNumeric(toType)) return true;
+                if (toType == Int32Type && HasPythonProtocol(fromType, Symbols.ConvertToInt)) return true;
+                if (toType == DoubleType && HasPythonProtocol(fromType, Symbols.ConvertToFloat)) return true;
+                if (toType == BigIntegerType && HasPythonProtocol(fromType, Symbols.ConvertToLong)) return true;
             }
 
             if (toType.IsGenericType) {

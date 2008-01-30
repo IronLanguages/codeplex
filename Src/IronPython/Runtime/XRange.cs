@@ -87,6 +87,12 @@ namespace IronPython.Runtime {
             }
         }
 
+        public virtual object this[object index] {
+            get {
+                return this[Converter.ConvertToIndex(index)];
+            }
+        }
+
         public object AddSequence(object other) {
             throw PythonOps.TypeErrorForBadInstance("unsupported operand type(s) for +: 'xrange' and {0}", other);
         }

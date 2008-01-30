@@ -1053,6 +1053,33 @@ def test_method():
     method = type(C.method)(id, None, 'abc')
     AreEqual(method.im_class, 'abc')
     
+    class myobj:
+        def __init__(self, val):            
+            self.val = val
+            self.called = []
+        def __hash__(self):
+            self.called.append('hash')
+            return hash(self.val)        
+        def __eq__(self, other): 
+            self.called.append('eq')
+            return self.val == other.val
+        def __call__(*args): pass
+    
+    func1, func2 = myobj(2), myobj(2)
+    inst1, inst2 = myobj(3), myobj(3)
+    
+    method = type(C().method)
+    m1 = method(func1, inst1)
+    m2 = method(func2, inst2)
+    AreEqual(m1, m2)
+    
+    Assert('eq' in func1.called)
+    Assert('eq' in inst1.called)
+
+    hash(m1)   
+    Assert('hash' in func1.called)
+    Assert('hash' in inst1.called)
+    
 def test_function_type():
     def f1(): pass
     def f2(a): pass

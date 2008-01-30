@@ -14,10 +14,13 @@
 #####################################################################################
 
 import clr
-clr.AddReference("Microsoft.Scripting")
-from Microsoft.Scripting import *
 import System
+
+clr.AddReference("Microsoft.Scripting")
+from Microsoft.Scripting import CallTarget0;
+from Microsoft.Scripting.Generation import CompilerHelpers
+
 paramTypes = System.Array[System.Type]([])
-cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod("test", str, paramTypes)
-cg.EmitReturn()
-cg.Finish()
+cg = CompilerHelpers.CreateDynamicMethod("test", System.Object, paramTypes)
+cg.Emit(System.Reflection.Emit.OpCodes.Ret)
+cg.CreateDelegate[CallTarget0](clr.Reference[System.Reflection.MethodInfo]())

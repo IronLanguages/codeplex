@@ -21,6 +21,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Collections.Generic;
 
     /// <summary>
     /// ArgBuilder which provides a default parameter value for a method call.
@@ -79,32 +80,7 @@ namespace Microsoft.Scripting.Generation {
             return _defaultValue;
         }
 
-        private static void EmitDefaultValue(Compiler cg, object value, Type type) {
-            if (value is Missing) {
-                cg.EmitMissingValue(type);
-            } else {
-                cg.EmitConstant(value);
-                //TODO This should turn into cg.EmitConvert(value.GetType(), type)
-                if (type.IsValueType) {
-                    if (value == null) cg.EmitTypeError("Cannot cast None to {0}", type);
-                    else if (value.GetType() != type) cg.EmitTypeError("Cannot cast {0} to {1}", value, type);
-                } else {
-                    // null is any reference type
-                    if (value != null) {
-                        Type from = value.GetType();
-                        if (!type.IsAssignableFrom(from)) {
-                            cg.EmitTypeError("Cannot cast {0} to {1}", value, type);
-                        } else {
-                            if (from.IsValueType) {
-                                cg.Emit(OpCodes.Box, from);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             object val = _defaultValue;
             if(val is Missing) {
                 val = CompilerHelpers.GetMissingValue(_argumentType);

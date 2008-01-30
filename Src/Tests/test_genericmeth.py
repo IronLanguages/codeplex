@@ -28,7 +28,7 @@ AssertDocEqual(gm.InstMeth.__doc__, 'str InstMeth[T](self)' + newline + 'str Ins
 
 # And the same for the static methods.
 expected_static_methods = 'str StaticMeth[T]()' + newline + 'str StaticMeth[(T, U)]()' + newline + 'str StaticMeth[T](int arg1)' + newline + 'str StaticMeth[T](str arg1)' + newline + 'str StaticMeth[(T, U)](int arg1)' + newline + 'str StaticMeth[T](T arg1)' + newline + 'str StaticMeth[(T, U)](T arg1, U arg2)' + newline + 'str StaticMeth()' + newline + 'str StaticMeth(int arg1)' + newline + 'str StaticMeth(str arg1)'
-Assert(GenMeth.StaticMeth.__doc__ == expected_static_methods)
+AssertDocEqual(GenMeth.StaticMeth.__doc__, expected_static_methods)
 
 # Check that we bind to the correct method based on type and call arguments for each of our instance methods. We can validate this
 # because each target method returns a unique string we can compare.

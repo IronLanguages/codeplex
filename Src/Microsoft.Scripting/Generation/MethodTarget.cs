@@ -135,7 +135,7 @@ namespace Microsoft.Scripting.Generation {
             return _returnBuilder.Build(context, callArgs, args, result);
         }
 
-        internal Expression MakeExpression(StandardRule rule, Expression[] parameters) {
+        internal Expression MakeExpression(StandardRule rule, IList<Expression> parameters) {
             MethodBinderContext context = new MethodBinderContext(_binder._binder, rule);
 
             Expression check = Ast.True();
@@ -242,13 +242,13 @@ namespace Microsoft.Scripting.Generation {
         /// <param name="parameters">The explicit arguments</param>
         /// <param name="knownTypes">If non-null, the type for each element in parameters</param>
         /// <returns></returns>
-        internal Expression MakeExpression(StandardRule rule, Expression[] parameters, IList<Type> knownTypes) {
-            Debug.Assert(knownTypes == null || parameters.Length == knownTypes.Count);
+        internal Expression MakeExpression(StandardRule rule, IList<Expression> parameters, IList<Type> knownTypes) {
+            Debug.Assert(knownTypes == null || parameters.Count == knownTypes.Count);
 
-            Expression[] args = parameters;
+            IList<Expression> args = parameters;
             if (knownTypes != null) {
-                args = new Expression[parameters.Length];
-                for (int i = 0; i < args.Length; i++) {
+                args = new Expression[parameters.Count];
+                for (int i = 0; i < args.Count; i++) {
                     args[i] = parameters[i];
                     if (knownTypes[i] != null && !knownTypes[i].IsAssignableFrom(parameters[i].Type)) {
                         args[i] = Ast.Convert(parameters[i], CompilerHelpers.GetVisibleType(knownTypes[i]));

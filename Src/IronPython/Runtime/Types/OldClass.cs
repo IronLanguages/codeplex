@@ -553,8 +553,8 @@ namespace IronPython.Runtime.Types {
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
             Variable tmp = rule.GetTemporary(typeof(object), "init");
             Variable instTmp = rule.GetTemporary(typeof(object), "inst");
-            rule.SetTest(rule.MakeTypeTest(typeof(OldClass), 0));
-            rule.SetTarget(
+            rule.Test = rule.MakeTypeTest(typeof(OldClass), 0);
+            rule.Target =
                 rule.MakeReturn(context.LanguageContext.Binder,
                     Ast.Comma(
                         Ast.Assign(
@@ -579,7 +579,7 @@ namespace IronPython.Runtime.Types {
                             // Checking the Parameter array directly here only works for simple signatures.
                             // It would get confused by cases like C(*()), C(**{}), or C(*E(), **{}), which could all
                             // bind against C(). 
-                            rule.Parameters.Length != 1 ?
+                            rule.Parameters.Count != 1 ?
                                 (Expression)Ast.Call(
                                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                                     typeof(OldClass).GetMethod("MakeCallError")
@@ -588,8 +588,7 @@ namespace IronPython.Runtime.Types {
                         ),
                         Ast.Read(instTmp)
                     )
-                )
-            );
+                );
 
             return rule;
         }
@@ -643,7 +642,7 @@ namespace IronPython.Runtime.Types {
                 );
             }
 
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, call));
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
             return rule;
         }
 
@@ -678,14 +677,14 @@ namespace IronPython.Runtime.Types {
         private static StandardRule<T> MakeDelMemberRule<T>(DeleteMemberAction action, CodeContext context, object[] args) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldClass));
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder,
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
                     Ast.ConvertHelper(rule.Parameters[0], typeof(OldClass)),
                     typeof(OldClass).GetMethod("DeleteCustomMember"),
                     Ast.CodeContext(),
                     Ast.Constant(action.Name)
                 )
-            ));
+            );
             return rule;
         }
 
@@ -750,7 +749,7 @@ namespace IronPython.Runtime.Types {
                 }
             }
 
-            rule.SetTarget(rule.MakeReturn(context.LanguageContext.Binder, target));
+            rule.Target = rule.MakeReturn(context.LanguageContext.Binder, target);
 
             return rule;
         }

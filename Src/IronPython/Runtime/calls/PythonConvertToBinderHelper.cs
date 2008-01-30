@@ -76,15 +76,13 @@ namespace IronPython.Runtime.Calls {
                 
                 rule = new StandardRule<T>();
                 rule.MakeTest(CompilerHelpers.GetType(_argument));
-                rule.SetTarget(
-                    rule.MakeReturn(
-                        Binder,
-                        Ast.New(
-                            making.GetConstructor(new Type[] { fromType }),
-                            Ast.ConvertHelper(
-                                rule.Parameters[0],
-                                fromType
-                            )
+                rule.Target = rule.MakeReturn(
+                    Binder,
+                    Ast.New(
+                        making.GetConstructor(new Type[] { fromType }),
+                        Ast.ConvertHelper(
+                            rule.Parameters[0],
+                            fromType
                         )
                     )
                 );
@@ -95,15 +93,13 @@ namespace IronPython.Runtime.Calls {
         private StandardRule<T> MakeArrayRule() {
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, DynamicHelpers.GetPythonType(_argument));
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.Call(
-                        typeof(PythonOps).GetMethod("ConvertTupleToArray").MakeGenericMethod(Action.ToType.GetElementType()),
-                        Ast.Convert(
-                            rule.Parameters[0],
-                            typeof(PythonTuple)
-                        )
+            rule.Target = rule.MakeReturn(
+                Binder,
+                Ast.Call(
+                    typeof(PythonOps).GetMethod("ConvertTupleToArray").MakeGenericMethod(Action.ToType.GetElementType()),
+                    Ast.Convert(
+                        rule.Parameters[0],
+                        typeof(PythonTuple)
                     )
                 )
             );
@@ -145,7 +141,7 @@ namespace IronPython.Runtime.Calls {
 
                 if (strVal.Length == 1) {
                     rule.AddTest(Ast.Equal(getLen, Ast.Constant(1)));
-                    rule.SetTarget(
+                    rule.Target =
                         rule.MakeReturn(
                             Binder,
                             Ast.Call(
@@ -153,19 +149,16 @@ namespace IronPython.Runtime.Calls {
                                 typeof(string).GetMethod("get_Chars"),
                                 Ast.Constant(0)
                             )
-                        )
-                    );
+                        );                    
                 } else {
                     rule.AddTest(Ast.NotEqual(getLen, Ast.Constant(1)));
-                    rule.SetTarget(
-                        rule.MakeError(
+                    rule.Target = rule.MakeError(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("TypeError"),
                                 Ast.Constant("expected string of length 1 when converting to char, got '{0}'"),
                                 Ast.NewArray(typeof(object[]), rule.Parameters[0])
-                            )
-                        )
-                    );
+                            )                        
+                        );
                 }
             } else {
                 // let the default binder produce the rule
@@ -181,7 +174,7 @@ namespace IronPython.Runtime.Calls {
 
             if (fromType == typeof(None)) {
                 // null is never true
-                rule.SetTarget(rule.MakeReturn(Binder, Ast.Constant(false)));
+                rule.Target = rule.MakeReturn(Binder, Ast.Constant(false));
             } else if (fromType == typeof(string)) {
                 MakeNonZeroPropertyRule(rule, typeof(string), "Length");
             } else if (_argument is ICollection) {
@@ -218,49 +211,45 @@ namespace IronPython.Runtime.Calls {
                 if (!newrule.IsError) {
                     rule = newrule;
                 } else {
-                    rule.SetTarget(rule.MakeReturn(Binder, Ast.Constant(true)));
+                    rule.Target = rule.MakeReturn(Binder, Ast.Constant(true));
                 }
             }
             return rule;
         }
 
         private void MakeBigIntegerRule(StandardRule<T> rule) {
-            rule.SetTarget(
+            rule.Target = 
                 rule.MakeReturn(
-                Binder,
+                    Binder,
                     Ast.Call(
                         typeof(BigInteger).GetMethod("op_Inequality", new Type[] { typeof(BigInteger), typeof(BigInteger) }),
                         Ast.ReadField(null, typeof(BigInteger).GetField("Zero")),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(BigInteger))
                     )
-                )
-            );
+                );
         }
 
         private void MakeComplexRule(StandardRule<T> rule) {            
-            rule.SetTarget(
+            rule.Target = 
                 rule.MakeReturn(
-                Binder,
+                    Binder,
                     Ast.Call(
                         typeof(Complex64).GetMethod("op_Inequality", new Type[] { typeof(Complex64), typeof(Complex64) }),
                         Ast.Constant(new Complex64()),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(Complex64))
                     )
-                )
-            );
+                );
         }
 
         private void MakePrimitiveRule(StandardRule<T> rule) {
             object zeroVal = Activator.CreateInstance(CompilerHelpers.GetType(_argument));
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.NotEqual(
-                        Ast.Constant(zeroVal),
-                        Ast.ConvertHelper(
-                            rule.Parameters[0],
-                            CompilerHelpers.GetType(_argument)
-                        )
+            rule.Target = rule.MakeReturn(
+                Binder,
+                Ast.NotEqual(
+                    Ast.Constant(zeroVal),
+                    Ast.ConvertHelper(
+                        rule.Parameters[0],
+                        CompilerHelpers.GetType(_argument)
                     )
                 )
             );
@@ -269,27 +258,23 @@ namespace IronPython.Runtime.Calls {
         private void MakeEnumRule(StandardRule<T> rule) {
             Type enumStorageType = Enum.GetUnderlyingType(CompilerHelpers.GetType(_argument));
             object zeroVal = Activator.CreateInstance(enumStorageType);
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.Equal(
-                        Ast.Convert(
-                            rule.Parameters[0],
-                            enumStorageType
-                        ),
-                        Ast.Constant(zeroVal)
-                    )
+            rule.Target = rule.MakeReturn(
+                Binder,
+                Ast.Equal(
+                    Ast.Convert(
+                        rule.Parameters[0],
+                        enumStorageType
+                    ),
+                    Ast.Constant(zeroVal)
                 )
             );
         }
 
         private void MakeStrongBoxRule(StandardRule<T> rule) {
-            rule.SetTarget(
-                rule.MakeError(
-                    Ast.Call(
-                        typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
-                        Ast.Constant("Can't convert a Reference<> instance to a bool")
-                    )
+            rule.Target = rule.MakeError(
+                Ast.Call(
+                    typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
+                    Ast.Constant("Can't convert a Reference<> instance to a bool")
                 )
             );
         }
@@ -299,20 +284,18 @@ namespace IronPython.Runtime.Calls {
         }
 
         private void MakeNonZeroPropertyRule(StandardRule<T> rule, Type collectionType, string propertyName) {
-            rule.SetTarget(
-                rule.MakeReturn(
-                    Binder,
-                    Ast.NotEqual(
-                        Ast.ReadProperty(
-                            Ast.ConvertHelper(
-                                rule.Parameters[0],
-                                collectionType
-                            ),
-                            collectionType.GetProperty(propertyName)
+            rule.Target = rule.MakeReturn(
+                Binder,
+                Ast.NotEqual(
+                    Ast.ReadProperty(
+                        Ast.ConvertHelper(
+                            rule.Parameters[0],
+                            collectionType
                         ),
-                        Ast.Constant(0)
-                    )
-                )
+                        collectionType.GetProperty(propertyName)
+                    ),
+                    Ast.Constant(0)
+                )            
             );
         }
     }

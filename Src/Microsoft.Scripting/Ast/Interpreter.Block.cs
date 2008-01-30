@@ -103,7 +103,7 @@ namespace Microsoft.Scripting.Ast {
                 lock (id) {
                     // Check _delegate again -- maybe it appeared between our first check and taking the lock
                     if (id.Delegate == null && ShouldCompile(id)) {
-                        id.Delegate = GetCompiledDelegate(block, id.DeclaringContext, null, id.ForceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(block, id.Source, null, id.ForceWrapperMethod);
                     }
                 }
                 if (id.Delegate != null) {
@@ -128,7 +128,7 @@ namespace Microsoft.Scripting.Ast {
             if (parent.LanguageContext.Options.ProfileDrivenCompilation) {
                 lock (id) {
                     if (id.Delegate == null && ShouldCompile(id)) {
-                        id.Delegate = GetCompiledDelegate(block, id.DeclaringContext, null, id.ForceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(block, id.Source, null, id.ForceWrapperMethod);
                     }
                 }
                 if (id.Delegate != null) {
@@ -163,7 +163,7 @@ namespace Microsoft.Scripting.Ast {
             // Walk the tree to determine whether to emit this CodeBlock or interpret it
             if (InterpretChecker.CanEvaluate(block, delayedEmit)) {
                 // Hold onto our declaring context in case we decide to emit ourselves later
-                id.DeclaringContext = context.ModuleContext.CompilerContext;
+                id.Source = context.ModuleContext.CompilerContext.SourceUnit;
                 id.ForceWrapperMethod = forceWrapperMethod;
 
                 if (delegateType == null) {
@@ -178,7 +178,7 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 lock (id) {
                     if (id.Delegate == null) {
-                        id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext, delegateType, forceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
                     }
                     return id.Delegate;
                 }
@@ -209,12 +209,12 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException(String.Format("failed to make delegate for type {0}", delegateType.FullName));
         }
 
-        private static Delegate GetCompiledDelegate(CodeBlock block, CompilerContext context, Type delegateType, bool forceWrapperMethod) {
-            bool createWrapperMethod = block.ParameterArray ? false : forceWrapperMethod || Compiler.NeedsWrapperMethod(block, true, false);
+        private static Delegate GetCompiledDelegate(CodeBlock block, SourceUnit source, Type delegateType, bool forceWrapperMethod) {
             bool hasThis = block.HasThis();
+            bool createWrapperMethod = block.ParameterArray ? false : forceWrapperMethod || Compiler.NeedsWrapperMethod(block, true, hasThis, false);
 
-            Compiler cg = CreateInterprettedMethod(block, context, delegateType, hasThis);
-            cg.EmitFunctionImplementation(block);
+            Compiler cg = CreateInterprettedMethod(block, source, delegateType, hasThis);
+            cg.GenerateCodeBlock(block);
 
             cg.Finish();
 
@@ -228,7 +228,7 @@ namespace Microsoft.Scripting.Ast {
                     delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
                     return cg.CreateDelegate(delegateType);
                 } else {
-                    delegateType = CallTargets.GetTargetType(true, block.Parameters.Count - (block.HasThis() ? 1 : 0), block.HasThis());
+                    delegateType = CallTargets.GetTargetType(block.Parameters.Count - (hasThis ? 1 : 0), true, hasThis);
                     return cg.CreateDelegate(delegateType);
                 }
             } else {
@@ -236,7 +236,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static Compiler CreateInterprettedMethod(CodeBlock block, CompilerContext context, Type delegateType, bool hasThis) {
+        private static Compiler CreateInterprettedMethod(CodeBlock block, SourceUnit context, Type delegateType, bool hasThis) {
             List<Type> paramTypes;
             List<SymbolId> paramNames;
             Compiler impl;
@@ -259,7 +259,7 @@ namespace Microsoft.Scripting.Ast {
                     new ConstantPool());
             impl.InterpretedMode = true;
             impl.ContextSlot = impl.ArgumentSlots[0];
-            impl.Context = context;
+            impl.SetSource(context);
             impl.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
                     new PropertySlot(impl.ContextSlot,
@@ -282,7 +282,7 @@ namespace Microsoft.Scripting.Ast {
             lock (id) {
                 if (id.Delegate == null) {
                     FlowChecker.Check(block);
-                    id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext, delegateType, forceWrapperMethod);
+                    id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
                 }
                 return id.Delegate;
             }

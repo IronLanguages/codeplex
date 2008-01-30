@@ -50,14 +50,14 @@ namespace Microsoft.Scripting.Hosting {
         // TODO: remove the need for this
         private void LoadSilverlightAssemblyNameMapping() {
             AssemblyName clrAssembly = new AssemblyName(typeof(object).Assembly.FullName);
-            foreach (string asm in new string[] { "mscorlib", "System", "System.Core", "System.Xml.Core" }) {
+            foreach (string asm in new string[] { "mscorlib", "System", "System.Core", "System.Xml" }) {
                 clrAssembly.Name = asm;
                 _assemblyFullNames.Add(asm.ToLower(), clrAssembly.FullName);
             }
 
-            _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=1.1.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("agclr", "agclr, Version=0.0.0.0, PublicKeyToken=b03f5f7f11d50a3a");
-            _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=8.1.0.0, PublicKeyToken=b03f5f7f11d50a3a");
+            _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
+            _assemblyFullNames.Add("system.windows", "System.Windows, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
+            _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
 
             AssemblyName dlrAssembly = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);            
             foreach (string asm in new string[] {
@@ -186,4 +186,3 @@ namespace Microsoft.Scripting.Hosting {
 
     }
 }
-

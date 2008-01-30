@@ -382,5 +382,28 @@ def test_assignment_order():
   # - rhs expression is evalled first, and should only be executed once, 
   AreEqual(c.log, "(idx=0, val=1)(idx=5, val=x)(idx=2, val=x)")
 
+def test_custom_indexer():
+    class cust_index(object):
+        def __init__(self, index):
+            self.index = index
+        def __index__(self):
+            return self.index
+    
+    for sliceable in [x(range(5)) for x in (list, tuple)]:        
+        AreEqual(sliceable[cust_index(0L)], 0)
+        AreEqual(sliceable[cust_index(0)], 0)
+        AreEqual(list(sliceable[cust_index(0L) : cust_index(3L)]), [0, 1, 2])
+        AreEqual(list(sliceable[cust_index(0) : cust_index(3)]), [0, 1, 2])
+    
+    # dictionary indexing shouldn't be affected    
+    x = cust_index(42)
+    d = {x:3}
+    AreEqual(d[x], 3)
+    for key in d.keys():
+        AreEqual(key, x)
 
+    if is_cli:
+        from System.Collections.Generic import List
+        List[int]
+    
 run_test(__name__)

@@ -38,7 +38,6 @@ for s in dir(et):
         exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
 
 #Rowan Work Item 312902
-@skip("interpreted")
 def test_deferred_compilation():
     global pe
     
@@ -83,7 +82,7 @@ def c():
 
 
 #Rowan Work Item 312902
-@skip("silverlight", "interpreted")
+@skip("silverlight")
 def test_formatexception():
     try:
         AssertError(TypeError, pe.FormatException, None)
@@ -99,7 +98,7 @@ def test_formatexception():
         pass
 
 #Rowan Work Item 31290
-@skip("silverlight", "interpreted")
+@skip("silverlight")
 def test_formatexception_showclrexceptions():
     try:
         pe.Options.ShowClrExceptions = True

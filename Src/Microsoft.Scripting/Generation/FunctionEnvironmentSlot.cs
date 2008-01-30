@@ -18,7 +18,7 @@ using System.Reflection;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {    
-    public class FunctionEnvironmentSlot : EnvironmentSlot {
+    class FunctionEnvironmentSlot : EnvironmentSlot {
         private Type _storageType;
 
         public FunctionEnvironmentSlot(Slot storage, Type storageType)

@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
     /// Dynamic Language Runtime Compiler.
     /// This part compiles code blocks.
     /// </summary>
-    public partial class Compiler {
+    partial class Compiler {
         // Should this be in TypeGen directly?
         private static int _Counter = 0;
         private static int _GeneratorCounter = 0;
@@ -140,7 +140,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates a slot for context of type CodeContext from an environment slot.
         /// </summary>
-        internal static Slot CreateEnvironmentContext(Compiler cg, CodeBlock block) {
+        private static Slot CreateEnvironmentContext(Compiler cg, CodeBlock block) {
             // update CodeContext so it contains the nested scope for the locals
             //  ctxSlot = new CodeContext(currentCodeContext, locals)
             Slot ctxSlot = cg.GetNamedLocal(typeof(CodeContext), "$frame");
@@ -152,8 +152,7 @@ namespace Microsoft.Scripting.Ast {
             return ctxSlot;
         }
 
-        // Used by TreeCompiler
-        internal static void CreateSlots(Compiler cg, CodeBlock block) {
+        private static void CreateSlots(Compiler cg, CodeBlock block) {
             Contract.RequiresNotNull(cg, "cg");
 
             if (block.HasEnvironment) {
@@ -259,9 +258,14 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // Used by Interpreter. Move to CompilerHelpers.
-        internal static bool NeedsWrapperMethod(CodeBlock block, bool hasContextParameter, bool stronglyTyped) {
-            return block.Parameters.Count + (hasContextParameter ? 1 : 0) >
-                (stronglyTyped ? ReflectionUtils.MaxSignatureSize - 1 : CallTargets.MaximumCallArgs);
+        internal static bool NeedsWrapperMethod(CodeBlock block, bool hasContextParameter, bool hasThis, bool stronglyTyped) {
+            if (stronglyTyped) {
+                // strongly typed delegate signature includes the context explicitly, block parameters don't:
+                return block.Parameters.Count + (hasContextParameter ? 1 : 0) > ReflectionUtils.MaxSignatureSize;
+            } else {
+                // call-target signature includes both the context and 'this' parameter implicitly, block parameters don't include context but they include 'this' parameter:
+                return block.Parameters.Count - (hasThis ? 1 : 0) > CallTargets.MaximumCallArgs;
+            }
         }
 
         private static ConstantPool GetStaticDataForBody(Compiler cg) {
@@ -279,9 +283,8 @@ namespace Microsoft.Scripting.Ast {
                 (block.IsClosure ||
                 !(cg.ContextSlot is StaticFieldSlot));
 
-            bool createWrapperMethod = block.ParameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(block, hasContextParameter, stronglyTyped));
-
             bool hasThis = block.HasThis();
+            bool createWrapperMethod = block.ParameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(block, hasContextParameter, hasThis, stronglyTyped));
 
             cg.EmitSequencePointNone();
 
@@ -310,7 +313,7 @@ namespace Microsoft.Scripting.Ast {
                     if (stronglyTyped) {
                         delegateType = ReflectionUtils.GetDelegateType(GetParameterTypes(block, hasContextParameter), block.ReturnType);
                     } else {
-                        delegateType = CallTargets.GetTargetType(hasContextParameter, block.Parameters.Count - (hasThis ? 1 : 0), hasThis);
+                        delegateType = CallTargets.GetTargetType(block.Parameters.Count - (hasThis ? 1 : 0), hasContextParameter, hasThis);
                     }
                 }
                 cg.EmitDelegateConstruction(impl, delegateType);
@@ -380,7 +383,7 @@ namespace Microsoft.Scripting.Ast {
             return parameterIndex;
         }
 
-        // Used by Interpreter
+        // Used by Interpreter. Doesn't do much in a way of compilation.
         internal static int ComputeDelegateSignature(CodeBlock block, Type delegateType, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
             implName = GetGeneratedName(block.Name);
 
@@ -465,6 +468,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates a wrapper method for the user-defined function.  This allows us to use the CallTargetN
         /// delegate against the function when we don't have a CallTarget# which is large enough.
+        /// 
         /// Used by Interpreter.
         /// </summary>
         internal static Compiler MakeWrapperMethodN(Compiler outer, Compiler impl, CodeBlock block, bool hasThis) {
@@ -531,9 +535,8 @@ namespace Microsoft.Scripting.Ast {
             return wrapper;
         }
 
-        // Used by OptimizedModuleGenerator and Interpreter
-        internal void EmitFunctionImplementation(CodeBlock block) {
-            CompilerHelpers.EmitStackTraceTryBlockStart(this);
+        private void EmitFunctionImplementation(CodeBlock block) {
+            EmitStackTraceTryBlockStart();
 
             // TODO: Cleanup!
             _references = block.References;
@@ -543,17 +546,55 @@ namespace Microsoft.Scripting.Ast {
 
             string displayName;
 
-            if (this.HasContext) {
-                displayName = Context.SourceUnit.GetSymbolDocument(block.Start.Line) ?? block.Name;
+            if (_source != null) {
+                displayName = _source.GetSymbolDocument(block.Start.Line) ?? block.Name;
             } else {
                 displayName = block.Name;
             }
 
-            CompilerHelpers.EmitStackTraceFaultBlock(this, block.Name, displayName);
+            EmitStackTraceFaultBlock(block.Name, displayName);
+        }
+
+        private void EmitStackTraceTryBlockStart() {
+            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
+                // push a try for traceback support
+                PushTryBlock();
+                BeginExceptionBlock();
+            }
+        }
+
+        private void EmitStackTraceFaultBlock(string name, string displayName) {
+            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
+                // push a fault block (runs only if there's an exception, doesn't handle the exception)
+                PopTargets();
+                if (IsDynamicMethod) {
+                    BeginCatchBlock(typeof(Exception));
+                } else {
+                    BeginFaultBlock();
+                }
+
+                EmitCodeContext();
+                if (IsDynamicMethod) {
+                    ConstantPool.AddData(Method).EmitGet(this);
+                } else {
+                    Emit(OpCodes.Ldtoken, (MethodInfo)Method);
+                    EmitCall(typeof(MethodBase), "GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) });
+                }
+                EmitString(name);
+                EmitString(displayName);
+                EmitGetCurrentLine();
+                EmitCall(typeof(ExceptionHelpers), "UpdateStackTrace");
+
+                // end the exception block
+                if (IsDynamicMethod) {
+                    Emit(OpCodes.Rethrow);
+                }
+                EndExceptionBlock();
+            }
         }
 
         // Used by TreeCompiler
-        internal static void EmitBody(Compiler cg, CodeBlock block) {
+        private static void EmitBody(Compiler cg, CodeBlock block) {
             GeneratorCodeBlock gcb = block as GeneratorCodeBlock;
             if (gcb != null) {
                 EmitGeneratorCodeBlockBody(cg, gcb);
@@ -628,30 +669,6 @@ namespace Microsoft.Scripting.Ast {
             // isn't associated with this function.
             EmitPosition(block.End, block.End);
             EmitSequencePointNone();
-        }
-
-        // Compiler entry point, used by ScriptCode.
-        // This is used for compiling the toplevel CodeBlock object.
-        internal static T CreateDelegate<T>(CompilerContext context, CodeBlock block)
-            where T : class {
-            Compiler cg = CompilerHelpers.CreateDynamicCodeGenerator(context);
-            cg.Allocator = CompilerHelpers.CreateFrameAllocator();
-
-            // TODO: Cleanup!
-            cg.References = block.References;
-
-            cg.EnvironmentSlot = new EnvironmentSlot(
-                new PropertySlot(
-                    new PropertySlot(cg.ContextSlot,
-                        typeof(CodeContext).GetProperty("Scope")),
-                    typeof(Scope).GetProperty("Dict"))
-                );
-
-            cg.EmitFunctionImplementation(block);
-
-            cg.Finish();
-
-            return (T)(object)cg.CreateDelegate(typeof(T));
         }
 
         private static EnvironmentFactory CreateEnvironmentFactory(int size) {
@@ -796,7 +813,6 @@ namespace Microsoft.Scripting.Ast {
             for (int i = 0; i < jumpTable.Length; i++) {
                 jumpTable[i] = topTargets[i].EnsureLabel(ncg);
             }
-            ncg.YieldLabels = jumpTable;
 
             Slot router = ncg.GetLocalTmp(typeof(int));
             ncg.EmitGetGeneratorLocation();

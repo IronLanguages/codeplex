@@ -365,8 +365,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private StandardRule<T> MakeUnoptimizedInvokeRule() {
-            Rule.SetTest(Test);
-            Rule.SetTarget(MakeUnoptimizedInvokeTarget());
+            Rule.Test = Test;
+            Rule.Target = MakeUnoptimizedInvokeTarget();
             return Rule;
         }
 
@@ -397,10 +397,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return MakeUnoptimizedInvokeRule();
             }
 
-            Rule.SetTest(Test);
+            Rule.Test = Test;
 
             Expression target = MakeIDispatchInvokeTarget();
-            Rule.SetTarget(target);
+            Rule.Target = target;
 
             return Rule;
         }

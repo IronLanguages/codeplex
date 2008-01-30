@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
     /// function. Though each closure will use the same string (the name of the variable), each
     /// string is considered a unique Name or symbol.
     /// </summary>
-    public abstract class Slot {
+    abstract class Slot {
         private bool _local;
         private Type _knownType;
         public abstract void EmitGet(Compiler cg);

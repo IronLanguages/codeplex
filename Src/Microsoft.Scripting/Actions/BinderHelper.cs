@@ -35,12 +35,12 @@ namespace Microsoft.Scripting.Actions {
         public static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(CompilerHelpers.GetType(self));
-            rule.SetTarget(
+            rule.Target =
                 rule.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Constant(isCallable)
-                )
-            );
+                );
+
             return rule;
         }
     }
@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static UnaryExpression GetParamsList(StandardRule<T> rule) {
+        public static UnaryExpression GetParamsList(StandardRule rule) {
             return Ast.Convert(
                 rule.Parameters[rule.ParameterCount - 1],
                 typeof(IList<object>)
@@ -161,13 +161,13 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static Expression MakeNecessaryTests(StandardRule<T> rule, Type[] testTypes, Expression[] arguments) {
+        public static Expression MakeNecessaryTests(StandardRule rule, Type[] testTypes, IList<Expression> arguments) {
             Expression typeTest = Ast.Constant(true);
 
             if (testTypes != null) {
                 for (int i = 0; i < testTypes.Length; i++) {
                     if (testTypes[i] != null) {
-                        Debug.Assert(i < arguments.Length);
+                        Debug.Assert(i < arguments.Count);
                         typeTest = Ast.AndAlso(typeTest, rule.MakeTypeTest(testTypes[i], arguments[i]));
                     }
                 }
@@ -177,7 +177,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")] // TODO: fix
-        public static Expression MakeNecessaryTests(StandardRule<T> rule, IList<Type[]> necessaryTests, Expression [] arguments) {
+        public static Expression MakeNecessaryTests(StandardRule rule, IList<Type[]> necessaryTests, Expression [] arguments) {
             if (necessaryTests.Count == 0) {
                 return Ast.Constant(true);
             }

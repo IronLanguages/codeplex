@@ -41,7 +41,7 @@ namespace IronPython.Runtime {
         internal static readonly IEqualityComparer<object> Comparer = new PythonObjectComparer();
         private static object DefaultGetItem;   // our cached __getitem__ method
 
-        internal Dictionary<object, object> data;
+        internal Dictionary<object, object> _data;
 
         internal static object MakeDict(PythonType cls) {
             if (cls == TypeCache.Dict) return new PythonDictionary();
@@ -50,7 +50,7 @@ namespace IronPython.Runtime {
 
         #region Constructors
         public PythonDictionary() {
-            this.data = new Dictionary<object, object>(Comparer);
+            this._data = new Dictionary<object, object>(Comparer);
         }
 
         internal PythonDictionary(object o)
@@ -58,7 +58,7 @@ namespace IronPython.Runtime {
             Update(o);
         }
 
-        internal PythonDictionary(int size) { data = new Dictionary<object, object>(size, Comparer); }
+        internal PythonDictionary(int size) { _data = new Dictionary<object, object>(size, Comparer); }
 
         [PythonName("__init__")]
         public void Initialize(object o, [ParamDictionary] IAttributesCollection kwArgs) {
@@ -100,15 +100,15 @@ namespace IronPython.Runtime {
         #region IDictionary<object,object> Members
 
         public void Add(object key, object value) {
-            lock (this) data.Add(BaseSymbolDictionary.NullToObj(key), value);
+            lock (this) _data.Add(BaseSymbolDictionary.NullToObj(key), value);
         }
 
         public virtual bool ContainsKey(object key) {
-            lock (this) return data.ContainsKey(BaseSymbolDictionary.NullToObj(key));
+            lock (this) return _data.ContainsKey(BaseSymbolDictionary.NullToObj(key));
         }
 
         public ICollection<object> Keys {
-            get { lock (this) return new DictionaryKeyCollection(this, data.Keys); }
+            get { return KeysAsList(); }
         }
 
         public bool Remove(object key) {
@@ -121,11 +121,11 @@ namespace IronPython.Runtime {
         }
 
         public bool TryGetValue(object key, out object value) {
-            lock (this) return data.TryGetValue(BaseSymbolDictionary.NullToObj(key), out value);
+            lock (this) return _data.TryGetValue(BaseSymbolDictionary.NullToObj(key), out value);
         }
 
         public ICollection<object> Values {
-            get { lock (this) return data.Values; }
+            get { return ValuesAsList(); }
         }
 
         #endregion
@@ -133,21 +133,21 @@ namespace IronPython.Runtime {
         #region ICollection<KeyValuePair<object,object>> Members
 
         public void Add(KeyValuePair<object, object> item) {
-            lock (this) data[BaseSymbolDictionary.NullToObj(item.Key)] = item.Value;
+            lock (this) _data[BaseSymbolDictionary.NullToObj(item.Key)] = item.Value;
         }
 
         [PythonName("clear")]
         public void Clear() {
-            lock (this) data.Clear();
+            lock (this) _data.Clear();
         }
 
         public bool Contains(KeyValuePair<object, object> item) {
-            lock (this) return data.ContainsKey(BaseSymbolDictionary.NullToObj(item.Key));
+            lock (this) return _data.ContainsKey(BaseSymbolDictionary.NullToObj(item.Key));
         }
 
         public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
             lock (this) {
-                Dictionary<object, object>.Enumerator ie = data.GetEnumerator();
+                Dictionary<object, object>.Enumerator ie = _data.GetEnumerator();
                 while (ie.MoveNext()) {
                     array[arrayIndex++] = new KeyValuePair<object, object>(BaseSymbolDictionary.ObjToNull(ie.Current.Key), ie.Current.Value);
                 }
@@ -159,7 +159,7 @@ namespace IronPython.Runtime {
         }
 
         public bool IsReadOnly {
-            get { return ((ICollection<KeyValuePair<object, object>>)data).IsReadOnly; }
+            get { return ((ICollection<KeyValuePair<object, object>>)_data).IsReadOnly; }
         }
 
         public bool Remove(KeyValuePair<object, object> item) {
@@ -171,7 +171,7 @@ namespace IronPython.Runtime {
         #region IEnumerable<KeyValuePair<object,object>> Members
 
         IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
-            return new DictKeyValueEnumerator(data);
+            return new DictKeyValueEnumerator(_data);
         }
 
         #endregion
@@ -180,7 +180,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__iter__")]
         public IEnumerator GetEnumerator() {
-            return new DictionaryKeyEnumerator(data);
+            return new DictionaryKeyEnumerator(_data);
         }
 
         #endregion
@@ -240,7 +240,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.KeyError(key);
             }
             set {
-                lock (this) data[BaseSymbolDictionary.NullToObj(key)] = value;
+                lock (this) _data[BaseSymbolDictionary.NullToObj(key)] = value;
             }
         }
 
@@ -248,7 +248,7 @@ namespace IronPython.Runtime {
         [PythonName("__delitem__")]
         public virtual void DeleteItem(object key) {
             lock (this) {
-                if (!data.Remove(BaseSymbolDictionary.NullToObj(key))) {
+                if (!_data.Remove(BaseSymbolDictionary.NullToObj(key))) {
                     throw PythonOps.KeyError(key);
                 }
             }
@@ -260,7 +260,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__len__")]
         public virtual int GetLength() {
-            return data.Count;
+            return _data.Count;
         }
 
         public bool ContainsValue(object value) {
@@ -302,33 +302,33 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("keys")]
-        public List KeysAsList() {
-            return DictionaryOps.keys(this);
+        public virtual List KeysAsList() {
+            lock(this) return DictionaryOps.keys(this._data);
         }
 
         [PythonName("values")]
-        public List ValuesAsList() {
-            return DictionaryOps.values(this);
+        public virtual List ValuesAsList() {
+            lock (this) return DictionaryOps.values(this._data);
         }
 
         [PythonName("items")]
-        public List Items() {
-            return DictionaryOps.items(this);
+        public virtual List Items() {
+            lock (this) return DictionaryOps.items(this._data);
         }
 
         [PythonName("iteritems")]
         public IEnumerator IterItems() {
-            return DictionaryOps.iteritems(this);
+            lock (this) return DictionaryOps.iteritems(this._data);
         }
 
         [PythonName("iterkeys")]
         public IEnumerator IterKeys() {
-            return DictionaryOps.iterkeys(this);
+            lock (this) return DictionaryOps.iterkeys(this._data);
         }
 
         [PythonName("itervalues")]
         public IEnumerator IterValues() {
-            return DictionaryOps.itervalues(this);
+            lock (this) return DictionaryOps.itervalues(this._data);
         }
 
         [PythonName("update")]
@@ -409,8 +409,8 @@ namespace IronPython.Runtime {
         #region ICloneable Members
 
         [PythonName("copy")]
-        public object Clone() {
-            return new PythonDictionary(new Dictionary<object, object>(data));
+        public virtual object Clone() {
+            return new PythonDictionary(new Dictionary<object, object>(_data));
         }
 
         #endregion
@@ -447,6 +447,8 @@ namespace IronPython.Runtime {
         }
 
         public bool ValueEquals(object other) {
+            if (Object.ReferenceEquals(this, other)) return true;
+
             IDictionary<object, object> oth = other as IDictionary<object, object>;
             if (oth == null) return false;
             if (oth.Count != Count) return false;
@@ -492,7 +494,7 @@ namespace IronPython.Runtime {
         }
 
         IDictionaryEnumerator IDictionary.GetEnumerator() {
-            return ((IDictionary)data).GetEnumerator();
+            return ((IDictionary)_data).GetEnumerator();
         }
 
         bool IDictionary.IsFixedSize {
@@ -517,10 +519,10 @@ namespace IronPython.Runtime {
 
         object IDictionary.this[object key] {
             get {
-                return data[BaseSymbolDictionary.NullToObj(key)];
+                return _data[BaseSymbolDictionary.NullToObj(key)];
             }
             set {
-                data[BaseSymbolDictionary.NullToObj(key)] = value;
+                _data[BaseSymbolDictionary.NullToObj(key)] = value;
             }
         }
 
@@ -599,7 +601,7 @@ namespace IronPython.Runtime {
         public IDictionary<SymbolId, object> SymbolAttributes {
             get {
                 Dictionary<SymbolId, object> d = new Dictionary<SymbolId, object>();
-                foreach (KeyValuePair<object, object> name in data) {
+                foreach (KeyValuePair<object, object> name in _data) {
                     string stringKey = name.Key as string;
                     if (stringKey == null) continue;
                     d.Add(SymbolTable.StringToId(stringKey), name.Value);
@@ -656,7 +658,7 @@ namespace IronPython.Runtime {
 
         public override object this[object key] {
             set {
-                data[BaseSymbolDictionary.NullToObj(key)] = value;
+                _data[BaseSymbolDictionary.NullToObj(key)] = value;
 
                 string s1 = key as string;
                 string s2 = value as string;
@@ -778,7 +780,7 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         public IEnumerator<object> GetEnumerator() {
-            return new DictionaryKeyEnumerator(_dict.data);
+            return new DictionaryKeyEnumerator(_dict._data);
         }
 
         #endregion
@@ -786,7 +788,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return new DictionaryKeyEnumerator(_dict.data);
+            return new DictionaryKeyEnumerator(_dict._data);
         }
 
         #endregion

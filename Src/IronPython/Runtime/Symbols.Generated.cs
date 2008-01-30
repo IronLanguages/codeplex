@@ -504,6 +504,7 @@ namespace IronPython.Runtime {
         private static SymbolId _Extend;
         private static SymbolId _Update;
         private static SymbolId _ThisArgument;
+        private static SymbolId _Index;
         ///<summary>Symbol for '__neg__'</summary> 
         public static SymbolId OperatorNegate {
             get {
@@ -1237,6 +1238,13 @@ namespace IronPython.Runtime {
             get {
                 if (_ThisArgument == SymbolId.Empty) _ThisArgument = MakeSymbolId("this");
                 return _ThisArgument;
+            }
+        }
+        ///<summary>Symbol for '__index__'</summary> 
+        public static SymbolId Index {
+            get {
+                if (_Index == SymbolId.Empty) _Index = MakeSymbolId("__index__");
+                return _Index;
             }
         }
 

@@ -17,12 +17,12 @@ using System;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    public interface ILazySlotFactory<T> {
+    interface ILazySlotFactory<T> {
         Slot GetConcreteSlot(Compiler cg, T data);
     }
 
 
-    public class LazySlot<T> : Slot {
+    internal class LazySlot<T> : Slot {
         private ILazySlotFactory<T> _factory;
         private T _data;
         private Type _type;

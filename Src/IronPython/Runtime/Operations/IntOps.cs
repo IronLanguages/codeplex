@@ -379,6 +379,11 @@ namespace IronPython.Runtime.Operations {
             return self;
         }
 
+        [PythonName("__index__")]
+        public static int __index__(int self) {
+            return self;
+        }
+
         [SpecialName, PythonName("__coerce__")]
         public static object Coerce(CodeContext context, int x, object o) {
             // called via builtin.coerce()

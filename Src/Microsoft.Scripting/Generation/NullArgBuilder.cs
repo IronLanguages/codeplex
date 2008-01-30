@@ -17,6 +17,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Collections.Generic;
 
     /// <summary>
     /// ArgBuilder which always produces null.  
@@ -32,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
             return null;
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             return Ast.Null();
         }
     }

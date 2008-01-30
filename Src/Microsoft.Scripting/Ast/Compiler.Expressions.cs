@@ -22,7 +22,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
-    public partial class Compiler {
+    partial class Compiler {
         /// <summary>
         /// Generates code for this expression in a value position.
         /// This method will leave the value of the expression
@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Ast {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-        public void EmitExpression(Expression node) {
+        internal void EmitExpression(Expression node) {
             Debug.Assert(node != null);
 
             switch (node.NodeType) {
@@ -229,14 +229,44 @@ namespace Microsoft.Scripting.Ast {
         private void Emit(BinaryExpression node) {
             Debug.Assert(node.NodeType != AstNodeType.AndAlso && node.NodeType != AstNodeType.OrElse);
 
-            EmitExpression(node.Left);
-            EmitExpression(node.Right);
+            if (NullableVsNull(node.Left, node.Right)) {
+                EmitExpressionAddress(node.Left, node.Left.Type);
 
-            if (node.Method != null) {
-                EmitCall(node.Method);
+                GenerateNullableBinaryOperator(node.NodeType, node.Left.Type);
+            } else if (NullableVsNull(node.Right, node.Left)) {
+                // null vs Nullable<T>
+                EmitExpressionAddress(node.Right, node.Right.Type);
+
+                GenerateNullableBinaryOperator(node.NodeType, node.Right.Type);
             } else {
-                GenerateBinaryOperator(node.NodeType, node.Type);
+                EmitExpression(node.Left);
+                EmitExpression(node.Right);
+
+                if (node.Method != null) {
+                    EmitCall(node.Method);
+                } else {
+                    GenerateBinaryOperator(node.NodeType, node.Type);
+                }
             }
+        }
+
+        private void GenerateNullableBinaryOperator(AstNodeType astNodeType, Type nullableType) {
+            switch(astNodeType) {
+                case AstNodeType.NotEqual:
+                    EmitPropertyGet(nullableType, "HasValue");
+                    break;
+                case AstNodeType.Equal:
+                    EmitPropertyGet(nullableType, "HasValue");
+                    EmitBoolean(false);
+                    Emit(OpCodes.Ceq);
+                    break;
+                default:
+                    throw new InvalidOperationException(astNodeType.ToString());
+            }
+        }
+
+        private static bool NullableVsNull(Expression nullable, Expression nullVal) {
+            return TypeUtils.IsNullableType(nullable.Type) && ConstantCheck.IsConstant(nullVal, null);
         }
 
         private void EmitBooleanOperator(BinaryExpression node, bool isAnd) {
@@ -522,6 +552,18 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(BoundAssignment node) {
+            if (TypeUtils.IsNullableType(node.Type)) {
+                // Nullable<T> being assigned...
+                if (ConstantCheck.IsConstant(node.Value, null)) {
+                    GetVariableSlot(node.Variable).EmitGetAddr(this);
+                    Emit(OpCodes.Initobj, node.Type);
+                    GetVariableSlot(node.Variable).EmitGet(this);
+                    return;
+                } else if (node.Type != node.Value.Type) {
+                    throw new InvalidOperationException();
+                }
+                // fall through & emit the store from Nullable<T> -> Nullable<T>
+            } 
             EmitExpression(node.Value);
             Emit(OpCodes.Dup);
             GetVariableSlot(node.Variable).EmitSet(this);
@@ -545,7 +587,7 @@ namespace Microsoft.Scripting.Ast {
             ArgumentSlots[0].EmitGet(this);
         }
 
-        public void EmitCodeContext() {
+        internal void EmitCodeContext() {
             if (ContextSlot == null) {
                 throw new InvalidOperationException("ContextSlot not available.");
             }

@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
+using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>
@@ -58,9 +59,9 @@ namespace Microsoft.Scripting.Generation {
             return (((SimpleArgBuilder)builder).Index == 0);
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             Debug.Assert(BuilderExpectsSingleParameter(_builder));
-            return _builder.ToExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Length)] });
+            return _builder.ToExpression(context, new Expression[] { parameters[GetKeywordIndex(parameters.Count)] });
         }
 
         public override Type Type {
@@ -73,8 +74,8 @@ namespace Microsoft.Scripting.Generation {
             return _builder.ToReturnExpression(context);
         }
 
-        internal override Expression UpdateFromReturn(MethodBinderContext context, Expression[] parameters) {
-            return _builder.UpdateFromReturn(context, new Expression[] { parameters[GetKeywordIndex(parameters.Length)] });
+        internal override Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
+            return _builder.UpdateFromReturn(context, new Expression[] { parameters[GetKeywordIndex(parameters.Count)] });
         }
 
         public override void UpdateFromReturn(object callArg, object[] args) {

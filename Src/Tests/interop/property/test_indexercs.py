@@ -127,8 +127,8 @@ def test_readonly():
     AreEqual(x[1], 10)
     
     def f(): x[2] = 20
-    AssertErrorWithMatch(AttributeError, 
-        "'ReadOnlyIndexer' object has no attribute '__setitem__'",
+    AssertErrorWithMatch(TypeError, 
+        "'ReadOnlyIndexer' object is unsubscriptable",
         f)
 
 def test_writeonly():
@@ -137,8 +137,8 @@ def test_writeonly():
     x[1] = 10
     Flag.Check(11)
     
-    AssertErrorWithMatch(AttributeError, 
-        "'WriteOnlyIndexer' object has no attribute '__getitem__'",
+    AssertErrorWithMatch(TypeError, 
+        "'WriteOnlyIndexer' object is unsubscriptable",
         lambda: x[1])
 
 

@@ -264,7 +264,32 @@ namespace IronPython.Runtime.Operations {
             if (y == BigInteger.Zero) {
                 throw new DivideByZeroException();
             }
-            return x.ToFloat64() / y.ToFloat64();
+
+            // first see if we can keep the two inputs as floats to give a precise result
+            double fRes, fDiv;
+            if (x.TryToFloat64(out fRes) && y.TryToFloat64(out fDiv)) {
+                return fRes / fDiv;
+            }
+
+            // otherwise give the user the truncated result if the result fits in a float
+            BigInteger rem;
+            BigInteger res = BigInteger.DivRem(x, y, out rem);
+            if (res.TryToFloat64(out fRes)) {                
+                if(rem != BigInteger.Zero) {
+                    // try and figure out the fractional portion
+                    BigInteger fraction = y / rem;
+                    if (fraction.TryToFloat64(out fDiv)) {
+                        if (fDiv != 0) {
+                            fRes += 1 / fDiv;
+                        }
+                    }
+                }
+
+                return fRes;
+            }            
+
+            // otherwise report an error
+            throw PythonOps.OverflowError("long/long too large for a float");
         }
 
         [SpecialName]
@@ -492,6 +517,16 @@ namespace IronPython.Runtime.Operations {
             if (diff == 0) return 0;
             else if (diff < 0) return -1;
             else return 1;
+        }
+
+        [PythonName("__long__")]
+        public static BigInteger __long__(BigInteger self) {
+            return self;
+        }
+
+        [PythonName("__index__")]
+        public static BigInteger __index__(BigInteger self) {
+            return self;
         }
     }
 }

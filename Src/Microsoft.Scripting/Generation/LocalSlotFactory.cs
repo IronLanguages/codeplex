@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// Creates slots that are backed by local variables.
     /// </summary>
-    public class LocalSlotFactory : SlotFactory {
+    class LocalSlotFactory : SlotFactory {
         private Compiler _codeGen;
 
         public LocalSlotFactory(Compiler codeGen) {

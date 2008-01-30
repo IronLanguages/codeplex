@@ -954,11 +954,19 @@ namespace IronPython.Compiler {
                         _languageFeatures |= PythonLanguageFeatures.TrueDivision;
                     } else if (name == Symbols.WithStmt) {
                         _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
+
                     } else if (name == Symbols.NestedScopes) {
                     } else if (name == Symbols.Generators) {
                     } else {
+                        string strName = SymbolTable.IdToString(name);
                         fromFuture = false;
-                        ReportSyntaxError(IronPython.Resources.UnknownFutureFeature + SymbolTable.IdToString(name));
+
+                        if (strName != "braces") {
+                            ReportSyntaxError(IronPython.Resources.UnknownFutureFeature + strName);
+                        } else {
+                            // match CPython error message
+                            ReportSyntaxError(IronPython.Resources.NotAChance);
+                        }
                     }
                 }
             }
@@ -2349,7 +2357,7 @@ namespace IronPython.Compiler {
             root.List = ne;
 
             GeneratorExpression ret = new GeneratorExpression(func, outermost);
-            ret.SetLoc(root.Start, GetEnd());
+            ret.SetLoc(test.Start, GetEnd());
             return ret;
         }
 

@@ -296,8 +296,14 @@ namespace Microsoft.Scripting {
         /// </summary>
         public IEnumerable<SymbolId> Keys {
             get {
-                foreach (SymbolId si in _dict.SymbolAttributes.Keys) {
-                    if (_attrs == null || _attrs.CheckEnumerable(si)) yield return si;
+                foreach (object name in _dict.Keys) {
+                    string strName = name as string;
+                    if (strName == null) continue;
+
+                    SymbolId si = SymbolTable.StringToId(strName);
+                    if (_attrs == null || _attrs.CheckEnumerable(si)) {
+                            yield return si;
+                    }                    
                 }
             }
         }

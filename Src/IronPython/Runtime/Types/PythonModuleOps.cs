@@ -120,7 +120,9 @@ namespace IronPython.Runtime.Types {
         
         [PropertyMethod, PythonName("__file__")]
         public static object Get__file__(Scope/*!*/ scope) {
-            return DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetFile();
+            object file = DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetFile();
+            if (file == null) throw PythonOps.AttributeError("module has no __file__ attribute");
+            return file;
         }
 
         [PropertyMethod, PythonName("__file__")]

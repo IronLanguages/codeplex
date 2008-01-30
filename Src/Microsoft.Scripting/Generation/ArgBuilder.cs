@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Provides the Expression which provides the value to be passed to the argument.
         /// </summary>
-        internal abstract Expression ToExpression(MethodBinderContext context, Expression[] parameters);
+        internal abstract Expression ToExpression(MethodBinderContext context, IList<Expression> parameters);
 
         /// <summary>
         /// Returns the type required for the argument or null if the ArgBuilder
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
         /// Provides an Expression which will update the provided value after a call to the method.  May
         /// return null if no update is required.
         /// </summary>
-        internal virtual Expression UpdateFromReturn(MethodBinderContext context, Expression[] parameters) {
+        internal virtual Expression UpdateFromReturn(MethodBinderContext context, IList<Expression> parameters) {
             return null;
         }
 

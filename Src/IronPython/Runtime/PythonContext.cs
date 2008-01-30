@@ -140,7 +140,7 @@ namespace IronPython.Runtime {
             _systemState = new SystemState(this);
             _systemState.Initialize();
 #if SILVERLIGHT
-            AddToPath(".");
+            AddToPath("");
 #endif
             
             // sys.argv always includes at least one empty string.

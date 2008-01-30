@@ -482,6 +482,37 @@ def test_module_name():
     m.__file__ = 'foo.py'
     AreEqual(m.__str__(), "<module '?' from 'foo.py'>")
 
+@skip('silverlight')
+def test_cp7007():
+    file_contents = '''
+called = 3.14
+    '''
+    
+    strange_module_names = [    "+",
+                                "+a",
+                                "a+",
+                                "++",
+                                "+++",
+                                "-",
+                                "=",
+                                "$",
+                                "^",
+                            ]
+    
+    strange_file_names = [ path_combine(testpath.public_testdir, "cp7007", x + ".py") for x in strange_module_names ]
+    sys.path.append(testpath.public_testdir + "\\cp7007")
+    
+    for x in strange_file_names: write_to_file(x, file_contents)
+    
+    try:
+        for x in strange_module_names:
+            temp_mod = __import__(x)
+            AreEqual(temp_mod.called, 3.14)
+    finally:
+        sys.path.remove(testpath.public_testdir + "\\cp7007")
+        delete_files(strange_file_names)
+        
+#------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:
     delete_all_f(__name__)

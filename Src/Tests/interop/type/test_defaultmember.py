@@ -88,7 +88,7 @@ def test_cs_scenarios():
 
     x = ClassWithset_Item()
     def f(): x[10] = 20
-    AssertError(AttributeError, f)
+    AssertError(TypeError, f)
     x.set_Item(3)
     Flag.Check(3)
     

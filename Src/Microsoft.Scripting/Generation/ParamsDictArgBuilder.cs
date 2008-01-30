@@ -19,6 +19,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Collections.Generic;
 
     /// <summary>
     /// Builds the parameter for a params dictionary argument - this collects all the extra name/value
@@ -39,7 +40,7 @@ namespace Microsoft.Scripting.Generation {
             get { return 3; }
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             Expression res = Ast.Call(
                 typeof(BinderOps).GetMethod("MakeSymbolDictionary"),
                 Ast.NewArray(typeof(SymbolId[]), ConstantNames()),
@@ -55,7 +56,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        private Expression[] GetParameters(Expression[] parameters) {
+        private Expression[] GetParameters(IList<Expression> parameters) {
             Expression[] res = new Expression[_nameIndexes.Length];
             for (int i = 0; i < _nameIndexes.Length; i++) {
                 res[i] = parameters[_nameIndexes[i] + _argIndex];

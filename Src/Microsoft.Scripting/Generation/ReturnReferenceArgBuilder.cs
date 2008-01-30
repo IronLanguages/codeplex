@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
             : base(index, type) {
         }
 
-        internal override Expression ToExpression(MethodBinderContext context, Expression[] parameters) {
+        internal override Expression ToExpression(MethodBinderContext context, IList<Expression> parameters) {
             if (_tmp == null) {
                 _tmp = context.GetTemporary(Type, "outParam");
             }

@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Exceptions {
         [PythonSystemType("BaseException"), DynamicBaseTypeAttribute, Serializable]
         public class BaseException : ICodeFormattable, IPythonObject, IDynamicObject, IEnumerable {
             private PythonType/*!*/ _type;          // the actual Python type of the Exception object
-            private object _message;                // the message object, cached at __init__ time, not updated on args assignment
+            private object _message = String.Empty; // the message object, cached at __init__ time, not updated on args assignment
             private PythonTuple _args;              // the tuple of args provided at creation time
             private IAttributesCollection _dict;    // the dictionary for extra values, created on demand
             private System.Exception _clrException; // the cached CLR exception that is thrown
@@ -115,9 +115,7 @@ namespace IronPython.Runtime.Exceptions {
                 _args = PythonTuple.MakeTuple(args ?? new object[] { null });
                 if (_args.Count == 1) {
                     _message = _args[0];
-                } else {
-                    _message = String.Empty;
-                }
+                } 
             }
 
             /// <summary>
@@ -401,6 +399,42 @@ namespace IronPython.Runtime.Exceptions {
                         text = locationInfo[3];
                     }
                 }
+            }
+        }
+
+
+        public partial class EnvironmentError : BaseException {
+            public override void __init__(params object[] args) {
+                if (args != null) {
+                    switch (args.Length) {
+                        case 0:
+                        case 1:                     // do nothing special
+                            break;
+                        case 2:                             // errno + strerror
+                            _errno = args[0];
+                            _strerror = args[1];
+                            break;
+                        case 3:                             // errno, str error, filename
+                            _errno = args[0];
+                            _strerror = args[1];
+                            _filename = args[2];
+                            // CPython doesn't include filename in args, remove
+                            // it before calling base init.
+                            args = ArrayUtils.RemoveLast(args);
+                            break;
+                        default:
+                            throw Microsoft.Scripting.RuntimeHelpers.TypeErrorForIncorrectArgumentCount("EnvironmentError",
+                                0,           // min arg cnt
+                                3,           // max arg cnt
+                                0,           // dflt count
+                                args.Length, // provide count    
+                                false,       // has args list
+                                false        // has dictionary
+                                );
+                    }
+                }
+
+                base.__init__(args);
             }
         }
 

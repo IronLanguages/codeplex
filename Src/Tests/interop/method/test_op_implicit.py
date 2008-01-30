@@ -160,8 +160,10 @@ def test_implicit_reference_conversions():
     c = System.Array[int]([1, 2, 3])
     d = System.Array[Int32WrapperClass]([Int32WrapperClass(1),])
     e = System.Array[Int32WrapperStruct]([Int32WrapperStruct(2),])
-    AssertError(TypeError, Consumer.EatInt32WrapperClassArray, c)
-    AssertError(TypeError, Consumer.EatInt32WrapperStructArray, c)
+    AssertErrorWithMessage(TypeError, "expected Array[Int32WrapperClass], got Array[int]", 
+                           Consumer.EatInt32WrapperClassArray, c)
+    AssertErrorWithMessage(TypeError, "expected Array[Int32WrapperStruct], got Array[int]", 
+                           Consumer.EatInt32WrapperStructArray, c)
     for x in [d, e]:
         AssertError(TypeError, Consumer.EatInt32Array, x)
     

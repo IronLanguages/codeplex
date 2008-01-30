@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// Local variable access
     /// Note that access of local variables of an enclosing function is done using a FieldSlot
     /// </summary>
-    public class LocalSlot : Slot {
+    class LocalSlot : Slot {
         private readonly LocalBuilder _localBuilder;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]

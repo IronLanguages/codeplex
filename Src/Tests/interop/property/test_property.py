@@ -19,7 +19,7 @@ skiptest("silverlight")
 add_clr_assemblies("propertydefinitions", "typesamples")
 
 from Merlin.Testing import *
-from Merlin.Testing.Property import *
+from Merlin.Testing.Property import *  #Merlin 315120 - please do not remove/modify this line
 from Merlin.Testing.TypeSample import *
 
 def test_explicitly_implemented_property():
@@ -264,7 +264,7 @@ def test_from_derived_type():
 def test_other_reflected_property_ops():
     p = ClassWithProperties.InstanceSimpleStructProperty
     AssertError(TypeError, lambda: p())
-    AssertError(AttributeError, lambda: p[1])
+    AssertError(TypeError, lambda: p[1])
     
 def test_none_as_value():
     pass

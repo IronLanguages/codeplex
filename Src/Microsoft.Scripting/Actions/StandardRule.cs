@@ -28,28 +28,24 @@ namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
     /// <summary>
-    /// A dynamic test that can invalidate a rule at runtime.  The definition of an
-    /// invalid rule is one whose Test will always return false.  In theory a set of
-    /// validators is not needed as this could be encoded in the test itself; however,
-    /// in practice it is much simpler to include these helpers.
+    /// Base class for all rules.
+    /// 
+    /// A rule consists of a test and a target.  The DLR compiles sets of rules
+    /// into dynamic sites providing fast dispatch to commonly invoked functionality.
     /// </summary>
-    /// <returns>Whether or not the rule should still be considered valid.</returns>
-    public delegate bool Validator();
-
     public abstract class StandardRule {
-        internal List<Validator> _validators;
-        internal Expression _test;
-        internal Expression _target;
+        internal Expression _test;                  // the test that determines if the rule is applicable for its parameters
+        internal Expression _target;                // the target that executes if the rule is true
+        internal Expression[] _parameters;          // the parameters which the rule is processing
+        internal List<object> _templateData;        // the templated parameters for this rule 
+        internal List<Function<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
+        private bool _error;                        // true if the rule represents an error
 
         // TODO revisit these fields and their uses when CodeBlock moves down
-        internal Expression[] _parameters;
-        internal Variable[] _paramVariables;
-        internal List<Variable> _temps;
-        internal Dictionary<Variable, VariableReference> _references;
-        internal List<object> _templateData;
-        private bool _canInterpretTarget = true;
-
-        private bool _error;
+        internal Variable[] _paramVariables;                            // TODO: Remove me when we can refer to params as expressions
+        internal List<Variable> _temps;                                 // TODO: Remove me when ASTs can have free-floating variables
+        internal Dictionary<Variable, VariableReference> _references;   // TODO: Remove me when the above 2 are gone
+        private bool _canInterpretTarget = true;                        // true if we can interpret this rule
 
         internal StandardRule() { }
 
@@ -58,13 +54,36 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         public Expression Test {
             get { return _test; }
+            set { _test = value; }
+        }
+
+        /// <summary>
+        /// The code to execute if the Test is true.
+        /// </summary>
+        public Expression Target {
+            get { return _target; }
+            set { _target = value; }
+        }
+
+        /// <summary>
+        /// Adds a validation delegate which determines if the rule is still valid.
+        /// 
+        /// A validator provides a dynamic test that can invalidate a rule at runtime.  
+        /// The definition of an invalid rule is one whose Test will always return false.  
+        /// In theory a set of validators is not needed as this could be encoded in the 
+        /// test itself; however, in practice it is much simpler to include these helpers.
+        /// 
+        /// The validator returns true if the rule should still be considered valid.
+        /// </summary>
+        public void AddValidator(Function<bool> validator) {
+            if (_validators == null) _validators = new List<Function<bool>>();
+            _validators.Add(validator);
         }
 
         /// <summary>
         /// Gets the logical parameters to the dynamic site in the form of Expressions.
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
-        public Expression[] Parameters {
+        public IList<Expression> Parameters {
             get {
                 return _parameters;
             }
@@ -80,12 +99,6 @@ namespace Microsoft.Scripting.Actions {
             Variable ret = Variable.Temporary(SymbolTable.StringToId(name), null, type);
             _temps.Add(ret);
             return ret;
-        }
-
-        public void SetTest(Expression test) {
-            Contract.RequiresNotNull(test, "test");
-            if (_test != null) throw new InvalidOperationException();
-            _test = test;
         }
 
         public Expression MakeReturn(ActionBinder binder, Expression expr) {
@@ -122,7 +135,6 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-
         public void AddTest(Expression expression) {
             Assert.NotNull(expression);
             if (_test == null) {
@@ -132,9 +144,37 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void SetTarget(Expression target) {
-            Contract.RequiresNotNull(target, "target");
-            _target = target;
+        /// <summary>
+        /// If not valid, this indicates that the given Test can never return true and therefore
+        /// this rule should be removed from any RuleSets when convenient in order to 
+        /// reduce memory usage and the number of active rules.
+        /// </summary>
+        public bool IsValid {
+            get {
+                if (_validators == null) return true;
+
+                foreach (Function<bool> v in _validators) {
+                    if (!v()) return false;
+                }
+                return true;
+            }
+        }
+
+        public abstract Type ReturnType {
+            get;
+        }
+
+        public void MakeTest(params Type[] types) {
+            _test = MakeTestForTypes(types, 0);
+        }
+
+        /// <summary>
+        /// Gets the logical parameters to the dynamic site in the form of Variables.
+        /// </summary>
+        internal Variable[] ParamVariables {
+            get {
+                return _paramVariables;
+            }
         }
 
         /// <summary>
@@ -159,17 +199,6 @@ namespace Microsoft.Scripting.Actions {
                 _canInterpretTarget = value;
             }
         }
-        public void AddValidator(Validator validator) {
-            if (_validators == null) _validators = new List<Validator>();
-            _validators.Add(validator);
-        }
-
-        /// <summary>
-        /// The code to execute if the Test is true.
-        /// </summary>
-        public Expression Target {
-            get { return _target; }
-        }
 
         /// <summary>
         ///  Gets the temporary variables allocated by this rule.
@@ -178,26 +207,6 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return _temps == null ? new Variable[] { } : _temps.ToArray();
             }
-        }
-
-        /// <summary>
-        /// If not valid, this indicates that the given Test can never return true and therefore
-        /// this rule should be removed from any RuleSets when convenient in order to 
-        /// reduce memory usage and the number of active rules.
-        /// </summary>
-        public bool IsValid {
-            get {
-                if (_validators == null) return true;
-
-                foreach (Validator v in _validators) {
-                    if (!v()) return false;
-                }
-                return true;
-            }
-        }
-
-        public abstract Type ReturnType {
-            get;
         }
 
         public static Expression MakeTypeTestExpression(Type t, Expression expr) {
@@ -268,6 +277,19 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
+        internal int TemplateParameterCount {
+            get {
+                if (_templateData == null) return 0;
+                return _templateData.Count;
+            }
+        }
+
+        internal object[] TemplateData {
+            get {
+                return _templateData.ToArray();
+            }
+        }
+
         internal void RewriteTest(Expression test) {
             Debug.Assert(test != null && (object)test != (object)_test);
             _test = test;
@@ -277,6 +299,61 @@ namespace Microsoft.Scripting.Actions {
             Debug.Assert(target != null && (object)target != (object)_test);
             _target = target;
         }
+
+        public Expression MakeTestForTypes(Type[] types, int index) {
+            Expression test = MakeTypeTest(types[index], index);
+            if (index < types.Length - 1) {
+                Expression nextTests = MakeTestForTypes(types, index + 1);
+                if (ConstantCheck.IsConstant(test, true)) {
+                    return nextTests;
+                } else if (ConstantCheck.IsConstant(nextTests, true)) {
+                    return test;
+                } else {
+                    return Ast.AndAlso(test, nextTests);
+                }
+            } else {
+                return test;
+            }
+        }
+
+        public Expression MakeTypeTest(Type type, int index) {
+            return MakeTypeTest(type, Parameters[index]);
+        }
+
+        public Expression MakeTypeTest(Type type, Expression tested) {
+            if (type == null || type == typeof(None)) {
+                return Ast.Equal(tested, Ast.Null());
+            }
+
+            return MakeTypeTestExpression(type, tested);
+        }
+
+        /// <summary>
+        /// Gets the number of logical parameters the dynamic site is provided with.
+        /// </summary>
+        public int ParameterCount {
+            get {
+                return _parameters.Length;
+            }
+        }
+
+
+        public Expression MakeTypeTestExpression(Type t, int param) {
+            return MakeTypeTestExpression(t, Parameters[param]);
+        }
+
+#if DEBUG
+        public string Dump {
+            get {
+                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
+                    AstWriter.Dump(Test, "Test", writer);
+                    writer.WriteLine();
+                    AstWriter.Dump(Target, "Target", writer);
+                    return writer.ToString();
+                }
+            }
+        }
+#endif
     }
 
     /// <summary>
@@ -291,7 +368,7 @@ namespace Microsoft.Scripting.Actions {
     /// </summary>
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
     public class StandardRule<T> : StandardRule {
-        private SmallRuleSet<T> _ruleSet;
+        private SmallRuleSet<T> _monomorphicRuleSet;
 
         public StandardRule() {
             int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
@@ -328,24 +405,6 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        /// <summary>
-        /// Gets the logical parameters to the dynamic site in the form of Variables.
-        /// </summary>
-        internal Variable[] ParamVariables {
-            get {
-                return _paramVariables;
-            }
-        }      
-
-        /// <summary>
-        /// Gets the number of logical parameters the dynamic site is provided with.
-        /// </summary>
-        public int ParameterCount {
-            get {
-                return _parameters.Length;
-            }
-        }
-
         private Variable MakeParameter(int index, string name, Type type) {
             Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type);
             ret.ParameterIndex = index;
@@ -358,10 +417,10 @@ namespace Microsoft.Scripting.Actions {
         /// </summary>
         internal SmallRuleSet<T> MonomorphicRuleSet {
             get {
-                if (_ruleSet == null) {
-                    _ruleSet = new SmallRuleSet<T>(new StandardRule<T>[] { this });
+                if (_monomorphicRuleSet == null) {
+                    _monomorphicRuleSet = new SmallRuleSet<T>(new StandardRule<T>[] { this });
                 }
-                return _ruleSet;
+                return _monomorphicRuleSet;
             }
         }
 
@@ -400,7 +459,11 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        public void Emit(Compiler cg, Label ifFalse) {
+        /// <summary>
+        /// Emits the test and target of the rule emitting the code using the provided
+        /// compiler, branching to ifFalse if the test is not satisfied.
+        /// </summary>
+        internal void Emit(Compiler cg, Label ifFalse) {
             Assert.NotNull(_test, _target);
 
             // Need to make sure we aren't generating into two different CodeGens at the same time
@@ -444,43 +507,7 @@ namespace Microsoft.Scripting.Actions {
             get {
                 return typeof(T).GetMethod("Invoke").ReturnType;
             }
-        }        
-
-        public void MakeTest(params Type[] types) {
-            _test = MakeTestForTypes(types, 0);
-        }
-
-        public Expression MakeTestForTypes(Type[] types, int index) {
-            Expression test = MakeTypeTest(types[index], index);
-            if (index < types.Length - 1) {
-                Expression nextTests = MakeTestForTypes(types, index + 1);
-                if (ConstantCheck.IsConstant(test, true)) {
-                    return nextTests;
-                } else if (ConstantCheck.IsConstant(nextTests, true)) {
-                    return test;
-                } else {
-                    return Ast.AndAlso(test, nextTests);
-                }
-            } else {
-                return test;
-            }
-        }
-
-        public Expression MakeTypeTest(Type type, int index) {
-            return MakeTypeTest(type, Parameters[index]);
-        }
-
-        public Expression MakeTypeTest(Type type, Expression tested) {
-            if (type == null || type == typeof(None)) {
-                return Ast.Equal(tested, Ast.Null());
-            }
-
-            return MakeTypeTestExpression(type, tested);
-        }
-        
-        public Expression MakeTypeTestExpression(Type t, int param) {
-            return MakeTypeTestExpression(t, Parameters[param]);
-        }        
+        }                   
 
         #region Factory Methods
 
@@ -490,7 +517,7 @@ namespace Microsoft.Scripting.Actions {
             BindingTarget bindingTarget = MethodBinder.MakeBinder(binder, target.Name, new MethodBase[] { target }).MakeBindingTarget(CallType.None, types);
 
             ret.MakeTest(types);
-            ret.SetTarget(ret.MakeReturn(binder, bindingTarget.MakeExpression(ret, ret.Parameters)));
+            ret.Target = ret.MakeReturn(binder, bindingTarget.MakeExpression(ret, ret.Parameters));
             return ret;
         }        
         
@@ -509,32 +536,6 @@ namespace Microsoft.Scripting.Actions {
 
             return new TemplatedRuleBuilder<T>(this);
         }
-
-        internal int TemplateParameterCount {
-            get {
-                if (_templateData == null) return 0;
-                return _templateData.Count;
-            }
-        }
-
-        internal object[] TemplateData {
-            get {
-                return _templateData.ToArray();
-            }
-        }
-
-#if DEBUG
-        public string Dump {
-            get {
-                using (System.IO.StringWriter writer = new System.IO.StringWriter()) {
-                    AstWriter.Dump(Test, "Test", writer);
-                    writer.WriteLine();
-                    AstWriter.Dump(Target, "Target", writer);
-                    return writer.ToString();
-                }
-            }
-        }
-#endif
     }
 }
  

@@ -25,14 +25,14 @@ using System.Text;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
-using Microsoft.Contracts;
+using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting.Ast {
 
     // TODO: Should move to Generation?
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")] // TODO: fix
-    public partial class Compiler : IDisposable {
+    internal partial class Compiler : IDisposable {
 
         struct ReturnBlock {
             internal Slot returnValue;
@@ -52,7 +52,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly ListStack<Targets> _targets = new ListStack<Targets>();
         private readonly List<Slot> _freeSlots = new List<Slot>();
 
-        private IList<Label> _yieldLabels;
         private Nullable<ReturnBlock> _returnBlock;
 
         // TODO: Where does this belong?
@@ -68,7 +67,7 @@ namespace Microsoft.Scripting.Ast {
         private int _currentLine;                   // last line number emitted to avoid dupes
 
         private Slot[] _argumentSlots;
-        private CompilerContext _context;
+        private SourceUnit _source;
         private ActionBinder _binder;
 
         private readonly ConstantPool _constantPool;
@@ -76,10 +75,10 @@ namespace Microsoft.Scripting.Ast {
         private bool _generator;                    // true if emitting generator, false otherwise
         private Slot _gotoRouter;                   // Slot that stores the number of the label to go to.
 
-        internal const int FinallyExitsNormally = 0;
-        internal const int BranchForReturn = 1;
-        internal const int BranchForBreak = 2;
-        internal const int BranchForContinue = 3;
+        private const int FinallyExitsNormally = 0;
+        private const int BranchForReturn = 1;
+        private const int BranchForBreak = 2;
+        private const int BranchForContinue = 3;
 
         // This is true if we are emitting code while in an interpreted context.
         // This flag should always be flowed through to other Compiler objects created from this one.
@@ -169,7 +168,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// True if Compiler should output a text file containing the generated IL, false otherwise.
         /// </summary>
-        internal bool ILDebug {
+        private bool ILDebug {
             get {
                 return (_options & CodeGenOptions.ILDebug) != 0;
             }
@@ -230,7 +229,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _debugSymbolWriter != null; }
         }
 
-        public MethodBase Method {
+        internal MethodBase Method {
             get {
                 return _method;
             }
@@ -261,18 +260,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // TODO: fix
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        internal IList<Label> YieldLabels {
-            get {
-                return _yieldLabels;
-            }
-            set {
-                _yieldLabels = value;
-            }
-        }
-
-        public IList<Slot> ArgumentSlots {
+        internal IList<Slot> ArgumentSlots {
             get {
                 return _argumentSlots;
             }
@@ -307,7 +295,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public Slot ContextSlot {
+        internal Slot ContextSlot {
             get {
                 return _contextSlot;
             }
@@ -330,19 +318,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal CompilerContext Context {
-            get {
-                Debug.Assert(_context != null);
-                return _context;
-            }
-            set {
-                _context = value;
-                this.Binder = _context.SourceUnit.LanguageContext.Binder;
-            }
-        }
-
-        internal bool HasContext {
-            get { return _context != null; }
+        internal void SetSource(SourceUnit source) {
+            Contract.RequiresNotNull(source, "source");
+            _source = source;
+            _binder = _source.LanguageContext.Binder;
         }
 
         internal ActionBinder Binder {
@@ -357,7 +336,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal TargetBlockType BlockType {
+        private TargetBlockType BlockType {
             get {
                 if (_targets.Count == 0) return TargetBlockType.Normal;
                 Targets t = _targets.Peek();
@@ -365,7 +344,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal Nullable<Label> BlockContinueLabel {
+        private Nullable<Label> BlockContinueLabel {
             get {
                 if (_targets.Count == 0) return Targets.NoLabel;
                 Targets t = _targets.Peek();
@@ -377,15 +356,15 @@ namespace Microsoft.Scripting.Ast {
             get {
                 return _generator;
             }
-            set {
+            private set {
                 _generator = value;
             }
         }
 
-        internal const int GotoRouterNone = -1;
-        internal const int GotoRouterYielding = -2;
+        private const int GotoRouterNone = -1;
+        private const int GotoRouterYielding = -2;
 
-        internal Slot GotoRouter {
+        private Slot GotoRouter {
             get {
                 return _gotoRouter;
             }
@@ -411,6 +390,114 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
+        #region Compiler entry point
+
+        /// <summary>
+        /// Compiler entry point, used by ScriptCode.
+        /// This is used for compiling the toplevel CodeBlock object.
+        /// TODO: Get rid of CallTargetWithContext
+        /// </summary>
+        internal static CallTargetWithContext0 CompileTopLevelCodeBlock(SourceUnit source, CodeBlock block) {
+            // 1. Analyze
+            AnalyzeBlock(block);
+
+            // 2. Generate the code
+            Compiler cg = CompilerHelpers.CreateDynamicCodeGenerator(source);
+            cg.Allocator = CompilerHelpers.CreateFrameAllocator();
+
+            // TODO: Cleanup!
+            cg.References = block.References;
+
+            cg.EnvironmentSlot = new EnvironmentSlot(
+                new PropertySlot(
+                    new PropertySlot(cg.ContextSlot,
+                        typeof(CodeContext).GetProperty("Scope")),
+                    typeof(Scope).GetProperty("Dict"))
+                );
+
+            cg.EmitFunctionImplementation(block);
+
+            cg.Finish();
+
+            return (CallTargetWithContext0)(object)cg.CreateDelegate(typeof(CallTargetWithContext0));
+        }
+
+        /// <summary>
+        /// Compiler entry point, used by TreeCompiler
+        /// </summary>
+        /// <typeparam name="T">Type of the delegate to create</typeparam>
+        /// <param name="block">CodeBlock to compile.</param>
+        /// <returns>The compiled delegate.</returns>
+        internal static T CompileCodeBlock<T>(CodeBlock block) {
+            // 1. Analyze
+            AnalyzeBlock(block);
+
+            // 2. Create signature
+            List<Type> types;
+            List<SymbolId> names;
+            string name;
+            Compiler.ComputeSignature(block, false, false, out types, out names, out name);
+
+            // 3. Create Compiler
+            Compiler c = CompilerHelpers.CreateDynamicCodeGenerator(name, block.ReturnType, types, null);
+            c.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, c);
+
+            // TODO: Cleanup !!!
+            c.References = block.References;
+
+            // 4. Emit
+            Compiler.EmitBody(c, block);
+
+            c.Finish();
+
+            // 5. Return the delegate.
+            return (T)(object)c.CreateDelegate(typeof(T));
+        }
+
+        /// <summary>
+        /// Compiler entry point, used by OptimizedModuleGenerator and Interpreter
+        /// </summary>
+        internal void GenerateCodeBlock(CodeBlock block) {
+            if (_source == null) {
+                throw new InvalidOperationException("Must have source unit.");
+            }
+
+            // 1. Analyze
+            AnalyzeBlock(block);
+
+            // 2. Generate the code.
+            EmitStackTraceTryBlockStart();
+
+            // TODO: Cleanup!
+            _references = block.References;
+
+            // emit the actual body
+            EmitBody(this, block);
+
+            string displayName = _source.GetSymbolDocument(block.Start.Line) ?? block.Name;
+
+            EmitStackTraceFaultBlock(block.Name, displayName);
+        }
+
+        #endregion
+
+        private static void AnalyzeBlock(CodeBlock block) {
+            DumpBlock(block);
+
+            ForestRewriter.Rewrite(block);
+            ClosureBinder.Bind(block);
+            FlowChecker.Check(block);
+
+            DumpBlock(block);
+        }
+
+        [Conditional("DEBUG")]
+        private static void DumpBlock(CodeBlock block) {
+#if DEBUG
+            AstWriter.Dump(block);
+#endif
+        }
+
         internal void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
             if (_targets.Count == 0) {
                 _targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, null));
@@ -420,11 +507,11 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void PushTryBlock() {
+        private void PushTryBlock() {
             PushExceptionBlock(TargetBlockType.Try, null);
         }
 
-        internal void PushTargets(Nullable<Label> breakTarget, Nullable<Label> continueTarget, Expression expression) {
+        private void PushTargets(Nullable<Label> breakTarget, Nullable<Label> continueTarget, Expression expression) {
             if (_targets.Count == 0) {
                 _targets.Push(new Targets(breakTarget, continueTarget, BlockType, null, expression));
             } else {
@@ -438,17 +525,17 @@ namespace Microsoft.Scripting.Ast {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "type")]
-        internal void PopTargets(TargetBlockType type) {
+        private void PopTargets(TargetBlockType type) {
             Targets t = _targets.Pop();
             Debug.Assert(t.BlockType == type);
         }
 
-        internal void PopTargets() {
+        private void PopTargets() {
             _targets.Pop();
         }
 
         // TODO: Cleanup, hacky!!!
-        internal void CheckAndPushTargets(Expression expression) {
+        private void CheckAndPushTargets(Expression expression) {
             for (int i = _targets.Count - 1; i >= 0; i--) {
                 if (_targets[i].expression == expression) {
                     PushTargets(_targets[i].breakLabel, _targets[i].continueLabel, null);
@@ -459,7 +546,7 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException("Statement not on the stack");
         }
 
-        internal void EmitBreak() {
+        private void EmitBreak() {
             Targets t = _targets.Peek();
             int finallyIndex = -1;
             switch (t.BlockType) {
@@ -507,7 +594,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitContinue() {
+        private void EmitContinue() {
             Targets t = _targets.Peek();
             switch (t.BlockType) {
                 default:
@@ -534,7 +621,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitReturn() {
+        // TODO: Make private !!!
+        internal void EmitReturn() {
             int finallyIndex = -1;
             switch (BlockType) {
                 default:
@@ -598,7 +686,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitCast(Type from, Type to) {
+        internal void EmitCast(Type from, Type to) {
             Contract.RequiresNotNull(from, "from");
             Contract.RequiresNotNull(to, "to");
 
@@ -633,7 +721,7 @@ namespace Microsoft.Scripting.Ast {
         /// objects.
         /// </summary>
         /// <param name="type"></param>
-        public void EmitBoxing(Type type) {
+        internal void EmitBoxing(Type type) {
             Contract.RequiresNotNull(type, "type");
             Debug.Assert(typeof(void).IsValueType);
 
@@ -646,14 +734,14 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitReturnValue() {
+        private void EmitReturnValue() {
             EnsureReturnBlock();
             if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                 _returnBlock.Value.returnValue.EmitGet(this);
             }
         }
 
-        internal void EmitReturn(Expression expr) {
+        private void EmitReturn(Expression expr) {
             if (_generator) {
                 EmitReturnInGenerator(expr);
             } else {
@@ -671,14 +759,14 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitReturnInGenerator(Expression expr) {
+        private void EmitReturnInGenerator(Expression expr) {
             EmitSetGeneratorReturnValue(expr);
 
             EmitInt(0);
             EmitReturn();
         }
 
-        internal void EmitYield(Expression expr, YieldTarget target) {
+        private void EmitYield(Expression expr, YieldTarget target) {
             Contract.RequiresNotNull(expr, "expr");
 
             EmitSetGeneratorReturnValue(expr);
@@ -705,13 +793,13 @@ namespace Microsoft.Scripting.Ast {
             Emit(OpCodes.Stind_Ref);
         }
 
-        internal void EmitUpdateGeneratorLocation(int index) {
+        private void EmitUpdateGeneratorLocation(int index) {
             ArgumentSlots[0].EmitGet(this);
             EmitInt(index);
             EmitFieldSet(typeof(Generator).GetField("location"));
         }
 
-        internal void EmitGetGeneratorLocation() {
+        private void EmitGetGeneratorLocation() {
             ArgumentSlots[0].EmitGet(this);
             EmitFieldGet(typeof(Generator), "location");
         }
@@ -720,7 +808,7 @@ namespace Microsoft.Scripting.Ast {
             EmitFieldGet(typeof(Uninitialized), "Instance");
         }
 
-        internal void EmitPosition(SourceLocation start, SourceLocation end) {
+        private void EmitPosition(SourceLocation start, SourceLocation end) {
             if (EmitDebugInfo) {
 
                 Debug.Assert(start != SourceLocation.Invalid);
@@ -743,7 +831,7 @@ namespace Microsoft.Scripting.Ast {
             EmitCurrentLine(start.Line);
         }
 
-        internal void EmitSequencePointNone() {
+        private void EmitSequencePointNone() {
             if (EmitDebugInfo) {
                 MarkSequencePoint(
                     _debugSymbolWriter,
@@ -753,7 +841,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public Slot GetLocalTmp(Type type) {
+        internal Slot GetLocalTmp(Type type) {
             Contract.RequiresNotNull(type, "type");
 
             for (int i = 0; i < _freeSlots.Count; i++) {
@@ -783,21 +871,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal Slot DupAndStoreInTemp(Type type) {
-            Debug.Assert(type != typeof(void));
-            this.Emit(OpCodes.Dup);
-            Slot ret = GetLocalTmp(type);
-            ret.EmitSet(this);
-            return ret;
-        }
-
-        internal void SetCustomAttribute(CustomAttributeBuilder cab) {
-            MethodBuilder builder = _method as MethodBuilder;
-            if (builder != null) {
-                builder.SetCustomAttribute(cab);
-            }
-        }
-
         internal ParameterBuilder DefineParameter(int position, ParameterAttributes attributes, string strParamName) {
             MethodBuilder builder = _method as MethodBuilder;
             if (builder != null) {
@@ -811,8 +884,8 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException(Resources.InvalidOperation_DefineParameterBakedMethod);
         }
 
-        internal void EmitGet(Slot slot, SymbolId name, bool check) {
-            Contract.RequiresNotNull(slot, "slot");
+        private void EmitGet(Slot slot, SymbolId name, bool check) {
+            Debug.Assert(slot != null, "slot");
 
             slot.EmitGet(this);
             if (check) {
@@ -820,7 +893,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitGetCurrentLine() {
+        private void EmitGetCurrentLine() {
             if (_currentLineSlot != null) {
                 _currentLineSlot.EmitGet(this);
             } else {
@@ -829,9 +902,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitCurrentLine(int line) {
-            if (!EmitLineInfo || !HasContext) return;
+            if (!EmitLineInfo || _source == null) {
+                return;
+            }
 
-            line = _context.SourceUnit.MapLine(line);
+            line = _source.MapLine(line);
             if (line != _currentLine && line != SourceLocation.None.Line) {
                 if (_currentLineSlot == null) {
                     _currentLineSlot = GetNamedLocal(typeof(int), "$line");
@@ -855,7 +930,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void Finish() {
+        internal void Finish() {
             Debug.Assert(_targets.Count == 0);
 
             if (_returnBlock.HasValue) {
@@ -875,7 +950,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitEnvironmentOrNull() {
+        private void EmitEnvironmentOrNull() {
             if (_environmentSlot != null) {
                 _environmentSlot.EmitGet(this);
             } else {
@@ -883,27 +958,10 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitThis() {
+        internal void EmitThis() {
             if (_method.IsStatic) throw new InvalidOperationException(Resources.InvalidOperation_ThisInStaticMethod);
             //!!! want to confirm this doesn't have a constant pool too
             Emit(OpCodes.Ldarg_0);
-        }
-
-        /// <summary>
-        /// Emits an array of constant values provided in the given list.  The array
-        /// is strongly typed.
-        /// </summary>
-        public void EmitArray<T>(IList<T> items) {
-            Contract.RequiresNotNull(items, "items");
-
-            EmitInt(items.Count);
-            Emit(OpCodes.Newarr, typeof(T));
-            for (int i = 0; i < items.Count; i++) {
-                Emit(OpCodes.Dup);
-                EmitInt(i);
-                EmitConstant(items[i]);
-                EmitStoreElement(typeof(T));
-            }
         }
 
         internal void EmitTuple(Type tupleType, int count, EmitArrayHelper emit) {
@@ -952,7 +1010,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitArgGet(int index) {
+        internal void EmitArgGet(int index) {
             Contract.Requires(index >= 0 && index < Int32.MaxValue, "index");
 
             if (_method == null || !_method.IsStatic) {
@@ -966,7 +1024,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Emits a symbol id.  
         /// </summary>
-        public void EmitSymbolId(SymbolId id) {
+        internal void EmitSymbolId(SymbolId id) {
             if (DynamicMethod) {
                 EmitInt(id.Id);
                 EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
@@ -994,7 +1052,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public void EmitType(Type type) {
+        private void EmitType(Type type) {
             Contract.RequiresNotNull(type, "type");
 
             if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
@@ -1006,7 +1064,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // Not to be used with virtual methods
-        internal void EmitDelegateConstruction(Compiler delegateFunction, Type delegateType) {
+        private void EmitDelegateConstruction(Compiler delegateFunction, Type delegateType) {
             Contract.RequiresNotNull(delegateFunction, "delegateFunction");
             Contract.RequiresNotNull(delegateType, "delegateType");
 
@@ -1086,7 +1144,7 @@ namespace Microsoft.Scripting.Ast {
                 //TODO cache these so that we use the same slot for the same values
                 _constantPool.AddData(value.Create(), value.Type).EmitGet(this);
             } else {
-                value.EmitCreation(this);
+                value.EmitCreation(IL);
             }
         }
 
@@ -1100,7 +1158,7 @@ namespace Microsoft.Scripting.Ast {
             return _argumentSlots[index];
         }
 
-        public MethodInfo CreateDelegateMethodInfo() {
+        internal MethodInfo CreateDelegateMethodInfo() {
             if (_method is DynamicMethod) {
                 return (MethodInfo)_method;
             } else if (_method is MethodBuilder) {
@@ -1112,7 +1170,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public Delegate CreateDelegate(Type delegateType) {
+        internal Delegate CreateDelegate(Type delegateType) {
             Contract.RequiresNotNull(delegateType, "delegateType");
 
             if (ConstantPool.IsBound) {
@@ -1122,18 +1180,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal Delegate CreateDelegate(Type delegateType, object target) {
-            Contract.RequiresNotNull(delegateType, "delegateType");
-            Debug.Assert(!ConstantPool.IsBound);
-
-            return ReflectionUtils.CreateDelegate(CreateDelegateMethodInfo(), delegateType, target);
-        }
-
-        public Compiler DefineMethod(string name, Type returnType, IList<Type> parameterTypes, string[] parameterNames) {
-            return DefineMethod(name, returnType, parameterTypes, parameterNames, null);
-        }
-
-        internal Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
+        private Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, string[] paramNames, ConstantPool constantPool) {
             Contract.RequiresNotNullItems(paramTypes, "paramTypes");
             //Contract.RequiresNotNull(paramNames, "paramNames");
 
@@ -1141,19 +1188,21 @@ namespace Microsoft.Scripting.Ast {
             if (!DynamicMethod) {
                 res = _typeGen.DefineMethod(name, retType, paramTypes, paramNames, constantPool);
             } else {
-                if (_context != null && CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_context.SourceUnit)) {
-                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_context.SourceUnit, name, retType, paramTypes, paramNames, constantPool);
+                if (_source != null && CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_source)) {
+                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_source, name, retType, paramTypes, paramNames, constantPool);
                 } else {
                     res = CompilerHelpers.CreateDynamicCodeGenerator(name, retType, paramTypes, constantPool);
                 }
             }
 
-            if (_context != null) res.Context = _context;
+            if (_source != null) {
+                res.SetSource(_source);
+            }
             res.InterpretedMode = _interpretedMode;
             return res;
         }
 
-        internal void EndExceptionBlock() {
+        private void EndExceptionBlock() {
             if (_targets.Count > 0) {
                 Targets t = _targets.Peek();
                 Debug.Assert(t.BlockType != TargetBlockType.LoopInFinally);
@@ -1165,29 +1214,29 @@ namespace Microsoft.Scripting.Ast {
             _ilg.EndExceptionBlock();
         }
 
-        internal void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
-            if (_context != null) {
-                startLine = _context.SourceUnit.MapLine(startLine);
-                endLine = _context.SourceUnit.MapLine(endLine);
+        private void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
+            if (_source != null) {
+                startLine = _source.MapLine(startLine);
+                endLine = _source.MapLine(endLine);
             }
             _ilg.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
 
         #region ILGen forwards - will go away
 
-        internal void BeginCatchBlock(Type exceptionType) {
+        private void BeginCatchBlock(Type exceptionType) {
             _ilg.BeginCatchBlock(exceptionType);
         }
 
-        internal Label BeginExceptionBlock() {
+        private Label BeginExceptionBlock() {
             return _ilg.BeginExceptionBlock();
         }
 
-        internal void BeginFaultBlock() {
+        private void BeginFaultBlock() {
             _ilg.BeginFaultBlock();
         }
 
-        internal void BeginFinallyBlock() {
+        private void BeginFinallyBlock() {
             _ilg.BeginFinallyBlock();
         }
 
@@ -1195,43 +1244,31 @@ namespace Microsoft.Scripting.Ast {
             return _ilg.DeclareLocal(localType);
         }
 
-        public Label DefineLabel() {
+        internal Label DefineLabel() {
             return _ilg.DefineLabel();
         }
 
-        public void Emit(OpCode opcode) {
+        internal void Emit(OpCode opcode) {
             _ilg.Emit(opcode);
         }
 
-        internal void Emit(OpCode opcode, byte arg) {
-            _ilg.Emit(opcode, arg);
-        }
-
-        public void Emit(OpCode opcode, ConstructorInfo con) {
+        internal void Emit(OpCode opcode, ConstructorInfo con) {
             _ilg.Emit(opcode, con);
-        }
-
-        internal void Emit(OpCode opcode, double arg) {
-            _ilg.Emit(opcode, arg);
         }
 
         internal void Emit(OpCode opcode, FieldInfo field) {
             _ilg.Emit(opcode, field);
         }
 
-        internal void Emit(OpCode opcode, float arg) {
-            _ilg.Emit(opcode, arg);
-        }
-
         internal void Emit(OpCode opcode, int arg) {
             _ilg.Emit(opcode, arg);
         }
 
-        public void Emit(OpCode opcode, Label label) {
+        internal void Emit(OpCode opcode, Label label) {
             _ilg.Emit(opcode, label);
         }
 
-        internal void Emit(OpCode opcode, Label[] labels) {
+        private void Emit(OpCode opcode, Label[] labels) {
             _ilg.Emit(opcode, labels);
         }
 
@@ -1239,20 +1276,8 @@ namespace Microsoft.Scripting.Ast {
             _ilg.Emit(opcode, local);
         }
 
-        internal void Emit(OpCode opcode, long arg) {
-            _ilg.Emit(opcode, arg);
-        }
-
-        public void Emit(OpCode opcode, MethodInfo meth) {
+        internal void Emit(OpCode opcode, MethodInfo meth) {
             _ilg.Emit(opcode, meth);
-        }
-
-        internal void Emit(OpCode opcode, sbyte arg) {
-            _ilg.Emit(opcode, arg);
-        }
-
-        internal void Emit(OpCode opcode, short arg) {
-            _ilg.Emit(opcode, arg);
         }
 
 #if !SILVERLIGHT
@@ -1261,38 +1286,17 @@ namespace Microsoft.Scripting.Ast {
         }
 #endif
 
-        internal void Emit(OpCode opcode, string str) {
-            _ilg.Emit(opcode, str);
-        }
-
-        public void Emit(OpCode opcode, Type cls) {
+        internal void Emit(OpCode opcode, Type cls) {
             _ilg.Emit(opcode, cls);
         }
 
-        public void EmitCall(OpCode opcode, MethodInfo methodInfo, Type[] optionalParameterTypes) {
-            _ilg.EmitCall(opcode, methodInfo, optionalParameterTypes);
-        }
-
-        public void MarkLabel(Label loc) {
+        internal void MarkLabel(Label loc) {
             _ilg.MarkLabel(loc);
         }
 
         [Conditional("DEBUG")]
         private void EmitDebugMarker(string marker) {
             _ilg.EmitDebugWriteLine(marker);
-        }
-
-        [Conditional("DEBUG")]
-        internal void EmitAssertNotNull() {
-            _ilg.EmitAssertNotNull();
-        }
-
-        /// <summary>
-        /// asserts the value at the top of the stack is not null
-        /// </summary>
-        [Conditional("DEBUG")]
-        internal void EmitAssertNotNull(string message) {
-            _ilg.EmitAssertNotNull(message);
         }
 
         internal void EmitTrueArgGet(int index) {
@@ -1303,19 +1307,19 @@ namespace Microsoft.Scripting.Ast {
             _ilg.EmitLoadArgAddress(index);
         }
 
-        public void EmitPropertyGet(Type type, string name) {
+        internal void EmitPropertyGet(Type type, string name) {
             _ilg.EmitPropertyGet(type, name);
         }
 
-        public void EmitPropertyGet(PropertyInfo pi) {
+        internal void EmitPropertyGet(PropertyInfo pi) {
             _ilg.EmitPropertyGet(pi);
         }
 
-        public void EmitPropertySet(Type type, string name) {
+        internal void EmitPropertySet(Type type, string name) {
             _ilg.EmitPropertySet(type, name);
         }
 
-        public void EmitPropertySet(PropertyInfo pi) {
+        internal void EmitPropertySet(PropertyInfo pi) {
             _ilg.EmitPropertySet(pi);
         }
 
@@ -1323,35 +1327,35 @@ namespace Microsoft.Scripting.Ast {
             _ilg.EmitFieldAddress(fi);
         }
 
-        public void EmitFieldGet(Type type, String name) {
+        private void EmitFieldGet(Type type, String name) {
             _ilg.EmitFieldGet(type, name);
         }
 
-        public void EmitFieldGet(FieldInfo fi) {
+        internal void EmitFieldGet(FieldInfo fi) {
             _ilg.EmitFieldGet(fi);
         }
 
-        public void EmitFieldSet(FieldInfo fi) {
+        internal void EmitFieldSet(FieldInfo fi) {
             _ilg.EmitFieldSet(fi);
         }
 
-        public void EmitNew(ConstructorInfo ci) {
+        internal void EmitNew(ConstructorInfo ci) {
             _ilg.EmitNew(ci);
         }
 
-        public void EmitNew(Type type, Type[] paramTypes) {
+        internal void EmitNew(Type type, Type[] paramTypes) {
             _ilg.EmitNew(type, paramTypes);
         }
 
-        public void EmitCall(MethodInfo mi) {
+        internal void EmitCall(MethodInfo mi) {
             _ilg.EmitCall(mi);
         }
 
-        public void EmitCall(Type type, String name) {
+        internal void EmitCall(Type type, String name) {
             _ilg.EmitCall(type, name);
         }
 
-        public void EmitCall(Type type, String name, Type[] paramTypes) {
+        private void EmitCall(Type type, String name, Type[] paramTypes) {
             _ilg.EmitCall(type, name, paramTypes);
         }
 
@@ -1373,7 +1377,7 @@ namespace Microsoft.Scripting.Ast {
         /// Emits the Ldelem* instruction for the appropriate type
         /// </summary>
         /// <param name="type"></param>
-        internal void EmitLoadElement(Type type) {
+        private void EmitLoadElement(Type type) {
             _ilg.EmitLoadElement(type);
         }
 
@@ -1384,51 +1388,23 @@ namespace Microsoft.Scripting.Ast {
             _ilg.EmitStoreElement(type);
         }
 
-        public void EmitNull() {
+        private void EmitNull() {
             _ilg.EmitNull();
         }
 
-        public void EmitString(string value) {
+        internal void EmitString(string value) {
             _ilg.EmitString(value);
         }
 
-        public void EmitBoolean(bool value) {
+        private void EmitBoolean(bool value) {
             _ilg.EmitBoolean(value);
         }
 
-        internal void EmitChar(char value) {
-            _ilg.EmitChar(value);
-        }
-
-        internal void EmitByte(byte value) {
-            _ilg.EmitByte(value);
-        }
-
-        private void EmitSByte(sbyte value) {
-            _ilg.EmitSByte(value);
-        }
-
-        private void EmitShort(short value) {
-            _ilg.EmitShort(value);
-        }
-
-        private void EmitUShort(ushort value) {
-            _ilg.EmitUShort(value);
-        }
-
-        public void EmitInt(int value) {
+        internal void EmitInt(int value) {
             _ilg.EmitInt(value);
         }
 
-        internal void EmitUInt(uint value) {
-            _ilg.EmitUInt(value);
-        }
-
-        public void EmitUnbox(Type type) {
-            _ilg.EmitUnbox(type);
-        }
-
-        internal void EmitMissingValue(Type type) {
+        private void EmitMissingValue(Type type) {
             _ilg.EmitMissingValue(type);
         }
 
@@ -1436,7 +1412,7 @@ namespace Microsoft.Scripting.Ast {
         /// Emits an array of values of count size.  The items are emitted via the callback
         /// which is provided with the current item index to emit.
         /// </summary>
-        public void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
+        private void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
             Contract.RequiresNotNull(elementType, "elementType");
             Contract.RequiresNotNull(emit, "emit");
             Contract.Requires(count >= 0, "count", "Count must be non-negative.");
@@ -1449,7 +1425,7 @@ namespace Microsoft.Scripting.Ast {
         #region IL Debugging Support
 
 #if !SILVERLIGHT
-        static int count;
+        private static int _Count;
 
         private static DebugILGen CreateDebugILGen(ILGenerator il, TypeGen typeGen, MethodBase method, IList<Type> paramTypes, bool debug) {
             // This ensures that it is not a DynamicMethod
@@ -1457,7 +1433,7 @@ namespace Microsoft.Scripting.Ast {
             string full_method_name = ((method.DeclaringType != null) ? method.DeclaringType.Name + "." : "") + method.Name;
 
             string filename = String.Format("gen_{0}_{1}.il", IOUtils.ToValidFileName(full_method_name),
-                System.Threading.Interlocked.Increment(ref count));
+                System.Threading.Interlocked.Increment(ref _Count));
 
             string tempFolder = Path.Combine(Path.GetTempPath(), "IronPython");
             Directory.CreateDirectory(tempFolder);
@@ -1524,7 +1500,7 @@ namespace Microsoft.Scripting.Ast {
             return ConstantPool.AddData(site);
         }
 
-        internal Slot GetTemporarySlot(Type type) {
+        private Slot GetTemporarySlot(Type type) {
             Slot temp;
 
             if (IsGenerator) {

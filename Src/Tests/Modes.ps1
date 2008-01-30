@@ -42,6 +42,19 @@ $global:IS_DEBUG = "$env:ROWAN_BIN".ToLower().EndsWith("bin\debug")
 $global:IS_64 = (test-path $env:SystemRoot\SYSWOW64) -or (test-path $env:systemroot\SYSWOW64)
 
 ###################################################################################
+function show-failure ()
+{
+	$host.ui.writeerrorline($args[0])
+	$global:ERRORS++
+	$host.ui.writeerrorline("    At line " + (gv -scope 0 myinvocation).value.ScriptLineNumber)
+	trap { continue }
+	1..3 | % { 
+	$msg = "    At " + (gv -scope $_ myinvocation).value.MyCommand + ":" + (gv -scope $_ myinvocation).value.ScriptLineNumber
+
+	$host.ui.writeerrorline($msg) }
+	echo ""
+}
+
 function test-setup
 {
 	echo "Setting up test run."
@@ -111,21 +124,21 @@ function hello-helper
 	$stuff = exe $args[1..$args.Length] $global:HELLO
 	if (! $?) 
 	{
-		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
-		write-error "$args[0] terminated with a non-zero exit code."
-		$global:ERRORS++
+		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
+		show-failure "$args[0] terminated with a non-zero exit code."
+		
 	}
 	elseif ($stuff[0] -ne "Hello World 1st Line") 
 	{
-		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
-		write-error "Missing output: Hello World 1st Line"
-		$global:ERRORS++
+		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
+		show-failure "Missing output: Hello World 1st Line"
+		
 	}
 	elseif($stuff[1] -ne 6) 
 	{
-		write-error "Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)"
-		write-error "Missing output: 6"
-		$global:ERRORS++
+		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
+		show-failure "Missing output: 6"
+		
 	}
 }
 
@@ -156,10 +169,10 @@ function test-pymodes($pyexe)
 	echo "Testing -c ..."
 	
 	$stuff = pyexe -c "True"
-	if ($stuff -ne $null) { write-error "Failed: $stuff"; $global:ERRORS++ }
+	if ($stuff -ne $null) { show-failure "Failed: $stuff";  }
 	
 	$stuff = pyexe -c "print True"
-	if ($stuff -ne "True") { write-error "Failed: $stuff"; $global:ERRORS++ }
+	if ($stuff -ne "True") { show-failure "Failed: $stuff";  }
 	
 	#------------------------------------------------------------------------------
 	## -h
@@ -177,7 +190,7 @@ function test-pymodes($pyexe)
 	{
 		if (!$stuff.Contains($expected))
 		{
-			write-error "Failed: $expected"; $global:ERRORS++
+			show-failure "Failed: $expected"; 
 		}
 	}
 	
@@ -212,8 +225,8 @@ function test-pymodes($pyexe)
 	if ($false) #$stuff.Length -le "HelloWorld".Length) 
 	{
 		$stuff = $stuff.Length
-		write-error "Failed: $stuff"
-		$global:ERRORS++
+		show-failure "Failed: $stuff"
+		
 	}
 	
 	
@@ -235,7 +248,7 @@ function test-pymodes($pyexe)
 	
 	echo "CodePlex Work Item 11102"
 	$stuff = pyexe -OO $global:DOCSTRING
-	#if ($stuff -ne "stuff and more stuff taking up space") {write-error "Failed: $stuff"; $global:ERRORS++}
+	#if ($stuff -ne "stuff and more stuff taking up space") {show-failure "Failed: $stuff"; }
 
 	#------------------------------------------------------------------------------
 	## -Q arg
@@ -255,7 +268,7 @@ function test-pymodes($pyexe)
 	foreach($key in $test_hash.Keys)
 	{
 		$stuff = pyexe $key.Split(" ") 2> $null 
-		if ($stuff -ne $test_hash[$key]) {write-error "Failed: $stuff"; $global:ERRORS++}
+		if ($stuff -ne $test_hash[$key]) {show-failure "Failed: $stuff"; }
 	}
 	
 	#next stderr...
@@ -273,7 +286,7 @@ function test-pymodes($pyexe)
 	foreach($key in $test_hash.Keys)
 	{
 		$stuff = pyexe $key.Split(" ") 2>&1
-		if ("$stuff" -ne $test_hash[$key]) {write-error "Failed: $stuff"; $global:ERRORS++}
+		if ("$stuff" -ne $test_hash[$key]) {show-failure "Failed: $stuff"; }
 	}
     
 }
@@ -288,51 +301,69 @@ function assembliesdir-helper
 	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir $args[1..$args.Length] 
 	$stuff = dir $env:TMP\assemblies_dir
 	#Just check to make sure it's empty...save assemblies option was not used.
-	if ($stuff -ne $null) {write-error "Failed: $stuff"; $global:ERRORS++}
+	if ($stuff -ne $null) {show-failure "Failed: $stuff"; }
 }
 
 function saveassemblies-helper
 {
 	set-alias dlrexe $args[0]
 	
+	mkdir $global:TEST_DIR\SaveAssembliesTemp > $null
+	pushd $global:TEST_DIR\SaveAssembliesTemp 
+	
 	#Test w/o the use of X:AssembliesDir
 	hello-helper $dlrexe "-X:SaveAssemblies" $args[1..$args.Length]
-	$stuff = dir $global:TEST_DIR -Name
 	
-	foreach($expected in @("hello_test.exe", "hello_test.pdb"))
+	$stuff = dir -Name
+	
+	#REGRESSION TEST
+	if ($stuff -ne $null) {
+		show-failure "Expected behavior of -X:SaveAssemblies is to not generate any assemblies w/o use of '-D' flag: "
+		
+	}
+	
+	#Test w/o the use of X:AssembliesDir, but with -D option
+	hello-helper $dlrexe -D "-X:SaveAssemblies" $args[1..$args.Length]
+	$stuff = dir -Name
+	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp\*
+	popd
+	
+	foreach($expected in @("snippets1.dll", "debugSnippets2.dll", "debugSnippets2.pdb"))
 	{
 		if (($stuff | select-string $expected) -eq $null) 
 		{
-			write-error "Failed saveassemblies-helper!"
-			write-error "Expected '$expected', but found '$stuff'" 
-			$global:ERRORS++
+			$host.ui.writeerrorline("Failed saveassemblies-helper!")
+			show-failure "Expected '$expected', but found '$stuff'" 
+			
 		}
 	}
 	
-	foreach($expected in @("site.exe", "site.pdb"))
-	{
-		if (($stuff | select-string $expected) -ne $null) 
-		{
-			write-error "Failed saveassemblies-helper!"
-			write-error "Found '$expected' in '$stuff'" 
-			$global:ERRORS++
-		}
-	}
+	#NO LONGER SEEMS RELEVANT
+	#foreach($expected in @("site.exe", "site.pdb"))
+	#{
+	#	if (($stuff | select-string $expected) -ne $null) 
+	#	{
+	#		$host.ui.writeerrorline("Failed saveassemblies-helper!")
+	#		show-failure "Found '$expected' in '$stuff'" 
+	#		
+	#	}
+	#}
 	
 	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
 	mkdir $env:TMP\assemblies_dir > $null
-	hello-helper $dlrexe "-X:AssembliesDir" $env:TMP\assemblies_dir "-X:SaveAssemblies" $args[1..$args.Length]
+	hello-helper $dlrexe -D "-X:SaveAssemblies" "-X:AssembliesDir" $env:TMP\assemblies_dir $args[1..$args.Length]
 	
 	$stuff = dir $env:TMP\assemblies_dir -Name
-	foreach($expected in @("hello_test.exe", "hello_test.pdb", "site.exe", "site.pdb"))
-	{
-		if (($stuff | select-string $expected) -eq $null) 
-		{
-			write-error "Failed saveassemblies-helper (with usage of -X:SaveAssemblies)!"
-			write-error "Expected '$expected', but found '$stuff'" 
-			$global:ERRORS++
-		}
-	}
+	echo "CodePlex Work Item 14833"
+	#foreach($expected in @("snippets1.dll", "debugSnippets2.dll", "debugSnippets2.pdb"))
+	#{
+	#	if (($stuff | select-string $expected) -eq $null) 
+	#	{
+	#		$host.ui.writeerrorline("Failed saveassemblies-helper (with usage of -X:SaveAssemblies with -X:AssembliesDir)!")
+	#		show-failure "Expected '$expected', but found '$stuff'" 	
+	#	}
+	#}
+	
 	#Should anything be done with the *.exe's?
 }
 
@@ -344,14 +375,14 @@ function exceptiondetail-helper
 	hello-helper $dlrexe "-X:ExceptionDetail"
 	
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;hwExcept()" 2>&1
-	if (! "$stuff".Contains("Hello World Exception")) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (! "$stuff".Contains("at Microsoft.Scripting.")) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if (! "$stuff".Contains(":line ")) {write-error "Failed: $stuff"; $global:ERRORS++}
+	if (! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
+	if (! "$stuff".Contains("at Microsoft.Scripting.")) {show-failure "Failed: $stuff"; }
+	if (! "$stuff".Contains(":line ")) {show-failure "Failed: $stuff"; }
 	
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{
-		write-error "Failed: $stuff"; $global:ERRORS++
+		show-failure "Failed: $stuff"; 
 	}
 }
 
@@ -362,16 +393,16 @@ function maxrecursion-helper
 
 	#--Trivial cases w/o flag
 	$stuff = dlrexe $args[1..$args.Length] $global:RECURSION 1
-	if ($stuff -ne 1) {write-error "Failed."; $global:ERRORS++}
+	if ($stuff -ne 1) {show-failure "Failed."; }
 	
 	$stuff = dlrexe $args[1..$args.Length] $global:RECURSION 2
-	if ($stuff -ne 2) {write-error "Failed."; $global:ERRORS++}
+	if ($stuff -ne 2) {show-failure "Failed."; }
 	
 	$stuff = dlrexe $args[1..$args.Length] $global:RECURSION 3
-	if ($stuff -ne 6) {write-error "Failed."; $global:ERRORS++}
+	if ($stuff -ne 6) {show-failure "Failed."; }
 	
 	$stuff = dlrexe $args[1..$args.Length] $global:RECURSION 20
-	if ($stuff -ne 2432902008176640000L) {write-error "Failed."; $global:ERRORS++}
+	if ($stuff -ne 2432902008176640000L) {show-failure "Failed."; }
 		
 	#--Trivial cases w/ flag
 	
@@ -385,7 +416,7 @@ function maxrecursion-helper
 	foreach($i in 3..5)
 	{
 		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 3
-		if ($stuff -ne 6) {write-error "Failed."; $global:ERRORS++}
+		if ($stuff -ne 6) {show-failure "Failed."; }
 	}
 	
 	#simple recursive script where we miss the MaxRecursion depth by one
@@ -396,7 +427,7 @@ function maxrecursion-helper
 		$script_param = $i + 3
 		$stuff = dlrexe "-X:MaxRecursion" $x_param $args[1..$args.Length] $global:RECURSION $script_param 2>&1
 		$stuff = "$stuff.ErrorDetails"
-		if (!$stuff.Contains("maximum recursion depth exceeded")) {write-error "Failed."; $global:ERRORS++}
+		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
 	}
 	
 	echo "CodePlex Work Item 10816"
@@ -404,7 +435,7 @@ function maxrecursion-helper
 	{
 		$stuff = dlrexe "-X:MaxRecursion" $i $args[1..$args.Length] $global:RECURSION 3 2>&1
 		$stuff = "$stuff.ErrorDetails"
-		if (!$stuff.Contains("maximum recursion depth exceeded")) {write-error "Failed."; $global:ERRORS++}
+		if (!$stuff.Contains("maximum recursion depth exceeded")) {show-failure "Failed."; }
 	}
 }
 
@@ -416,12 +447,12 @@ function notraceback-helper
 	hello-helper $dlrexe "-X:NoTraceback"
 	
 	$stuff = dlrexe "-X:NoTraceback" $args[1..$args.Length] $global:TRACEBACK
-	if ($stuff -ne "No traceback") {write-error "Failed: $stuff"; $global:ERRORS++}
+	if ($stuff -ne "No traceback") {show-failure "Failed: $stuff"; }
 	
 	$stuff = dlrexe $args[1..$args.Length] $global:TRACEBACK
 	if (!$global:IS_64)
 	{
-		if ($stuff -eq "No traceback") {write-error "Failed: $stuff"; $global:ERRORS++}
+		if ($stuff -eq "No traceback") {show-failure "Failed: $stuff"; }
 	}
 	else
 	{
@@ -437,17 +468,17 @@ function showclrexceptions-helper
 	hello-helper $dlrexe "-X:ShowClrExceptions"
 	
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *; hwExcept()" 2>&1
-	if(! "$stuff".Contains("Hello World Exception")) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if(! "$stuff".Contains("CLR Exception:")) {write-error "Failed: $stuff"; $global:ERRORS++}
-	if(! "$stuff".Contains("StringException")) {write-error "Failed: $stuff"; $global:ERRORS++}
+	if(! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
+	if(! "$stuff".Contains("CLR Exception:")) {show-failure "Failed: $stuff"; }
+	if(! "$stuff".Contains("StringException")) {show-failure "Failed: $stuff"; }
 	
 	$stuff = dlrexe "-X:ShowClrExceptions" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 
 	{
-		write-error "Failed: $stuff"; $global:ERRORS++
+		show-failure "Failed: $stuff"; 
 	}
-	if (! "$stuff".Contains("CLR Exception:")) { write-error "Failed: $stuff"; $global:ERRORS++ }
-	if (! "$stuff".Contains("OverflowException")) { write-error "Failed: $stuff"; $global:ERRORS++ }
+	if (! "$stuff".Contains("CLR Exception:")) { show-failure "Failed: $stuff";  }
+	if (! "$stuff".Contains("OverflowException")) { show-failure "Failed: $stuff";  }
 }
 
 function mta-helper
@@ -503,8 +534,8 @@ function test-dlrmodes($dlrexe)
 	
 	#------------------------------------------------------------------------------
 	## -X:SaveAssemblies
-	#echo "Testing -X:SaveAssemblies ..."	
-	#saveassemblies-helper $dlrexe 
+	echo "Testing -X:SaveAssemblies ..."	
+	saveassemblies-helper $dlrexe 
 	
 	#------------------------------------------------------------------------------
 	## -X:ExceptionDetail
@@ -544,7 +575,7 @@ function test-dlrmodes($dlrexe)
 	{
 		$stuff = dlrexe "-X:ShowASTs" $global:HELLO
 		#just check to make sure it does not throw for now
-		if (! $?) {write-error "Failed."; $global:ERRORS++}
+		if (! $?) {show-failure "Failed."; }
 	}
 	
 	#------------------------------------------------------------------------------
@@ -555,7 +586,7 @@ function test-dlrmodes($dlrexe)
 	{
 		$stuff = dlrexe "-X:DumpASTs" $global:HELLO
 		#just check to make sure it does not throw for now
-		if (! $?) {write-error "Failed."; $global:ERRORS++}
+		if (! $?) {show-failure "Failed."; }
 	}
 
 	#------------------------------------------------------------------------------
@@ -566,7 +597,7 @@ function test-dlrmodes($dlrexe)
 	{
 		$stuff = dlrexe "-X:ShowRules" $global:HELLO
 		#just check to make sure it does not throw for now
-		if (! $?) {write-error "Failed."; $global:ERRORS++}
+		if (! $?) {show-failure "Failed."; }
 	}
 }
 
@@ -636,7 +667,7 @@ function test-negmodes($pyexe)
 #sanity checks
 if (!(test-path $env:ROWAN_BIN\ipy.exe)) 
 {
-	write-error "ROWAN_BIN environment variable is not set or ipy.exe not built!"
+	$host.ui.writeerrorline("ROWAN_BIN environment variable is not set or ipy.exe not built!")
 	exit 1
 }
 
@@ -660,7 +691,7 @@ test-pymodes $env:MERLIN_ROOT\..\External\Languages\CPython\25\python.exe
 
 if ($global:ERRORS -gt 0)
 {
-	write-error "$global:ERRORS test(s) failed!"
+	$host.ui.writeerrorline("$global:ERRORS test(s) failed!")
 	exit 1
 }
 

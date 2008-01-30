@@ -19,7 +19,7 @@ using System.Reflection.Emit;
 
 namespace Microsoft.Scripting.Generation {
 
-    public class StaticFieldSlotFactory : SlotFactory {
+    class StaticFieldSlotFactory : SlotFactory {
         private TypeGen _typeGen;
 
         public StaticFieldSlotFactory(TypeGen typeGen) {

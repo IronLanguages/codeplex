@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
             get { return CompilerHelpers.GetVisibleType(_value); }
         }
 
-        public override void EmitCreation(Compiler cg) {
+        public override void EmitCreation(ILGen il) {
             throw new InvalidOperationException();
         }
 

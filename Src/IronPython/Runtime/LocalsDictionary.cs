@@ -21,14 +21,33 @@ using Microsoft.Scripting;
 namespace IronPython.Runtime {
     [PythonType(typeof(PythonDictionary))]
     class LocalsDictionary : ScopeDictionary {
-        public LocalsDictionary(Scope scope) : base(scope) {
+        private LocalsDictionary(Scope scope) : base(scope) {
+        }
+
+        /// <summary>
+        /// if the locals scope is composed of only a single dictionary, returns 
+        /// it.  Otherwise returns the virtualized LocalsDictionary 
+        /// </summary>
+        internal static IAttributesCollection GetDictionaryFromScope(Scope scope) {
+            Scope curScope = scope;
+            int count = 0;
+            while (ScopeVisible(curScope, scope)) {
+                curScope = curScope.Parent;
+                count++;
+            }
+
+            if (count == 1) {
+                return scope.Dict;
+            }
+
+            return new LocalsDictionary(scope);
         }
 
         public override SymbolId[] GetExtraKeys() {
             List<SymbolId> keys = new List<SymbolId>();
             Scope curScope = Scope;
 
-            while (ScopeVisible(curScope)) {
+            while (ScopeVisible(curScope, Scope)) {
                 keys.AddRange(curScope.Keys);
                 curScope = curScope.Parent;
             }
@@ -44,7 +63,7 @@ namespace IronPython.Runtime {
         protected override bool TryGetExtraValue(SymbolId key, out object value) {
             Scope curScope = Scope;
 
-            while (ScopeVisible(curScope)) {
+            while (ScopeVisible(curScope, Scope)) {
                 if (curScope.TryGetName(key, out value)) return true;
                 curScope = curScope.Parent;
             }
@@ -53,10 +72,10 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        private bool ScopeVisible(Scope curScope) {
-            if (Scope.Parent != null) {
+        private static bool ScopeVisible(Scope curScope, Scope myScope) {
+            if (myScope.Parent != null) {
                 // non-leaf classes and globals (top most)
-                return (curScope == Scope || curScope.IsVisible) && curScope.Parent != null;
+                return (curScope == myScope || curScope.IsVisible) && curScope.Parent != null;
             }
             // top-level locals, we'll just iterate once
             return curScope != null;

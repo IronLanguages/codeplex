@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
     /// any storage for environment promoted locals.  Today this is only used for compiled modules
     /// that have their locals stored in static fields.
     /// </summary>
-    public class EnvironmentSlot : Slot {
+    class EnvironmentSlot : Slot {
         private Slot _storage;
 
         public EnvironmentSlot(Slot storage) {

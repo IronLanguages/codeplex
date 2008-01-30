@@ -405,6 +405,10 @@ def test_start_of_str():
     AreEqual(startOfStr.match('bazbar', 0,0).span(), (0,0))
     AreEqual(startOfStr.match('bazbar', 1,2), None)
     AreEqual(startOfStr.match('bazbar', endpos=3).span(), (0,0))
+    
+    AreEqual(re.sub('^', 'x', ''), 'x')
+    AreEqual(re.sub('^', 'x', ' '), 'x ')
+    AreEqual(re.sub('^', 'x', 'abc'), 'xabc')
 
 # check that groups in split RE are added properly
 def test_split():

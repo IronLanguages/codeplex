@@ -2576,6 +2576,64 @@ def test_getslice_setslice3():
     del(a[-1:-5])
     AreEqual(a.calls, ['len', 'delete'])
 
+def test_simple_slicing():
+    """verify simple slicing works correctly, even in the face of __getitem__ and friends"""
+    class only_slice(object):
+        def __getslice__(self, i, j): 
+            self.res = 'get', i, j
+        def __setslice__(self, i, j, value): 
+            self.res = 'set', i, j, value
+        def __delslice__(self, i, j): 
+            self.res = 'del', i, j
+
+    class mixed_slice(object):
+        def __getslice__(self, i, j): 
+            self.res = 'get', i, j
+        def __setslice__(self, i, j, value): 
+            self.res = 'set', i, j, value
+        def __delslice__(self, i, j): 
+            self.res = 'del', i, j
+        def __getitem__(self, index): raise Exception()
+        def __setitem__(self, index, value): raise Exception()
+        def __delitem__(self, index): raise Exception()
+        
+    for mytype in [only_slice, mixed_slice]:
+        x = mytype()
+        x[:]
+        AreEqual(x.res, ('get', 0, sys.maxint))
+        
+        x[0:]
+        AreEqual(x.res, ('get', 0, sys.maxint))
+        
+        x[1:]
+        AreEqual(x.res, ('get', 1, sys.maxint))
+    
+        x[:100]
+        AreEqual(x.res, ('get', 0, 100))
+        
+        x[:] = 2
+        AreEqual(x.res, ('set', 0, sys.maxint, 2))
+        
+        x[0:] = 2
+        AreEqual(x.res, ('set', 0, sys.maxint, 2))
+        
+        x[1:] = 2
+        AreEqual(x.res, ('set', 1, sys.maxint, 2))
+    
+        x[:100] = 2
+        AreEqual(x.res, ('set', 0, 100, 2))
+    
+        del x[:]
+        AreEqual(x.res, ('del', 0, sys.maxint))
+        
+        del x[0:]
+        AreEqual(x.res, ('del', 0, sys.maxint))
+        
+        del x[1:]
+        AreEqual(x.res, ('del', 1, sys.maxint))
+    
+        del x[:100]
+        AreEqual(x.res, ('del', 0, 100))
 
 def test_slice_getslice_forbidden():
     """providing no value for step forbids calling __getslice__"""

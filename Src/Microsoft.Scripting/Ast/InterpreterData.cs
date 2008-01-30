@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -25,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
 
         // Profile-driven compilation support
         public int CallCount = 0;
-        public CompilerContext DeclaringContext;
+        public SourceUnit Source;
         public bool ForceWrapperMethod;
 
         public const int MaxInterpretedCalls = 2;

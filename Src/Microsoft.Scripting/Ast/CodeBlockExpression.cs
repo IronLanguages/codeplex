@@ -27,7 +27,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly bool _forceWrapperMethod;
         private readonly bool _stronglyTyped;
         private readonly Type _delegateType;
-        private readonly bool _isDeclarative;
         
         internal bool ForceWrapperMethod {
             get { return _forceWrapperMethod; }
@@ -41,26 +40,13 @@ namespace Microsoft.Scripting.Ast {
             get { return _delegateType; }
         }
 
-        /// <summary>
-        /// Whether this expression declares the block. If so, the declaring code's variable are accessible from within the block (a closure is created).
-        /// Otherwise, the block is only referred to by the containing block and do not share it's scope.
-        /// </summary>
-        public bool IsDeclarative {
-            get { return _isDeclarative; }
-        }
-
-        internal CodeBlockExpression(CodeBlock /*!*/ block, bool forceWrapperMethod, bool stronglyTyped, bool isDeclarative, Type delegateType)
+        internal CodeBlockExpression(CodeBlock /*!*/ block, bool forceWrapperMethod, bool stronglyTyped, Type delegateType)
             : base(AstNodeType.CodeBlockExpression, typeof(Delegate)) {
             Assert.NotNull(block);
-
-            if (isDeclarative) {
-                block.DeclarativeReferenceAdded();
-            }
 
             _block = block;
             _forceWrapperMethod = forceWrapperMethod;
             _stronglyTyped = stronglyTyped;
-            _isDeclarative = isDeclarative;
             _delegateType = delegateType;
         }
 
@@ -70,23 +56,16 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-
-        // TODO: rename to CodeBlockDeclaration?
-
         public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper) {
-            return new CodeBlockExpression(block, forceWrapper, false, true, null);
+            return new CodeBlockExpression(block, forceWrapper, false, null);
         }
 
         public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper, bool stronglyTyped) {
-            return new CodeBlockExpression(block, forceWrapper, stronglyTyped, true, null);
+            return new CodeBlockExpression(block, forceWrapper, stronglyTyped, null);
         }
 
-        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool stronglyTyped, Type delegateType) {
-            return new CodeBlockExpression(block, false, stronglyTyped, true, delegateType);
-        }
-
-        public static CodeBlockExpression CodeBlockReference(CodeBlock block, Type delegateType) {
-            return new CodeBlockExpression(block, false, true, false, delegateType);
+        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, Type delegateType) {
+            return new CodeBlockExpression(block, false, true, delegateType);
         }
     }
 }
