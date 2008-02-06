@@ -18,7 +18,8 @@ using System.Text;
 
 using Microsoft.Scripting;
 
-using IronPython.Runtime.Operations;    
+using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;    
 
 namespace IronPython.Runtime.Types {
     sealed class PythonTypeUserDescriptorSlot : PythonTypeSlot {

@@ -21,6 +21,7 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;

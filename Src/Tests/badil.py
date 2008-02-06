@@ -17,7 +17,7 @@ import clr
 import System
 
 clr.AddReference("Microsoft.Scripting")
-from Microsoft.Scripting import CallTarget0;
+from Microsoft.Scripting.Runtime import CallTarget0;
 from Microsoft.Scripting.Generation import CompilerHelpers
 
 paramTypes = System.Array[System.Type]([])

@@ -24,6 +24,7 @@ using System.Collections;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {

@@ -157,6 +157,25 @@ def gen_ast_rewriter(cw):
 
         cw.write(text + (60 - len(text)) * " " + comment)
 
+def gen_ast_interpreter(cw):
+    for node in expressions:
+        method = "Interpret"
+
+        # special case AndAlso and OrElse
+        if node.kind == "AndAlso" or node.kind == "OrElse":
+            method += node.kind
+
+        if node.enabled:
+            text = method + node.type + ","
+            comment = "//    " + node.kind
+        else:
+            text = ""
+            comment = "// ** " + node.kind
+
+        cw.write(text + (60 - len(text)) * " " + comment)
+
+
 generate.CodeGenerator("Expression Tree Node Types", gen_tree_nodes).doit()
 generate.CodeGenerator("DLR AST Walker", gen_scripting_walker).doit()
 generate.CodeGenerator("Ast Rewriter", gen_ast_rewriter).doit()
+generate.CodeGenerator("Ast Interpreter", gen_ast_interpreter).doit()

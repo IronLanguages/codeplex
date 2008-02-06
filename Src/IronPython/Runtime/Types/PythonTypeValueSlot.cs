@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     public class PythonTypeValueSlot : PythonTypeSlot {

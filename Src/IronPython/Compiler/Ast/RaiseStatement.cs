@@ -46,6 +46,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Throw(
                 Span,
                 Ast.Call(AstGenerator.GetHelperMethod("MakeException"),
+                    Ast.CodeContext(),
                     ag.TransformOrConstantNull(_type, typeof(object)),
                     ag.TransformOrConstantNull(_value, typeof(object)),
                     ag.TransformOrConstantNull(_traceback, typeof(object))

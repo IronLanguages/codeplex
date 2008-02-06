@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public class AbstractObject {

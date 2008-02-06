@@ -22,6 +22,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Ast {
 

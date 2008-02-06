@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     public class DispMethod : DispCallable {

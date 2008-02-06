@@ -14,7 +14,10 @@
  * ***************************************************************************/
 
 using System;
+
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime {
@@ -22,16 +25,18 @@ namespace IronPython.Runtime {
     public enum ModuleOptions {
         None = 0,
         PublishModule = 1,
-        TrueDivision = 2,
+        TrueDivision = 2,        
         ShowClsMethods = 4,
         Optimized = 8,
-        Initialize = 16
+        Initialize = 16,
+        WithStatement = 32
     }
 
     public class PythonModule : ScopeExtension {
         private bool _trueDivision;
         private bool _isPythonCreatedModule;
         private bool _showCls;
+        private bool _withStatement;
 
         internal PythonModule(Scope scope)
             : base(scope) {
@@ -43,6 +48,7 @@ namespace IronPython.Runtime {
         protected PythonModule(PythonModule module)
             : base(module) {
             _trueDivision = module._trueDivision;
+            _withStatement = module._withStatement;
             _isPythonCreatedModule = module._isPythonCreatedModule;
         }
 
@@ -52,6 +58,15 @@ namespace IronPython.Runtime {
             }
             set {
                 _trueDivision = value;
+            }
+        }
+
+        public bool AllowWithStatement {
+            get {
+                return _withStatement;
+            }
+            set {
+                _withStatement = value;
             }
         }
 

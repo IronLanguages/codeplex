@@ -23,6 +23,7 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 

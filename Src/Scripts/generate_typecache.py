@@ -58,7 +58,6 @@ data = [
     TypeData('SetCollection', entryName='Set'),
     TypeData('PythonType'),
     TypeData('String', 'str'),
-    TypeData('SystemState'),
     TypeData('PythonTuple'),
     TypeData('WeakReference'),
     TypeData('List'),

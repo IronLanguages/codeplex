@@ -22,6 +22,7 @@ using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler.Generation;
@@ -423,7 +424,7 @@ namespace IronPython.Runtime.Exceptions {
                             args = ArrayUtils.RemoveLast(args);
                             break;
                         default:
-                            throw Microsoft.Scripting.RuntimeHelpers.TypeErrorForIncorrectArgumentCount("EnvironmentError",
+                            throw Microsoft.Scripting.Runtime.RuntimeHelpers.TypeErrorForIncorrectArgumentCount("EnvironmentError",
                                 0,           // min arg cnt
                                 3,           // max arg cnt
                                 0,           // dflt count

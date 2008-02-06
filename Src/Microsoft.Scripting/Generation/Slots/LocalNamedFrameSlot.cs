@@ -17,6 +17,7 @@ using System;
 using System.Reflection.Emit;
 using Microsoft.Scripting.Ast;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     class LocalNamedFrameSlot : Slot {

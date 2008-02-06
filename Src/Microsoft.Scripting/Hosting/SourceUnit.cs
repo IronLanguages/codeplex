@@ -21,6 +21,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using System.Security.Permissions;
@@ -79,8 +80,14 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public SourceCodeProperties GetCodeProperties() {
-            _context.ParseSourceCode(new CompilerContext(this, null, new ErrorSink()));
+        public SourceCodeProperties GetCodeProperties(IScriptScope scope) {
+            _context.ParseSourceCode(
+                new CompilerContext(
+                    this, 
+                    _context.GetModuleCompilerOptions(RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "scope").Scope), 
+                    new ErrorSink()
+                )
+            );
 
             return _codeProperties ?? SourceCodeProperties.None;
         }

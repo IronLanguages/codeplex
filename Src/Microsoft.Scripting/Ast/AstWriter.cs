@@ -21,6 +21,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 #if DEBUG
 namespace Microsoft.Scripting.Ast {

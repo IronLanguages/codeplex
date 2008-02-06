@@ -19,6 +19,7 @@ using System.Text;
 using System.Configuration;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {

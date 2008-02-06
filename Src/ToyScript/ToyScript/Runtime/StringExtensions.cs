@@ -15,6 +15,7 @@
 
 using Microsoft.Scripting;
 using ToyScript.Runtime;
+using Microsoft.Scripting.Runtime;
 
 [assembly:ExtensionType(typeof(string), typeof(StringExtensions))]
 

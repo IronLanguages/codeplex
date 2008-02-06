@@ -26,6 +26,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("marshal", typeof(IronPython.Modules.PythonMarshal))]
 namespace IronPython.Modules {

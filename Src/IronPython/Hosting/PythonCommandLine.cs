@@ -27,6 +27,7 @@ using System.Reflection;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Hosting {
    
@@ -34,10 +35,12 @@ namespace IronPython.Hosting {
     /// A simple Python command-line should mimic the standard python.exe
     /// </summary>
     public class PythonCommandLine : CommandLine {
+        private PythonContext/*!*/ _context;
 
         private new PythonConsoleOptions Options { get { return (PythonConsoleOptions)base.Options; } }
         
-        public PythonCommandLine() {
+        public PythonCommandLine(PythonContext/*!*/ context) {
+            _context = context;
         }
 
         protected override string Logo {
@@ -128,15 +131,18 @@ namespace IronPython.Hosting {
                 // if the user used the -m option we need to update sys.argv to arv[0] is the full path
                 // to the module we'll run.  If we don't find the module we'll have an import error
                 // and this doesn't matter.
-                foreach (object o in PythonContext.GetSystemState(null).path) {
-                    string str = o as string;
-                    if (str == null) continue;
+                List path;
+                if (_context.TryGetSystemPath(out path)) {
+                    foreach (object o in path) {
+                        string str = o as string;
+                        if (str == null) continue;
 
-                    string libpath = Path.Combine(str, Options.ModuleToRun + ".py");
-                    if (File.Exists(libpath)) {
-                        // cast to List is a little scary but safe during startup
-                        ((List)SystemState.Instance.argv)[0] = libpath;
-                        break;
+                        string libpath = Path.Combine(str, Options.ModuleToRun + ".py");
+                        if (File.Exists(libpath)) {
+                            // cast to List is a little scary but safe during startup
+                            ((List)_context.SystemState.Dict[SymbolTable.StringToId("argv")])[0] = libpath;
+                            break;
+                        }
                     }
                 }
             }
@@ -188,7 +194,7 @@ namespace IronPython.Hosting {
             string executable = Assembly.GetEntryAssembly().Location;
             string prefix = Path.GetDirectoryName(executable);
 #endif
-            PythonContext.GetSystemState(null).SetHostVariables(prefix, executable, version);
+            _context.SetHostVariables(prefix, executable, version);
             return version;
         }
 

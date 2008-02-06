@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1813:AvoidUnsealedAttributes")] // TODO: fix

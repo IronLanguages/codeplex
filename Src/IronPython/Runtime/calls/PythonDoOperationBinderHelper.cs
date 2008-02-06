@@ -25,6 +25,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Operations;

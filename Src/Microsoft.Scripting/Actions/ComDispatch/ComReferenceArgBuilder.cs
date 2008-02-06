@@ -23,10 +23,11 @@ using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     using Ast = Microsoft.Scripting.Ast.Ast;

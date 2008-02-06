@@ -36,6 +36,7 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Hosting {
 
     using Microsoft.Scripting.Generation;
+    using Microsoft.Scripting.Runtime;
 
     public sealed class PythonEngine {
         // Work around until tests are updated.

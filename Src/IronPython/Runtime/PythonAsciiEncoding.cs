@@ -9,6 +9,7 @@ namespace IronPython.Runtime {
     /// setup to always convert even values outside of the ASCII range.  The EncoderFallback/DecoderFallbacks can
     /// be replaced with versions that will throw exceptions instead though.
     /// </summary>
+    [Serializable]
     sealed class PythonAsciiEncoding : Encoding {
         internal static Encoding Instance = MakeNonThrowing();
 

@@ -29,6 +29,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using SpecialName = System.Runtime.CompilerServices.SpecialNameAttribute;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]
 namespace IronPython.Modules {
@@ -218,11 +219,11 @@ namespace IronPython.Modules {
             }
 
             [PythonName("fromunicode")]
-            public void FromUnicode(string s) {
+            public void FromUnicode(CodeContext/*!*/ context, string s) {
                 if (s == null) throw PythonOps.TypeError("expected string");
                 if (s.Length == 0) throw PythonOps.ValueError("empty string");
                 if ((s.Length % ItemSize) != 0) throw PythonOps.ValueError("string length not a multiple of itemsize");
-                MemoryStream ms = new MemoryStream(SystemState.Instance.DefaultEncoding.GetBytes(s));
+                MemoryStream ms = new MemoryStream(PythonContext.GetContext(context).DefaultEncoding.GetBytes(s));
 
                 FromStream(ms);
             }
@@ -477,14 +478,14 @@ namespace IronPython.Modules {
             }
 
             [PythonName("tounicode")]
-            public string ToUnicode() {
+            public string ToUnicode(CodeContext/*!*/ context) {
                 if (typeCode != 'u') throw PythonOps.ValueError("only 'u' arrays can be converted to unicode");
 
                 Stream s = ToStream();
                 byte[] bytes = new byte[s.Length];
                 s.Read(bytes, 0, (int)s.Length);
 
-                return SystemState.Instance.DefaultEncoding.GetString(bytes, 0, bytes.Length);
+                return PythonContext.GetContext(context).DefaultEncoding.GetString(bytes, 0, bytes.Length);
             }
 
             [PythonName("write")]

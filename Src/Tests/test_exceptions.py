@@ -288,7 +288,7 @@ if is_cli or is_silverlight:
             try:
                 raise SyntaxError("foo")
             except 12:
-                Assert(false)
+                Assert(False)
                 pass
         except SyntaxError:
             pass
@@ -313,9 +313,9 @@ if is_cli or is_silverlight:
         # BUG 481 Trying to pass raise in Traceback should cause an error until it is implemented
         try:
             raise "BadTraceback", "somedata", "a string is not a traceback"
-            Assert (false, "fell through raise for some reason")
+            Assert (False, "fell through raise for some reason")
         except "BadTraceback":
-            Assert(false)
+            Assert(False)
         except TypeError:
             pass
         

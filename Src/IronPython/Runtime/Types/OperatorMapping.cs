@@ -18,6 +18,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     class OperatorMapping {

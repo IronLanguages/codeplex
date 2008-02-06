@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
@@ -59,23 +60,23 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("__import__(name) -> module\n\nImport a module.")]
-        public static object __import__(CodeContext context, string name) {
+        public static object __import__(CodeContext/*!*/ context, string name) {
             return __import__(context, name, null, null, null);
         }
 
         [Documentation("__import__(name, globals) -> module\n\nImport a module.")]
-        public static object __import__(CodeContext context, string name, object globals) {
+        public static object __import__(CodeContext/*!*/ context, string name, object globals) {
             return __import__(context, name, globals, null, null);
 
         }
 
         [Documentation("__import__(name, globals, locals) -> module\n\nImport a module.")]
-        public static object __import__(CodeContext context, string name, object globals, object locals) {
+        public static object __import__(CodeContext/*!*/ context, string name, object globals, object locals) {
             return __import__(context, name, globals, locals, null);
         }
 
         [Documentation("__import__(name, globals, locals, fromlist) -> module\n\nImport a module.")]
-        public static object __import__(CodeContext context, string name, object globals, object locals, object fromList) {
+        public static object __import__(CodeContext/*!*/ context, string name, object globals, object locals, object fromList) {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
             ISequence from = fromList as ISequence;
 
@@ -106,7 +107,7 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("abs(number) -> number\n\nReturn the absolute value of the argument.")]
-        public static object abs(CodeContext context, object o) {
+        public static object abs(CodeContext/*!*/ context, object o) {
             if (o is int) return Int32Ops.Abs((int)o);
             if (o is long) return Int64Ops.Abs((long)o);
             if (o is double) return DoubleOps.Abs((double)o);
@@ -146,15 +147,15 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("apply(object[, args[, kwargs]]) -> value\n\nDeprecated.\nInstead, use:\n    function(*args, **keywords).")]
-        public static object apply(CodeContext context, object func) {
+        public static object apply(CodeContext/*!*/ context, object func) {
             return PythonOps.CallWithContext(context, func);
         }
 
-        public static object apply(CodeContext context, object func, object args) {
+        public static object apply(CodeContext/*!*/ context, object func, object args) {
             return PythonOps.CallWithArgsTupleAndContext(context, func, ArrayUtils.EmptyObjects, args);
         }
 
-        public static object apply(CodeContext context, object func, object args, object kws) {
+        public static object apply(CodeContext/*!*/ context, object func, object args, object kws) {
             return PythonOps.CallWithArgsTupleAndKeywordDictAndContext(context, func, ArrayUtils.EmptyObjects, ArrayUtils.EmptyStrings, args, kws);
         }
 
@@ -178,7 +179,7 @@ namespace IronPython.Runtime {
             return RuntimeHelpers.CharToString((char)value);
         }
 
-        private static object TryCoerce(CodeContext context, object x, object y) {
+        private static object TryCoerce(CodeContext/*!*/ context, object x, object y) {
             object res;
             if (DynamicHelpers.GetPythonType(x).TryInvokeBinaryOperator(context,
                 Operators.Coerce,
@@ -191,7 +192,7 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("coerce(x, y) -> (x1, y1)\n\nReturn a tuple consisting of the two numeric arguments converted to\na common type. If coercion is not possible, raise TypeError.")]
-        public static object coerce(CodeContext context, object x, object y) {
+        public static object coerce(CodeContext/*!*/ context, object x, object y) {
             object converted;
 
             if (x == null && y == null) {
@@ -211,7 +212,7 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object compile(CodeContext context, string source, string filename, string kind, object flags, object dontInherit) {
+        public static object compile(CodeContext/*!*/ context, string source, string filename, string kind, object flags, object dontInherit) {
             if (source.IndexOf('\0') != -1) {
                 throw PythonOps.TypeError("compile() expected string without null bytes");
             }
@@ -253,38 +254,38 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object compile(CodeContext context, string source, string filename, string kind, object flags) {
+        public static object compile(CodeContext/*!*/ context, string source, string filename, string kind, object flags) {
             return compile(context, source, filename, kind, flags, null);
         }
 
         [Documentation("compile a unit of source code.\n\nThe source can be compiled either as exec, eval, or single.\nexec compiles the code as if it were a file\neval compiles the code as if were an expression\nsingle compiles a single statement\n\n")]
-        public static object compile(CodeContext context, string source, string filename, string kind) {
+        public static object compile(CodeContext/*!*/ context, string source, string filename, string kind) {
             return compile(context, source, filename, kind, null, null);
         }
 
         public static object classmethod = DynamicHelpers.GetPythonTypeFromType(typeof(classmethod));
 
-        public static int cmp(CodeContext context, object x, object y) {
+        public static int cmp(CodeContext/*!*/ context, object x, object y) {
             return PythonOps.Compare(context, x, y);
         }
 
         public static object complex = DynamicHelpers.GetPythonTypeFromType(typeof(Complex64));
 
-        public static void delattr(CodeContext context, object o, string name) {
+        public static void delattr(CodeContext/*!*/ context, object o, string name) {
             PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name)); 
         }
 
         public static object dict = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
-        public static List dir(CodeContext context) {
+        public static List dir(CodeContext/*!*/ context) {
             List res = List.Make(LocalsAsAttributesCollection(context).Keys);
 
             res.Sort();
             return res;
         }
 
-        public static List dir(CodeContext context, object o) {
+        public static List dir(CodeContext/*!*/ context, object o) {
             IList<object> ret = PythonOps.GetAttrNames(context, o);
             List lret = new List(ret);
             lret.Sort();
@@ -293,7 +294,7 @@ namespace IronPython.Runtime {
 
         // Python has lots of optimizations for this method that we may want to implement in the future
         // In particular, this should be treated like the other binary operators
-        public static object divmod(CodeContext context, object x, object y) {
+        public static object divmod(CodeContext/*!*/ context, object x, object y) {
             Debug.Assert(PythonOps.NotImplemented != null);
             object ret;
             if (DynamicHelpers.GetPythonType(x).TryInvokeBinaryOperator(context, Operators.DivMod, x, y, out ret)
@@ -311,31 +312,31 @@ namespace IronPython.Runtime {
 
         public static object enumerate = DynamicHelpers.GetPythonTypeFromType(typeof(Enumerate));
 
-        public static object eval(CodeContext context, FunctionCode code) {
+        public static object eval(CodeContext/*!*/ context, FunctionCode code) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
             return eval(context, code, null);
         }
 
-        public static object eval(CodeContext context, FunctionCode code, IAttributesCollection globals) {
+        public static object eval(CodeContext/*!*/ context, FunctionCode code, IAttributesCollection globals) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
             return eval(context, code, globals, globals);
         }
 
-        public static object eval(CodeContext context, FunctionCode code, IAttributesCollection globals, object locals) {
+        public static object eval(CodeContext/*!*/ context, FunctionCode code, IAttributesCollection globals, object locals) {
             Debug.Assert(context != null);
             if (code == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
-            Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
+            Scope scope = GetExecEvalScope(context, globals, locals);
 
             return code.Call(context, scope, false); // Do not try evaluate mode for compiled code
 
         }
 
-        public static IAttributesCollection GetAttrLocals(CodeContext context, object locals) {
+        public static IAttributesCollection GetAttrLocals(CodeContext/*!*/ context, object locals) {
             IAttributesCollection attrLocals;
             if (locals == null) {
                 attrLocals = LocalsAsAttributesCollection(context);
@@ -345,21 +346,21 @@ namespace IronPython.Runtime {
             return attrLocals;
         }
 
-        public static object eval(CodeContext context, string expression) {
+        public static object eval(CodeContext/*!*/ context, string expression) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
             return eval(context, expression, globals(context), locals(context));
         }
 
-        public static object eval(CodeContext context, string expression, IAttributesCollection globals) {
+        public static object eval(CodeContext/*!*/ context, string expression, IAttributesCollection globals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
             return eval(context, expression, globals, globals);
         }
 
-        public static object eval(CodeContext context, string expression, IAttributesCollection globals, object locals) {
+        public static object eval(CodeContext/*!*/ context, string expression, IAttributesCollection globals, object locals) {
             Debug.Assert(context != null);
             if (expression == null) throw PythonOps.TypeError("eval() argument 1 must be string or code object");
 
@@ -367,7 +368,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.TypeError("locals must be mapping");
             }
 
-            Microsoft.Scripting.Scope scope = GetExecEvalScope(context, globals, locals);
+            Scope scope = GetExecEvalScope(context, globals, locals);
 
             // TODO: remove TrimStart
             SourceUnit expr_code = context.LanguageContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
@@ -375,15 +376,15 @@ namespace IronPython.Runtime {
             return context.LanguageContext.CompileSourceCode(expr_code, GetDefaultCompilerOptions(context, true, 0)).Run(scope, context.ModuleContext, true);
         }
 
-        public static void execfile(CodeContext context, object filename) {
+        public static void execfile(CodeContext/*!*/ context, object filename) {
             execfile(context, filename, null, null);
         }
 
-        public static void execfile(CodeContext context, object filename, object globals) {
+        public static void execfile(CodeContext/*!*/ context, object filename, object globals) {
             execfile(context, filename, globals, null);
         }
 
-        public static void execfile(CodeContext context, object filename, object globals, object locals) {
+        public static void execfile(CodeContext/*!*/ context, object filename, object globals, object locals) {
             IAttributesCollection g = globals as IAttributesCollection;
             if (g == null && globals != null) {
                 throw PythonOps.TypeError("execfile: arg 2 must be dictionary");
@@ -398,7 +399,7 @@ namespace IronPython.Runtime {
 
             Scope execScope = GetExecEvalScope(context, g, l);
             string path = Converter.ConvertToString(filename);
-            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetSystemState(context).DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetContext(context).DefaultEncoding, SourceCodeKind.File);
 
             if (sourceUnit == null) {
                 throw PythonOps.IOError("execfile: specified file doesn't exist");
@@ -480,22 +481,22 @@ namespace IronPython.Runtime {
 
         public static object @float = DynamicHelpers.GetPythonTypeFromType(typeof(double));
 
-        public static object getattr(CodeContext context, object o, string name) {
+        public static object getattr(CodeContext/*!*/ context, object o, string name) {
             return PythonOps.GetBoundAttr(context, o, SymbolTable.StringToId(name));
         }
 
-        public static object getattr(CodeContext context, object o, string name, object def) {
+        public static object getattr(CodeContext/*!*/ context, object o, string name, object def) {
             object ret;
             if (PythonOps.TryGetBoundAttr(context, o, SymbolTable.StringToId(name), out ret)) return ret;
             else return def;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
-        public static IAttributesCollection globals(CodeContext context) {
+        public static IAttributesCollection globals(CodeContext/*!*/ context) {
             return new GlobalsDictionary(context.Scope);
         }
 
-        public static bool hasattr(CodeContext context, object o, string name) {
+        public static bool hasattr(CodeContext/*!*/ context, object o, string name) {
             return PythonOps.HasAttr(context, o, SymbolTable.StringToId(name));
         }
 
@@ -503,7 +504,7 @@ namespace IronPython.Runtime {
             return PythonOps.Hash(o);
         }
 
-        public static void help(CodeContext context, object o) {
+        public static void help(CodeContext/*!*/ context, object o) {
             StringBuilder doc = new StringBuilder();
             List<object> doced = new List<object>();  // document things only once
 
@@ -526,7 +527,7 @@ namespace IronPython.Runtime {
                     Ops.Print(context.SystemState, "-- More --");
                     Ops.ReadLineFromSrc(context.SystemState);
                 }*/
-                PythonOps.Print(strings[i]);
+                PythonOps.Print(context, strings[i]);
             }
         }
 
@@ -549,7 +550,7 @@ namespace IronPython.Runtime {
 
                 // try and find things that string could refer to,
                 // then call help on them.
-                foreach (object module in SystemState.Instance.modules.Values) {
+                foreach (object module in PythonContext.GetContext(context).SystemStateModules.Values) {
                     IList<object> attrs = PythonOps.GetAttrNames(context, module);
                     PythonType modType = DynamicHelpers.GetPythonType(module);
                     List candidates = new List();
@@ -724,11 +725,11 @@ namespace IronPython.Runtime {
             return PythonOps.Id(o);
         }
 
-        public static object input(CodeContext context) {
+        public static object input(CodeContext/*!*/ context) {
             return input(context, null);
         }
 
-        public static object input(CodeContext context, object prompt) {
+        public static object input(CodeContext/*!*/ context, object prompt) {
             return eval(context, raw_input(context, prompt));
         }
 
@@ -775,7 +776,7 @@ namespace IronPython.Runtime {
         public static object list = DynamicHelpers.GetPythonTypeFromType(typeof(List));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
-        public static object locals(CodeContext context) {            
+        public static object locals(CodeContext/*!*/ context) {            
             ObjectAttributesAdapter adapter = context.Scope.Dict as ObjectAttributesAdapter;
             if(adapter != null) {
                 // we've wrapped Locals in an IAttributesCollection, give the user back the
@@ -786,7 +787,7 @@ namespace IronPython.Runtime {
             return LocalsAsAttributesCollection(context);
         }
 
-        internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext context) {
+        internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext/*!*/ context) {
             return LocalsDictionary.GetDictionaryFromScope(context.Scope);
         }
 
@@ -1213,15 +1214,15 @@ namespace IronPython.Runtime {
             return (int)index;
         }
 
-        public static string raw_input(CodeContext context) {
+        public static string raw_input(CodeContext/*!*/ context) {
             return raw_input(context, null);
         }
 
-        public static string raw_input(CodeContext context, object prompt) {
+        public static string raw_input(CodeContext/*!*/ context, object prompt) {
             if (prompt != null) {
-                PythonOps.PrintNoNewline(prompt);
+                PythonOps.PrintNoNewline(context, prompt);
             }
-            string line = PythonOps.ReadLineFromSrc(SystemState.Instance.stdin) as string;
+            string line = PythonOps.ReadLineFromSrc(PythonContext.GetContext(context).SystemStandardIn) as string;
             if (line != null && line.EndsWith("\n")) return line.Substring(0, line.Length - 1);
             return line;
         }
@@ -1253,15 +1254,6 @@ namespace IronPython.Runtime {
             }
             PythonContext.GetImporter(context).ReloadModule(scope);
             return scope;
-        }
-
-        public static object reload(CodeContext/*!*/ context, SystemState/*!*/ state) {
-            if (state == null) throw PythonOps.TypeError("unexpected type: NoneType");
-
-            Debug.Assert(state == SystemState.Instance, "unexpected multiple instances of SystemState");
-            state.Initialize();
-
-            return state;
         }
 
         public static object repr(object o) {
@@ -1304,7 +1296,7 @@ namespace IronPython.Runtime {
             return MathUtils.RoundAwayFromZero(number, ndigits);
         }
 
-        public static void setattr(CodeContext context, object o, string name, object val) {
+        public static void setattr(CodeContext/*!*/ context, object o, string name, object val) {
             PythonOps.SetAttr(context, o, SymbolTable.StringToId(name), val);
         }
 
@@ -1378,11 +1370,11 @@ namespace IronPython.Runtime {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         [Documentation("vars([object]) -> dictionary\n\nWithout arguments, equivalent to locals().\nWith an argument, equivalent to object.__dict__.")]
-        public static object vars(CodeContext context) {
+        public static object vars(CodeContext/*!*/ context) {
             return locals(context);
         }
 
-        public static object vars(CodeContext context, object @object) {
+        public static object vars(CodeContext/*!*/ context, object @object) {
             object value;
             if (!PythonOps.TryGetBoundAttr(@object, Symbols.Dict, out value)) {
                 throw PythonOps.TypeError("vars() argument must have __dict__ attribute");
@@ -1472,7 +1464,7 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Gets a scope used for executing new code in optionally replacing the globals and locals dictionaries.
         /// </summary>
-        private static Scope GetExecEvalScope(CodeContext context, IAttributesCollection globals, object localsDict) {
+        private static Scope GetExecEvalScope(CodeContext/*!*/ context, IAttributesCollection globals, object localsDict) {
             if (globals == null) globals = Builtin.globals(context);
             if (localsDict == null) localsDict = locals(context);
 
@@ -1481,7 +1473,7 @@ namespace IronPython.Runtime {
             Scope scope = new Scope(python, new Scope(python, globals), GetAttrLocals(context, localsDict));
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
-                globals[Symbols.Builtins] = python.SystemState.BuiltinModuleInstance;
+                globals[Symbols.Builtins] = python.BuiltinModuleInstance;
             }
             return scope;
         }

@@ -20,6 +20,8 @@ using System.Reflection;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 
 namespace ToyScript.Runtime {
     class ToyBinder : ActionBinder {

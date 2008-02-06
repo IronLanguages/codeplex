@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {

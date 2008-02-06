@@ -23,6 +23,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     public class TypeGen {

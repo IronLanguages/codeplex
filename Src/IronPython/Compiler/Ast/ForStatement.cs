@@ -19,6 +19,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Runtime;
 
     public class ForStatement : Statement {
         private SourceLocation _header;

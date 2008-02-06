@@ -24,6 +24,7 @@ using Microsoft.Scripting.Generation;
 using System.Text;
 using System.Runtime.Remoting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -61,6 +62,10 @@ namespace Microsoft.Scripting.Hosting {
 
         IScriptScope ExecuteFile(string path);
 
+        IScriptScope Globals {
+            get;
+            set;
+        }
         void LoadAssembly(Assembly asm);
     }
 
@@ -68,7 +73,7 @@ namespace Microsoft.Scripting.Hosting {
 
         private readonly ScriptDomainManager/*!*/ _manager;
         private readonly ScriptIO/*!*/ _io;
-        private ScriptScope/*!*/ _globals;
+        private IScriptScope/*!*/ _globals;
             
         public IScriptHost Host {
             get { return _manager.Host; }
@@ -212,13 +217,13 @@ namespace Microsoft.Scripting.Hosting {
         /// You can set the globals scope, which you might do if you created a ScriptScope with an 
         /// IAttributesCollection so that your host could late bind names.
         /// </summary>
-        public ScriptScope Globals {
+        public IScriptScope Globals {
             get { return _globals; }
             set {
                 Contract.RequiresNotNull(value, "value");
 
                 _globals = value;
-                _manager.SetGlobalsDictionary(_globals.Scope.Dict);
+                _manager.SetGlobalsDictionary(((ScriptScope)_globals).Scope.Dict);
             }
         }
 

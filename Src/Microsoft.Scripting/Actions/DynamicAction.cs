@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public enum DynamicActionKind {

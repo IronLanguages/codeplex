@@ -26,6 +26,7 @@ using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
 

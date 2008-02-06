@@ -30,6 +30,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Math;
 

@@ -27,6 +27,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Helpers;
+using Microsoft.Scripting.Runtime;
 
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {

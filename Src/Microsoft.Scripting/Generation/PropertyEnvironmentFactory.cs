@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
 

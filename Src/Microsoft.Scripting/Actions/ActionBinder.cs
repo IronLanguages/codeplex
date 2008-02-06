@@ -21,6 +21,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.Text;
 

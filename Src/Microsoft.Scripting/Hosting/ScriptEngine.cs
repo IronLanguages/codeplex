@@ -20,6 +20,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using ScriptSource = Microsoft.Scripting.Hosting.SourceUnit;

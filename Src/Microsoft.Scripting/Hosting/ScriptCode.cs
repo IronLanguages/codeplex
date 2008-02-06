@@ -20,6 +20,7 @@ using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting {
     /// <summary>

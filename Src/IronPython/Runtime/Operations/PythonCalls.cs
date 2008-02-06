@@ -18,6 +18,7 @@ using Microsoft.Scripting;
 using DefaultContext = IronPython.Runtime.Calls.DefaultContext;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {

@@ -17,7 +17,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.Scripting {
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
+namespace IronPython.Runtime {
 
     /// <summary>
     /// Indicates the type of change to a dynamic type - whether a new member was added, or an existing member

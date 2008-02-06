@@ -24,6 +24,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
@@ -383,13 +384,7 @@ namespace IronPython.Runtime.Types {
                 if (Targets.Count > 0) {
                     PythonType declaringType = DynamicHelpers.GetPythonTypeFromType(DeclaringType);
 
-                    PythonTypeSlot dts;
-                    if (!declaringType.TryLookupSlot(DefaultContext.Default, Symbols.Module, out dts))
-                        return "__builtin__";   //!!! ???
-
-                    object val;
-                    if (dts.TryGetValue(DefaultContext.Default, null, declaringType, out val))
-                        return (string)val;
+                    return PythonTypeOps.GetModuleName(declaringType.UnderlyingSystemType);
                 }
                 return null;
             }

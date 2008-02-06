@@ -26,6 +26,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
@@ -239,7 +240,7 @@ namespace IronPython.Runtime {
             string parentName = modName.Substring(0, lastDot);
             object parentObject;
             // Try lookup parent module in the sys.modules
-            if (!_context.SystemState.modules.TryGetValue(parentName, out parentObject)) {
+            if (!_context.SystemStateModules.TryGetValue(parentName, out parentObject)) {
                 // parent module not found in sys.modules, fallback to absolute import
                 return false;
             }
@@ -274,7 +275,7 @@ namespace IronPython.Runtime {
                 return;
             }
 
-            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(fileName, _context.SystemState.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(fileName, _context.DefaultEncoding, SourceCodeKind.File);
 
             if (sourceUnit == null) {
                 throw PythonOps.SystemError("module source file not found");
@@ -291,19 +292,23 @@ namespace IronPython.Runtime {
 
             string name = (string)module.GetName();
 
-            if (!_context.SystemState.Builtins.TryGetValue(name, out type)) {
+            if (!PythonContext.Builtins.TryGetValue(name, out type)) {
                 throw new NotImplementedException();
             }
 
             // TODO: is this correct?
-            module.Scope.Clear();
             module.SetName(name);
             PythonModuleOps.PopulateModuleDictionary(module.Scope.Dict, type);
+
+            if (module.Scope == _context.SystemState) {
+                // re-run sys initialization
+                _context.InitializeSystemState();
+            }
         }
 
         internal bool TryGetExistingModule(string/*!*/ fullName, out object ret) {
             // Python uses None/null as a key here to indicate a missing module
-            if (_context.SystemState.modules.TryGetValue(fullName, out ret)) {
+            if (_context.SystemStateModules.TryGetValue(fullName, out ret)) {
                 return ret != null;
             }
             return false;
@@ -333,8 +338,11 @@ namespace IronPython.Runtime {
             ret = ImportBuiltin(context, name);
             if (ret != null) return ret;
 
-            ret = ImportFromPath(context, name, name, _context.SystemState.path);
-            if (ret != null) return ret;
+            List path;
+            if (PythonContext.GetContext(context).TryGetSystemPath(out path)) {
+                ret = ImportFromPath(context, name, name, path);
+                if (ret != null) return ret;
+            }
 
             ret = ImportReflected(context, name);
             if (ret != null) return ret;
@@ -383,7 +391,7 @@ namespace IronPython.Runtime {
         private object FindImportFunction(CodeContext/*!*/ context) {
             object builtin, import;
             if (!context.Scope.ModuleScope.TryGetName(context.LanguageContext, Symbols.Builtins, out builtin)) {
-                builtin = SystemState.Instance.BuiltinModuleInstance;
+                builtin = PythonContext.GetContext(context).BuiltinModuleInstance;
             }
 
             Scope scope = builtin as Scope;
@@ -422,7 +430,7 @@ namespace IronPython.Runtime {
 
         private PythonModule CreateBuiltinModule(string name) {
             Type type;
-            if (_context.SystemState.Builtins.TryGetValue(name, out type)) {
+            if (PythonContext.Builtins.TryGetValue(name, out type)) {
                 // RuntimeHelpers.RunClassConstructor
                 // run the type's .cctor before doing any custom reflection on the type.
                 // This allows modules to lazily initialize PythonType's to custom values
@@ -488,7 +496,7 @@ namespace IronPython.Runtime {
                 success = true;
             } finally {
                 if (!success) {
-                    _context.SystemState.modules.Remove(fullName);
+                    _context.SystemStateModules.Remove(fullName);
                 }
             }
         }
@@ -512,7 +520,7 @@ namespace IronPython.Runtime {
                     }
 
                     baseName = baseName.Substring(0, lastDot);
-                    object package = _context.SystemState.modules[baseName];
+                    object package = _context.SystemStateModules[baseName];
                     if (PythonOps.TryGetBoundAttr(package, Symbols.Path, out path)) {
                         if (path is List) {
                             basePath = (List)path;
@@ -563,7 +571,7 @@ namespace IronPython.Runtime {
         private PythonModule LoadModuleFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
             Assert.NotNull(context, name, path);
 
-            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(path, _context.SystemState.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = _context.TryGetSourceFileUnit(path, _context.DefaultEncoding, SourceCodeKind.File);
             if (sourceUnit == null) {
                 return null;
             }

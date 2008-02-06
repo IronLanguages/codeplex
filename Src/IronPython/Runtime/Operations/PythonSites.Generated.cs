@@ -17,6 +17,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public class PythonSites {

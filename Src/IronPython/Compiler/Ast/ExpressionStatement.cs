@@ -35,6 +35,7 @@ namespace IronPython.Compiler.Ast {
             if (ag.PrintExpressions) {
                 expression = Ast.Call(
                     AstGenerator.GetHelperMethod("PrintExpressionValue"),
+                    Ast.CodeContext(),
                     AstGenerator.ConvertIfNeeded(expression, typeof(object))
                 );
             }

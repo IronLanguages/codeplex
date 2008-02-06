@@ -19,6 +19,7 @@ using System.Text;
 using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonType(typeof(PythonDictionary))]

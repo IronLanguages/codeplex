@@ -22,6 +22,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
@@ -51,7 +52,7 @@ namespace IronPython.Runtime.Operations {
         private static Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker,ReflectedEvent>();
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, object cls, string name, PythonTuple bases, IAttributesCollection dict) {
+        public static object Make(CodeContext/*!*/ context, object cls, string name, PythonTuple bases, IAttributesCollection dict) {
             if (name == null) {
                 throw PythonOps.TypeError("type() argument 1 must be string, not None");
             }
@@ -106,7 +107,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, object cls, object o) {
+        public static object Make(CodeContext/*!*/ context, object cls, object o) {
             return DynamicHelpers.GetPythonType(o);
         }
 
@@ -139,7 +140,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName, PythonName("__repr__")]
-        public static string Repr(CodeContext context, PythonType self) {
+        public static string Repr(CodeContext/*!*/ context, PythonType self) {
             string name = GetName(self);
 
             if (self.IsSystemType) {
@@ -163,25 +164,30 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName, PythonName("__str__")]
-        public static string PythonToString(CodeContext context, PythonType self) {
+        public static string PythonToString(CodeContext/*!*/ context, PythonType self) {
             return Repr(context, self);
         }
 
         [PropertyMethod, PythonName("__module__")]
         public static string GetModule(PythonType self) {
-            if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(self.UnderlyingSystemType)) {
-                string moduleName = null;
-                Type curType = self.UnderlyingSystemType;
-                while (curType != null) {
-                    SystemState.Instance.BuiltinModuleNames.TryGetValue(curType, out moduleName);
-                    curType = curType.DeclaringType;
+            return GetModuleName(self.UnderlyingSystemType);
+        }
 
-                    if (moduleName != null) return moduleName;
+        internal static string GetModuleName(Type type) {
+            if (IsRuntimeAssembly(type.Assembly) || PythonTypeCustomizer.IsPythonType(type)) {
+                Type curType = type;
+                while (curType != null) {
+                    string moduleName;
+                    if (PythonContext.BuiltinModuleNames.TryGetValue(curType, out moduleName)) {
+                        return moduleName;
+                    }
+
+                    curType = curType.DeclaringType;
                 }
                 return "__builtin__";
             }
 
-            return self.UnderlyingSystemType.Namespace + " in " + self.UnderlyingSystemType.Assembly.FullName;
+            return type.Namespace + " in " + type.Assembly.FullName;
         }
 
         public static PythonType __getitem__(PythonType self, params Type[] args) {
@@ -215,7 +221,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             [SpecialName]
-            public object Call(CodeContext context, params object[] args) {
+            public object Call(CodeContext/*!*/ context, params object[] args) {
                 if (_type == null) {
                     return CallWithoutType(context, args);
                 }
@@ -223,13 +229,13 @@ namespace IronPython.Runtime.Operations {
             }
             
             [SpecialName]
-            public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
+            public object Call(CodeContext/*!*/ context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
                 // This is not symmetric with the simple Call() overload.
                 // (Bug 365660: handle the case when _type == null)
                 return PythonCalls.CallWithKeywordArgs(_type, args, dict);
             }
 
-            private static object CallWithoutType(CodeContext context, object[] args) {
+            private static object CallWithoutType(CodeContext/*!*/ context, object[] args) {
                 if (args == null || args.Length == 0)
                     throw PythonOps.TypeError("type.__call__ needs an argument");
 
@@ -242,19 +248,19 @@ namespace IronPython.Runtime.Operations {
                 return PythonTypeOps.CallWorker(context, dt, ArrayUtils.RemoveFirst(args));
             }
 
-            internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
+            internal override bool TryGetValue(CodeContext/*!*/ context, object instance, PythonType owner, out object value) {
                 value = new TypeCaller((PythonType)instance);
                 return true;
             }
         }
 
-        internal static object CallParams(CodeContext context, PythonType cls, params object[] args\u03c4) {
+        internal static object CallParams(CodeContext/*!*/ context, PythonType cls, params object[] args\u03c4) {
             if (args\u03c4 == null) args\u03c4 = ArrayUtils.EmptyObjects;
 
             return CallWorker(context, cls, args\u03c4);
         }
 
-        internal static object CallWorker(CodeContext context, PythonType dt, object[] args) {
+        internal static object CallWorker(CodeContext/*!*/ context, PythonType dt, object[] args) {
             object newObject = PythonOps.CallWithContext(context, GetTypeNew(context, dt), ArrayUtils.Insert<object>(dt, args));
 
             if (ShouldInvokeInit(dt, DynamicHelpers.GetPythonType(newObject), args.Length)) {
@@ -266,7 +272,7 @@ namespace IronPython.Runtime.Operations {
             return newObject;
         }
 
-        private static object CallWorker(CodeContext context, PythonType dt, KwCallInfo args) {
+        private static object CallWorker(CodeContext/*!*/ context, PythonType dt, KwCallInfo args) {
             object[] clsArgs = ArrayUtils.Insert<object>(dt, args.Arguments);
             object newObject = PythonOps.CallWithKeywordArgs(context,
                 GetTypeNew(context, dt),
@@ -288,7 +294,7 @@ namespace IronPython.Runtime.Operations {
         /// Looks up __init__ avoiding calls to __getattribute__ and handling both
         /// new-style and old-style classes in the MRO.
         /// </summary>
-        private static object GetInitMethod(CodeContext context, PythonType dt, object newObject) {
+        private static object GetInitMethod(CodeContext/*!*/ context, PythonType dt, object newObject) {
             // __init__ is never searched for w/ __getattribute__
             for (int i = 0; i < dt.ResolutionOrder.Count; i++) {
                 PythonType cdt = dt.ResolutionOrder[i];
@@ -315,7 +321,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        private static void AddFinalizer(CodeContext context, PythonType dt, object newObject) {
+        private static void AddFinalizer(CodeContext/*!*/ context, PythonType dt, object newObject) {
             // check if object has finalizer...
             PythonTypeSlot dummy;
             if (dt.TryResolveSlot(context, Symbols.Unassign, out dummy)) {
@@ -327,7 +333,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        private static object GetTypeNew(CodeContext context, PythonType dt) {
+        private static object GetTypeNew(CodeContext/*!*/ context, PythonType dt) {
             PythonTypeSlot dts;
 
             if (!dt.TryResolveSlot(context, Symbols.NewInst, out dts)) {

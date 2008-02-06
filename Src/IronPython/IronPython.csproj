@@ -217,6 +217,7 @@
     <Compile Include="Runtime\IParameterSequence.cs" />
     <Compile Include="Runtime\KwCallInfo.cs" />
     <Compile Include="Runtime\MissingParameter.cs" />
+    <Compile Include="Runtime\NameType.cs" />
     <Compile Include="Runtime\Operations\PythonTypeOps.cs" />
     <Compile Include="Runtime\PythonAsciiEncoding.cs" />
     <Compile Include="Runtime\Attributes.cs" />
@@ -291,8 +292,8 @@
     <Compile Include="Runtime\Super.cs" />
     <Compile Include="Runtime\Symbols.cs" />
     <Compile Include="Runtime\Symbols.Generated.cs" />
-    <Compile Include="Runtime\SystemState.cs" />
     <Compile Include="Runtime\PythonTuple.cs" />
+    <Compile Include="Runtime\sys.cs" />
     <Compile Include="Runtime\Types\ComObject.cs" />
     <Compile Include="Runtime\Types\CustomOldClassDictionary.cs" />
     <Compile Include="Runtime\Types\DelegateBuilder.cs" />

@@ -18,6 +18,7 @@ using System.Reflection;
 
 using Microsoft.Scripting.Utils;
 using System.Collections.Generic;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {

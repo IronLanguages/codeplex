@@ -21,12 +21,14 @@ using System.Reflection;
 using System.IO;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
     internal sealed class RemoteScriptEnvironment : RemoteWrapper, IScriptEnvironment {
         private readonly ScriptDomainManager _manager;
+        private IScriptScope/*!*/ _globals;
 
         #region Construction
 
@@ -125,6 +127,16 @@ namespace Microsoft.Scripting.Hosting {
 
         public string[] GetRegisteredLanguageIdentifiers() {
             return _manager.GetRegisteredLanguageIdentifiers();
+        }
+
+        public IScriptScope Globals {
+            get { return _globals; }
+            set {
+                Contract.RequiresNotNull(value, "value");
+
+                _globals = value;
+                _manager.SetGlobalsDictionary(((ScriptScope)_globals).Scope.Dict);
+            }
         }
 
         public IScriptEngine GetEngine(string languageId) {

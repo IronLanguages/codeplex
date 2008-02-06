@@ -25,6 +25,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 
@@ -180,7 +181,7 @@ namespace IronPython.Runtime.Types {
                     stubs = null;
                 } else {
                     // create signature converting stub:
-                    handler = Microsoft.Scripting.RuntimeHelpers.GetDelegate(func, _event.Info.EventHandlerType);
+                    handler = Microsoft.Scripting.Runtime.RuntimeHelpers.GetDelegate(func, _event.Info.EventHandlerType);
                     stubs = _event.GetStubList(_instance);
                 }
 

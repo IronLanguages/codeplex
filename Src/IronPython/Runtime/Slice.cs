@@ -21,6 +21,7 @@ using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonType("slice")]

@@ -21,6 +21,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 
 using Utils = Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

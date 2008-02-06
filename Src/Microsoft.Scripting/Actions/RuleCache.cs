@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

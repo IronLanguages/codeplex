@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
 

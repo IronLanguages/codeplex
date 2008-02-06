@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;

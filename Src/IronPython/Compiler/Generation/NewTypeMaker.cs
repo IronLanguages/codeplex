@@ -33,6 +33,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Compiler.Generation {
     /// <summary>
@@ -109,14 +110,24 @@ namespace IronPython.Compiler.Generation {
                         name = "_" + typeName + name;
                     }
 
-                    if (name == "__dict__") {
-                        dict[SymbolTable.StringToId(name)] = new PythonTypeDictSlot();
+                    SymbolId id = SymbolTable.StringToId(name);
+
+                    // don't replace existing values, they'll just be read-only.  For example
+                    // class foo(object):
+                    //     __slots__ = ['__init__']
+                    //     def __init__(self): pass
+                    //
+                    object dummy;
+                    if (dict.TryGetValue(id, out dummy)) continue;
+
+                    if (id == Symbols.Dict) {
+                        dict[id] = new PythonTypeDictSlot();
                         continue;
-                    } else if (name == "__weakref__") {
+                    } else if (id == Symbols.WeakRef) {
                         continue;
                     }
 
-                    dict[SymbolTable.StringToId(name)] = new ReflectedSlotProperty(name, ret, i);
+                    dict[id] = new ReflectedSlotProperty(name, ret, i);
                 }
             }
 

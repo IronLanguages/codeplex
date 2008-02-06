@@ -30,6 +30,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Calls {
@@ -225,7 +226,7 @@ namespace IronPython.Runtime.Calls {
 
         #region Internal API Surface
 
-        public object Call(CodeContext context, Microsoft.Scripting.Scope scope, bool tryEvaluate) {
+        public object Call(CodeContext context, Scope scope, bool tryEvaluate) {
             if (_code != null) {
                 return _code.Run(scope, context.ModuleContext, tryEvaluate);
             } else if (_func != null) {

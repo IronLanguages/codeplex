@@ -18,6 +18,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Runtime;
 
     class Index : Expression {
         private readonly Expression _target;

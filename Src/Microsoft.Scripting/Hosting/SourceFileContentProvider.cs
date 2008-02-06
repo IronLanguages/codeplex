@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
 

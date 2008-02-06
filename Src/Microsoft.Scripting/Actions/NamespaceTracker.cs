@@ -22,6 +22,8 @@ using System.Threading;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
+
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {

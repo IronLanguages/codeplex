@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {

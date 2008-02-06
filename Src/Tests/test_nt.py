@@ -184,7 +184,21 @@ def test_fdopen():
     #CodePlex Work Item #8617
     # AssertError(ValueError,nt.fdopen,0,"p")
  
-   
+    #CodePlex 5633
+    if not is_cli:
+        stuff = "\x00a\x01\x02b\x03 \x04  \x05\n\x06_\0xFE\0xFFxyz"
+        name = "cp5633.txt"
+        fd = nt.open(name, nt.O_CREAT | nt.O_BINARY | nt.O_TRUNC | nt.O_WRONLY)
+        f = nt.fdopen(fd, 'wb')
+        f.write(stuff)
+        f.close()
+        f = file(name, 'rb')
+        try:
+            AreEqual(stuff, f.read())
+        finally:
+            f.close()
+            nt.remove(name)
+        
 # fstat,unlink tests
 def test_fstat():
     #CodePlex Work Item #8618

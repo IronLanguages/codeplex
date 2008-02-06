@@ -25,6 +25,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using System.Threading;
 
 namespace IronPython.Runtime.Calls {

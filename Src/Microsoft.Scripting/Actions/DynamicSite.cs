@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
 

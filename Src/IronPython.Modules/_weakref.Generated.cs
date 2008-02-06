@@ -22,6 +22,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 #if !SILVERLIGHT
 namespace IronPython.Modules {

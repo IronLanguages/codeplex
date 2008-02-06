@@ -24,6 +24,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler.Generation;
@@ -390,33 +391,8 @@ namespace IronPython.Runtime.Operations {
                     }
                 }
 
-                ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
-                if (rsp != null) {
-                    // type has __slots__ defined for this member, call the getter directly
-                    rule.Target =
-                        rule.MakeReturn(
-                            context.LanguageContext.Binder,
-                            Ast.Comma(
-                                Ast.Assign(
-                                    tmp,
-                                    Ast.SimpleCallHelper(
-                                        rsp.GetterMethod,
-                                        rule.Parameters[0]
-                                    )
-                                ),
-                                Ast.Call(
-                                    typeof(PythonOps).GetMethod("CheckInitializedAttribute"),
-                                    Ast.Read(tmp),
-                                    Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
-                                    Ast.Constant(SymbolTable.IdToString(action.Name))
-                                ),
-                                Ast.Read(tmp)
-                            )
-                        );
-                    return rule;      
-                }
-
                 Expression body = Ast.Empty();
+                PythonTypeSlot getattr;
 
                 bool isOldStyle = false;
                 foreach (PythonType dt in sdo.PythonType.ResolutionOrder) {
@@ -426,7 +402,7 @@ namespace IronPython.Runtime.Operations {
                     }
                 }
 
-                if (!isOldStyle) {
+                if (!isOldStyle || dts is ReflectedSlotProperty) {
                     if (sdo.HasDictionary && (dts == null || !dts.IsSetDescriptor(context, sdo.PythonType))) {
                         body = MakeDictionaryAccess<T>(context, action, rule, tmp);
                     }
@@ -439,7 +415,6 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 // fall back to __getattr__ if it's defined.
-                PythonTypeSlot getattr;
                 if (sdo.PythonType.TryResolveSlot(context, Symbols.GetBoundAttr, out getattr)) {
                     body = MakeGetAttrRule<T>(context, action, rule, body, tmp, getattr);
                 }
@@ -785,7 +760,30 @@ namespace IronPython.Runtime.Operations {
                     rule.MakeReturn(context.LanguageContext.Binder, Ast.Null())
                 );
         }
-        private static Block MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, PythonTypeSlot dts, Expression body, Variable tmp, Type userType) {
+
+        private static Expression MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, PythonTypeSlot dts, Expression body, Variable tmp, Type userType) {
+            ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
+            if (rsp != null) {                
+                // we need to fall back to __getattr__ if the value is not defined, so call it and check the result.
+                return Ast.If(
+                    Ast.NotEqual(
+                        Ast.Assign(
+                            tmp,
+                            Ast.SimpleCallHelper(
+                                rsp.GetterMethod,
+                                rule.Parameters[0]
+                            )
+                        ),
+                        Ast.ReadField(null, typeof(Uninitialized).GetField("Instance"))
+                    ),
+                    rule.MakeReturn(
+                        context.LanguageContext.Binder,
+                        Ast.Read(tmp)
+                    )
+                );
+                
+            } 
+            
             ReflectedProperty rp = dts as ReflectedProperty;
             if (rp != null) {
                 // direct dispatch to the property...                
@@ -1209,21 +1207,7 @@ namespace IronPython.Runtime.Operations {
         /// which case we'll display the result of __repr__.
         /// </summary>
         public static string ToStringHelper(IPythonObject o) {
-
-            object ret;
-            PythonType ut = o.PythonType;
-            Debug.Assert(ut != null);
-
-            PythonTypeSlot dts;
-            if (ut.TryResolveSlot(DefaultContext.Default, Symbols.Repr, out dts) &&
-                dts.TryGetValue(DefaultContext.Default, o, ut, out ret)) {
-
-                string strRet;
-                if (ret != null && Converter.TryConvertToString(PythonCalls.Call(ret), out strRet)) return strRet;
-                throw PythonOps.TypeError("__repr__ returned non-string type ({0})", DynamicHelpers.GetPythonType(ret).Name);
-            }
-
-            return TypeHelpers.ReprMethod(o);
+            return ObjectOps.__str__(o);
         }
 
         public static bool TryGetNonInheritedMethodHelper(PythonType dt, object instance, SymbolId name, out object callTarget) {

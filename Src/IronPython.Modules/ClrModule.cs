@@ -18,17 +18,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
+
 using IronPython.Runtime.Types;
 using IronPython.Runtime;
-using System.Runtime.CompilerServices;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
@@ -313,8 +315,11 @@ namespace IronPython.Modules {
 
             // update our path w/ the path of this file...
             string path = System.IO.Path.GetDirectoryName(file);
-            List list = SystemState.Instance.path;
-            if (list == null) throw PythonOps.TypeError("cannot update path, it is not a list");
+            List list;
+
+            if (!PythonContext.GetContext(context).TryGetSystemPath(out list)) {
+                throw PythonOps.TypeError("cannot update path, it is not a list");
+            }
 
             list.Add(path);
 

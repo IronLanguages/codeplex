@@ -22,9 +22,10 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting {
+namespace Microsoft.Scripting.Actions {
     /// <summary>
     /// A TypeCollision is used when we have a collsion between
     /// two types with the same name.  Currently this is only possible w/ generic

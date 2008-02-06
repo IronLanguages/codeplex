@@ -26,6 +26,7 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("time", typeof(IronPython.Modules.PythonTime))]
 namespace IronPython.Modules {

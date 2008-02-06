@@ -27,6 +27,7 @@ using IronPython.Runtime.Types;
 
 #if !SILVERLIGHT // Sockets
 using System.Net.Sockets;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("select", typeof(IronPython.Modules.PythonSelect))]
 namespace IronPython.Modules {

@@ -26,6 +26,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("copy_reg", typeof(IronPython.Modules.PythonCopyReg))]
 namespace IronPython.Modules {

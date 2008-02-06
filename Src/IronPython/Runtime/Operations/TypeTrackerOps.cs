@@ -21,6 +21,7 @@ using Microsoft.Scripting.Actions;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonExtensionType(typeof(TypeTracker), typeof(TypeTrackerOps))]
 namespace IronPython.Runtime.Operations {

@@ -22,6 +22,10 @@ if is_cli:
     from Merlin.Testing import *
     from Merlin.Testing.Call import *
     from Merlin.Testing.TypeSample import *
+    
+    from clr import StrongBox
+    box_int = StrongBox[int]
+
     o = VariousParameters()
     
 else:
@@ -363,5 +367,138 @@ def test_special_name():
     AssertError(SyntaxError, eval, "f(def = 3)")
     f(**{"def": 8}); Flag.Check(8)
     
+def test_1_byref_arg():
+    obj = ByRefParameters()
+
+    #public void M100(ref int arg) { arg = 1; }
+    f = obj.M100
+    
+    AreEqual(f(2), 1)
+    AreEqual(f(arg = 3), 1)
+    AreEqual(f(*(4,)), 1)
+    AreEqual(f(**{'arg': 5}), 1)
+    
+    x = box_int(6); AreEqual(f(x), None); AreEqual(x.Value, 1)
+    x = box_int(7); f(arg = x); AreEqual(x.Value, 1)
+    x = box_int(8); f(*(x,)); AreEqual(x.Value, 1)
+    x = box_int(9); f(**{'arg':x}); AreEqual(x.Value, 1)
+    
+    #public void M120(out int arg) { arg = 2; }
+    f = obj.M120
+    AreEqual(f(), 2)
+    #AssertError(TypeError, lambda: f(1))  # bug 311218
+    
+    x = box_int(); AreEqual(f(x), None); AreEqual(x.Value, 2)
+    x = box_int(7); f(arg = x); AreEqual(x.Value, 2)
+    x = box_int(8); f(*(x,)); AreEqual(x.Value, 2)
+    x = box_int(9); f(**{'arg':x}); AreEqual(x.Value, 2)
+
+def test_2_byref_args():
+    obj = ByRefParameters()
+
+    #public void M200(int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg2 = 10; }
+    f = obj.M200
+    AreEqual(f(1, 2), 10); Flag.Check(12)
+    AreEqual(f(3, arg2 = 4), 10); Flag.Check(34)
+    AreEqual(f(arg2 = 6, arg1 = 5), 10); Flag.Check(56)
+    AreEqual(f(*(7, 8)), 10); Flag.Check(78)
+    AreEqual(f(9, *(1,)), 10); Flag.Check(91)
+    
+    x = box_int(5); AreEqual(f(1, x), None); AreEqual(x.Value, 10); Flag.Check(15)
+    x = box_int(6); f(2, x); AreEqual(x.Value, 10); Flag.Check(26)
+    x = box_int(7); f(3, *(x,)); AreEqual(x.Value, 10); Flag.Check(37)
+    x = box_int(8); f(**{'arg1': 4, 'arg2' : x}); AreEqual(x.Value, 10); Flag.Check(48)
+    
+    #public void M201(ref int arg1, int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg1 = 20; }
+    f = obj.M201
+    AreEqual(f(1, 2), 20)
+    x = box_int(2); f(x, *(2,)); AreEqual(x.Value, 20); Flag.Check(22)
+    
+    #public void M202(ref int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10 + arg2; arg1 = 30; arg2 = 40; }
+    f = obj.M202
+    AreEqual(f(1, 2), (30, 40))
+    AreEqual(f(arg2 = 1, arg1 = 2), (30, 40)); Flag.Check(21)
+    
+    AssertErrorWithMessage(TypeError, "expected int, got StrongBox[int]", lambda: f(box_int(3), 4))  # bug 311239
+    x = box_int(3)
+    y = box_int(4)
+    #f(arg2 = y, *(x,)); Flag.Check(34) # bug 311169
+    AssertErrorWithMessage(TypeError, "M202() got multiple values for keyword argument 'arg1'", lambda: f(arg1 = x, *(y,))) # msg
+    
+    # just curious
+    x = y = box_int(5)
+    f(x, y); AreEqual(x.Value, 40); AreEqual(y.Value, 40); Flag.Check(55)
+
+def test_2_out_args():
+    obj = ByRefParameters()
+    
+    #public void M203(int arg1, out int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10; arg2 = 50; }
+    f = obj.M203
+    AreEqual(f(1), 50)
+    AreEqual(f(*(2,)), 50)
+    #AssertError(TypeError, lambda: f(1, 2))  # bug 311218
+    
+    x = box_int(4)
+    f(1, x); AreEqual(x.Value, 50)
+    
+    #public void M204(out int arg1, int arg2) { Flag.Reset(); Flag.Value1 = arg2; arg1 = 60; }
+    # TODO
+    
+    #public void M205(out int arg1, out int arg2) { arg1 = 70; arg2 = 80; }
+    f = obj.M205
+    AreEqual(f(), (70, 80))
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(1))
+    #AssertErrorWithMessage(TypeError, "M205() ??)", lambda: f(1, 2))
+    
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(arg2 = box_int(2)))
+    AssertErrorWithMessage(TypeError, "M205() takes at most 2 arguments (1 given)", lambda: f(arg1 = box_int(2)))
+    
+    for l in [
+        lambda: f(*(x, y)),
+        lambda: f(x, y, *()),
+        lambda: f(arg2 = y, arg1 = x, *()),
+        lambda: f(x, arg2 = y, ),
+        lambda: f(x, **{"arg2":y})
+             ]:
+        x, y = box_int(1), box_int(2)
+        #print l
+        l()
+        AreEqual(x.Value, 70)
+        AreEqual(y.Value, 80)
+    
+    
+    #public void M206(ref int arg1, out int arg2) { Flag.Reset(); Flag.Value1 = arg1 * 10; arg1 = 10; arg2 = 20; }
+    f = obj.M206
+    AreEqual(f(1), (10, 20))
+    AreEqual(f(arg1 = 2), (10, 20))
+    AreEqual(f(*(3,)), (10, 20))
+    AssertError(TypeError, lambda: f(box_int(5)))
+   
+    x, y = box_int(4), box_int(5)
+    f(x, y); AreEqual(x.Value, 10); AreEqual(y.Value, 20); 
+    
+    #public void M207(out int arg1, ref int arg2) { Flag.Reset(); Flag.Value1 = arg2; arg1 = 30; arg2 = 40; }
+    
+    f = obj.M207
+    AreEqual(f(1), (30, 40))
+    AreEqual(f(arg2 = 2), (30, 40)); Flag.Check(2)
+    #AssertError(TypeError, lambda: f(1, 2))
+    AssertError(TypeError, lambda: f(arg2 = 1, arg1 = 2))
+    
+    for l in [ 
+            lambda: f(x, y), 
+            lambda: f(arg2 = y, arg1 = x),
+            lambda: f(x, *(y,)),
+            lambda: f(*(x, y,)),
+            #lambda: f(arg1 = x, *(y,)),
+            lambda: f(arg1 = x, **{'arg2': y}),
+             ]:
+        x, y = box_int(1), box_int(2)
+        #print l
+        l()
+        AreEqual(x.Value, 30)
+        AreEqual(y.Value, 40)
+        Flag.Check(2)
+        
 run_test(__name__)
 

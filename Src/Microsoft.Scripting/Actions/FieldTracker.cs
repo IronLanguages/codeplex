@@ -19,6 +19,7 @@ using System.Text;
 using System.Reflection;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 

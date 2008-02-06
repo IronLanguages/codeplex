@@ -24,6 +24,7 @@ using Microsoft.Scripting.Generation;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Calls {
     static class PythonBinderHelper {

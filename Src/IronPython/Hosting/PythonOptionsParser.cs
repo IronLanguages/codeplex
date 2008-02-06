@@ -19,11 +19,14 @@ using IronPython.Compiler;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 
@@ -58,11 +61,11 @@ namespace IronPython.Hosting {
             base.Parse(args);
 
             PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
-            _context.SystemState.argv = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
             if (scriptOpt.WarningFilters != null)
-                _context.SystemState.warnoptions = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
+                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
 
-            _context.SystemState.SetRecursionLimit(_engineOptions.MaximumRecursion);
+            PythonFunction.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }
 
         /// <exception cref="Exception">On error.</exception>

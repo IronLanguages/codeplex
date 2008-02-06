@@ -23,10 +23,12 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
 

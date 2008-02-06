@@ -18,6 +18,7 @@ using System.Reflection;
 using Microsoft.Scripting;
 
 using ToyScript.Runtime;
+using Microsoft.Scripting.Runtime;
 
 namespace ToyScript {
     public static class ToyHelpers {

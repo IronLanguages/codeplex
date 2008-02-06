@@ -20,6 +20,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Ast;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 

@@ -17,7 +17,7 @@ using System;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Ast;
-
+using Microsoft.Scripting.Runtime;
 namespace Microsoft.Scripting.Generation {
     /// <summary>
     /// ArgBuilder provides an argument value used by the MethodBinder.  One ArgBuilder exists for each

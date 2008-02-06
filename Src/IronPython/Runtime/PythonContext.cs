@@ -26,6 +26,8 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Compiler;
@@ -36,17 +38,26 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 
 using PyAst = IronPython.Compiler.Ast;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime {
     public sealed class PythonContext : LanguageContext {
        private static readonly Guid PythonLanguageGuid = new Guid("03ed4b80-d10b-442f-ad9a-47dae85b2051");
         private static readonly Guid LanguageVendor_Microsoft = new Guid(-1723120188, -6423, 0x11d2, 0x90, 0x3f, 0, 0xc0, 0x4f, 0xa3, 2, 0xa1);
+        private readonly Importer/*!*/ _importer;
+        private readonly PythonEngineOptions/*!*/ _engineOptions;
+        private readonly IDictionary<object, object>/*!*/ _modulesDict = new PythonDictionary();
+        private readonly Dictionary<SymbolId, ModuleGlobalCache>/*!*/ _builtinCache = new Dictionary<SymbolId, ModuleGlobalCache>();
+        private readonly Scope/*!*/ _systemState;
+        private static readonly Dictionary<Type, string>/*!*/ _builtinModuleNames = new Dictionary<Type, string>();
+        private static readonly Dictionary<string, Type>/*!*/ _builtinsDict = CreateBuiltinTable();
 
-        private readonly SystemState/*!*/ _systemState;    
-        private readonly Importer/*!*/ _importer;          
-        private readonly PythonEngineOptions/*!*/ _engineOptions; 
+        private Encoding _defaultEncoding = PythonAsciiEncoding.Instance;
+        private string _initialVersionString;
+        private string _initialExecutable, _initialPrefix;
 
 
+        private Scope _builtins;
         private ScriptEngine _engine;
 #if !SILVERLIGHT
         private static int _hookedAssemblyResolve;
@@ -80,10 +91,88 @@ namespace IronPython.Runtime {
             }
         }
 
-        public SystemState/*!*/ SystemState {
+        public Scope/*!*/ SystemState {
             get {
                 return _systemState;
             }
+        }
+
+        public bool TryGetSystemPath(out List path) {
+            object val;
+            if (SystemState.Dict.TryGetValue(SymbolTable.StringToId("path"), out val)) {
+                path = val as List;
+            } else {
+                path = null;
+            }
+
+            return path != null;
+        }
+
+        public object SystemStandardOut {
+            get {
+                return GetSystemStateValue("stdout");
+            }
+        }
+
+        public object SystemStandardIn {
+            get {
+                return GetSystemStateValue("stdin");
+            }
+        }
+
+        public object SystemStandardError {
+            get {
+                return GetSystemStateValue("stderr");
+            }
+        }
+
+        public IDictionary<object, object> SystemStateModules {
+            get {
+                return _modulesDict;
+            }
+        }
+
+        // as of 1.5 preferred access is exc_info, these may be null.
+        internal object SystemExceptionType {
+            set {
+                SetSystemStateValue("exc_type", value);
+            }
+        }
+
+        public object SystemExceptionValue {
+            set {
+                SetSystemStateValue("exc_value", value);
+            }
+        }
+
+        public object SystemExceptionTraceBack {
+            set {
+                SetSystemStateValue("exc_traceback", value);
+            }
+        }
+
+        internal PythonModule GetModuleByName(string/*!*/ name) {
+            Assert.NotNull(name);
+            object scopeObj;
+            Scope scope;
+            if (SystemStateModules.TryGetValue(name, out scopeObj) && (scope = scopeObj as Scope) != null) {
+                return EnsurePythonModule(scope);
+            }
+            return null;
+        }
+
+        internal PythonModule GetModuleByPath(string/*!*/ path) {
+            Assert.NotNull(path);
+            foreach (object scopeObj in SystemStateModules.Values) {
+                Scope scope = scopeObj as Scope;
+                if (scope != null) {
+                    PythonModule module = EnsurePythonModule(scope);
+                    if (ScriptDomainManager.CurrentManager.PathComparer.Compare(module.GetFile(), path) == 0) {
+                        return module;
+                    }
+                }
+            }
+            return null;
         }
 
         public override string DisplayName {
@@ -137,15 +226,18 @@ namespace IronPython.Runtime {
                 ((PythonContext)DefaultContext.DefaultCLS.LanguageContext).Binder = Binder;
             }
 
-            _systemState = new SystemState(this);
-            _systemState.Initialize();
+            InitializeBuiltins();
+            
+            _systemState = CreateBuiltinModule("sys", typeof(SysModule)).Scope;
+
+            InitializeSystemState(false);
 #if SILVERLIGHT
             AddToPath("");
 #endif
             
             // sys.argv always includes at least one empty string.
             Debug.Assert(PythonOptions.Arguments != null);
-            _systemState.argv = List.Make(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments);
+            SetSystemStateValue("argv", List.Make(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments));
 
 #if !SILVERLIGHT // AssemblyResolve
             try {
@@ -157,6 +249,43 @@ namespace IronPython.Runtime {
                 // If so, we will not look up sys.path for module loads
             }
 #endif
+        }
+
+        internal void InitializeSystemState() {
+            InitializeSystemState(true);
+        }
+
+        /// <summary>
+        /// Initializes the sys module.  Called both to load and reload sys
+        /// </summary>
+        private void InitializeSystemState(bool reload) {
+            if (!reload) {
+                // These fields do not get reset on "reload(sys)"
+                SetSystemStateValue("argv", List.Make(new object[] { String.Empty }));                
+                SetSystemStateValue("modules", _modulesDict);
+
+                _modulesDict["sys"] = _systemState;
+
+                SetSystemStateValue("path", List.Make());
+                SetSystemStateValue("ps1", ">>> ");
+                SetSystemStateValue("ps1", "... ");
+
+                SetStandardIO();
+
+                SystemExceptionType = SystemExceptionValue = SystemExceptionTraceBack = null;
+            }
+
+            SetSystemStateValue("stdin", GetSystemStateValue("__stdin__"));
+            SetSystemStateValue("stdout", GetSystemStateValue("__stdout__"));
+            SetSystemStateValue("stderr", GetSystemStateValue("__stderr__"));
+
+            // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
+            // engine elsewhere. For now, we initialize them just once to some default value
+            SetSystemStateValue("warnoptions", List.Make());
+
+
+            PublishBuiltinModuleNames();
+            SetHostVariables();
         }
 
         public override CodeBlock ParseSourceCode(CompilerContext context) {
@@ -208,6 +337,7 @@ namespace IronPython.Runtime {
             // TODO: remove when the module is generated by PythonAst.Transform:
             PythonCompilerOptions pco = (PythonCompilerOptions)context.Options;
             pco.TrueDivision = ast.TrueDivision;
+            pco.AllowWithStatement = ast.AllowWithStatement;
 
             PyAst.PythonNameBinder.BindAst(ast, context);
 
@@ -333,7 +463,7 @@ namespace IronPython.Runtime {
         #region Scopes
 
         public override Scope GetScope(string/*!*/ path) {
-            PythonModule module = _systemState.GetModuleByPath(path);
+            PythonModule module = GetModuleByPath(path);
             return (module != null) ? module.Scope : null;
         }
         
@@ -364,6 +494,7 @@ namespace IronPython.Runtime {
 
             // flow the code's true division into the module if we have it set
             newPythonContext.TrueDivision |= ((PythonCompilerOptions)newPythonContext.CompilerContext.Options).TrueDivision;
+            newPythonContext.AllowWithStatement |= ((PythonCompilerOptions)newPythonContext.CompilerContext.Options).AllowWithStatement;
         }
 
         internal PythonModule/*!*/ CompileAndInitializeModule(string moduleName, string fileName, SourceUnit sourceUnit) {
@@ -382,7 +513,7 @@ namespace IronPython.Runtime {
         }
 
         public PythonModule/*!*/ CompileModule(string fileName, string moduleName, ModuleOptions options, bool skipFirstLine, out ScriptCode compiledCode) {
-            SourceUnit sourceCode = CreateFileUnit(String.IsNullOrEmpty(fileName) ? null : fileName, _systemState.DefaultEncoding);
+            SourceUnit sourceCode = CreateFileUnit(String.IsNullOrEmpty(fileName) ? null : fileName, DefaultEncoding);
             return CompileModule(fileName, moduleName, sourceCode, options, skipFirstLine, out compiledCode);
         }
 
@@ -439,6 +570,7 @@ namespace IronPython.Runtime {
             PythonModule module = CreatePythonModule(moduleName, fileName, scope);
             module.ShowCls = (options & ModuleOptions.ShowClsMethods) != 0;
             module.TrueDivision = (options & ModuleOptions.TrueDivision) != 0;
+            module.AllowWithStatement = (options & ModuleOptions.WithStatement) != 0;
             module.IsPythonCreatedModule = true;
 
             if ((options & ModuleOptions.Initialize) != 0) {
@@ -456,11 +588,9 @@ namespace IronPython.Runtime {
             PythonModule module = new PythonModule(scope);
             module = (PythonModule)scope.SetExtension(ContextId, module);
 
-            // adds __builtin__ variable if this is not a __builtin__ module itself:             
-            if (_systemState != null && _systemState.modules.ContainsKey("__builtin__")) {
-                module.Scope.SetName(Symbols.Builtins, _systemState.modules["__builtin__"]); // TODO: PythonContext.Id, 
-            } else {
-                Debug.Assert(moduleName == "__builtin__");
+            // adds __builtin__ variable if this is not a __builtin__ module itself:
+            if (moduleName != "__builtin__") {
+                module.Scope.SetName(Symbols.Builtins, SystemStateModules["__builtin__"]); // TODO: PythonContext.Id, 
             }
 
             // do not set names if null to make attribute getter pas thru:
@@ -486,7 +616,7 @@ namespace IronPython.Runtime {
         public void PublishModule(string/*!*/ name, PythonModule/*!*/ module) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(module, "module");
-            _systemState.modules[name] = module.Scope;
+            SystemStateModules[name] = module.Scope;
         }
 
         // TODO: remove
@@ -508,7 +638,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.SystemError("nameless module");
             }
 
-            if (!_systemState.modules.ContainsKey(name)) {
+            if (!SystemStateModules.ContainsKey(name)) {
                 throw PythonOps.ImportError("module {0} not in sys.modules", name);
             }
 
@@ -553,7 +683,7 @@ namespace IronPython.Runtime {
 
         protected override ModuleGlobalCache GetModuleCache(SymbolId name) {
             ModuleGlobalCache res;
-            if (!_systemState.TryGetModuleGlobalCache(name, out res)) {
+            if (!TryGetModuleGlobalCache(name, out res)) {
                 res = base.GetModuleCache(name);
             }
 
@@ -593,16 +723,19 @@ namespace IronPython.Runtime {
         public override Assembly LoadAssemblyFromFile(string file) {
 #if !SILVERLIGHT
             // check all files in the path...
-            IEnumerator ie = PythonOps.GetEnumerator(_systemState.path);
-            while (ie.MoveNext()) {
-                string str;
-                if (Converter.TryConvertToString(ie.Current, out str)) {
-                    string fullName = Path.Combine(str, file);
-                    Assembly res;
+            List path;
+            if (TryGetSystemPath(out path)) {
+                IEnumerator ie = PythonOps.GetEnumerator(path);
+                while (ie.MoveNext()) {
+                    string str;
+                    if (Converter.TryConvertToString(ie.Current, out str)) {
+                        string fullName = Path.Combine(str, file);
+                        Assembly res;
 
-                    if (TryLoadAssemblyFromFileWithPath(fullName, out res)) return res;
-                    if (TryLoadAssemblyFromFileWithPath(fullName + ".EXE", out res)) return res;
-                    if (TryLoadAssemblyFromFileWithPath(fullName + ".DLL", out res)) return res;
+                        if (TryLoadAssemblyFromFileWithPath(fullName, out res)) return res;
+                        if (TryLoadAssemblyFromFileWithPath(fullName + ".EXE", out res)) return res;
+                        if (TryLoadAssemblyFromFileWithPath(fullName + ".DLL", out res)) return res;
+                    }
                 }
             }
 #endif
@@ -638,7 +771,7 @@ namespace IronPython.Runtime {
         #endregion
 
         public override void SetScriptSourceSearchPaths(string[] paths) {
-            _systemState.path = List.Make(paths);
+            SetSystemStateValue("path", List.Make(paths));
         }
         
         public override TextWriter GetOutputWriter(bool isErrorOutput) {
@@ -886,10 +1019,6 @@ namespace IronPython.Runtime {
             return GetContext(context)._importer;
         }
 
-        public static SystemState/*!*/ GetSystemState(CodeContext context) {
-            return GetContext(context)._systemState;
-        }
-
         public static PythonContext/*!*/ GetContext(CodeContext context) {
             PythonContext result;
 
@@ -903,7 +1032,7 @@ namespace IronPython.Runtime {
 
         public override ServiceType GetService<ServiceType>(params object[] args) {
             if (typeof(ServiceType) == typeof(CommandLine)) {
-                return (ServiceType)(object)new PythonCommandLine();
+                return (ServiceType)(object)new PythonCommandLine(this);
             } else if (typeof(ServiceType) == typeof(OptionsParser)) {
                 return (ServiceType)(object)new PythonOptionsParser(this);
             } else if (typeof(ServiceType) == typeof(ITokenCategorizer)) {
@@ -918,7 +1047,10 @@ namespace IronPython.Runtime {
         }
 
         public void AddToPath(string directory) {
-            _systemState.path.Append(directory);
+            List path;
+            if (TryGetSystemPath(out path)) {
+                path.Append(directory);
+            }
         }
 
         public override CompilerOptions/*!*/ GetDefaultCompilerOptions() {
@@ -933,11 +1065,16 @@ namespace IronPython.Runtime {
             Assert.NotNull(scope);
 
             PythonModule module = GetPythonModule(scope);
-            return new PythonCompilerOptions(
-                module != null
-                    ? module.TrueDivision
-                    : PythonOptions.DivisionOptions == PythonDivisionOptions.New
-                );
+
+            PythonCompilerOptions res = new PythonCompilerOptions();
+            if (module != null) {
+                res.TrueDivision = module.TrueDivision;
+                res.AllowWithStatement = module.AllowWithStatement;
+            } else {
+                res.TrueDivision = PythonOptions.DivisionOptions == PythonDivisionOptions.New;
+            }
+
+            return res;
         }
 
         public override ErrorSink GetCompilerErrorSink() {
@@ -951,5 +1088,189 @@ namespace IronPython.Runtime {
             typeName = GetPythonExceptionClassName(pythonEx);
         }
 
+        /// <summary>
+        /// Gets or sets the default encoding for this system state / engine.
+        /// </summary>
+        public Encoding DefaultEncoding {
+            get { return _defaultEncoding; }
+            set { _defaultEncoding = value; }
+        }
+
+        public string GetDefaultEncodingName() {
+            return DefaultEncoding.WebName.ToLower().Replace('-', '_');
+        }
+
+        /// <summary>
+        /// Dictionary from name to type of all known built-in module names.
+        /// </summary>
+        internal static Dictionary<string, Type> Builtins {
+            get {
+                return _builtinsDict;
+            }
+        }
+
+        /// <summary>
+        /// Dictionary from type to name of all built-in modules.
+        /// </summary>
+        public static Dictionary<Type, string> BuiltinModuleNames {
+            get {
+                return _builtinModuleNames;
+            }
+        }
+
+        private void InitializeBuiltins() {
+            // create the __builtin__ module
+            Scope builtinModule = CreateBuiltinModule("__builtin__", typeof(Builtin)).Scope;
+            _modulesDict["__builtin__"] = builtinModule;
+
+            CreateBuiltinTable();
+        }
+
+        private static Dictionary<string, Type> CreateBuiltinTable() {
+            Dictionary<string, Type> builtinTable = new Dictionary<string, Type>();
+
+            // We should register builtins, if any, from IronPython.dll
+            LoadBuiltins(builtinTable, typeof(PythonContext).Assembly);
+
+            // Load builtins from IronPython.Modules
+            Assembly ironPythonModules;
+            ironPythonModules = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(GetIronPythonAssembly("IronPython.Modules"));
+            LoadBuiltins(builtinTable, ironPythonModules);
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix) {
+                // we make our nt package show up as a posix package
+                // on unix platforms.  Because we build on top of the 
+                // CLI for all file operations we should be good from
+                // there, but modules that check for the presence of
+                // names (e.g. os) will do the right thing.
+                Debug.Assert(builtinTable.ContainsKey("nt"));
+                builtinTable["posix"] = builtinTable["nt"];
+                builtinTable.Remove("nt");
+            }
+
+            return builtinTable;
+        }
+
+        private static void LoadBuiltins(Dictionary<string, Type> builtinTable, Assembly assem) {
+            object[] attrs = assem.GetCustomAttributes(typeof(PythonModuleAttribute), false);
+            if (attrs.Length > 0) {
+                foreach (PythonModuleAttribute pma in attrs) {
+                    builtinTable[pma.Name] = pma.Type;
+                    BuiltinModuleNames[pma.Type] = pma.Name;
+                }
+            }
+        }
+
+        public static string GetIronPythonAssembly(string baseName) {
+#if SIGNED
+            return baseName + ", Version=" + Assembly.GetExecutingAssembly().GetName().Version.ToString() + ", Culture=neutral, PublicKeyToken=31bf3856ad364e35";
+#else
+        return baseName;
+#endif
+        }
+        
+        private void PublishBuiltinModuleNames() {
+            object[] keys = new object[_builtinsDict.Keys.Count];
+            int index = 0;
+            foreach (object key in _builtinsDict.Keys) {
+                keys[index++] = key;
+            }
+            SystemState.Dict[SymbolTable.StringToId("builtin_module_names")] = PythonTuple.MakeTuple(keys);
+        }
+
+        /// <summary>
+        /// TODO: Remove me, or stop caching built-ins.  This is broken if the user changes __builtin__
+        /// </summary>
+        public Scope BuiltinModuleInstance {
+            get {
+                lock (this) {
+                    Scope res = _builtins;
+                    if (res == null) {
+                        res = _builtins = (Scope)SystemStateModules["__builtin__"];
+                        _builtins.ModuleChanged += new EventHandler<ModuleChangeEventArgs>(BuiltinsChanged);
+                    }
+                    return res;
+                }
+            }
+        }
+
+        private void BuiltinsChanged(object sender, ModuleChangeEventArgs e) {
+            ModuleGlobalCache mgc;
+            lock (_builtinCache) {
+                if (_builtinCache.TryGetValue(e.Name, out mgc)) {
+                    switch (e.ChangeType) {
+                        case ModuleChangeType.Delete: mgc.Value = Uninitialized.Instance; break;
+                        case ModuleChangeType.Set: mgc.Value = e.Value; break;
+                    }
+                } else {
+                    // shouldn't be able to delete before it was set
+                    object value = e.ChangeType == ModuleChangeType.Set ? e.Value : Uninitialized.Instance;
+                    _builtinCache[e.Name] = new ModuleGlobalCache(value);
+                }
+            }
+        }
+
+        internal bool TryGetModuleGlobalCache(SymbolId name, out ModuleGlobalCache cache) {
+            lock (_builtinCache) {
+                if (!_builtinCache.TryGetValue(name, out cache)) {
+                    // only cache values currently in built-ins, everything else will have
+                    // no caching policy and will fall back to the LanguageContext.
+                    object value;
+                    if (BuiltinModuleInstance.TryGetName(this, name, out value)) {
+                        _builtinCache[name] = cache = new ModuleGlobalCache(value);
+                    }
+                }
+            }
+            return cache != null;
+        }
+
+        public void SetHostVariables(string prefix, string executable, string versionString) {
+            _initialVersionString = versionString;
+            _initialExecutable = executable ?? "";
+            _initialPrefix = prefix;
+
+            SetHostVariables();
+        }
+
+        private void SetHostVariables() {
+            SystemState.Dict[SymbolTable.StringToId("executable")] = _initialExecutable;
+            SystemState.Dict[SymbolTable.StringToId("exec_prefix")] = SystemState.Dict[SymbolTable.StringToId("prefix")] = _initialPrefix;
+            SetVersionVariables(2, 5, 0, "release", _initialVersionString);
+        }
+
+        private void SetVersionVariables(byte major, byte minor, byte build, string level, string versionString) {
+            SystemState.Dict[SymbolTable.StringToId("hexversion")] = ((int)major << 24) + ((int)minor << 16) + ((int)build << 8);
+            SystemState.Dict[SymbolTable.StringToId("version_info")] = PythonTuple.MakeTuple((int)major, (int)minor, (int)build, level, 0);
+            SystemState.Dict[SymbolTable.StringToId("version")] = String.Format("{0}.{1}.{2} ({3})", major, minor, build, versionString);
+        }
+
+        private object GetSystemStateValue(string name) {
+            object val;
+            if (SystemState.Dict.TryGetValue(SymbolTable.StringToId(name), out val)) {
+                return val;
+            }
+            return null;
+        }
+
+        private void SetSystemStateValue(string name, object value) {
+            SystemState.Dict[SymbolTable.StringToId(name)] = value;
+        }
+
+        private void SetStandardIO() {
+            SharedIO io = DomainManager.SharedIO;
+            
+            PythonFile stdin = PythonFile.CreateConsole(io, ConsoleStreamType.Input, "<stdin>");
+            PythonFile stdout = PythonFile.CreateConsole(io, ConsoleStreamType.Output, "<stdout>");
+            PythonFile stderr = PythonFile.CreateConsole(io, ConsoleStreamType.ErrorOutput, "<stderr>");
+
+            SetSystemStateValue("__stdin__", stdin);
+            SetSystemStateValue("stdin", stdin);
+
+            SetSystemStateValue("__stdout__", stdout);
+            SetSystemStateValue("stdout", stdout);
+
+            SetSystemStateValue("__stderr__", stderr);
+            SetSystemStateValue("stderr", stderr);
+        }
     }
 }

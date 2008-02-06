@@ -19,6 +19,7 @@ using System.Collections.Generic;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>

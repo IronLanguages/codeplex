@@ -15,6 +15,7 @@
 
 using System.Collections.Generic;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {

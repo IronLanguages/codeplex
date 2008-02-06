@@ -22,6 +22,7 @@ using ComTypes = System.Runtime.InteropServices.ComTypes;
 using System.Reflection;
 using System.Globalization;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;

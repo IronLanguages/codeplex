@@ -66,9 +66,10 @@ def test_errorInfo():
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
-    AssertResults("void IntArguments(Int32 arg1, Int32 arg2)",
-                  InvalidOperationException, # Not implemented yet
-                  ops.GetDocumentation, com_obj.IntArguments)
+    AssertError(SystemError, ops.GetDocumentation, com_obj.IntArguments, skip=preferComDispatch, bugid="TODO")
+    if preferComDispatch:
+        AreEqual("void IntArguments(Int32 arg1, Int32 arg2)", ops.GetDocumentation(com_obj.IntArguments))
+    
 
 def test_namedArgs():
     # Named arguments
@@ -87,12 +88,13 @@ def test_namedArgs():
     # Named arguments and kwargs
     AreEqual(12345, com_obj.SumArgs(1, 2, a5=5, **{"a4":4, "a3":3}))
     
-    AssertResults(COMException, # DISP_E_UNKNOWNNAME
-        ArgumentTypeException, 
-        com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6})
-    AssertResults(TargetParameterCountException, 
-        ArgumentTypeException, 
-        com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5})
+
+    # DISP_E_UNKNOWNNAME
+    AssertError(COMException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6, "runonly":preferComDispatch, "bugid":"TODO"})
+    AssertError(ArgumentTypeException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a6":6, "skip":preferComDispatch, "bugid":"TODO"})
+    
+    AssertError(StandardError, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "runonly":preferComDispatch, "bugid":"TODO"}) 
+    AssertError(ArgumentTypeException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "skip":preferComDispatch, "bugid":"TODO"})
 
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

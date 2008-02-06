@@ -24,6 +24,7 @@ using System.Threading;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Hosting;
@@ -353,6 +354,12 @@ namespace IronPython.Runtime.Calls {
 
         internal Exception BadKeywordArgumentError(int count) {
             return RuntimeHelpers.TypeErrorForIncorrectArgumentCount(__name__, NormalArgumentCount, Defaults.Length, count, ExpandListPosition != -1, true);
+        }
+
+        internal static void SetRecursionLimit(int limit) {
+            if (limit < 0) throw PythonOps.ValueError("recursion limit must be positive");
+            PythonFunction.EnforceRecursion = (limit != Int32.MaxValue);
+            PythonFunction._MaximumDepth = limit;
         }
 
         #endregion

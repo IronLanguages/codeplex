@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using System.CodeDom.Compiler;
 
 namespace Microsoft.Scripting.Actions { 

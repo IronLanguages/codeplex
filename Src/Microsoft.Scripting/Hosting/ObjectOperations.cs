@@ -24,6 +24,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using System.Security.Permissions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
 

@@ -33,6 +33,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -171,7 +172,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("open")]
-        public static object Open(CodeContext context, string filename, int flag, int mode) {
+        public static object Open(CodeContext/*!*/ context, string filename, int flag, int mode) {
             try {
                 FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
 
@@ -180,7 +181,7 @@ namespace IronPython.Modules {
                 else if (fs.CanWrite) mode2 = "w";
                 else mode2 = "r";
 
-                return PythonFileManager.AddToStrongMapping(PythonFile.Create(fs, filename, mode2, false));
+                return PythonFileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2, false));
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -724,7 +725,7 @@ namespace IronPython.Modules {
             try {
                 FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
-                PythonFile res = PythonFile.Create(sw, sw.Name, "w+b");
+                PythonFile res = PythonFile.Create(context, sw, sw.Name, "w+b");
                 return res;
             } catch (Exception e) {
                 throw ToPythonException(e);
@@ -887,12 +888,12 @@ namespace IronPython.Modules {
             private Process _process;
 
             [PythonName("__new__")]
-            public static object Make(CodeContext context, string command, Process process, Stream stream, string mode) {
+            public static object Make(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
                 return new POpenFile(context, command, process, stream, mode);
             }
 
-            internal POpenFile(CodeContext context, string command, Process process, Stream stream, string mode) {
-                Initialize(stream, SystemState.Instance.DefaultEncoding, command, mode);
+            internal POpenFile(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
+                Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, command, mode);
                 this._process = process;
             }
 

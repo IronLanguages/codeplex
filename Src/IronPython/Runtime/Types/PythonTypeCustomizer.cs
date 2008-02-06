@@ -28,6 +28,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     class PythonTypeCustomizer : CoreReflectedTypeBuilder {
@@ -68,21 +69,13 @@ namespace IronPython.Runtime.Types {
             customizer.AddPythonProtocolMethods();
             customizer.AddRichEqualityProtocols();
             customizer.AddToStringProtocols();
-            customizer.AddModule();
+
             if (ScriptDomainManager.Options.PrivateBinding) {
                 customizer.AddPrivateMembers();
             }
 
             if (_sysTypes.ContainsKey(dt.UnderlyingSystemType)) {
                 customizer.HideMembers();
-            }
-        }
-
-        private void AddModule() {
-            string name;
-            if (PythonExtensionTypeAttribute._sysState != null && 
-                PythonExtensionTypeAttribute._sysState.BuiltinModuleNames.TryGetValue(Builder.UnfinishedType.UnderlyingSystemType, out name)) {
-                Builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(name));
             }
         }
 

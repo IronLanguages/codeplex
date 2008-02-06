@@ -285,13 +285,17 @@ def test_is_builtin():
     # there are a several differences between ironpython and cpython
     if is_cli or is_silverlight:
         AreEqual(imp.is_builtin("copy_reg"),1)
-        AreEqual(imp.is_builtin("sys"),0)
-        AreEqual(imp.is_builtin("__builtin__"),1)
     else:
         AreEqual(imp.is_builtin("copy_reg"),0)
-        AreEqual(imp.is_builtin("sys"),-1)
-        AreEqual(imp.is_builtin("__builtin__"),-1)
-        
+    
+    # supposedly you can't re-init these
+    AreEqual(imp.is_builtin("sys"), -1)
+    AreEqual(imp.is_builtin("__builtin__"), -1)       
+    AreEqual(imp.is_builtin("exceptions"), -1)       
+    
+    imp.init_builtin("sys")
+    imp.init_builtin("__builtin__")
+    imp.init_builtin("exceptions")
 
 @skip("win32")
 def test_sys_path_none_builtins():

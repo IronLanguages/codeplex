@@ -138,7 +138,7 @@ def test_subclassing():
     y.a = 1; AreEqual(1, y.a)    # 'a' is available
     y.b = 2; AreEqual(2, y.b)
     def f(): y.c = 3
-    #AssertError(AttributeError, f)  # bug 364423
+    #AssertError(AttributeError, f)  # bug 364438
 
     #
     # If a class defines a slot also defined in a base class, the instance variable 
