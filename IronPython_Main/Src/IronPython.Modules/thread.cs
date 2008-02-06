@@ -29,6 +29,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Hosting;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
@@ -210,9 +211,9 @@ namespace IronPython.Modules {
                 } catch (SystemExitException) {
                     // ignore and quit
                 } catch (Exception e) {
-                    PythonOps.Print("Unhandled exception on thread");
+                    PythonOps.Print(_context, "Unhandled exception on thread");
                     string result = _context.LanguageContext.FormatException(e);
-                    PythonOps.Print(result);
+                    PythonOps.Print(_context, result);
                 }
             }
         }

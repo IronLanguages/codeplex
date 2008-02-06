@@ -22,6 +22,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Runtime;
 
     public class TryStatement : Statement {
         private SourceLocation _header;
@@ -283,6 +284,7 @@ namespace IronPython.Compiler.Ast {
                         extracted.Variable,
                         Ast.Call(
                             AstGenerator.GetHelperMethod("SetCurrentException"),
+                            Ast.CodeContext(),
                             exception
                         )
                     )

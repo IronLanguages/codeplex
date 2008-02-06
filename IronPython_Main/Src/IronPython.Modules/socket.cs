@@ -38,6 +38,7 @@ using System.Net.Sockets;
 using System.Net.Security;
 using System.IO;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]

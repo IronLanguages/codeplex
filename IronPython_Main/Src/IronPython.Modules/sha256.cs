@@ -18,6 +18,7 @@ using System.Security.Cryptography;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;

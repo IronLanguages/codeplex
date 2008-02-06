@@ -21,6 +21,7 @@ using System.Text;
 using System.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using System.Runtime.InteropServices;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     public class BoundDispEvent {

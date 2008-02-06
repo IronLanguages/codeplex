@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonExtensionType(typeof(Assembly), typeof(PythonAssemblyOps))]
 namespace IronPython.Runtime.Types {

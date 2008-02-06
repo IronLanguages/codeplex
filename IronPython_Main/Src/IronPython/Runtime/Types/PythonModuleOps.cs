@@ -31,6 +31,7 @@ using IronPython.Compiler;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonExtensionTypeAttribute(typeof(Scope), typeof(PythonModuleOps))]
 namespace IronPython.Runtime.Types {
@@ -146,6 +147,10 @@ namespace IronPython.Runtime.Types {
                 dict[SymbolTable.StringToId(fi.Name)] = fi.GetValue(null);
             }
 
+            // if we're replacing an existing built-in function we need to first
+            // place a new one instead of just adding the pre-existing overloads back 
+            // in.
+            Dictionary<SymbolId, object> cleared = new Dictionary<SymbolId,object>();
             foreach (MethodInfo mi in type.GetMethods()) {
                 if (!mi.IsStatic) continue;
 
@@ -155,12 +160,13 @@ namespace IronPython.Runtime.Types {
 
                 SymbolId name = SymbolTable.StringToId(strName);
 
-                object val;
-                if (dict.TryGetValue(name, out val)) {
+                object val, dummy;
+                if (dict.TryGetValue(name, out val) && cleared.TryGetValue(name, out dummy)) {                    
                     BuiltinFunction bf = val as BuiltinFunction;
                     Debug.Assert(bf != null);
                     bf.AddMethod(mi);
                 } else {
+                    cleared[name] = null;
                     dict[name] = BuiltinFunction.MakeMethod(strName,
                         mi,
                         nt == NameType.PythonMethod ? FunctionType.Function | FunctionType.AlwaysVisible : FunctionType.Function);

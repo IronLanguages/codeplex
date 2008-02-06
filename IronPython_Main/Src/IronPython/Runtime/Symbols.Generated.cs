@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     public static partial class Symbols {

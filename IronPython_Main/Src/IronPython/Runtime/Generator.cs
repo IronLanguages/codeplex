@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;   
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
@@ -98,7 +99,7 @@ namespace IronPython.Runtime {
                 // Sample error message from CPython 2.5 looks like:
                 //     Exception __main__.MyError: MyError() in <generator object at 0x00D7F6E8> ignored
                 string message = string.Format("Exception {0} in {1} ignored\n", e.Message, this);
-                PythonOps.Write(SystemState.Instance.stderr, message);
+                PythonOps.Write(Context, PythonContext.GetContext(Context).SystemStandardError, message);
             }
         }
 #endif // !SILVERLIGHT
@@ -262,7 +263,7 @@ namespace IronPython.Runtime {
 
                 // This may invoke user code such as __init__, thus MakeException may throw. 
                 // Since this is invoked from the generator's body, the generator can catch this exception. 
-                Exception e = PythonOps.MakeException(throwableBackup, _value, _traceback);
+                Exception e = PythonOps.MakeException(Context, throwableBackup, _value, _traceback);
                 throw e;
             }
         }

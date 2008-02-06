@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -30,7 +31,7 @@ using IronPython.Runtime.Operations;
 namespace IronPythonTest {
     public class AttrInjectorTest {
         static AttrInjectorTest() {
-            Microsoft.Scripting.RuntimeHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
+            Microsoft.Scripting.Runtime.RuntimeHelpers.RegisterAssembly(Assembly.GetExecutingAssembly());
         }
 
         public static object LoadXml(string text) {

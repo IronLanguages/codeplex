@@ -25,6 +25,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("_codecs", typeof(IronPython.Modules.PythonCodecs))]
 namespace IronPython.Modules {
@@ -186,42 +187,42 @@ namespace IronPython.Modules {
         }
 
         [PythonName("decode")]
-        public static object Decode(CodeContext context, object obj) {
-            PythonTuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
+        public static object Decode(CodeContext/*!*/ context, object obj) {
+            PythonTuple t = Lookup(PythonContext.GetContext(context).GetDefaultEncodingName());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
-        public static object Decode(CodeContext context, object obj, string encoding) {
+        public static object Decode(CodeContext/*!*/ context, object obj, string encoding) {
             PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         [PythonName("decode")]
-        public static object Decode(CodeContext context, object obj, string encoding, string errors) {
+        public static object Decode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
             PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
         }
 
         [PythonName("encode")]
-        public static object Encode(CodeContext context, object obj) {
-            PythonTuple t = Lookup(SystemState.Instance.GetDefaultEncoding());
+        public static object Encode(CodeContext/*!*/ context, object obj) {
+            PythonTuple t = Lookup(PythonContext.GetContext(context).GetDefaultEncodingName());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
-        public static object Encode(CodeContext context, object obj, string encoding) {
+        public static object Encode(CodeContext/*!*/ context, object obj, string encoding) {
             PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         [PythonName("encode")]
-        public static object Encode(CodeContext context, object obj, string encoding, string errors) {
+        public static object Encode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
             PythonTuple t = Lookup(encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
@@ -347,7 +348,7 @@ namespace IronPython.Modules {
         #endregion
 
         [PythonName("raw_unicode_escape_decode")]
-        public static PythonTuple RawUnicodeEscapeDecode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
+        public static PythonTuple RawUnicodeEscapeDecode(CodeContext/*!*/ context, object input, [DefaultParameterValue("strict")]string errors) {
             return PythonTuple.MakeTuple(
                 StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)
@@ -355,7 +356,7 @@ namespace IronPython.Modules {
         }
 
         [PythonName("raw_unicode_escape_encode")]
-        public static PythonTuple RawUnicodeEscapeEncode(CodeContext context, object input, [DefaultParameterValue("strict")]string errors) {
+        public static PythonTuple RawUnicodeEscapeEncode(CodeContext/*!*/ context, object input, [DefaultParameterValue("strict")]string errors) {
             return PythonTuple.MakeTuple(
                 StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)

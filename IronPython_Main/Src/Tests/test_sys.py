@@ -14,7 +14,6 @@
 #####################################################################################
 
 from lib.assert_util import *
-skiptest("win32")
 
 # adding some negative test case coverage for the sys module; we currently don't implement
 # some methods---there is a CodePlex work item 1042 to track the real implementation of 
@@ -49,30 +48,37 @@ def test_assign_getframe():
         sys._getframe = val
         AreEqual(sys._getframe, val)
 
-def test_negative():
-	# api_version
-	AreEqual(sys.api_version, 'IronPython does not support the C APIs, the api_version is not supported')
-	try:
-		sys.api_version = 2
-	except NotImplementedError:
-		pass
-	else:
-		Assert(False, "Setting sys.api_version did not throw NotImplementedError---ERROR!")
-	# displayhook
-	AreEqual(sys.displayhook, 'IronPython does not support sys.displayhook')
-	try:
-		sys.displayhook = 2
-	except NotImplementedError:
-		pass
-	else:
-		Assert(False, "Setting sys.displayhook did not throw NotImplementedError---ERROR!")
-	# settrace
-	AssertError(NotImplementedError, sys.settrace, None)
-	# getrefcount
-	Assert(not hasattr(sys, 'getrefcount'))
+@skip("win32")  
+def test_api_version():
+    # api_version
+    AreEqual(sys.api_version, 0)
+
+@skip("win32")    
+def test_displayhook():    
+    # displayhook
+    AssertError(NotImplementedError, sys.displayhook, None)
+
+@skip("win32")  
+def test_settrace():
+    # settrace
+    AssertError(NotImplementedError, sys.settrace, None)
+
+@skip("win32")  
+def test_getrefcount():
+    # getrefcount
+    Assert(not hasattr(sys, 'getrefcount'))
+
+@skip("win32 silverlight")
+def test_version():
+    import re
+    #E.g., 2.5.0 (IronPython 2.0 Alpha (2.0.0.800) on .NET 2.0.50727.1433)
+    regex = "^\d\.\d\.\d \(IronPython \d\.\d(\.\d)? ((Alpha )|(Beta )|())\(\d\.\d\.\d\.\d{3,4}\) on \.NET \d(\.\d{1,5}){3}\)$"
+    Assert(re.match(regex, sys.version) != None)
 
 def test_winver():
-    Assert(hasattr(sys, 'winver'))
+    import re
+    #E.g., "2.5"
+    Assert(re.match("^\d\.\d$", sys.winver) != None)
 
 
 testDelGetFrame = "Test_Del_GetFrame" in sys.argv
@@ -81,6 +87,6 @@ if testDelGetFrame:
 else:
     run_test(__name__)
     # this is a destructive test, run it in separate instance of IronPython
-    if not is_silverlight:
+    if not is_silverlight and sys.platform!="win32":
         from lib.process_util import launch_ironpython_changing_extensions
         AreEqual(0, launch_ironpython_changing_extensions(__file__, [], [], ("Test_Del_GetFrame",)))

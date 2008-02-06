@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.CodeDom.Compiler;
 

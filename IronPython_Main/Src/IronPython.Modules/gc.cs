@@ -23,6 +23,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {

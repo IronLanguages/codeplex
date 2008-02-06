@@ -122,8 +122,8 @@ exceptionHierarchy = ExceptionInfo('BaseException', 'System.Exception', None, No
                                 ),
                             ),
                             ExceptionInfo('MemoryError', 'System.OutOfMemoryException', None, (), ()),
-                            ExceptionInfo('NameError', 'Microsoft.Scripting.UnboundNameException', None, (), (
-                                    ExceptionInfo('UnboundLocalError', 'Microsoft.Scripting.UnboundLocalException', None, (), ()),
+                            ExceptionInfo('NameError', 'Microsoft.Scripting.Runtime.UnboundNameException', None, (), (
+                                    ExceptionInfo('UnboundLocalError', 'Microsoft.Scripting.Runtime.UnboundLocalException', None, (), ()),
                                 ),
                             ),
                             ExceptionInfo('ReferenceError', 'IronPython.Runtime.Exceptions.ReferenceException', None, (), ()),

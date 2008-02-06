@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public class ExtensionPropertyTracker : PropertyTracker {

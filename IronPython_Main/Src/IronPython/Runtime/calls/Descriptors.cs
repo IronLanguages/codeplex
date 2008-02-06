@@ -21,6 +21,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Calls {
     public class staticmethod : PythonTypeSlot {

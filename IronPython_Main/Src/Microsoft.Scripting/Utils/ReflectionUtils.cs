@@ -19,6 +19,7 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Utils {
     public static class ReflectionUtils {

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Utils = Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;

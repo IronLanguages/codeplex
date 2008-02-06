@@ -25,7 +25,7 @@ using System.Security;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("IronPython.Modules")]
-[assembly: AssemblyCopyright("� Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("? Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -50,7 +50,7 @@ using System.Security;
 [assembly: SecurityTransparent]
 
 #if !SILVERLIGHT
-[assembly: AssemblyFileVersion("2.0.10128.01")]
+[assembly: AssemblyFileVersion("2.0.0.00")]
 [assembly: AssemblyInformationalVersion("2.0")]
 [assembly: AllowPartiallyTrustedCallers]
 #endif

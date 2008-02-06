@@ -27,6 +27,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {

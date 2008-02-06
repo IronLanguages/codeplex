@@ -13,6 +13,8 @@
  *
  * ***************************************************************************/
 
+using Microsoft.Scripting.Runtime;
+
 namespace Microsoft.Scripting.Ast {
     public class CodeBlockInvoker {
         private CodeBlock _block;

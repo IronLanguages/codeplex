@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
 using System.Runtime.InteropServices;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>

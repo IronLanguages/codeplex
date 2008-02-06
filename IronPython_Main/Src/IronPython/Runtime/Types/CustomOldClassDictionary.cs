@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

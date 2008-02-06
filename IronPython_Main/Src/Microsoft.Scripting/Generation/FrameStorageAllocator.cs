@@ -16,6 +16,7 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     class FrameStorageAllocator : StorageAllocator {

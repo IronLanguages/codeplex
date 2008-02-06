@@ -20,6 +20,7 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;

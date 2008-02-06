@@ -18,6 +18,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
     using Ast = MSAst.Ast;
+    using Microsoft.Scripting.Runtime;
 
     class Binary : Expression {
         private readonly Operator _op;

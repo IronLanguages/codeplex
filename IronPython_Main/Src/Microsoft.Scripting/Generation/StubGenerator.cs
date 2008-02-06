@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using System.Reflection.Emit;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     static class StubGenerator {

@@ -28,6 +28,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Hosting;
@@ -110,7 +111,7 @@ namespace IronPython.Runtime.Operations {
 
         
 
-        public static bool IsCallable(CodeContext context, object o) {
+        public static bool IsCallable(CodeContext/*!*/ context, object o) {
             // This tells if an object can be called, but does not make a claim about the parameter list.
             // In 1.x, we could check for certain interfaces like ICallable*, but those interfaces were deprecated
             // in favor of dynamic sites. 
@@ -185,7 +186,7 @@ namespace IronPython.Runtime.Operations {
             return StringRepr(DefaultContext.Default, o);
         }
 
-        public static string StringRepr(CodeContext context, object o) {
+        public static string StringRepr(CodeContext/*!*/ context, object o) {
             if (o == null) return "None";
 
             string s = o as string;
@@ -676,7 +677,7 @@ namespace IronPython.Runtime.Operations {
             return Compare(DefaultContext.Default, x, y);
         }
 
-        public static int Compare(CodeContext context, object x, object y) {
+        public static int Compare(CodeContext/*!*/ context, object x, object y) {
             if (x == y) return 0;
 
             return CompareSite.Invoke(x, y);
@@ -764,23 +765,23 @@ namespace IronPython.Runtime.Operations {
             return 1;
         }
 
-        public static object GreaterThanHelper(CodeContext context, object self, object other) {
+        public static object GreaterThanHelper(CodeContext/*!*/ context, object self, object other) {
             return InternalCompare(context, Operators.GreaterThan, self, other);
         }
 
-        public static object LessThanHelper(CodeContext context, object self, object other) {
+        public static object LessThanHelper(CodeContext/*!*/ context, object self, object other) {
             return InternalCompare(context, Operators.LessThan, self, other);
         }
 
-        public static object GreaterThanOrEqualHelper(CodeContext context, object self, object other) {
+        public static object GreaterThanOrEqualHelper(CodeContext/*!*/ context, object self, object other) {
             return InternalCompare(context, Operators.GreaterThanOrEqual, self, other);
         }
 
-        public static object LessThanOrEqualHelper(CodeContext context, object self, object other) {
+        public static object LessThanOrEqualHelper(CodeContext/*!*/ context, object self, object other) {
             return InternalCompare(context, Operators.LessThanOrEqual, self, other);
         }
 
-        public static object InternalCompare(CodeContext context, Operators op, object self, object other) {
+        public static object InternalCompare(CodeContext/*!*/ context, Operators op, object self, object other) {
             object ret;
             if (DynamicHelpers.GetPythonType(self).TryInvokeBinaryOperator(context, op, self, other, out ret))
                 return ret;
@@ -1106,7 +1107,7 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static object CallWithContext(CodeContext context, object func, params object[] args) {
+        public static object CallWithContext(CodeContext/*!*/ context, object func, params object[] args) {
             return PythonCalls.Call(func, args);
         }
 
@@ -1120,7 +1121,7 @@ namespace IronPython.Runtime.Operations {
         /// that supports calling with 'this'. If not, the 'this' object is dropped
         /// and a normal call is made.
         /// </summary>
-        public static object CallWithContextAndThis(CodeContext context, object func, object instance, params object[] args) {
+        public static object CallWithContextAndThis(CodeContext/*!*/ context, object func, object instance, params object[] args) {
             // drop the 'this' and make the call
             return CallWithContext(context, func, args);            
         }
@@ -1139,7 +1140,7 @@ namespace IronPython.Runtime.Operations {
             return dt;
         }
 
-        public static object CallWithArgsTupleAndContext(CodeContext context, object func, object[] args, object argsTuple) {
+        public static object CallWithArgsTupleAndContext(CodeContext/*!*/ context, object func, object[] args, object argsTuple) {
             PythonTuple tp = argsTuple as PythonTuple;
             if (tp != null) {
                 object[] nargs = new object[args.Length + tp.Count];
@@ -1156,7 +1157,7 @@ namespace IronPython.Runtime.Operations {
             return CallWithContext(context, func, allArgs.GetObjectArray());
         }
        
-        public static object CallWithArgsTupleAndKeywordDictAndContext(CodeContext context, object func, object[] args, string[] names, object argsTuple, object kwDict) {
+        public static object CallWithArgsTupleAndKeywordDictAndContext(CodeContext/*!*/ context, object func, object[] args, string[] names, object argsTuple, object kwDict) {
             IDictionary kws = kwDict as IDictionary;
             if (kws == null && kwDict != null) throw PythonOps.TypeError("argument after ** must be a dictionary");
 
@@ -1197,7 +1198,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static object CallWithKeywordArgs(CodeContext context, object func, object[] args, string[] names) {
+        public static object CallWithKeywordArgs(CodeContext/*!*/ context, object func, object[] args, string[] names) {
             return PythonCalls.CallWithKeywordArgs(func, args, names);
         }
 
@@ -1357,7 +1358,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static void SetAttr(CodeContext context, object o, SymbolId name, object value) {
+        public static void SetAttr(CodeContext/*!*/ context, object o, SymbolId name, object value) {
             DynamicSite<object, object, object> site;
             lock (_setAttrSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
@@ -1369,7 +1370,7 @@ namespace IronPython.Runtime.Operations {
             site.Invoke(context, o, value);
         }
 
-        public static bool TryGetBoundAttr(CodeContext context, object o, SymbolId name, out object ret) {
+        public static bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
             DynamicSite<object, object> site;
             lock (_tryGetMemSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
@@ -1382,7 +1383,7 @@ namespace IronPython.Runtime.Operations {
             return ret != OperationFailed.Value;
         }
 
-        public static void DeleteAttr(CodeContext context, object o, SymbolId name) {
+        public static void DeleteAttr(CodeContext/*!*/ context, object o, SymbolId name) {
             DynamicSite<object, object> site;
             lock (_deleteAttrSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
@@ -1394,7 +1395,7 @@ namespace IronPython.Runtime.Operations {
             site.Invoke(context, o);            
         }
 
-        public static bool HasAttr(CodeContext context, object o, SymbolId name) {
+        public static bool HasAttr(CodeContext/*!*/ context, object o, SymbolId name) {
             object dummy;
             try {
                 return TryGetBoundAttr(context, o, name, out dummy);
@@ -1403,7 +1404,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
         
-        public static object GetBoundAttr(CodeContext context, object o, SymbolId name) {
+        public static object GetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name) {
             object ret;
             if (!TryGetBoundAttr(context, o, name, out ret)) {
                 if (o is OldClass) {
@@ -1416,7 +1417,7 @@ namespace IronPython.Runtime.Operations {
             return ret;           
         }
 
-        public static void ObjectSetAttribute(CodeContext context, object o, SymbolId name, object value) {
+        public static void ObjectSetAttribute(CodeContext/*!*/ context, object o, SymbolId name, object value) {
             ICustomMembers ids = o as ICustomMembers;
 
             if (ids != null) {
@@ -1432,7 +1433,7 @@ namespace IronPython.Runtime.Operations {
                 throw AttributeErrorForMissingOrReadonly(context, DynamicHelpers.GetPythonType(o), name);
         }
 
-        public static void ObjectDeleteAttribute(CodeContext context, object o, SymbolId name) {
+        public static void ObjectDeleteAttribute(CodeContext/*!*/ context, object o, SymbolId name) {
             ICustomMembers ifca = o as ICustomMembers;
             if (ifca != null) {
                 try {
@@ -1449,7 +1450,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static object ObjectGetAttribute(CodeContext context, object o, SymbolId name) {
+        public static object ObjectGetAttribute(CodeContext/*!*/ context, object o, SymbolId name) {
             ICustomMembers ifca = o as ICustomMembers;
             if (ifca != null) {
                 return GetCustomMembers(context, ifca, name);
@@ -1463,7 +1464,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeErrorForMissingAttribute(DynamicHelpers.GetPythonType(o).Name, name);
         }
 
-        private static object GetCustomMembers(CodeContext context, ICustomMembers ifca, SymbolId name) {
+        private static object GetCustomMembers(CodeContext/*!*/ context, ICustomMembers ifca, SymbolId name) {
             object ret;
             if (ifca.TryGetBoundCustomMember(context, name, out ret)) return ret;
 
@@ -1474,7 +1475,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static Exception AttributeErrorForMissingOrReadonly(CodeContext context, PythonType dt, SymbolId name) {
+        public static Exception AttributeErrorForMissingOrReadonly(CodeContext/*!*/ context, PythonType dt, SymbolId name) {
             PythonTypeSlot dts;
             if (dt.TryResolveSlot(context, name, out dts)) {
                 throw PythonOps.AttributeErrorForReadonlyAttribute(PythonTypeOps.GetName(dt), name);
@@ -1492,7 +1493,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        public static IList<object> GetAttrNames(CodeContext context, object o) {
+        public static IList<object> GetAttrNames(CodeContext/*!*/ context, object o) {
             IMembersList memList = o as IMembersList;
 
             if (memList != null) {
@@ -1518,7 +1519,7 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        public static IDictionary<object, object> GetAttrDict(CodeContext context, object o) {
+        public static IDictionary<object, object> GetAttrDict(CodeContext/*!*/ context, object o) {
             ICustomMembers ids = o as ICustomMembers;
             if (ids != null) {
                 return ids.GetCustomMemberDictionary(context);
@@ -1602,22 +1603,22 @@ namespace IronPython.Runtime.Operations {
             return PythonCalls.Call(PythonOps.GetBoundAttr(DefaultContext.Default, target, name), args);
         }
 
-        public static object InvokeWithContext(CodeContext context, object target, SymbolId name, params object[] args) {
+        public static object InvokeWithContext(CodeContext/*!*/ context, object target, SymbolId name, params object[] args) {
             return PythonOps.CallWithContext(context, PythonOps.GetBoundAttr(context, target, name), args);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, out object ret) {
+        public static bool TryInvokeOperator(CodeContext/*!*/ context, Operators name, object target, out object ret) {
             return DynamicHelpers.GetPythonType(target).TryInvokeUnaryOperator(context, name, target, out ret);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object other, out object ret) {
+        public static bool TryInvokeOperator(CodeContext/*!*/ context, Operators name, object target, object other, out object ret) {
             return DynamicHelpers.GetPythonType(target).TryInvokeBinaryOperator(context, name, target, other, out ret);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        public static bool TryInvokeOperator(CodeContext context, Operators name, object target, object value1, object value2, out object ret) {
+        public static bool TryInvokeOperator(CodeContext/*!*/ context, Operators name, object target, object value1, object value2, out object ret) {
             return DynamicHelpers.GetPythonType(target).TryInvokeTernaryOperator(context, name, target, value1, value2, out ret);
         }
 
@@ -1636,7 +1637,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        public static object IsMappingType(CodeContext context, object o) {
+        public static object IsMappingType(CodeContext/*!*/ context, object o) {
             if (o is IDictionary || o is PythonDictionary || o is IDictionary<object, object> || o is IAttributesCollection) {
                 return RuntimeHelpers.True;
             }
@@ -1958,7 +1959,7 @@ namespace IronPython.Runtime.Operations {
             iwr.SetFinalizer(new WeakRefTracker(nif, nif));
         }
 
-        private static object FindMetaclass(CodeContext context, PythonTuple bases, IAttributesCollection dict) {
+        private static object FindMetaclass(CodeContext/*!*/ context, PythonTuple bases, IAttributesCollection dict) {
             // If dict['__metaclass__'] exists, it is used. 
             object ret;
             if (dict.TryGetValue(Symbols.MetaClass, out ret) && ret != null) return ret;
@@ -1977,7 +1978,7 @@ namespace IronPython.Runtime.Operations {
             return TypeCache.OldInstance;
         }
 
-        public static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, Delegate body) {
+        public static object MakeClass(CodeContext/*!*/ context, string name, object[] bases, string selfNames, Delegate body) {
             CodeContext bodyContext;
             CallTarget0 target;
             CallTargetWithContext0 targetWithContext;
@@ -2135,11 +2136,13 @@ namespace IronPython.Runtime.Operations {
 
         #region Standard I/O support
 
-        public static void Write(object f, string text) {
-            SystemState state = SystemState.Instance;
-
-            if (f == null) f = state.stdout;
-            if (f == null || f == Uninitialized.Instance) throw PythonOps.RuntimeError("lost sys.std_out");
+        public static void Write(CodeContext/*!*/ context, object f, string text) {
+            if (f == null) {
+                f = PythonContext.GetContext(context).SystemStandardOut;
+            }
+            if (f == null || f == Uninitialized.Instance) {
+                throw PythonOps.RuntimeError("lost sys.std_out");
+            }
 
             _writeSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
         }
@@ -2149,10 +2152,10 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.Invoke(f, Symbols.ConsoleReadLine);
         }
 
-        public static void WriteSoftspace(object f) {
+        public static void WriteSoftspace(CodeContext/*!*/ context, object f) {
             if (CheckSoftspace(f)) {
                 SetSoftspace(f, RuntimeHelpers.False);
-                Write(f, " ");
+                Write(context, f, " ");
             }
         }
 
@@ -2167,26 +2170,22 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Must stay here for now because libs depend on it.
-        public static void Print(object o) {
-            SystemState state = SystemState.Instance;
-
-            PrintWithDest(state.stdout, o);
+        public static void Print(CodeContext/*!*/ context, object o) {
+            PrintWithDest(context, PythonContext.GetContext(context).SystemStandardOut, o);
         }
 
-        public static void PrintNoNewline(object o) {
-            SystemState state = SystemState.Instance;
-
-            PrintWithDestNoNewline(state.stdout, o);
+        public static void PrintNoNewline(CodeContext/*!*/ context, object o) {
+            PrintWithDestNoNewline(context, PythonContext.GetContext(context).SystemStandardOut, o);
         }
 
-        public static void PrintWithDest(object dest, object o) {
-            PrintWithDestNoNewline(dest, o);
-            Write(dest, "\n");
+        public static void PrintWithDest(CodeContext/*!*/ context, object dest, object o) {
+            PrintWithDestNoNewline(context, dest, o);
+            Write(context, dest, "\n");
         }
 
-        public static void PrintWithDestNoNewline(object dest, object o) {
-            WriteSoftspace(dest);
-            Write(dest, o == null ? "None" : ToString(o));
+        public static void PrintWithDestNoNewline(CodeContext/*!*/ context, object dest, object o) {
+            WriteSoftspace(context, dest);
+            Write(context, dest, o == null ? "None" : ToString(o));
         }
 
         public static object ReadLineFromSrc(object src) {
@@ -2196,17 +2195,16 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Prints newline into default standard output
         /// </summary>
-        public static void PrintNewline() {
-            SystemState state = SystemState.Instance;
-            PrintNewlineWithDest(state.stdout);
+        public static void PrintNewline(CodeContext/*!*/ context) {
+            PrintNewlineWithDest(context, PythonContext.GetContext(context).SystemStandardOut);
         }
 
         /// <summary>
         /// Prints newline into specified destination. Sets softspace property to false.
         /// </summary>
         /// <param name="dest"></param>
-        public static void PrintNewlineWithDest(object dest) {
-            PythonOps.Write(dest, "\n");
+        public static void PrintNewlineWithDest(CodeContext/*!*/ context, object dest) {
+            PythonOps.Write(context, dest, "\n");
             PythonOps.SetSoftspace(dest, RuntimeHelpers.False);
         }
 
@@ -2214,8 +2212,8 @@ namespace IronPython.Runtime.Operations {
         /// Prints value into default standard output with Python comma semantics.
         /// </summary>
         /// <param name="o"></param>
-        public static void PrintComma(object o) {
-            PrintCommaWithDest(SystemState.Instance.stdout, o);
+        public static void PrintComma(CodeContext/*!*/ context, object o) {
+            PrintCommaWithDest(context, PythonContext.GetContext(context).SystemStandardOut, o);
         }
 
         /// <summary>
@@ -2223,11 +2221,11 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="dest"></param>
         /// <param name="o"></param>
-        public static void PrintCommaWithDest(object dest, object o) {
-            PythonOps.WriteSoftspace(dest);
+        public static void PrintCommaWithDest(CodeContext/*!*/ context, object dest, object o) {
+            PythonOps.WriteSoftspace(context, dest);
             string s = o == null ? "None" : PythonOps.ToString(o);
 
-            PythonOps.Write(dest, s);
+            PythonOps.Write(context, dest, s);
             PythonOps.SetSoftspace(dest, !s.EndsWith("\n"));
         }        
 
@@ -2237,10 +2235,10 @@ namespace IronPython.Runtime.Operations {
         /// </summary>
         /// <param name="context"></param>
         /// <param name="value"></param>
-        public static void PrintExpressionValue(object value) {
+        public static void PrintExpressionValue(CodeContext/*!*/ context, object value) {
             if (value != null) {
-                Print(PythonOps.StringRepr(value));
-                SystemState.Instance.BuiltinModuleInstance.SetMemberAfter("_", value);
+                Print(context, PythonOps.StringRepr(value));
+                PythonContext.GetContext(context).BuiltinModuleInstance.SetMemberAfter("_", value);
             }
         }
 
@@ -2253,7 +2251,7 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// import spam.eggs
         /// </summary>
-        public static object ImportTop(CodeContext context, string fullName) {
+        public static object ImportTop(CodeContext/*!*/ context, string fullName) {
             return PythonContext.GetImporter(context).Import(context, fullName, null);
         }
 
@@ -2265,7 +2263,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="context"></param>
         /// <param name="fullName"></param>
         /// <returns></returns>
-        public static object ImportBottom(CodeContext context, string fullName) {
+        public static object ImportBottom(CodeContext/*!*/ context, string fullName) {
             object module = PythonContext.GetImporter(context).Import(context, fullName, null);
 
             if (fullName.IndexOf('.') >= 0) {
@@ -2284,7 +2282,7 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// from spam import eggs1, eggs2 
         /// </summary>
-        public static object ImportWithNames(CodeContext context, string fullName, string[] names) {
+        public static object ImportWithNames(CodeContext/*!*/ context, string fullName, string[] names) {
             return PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple(names));
         }
 
@@ -2296,7 +2294,7 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// Called repeatedly for all elements being imported (a, b, c, d above)
         /// </summary>
-        public static object ImportFrom(CodeContext context, object module, string name) {
+        public static object ImportFrom(CodeContext/*!*/ context, object module, string name) {
             return PythonContext.GetImporter(context).ImportFrom(context, module, name);
         }
 
@@ -2349,7 +2347,7 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// exec code
         /// </summary>
-        public static void UnqualifiedExec(CodeContext context, object code) {
+        public static void UnqualifiedExec(CodeContext/*!*/ context, object code) {
             IAttributesCollection locals = null;
             IAttributesCollection globals = null;
 
@@ -2380,7 +2378,7 @@ namespace IronPython.Runtime.Operations {
         /// 
         /// exec code in globals [, locals ]
         /// </summary>
-        public static void QualifiedExec(CodeContext context, object code, IAttributesCollection globals, object locals) {
+        public static void QualifiedExec(CodeContext/*!*/ context, object code, IAttributesCollection globals, object locals) {
             PythonFile pf;
             Stream cs;
 
@@ -2432,12 +2430,12 @@ namespace IronPython.Runtime.Operations {
             }
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
-                globals[Symbols.Builtins] = SystemState.Instance.modules["__builtin__"];
+                globals[Symbols.Builtins] = PythonContext.GetContext(context).SystemStateModules["__builtin__"];
             }
 
             IAttributesCollection attrLocals = Builtin.GetAttrLocals(context, locals);
 
-            Microsoft.Scripting.Scope scope = new Microsoft.Scripting.Scope(context.LanguageContext, new Microsoft.Scripting.Scope(context.LanguageContext, globals), attrLocals);
+            Scope scope = new Scope(context.LanguageContext, new Scope(context.LanguageContext, globals), attrLocals);
 
             fc.Call(new CodeContext(scope, context.LanguageContext, ((PythonModule)context.ModuleContext).Clone()), scope, tryEvaluate);
         }
@@ -2481,12 +2479,12 @@ namespace IronPython.Runtime.Operations {
         //   }
 
         // Called at the start of the except handlers to set the current exception. 
-        public static object SetCurrentException(Exception clrException) {
+        public static object SetCurrentException(CodeContext/*!*/ context, Exception clrException) {
             Assert.NotNull(clrException);
 
             ExceptionHelpers.AssociateDynamicStackFrames(clrException);
             RawException = clrException;
-            GetExceptionInfo(); // force update of non-thread static exception info...
+            GetExceptionInfo(context); // force update of non-thread static exception info...
             return PythonExceptions.ToPython(clrException);
         }
 
@@ -2597,8 +2595,8 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Get an exception tuple for the "current" exception. This is used for sys.exc_info()
         /// </summary>
-        public static PythonTuple GetExceptionInfo() {
-            return GetExceptionInfoLocal(RawException);
+        public static PythonTuple GetExceptionInfo(CodeContext/*!*/ context) {
+            return GetExceptionInfoLocal(context, RawException);
         }
 
         /// <summary>
@@ -2608,7 +2606,7 @@ namespace IronPython.Runtime.Operations {
         /// <returns>a tuple of (type, value, traceback)</returns>
         /// <remarks>This is called directly by the With statement so that it can get an exception tuple
         /// in its own private except handler without disturbing the thread-wide sys.exc_info(). </remarks>
-        public static PythonTuple GetExceptionInfoLocal(Exception ex) {
+        public static PythonTuple GetExceptionInfoLocal(CodeContext/*!*/ context, Exception ex) {
             if (ex == null) {
                 return PythonTuple.MakeTuple(null, null, null);
             }
@@ -2616,13 +2614,14 @@ namespace IronPython.Runtime.Operations {
             object pyExcep = PythonExceptions.ToPython(ex);
 
             TraceBack tb = CreateTraceBack(ex);
-            SystemState.Instance.ExceptionTraceBack = tb;
+            PythonContext pc =PythonContext.GetContext(context);
+            pc.SystemExceptionTraceBack = tb;
 
             StringException se = pyExcep as StringException;
             if (se == null) {
-                object excType = PythonOps.GetBoundAttr(DefaultContext.Default, pyExcep, Symbols.Class);
-                SystemState.Instance.ExceptionType = excType;
-                SystemState.Instance.ExceptionValue = pyExcep;
+                object excType = PythonOps.GetBoundAttr(context, pyExcep, Symbols.Class);
+                pc.SystemExceptionType = excType;
+                pc.SystemExceptionValue = pyExcep;
 
                 return PythonTuple.MakeTuple(
                     excType,
@@ -2633,8 +2632,8 @@ namespace IronPython.Runtime.Operations {
             // string exceptions are special...  there tuple looks
             // like string, argument, traceback instead of
             //      type,   instance, traceback
-            SystemState.Instance.ExceptionType = pyExcep;
-            SystemState.Instance.ExceptionValue = se.Value;
+            pc.SystemExceptionType = pyExcep;
+            pc.SystemExceptionValue = se.Value;
 
             return PythonTuple.MakeTuple(
                 pyExcep,
@@ -2661,12 +2660,12 @@ namespace IronPython.Runtime.Operations {
         /// If type is a type then value can either be an instance of type,
         /// a Tuple, or a single value.  This case is handled by EC.CreateThrowable.
         /// </summary>
-        public static Exception MakeException(object type, object value, object traceback) {
+        public static Exception MakeException(CodeContext/*!*/ context, object type, object value, object traceback) {
             Exception throwable;
 
             if (type == null && value == null && traceback == null) {
                 // rethrow
-                PythonTuple t = GetExceptionInfo();
+                PythonTuple t = GetExceptionInfo(context);
                 type = t[0];
                 value = t[1];
                 traceback = t[2];
@@ -2871,12 +2870,12 @@ namespace IronPython.Runtime.Operations {
                 CompilerHelpers.MakeRepeatedArray<object>(Uninitialized.Instance, Tuple.GetSize(type)));
         }
 
-        public static bool IsClsVisible(CodeContext context) {
+        public static bool IsClsVisible(CodeContext/*!*/ context) {
             PythonModule pmc = context.ModuleContext as PythonModule;
             return pmc == null || pmc.ShowCls;
         }
 
-        public static object GetInitMember(CodeContext context, PythonType type, object instance) {
+        public static object GetInitMember(CodeContext/*!*/ context, PythonType type, object instance) {
             object value;
             bool res = type.TryGetNonCustomBoundMember(context, instance, Symbols.Init, out value);
             Debug.Assert(res);
@@ -2884,7 +2883,7 @@ namespace IronPython.Runtime.Operations {
             return value;
         }
 
-        public static object GetMixedMember(CodeContext context, PythonType type, object instance, SymbolId name) {
+        public static object GetMixedMember(CodeContext/*!*/ context, PythonType type, object instance, SymbolId name) {
             foreach (PythonType t in type.ResolutionOrder) {
                 if (Mro.IsOldStyle(t)) {
                     OldClass oc = (OldClass)ToPythonType(t);
@@ -3120,19 +3119,19 @@ namespace IronPython.Runtime.Operations {
                 
         #endregion
 
-        public static bool SlotTryGetBoundValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
+        public static bool SlotTryGetBoundValue(CodeContext/*!*/ context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
             return slot.TryGetBoundValue(context, instance, owner, out value);
         }
 
-        public static bool SlotTryGetValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
+        public static bool SlotTryGetValue(CodeContext/*!*/ context, PythonTypeSlot slot, object instance, PythonType owner, out object value) {
             return slot.TryGetValue(context, instance, owner, out value);
         }
 
-        public static bool SlotTrySetValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner, object value) {
+        public static bool SlotTrySetValue(CodeContext/*!*/ context, PythonTypeSlot slot, object instance, PythonType owner, object value) {
             return slot.TrySetValue(context, instance, owner, value);
         }
 
-        public static bool SlotTryDeleteValue(CodeContext context, PythonTypeSlot slot, object instance, PythonType owner) {
+        public static bool SlotTryDeleteValue(CodeContext/*!*/ context, PythonTypeSlot slot, object instance, PythonType owner) {
             return slot.TryDeleteValue(context, instance, owner);
         }
 
@@ -3160,7 +3159,7 @@ namespace IronPython.Runtime.Operations {
             return type.HasGetAttribute;
         }
 
-        public static bool TryResolveTypeSlot(CodeContext context, PythonType type, SymbolId name, out PythonTypeSlot slot) {
+        public static bool TryResolveTypeSlot(CodeContext/*!*/ context, PythonType type, SymbolId name, out PythonTypeSlot slot) {
             return type.TryResolveSlot(context, name, out slot);
         }
 
@@ -3182,7 +3181,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Function helpers
 
-        public static PythonFunction MakeFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults,
+        public static PythonFunction MakeFunction(CodeContext/*!*/ context, string name, Delegate target, string[] argNames, object[] defaults,
             FunctionAttributes attributes, string docString, int lineNumber, string fileName) {
             PythonFunction ret = new PythonFunction(context, name, target, argNames, defaults, attributes);
             if (docString != null) ret.__doc__ = docString;

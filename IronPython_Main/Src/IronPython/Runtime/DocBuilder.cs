@@ -29,6 +29,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     static class DocBuilder {

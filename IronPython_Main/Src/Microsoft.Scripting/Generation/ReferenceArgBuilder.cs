@@ -19,6 +19,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;

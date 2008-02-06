@@ -19,6 +19,7 @@ using System.Collections.ObjectModel;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Ast {

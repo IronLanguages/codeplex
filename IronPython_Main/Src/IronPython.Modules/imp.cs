@@ -30,6 +30,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
 namespace IronPython.Modules {
@@ -67,7 +68,7 @@ namespace IronPython.Modules {
             if (path == null) {
                 return FindBuiltinOrSysPath(context, name);
             } else {
-                return FindModulePath(name, path);
+                return FindModulePath(context, name, path);
             }
         }
 
@@ -83,7 +84,7 @@ namespace IronPython.Modules {
             PythonContext pythonContext = PythonContext.GetContext(context);
 
             // already loaded? do reload()
-            PythonModule module = pythonContext.SystemState.GetModuleByName(name);
+            PythonModule module = pythonContext.GetModuleByName(name);
             if (module != null) {
                 pythonContext.Importer.ReloadModule(module.Scope);
                 return module.Scope;
@@ -157,7 +158,15 @@ namespace IronPython.Modules {
         public static int IsBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("is_builtin() argument 1 must be string, not None");
             Type ty;
-            if (PythonContext.GetContext(context).SystemState.Builtins.TryGetValue(name, out ty)) {
+            if (PythonContext.Builtins.TryGetValue(name, out ty)) {
+                if (ty.Assembly == typeof(PythonContext).Assembly) {
+                    // supposedly these can't be re-initialized and return -1 to
+                    // indicate that here, but CPython does allow passing them
+                    // to init_builtin.
+                    return -1;
+                }
+
+                
                 return 1;
             }
             return 0;
@@ -200,7 +209,7 @@ namespace IronPython.Modules {
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
             PythonContext pythonContext = PythonContext.GetContext(context);
-            SourceUnit codeUnit = pythonContext.TryGetSourceFileUnit(pathname, pythonContext.SystemState.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit codeUnit = pythonContext.TryGetSourceFileUnit(pathname, pythonContext.DefaultEncoding, SourceCodeKind.File);
             return pythonContext.CompileAndInitializeModule(name, pathname, codeUnit);
         }
 
@@ -216,14 +225,14 @@ namespace IronPython.Modules {
         #region Implementation
 
         private static PythonTuple FindBuiltinOrSysPath(CodeContext/*!*/ context, string/*!*/ name) {
-            List sysPath = SystemState.Instance.path;
-            if (sysPath == null) {
+            List sysPath;
+            if (!PythonContext.GetContext(context).TryGetSystemPath(out sysPath)) {
                 throw PythonOps.ImportError("sys.path must be a list of directory names");
             }
             return FindModuleBuiltinOrPath(context, name, sysPath);
         }
 
-        private static PythonTuple FindModulePath(string name, List path) {
+        private static PythonTuple FindModulePath(CodeContext/*!*/ context, string name, List path) {
             Debug.Assert(path != null);
 
             if (name == null) {
@@ -245,7 +254,7 @@ namespace IronPython.Modules {
                 string fileName = pathName + ".py";
                 if (File.Exists(fileName)) {
                     FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    PythonFile pf = PythonFile.Create(fs, fileName, "U");
+                    PythonFile pf = PythonFile.Create(context, fs, fileName, "U");
                     return PythonTuple.MakeTuple(pf, fileName, PythonTuple.MakeTuple(".py", "U", PythonSource));
                 }
             }
@@ -253,18 +262,18 @@ namespace IronPython.Modules {
             throw PythonOps.ImportError("No module named {0}", name);
         }
 
-        private static PythonTuple FindModuleBuiltinOrPath(CodeContext context, string name, List path) {
+        private static PythonTuple FindModuleBuiltinOrPath(CodeContext/*!*/ context, string name, List path) {
             if (name.Equals("sys")) return BuiltinModuleTuple(name);
             if (name.Equals("clr")) {
                 context.ModuleContext.ShowCls = true;
                 return BuiltinModuleTuple(name);
             }
             Type ty;
-            if (SystemState.Instance.Builtins.TryGetValue(name, out ty)) {
+            if (PythonContext.Builtins.TryGetValue(name, out ty)) {
                 return BuiltinModuleTuple(name);
             }
 
-            return FindModulePath(name, path);
+            return FindModulePath(context, name, path);
         }
 
         private static PythonTuple BuiltinModuleTuple(string name) {
@@ -281,7 +290,7 @@ namespace IronPython.Modules {
             
             string initPath = Path.Combine(path, "__init__.py");
             
-            SourceUnit codeUnit = context.CreateFileUnit(initPath, context.SystemState.DefaultEncoding);
+            SourceUnit codeUnit = context.CreateFileUnit(initPath, context.DefaultEncoding);
             return context.CompileAndInitializeModule(moduleName, initPath, codeUnit).Scope;
         }
 #endif

@@ -21,6 +21,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;

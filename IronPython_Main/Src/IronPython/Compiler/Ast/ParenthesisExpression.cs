@@ -16,6 +16,7 @@
 using System;
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Compiler.Ast {
 

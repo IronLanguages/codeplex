@@ -32,9 +32,9 @@ namespace IronPython.Compiler.Ast {
         private readonly bool _isModule;
         private readonly bool _trueDivision;
         private readonly bool _printExpressions;
-
+        private readonly bool _withStatement;
         private PythonVariable _docVariable;
-
+        private MSAst.CodeBlock _block;
         /// <summary>
         /// The globals that free variables in the functions bind to,
         /// then need to be separated into their own dictionary so that
@@ -42,7 +42,15 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         private Dictionary<SymbolId, PythonVariable> _globals;
 
-        private MSAst.CodeBlock _block;
+        public PythonAst(Statement body, bool isModule, bool trueDivision, bool withStatement, bool printExpressions) {
+            Contract.RequiresNotNull(body, "body");
+
+            _body = body;
+            _isModule = isModule;
+            _trueDivision = trueDivision;
+            _printExpressions = printExpressions;
+            _withStatement = withStatement;
+        }
 
         /// <summary>
         /// True division is enabled in this AST.
@@ -52,21 +60,21 @@ namespace IronPython.Compiler.Ast {
         }
 
         /// <summary>
+        /// True if the with statement is enabled in this AST.
+        /// </summary>
+        public bool AllowWithStatement {
+            get {
+                return _withStatement;
+            }
+        }
+
+        /// <summary>
         /// Interactive code: expression statements print their value.
         /// </summary>
         public bool PrintExpressions {
             get { return _printExpressions; }
         }
-
-        public PythonAst(Statement body, bool isModule, bool trueDivision, bool printExpressions) {
-            Contract.RequiresNotNull(body, "body");
-
-            _body = body;
-            _isModule = isModule;
-            _trueDivision = trueDivision;
-            _printExpressions = printExpressions;
-        }
-
+        
         public Statement Body {
             get { return _body; }
         }

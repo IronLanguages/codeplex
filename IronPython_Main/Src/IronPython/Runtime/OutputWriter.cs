@@ -35,7 +35,7 @@ namespace IronPython.Runtime {
 
         public object Sink {
             get {
-                return (_isErrorOutput) ? SystemState.Instance.stderr : SystemState.Instance.stdout;
+                return (_isErrorOutput) ? _context.SystemStandardError : _context.SystemStandardOut;
             }
         }
 
@@ -47,10 +47,11 @@ namespace IronPython.Runtime {
         }
 
         public override void Write(string value) {
+            // the context arg is only used to get stdout if it's not passed in
             try {
-                PythonOps.PrintWithDestNoNewline(Sink, value);
+                PythonOps.PrintWithDestNoNewline(DefaultContext.Default, Sink, value);
             } catch (Exception e) {
-                PythonOps.Print(_context.FormatException(e));
+                PythonOps.PrintWithDest(DefaultContext.Default, _context.SystemStandardOut, _context.FormatException(e));
             }
         }
 

@@ -20,6 +20,7 @@ using System.Runtime.CompilerServices;
 
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonType("buffer")]

@@ -20,6 +20,7 @@ using System.Reflection;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     /// <summary>

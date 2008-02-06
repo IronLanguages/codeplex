@@ -24,6 +24,7 @@ using Microsoft.Scripting.Math;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("operator", typeof(IronPython.Modules.PythonOperator))]
 namespace IronPython.Modules {

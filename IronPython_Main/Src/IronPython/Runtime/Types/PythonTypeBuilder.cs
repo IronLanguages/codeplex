@@ -18,6 +18,7 @@ using System.Text;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime.Types {

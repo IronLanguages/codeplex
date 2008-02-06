@@ -341,7 +341,7 @@ namespace Microsoft.Scripting.Shell {
                 string code = b.ToString();
 
 
-                SourceCodeProperties props = _engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode).GetCodeProperties(); 
+                SourceCodeProperties props = _engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode).GetCodeProperties(_module); 
 
                 if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {
                     return props != SourceCodeProperties.IsEmpty ? code : null;

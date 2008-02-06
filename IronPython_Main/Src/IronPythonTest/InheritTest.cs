@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPythonTest {
 
@@ -852,30 +853,30 @@ namespace IronPythonTest {
     }
 
     public class StrangeOverrides {
-        public virtual object SomeMethodWithContext(Microsoft.Scripting.CodeContext context, object arg) {
+        public virtual object SomeMethodWithContext(CodeContext context, object arg) {
             Debug.Assert(this != null && this is StrangeOverrides);
             return arg;
         }
 
-        public virtual object ParamsMethodWithContext(Microsoft.Scripting.CodeContext context, params object[] args) {
+        public virtual object ParamsMethodWithContext(CodeContext context, params object[] args) {
             Debug.Assert(this != null && this is StrangeOverrides);
             return args;
         }
 
-        public virtual object ParamsIntMethodWithContext(Microsoft.Scripting.CodeContext context, params int[] args) {
+        public virtual object ParamsIntMethodWithContext(CodeContext context, params int[] args) {
             Debug.Assert(this != null && this is StrangeOverrides);
             return args;
         }
 
-        public object CallWithContext(Microsoft.Scripting.CodeContext context, object arg) {
+        public object CallWithContext(CodeContext context, object arg) {
             return SomeMethodWithContext(context, arg);
         }
 
-        public object CallParamsWithContext(Microsoft.Scripting.CodeContext context, params object[] arg) {
+        public object CallParamsWithContext(CodeContext context, params object[] arg) {
             return ParamsMethodWithContext(context, arg);
         }
 
-        public object CallIntParamsWithContext(Microsoft.Scripting.CodeContext  context, params int[] arg) {
+        public object CallIntParamsWithContext(CodeContext  context, params int[] arg) {
             return ParamsIntMethodWithContext(context, arg);
         }
     }

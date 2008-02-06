@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

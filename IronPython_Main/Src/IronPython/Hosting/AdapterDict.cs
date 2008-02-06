@@ -18,6 +18,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -309,6 +310,22 @@ namespace IronPython.Hosting {
             if (TryGetObjectValue(item.Key, out value) && value == item.Value)
                 return true;
             return false;
+        }
+
+        public void CopyTo(Array/*!*/ array, int index) {
+            throw new NotImplementedException("The method or operation is not implemented.");
+        }
+
+        public bool IsSynchronized {
+            get {
+                return false;
+            }
+        }
+
+        public object/*!*/ SyncRoot {
+            get {
+                return this;
+            }
         }
 
         public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {

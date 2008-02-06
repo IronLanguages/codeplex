@@ -22,6 +22,7 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("xrange")]

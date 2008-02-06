@@ -17,7 +17,7 @@
 from lib.assert_util import *
 skiptest("silverlight")
 
-add_clr_assemblies("baseclass", "typesamples")
+add_clr_assemblies("baseclasscs", "typesamples")
 
 from Merlin.Testing import *
 from Merlin.Testing.BaseClass import *

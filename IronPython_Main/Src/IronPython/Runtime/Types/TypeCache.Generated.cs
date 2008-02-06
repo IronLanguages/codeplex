@@ -24,6 +24,7 @@ using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     public static class TypeCache {
@@ -42,7 +43,6 @@ namespace IronPython.Runtime.Types {
         private static PythonType setcollection;
         private static PythonType pythontype;
         private static PythonType str;
-        private static PythonType systemstate;
         private static PythonType pythontuple;
         private static PythonType weakreference;
         private static PythonType list;
@@ -143,13 +143,6 @@ namespace IronPython.Runtime.Types {
             get {
                 if (str == null) str = DynamicHelpers.GetPythonTypeFromType(typeof(String));
                 return str;
-            }
-        }
-
-        public static PythonType SystemState {
-            get {
-                if (systemstate == null) systemstate = DynamicHelpers.GetPythonTypeFromType(typeof(SystemState));
-                return systemstate;
             }
         }
 

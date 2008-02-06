@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     using Ast = Microsoft.Scripting.Ast.Ast;

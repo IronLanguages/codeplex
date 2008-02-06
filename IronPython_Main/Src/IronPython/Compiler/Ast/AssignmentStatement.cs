@@ -24,6 +24,7 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Runtime;
 
     public class AssignmentStatement : Statement {
         // _left.Length is 1 for simple assignments like "x = 1"

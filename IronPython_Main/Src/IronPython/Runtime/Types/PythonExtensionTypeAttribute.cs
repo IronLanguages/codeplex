@@ -22,6 +22,7 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;
@@ -38,7 +39,6 @@ namespace IronPython.Runtime.Types {
         private static Dictionary<OperatorMapping, SymbolId> _reverseOperatorTable;
 
         private static ContextId _Context = DefaultContext.Id;
-        internal static SystemState _sysState;  // HACK: we need access to SystemState before it's done initing to get module names
 
         static PythonExtensionTypeAttribute() {
             InitializeOperatorTable();
@@ -74,18 +74,6 @@ namespace IronPython.Runtime.Types {
             PythonTypeContext ctx = new PythonTypeContext();
             ctx.IsPythonType = true;
             _type.SetContextTag(DefaultContext.Id, ctx);
-
-            string name;
-            PythonTypeBuilder.GetBuilder(_type).AddInitializer(delegate(PythonTypeBuilder builder) {
-                Type t = _type.UnderlyingSystemType;
-                while (t != null) {
-                    if (_sysState != null && _sysState.BuiltinModuleNames.TryGetValue(t, out name)) {
-                        builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(name));
-                        break;
-                    }
-                    t = t.DeclaringType;
-                }
-            });
         }
 
         internal ExtensionNameTransformer Transformer {

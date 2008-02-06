@@ -24,6 +24,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
@@ -78,7 +79,23 @@ namespace IronPython.Runtime.Operations {
             ICodeFormattable icf = o as ICodeFormattable;
             if (icf != null) return icf.ToCodeString(DefaultContext.Default);
 
-            return __repr__(o);
+            PythonType ut = DynamicHelpers.GetPythonType(o);
+            PythonTypeSlot dts;
+            object ret;
+            if (ut.TryResolveSlot(DefaultContext.Default, Symbols.Repr, out dts) &&
+                dts.TryGetValue(DefaultContext.Default, o, ut, out ret)) {
+
+                string strRet;
+                if (ret != null && Converter.TryConvertToString(PythonCalls.Call(ret), out strRet)) {
+                    return strRet;
+                }
+
+                throw PythonOps.TypeError("__repr__ returned non-string type ({0})", DynamicHelpers.GetPythonType(ret).Name);
+            }
+
+            // unreachable, all objects have __repr__
+            Debug.Assert(false);
+            throw new InvalidOperationException();
         }
 
         [SpecialName]

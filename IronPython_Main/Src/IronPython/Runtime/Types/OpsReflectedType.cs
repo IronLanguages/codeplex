@@ -21,6 +21,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Compiler;
 using IronPython.Runtime.Calls;

@@ -19,6 +19,7 @@ using Microsoft.Scripting;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 // This generated code is updated by the generate_exceptions.py script.
 namespace IronPython.Runtime.Exceptions {
@@ -408,7 +409,7 @@ namespace IronPython.Runtime.Exceptions {
             if (clrException is IronPython.Runtime.Exceptions.PendingDeprecationWarningException) return new BaseException(PendingDeprecationWarning);
             if (clrException is IronPython.Runtime.Exceptions.RuntimeWarningException) return new BaseException(RuntimeWarning);
             if (clrException is IronPython.Runtime.Exceptions.SyntaxWarningException) return new BaseException(SyntaxWarning);
-            if (clrException is Microsoft.Scripting.UnboundLocalException) return new BaseException(UnboundLocalError);
+            if (clrException is Microsoft.Scripting.Runtime.UnboundLocalException) return new BaseException(UnboundLocalError);
             if (clrException is IronPython.Runtime.Exceptions.UnicodeTranslateException) return new UnicodeTranslateError();
             if (clrException is IronPython.Runtime.Exceptions.UserWarningException) return new BaseException(UserWarning);
             if (clrException is System.ComponentModel.WarningException) return new BaseException(Warning);
@@ -425,7 +426,7 @@ namespace IronPython.Runtime.Exceptions {
             if (clrException is Microsoft.Scripting.SyntaxErrorException) return new SyntaxError();
             if (clrException is System.SystemException) return new BaseException(SystemError);
             if (clrException is IronPython.Runtime.Exceptions.SystemExitException) return new SystemExit();
-            if (clrException is Microsoft.Scripting.UnboundNameException) return new BaseException(NameError);
+            if (clrException is Microsoft.Scripting.Runtime.UnboundNameException) return new BaseException(NameError);
             if (clrException is IronPython.Runtime.Exceptions.UnicodeException) return new BaseException(UnicodeError);
             if (clrException is IronPython.Runtime.Exceptions.UnicodeWarningException) return new BaseException(UnicodeWarning);
             return new BaseException(Exception);
@@ -462,7 +463,7 @@ namespace IronPython.Runtime.Exceptions {
             if (type == PendingDeprecationWarning) return new IronPython.Runtime.Exceptions.PendingDeprecationWarningException(message);
             if (type == RuntimeWarning) return new IronPython.Runtime.Exceptions.RuntimeWarningException(message);
             if (type == SyntaxWarning) return new IronPython.Runtime.Exceptions.SyntaxWarningException(message);
-            if (type == UnboundLocalError) return new Microsoft.Scripting.UnboundLocalException(message);
+            if (type == UnboundLocalError) return new Microsoft.Scripting.Runtime.UnboundLocalException(message);
             if (type == DynamicHelpers.GetPythonTypeFromType(typeof(UnicodeTranslateError))) return new IronPython.Runtime.Exceptions.UnicodeTranslateException(message);
             if (type == UserWarning) return new IronPython.Runtime.Exceptions.UserWarningException(message);
             if (type == Warning) return new System.ComponentModel.WarningException(message);
@@ -479,7 +480,7 @@ namespace IronPython.Runtime.Exceptions {
             if (type == DynamicHelpers.GetPythonTypeFromType(typeof(SyntaxError))) return new Microsoft.Scripting.SyntaxErrorException(message);
             if (type == SystemError) return new System.SystemException(message);
             if (type == DynamicHelpers.GetPythonTypeFromType(typeof(SystemExit))) return new IronPython.Runtime.Exceptions.SystemExitException(message);
-            if (type == NameError) return new Microsoft.Scripting.UnboundNameException(message);
+            if (type == NameError) return new Microsoft.Scripting.Runtime.UnboundNameException(message);
             if (type == UnicodeError) return new IronPython.Runtime.Exceptions.UnicodeException(message);
             if (type == UnicodeWarning) return new IronPython.Runtime.Exceptions.UnicodeWarningException(message);
             if (type == Exception) return new System.Exception(message);

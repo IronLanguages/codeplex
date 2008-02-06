@@ -22,6 +22,7 @@ using System.Diagnostics;
 using IronPython.Runtime;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     internal partial class PythonExtensionTypeAttribute {

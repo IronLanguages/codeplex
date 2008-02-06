@@ -3125,5 +3125,21 @@ def test_oldclass_and_direct_delete():
     AreEqual(setVal, (slice(None, -1, None)))
     del OldStyle()[-1::] 
     AreEqual(setVal, (slice(-1, None, None)))
-
+    
+def test_cp8297():
+    #-1
+    x = range(3)
+    x[:-1] = x
+    AreEqual(x, [0, 1, 2, 2])
+    
+    #-2
+    x = range(3)
+    x[:-2] = x
+    AreEqual(x, [0, 1, 2, 1, 2])
+    
+    for i in [0, -3, -10, -1001, -2147483648, -2147483649, -9223372036854775807L, -9223372036854775808L, -9223372036854775809L]:
+        x = range(3)
+        x[:i] = x
+        AreEqual(x, [0, 1, 2, 0, 1, 2])
+        
 run_test(__name__)

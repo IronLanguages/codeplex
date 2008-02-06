@@ -19,6 +19,7 @@ using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;

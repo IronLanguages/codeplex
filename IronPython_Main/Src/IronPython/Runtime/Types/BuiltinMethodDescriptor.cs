@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;

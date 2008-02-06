@@ -16,6 +16,7 @@
 using System;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     class ModuleGlobalFactory : SlotFactory {

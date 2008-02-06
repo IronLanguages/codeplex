@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     public abstract class TypeTracker : MemberTracker, IMembersList {

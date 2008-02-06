@@ -20,12 +20,13 @@ using System.Text;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using IronPython.Runtime;
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
-using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("collections", typeof(IronPython.Modules.PythonCollections))]
 namespace IronPython.Modules {

@@ -23,6 +23,7 @@ using System.Reflection;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     /// <summary>

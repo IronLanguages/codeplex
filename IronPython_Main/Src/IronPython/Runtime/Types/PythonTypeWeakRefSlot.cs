@@ -22,6 +22,7 @@ using Microsoft.Scripting;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     [PythonType("getset_descriptor")]

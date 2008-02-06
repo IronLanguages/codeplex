@@ -27,6 +27,7 @@ using System.Threading;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using System.Text;
 

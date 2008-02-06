@@ -18,6 +18,7 @@ using System.Runtime.CompilerServices;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -33,7 +34,7 @@ namespace IronPython.Runtime.Types {
         [SpecialName]
         public object Call(CodeContext context, object[] args) {
             Assert.NotNull(args);
-            return Microsoft.Scripting.RuntimeHelpers.GetDelegate(args[0], _type);
+            return Microsoft.Scripting.Runtime.RuntimeHelpers.GetDelegate(args[0], _type);
         }
     }
 

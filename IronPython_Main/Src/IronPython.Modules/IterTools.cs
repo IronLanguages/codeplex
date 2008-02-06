@@ -27,6 +27,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("itertools", typeof(IronPython.Modules.PythonIterTools))]
 namespace IronPython.Modules {

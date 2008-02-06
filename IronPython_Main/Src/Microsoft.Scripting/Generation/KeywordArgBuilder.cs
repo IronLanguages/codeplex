@@ -17,6 +17,7 @@ using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using System.Collections.Generic;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     /// <summary>

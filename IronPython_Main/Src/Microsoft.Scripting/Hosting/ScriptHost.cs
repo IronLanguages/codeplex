@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Collections;
 using System.IO;
 using System.Threading;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {

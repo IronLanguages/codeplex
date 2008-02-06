@@ -20,6 +20,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
@@ -101,10 +102,6 @@ namespace IronPython.Runtime.Types {
                 finalArgs[i + args.Length] = kvp.Value;
                 i++;
             }
-        }
-
-        public static string ReprMethod(object self) {
-            return string.Format("<{0} object at {1}>", PythonTypeOps.GetName(self), PythonOps.HexId(self));
         }
 
         public static Type[] GetTypesFromTuple(object index) {

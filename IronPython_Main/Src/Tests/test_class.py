@@ -603,7 +603,7 @@ def test_cp8246():
     
     
 ############################################################
-def text_mixed_inheritance():
+def test_mixed_inheritance():
     """inheritance from both old & new style classes..."""
     class foo: pass
     
@@ -615,7 +615,21 @@ def text_mixed_inheritance():
     
     AreEqual(baz1.__bases__, (foo, bar))
     AreEqual(baz2.__bases__, (bar, foo))
-
+    
+    class foo:
+        abc = 3
+    
+    class bar(object):
+        def get_abc():
+            return 42
+        def set_abc():
+            pass
+            
+        abc = property(fget=get_abc, fset=set_abc)
+    
+    class baz(foo, bar): pass
+    
+    AreEqual(baz().abc, 3)
 
 ############################################################
 def test_newstyle_unbound_inheritance():
@@ -1332,7 +1346,49 @@ def test_slots():
     # but if it's just a class member we respect MRO
     AreEqual(baz2().abc, 3)
     
+    # getattr and __slots__ should mix well
+    class Foo(object):
+        __slots__ = ['bar']
+        def __getattr__(self, name):
+                return name.upper()
     
+    AreEqual(Foo().bar, 'BAR')
+    
+    # slot takes precedence over dictionary member
+    class Foo(object):
+        __slots__ = ['bar', '__dict__']
+
+    a = Foo()
+    a.__dict__['bar'] = 'abc'
+    AssertError(AttributeError, lambda : a.bar)
+
+    # members defined the class take precedence over slots
+    global initCalled
+    class Foo(object):
+        __slots__ = ["__init__"]
+        def __init__(self):
+            global initCalled
+            initCalled = True
+            
+    a = Foo()
+    AreEqual(initCalled, True)
+    
+    # the member is readonly because the member slot is gone.
+    def f(): a.__init__ = 'abc'
+    AssertError(AttributeError, f)
+    
+    # make sure __init__ isn't special
+    class Foo(object):
+        __slots__ = ["abc"]
+        abc = 3
+        
+    a = Foo()
+    AreEqual(a.abc, 3)
+    
+    def f(): a.abc = 'abc'
+    AssertError(AttributeError, f)
+    
+
 def test_slots11457():
     class COld:
         __slots__ = ['a']
@@ -2224,4 +2280,47 @@ def test_oldinstance_operator_exceptions():
         # binary operators catch AttributeError
         getattr(type(OC3()), x)(OC3(), OC3())
         
+
+def test_cp10291():
+    class K1(object):
+        def __call__(self):
+            return "K1"
+    
+    class K2(K1):
+        def __call__(self):
+            return "K2" + K1.__call__(self)
+
+    class K1Old:
+        def __call__(self):
+            return "K1"
+    
+    class K2Old(K1Old):
+        def __call__(self):
+            return "K2" + K1Old.__call__(self)
+
+
+    for k1, k2 in [ (K1, K2),
+                    (K1Old, K2Old),
+                    ]:
+        AreEqual(k1()(), "K1")
+        AreEqual(k2()(), "K2K1")
+
+def test_cp11760():
+    class KNew(object):
+        def __str__(self): return "KNew"
+    
+    class KOld:
+        def __str__(self): return "KOld"
+    
+    for K in [KNew, KOld]:
+        dir_str = dir(K().__str__)    
+        for x in [  '__class__', '__delattr__', '__doc__', 
+                    '__get__', '__getattribute__', '__hash__', '__init__', 
+                    '__new__', '__reduce__', '__reduce_ex__', '__repr__', 
+                    '__setattr__', '__str__', 'im_class', 
+                    'im_func', 'im_self',
+                    #'__call__', '__cmp__', 
+                    ]:
+            Assert(x in dir_str, x + " is not in dir(K().__str__)")
+
 run_test(__name__)

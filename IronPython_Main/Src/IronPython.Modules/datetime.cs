@@ -27,6 +27,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
@@ -619,28 +620,28 @@ namespace IronPython.Modules {
             public static object operator >(PythonDate self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
-                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <(PythonDate self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
-                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator >=(PythonDate self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
-                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
             }
 
             [return: MaybeNotImplemented]
             public static object operator <=(PythonDate self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
-                return Microsoft.Scripting.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
+                return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
             [SpecialName, PythonName("__eq__")]

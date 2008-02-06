@@ -19,6 +19,7 @@ using System.Text;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 
 namespace ToyScript {
     class ToyConsole : ConsoleHost {

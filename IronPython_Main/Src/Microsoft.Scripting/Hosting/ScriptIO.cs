@@ -20,6 +20,7 @@ using System.IO;
 using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>

@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Exceptions;
@@ -49,7 +50,7 @@ namespace IronPython.Runtime.Operations {
         #region ICodeFormattable Members
 
         [SpecialName, PythonName("__repr__")]
-        public virtual string ToCodeString(CodeContext context) {
+        public virtual string ToCodeString(CodeContext/*!*/ context) {
             return StringOps.Quote(Value);
         }
 
@@ -204,7 +205,7 @@ namespace IronPython.Runtime.Operations {
         #region Python Constructors
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls) {
+        public static object Make(CodeContext/*!*/ context, PythonType cls) {
             if (cls == TypeCache.String) {
                 return "";
             } else {
@@ -213,7 +214,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls, object @object) {
+        public static object Make(CodeContext/*!*/ context, PythonType cls, object @object) {
             if (cls == TypeCache.String) {
                 return FastNew(context, @object);
             } else {
@@ -222,7 +223,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls,
+        public static object Make(CodeContext/*!*/ context, PythonType cls,
             object @string,
             [DefaultParameterValue(null)] string encoding,
             [DefaultParameterValue("strict")] string errors) {
@@ -231,7 +232,7 @@ namespace IronPython.Runtime.Operations {
             if (str == null) throw PythonOps.TypeError("converting to unicode: need string, got {0}", DynamicHelpers.GetPythonType(@string).Name);
 
             if (cls == TypeCache.String) {
-                return Decode(context, str, encoding ?? SystemState.Instance.GetDefaultEncoding(), errors);
+                return Decode(context, str, encoding ?? PythonContext.GetContext(context).GetDefaultEncodingName(), errors);
             } else {
                 return cls.CreateInstance(context, str, encoding, errors);
             }
@@ -365,18 +366,18 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("decode")]
-        public static string Decode(CodeContext context, string s) {
+        public static string Decode(CodeContext/*!*/ context, string s) {
             return Decode(context, s, Missing.Value, "strict");
         }
 
         [PythonName("decode")]
-        public static string Decode(CodeContext context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
-            return RawDecode(s, encoding, errors);
+        public static string Decode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
+            return RawDecode(context, s, encoding, errors);
         }
 
         [PythonName("encode")]
-        public static string Encode(CodeContext context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
-            return RawEncode(s, encoding, errors);
+        public static string Encode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
+            return RawEncode(context, s, encoding, errors);
         }
 
         [PythonName("endswith")]
@@ -1142,7 +1143,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext context, string self) {
+        public static object GetNewArgs(CodeContext/*!*/ context, string self) {
             if (!Object.ReferenceEquals(self, null)) {
                 // Cast self to object to avoid exception caused by trying to access SystemState on DefaultContext
                 return PythonTuple.MakeTuple(StringOps.Make(context, TypeCache.String, (object)self));
@@ -1350,16 +1351,18 @@ namespace IronPython.Runtime.Operations {
             return name.ToLower().Replace('-', '_');
         }
 
-        private static string RawDecode(string s, object encodingType, string errors) {
+        private static string RawDecode(CodeContext/*!*/ context, string s, object encodingType, string errors) {
+            PythonContext pc = PythonContext.GetContext(context);
+
             string encoding = null;
             if (encodingType == Missing.Value) {
-                encoding = SystemState.Instance.GetDefaultEncoding();
+                encoding = pc.GetDefaultEncodingName();
             } else {
                 encoding = encodingType as string;
                 if (encoding == null) {
                     if (encodingType != null)
                         throw PythonOps.TypeError("decode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
-                    encoding = SystemState.Instance.GetDefaultEncoding();
+                    encoding = pc.GetDefaultEncodingName();
                 }
             }
 
@@ -1374,8 +1377,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            Encoding e = SystemState.Instance.DefaultEncoding;
-
+            Encoding e = pc.DefaultEncoding;
             if (encoding == null || TryGetEncoding(e, encoding, out e)) {
 #if !SILVERLIGHT // DecoderFallback
                 // CLR's encoder exceptions have a 1-1 mapping w/ Python's encoder exceptions
@@ -1407,16 +1409,18 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.LookupError("unknown encoding: {0}", encoding);
         }
 
-        private static string RawEncode(string s, object encodingType, string errors) {
+        private static string RawEncode(CodeContext/*!*/ context, string s, object encodingType, string errors) {
+            PythonContext pc = PythonContext.GetContext(context);
+
             string encoding = null;
             if (encodingType == Missing.Value) {
-                encoding = SystemState.Instance.GetDefaultEncoding();
+                encoding = PythonContext.GetContext(context).GetDefaultEncodingName();
             } else {
                 encoding = encodingType as string;
                 if (encoding == null) {
                     if (encodingType != null)
                         throw PythonOps.TypeError("encode() expected string, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(encodingType).Name));
-                    encoding = SystemState.Instance.GetDefaultEncoding();
+                    encoding = pc.GetDefaultEncodingName();
                 }
             }
 
@@ -1430,7 +1434,7 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            Encoding e = SystemState.Instance.DefaultEncoding;
+            Encoding e = pc.DefaultEncoding;
             if (encoding == null || TryGetEncoding(e, encoding, out e)) {
 #if !SILVERLIGHT
                 // CLR's encoder exceptions have a 1-1 mapping w/ Python's encoder exceptions

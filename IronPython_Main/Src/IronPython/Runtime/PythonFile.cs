@@ -21,6 +21,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime.Operations;
@@ -801,8 +802,8 @@ namespace IronPython.Runtime {
         public PythonFile() {
         }
         
-        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode) {
-            return Create(stream, SystemState.Instance.DefaultEncoding, name, mode);
+        internal static PythonFile/*!*/ Create(CodeContext/*!*/ context, Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode) {
+            return Create(stream, PythonContext.GetContext(context).DefaultEncoding, name, mode);
         }
 
         internal static PythonFile/*!*/ Create(Stream/*!*/ stream, Encoding/*!*/ encoding, string/*!*/ name, string/*!*/ mode) {
@@ -817,9 +818,9 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode, bool weakMapping) {
+        internal static PythonFile/*!*/ Create(CodeContext/*!*/ context, Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode, bool weakMapping) {
             PythonFile res = new PythonFile();
-            res.InternalInitialize(stream, SystemState.Instance.DefaultEncoding, name, mode, weakMapping);
+            res.InternalInitialize(stream, PythonContext.GetContext(context).DefaultEncoding, name, mode, weakMapping);
             return res;
         }
 
@@ -838,7 +839,7 @@ namespace IronPython.Runtime {
         // Seems C-Python allows "b|t" at the beginning too.
         // 
         [PythonName("__init__")]
-        public void Initialize(string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
+        public void Initialize(CodeContext/*!*/ context, string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
@@ -898,7 +899,7 @@ namespace IronPython.Runtime {
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
-                Initialize(stream, SystemState.Instance.DefaultEncoding, name, inMode);
+                Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, name, inMode);
                 this._isOpen = true;
             } catch (UnauthorizedAccessException e) {
                 throw new IOException(e.Message, e);
@@ -906,7 +907,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__init__")]
-        public void Initialize([NotNull]Stream/*!*/ stream) {
+        public void Initialize(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream) {
             Contract.RequiresNotNull(stream, "stream");
 
             string mode;
@@ -914,12 +915,12 @@ namespace IronPython.Runtime {
             else if (stream.CanWrite) mode = "w";
             else mode = "r";
 
-            Initialize(stream, SystemState.Instance.DefaultEncoding, mode);
+            Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
         }
 
         [PythonName("__init__")]
-        public void Initialize([NotNull]Stream/*!*/ stream, string mode) {
-            Initialize(stream, SystemState.Instance.DefaultEncoding, mode);
+        public void Initialize(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream, string mode) {
+            Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
         }
 
         [PythonName("__init__")]

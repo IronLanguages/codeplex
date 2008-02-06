@@ -22,6 +22,7 @@ using Microsoft.Scripting.Shell;
 using System.Threading;
 using Microsoft.Scripting.Utils;
 using System.Globalization;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
 

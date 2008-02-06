@@ -32,6 +32,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Hosting;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("cPickle", typeof(IronPython.Modules.PythonPickle))]
 namespace IronPython.Modules {
@@ -64,7 +65,7 @@ namespace IronPython.Modules {
             + "See documentation for Pickler() for a description the file, protocol, and\n"
             + "(deprecated) bin parameters."
             )]
-        public static void dump(CodeContext context, object obj, object file, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
+        public static void dump(CodeContext/*!*/ context, object obj, object file, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             Pickler pickler = new Pickler(file, protocol, bin);
             pickler.dump(context, obj);
         }
@@ -75,7 +76,7 @@ namespace IronPython.Modules {
             + "See the documentation for Pickler() for a description of the protocol and\n"
             + "(deprecated) bin parameters."
             )]
-        public static string dumps(CodeContext context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
+        public static string dumps(CodeContext/*!*/ context, object obj, [DefaultParameterValue(null)] object protocol, [DefaultParameterValue(null)] object bin) {
             //??? possible perf enhancement: use a C# TextWriter-backed IFileOutput and
             // thus avoid Python call overhead. Also do similar thing for LoadFromString.
             object stringIO = PythonOps.InvokeWithContext(context, DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)), SymbolTable.StringToId("StringIO"));
@@ -96,7 +97,7 @@ namespace IronPython.Modules {
             + "load() automatically determines if the pickle data was written in binary or\n"
             + "text mode."
             )]
-        public static object load(CodeContext context, object file) {
+        public static object load(CodeContext/*!*/ context, object file) {
             return new Unpickler(file).load(context);
         }
 
@@ -105,7 +106,7 @@ namespace IronPython.Modules {
             + "reconstructed object. Characters in the string beyond the end of the first\n"
             + "pickle are ignored."
             )]
-        public static object loads(CodeContext context, object @string) {
+        public static object loads(CodeContext/*!*/ context, object @string) {
             object stringIO = PythonOps.Invoke(
                 DynamicHelpers.GetPythonTypeFromType(typeof(PythonStringIO)),
                 SymbolTable.StringToId("StringIO"),
@@ -273,7 +274,7 @@ namespace IronPython.Modules {
             private const char HighestPrintableChar = (char)126;
             // max elements that can be set/appended at a time using SETITEMS/APPENDS
 
-            private delegate void PickleFunction(CodeContext context, object value);
+            private delegate void PickleFunction(CodeContext/*!*/ context, object value);
             private readonly Dictionary<PythonType, PickleFunction> dispatchTable;
 
             private int _batchSize = 1000;
@@ -321,7 +322,7 @@ namespace IronPython.Modules {
                 set { /* ignore */ }
             }
 
-            public static Pickler __new__(CodeContext context, 
+            public static Pickler __new__(CodeContext/*!*/ context, 
                 PythonType cls,
                 [DefaultParameterValue(null)] object file,
                 [DefaultParameterValue(null)] object protocol,
@@ -395,7 +396,7 @@ namespace IronPython.Modules {
                 + "reference to the previously generated value will be pickled. Unpickling will\n"
                 + "then create multiple references to a single object."
                 )]
-            public void dump(CodeContext context, object obj) {
+            public void dump(CodeContext/*!*/ context, object obj) {
                 if (_protocol >= 2) WriteProto();
                 Save(context, obj);
                 Write(Opcode.Stop);
@@ -425,7 +426,7 @@ namespace IronPython.Modules {
 
             #region Save functions
 
-            private void Save(CodeContext context, object obj) {
+            private void Save(CodeContext/*!*/ context, object obj) {
                 if (_persist_id != null) {
                     if (_persist_site == null) {
                         _persist_site = RuntimeHelpers.CreateSimpleCallSite<object, object, string>();
@@ -454,7 +455,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SavePersId(CodeContext context, string res) {
+            private void SavePersId(CodeContext/*!*/ context, string res) {
                 if (this.binary != 0) {
                     Save(context, res);
                     Write(Opcode.BinPersid);
@@ -465,7 +466,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveBoolean(CodeContext context, object obj) {
+            private void SaveBoolean(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Boolean), "arg must be bool");
                 if (_protocol < 2) {
                     Write(Opcode.Int);
@@ -480,7 +481,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveDict(CodeContext context, object obj) {
+            private void SaveDict(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.Dict), "arg must be dict");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
@@ -496,7 +497,7 @@ namespace IronPython.Modules {
                 BatchSetItems(context, (DictionaryOps.iteritems((IDictionary<object, object>)obj)));
             }
 
-            private void SaveFloat(CodeContext context, object obj) {
+            private void SaveFloat(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Double), "arg must be float");
 
                 if (_protocol < 1) {
@@ -508,7 +509,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveGlobal(CodeContext context, object obj) {
+            private void SaveGlobal(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(
                     DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.OldClass) ||
                     DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.Function) ||
@@ -526,7 +527,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveGlobalByName(CodeContext context, object obj, object name) {
+            private void SaveGlobalByName(CodeContext/*!*/ context, object obj, object name) {
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
 
                 object moduleName = FindModuleForGlobal(context, obj, name);
@@ -558,7 +559,7 @@ namespace IronPython.Modules {
                 WritePut(obj);
             }
 
-            private void SaveInstance(CodeContext context, object obj) {
+            private void SaveInstance(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.OldInstance), "arg must be old-class instance");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
 
@@ -602,7 +603,7 @@ namespace IronPython.Modules {
                 Write(Opcode.Build);
             }
 
-            private void SaveInteger(CodeContext context, object obj) {
+            private void SaveInteger(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Int32), "arg must be int");
                 if (_protocol < 1) {
                     Write(Opcode.Int);
@@ -623,7 +624,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveList(CodeContext context, object obj) {
+            private void SaveList(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.List), "arg must be list");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
@@ -638,7 +639,7 @@ namespace IronPython.Modules {
                 BatchAppends(context, ((IEnumerable)obj).GetEnumerator());
             }
 
-            private void SaveLong(CodeContext context, object obj) {
+            private void SaveLong(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.BigInteger), "arg must be long");
 
                 if (_protocol < 2) {
@@ -665,7 +666,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveNone(CodeContext context, object obj) {
+            private void SaveNone(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.None), "arg must be None");
                 Write(Opcode.NoneValue);
             }
@@ -675,7 +676,7 @@ namespace IronPython.Modules {
             /// the resulting data. Use the first available of
             /// copy_reg.dispatch_table[type(obj)], obj.__reduce_ex__, and obj.__reduce__.
             /// </summary>
-            private void SaveObject(CodeContext context, object obj) {
+            private void SaveObject(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
 
@@ -734,7 +735,7 @@ namespace IronPython.Modules {
             /// 
             /// Only context, obj, func, and reduceCallable are required; all other arguments may be null.
             /// </summary>
-            private void SaveReduce(CodeContext context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
+            private void SaveReduce(CodeContext/*!*/ context, object obj, object reduceCallable, object func, object args, object state, object listItems, object dictItems) {
                 if (!PythonOps.IsCallable(func)) {
                     throw CannotPickle(obj, "func from reduce() should be callable");
                 } else if (!(args is PythonTuple) && args != null) {
@@ -788,7 +789,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveTuple(CodeContext context, object obj) {
+            private void SaveTuple(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.PythonTuple), "arg must be tuple");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 PythonTuple t = (PythonTuple)obj;
@@ -817,7 +818,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void SaveUnicode(CodeContext context, object obj) {
+            private void SaveUnicode(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.String), "arg must be unicode");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
@@ -998,7 +999,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void WriteInitArgs(CodeContext context, object obj) {
+            private void WriteInitArgs(CodeContext/*!*/ context, object obj) {
                 object getInitArgsCallable;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.GetInitArgs, out getInitArgsCallable)) {
                     object initArgs = PythonCalls.Call(getInitArgsCallable);
@@ -1042,7 +1043,7 @@ namespace IronPython.Modules {
             /// to the object at the top of the stack. Use APPENDS if possible, but
             /// append no more than BatchSize items at a time.
             /// </summary>
-            private void BatchAppends(CodeContext context, IEnumerator enumerator) {
+            private void BatchAppends(CodeContext/*!*/ context, IEnumerator enumerator) {
                 if (_protocol < 1) {
                     while (enumerator.MoveNext()) {
                         Save(context, enumerator.Current);
@@ -1098,7 +1099,7 @@ namespace IronPython.Modules {
             /// iter in the object at the top of the stack. Use SETITEMS if possible,
             /// but append no more than BatchSize items at a time.
             /// </summary>
-            private void BatchSetItems(CodeContext context, IEnumerator enumerator) {
+            private void BatchSetItems(CodeContext/*!*/ context, IEnumerator enumerator) {
                 PythonTuple kvTuple;
                 if (_protocol < 1) {
                     while (enumerator.MoveNext()) {
@@ -1196,7 +1197,7 @@ namespace IronPython.Modules {
             /// attribute with the given name, and that attribute is the same object as obj,
             /// then that module is used.
             /// </summary>
-            private object FindModuleForGlobal(CodeContext context, object obj, object name) {
+            private object FindModuleForGlobal(CodeContext/*!*/ context, object obj, object name) {
                 object module;
                 object moduleName;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
@@ -1217,7 +1218,7 @@ namespace IronPython.Modules {
                     }
                 } else {
                     // No obj.__module__, so crawl through all loaded modules looking for obj
-                    foreach (KeyValuePair<object, object> modulePair in SystemState.Instance.modules) {
+                    foreach (KeyValuePair<object, object> modulePair in PythonContext.GetContext(context).SystemStateModules) {
                         moduleName = modulePair.Key;
                         module = modulePair.Value;
                         object foundObj;
@@ -1252,7 +1253,7 @@ namespace IronPython.Modules {
 
             private readonly object _mark = new object();
 
-            private delegate void LoadFunction(CodeContext context);
+            private delegate void LoadFunction(CodeContext/*!*/ context);
             private readonly Dictionary<string, LoadFunction> _dispatch;
 
             private IFileInput _file;
@@ -1328,7 +1329,7 @@ namespace IronPython.Modules {
                 + "Read pickle data from the file object that was passed to the constructor and\n"
                 + "return the corresponding unpickled objects."
                )]
-            public object load(CodeContext context) {
+            public object load(CodeContext/*!*/ context) {
                 _stack = new List();
 
                 string opcode = Read(1);
@@ -1354,7 +1355,7 @@ namespace IronPython.Modules {
                 + "incurring the overhead of completely unpickling an object. See the pickle\n"
                 + "module documentation for more information about persistent ids."
                )]
-            public void noload(CodeContext context) {
+            public void noload(CodeContext/*!*/ context) {
                 throw PythonOps.NotImplementedError("noload() is not implemented");
             }
 
@@ -1408,7 +1409,7 @@ namespace IronPython.Modules {
                 return raw.Substring(0, raw.Length - 1);
             }
 
-            private object ReadFloatString(CodeContext context) {
+            private object ReadFloatString(CodeContext/*!*/ context) {
                 return DoubleOps.Make(context, TypeCache.Double, ReadLineNoNewline());
             }
 
@@ -1417,7 +1418,7 @@ namespace IronPython.Modules {
                 return PythonStruct.CreateDoubleValue(ref index, false, Read(8));
             }
 
-            private object ReadIntFromString(CodeContext context) {
+            private object ReadIntFromString(CodeContext/*!*/ context) {
                 string raw = ReadLineNoNewline();
                 if ("00" == raw) return RuntimeHelpers.False;
                 else if ("01" == raw) return RuntimeHelpers.True;
@@ -1429,7 +1430,7 @@ namespace IronPython.Modules {
                 return PythonStruct.CreateIntValue(ref index, true, Read(4));
             }
 
-            private object ReadLongFromString(CodeContext context) {
+            private object ReadLongFromString(CodeContext/*!*/ context) {
                 return BigIntegerOps.Make(context, TypeCache.BigInteger, ReadLineNoNewline());
             }
 
@@ -1447,7 +1448,7 @@ namespace IronPython.Modules {
                 return PythonStruct.CreateUShortValue(ref index, true, Read(2));
             }
 
-            public object find_global(CodeContext context, object module, object attr) {
+            public object find_global(CodeContext/*!*/ context, object module, object attr) {
                 object moduleObject;
                 if (!PythonContext.GetImporter(context).TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
                     moduleObject = Builtin.__import__(context, Converter.ConvertToString(module));
@@ -1455,7 +1456,7 @@ namespace IronPython.Modules {
                 return PythonOps.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
             }
 
-            private object MakeInstance(CodeContext context, object cls, object[] args) {
+            private object MakeInstance(CodeContext/*!*/ context, object cls, object[] args) {
                 OldClass oc = cls as OldClass;
                 if (oc != null) {
                     OldInstance inst = new OldInstance(oc);
@@ -1483,11 +1484,11 @@ namespace IronPython.Modules {
                 PopMark(markIndex);
             }
 
-            private void LoadEof(CodeContext context) {
+            private void LoadEof(CodeContext/*!*/ context) {
                 throw PythonOps.EofError("unexpected end of opcode stream");
             }
 
-            private void LoadAppend(CodeContext context) {
+            private void LoadAppend(CodeContext/*!*/ context) {
                 object item = _stack.Pop();
                 object seq = _stack[-1];
                 if (seq is List) {
@@ -1497,7 +1498,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void LoadAppends(CodeContext context) {
+            private void LoadAppends(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 object seq = _stack[markIndex - 1];
                 object stackSlice = _stack.GetSlice(markIndex + 1, _stack.Count);
@@ -1509,27 +1510,27 @@ namespace IronPython.Modules {
                 PopMark(markIndex);
             }
 
-            private void LoadBinFloat(CodeContext context) {
+            private void LoadBinFloat(CodeContext/*!*/ context) {
                 _stack.Append(ReadFloat64());
             }
 
-            private void LoadBinGet(CodeContext context) {
+            private void LoadBinGet(CodeContext/*!*/ context) {
                 _stack.Append(MemoGet((long)ReadUInt8()));
             }
 
-            private void LoadBinInt(CodeContext context) {
+            private void LoadBinInt(CodeContext/*!*/ context) {
                 _stack.Append(ReadInt32());
             }
 
-            private void LoadBinInt1(CodeContext context) {
+            private void LoadBinInt1(CodeContext/*!*/ context) {
                 _stack.Append((int)ReadUInt8());
             }
 
-            private void LoadBinInt2(CodeContext context) {
+            private void LoadBinInt2(CodeContext/*!*/ context) {
                 _stack.Append((int)ReadUInt16());
             }
 
-            private void LoadBinPersid(CodeContext context) {
+            private void LoadBinPersid(CodeContext/*!*/ context) {
                 if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
 
                 if (_pers_site == null) {
@@ -1538,15 +1539,15 @@ namespace IronPython.Modules {
                 _stack.Append(_pers_site.Invoke(context, _pers_loader, _stack.Pop()));
             }
 
-            private void LoadBinPut(CodeContext context) {
+            private void LoadBinPut(CodeContext/*!*/ context) {
                 MemoPut((long)ReadUInt8(), _stack[-1]);
             }
 
-            private void LoadBinString(CodeContext context) {
+            private void LoadBinString(CodeContext/*!*/ context) {
                 _stack.Append(Read(ReadInt32()));
             }
 
-            private void LoadBinUnicode(CodeContext context) {
+            private void LoadBinUnicode(CodeContext/*!*/ context) {
 #if !SILVERLIGHT    // Encoding
                 _stack.Append(StringOps.Decode(context, Read(ReadInt32()), "utf-8", "strict"));
 #else
@@ -1554,7 +1555,7 @@ namespace IronPython.Modules {
 #endif
             }
 
-            private void LoadBuild(CodeContext context) {
+            private void LoadBuild(CodeContext/*!*/ context) {
                 object arg = _stack.Pop();
                 object inst = _stack[-1];
                 object setStateCallable;
@@ -1606,49 +1607,49 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void LoadDict(CodeContext context) {
+            private void LoadDict(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 PythonDictionary dict = new PythonDictionary((_stack.Count - 1 - markIndex) / 2);
                 SetItems(dict, markIndex);
                 _stack.Append(dict);
             }
 
-            private void LoadDup(CodeContext context) {
+            private void LoadDup(CodeContext/*!*/ context) {
                 _stack.Append(_stack[-1]);
             }
 
-            private void LoadEmptyDict(CodeContext context) {
+            private void LoadEmptyDict(CodeContext/*!*/ context) {
                 _stack.Append(new PythonDictionary());
             }
 
-            private void LoadEmptyList(CodeContext context) {
+            private void LoadEmptyList(CodeContext/*!*/ context) {
                 _stack.Append(List.MakeList());
             }
 
-            private void LoadEmptyTuple(CodeContext context) {
+            private void LoadEmptyTuple(CodeContext/*!*/ context) {
                 _stack.Append(PythonTuple.MakeTuple());
             }
 
-            private void LoadExt1(CodeContext context) {
+            private void LoadExt1(CodeContext/*!*/ context) {
                 PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt8()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
-            private void LoadExt2(CodeContext context) {
+            private void LoadExt2(CodeContext/*!*/ context) {
                 PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt16()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
-            private void LoadExt4(CodeContext context) {
+            private void LoadExt4(CodeContext/*!*/ context) {
                 PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[ReadInt32()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
-            private void LoadFloat(CodeContext context) {
+            private void LoadFloat(CodeContext/*!*/ context) {
                 _stack.Append(ReadFloatString(context));
             }
 
-            private void LoadGet(CodeContext context) {
+            private void LoadGet(CodeContext/*!*/ context) {
                 try {
                     _stack.Append(MemoGet((long)(int)ReadIntFromString(context)));
                 } catch (ArgumentException) {
@@ -1656,13 +1657,13 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void LoadGlobal(CodeContext context) {
+            private void LoadGlobal(CodeContext/*!*/ context) {
                 string module = ReadLineNoNewline();
                 string attr = ReadLineNoNewline();
                 _stack.Append(find_global(context, module, attr));
             }
 
-            private void LoadInst(CodeContext context) {
+            private void LoadInst(CodeContext/*!*/ context) {
                 LoadGlobal(context);
                 object cls = _stack.Pop();
                 if (cls is OldClass || cls is PythonType) {
@@ -1676,46 +1677,46 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void LoadInt(CodeContext context) {
+            private void LoadInt(CodeContext/*!*/ context) {
                 _stack.Append(ReadIntFromString(context));
             }
 
-            private void LoadList(CodeContext context) {
+            private void LoadList(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 object list = _stack.GetSlice(markIndex + 1, _stack.Count);
                 PopMark(markIndex);
                 _stack.Append(list);
             }
 
-            private void LoadLong(CodeContext context) {
+            private void LoadLong(CodeContext/*!*/ context) {
                 _stack.Append(ReadLongFromString(context));
             }
 
-            private void LoadLong1(CodeContext context) {
+            private void LoadLong1(CodeContext/*!*/ context) {
                 _stack.Append(ReadLong(ReadUInt8()));
             }
 
-            private void LoadLong4(CodeContext context) {
+            private void LoadLong4(CodeContext/*!*/ context) {
                 _stack.Append(ReadLong(ReadInt32()));
             }
 
-            private void LoadLongBinGet(CodeContext context) {
+            private void LoadLongBinGet(CodeContext/*!*/ context) {
                 _stack.Append(MemoGet((long)(int)ReadInt32()));
             }
 
-            private void LoadLongBinPut(CodeContext context) {
+            private void LoadLongBinPut(CodeContext/*!*/ context) {
                 MemoPut((long)(int)ReadInt32(), _stack[-1]);
             }
 
-            private void LoadMark(CodeContext context) {
+            private void LoadMark(CodeContext/*!*/ context) {
                 _stack.Append(_mark);
             }
 
-            private void LoadNewFalse(CodeContext context) {
+            private void LoadNewFalse(CodeContext/*!*/ context) {
                 _stack.Append(RuntimeHelpers.False);
             }
 
-            private void LoadNewObj(CodeContext context) {
+            private void LoadNewObj(CodeContext/*!*/ context) {
                 PythonTuple args = _stack.Pop() as PythonTuple;
                 if (args == null) {
                     throw PythonOps.TypeError("expected tuple as second argument to NEWOBJ, got {0}", DynamicHelpers.GetPythonType(args));
@@ -1741,15 +1742,15 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("didn't find __new__");
             }
 
-            private void LoadNewTrue(CodeContext context) {
+            private void LoadNewTrue(CodeContext/*!*/ context) {
                 _stack.Append(RuntimeHelpers.True);
             }
 
-            private void LoadNoneValue(CodeContext context) {
+            private void LoadNoneValue(CodeContext/*!*/ context) {
                 _stack.Append(NoneTypeOps.Instance);
             }
 
-            private void LoadObj(CodeContext context) {
+            private void LoadObj(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 object cls = _stack[markIndex + 1];
                 if (cls is OldClass || cls is PythonType) {
@@ -1761,7 +1762,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            private void LoadPersId(CodeContext context) {
+            private void LoadPersId(CodeContext/*!*/ context) {
                 if (_pers_loader == null) {
                     throw CannotUnpickle("A load persistent ID instruction is present but no persistent_load function is available");
                 }
@@ -1771,25 +1772,25 @@ namespace IronPython.Modules {
                 _stack.Append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));
             }
 
-            private void LoadPop(CodeContext context) {
+            private void LoadPop(CodeContext/*!*/ context) {
                 _stack.Pop();
             }
 
-            private void LoadPopMark(CodeContext context) {
+            private void LoadPopMark(CodeContext/*!*/ context) {
                 PopMark(MarkIndex);
             }
 
-            private void LoadProto(CodeContext context) {
+            private void LoadProto(CodeContext/*!*/ context) {
                 int proto = ReadUInt8();
                 if (proto > 2) throw PythonOps.ValueError("unsupported pickle protocol: {0}", proto);
                 // discard result
             }
 
-            private void LoadPut(CodeContext context) {
+            private void LoadPut(CodeContext/*!*/ context) {
                 MemoPut((long)(int)ReadIntFromString(context), _stack[-1]);
             }
 
-            private void LoadReduce(CodeContext context) {
+            private void LoadReduce(CodeContext/*!*/ context) {
                 object args = _stack.Pop();
                 object callable = _stack.Pop();
                 if (args == null) {
@@ -1803,7 +1804,7 @@ namespace IronPython.Modules {
                 _stack.Append(PythonOps.CallWithArgsTupleAndContext(context, callable, ArrayUtils.EmptyObjects, args));
             }
 
-            private void LoadSetItem(CodeContext context) {
+            private void LoadSetItem(CodeContext/*!*/ context) {
                 object value = _stack.Pop();
                 object key = _stack.Pop();
                 PythonDictionary dict = _stack[-1] as PythonDictionary;
@@ -1816,7 +1817,7 @@ namespace IronPython.Modules {
                 dict[key] = value;
             }
 
-            private void LoadSetItems(CodeContext context) {
+            private void LoadSetItems(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 PythonDictionary dict = _stack[markIndex - 1] as PythonDictionary;
                 if (dict == null) {
@@ -1828,11 +1829,11 @@ namespace IronPython.Modules {
                 SetItems(dict, markIndex);
             }
 
-            private void LoadShortBinstring(CodeContext context) {
+            private void LoadShortBinstring(CodeContext/*!*/ context) {
                 _stack.Append(Read(ReadUInt8()));
             }
 
-            private void LoadString(CodeContext context) {
+            private void LoadString(CodeContext/*!*/ context) {
                 string repr = ReadLineNoNewline();
                 if (repr.Length < 2 ||
                     !(
@@ -1849,32 +1850,32 @@ namespace IronPython.Modules {
 #endif
             }
 
-            private void LoadTuple(CodeContext context) {
+            private void LoadTuple(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 PythonTuple tuple = PythonTuple.MakeTuple(_stack.GetSliceAsArray(markIndex + 1, _stack.Count));
                 PopMark(markIndex);
                 _stack.Append(tuple);
             }
 
-            private void LoadTuple1(CodeContext context) {
+            private void LoadTuple1(CodeContext/*!*/ context) {
                 object item0 = _stack.Pop();
                 _stack.Append(PythonTuple.MakeTuple(item0));
             }
 
-            private void LoadTuple2(CodeContext context) {
+            private void LoadTuple2(CodeContext/*!*/ context) {
                 object item1 = _stack.Pop();
                 object item0 = _stack.Pop();
                 _stack.Append(PythonTuple.MakeTuple(item0, item1));
             }
 
-            private void LoadTuple3(CodeContext context) {
+            private void LoadTuple3(CodeContext/*!*/ context) {
                 object item2 = _stack.Pop();
                 object item1 = _stack.Pop();
                 object item0 = _stack.Pop();
                 _stack.Append(PythonTuple.MakeTuple(item0, item1, item2));
             }
 
-            private void LoadUnicode(CodeContext context) {
+            private void LoadUnicode(CodeContext/*!*/ context) {
 #if !SILVERLIGHT    // Encoding
                 _stack.Append(StringOps.Decode(context, ReadLineNoNewline(), "raw-unicode-escape", "strict"));
 #else

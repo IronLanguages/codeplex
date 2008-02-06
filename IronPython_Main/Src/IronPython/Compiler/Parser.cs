@@ -108,6 +108,7 @@ namespace IronPython.Compiler {
             get { return (_languageFeatures & PythonLanguageFeatures.TrueDivision) == PythonLanguageFeatures.TrueDivision; }
         }
 
+
         #region Construction
 
         private Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
@@ -421,7 +422,7 @@ namespace IronPython.Compiler {
 
             SuiteStatement ret = new SuiteStatement(stmts);
             ret.SetLoc(SourceLocation.MinValue, GetEnd());
-            return new PythonAst(ret, makeModule, TrueDivision, false);
+            return new PythonAst(ret, makeModule, TrueDivision, AllowWithStatement, false);
         }
 
         private static readonly char[] newLineChar = new char[] { '\n' };
@@ -481,7 +482,7 @@ namespace IronPython.Compiler {
                     return null;
                 }
 
-                return new PythonAst(ret, false, TrueDivision, true);
+                return new PythonAst(ret, false, TrueDivision, AllowWithStatement, true);
             } else {
                 if ((_errorCode & ErrorCodes.IncompleteMask) != 0) {
                     if ((_errorCode & ErrorCodes.IncompleteToken) != 0) {
@@ -557,14 +558,14 @@ namespace IronPython.Compiler {
             EatOptionalNewlines();
             Statement statement = ParseStmt();
             EatEndOfInput();
-            return new PythonAst(statement, false, TrueDivision, true);
+            return new PythonAst(statement, false, TrueDivision, AllowWithStatement, true);
         }
 
         public PythonAst ParseExpression() {
             // TODO: move from source unit  .TrimStart(' ', '\t')
             ReturnStatement ret = new ReturnStatement(ParseTestListAsExpression());
             ret.SetLoc(SourceSpan.None);
-            return new PythonAst(ret, false, TrueDivision, false);
+            return new PythonAst(ret, false, TrueDivision, AllowWithStatement, false);
         }
 
         private Expression ParseTestListAsExpression() {

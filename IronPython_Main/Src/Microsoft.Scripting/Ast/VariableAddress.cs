@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Ast {
     sealed class VariableAddress : EvaluationAddress {

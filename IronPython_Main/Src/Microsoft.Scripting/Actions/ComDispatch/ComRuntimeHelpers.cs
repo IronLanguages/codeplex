@@ -24,6 +24,7 @@ using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {

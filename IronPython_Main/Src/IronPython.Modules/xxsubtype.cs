@@ -20,6 +20,7 @@ using IronPython.Runtime;
 using System.Diagnostics;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("xxsubtype", typeof(IronPython.Modules.xxsubtype))]
 namespace IronPython.Modules {

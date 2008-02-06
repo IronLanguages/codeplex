@@ -18,6 +18,7 @@ using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Math;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;

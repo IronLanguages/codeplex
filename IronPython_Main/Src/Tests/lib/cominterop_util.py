@@ -75,6 +75,50 @@ else:
 agentsvr_path = path_combine(windir, r"msagent\agentsvr.exe")
 scriptpw_path = path_combine(windir, r"system32\scriptpw.dll")
 
+
+#------------------------------------------------------------------------------
+#--Override a couple of definitions from assert_util
+from lib import assert_util
+DEBUG = 1
+
+def assert_helper(in_dict):    
+    #add the keys if they're not there
+    if not in_dict.has_key("runonly"): in_dict["runonly"] = True
+    if not in_dict.has_key("skip"): in_dict["skip"] = False
+    
+    #determine whether this test will be run or not
+    run = in_dict["runonly"] and not in_dict["skip"]
+    
+    #strip out the keys
+    for x in ["runonly", "skip"]: in_dict.pop(x)
+    
+    if not run:
+        if in_dict.has_key("bugid"):
+            print "...skipped an assert due to bug", str(in_dict["bugid"])
+            
+        elif DEBUG:
+            print "...skipped an assert on", sys.platform
+    
+    if in_dict.has_key("bugid"): in_dict.pop("bugid")
+    return run
+
+def Assert(*args, **kwargs):
+    if assert_helper(kwargs): assert_util.Assert(*args, **kwargs)
+    
+def AreEqual(*args, **kwargs):
+    if assert_helper(kwargs): assert_util.AreEqual(*args, **kwargs)
+
+def AssertError(*args, **kwargs):
+    try:
+        if assert_helper(kwargs): assert_util.AssertError(*args, **kwargs)
+    except Exception, e:
+        print "AssertError(" + str(args) + ", " + str(kwargs) + ") failed!"
+        raise e
+
+def AlmostEqual(*args, **kwargs):
+    if assert_helper(kwargs): assert_util.AlmostEqual(*args, **kwargs)
+
+
 #------------------------------------------------------------------------------
 #--HELPERS
 
@@ -154,25 +198,10 @@ def getRCWFromProgID(prog_id):
     '''
     Returns an instance of prog_id.
     '''
-    return Activator.CreateInstance(getTypeFromProgID(prog_id))
-
-#------------------------------------------------------------------------------    
-def AssertResults(expectedResultWithIDispatch, expectedResultWithInteropAssembly, func, *args, **kwargs):
-    if preferComDispatch: expectedResult = expectedResultWithIDispatch
-    else: expectedResult = expectedResultWithInteropAssembly
-    
-    exceptionExpected = False
-    try:
-        exceptionExpected = (issubclass(expectedResult, Exception) or 
-                             issubclass(expectedResult, System_dot_Exception))
-    except TypeError: pass
-    
-    if exceptionExpected:
-        try:        result = func(*args, **kwargs)
-        except expectedResult: return
-        else :      Fail("Expected %r but got no exception (result=%r)" % (expectedResult, result))
+    if is_cli:
+        return Activator.CreateInstance(getTypeFromProgID(prog_id))
     else:
-        AreEqual(func(*args, **kwargs), expectedResult)
+        return win32com.client.Dispatch(prog_id)
 
 #------------------------------------------------------------------------------
 def genPeverifyInteropAsm(file):
@@ -236,6 +265,45 @@ class skip_comdispatch:
         else: 
             from lib.assert_util import _do_nothing
             return _do_nothing('... Decorated with @skip_comdispatch(%s), Skipping %s ...' % (self.msg, f.func_name))
+
+#------------------------------------------------------------------------------
+#--Fake parts of System for compat tests
+if sys.platform=="win32":
+    class System:
+        class Byte(int):
+            MinValue = 0
+            MaxValue = 255
+        class SByte(int):
+            MinValue = -128
+            MaxValue = 127
+        class Int16(int):
+            MinValue = -32768
+            MaxValue = 32767
+        class UInt16(int):
+            MinValue = 0
+            MaxValue = 65535
+        class Int32(int):
+            MinValue = -2147483648
+            MaxValue =  2147483647
+        class UInt32(long):
+            MinValue = 0
+            MaxValue = 4294967295
+        class Int64(long):
+            MinValue = -9223372036854775808L
+            MaxValue =  9223372036854775807L
+        class UInt64(long):
+            MinValue = 0L 
+            MaxValue = 18446744073709551615
+        class Single(float):
+            MinValue = -3.40282e+038
+            MaxValue =  3.40282e+038
+        class Double(float):
+            MinValue = -1.79769313486e+308
+            MaxValue =  1.79769313486e+308
+        class String(str):
+            pass
+        class Boolean(int):
+            pass
             
 #------------------------------------------------------------------------------
 def run_com_test(name, file):
@@ -243,7 +311,9 @@ def run_com_test(name, file):
     
     #Run this test with PreferComDispatch as well
     if not preferComDispatch and sys.platform!="win32":
-        print "Re-running under '-X:PreferComDispatch' mode."
+        print
+        print "#" * 80
+        print "Re-running %s under '-X:PreferComDispatch' mode." % (file)
         AreEqual(launch_ironpython_changing_extensions(file, add=["-X:PreferComDispatch"]), 0)
     
     genPeverifyInteropAsm(file)

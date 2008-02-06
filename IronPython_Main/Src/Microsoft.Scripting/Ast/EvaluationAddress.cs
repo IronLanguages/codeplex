@@ -13,9 +13,11 @@
  *
  * ***************************************************************************/
 
+using Microsoft.Scripting.Runtime;
+
 namespace Microsoft.Scripting.Ast {
     class EvaluationAddress {
-        private readonly Expression /*!*/ _expr;
+        private readonly Expression/*!*/ _expr;
 
         public EvaluationAddress(Expression /*!*/ expression) {
             _expr = expression;

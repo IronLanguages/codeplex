@@ -20,6 +20,7 @@ using System.Text;
 using Microsoft.Scripting;
 
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
 

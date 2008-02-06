@@ -19,6 +19,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;

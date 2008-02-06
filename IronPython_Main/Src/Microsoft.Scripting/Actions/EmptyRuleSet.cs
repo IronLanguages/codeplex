@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     internal class EmptyRuleSet<T> : RuleSet<T> {

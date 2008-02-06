@@ -26,6 +26,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {

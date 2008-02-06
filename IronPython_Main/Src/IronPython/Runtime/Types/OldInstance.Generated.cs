@@ -21,6 +21,7 @@ using System.Runtime.CompilerServices;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     public partial class OldInstance {

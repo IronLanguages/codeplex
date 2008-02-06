@@ -14,13 +14,10 @@
 #####################################################################################
     
 
-# the tests (could) expose some degree of implementation details, 
-# therefore, it may need update upon failures.
-
 from lib.assert_util import *
 skiptest("silverlight")
 
-add_clr_assemblies("baseclass", "typesamples")
+add_clr_assemblies("baseclasscs", "typesamples")
 
 from Merlin.Testing import *
 from Merlin.Testing.BaseClass import *
@@ -219,12 +216,14 @@ def test_virtual_override_method():
     AreEqual(Class210b.m210(x), 211)
     AreEqual(x.m210(), 211)
     AreEqual(C.m210(x), 211)
+    AreEqual(Callback.On(x), 210)
     
     C.m210 = lambda self: 400
     AreEqual(Class210a.m210(x), 210)
     AreEqual(Class210b.m210(x), 211)
     AreEqual(x.m210(), 400)
     AreEqual(C.m210(x), 400)
+    AreEqual(Callback.On(x), 210)
     
     class C(Class210c): 
         def m210(self): return 500
@@ -233,12 +232,14 @@ def test_virtual_override_method():
     AreEqual(Class210c.m210(x), 212)
     AreEqual(x.m210(), 500)
     AreEqual(C.m210(x), 500)
+    AreEqual(Callback.On(x), 500)
 
     del C.m210
     #AreEqual(Class210a.m210(x), 210) # bug 368813
     AreEqual(Class210c.m210(x), 212)
     AreEqual(x.m210(), 212)
     AreEqual(C.m210(x), 212)
+    AreEqual(Callback.On(x), 212)
     
     class C(Class210d): pass
     x = C()
@@ -246,19 +247,23 @@ def test_virtual_override_method():
     AreEqual(Class210d.m210(x), 210)
     AreEqual(x.m210(), 210)
     AreEqual(C.m210(x), 210)
+    AreEqual(Callback.On(x), 210)
     
     C.m210 = lambda self: 600
     #AreEqual(Class210a.m210(x), 210) # bug 368813
     AreEqual(Class210d.m210(x), 210)
     AreEqual(x.m210(), 600)
     AreEqual(C.m210(x), 600)
-    
+    AreEqual(Callback.On(x), 600)
+
+def test_final_methods():
     class C(Class210e): 
         def m210(self): return 700
     x = C()
     AreEqual(x.m210(), 700)
-    #AreEqual(Class210a.m210(x), 210) # bug 
+    #AreEqual(Class210a.m210(x), 210) # bug 368813
     AreEqual(Class210e.m210(x), 214)
+    AreEqual(Callback.On(x), 214)
 
 @disabled("bug 369539")
 def test_generic_method_inside_interface():
@@ -412,13 +417,34 @@ def test_super():
     x = C()
     AreEqual(x.m210(), 514)
 
-def test_signature():
-    class C(IInterface600): 
-        def m600a(a, b, c): 
-            return 3
-            
+# incomplete...
+def test_long_hierarchy():
+    class C(CType11): pass
+
     x = C()
-    a, b, c = StrongBox[int](1), StrongBox[int](2), 3
-    #IInterface600.m600a(x, a, c)
+    x.m1()
+    Flag.Check(10)
     
+    Flag.Reset()
+    Callback.On(x)
+    Flag.Check(10)
+    
+    class C(CType11):
+        def m1(self): Flag.Set(20)
+    
+    x = C()
+    Callback.On(x)
+    Flag.Check(20)
+    
+    class C(CType21):
+        pass
+    x = C()
+    AssertError(AttributeError, Callback.On, x)
+    
+    class C(CType21):
+        def m1(self): Flag.Set(30)
+    x = C()
+    Callback.On(x)
+    Flag.Check(30)
+                
 run_test(__name__)

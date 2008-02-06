@@ -16,6 +16,7 @@
 using System;
 using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
 

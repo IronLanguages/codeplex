@@ -27,6 +27,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 #if !SILVERLIGHT // finalizers not supported
 

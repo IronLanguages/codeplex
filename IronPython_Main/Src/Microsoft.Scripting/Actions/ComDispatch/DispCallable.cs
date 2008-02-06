@@ -29,6 +29,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     using Ast = Microsoft.Scripting.Ast.Ast;

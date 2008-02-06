@@ -27,6 +27,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     /// <summary>

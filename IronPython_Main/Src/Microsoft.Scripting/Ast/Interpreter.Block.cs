@@ -20,13 +20,14 @@ using System.Reflection;
 
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Interpreter partial class. This part contains interpretation code for code blocks.
     /// </summary>
-    public static partial class Interpreter {
+    internal static partial class Interpreter {
         private static WeakHash<CodeBlock, InterpreterData> _Hashtable = new WeakHash<CodeBlock, InterpreterData>();
 
         private static InterpreterData GetBlockInterpreterData(CodeBlock block) {
@@ -53,7 +54,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             context.Scope.SourceLocation = block.Start;
-            ret = Interpreter.EvaluateExpression(context, block.Body);
+            ret = Interpreter.Interpret(context, block.Body);
 
             ControlFlow cf = ret as ControlFlow;
             if (cf != null) {
