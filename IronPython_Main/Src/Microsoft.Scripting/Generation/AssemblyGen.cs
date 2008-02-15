@@ -33,136 +33,122 @@ using System.Text;
 
 namespace Microsoft.Scripting.Generation {
     public class AssemblyGen {
-        private readonly AssemblyBuilder _myAssembly;
-        private ModuleBuilder _myModule;
-        private AssemblyGenAttributes _genAttrs;
-        private int _index;
-        
-        private ISymbolDocumentWriter _symbolWriter;
-        private readonly string _outFileName;       // can be null iff !SaveAndReloadAssemblies
-        private PortableExecutableKinds _peKind;
-        private ImageFileMachine _machine;
+        private readonly AssemblyBuilder/*!*/ _myAssembly;
+        private readonly ModuleBuilder/*!*/ _myModule;
+        private readonly PortableExecutableKinds _peKind;
+        private readonly ImageFileMachine _machine;
+        private readonly bool _isDebuggable;
+
+        // A simple single item cache for symbol document writers.
+        // If URL and language match chached symbol writer is reused.
+        private string _lastSymbolDocumentUrl;
+        private LanguageContext _lastSymbolDocumentLanguage;
+        private ISymbolDocumentWriter _lastSymbolDocumentWriter;
 
 #if !SILVERLIGHT
+        private readonly string _outFileName;       // can be null iff !SaveAndReloadAssemblies
         private readonly string _outDir;            // null means the current directory
         private const string peverify_exe = "peverify.exe";
 #endif
 
-        public AssemblyGen(string moduleName,
-            string outDir,
-            string outFile,
-            AssemblyGenAttributes generationAttributes)
-            :
-            this(moduleName, outDir, outFile, generationAttributes, 
-            PortableExecutableKinds.ILOnly, ImageFileMachine.I386) { 
+        private int _index;
+
+        public bool IsDebuggable {
+            get { 
+#if !SILVERLIGHT
+                Debug.Assert(_isDebuggable == (_myModule.GetSymWriter() != null));
+#endif
+                return _isDebuggable; 
+            }
         }
 
-        public AssemblyGen(string moduleName, 
-            string outDir, 
-            string outFile, 
-            AssemblyGenAttributes generationAttributes,
-            PortableExecutableKinds peKind, 
-            ImageFileMachine machine) {
+        public AssemblyGen(AssemblyName/*!*/ name, string outDir, string outFileExtension, bool isDebuggable)
+            : this(name, outDir, outFileExtension, isDebuggable, PortableExecutableKinds.ILOnly, ImageFileMachine.I386) { 
+        }
 
-            Contract.Requires(!String.IsNullOrEmpty(moduleName), "moduleName", "Module name cannot be a null reference or an empty string.");
-            Contract.Requires(outFile != null || !SaveAndReloadAssemblies, "outFile", "SaveAssemblies mode requires non-null output file name.");
+        public AssemblyGen(AssemblyName/*!*/ name, string outDir, string outFileExtension, bool isDebuggable,
+            PortableExecutableKinds peKind, ImageFileMachine machine) {
 
-            _genAttrs = generationAttributes;
-
-            AssemblyName asmname = new AssemblyName();
-
-            AppDomain domain = System.Threading.Thread.GetDomain();
-
-            _machine = machine;
-            _peKind = peKind;
-            _outFileName = outFile;
+            Contract.RequiresNotNull(name, "name");
 
 #if SILVERLIGHT  // AssemblyBuilderAccess.RunAndSave, Environment.CurrentDirectory
-            asmname.Name = moduleName;
-            _myAssembly = domain.DefineDynamicAssembly(asmname, AssemblyBuilderAccess.Run);
-            _myModule = _myAssembly.DefineDynamicModule(moduleName, EmitDebugInfo);
+            _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
+            _myModule = _myAssembly.DefineDynamicModule(name.Name, isDebuggable);
 #else
-            try {
-                outDir = Path.GetFullPath(String.IsNullOrEmpty(outDir) ? Environment.CurrentDirectory : outDir);
-            } catch (Exception e) {
-                throw new ArgumentException("Invalid output directory", e);
+            if (outFileExtension == null) {
+                outFileExtension = ".dll";
             }
 
-            if (SaveAndReloadAssemblies || VerifyAssemblies) {
+            if (outDir != null) {
+                try {
+                    outDir = Path.GetFullPath(outDir);
+                } catch (Exception e) {
+                    throw new ArgumentException("Invalid output directory", e);
+                }
+                try {
+                    Path.Combine(outDir, name.Name + outFileExtension);
+                } catch (ArgumentException e) {
+                    throw new ArgumentException("Invalid assembly name or file extension", e);
+                }
+
+                _outFileName = name.Name + outFileExtension;
                 _outDir = outDir;
             }
 
-            if (SaveAndReloadAssemblies) {
-                asmname.Name = Path.GetFileNameWithoutExtension(_outFileName);
-                _myAssembly = domain.DefineDynamicAssembly(asmname, AssemblyBuilderAccess.RunAndSave, outDir, null);
-                _myModule = _myAssembly.DefineDynamicModule(_outFileName, _outFileName, EmitDebugInfo);
+            if (outDir != null) {
+                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, outDir);
+                _myModule = _myAssembly.DefineDynamicModule(name.Name, _outFileName, isDebuggable);
             } else {
-                asmname.Name = moduleName;
-                _myAssembly = domain.DefineDynamicAssembly(asmname, AssemblyBuilderAccess.Run);
-                _myModule = _myAssembly.DefineDynamicModule(moduleName, EmitDebugInfo);
+                _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
+                _myModule = _myAssembly.DefineDynamicModule(name.Name, isDebuggable);
             }
+
             _myAssembly.DefineVersionInfoResource();
 #endif
-            if (EmitDebugInfo) SetDebuggableAttributes();
+            _machine = machine;
+            _peKind = peKind;
+            _isDebuggable = isDebuggable;
+            
+            if (isDebuggable) {
+                SetDebuggableAttributes();
+            }
         }
 
         private void SetDebuggableAttributes() {
-            if (GenerateDebugAssemblies) {
-                Type[] argTypes = new Type[] { typeof(DebuggableAttribute.DebuggingModes) };
-                Object[] argValues = new Object[] { CurrentDebuggableAttributes };
+            DebuggableAttribute.DebuggingModes attrs = 
+                DebuggableAttribute.DebuggingModes.Default |
+                DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints |
+                DebuggableAttribute.DebuggingModes.DisableOptimizations;
+                   
+            Type[] argTypes = new Type[] { typeof(DebuggableAttribute.DebuggingModes) };
+            Object[] argValues = new Object[] { attrs };
 
-                _myAssembly.SetCustomAttribute(new CustomAttributeBuilder(
-                   typeof(DebuggableAttribute).GetConstructor(argTypes), argValues)
-                   );
+            _myAssembly.SetCustomAttribute(new CustomAttributeBuilder(
+               typeof(DebuggableAttribute).GetConstructor(argTypes), argValues)
+            );
 
-                _myModule.SetCustomAttribute(new CustomAttributeBuilder(
-                    typeof(DebuggableAttribute).GetConstructor(argTypes), argValues)
-                    );
-            }
+            _myModule.SetCustomAttribute(new CustomAttributeBuilder(
+                typeof(DebuggableAttribute).GetConstructor(argTypes), argValues)
+            );
         }
 
-        private DebuggableAttribute.DebuggingModes CurrentDebuggableAttributes {
-            get {
-                return DebuggableAttribute.DebuggingModes.Default |
-                       DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints |
-                       (DisableOptimizations ?
-                            DebuggableAttribute.DebuggingModes.DisableOptimizations :
-                            DebuggableAttribute.DebuggingModes.None);
-            }
-        }
+        internal ISymbolDocumentWriter/*!*/ GetSymbolWriter(string/*!*/ sourceUrl, LanguageContext/*!*/ language) {
+            Assert.NotEmpty(sourceUrl);
+            Assert.NotNull(language);
+            Debug.Assert(_isDebuggable);
 
-        public void SetSourceUnit(SourceUnit sourceUnit) {
-            if (EmitDebugInfo && sourceUnit.HasPath) {
-                _symbolWriter = _myModule.DefineDocument(
-                    sourceUnit.Id,
-                    sourceUnit.LanguageContext.LanguageGuid,
-                    sourceUnit.LanguageContext.VendorGuid,
-                    SymbolGuids.DocumentType_Text);
+            // caching:
+            if (sourceUrl != _lastSymbolDocumentUrl || _lastSymbolDocumentLanguage != language) {
+                _lastSymbolDocumentUrl = sourceUrl;
+                _lastSymbolDocumentLanguage = language;
+                _lastSymbolDocumentWriter = _myModule.DefineDocument(sourceUrl,
+                    language.LanguageGuid,
+                    language.VendorGuid,
+                    SymbolGuids.DocumentType_Text
+                );
             }
-		}
 
-        public bool EmitDebugInfo {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.EmitDebugInfo) == AssemblyGenAttributes.EmitDebugInfo;
-            }
-        }
-
-        public bool ILDebug {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.ILDebug) == AssemblyGenAttributes.ILDebug;
-            }
-        }
-
-        public bool BeforeFieldInit {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.BeforeFieldInit) == AssemblyGenAttributes.BeforeFieldInit;
-            }
-        }
-
-        public bool DisableOptimizations {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.DisableOptimizations) == AssemblyGenAttributes.DisableOptimizations;
-            }
+            return _lastSymbolDocumentWriter;
         }
 
 #if !SILVERLIGHT // IResourceWriter
@@ -186,47 +172,22 @@ namespace Microsoft.Scripting.Generation {
         }
 #endif
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFile")]
-        public Assembly DumpAndLoad() {
-#if SILVERLIGHT // AssemblyBuilder.Save
-            return _myAssembly;
-#else
-            if (!SaveAndReloadAssemblies) {
-                return _myAssembly;
-            }
-
-            string fullPath = Path.Combine(_outDir, _outFileName);
-
-            try {
-                Dump();
-            } catch (IOException) {
-                return _myAssembly;
-            }
-
-            return Assembly.LoadFile(fullPath);
-#endif
-        }
+        #region Dump and Verify
 
         public void Dump() {
-            Dump(null);
-        }
-
-        public void Dump(string fileName) {
 #if !SILVERLIGHT // AssemblyBuilder.Save
-            _myAssembly.Save(fileName ?? _outFileName, _peKind, _machine);
+            _myAssembly.Save(_outFileName, _peKind, _machine);
 #endif
         }
 
         public void Verify() {
 #if !SILVERLIGHT
-            if (VerifyAssemblies) {
-                PeVerifyThis();
-            }
+            PeVerifyThis();
 #endif
         }
 
+#if !SILVERLIGHT
         private static string FindPeverify() {
-#if !SILVERLIGHT // Environment.GetEnvironmentVariable
             string path = System.Environment.GetEnvironmentVariable("PATH");
             string[] dirs = path.Split(';');
             foreach (string dir in dirs) {
@@ -235,11 +196,9 @@ namespace Microsoft.Scripting.Generation {
                     return file;
                 }
             }
-#endif
             return null;
         }
 
-#if !SILVERLIGHT // ProcessStartInfo
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void PeVerifyThis() {
             string peverifyPath = FindPeverify();
@@ -274,8 +233,8 @@ namespace Microsoft.Scripting.Generation {
                 // copy any DLLs or EXEs created by the process during the run...
                 CopyFilesCreatedSinceStart(Path.GetTempPath(), Environment.CurrentDirectory);
                 CopyDirectory(Path.GetTempPath(), pythonPath);
-                if (ScriptDomainManager.Options.BinariesDirectory != null && ScriptDomainManager.Options.BinariesDirectory != Path.GetTempPath()) {
-                    CopyFilesCreatedSinceStart(Path.GetTempPath(), ScriptDomainManager.Options.BinariesDirectory);
+                if (Snippets.Shared.SnippetsDirectory != null && Snippets.Shared.SnippetsDirectory != Path.GetTempPath()) {
+                    CopyFilesCreatedSinceStart(Path.GetTempPath(), Snippets.Shared.SnippetsDirectory);
                 }
                 
                 // /IGNORE=80070002 ignores errors related to files we can't find, this happens when we generate assemblies
@@ -354,99 +313,47 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 #endif
+        #endregion
 
-        public TypeGen DefinePublicType(string name, Type parent) {
-            TypeAttributes attrs = TypeAttributes.Public;
-            if (BeforeFieldInit) attrs |= TypeAttributes.BeforeFieldInit;
+        public TypeGen/*!*/ DefinePublicType(string/*!*/ name, Type/*!*/ parent) {
+            return DefinePublicType(name, parent, true);
+        }
+
+        public TypeGen/*!*/ DefinePublicType(string/*!*/ name, Type/*!*/ parent, bool preserveName) {
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(parent, "parent");
             
+            TypeAttributes attrs = TypeAttributes.Public;
+
+            StringBuilder sb = new StringBuilder(name);
+            if (!preserveName) {
+                int index = Interlocked.Increment(ref _index);
+                sb.Append("$");
+                sb.Append(index);
+            }
+
             // There is a bug in Reflection.Emit that leads to 
             // Unhandled Exception: System.Runtime.InteropServices.COMException (0x80131130): Record not found on lookup.
             // if there is any of the characters []*&+,\ in the type name and a method defined on the type is called.
-            name = new StringBuilder(name).Replace('+', '_').Replace('[', '_').Replace(']', '_').Replace('*', '_').Replace('&', '_').Replace(',', '_').Replace('\\', '_').ToString();
+            sb.Replace('+', '_').Replace('[', '_').Replace(']', '_').Replace('*', '_').Replace('&', '_').Replace(',', '_').Replace('\\', '_');
+            
+            name = sb.ToString();
+
             TypeBuilder tb = _myModule.DefineType(name, attrs);
 
             tb.SetParent(parent);
+
             return new TypeGen(this, tb);
         }
 
-        internal Compiler DefineMethod(string methodName, Type returnType, IList<Type> paramTypes, ConstantPool constantPool) {
-            Compiler cg;
-            if (GenerateStaticMethods) {
-                TypeGen tg = DefineHelperType();
-                cg = tg.DefineMethod("$" + methodName, returnType, paramTypes, null, constantPool);
-                cg.DynamicMethod = true;
-            } else {
-                Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
-                DynamicMethod target = CreateDynamicMethod(returnType, parameterTypes, methodName);
-                cg = new Compiler(null, this, target, target.GetILGenerator(), parameterTypes, constantPool);
-            }
-            return cg;
-        }
 
-        internal TypeGen DefineHelperType() {
-            int index = Interlocked.Increment(ref _index);
-            return DefinePublicType("Type$" + index, typeof(object));
-        }
-
-        private DynamicMethod CreateDynamicMethod(Type returnType, Type[] parameterTypes, string name) {
-            name = name + "##" + Interlocked.Increment(ref _index);
-            return CompilerHelpers.ConstructNewDynamicMethod(name, returnType, parameterTypes, _myModule);
-        }
 
 #if !SILVERLIGHT
         public void SetEntryPoint(MethodInfo mi, PEFileKinds kind) {
             _myAssembly.SetEntryPoint(mi, kind);
         }
 #endif
-
-        public bool GenerateStaticMethods {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.GenerateStaticMethods) != 0;
-            }
-            set {
-                if (value) _genAttrs |= AssemblyGenAttributes.GenerateStaticMethods;
-                else _genAttrs &= ~AssemblyGenAttributes.GenerateStaticMethods;
-            }
-        }
-
-        public bool GenerateDebugAssemblies {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.GenerateDebugAssemblies) != 0;
-            }
-            set {
-                if (value) _genAttrs |= AssemblyGenAttributes.GenerateDebugAssemblies;
-                else _genAttrs &= ~AssemblyGenAttributes.GenerateDebugAssemblies;
-            }
-        }
-
-        public bool SaveAndReloadAssemblies {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.SaveAndReloadAssemblies) != 0;
-            }
-            set {
-                if (value) _genAttrs |= AssemblyGenAttributes.SaveAndReloadAssemblies;
-                else _genAttrs &= ~AssemblyGenAttributes.SaveAndReloadAssemblies;
-            }
-        }
-
-#if !SILVERLIGHT
-        public bool VerifyAssemblies {
-            get {
-                return (_genAttrs & AssemblyGenAttributes.VerifyAssemblies) != 0;
-            }
-            set {
-                if (value) _genAttrs |= AssemblyGenAttributes.VerifyAssemblies;
-                else _genAttrs &= ~AssemblyGenAttributes.VerifyAssemblies;
-            }
-        }
-#endif
         
-        // TODO: SourceUnit should provide writers for each symbol document file used in the unit
-        public ISymbolDocumentWriter SymbolWriter {
-            get { return _symbolWriter; }
-            set { _symbolWriter = value; }
-        }
-
         public AssemblyBuilder AssemblyBuilder {
             get { return _myAssembly; }
         }

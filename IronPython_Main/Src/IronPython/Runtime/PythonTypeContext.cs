@@ -61,13 +61,8 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public static bool IsMineOrVisible(PythonType owner, PythonType declaring) {
             if (owner != null && !object.ReferenceEquals(owner, declaring)) {
-                PythonTypeContext ctx = owner.GetContextTag(DefaultContext.Id) as PythonTypeContext;
-                if (ctx != null && ctx.IsPythonType) {
-                    // see if this methods type is a non-python type
-                    ctx = declaring.GetContextTag(DefaultContext.Id) as PythonTypeContext;
-                    if (ctx == null || !ctx.IsPythonType) {
-                        return false;
-                    }
+                if (owner.IsPythonType && !declaring.IsPythonType) {
+                    return false;
                 }
             }
             return true;

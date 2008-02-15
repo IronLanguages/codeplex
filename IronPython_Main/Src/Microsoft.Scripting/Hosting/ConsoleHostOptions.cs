@@ -32,7 +32,6 @@ namespace Microsoft.Scripting.Hosting {
             None,
             RunConsole,
             RunFiles,
-            ExecuteFile,
             DisplayHelp
         }
 
@@ -56,7 +55,6 @@ namespace Microsoft.Scripting.Hosting {
         public List<string/*!*/> EnvironmentVars { get { return _environmentVars; } }
         
         public ConsoleHostOptions() {
-
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional")] // TODO: fix
@@ -81,10 +79,15 @@ namespace Microsoft.Scripting.Hosting {
 
     public class ConsoleHostOptionsParser {
         public ConsoleHostOptions Options { get { return _options; } set { _options = value; } }
-        private ConsoleHostOptions _options;
+        private ConsoleHostOptions/*!*/ _options;
+        private IScriptEnvironment/*!*/ _env;
 
-        public ConsoleHostOptionsParser(ConsoleHostOptions options) {
-            _options = options ?? new ConsoleHostOptions();
+        public ConsoleHostOptionsParser(ConsoleHostOptions/*!*/ options, IScriptEnvironment/*!*/ environment) {
+            Contract.RequiresNotNull(options, "options");
+            Contract.RequiresNotNull(environment, "environment");
+
+            _options = options;
+            _env = environment;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
@@ -110,12 +113,6 @@ namespace Microsoft.Scripting.Hosting {
                         _options.Files.AddRange(value.Split(';'));
                         break;
 
-                    case "execute":
-                        OptionValueRequired(name, value);
-                        _options.RunAction = ConsoleHostOptions.Action.ExecuteFile;
-                        _options.Files.Add(value);
-                        break;
-                    
                     case "lang":
                         OptionValueRequired(name, value);
                         _options.ScriptEngine = GetScriptEngine(value);
@@ -182,9 +179,6 @@ namespace Microsoft.Scripting.Hosting {
 
                     break;
 
-                case ConsoleHostOptions.Action.ExecuteFile:
-                    break;
-
                 case ConsoleHostOptions.Action.RunConsole:
                     if (_options.ScriptEngine == null)
                         _options.ScriptEngine = GetScriptEngine("py");
@@ -237,11 +231,11 @@ namespace Microsoft.Scripting.Hosting {
             throw new InvalidOptionException(String.Format("Option '{0}' is not available on Silverlight.", optionName));
         }
 
-        private static IScriptEngine GetScriptEngine(string languageId) {
+        private IScriptEngine GetScriptEngine(string languageId) {
             Debug.Assert(languageId != null);
 
             try {
-                return ScriptDomainManager.CurrentManager.GetEngine(languageId);
+                return _env.GetEngine(languageId);
             } catch (Exception e) {
                 throw new InvalidOperationException(String.Format("Cannot create language provider corresponding to the language id '{0}'.", languageId), e);
             }

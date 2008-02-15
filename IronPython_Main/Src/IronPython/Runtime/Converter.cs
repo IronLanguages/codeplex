@@ -35,28 +35,28 @@ namespace IronPython.Runtime {
     public static partial class Converter {
         #region Conversion Sites
 
-        private static FastDynamicSite<object, int> _intSite = MakeExplicitConvertSite<int>();
-        private static FastDynamicSite<object, double> _doubleSite = MakeExplicitConvertSite<double>();
-        private static FastDynamicSite<object, Complex64> _complexSite = MakeExplicitConvertSite<Complex64>();
-        private static FastDynamicSite<object, BigInteger> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
-        private static FastDynamicSite<object, string> _stringSite = MakeExplicitConvertSite<string>();
-        private static FastDynamicSite<object, bool> _boolSite = MakeExplicitConvertSite<bool>();
-        private static FastDynamicSite<object, char> _charSite = MakeImplicitConvertSite<char>();
-        private static FastDynamicSite<object, char> _explicitCharSite = MakeExplicitConvertSite<char>();
-        private static FastDynamicSite<object, IEnumerable> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
-        private static FastDynamicSite<object, IEnumerator> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
-        private static Dictionary<Type, FastDynamicSite<object, object>> _siteDict = new Dictionary<Type, FastDynamicSite<object, object>>();
-        private static FastDynamicSite<object, byte> _byteSite = MakeExplicitConvertSite<byte>();
-        private static FastDynamicSite<object, sbyte> _sbyteSite = MakeExplicitConvertSite<sbyte>();
-        private static FastDynamicSite<object, Int16> _int16Site = MakeExplicitConvertSite<Int16>();
-        private static FastDynamicSite<object, UInt16> _uint16Site = MakeExplicitConvertSite<UInt16>();
-        private static FastDynamicSite<object, UInt32> _uint32Site = MakeExplicitConvertSite<UInt32>();
-        private static FastDynamicSite<object, Int64> _int64Site = MakeExplicitConvertSite<Int64>();
-        private static FastDynamicSite<object, UInt64> _uint64Site = MakeExplicitConvertSite<UInt64>();
-        private static FastDynamicSite<object, decimal> _decimalSite = MakeExplicitConvertSite<decimal>();
-        private static FastDynamicSite<object, float> _floatSite = MakeExplicitConvertSite<float>();
+        private static readonly FastDynamicSite<object, int> _intSite = MakeExplicitConvertSite<int>();
+        private static readonly FastDynamicSite<object, double> _doubleSite = MakeExplicitConvertSite<double>();
+        private static readonly FastDynamicSite<object, Complex64> _complexSite = MakeExplicitConvertSite<Complex64>();
+        private static readonly FastDynamicSite<object, BigInteger> _bigIntSite = MakeExplicitConvertSite<BigInteger>();
+        private static readonly FastDynamicSite<object, string> _stringSite = MakeExplicitConvertSite<string>();
+        private static readonly FastDynamicSite<object, bool> _boolSite = MakeExplicitConvertSite<bool>();
+        private static readonly FastDynamicSite<object, char> _charSite = MakeImplicitConvertSite<char>();
+        private static readonly FastDynamicSite<object, char> _explicitCharSite = MakeExplicitConvertSite<char>();
+        private static readonly FastDynamicSite<object, IEnumerable> _ienumerableSite = MakeImplicitConvertSite<IEnumerable>();
+        private static readonly FastDynamicSite<object, IEnumerator> _ienumeratorSite = MakeImplicitConvertSite<IEnumerator>();
+        private static readonly Dictionary<Type, FastDynamicSite<object, object>> _siteDict = new Dictionary<Type, FastDynamicSite<object, object>>();
+        private static readonly FastDynamicSite<object, byte> _byteSite = MakeExplicitConvertSite<byte>();
+        private static readonly FastDynamicSite<object, sbyte> _sbyteSite = MakeExplicitConvertSite<sbyte>();
+        private static readonly FastDynamicSite<object, Int16> _int16Site = MakeExplicitConvertSite<Int16>();
+        private static readonly FastDynamicSite<object, UInt16> _uint16Site = MakeExplicitConvertSite<UInt16>();
+        private static readonly FastDynamicSite<object, UInt32> _uint32Site = MakeExplicitConvertSite<UInt32>();
+        private static readonly FastDynamicSite<object, Int64> _int64Site = MakeExplicitConvertSite<Int64>();
+        private static readonly FastDynamicSite<object, UInt64> _uint64Site = MakeExplicitConvertSite<UInt64>();
+        private static readonly FastDynamicSite<object, decimal> _decimalSite = MakeExplicitConvertSite<decimal>();
+        private static readonly FastDynamicSite<object, float> _floatSite = MakeExplicitConvertSite<float>();
 
-        private static FastDynamicSite<object, object> 
+        private static readonly FastDynamicSite<object, object> 
             _tryByteSite       = MakeExplicitTrySite<Byte>(),
             _trySByteSite      = MakeExplicitTrySite<SByte>(),
             _tryInt16Site      = MakeExplicitTrySite<Int16>(),

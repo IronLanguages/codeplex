@@ -237,7 +237,9 @@ namespace Microsoft.Scripting.Generation {
             return ns;
         }
 
-        internal static Type[] MakeParamTypeArray(IList<Type> baseParamTypes, ConstantPool constantPool) {
+        internal static Type/*!*/[]/*!*/ MakeParamTypeArray(IList<Type/*!*/>/*!*/ baseParamTypes, ConstantPool constantPool) {
+            Assert.NotNullItems(baseParamTypes);
+
             if (constantPool == null) {
                 return new List<Type>(baseParamTypes).ToArray();
             } else {
@@ -248,74 +250,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        #region Compiler Creation Support
-
-        internal static Compiler CreateDebuggableDynamicCodeGenerator(SourceUnit sourceUnit, string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
-            TypeGen tg = ScriptDomainManager.CurrentManager.Snippets.DefineDebuggableType(name, typeof(object), sourceUnit);
-            Compiler cg = tg.DefineMethod("Initialize", retType, paramTypes, paramNames, constantPool);
-
-            tg.AddCodeContextField();
-            cg.DynamicMethod = true;
-
-            return cg;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        internal static Compiler CreateDynamicCodeGenerator(string name, Type retType, IList<Type> paramTypes, ConstantPool constantPool) {
-            return ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(name, retType, paramTypes, constantPool);
-        }
-
-        /// <summary>
-        /// Creates a new CodeGenerator for emitting the given code.
-        /// The CodeGenerator is usually tied to a dynamic method
-        /// unless debugging has been enabled.
-        /// </summary>
-        internal static Compiler CreateDynamicCodeGenerator(SourceUnit source) {
-            Compiler cg;
-
-            string typeName = "";
-#if DEBUG
-            if (source.HasPath) {
-                typeName = ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(source.Id)));
-            }
-#endif
-
-            if (NeedDebuggableDynamicCodeGenerator(source)) {
-                cg = CreateDebuggableDynamicCodeGenerator(
-                    source,
-                    typeName,
-                    typeof(object),
-                    new Type[] { typeof(CodeContext) },
-                    null,
-                    new ConstantPool()
-                );
-            } else {
-                cg = CreateDynamicCodeGenerator(
-                    typeName,
-                    typeof(object),
-                    new Type[] { typeof(CodeContext) },
-                    new ConstantPool());
-
-                cg.CacheConstants = false;
-            }
-
-            cg.ContextSlot = cg.GetArgumentSlot(0);
-            cg.SetSource(source);
-
-            // Caller wanted dynamic method, we should produce it.
-            Debug.Assert(cg.DynamicMethod);
-
-            return cg;
-        }
-
-        internal static bool NeedDebuggableDynamicCodeGenerator(SourceUnit/*!*/ sourceUnit) {
-            return sourceUnit.LanguageContext.Options.ClrDebuggingEnabled && sourceUnit.HasPath;
-        }
-
-        #endregion
-
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         public static Operators OperatorToReverseOperator(Operators op) {
             switch (op) {
                 case Operators.LessThan: return Operators.GreaterThan;
@@ -324,12 +259,44 @@ namespace Microsoft.Scripting.Generation {
                 case Operators.GreaterThanOrEqual: return Operators.LessThanOrEqual;
                 case Operators.Equals: return Operators.Equals;
                 case Operators.NotEquals: return Operators.NotEquals;
-                default:
-                    if (op >= Operators.Add && op <= Operators.Xor) {
-                        return (Operators)((int)op + (int)Operators.ReverseAdd - (int)Operators.Add);
-                    }
-                    return Operators.None;
+                case Operators.DivMod: return Operators.ReverseDivMod;
+                case Operators.ReverseDivMod: return Operators.DivMod;
+                #region Generated Operator Reversal
+
+                // *** BEGIN GENERATED CODE ***
+
+                case Operators.Add: return Operators.ReverseAdd;
+                case Operators.ReverseAdd: return Operators.Add;
+                case Operators.Subtract: return Operators.ReverseSubtract;
+                case Operators.ReverseSubtract: return Operators.Subtract;
+                case Operators.Power: return Operators.ReversePower;
+                case Operators.ReversePower: return Operators.Power;
+                case Operators.Multiply: return Operators.ReverseMultiply;
+                case Operators.ReverseMultiply: return Operators.Multiply;
+                case Operators.FloorDivide: return Operators.ReverseFloorDivide;
+                case Operators.ReverseFloorDivide: return Operators.FloorDivide;
+                case Operators.Divide: return Operators.ReverseDivide;
+                case Operators.ReverseDivide: return Operators.Divide;
+                case Operators.TrueDivide: return Operators.ReverseTrueDivide;
+                case Operators.ReverseTrueDivide: return Operators.TrueDivide;
+                case Operators.Mod: return Operators.ReverseMod;
+                case Operators.ReverseMod: return Operators.Mod;
+                case Operators.LeftShift: return Operators.ReverseLeftShift;
+                case Operators.ReverseLeftShift: return Operators.LeftShift;
+                case Operators.RightShift: return Operators.ReverseRightShift;
+                case Operators.ReverseRightShift: return Operators.RightShift;
+                case Operators.BitwiseAnd: return Operators.ReverseBitwiseAnd;
+                case Operators.ReverseBitwiseAnd: return Operators.BitwiseAnd;
+                case Operators.BitwiseOr: return Operators.ReverseBitwiseOr;
+                case Operators.ReverseBitwiseOr: return Operators.BitwiseOr;
+                case Operators.Xor: return Operators.ReverseXor;
+                case Operators.ReverseXor: return Operators.Xor;
+
+                // *** END GENERATED CODE ***
+
+                #endregion
             }
+            return Operators.None;
         }
 
         public static Operators InPlaceOperatorToOperator(Operators op) {
@@ -631,51 +598,6 @@ namespace Microsoft.Scripting.Generation {
             NonNullType.AssertInitialized(ret);
             return ret;
         }
-
-
-        #region Creating ILGen for dynamic method
-
-        public static DynamicILGen CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
-            AssemblyGen asm = ScriptDomainManager.CurrentManager.Snippets.Assembly;
-
-            if (asm.GenerateStaticMethods) {
-                TypeGen tg = asm.DefineHelperType();
-                TypeBuilder tb = tg.TypeBuilder;
-                MethodBuilder mb = tb.DefineMethod(name, CompilerHelpers.PublicStatic, returnType, parameterTypes);
-                return new DynamicILGenType(tb, mb, mb.GetILGenerator());
-            } else {
-                DynamicMethod dm = ConstructNewDynamicMethod(name, returnType, parameterTypes, asm.ModuleBuilder);
-                return new DynamicILGenMethod(dm, dm.GetILGenerator());
-            }
-        }
-
-#if !SILVERLIGHT
-        // This overload is only available in CLR V2 SP1
-        private static readonly Type[] _DynamicMethodConstructorSignature = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
-        private static readonly ConstructorInfo _DynamicMethodConstructor = typeof(DynamicMethod).GetConstructor(_DynamicMethodConstructorSignature);
-#endif
-        // Module is used only for CLR before V2 SP1
-        internal static DynamicMethod ConstructNewDynamicMethod(string name, Type returnType, Type[] parameterTypes, Module m) {
-#if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
-            return new DynamicMethod(name, returnType, parameterTypes);
-#else
-            if (_DynamicMethodConstructor != null) {
-                object[] parameters = new object[] { name, returnType, parameterTypes };
-                return (DynamicMethod)_DynamicMethodConstructor.Invoke(parameters);
-            } else {
-                // Don't have the new constructor,
-                // let's put the dynamic method on the snippet module.
-                return new DynamicMethod(
-                    name,
-                    returnType,
-                    parameterTypes,
-                    m
-                );
-            }
-#endif
-        }
-
-        #endregion
 
         public static Type/*!*/[]/*!*/ GetExpressionTypes(Expression/*!*/[]/*!*/ expressions) {
             Contract.RequiresNotNull(expressions, "expressions");

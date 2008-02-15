@@ -851,7 +851,7 @@ if not is_interpreted():
         # AreEqual(pow(2,2), 4) # bug 359890
         dir('abc')
 
-## Overriding __builtin__ method inconsistent with -X:GenerateAsSnippets flag
+## Overriding __builtin__ method inconsistent with -X:TupleBasedOptimizedScopes flag
 import __builtin__
 __builtin__.help = 10
 AssertErrorWithPartialMessage(TypeError, "is not callable", lambda: help(dir))

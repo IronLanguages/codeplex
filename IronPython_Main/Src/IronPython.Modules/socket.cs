@@ -44,7 +44,7 @@ using Microsoft.Scripting.Runtime;
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
     public static class PythonSocket {
-        public static string __doc__ = "Implementation module for socket operations.\n\n"
+        public const string __doc__ = "Implementation module for socket operations.\n\n"
             + "This module is a loose wrapper around the .NET System.Net.Sockets API, so you\n"
             + "may find the corresponding MSDN documentation helpful in decoding error\n"
             + "messages and understanding corner cases.\n"
@@ -67,12 +67,10 @@ namespace IronPython.Modules {
 
         #region Socket object
 
-        public static PythonType socket = DynamicHelpers.GetPythonTypeFromType(typeof(SocketObj));
-        public static PythonType SocketType = socket;
+        public static PythonType SocketType = DynamicHelpers.GetPythonTypeFromType(typeof(socket));
 
-        [PythonType("socket")]
-        public class SocketObj : IWeakReferenceable {
-            public static string __doc__ = "socket([family[, type[, proto]]]) -> socket object\n\n"
+        [PythonSystemType]
+        [Documentation("socket([family[, type[, proto]]]) -> socket object\n\n"
                 + "Create a socket (a network connection endpoint) of the given family, type,\n"
                 + "and protocol. socket() accepts keyword arguments.\n"
                 + " - family (address family) defaults to AF_INET\n"
@@ -80,8 +78,8 @@ namespace IronPython.Modules {
                 + " - proto (protocol type) defaults to 0, which specifies the default protocol\n"
                 + "\n"
                 + "This module supports only IP sockets. It does not support raw or Unix sockets.\n"
-                + "Both IPv4 and IPv6 are supported.";
-
+                + "Both IPv4 and IPv6 are supported.")]
+        public class socket : IWeakReferenceable {
             #region Fields
 
             /// <summary>
@@ -96,14 +94,14 @@ namespace IronPython.Modules {
             private const int DefaultSocketType = (int)System.Net.Sockets.SocketType.Stream;
             private const int DefaultProtocolType = (int)ProtocolType.Unspecified;
 
-            internal Socket socket;
+            internal Socket _socket;
             private WeakRefTracker weakRefTracker = null;
 
             #endregion
 
             #region Public API
 
-            public SocketObj([DefaultParameterValue(DefaultAddressFamily)] int addressFamily,
+            public socket([DefaultParameterValue(DefaultAddressFamily)] int addressFamily,
                 [DefaultParameterValue(DefaultSocketType)] int socketType,
                 [DefaultParameterValue(DefaultProtocolType)] int protocolType) {
 
@@ -138,17 +136,16 @@ namespace IronPython.Modules {
                 + "If a timeout is set and the socket is in blocking mode, accept() will block\n"
                 + "indefinitely until a connection is ready."
                 )]
-            [PythonName("accept")]
-            public PythonTuple Accept() {
-                SocketObj wrappedRemoteSocket;
+            public PythonTuple accept() {
+                socket wrappedRemoteSocket;
                 Socket realRemoteSocket;
                 try {
-                    realRemoteSocket = socket.Accept();
+                    realRemoteSocket = _socket.Accept();
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
-                wrappedRemoteSocket = new SocketObj(realRemoteSocket);
-                return PythonTuple.MakeTuple(wrappedRemoteSocket, wrappedRemoteSocket.GetRemoteAddress());
+                wrappedRemoteSocket = new socket(realRemoteSocket);
+                return PythonTuple.MakeTuple(wrappedRemoteSocket, wrappedRemoteSocket.getpeername());
             }
 
             [Documentation("bind(address) -> None\n\n"
@@ -161,32 +158,30 @@ namespace IronPython.Modules {
                 + "set port to 0, the system will assign an available port number between 1024\n"
                 + "and 5000."
                 )]
-            [PythonName("bind")]
-            public void Bind(PythonTuple address) {
-                IPEndPoint localEP = TupleToEndPoint(address, socket.AddressFamily);
+            public void bind(PythonTuple address) {
+                IPEndPoint localEP = TupleToEndPoint(address, _socket.AddressFamily);
                 try {
-                    socket.Bind(localEP);
+                    _socket.Bind(localEP);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
             }
 
             [Documentation("close() -> None\n\nClose the socket. It cannot be used after being closed.")]
-            [PythonName("close")]
-            public void Close() {
+            public void close() {
                 lock (handleToSocket) {
                     List<Socket> sockets;
-                    if (handleToSocket.TryGetValue((IntPtr)socket.Handle, out sockets)) {
-                        if (sockets.Contains(socket)) {
-                            sockets.Remove(socket);
+                    if (handleToSocket.TryGetValue((IntPtr)_socket.Handle, out sockets)) {
+                        if (sockets.Contains(_socket)) {
+                            sockets.Remove(_socket);
                         }
                         if (sockets.Count == 0) {
-                            handleToSocket.Remove(socket.Handle);
+                            handleToSocket.Remove(_socket.Handle);
                         }
                     }
                 }
                 try {
-                    socket.Close();
+                    _socket.Close();
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -203,11 +198,10 @@ namespace IronPython.Modules {
                 + "If a timeout is set and the socket is in blocking mode, connect() will block\n"
                 + "indefinitely until a connection is made or an error occurs."
                 )]
-            [PythonName("connect")]
-            public void Connect(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
+            public void connect(PythonTuple address) {
+                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
                 try {
-                    socket.Connect(remoteEP);
+                    _socket.Connect(remoteEP);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -225,11 +219,10 @@ namespace IronPython.Modules {
                 + "mode. If a timeout is set and the socket is in blocking mode, connect_ex() will\n"
                 + "block indefinitely until a connection is made or an error occurs."
                 )]
-            [PythonName("connect_ex")]
-            public int ConnectEx(PythonTuple address) {
-                IPEndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
+            public int connect_ex(PythonTuple address) {
+                IPEndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
                 try {
-                    socket.Connect(remoteEP);
+                    _socket.Connect(remoteEP);
                 } catch (SocketException e) {
                     return e.ErrorCode;
                 }
@@ -239,10 +232,9 @@ namespace IronPython.Modules {
             [Documentation("fileno() -> file_handle\n\n"
                 + "Return the underlying system handle for this socket (a 64-bit integer)."
                 )]
-            [PythonName("fileno")]
-            public Int64 GetHandle() {
+            public Int64 fileno() {
                 try {
-                    return socket.Handle.ToInt64();
+                    return _socket.Handle.ToInt64();
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -252,10 +244,9 @@ namespace IronPython.Modules {
                 + "Return the address of the remote end of this socket. The address format is\n"
                 + "family-dependent (e.g. a (host, port) tuple for IPv4)."
                 )]
-            [PythonName("getpeername")]
-            public PythonTuple GetRemoteAddress() {
+            public PythonTuple getpeername() {
                 try {
-                    IPEndPoint remoteEP = socket.RemoteEndPoint as IPEndPoint;
+                    IPEndPoint remoteEP = _socket.RemoteEndPoint as IPEndPoint;
                     if (remoteEP == null) {
                         throw MakeException(new SocketException((int)SocketError.AddressFamilyNotSupported));
                     }
@@ -269,10 +260,9 @@ namespace IronPython.Modules {
                 + "Return the address of the local end of this socket. The address format is\n"
                 + "family-dependent (e.g. a (host, port) tuple for IPv4)."
                 )]
-            [PythonName("getsockname")]
-            public PythonTuple GetLocalAddress() {
+            public PythonTuple getsockname() {
                 try {
-                    IPEndPoint localEP = socket.LocalEndPoint as IPEndPoint;
+                    IPEndPoint localEP = _socket.LocalEndPoint as IPEndPoint;
                     if (localEP == null) {
                         throw MakeException(new SocketException((int)SocketError.InvalidArgument));
                     }
@@ -289,8 +279,7 @@ namespace IronPython.Modules {
                 + "whose maximum length is buflen bytes) is returned. The caller must the decode\n"
                 + "the resulting byte string."
                 )]
-            [PythonName("getsockopt")]
-            public object GetSocketOption(int optionLevel, int optionName, [DefaultParameterValue(0)] int optionLength) {
+            public object getsockopt(int optionLevel, int optionName, [DefaultParameterValue(0)] int optionLength) {
                 SocketOptionLevel level = (SocketOptionLevel)Enum.ToObject(typeof(SocketOptionLevel), optionLevel);
                 if (!Enum.IsDefined(typeof(SocketOptionLevel), level)) {
                     throw MakeException(new SocketException((int)SocketError.InvalidArgument));
@@ -303,10 +292,10 @@ namespace IronPython.Modules {
                 try {
                     if (optionLength == 0) {
                         // Integer return value
-                        return (int)socket.GetSocketOption(level, name);
+                        return (int)_socket.GetSocketOption(level, name);
                     } else {
                         // Byte string return value
-                        return StringOps.FromByteArray(socket.GetSocketOption(level, name, optionLength));
+                        return StringOps.FromByteArray(_socket.GetSocketOption(level, name, optionLength));
                     }
                 } catch (Exception e) {
                     throw MakeException(e);
@@ -317,10 +306,9 @@ namespace IronPython.Modules {
                 + "Listen for connections on the socket. Backlog is the maximum length of the\n"
                 + "pending connections queue. The maximum value is system-dependent."
                 )]
-            [PythonName("listen")]
-            public void Listen(int backlog) {
+            public void listen(int backlog) {
                 try {
-                    socket.Listen(backlog);
+                    _socket.Listen(backlog);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -329,9 +317,8 @@ namespace IronPython.Modules {
             [Documentation("makefile([mode[, bufsize]]) -> file object\n\n"
                 + "Return a regular file object corresponding to the socket.  The mode\n"
                 + "and bufsize arguments are as for the built-in open() function.")]
-            [PythonName("makefile")]
-            public PythonFile MakeFile([DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
-                return new FileObject(this, mode, bufSize);
+            public PythonFile makefile(CodeContext/*!*/ context, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
+                return new FileObject(context, this, mode, bufSize);
             }
 
             [Documentation("recv(bufsize[, flags]) -> string\n\n"
@@ -343,12 +330,11 @@ namespace IronPython.Modules {
                 + "settimeout(). If the timeout was exceeded, socket.timeout is raised."
                 + "recv() returns immediately with zero bytes when the connection is closed."
                 )]
-            [PythonName("recv")]
-            public string Receive(int maxBytes, [DefaultParameterValue(0)] int flags) {
+            public string recv(int maxBytes, [DefaultParameterValue(0)] int flags) {
                 int bytesRead;
                 byte[] buffer = new byte[maxBytes];
                 try {
-                    bytesRead = socket.Receive(buffer, (SocketFlags)flags);
+                    bytesRead = _socket.Receive(buffer, (SocketFlags)flags);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -360,14 +346,13 @@ namespace IronPython.Modules {
                 + "received, and address (whose format is protocol-dependent) is the address of\n"
                 + "the socket from which the data was received."
                 )]
-            [PythonName("recvfrom")]
-            public PythonTuple ReceiveFrom(int maxBytes, [DefaultParameterValue(0)] int flags) {
+            public PythonTuple recvfrom(int maxBytes, [DefaultParameterValue(0)] int flags) {
                 int bytesRead;
                 byte[] buffer = new byte[maxBytes];
                 IPEndPoint remoteIPEP = new IPEndPoint(IPAddress.Any, 0);
                 EndPoint remoteEP = remoteIPEP;
                 try {
-                    bytesRead = socket.ReceiveFrom(buffer, (SocketFlags)flags, ref remoteEP);
+                    bytesRead = _socket.ReceiveFrom(buffer, (SocketFlags)flags, ref remoteEP);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -391,11 +376,10 @@ namespace IronPython.Modules {
                 + "successful completion of the Send method means that the underlying system has\n"
                 + "had room to buffer your data for a network send"
                 )]
-            [PythonName("send")]
-            public int Send(string data, [DefaultParameterValue(0)] int flags) {
+            public int send(string data, [DefaultParameterValue(0)] int flags) {
                 byte[] buffer = StringOps.ToByteArray(data);
                 try {
-                    return socket.Send(buffer, (SocketFlags)flags);
+                    return _socket.Send(buffer, (SocketFlags)flags);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
@@ -421,14 +405,13 @@ namespace IronPython.Modules {
                 + "successful completion of the Send method means that the underlying system has\n"
                 + "had room to buffer your data for a network send"
                 )]
-            [PythonName("sendall")]
-            public void SendAll(string data, [DefaultParameterValue(0)] int flags) {
+            public void sendall(string data, [DefaultParameterValue(0)] int flags) {
                 byte[] buffer = StringOps.ToByteArray(data);
                 try {
                     int bytesTotal = buffer.Length;
                     int bytesRemaining = bytesTotal;
                     while (bytesRemaining > 0) {
-                        bytesRemaining -= socket.Send(buffer, bytesTotal - bytesRemaining, bytesRemaining, (SocketFlags)flags);
+                        bytesRemaining -= _socket.Send(buffer, bytesTotal - bytesRemaining, bytesRemaining, (SocketFlags)flags);
                     }
                 } catch (Exception e) {
                     throw MakeException(e);
@@ -452,21 +435,19 @@ namespace IronPython.Modules {
                 + "successful completion of the Send method means that the underlying system has\n"
                 + "had room to buffer your data for a network send"
                 )]
-            [PythonName("sendto")]
-            public int SendTo(string data, int flags, PythonTuple address) {
+            public int sendto(string data, int flags, PythonTuple address) {
                 byte[] buffer = StringOps.ToByteArray(data);
-                EndPoint remoteEP = TupleToEndPoint(address, socket.AddressFamily);
+                EndPoint remoteEP = TupleToEndPoint(address, _socket.AddressFamily);
                 try {
-                    return socket.SendTo(buffer, (SocketFlags)flags, remoteEP);
+                    return _socket.SendTo(buffer, (SocketFlags)flags, remoteEP);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
             }
 
             [Documentation("")]
-            [PythonName("sendto")]
-            public int SendTo(string data, PythonTuple address) {
-                return SendTo(data, 0, address);
+            public int sendto(string data, PythonTuple address) {
+                return sendto(data, 0, address);
             }
 
             [Documentation("setblocking(flag) -> None\n\n"
@@ -481,12 +462,11 @@ namespace IronPython.Modules {
                 + "setblocking(0) is equivalent to settimeout(0), and setblocking(1) is equivalent\n"
                 + "to settimeout(None)."
                 )]
-            [PythonName("setblocking")]
-            public void SetBlocking(int shouldBlock) {
+            public void setblocking(int shouldBlock) {
                 if (shouldBlock == 0) {
-                    SetTimeout(0);
+                    settimeout(0);
                 } else {
-                    SetTimeout(null);
+                    settimeout(null);
                 }
             }
 
@@ -505,23 +485,22 @@ namespace IronPython.Modules {
                 + "If the timeout is non-zero and is less than 0.5, it will be set to 0.5. This\n"
                 + "limitation is specific to IronPython.\n"
                 )]
-            [PythonName("settimeout")]
-            public void SetTimeout(object timeout) {
+            public void settimeout(object timeout) {
                 try {
                     if (timeout == null) {
-                        socket.Blocking = true;
-                        socket.SendTimeout = 0;
+                        _socket.Blocking = true;
+                        _socket.SendTimeout = 0;
                     } else {
                         double seconds;
                         seconds = Converter.ConvertToDouble(timeout);
                         if (seconds < 0) {
                             throw PythonOps.TypeError("a non-negative float is required");
                         }
-                        socket.Blocking = seconds > 0; // 0 timeout means non-blocking mode
-                        socket.SendTimeout = (int)(seconds * MillisecondsPerSecond);
+                        _socket.Blocking = seconds > 0; // 0 timeout means non-blocking mode
+                        _socket.SendTimeout = (int)(seconds * MillisecondsPerSecond);
                     }
                 } finally {
-                    socket.ReceiveTimeout = socket.SendTimeout;
+                    _socket.ReceiveTimeout = _socket.SendTimeout;
                 }
             }
 
@@ -530,13 +509,12 @@ namespace IronPython.Modules {
                 + "timeout is set, return None. For more details on timeouts and blocking, see the\n"
                 + "Python socket module documentation."
                 )]
-            [PythonName("gettimeout")]
-            public object GetTimeout() {
+            public object gettimeout() {
                 try {
-                    if (socket.Blocking && socket.SendTimeout == 0) {
+                    if (_socket.Blocking && _socket.SendTimeout == 0) {
                         return null;
                     } else {
-                        return (double)socket.SendTimeout / MillisecondsPerSecond;
+                        return (double)_socket.SendTimeout / MillisecondsPerSecond;
                     }
                 } catch (Exception e) {
                     throw MakeException(e);
@@ -549,8 +527,7 @@ namespace IronPython.Modules {
                 + "an integer or a string containing a binary structure. The caller is responsible\n"
                 + "for properly encoding the byte string."
                 )]
-            [PythonName("setsockopt")]
-            public void SetSocketOption(int optionLevel, int optionName, object value) {
+            public void setsockopt(int optionLevel, int optionName, object value) {
                 SocketOptionLevel level = (SocketOptionLevel)Enum.ToObject(typeof(SocketOptionLevel), optionLevel);
                 if (!Enum.IsDefined(typeof(SocketOptionLevel), level)) {
                     throw MakeException(new SocketException((int)SocketError.InvalidArgument));
@@ -563,13 +540,13 @@ namespace IronPython.Modules {
                 try {
                     int intValue;
                     if (Converter.TryConvertToInt32(value, out intValue)) {
-                        socket.SetSocketOption(level, name, intValue);
+                        _socket.SetSocketOption(level, name, intValue);
                         return;
                     }
 
                     string strValue;
                     if (Converter.TryConvertToString(value, out strValue)) {
-                        socket.SetSocketOption(level, name, StringOps.ToByteArray(strValue));
+                        _socket.SetSocketOption(level, name, StringOps.ToByteArray(strValue));
                         return;
                     }
                 } catch (Exception e) {
@@ -584,26 +561,24 @@ namespace IronPython.Modules {
                 + "timeout is set, return None. For more details on timeouts and blocking, see the\n"
                 + "Python socket module documentation."
                 )]
-            [PythonName("shutdown")]
-            public void Shutdown(int how) {
+            public void shutdown(int how) {
                 SocketShutdown howValue = (SocketShutdown)Enum.ToObject(typeof(SocketShutdown), how);
                 if (!Enum.IsDefined(typeof(SocketShutdown), howValue)) {
                     throw MakeException(new SocketException((int)SocketError.InvalidArgument));
                 }
                 try {
-                    socket.Shutdown(howValue);
+                    _socket.Shutdown(howValue);
                 } catch (Exception e) {
                     throw MakeException(e);
                 }
             }
 
-            [PythonName("__repr__")]
             public override string ToString() {
                 try {
-                    return "<socket object, fd=" + GetHandle().ToString()
-                        + ", family=" + ((int)socket.AddressFamily).ToString()
-                        + ", type=" + ((int)socket.SocketType).ToString()
-                        + ", protocol=" + ((int)socket.ProtocolType).ToString()
+                    return "<socket object, fd=" + fileno().ToString()
+                        + ", family=" + ((int)_socket.AddressFamily).ToString()
+                        + ", type=" + ((int)_socket.SocketType).ToString()
+                        + ", protocol=" + ((int)_socket.ProtocolType).ToString()
                         + ">"
                     ;
                 } catch {
@@ -617,7 +592,7 @@ namespace IronPython.Modules {
             /// primarily intended to be used by other modules (such as select) that implement
             /// networking primitives. User code should not normally need to call this function.
             /// </summary>
-            public static Socket HandleToSocket(Int64 handle) {
+            internal static Socket HandleToSocket(Int64 handle) {
                 List<Socket> sockets;
                 lock (handleToSocket) {
                     if (handleToSocket.TryGetValue((IntPtr)handle, out sockets)) {
@@ -633,16 +608,16 @@ namespace IronPython.Modules {
 
             #region IWeakReferenceable Implementation
 
-            public WeakRefTracker GetWeakRef() {
+            WeakRefTracker IWeakReferenceable.GetWeakRef() {
                 return weakRefTracker;
             }
 
-            public bool SetWeakRef(WeakRefTracker value) {
+            bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
                 weakRefTracker = value;
                 return true;
             }
 
-            public void SetFinalizer(WeakRefTracker value) {
+            void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
                 weakRefTracker = value;
             }
 
@@ -654,7 +629,7 @@ namespace IronPython.Modules {
             /// Create a Python socket object from an existing .NET socket object
             /// (like one returned from Socket.Accept())
             /// </summary>
-            private SocketObj(Socket socket) {
+            private socket(Socket socket) {
                 Initialize(socket);
             }
 
@@ -662,11 +637,11 @@ namespace IronPython.Modules {
             /// Perform initialization common to all constructors
             /// </summary>
             private void Initialize(Socket socket) {
-                this.socket = socket;
+                this._socket = socket;
                 if (DefaultTimeout == null) {
-                    SetTimeout(null);
+                    settimeout(null);
                 } else {
-                    SetTimeout((double)DefaultTimeout / MillisecondsPerSecond);
+                    settimeout((double)DefaultTimeout / MillisecondsPerSecond);
                 }
                 lock (handleToSocket) {
                     if (!handleToSocket.ContainsKey(socket.Handle)) {
@@ -705,8 +680,7 @@ namespace IronPython.Modules {
         #region Public API
 
         [Documentation("")]
-        [PythonName("getaddrinfo")]
-        public static List GetAddrInfo(
+        public static List getaddrinfo(
             string host,
             object port,
             [DefaultParameterValue((int)AddressFamily.Unspecified)] int family,
@@ -720,8 +694,8 @@ namespace IronPython.Modules {
                 numericPort = 0;
             } else if (port is int) {
                 numericPort = (int)port;
-            } else if (port is ExtensibleInt) {
-                numericPort = ((ExtensibleInt)port).Value;
+            } else if (port is Extensible<int>) {
+                numericPort = ((Extensible<int>)port).Value;
             } else if (port is string) {
                 if (!Int32.TryParse((string)port, out numericPort)) {
                     // TODO: also should consult GetServiceByName                    
@@ -774,8 +748,7 @@ namespace IronPython.Modules {
             + "address. An unspecified or empty name is interpreted as the local host. If the\n"
             + "name lookup fails, the passed-in name is returned as-is."
             )]
-        [PythonName("getfqdn")]
-        public static string GetFQDN(string host) {
+        public static string getfqdn(string host) {
             host = host.Trim();
             if (host == BroadcastAddrToken) {
                 return host;
@@ -799,9 +772,8 @@ namespace IronPython.Modules {
         }
 
         [Documentation("")]
-        [PythonName("getfqdn")]
-        public static string GetFQDN() {
-            return GetFQDN(LocalhostAddrToken);
+        public static string getfqdn() {
+            return getfqdn(LocalhostAddrToken);
         }
 
         [Documentation("gethostbyname(hostname) -> ip address\n\n"
@@ -811,8 +783,7 @@ namespace IronPython.Modules {
             + "\n"
             + "gethostbyname() doesn't support IPv6; for IPv4/IPv6 support, use getaddrinfo()."
             )]
-        [PythonName("gethostbyname")]
-        public static string GetHostByName(string host) {
+        public static string gethostbyname(string host) {
             return HostToAddress(host, AddressFamily.InterNetwork).ToString();
         }
 
@@ -824,8 +795,7 @@ namespace IronPython.Modules {
             + "gethostbyname_ex() doesn't support IPv6; for IPv4/IPv6 support, use\n"
             + "getaddrinfo()."
             )]
-        [PythonName("gethostbyname_ex")]
-        public static PythonTuple GetHostByNameEx(string host) {
+        public static PythonTuple gethostbyname_ex(string host) {
             string hostname;
             List aliases;
             List ips = List.Make();
@@ -859,8 +829,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("gethostname() -> hostname\nReturn this machine's hostname")]
-        [PythonName("gethostname")]
-        public static string GetHostName() {
+        public static string gethostname() {
             return Dns.GetHostName();
         }
 
@@ -868,13 +837,12 @@ namespace IronPython.Modules {
             + "Return a tuple of (primary hostname, alias hostnames, ip addresses). host may\n"
             + "be either a hostname or an IP address."
             )]
-        [PythonName("gethostbyaddr")]
-        public static object GetHostByAddr(string host) {
+        public static object gethostbyaddr(string host) {
             if (host == "") {
-                host = GetHostName();
+                host = gethostname();
             }
             // This conversion seems to match CPython behavior
-            host = GetHostByName(host);
+            host = gethostbyname(host);
 
             IPAddress[] ips = null;
             IPHostEntry hostEntry = null;
@@ -914,9 +882,8 @@ namespace IronPython.Modules {
             + "   omitted. It it were supported, it would return the UDP-based port name\n"
             + "   rather than the TCP-based port name.\n"
             )]
-        [PythonName("getnameinfo")]
-        public static object GetNameInfo(PythonTuple socketAddr, int flags) {
-            if (socketAddr.GetLength() < 2 || socketAddr.GetLength() > 4) {
+        public static object getnameinfo(PythonTuple socketAddr, int flags) {
+            if (socketAddr.__len__() < 2 || socketAddr.__len__() > 4) {
                 throw PythonOps.TypeError("socket address must be a 2-tuple (IPv4 or IPv6) or 4-tuple (IPv6)");
             }
 
@@ -979,8 +946,7 @@ namespace IronPython.Modules {
             + "\n"
             + "Raises socket.error if no protocol number can be found."
             )]
-        [PythonName("getprotobyname")]
-        public static object GetProtoByName(string protocolName) {
+        public static object getprotobyname(string protocolName) {
             switch (protocolName.ToLower()) {
                 case "ah": return IPPROTO_AH;
                 case "esp": return IPPROTO_ESP;
@@ -1009,8 +975,7 @@ namespace IronPython.Modules {
             //+ "Given a service name (e.g. 'domain') return the associated protocol number (e.g.\n"
             //+ "53). The protocol name (if specified) must be either 'tcp' or 'udp'."
             )]
-        [PythonName("getservbyname")]
-        public static int GetServiceByName(string serviceName, [DefaultParameterValue(null)] string protocolName) {
+        public static int getservbyname(string serviceName, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
             throw PythonOps.NotImplementedError("name to service conversion not supported");
         }
@@ -1020,27 +985,23 @@ namespace IronPython.Modules {
             //+ "Given a port number (e.g. 53), return the associated protocol name (e.g.\n"
             //+ "'domain'). The protocol name (if specified) must be either 'tcp' or 'udp'."
             )]
-        [PythonName("getservbyport")]
-        public static string GetServiceByPort(int port, [DefaultParameterValue(null)] string protocolName) {
+        public static string getservbyport(int port, [DefaultParameterValue(null)] string protocolName) {
             // !!! .NET networking libraries don't support this, so we don't either
             throw PythonOps.NotImplementedError("service to name conversion not supported");
         }
 
         [Documentation("ntohl(x) -> integer\n\nConvert a 32-bit integer from network byte order to host byte order.")]
-        [PythonName("ntohl")]
-        public static int NetworkToHostOrder32(object x) {
+        public static int ntohl(object x) {
             return IPAddress.NetworkToHostOrder(SignInsenstitiveToInt32(x));
         }
 
         [Documentation("ntohs(x) -> integer\n\nConvert a 16-bit integer from network byte order to host byte order.")]
-        [PythonName("ntohs")]
-        public static short NetworkToHostOrder16(object x) {
+        public static short ntohs(object x) {
             return IPAddress.NetworkToHostOrder(SignInsenstitiveToInt16(x));
         }
 
         [Documentation("htonl(x) -> integer\n\nConvert a 32bit integer from host byte order to network byte order.")]
-        [PythonName("htonl")]
-        public static int HostToNetworkOrder32(object x) {
+        public static int htonl(object x) {
             return IPAddress.HostToNetworkOrder(SignInsenstitiveToInt32(x));
         }
 
@@ -1077,8 +1038,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("htons(x) -> integer\n\nConvert a 16-bit integer from host byte order to network byte order.")]
-        [PythonName("htons")]
-        public static short HostToNetworkOrder16(object x) {
+        public static short htons(object x) {
             return IPAddress.HostToNetworkOrder(SignInsenstitiveToInt16(x));
         }
 
@@ -1093,8 +1053,7 @@ namespace IronPython.Modules {
             + "\n"
             + "inet_pton() supports IPv4 and IPv6."
             )]
-        [PythonName("inet_pton")]
-        public static string IPStringToPackedBytes(int addressFamily, string ipString) {
+        public static string inet_pton(int addressFamily, string ipString) {
             if (addressFamily != (int)AddressFamily.InterNetwork && addressFamily != (int)AddressFamily.InterNetworkV6) {
                 throw MakeException(new SocketException((int)SocketError.AddressFamilyNotSupported));
             }
@@ -1121,8 +1080,7 @@ namespace IronPython.Modules {
             + "\n"
             + "inet_ntop() supports IPv4 and IPv6."
             )]
-        [PythonName("inet_ntop")]
-        public static string IPPackedBytesToString(int addressFamily, string packedIP) {
+        public static string inet_ntop(int addressFamily, string packedIP) {
             if (!(
                 (packedIP.Length == IPv4AddrBytes && addressFamily == (int)AddressFamily.InterNetwork)
                 || (packedIP.Length == IPv6AddrBytes && addressFamily == (int)AddressFamily.InterNetworkV6)
@@ -1146,9 +1104,8 @@ namespace IronPython.Modules {
             + "\n"
             + "inet_aton() supports only IPv4."
             )]
-        [PythonName("inet_aton")]
-        public static string IPStringToPackedBytes(string ipString) {
-            return IPStringToPackedBytes((int)AddressFamily.InterNetwork, ipString);
+        public static string inet_aton(string ipString) {
+            return inet_pton((int)AddressFamily.InterNetwork, ipString);
         }
 
         [Documentation("inet_ntoa(packed_ip) -> ip_string\n\n"
@@ -1160,9 +1117,8 @@ namespace IronPython.Modules {
             + "\n"
             + "inet_ntoa() supports only IPv4."
             )]
-        [PythonName("inet_ntoa")]
-        public static string IPPackedBytesToString(string packedIP) {
-            return IPPackedBytesToString((int)AddressFamily.InterNetwork, packedIP);
+        public static string inet_ntoa(string packedIP) {
+            return inet_ntop((int)AddressFamily.InterNetwork, packedIP);
         }
 
         [Documentation("getdefaulttimeout() -> timeout\n\n"
@@ -1170,8 +1126,7 @@ namespace IronPython.Modules {
             + "value of None means that sockets have no timeout and begin in blocking mode.\n"
             + "The default value when the module is imported is None."
             )]
-        [PythonName("getdefaulttimeout")]
-        public static object GetDefaultTimeout() {
+        public static object getdefaulttimeout() {
             if (DefaultTimeout == null) {
                 return null;
             } else {
@@ -1184,8 +1139,7 @@ namespace IronPython.Modules {
             + "meaning that sockets have no timeout and start in blocking mode, or a\n"
             + "non-negative float that specifies the default timeout in seconds."
             )]
-        [PythonName("setdefaulttimeout")]
-        public static void SetDefaultTimeout(object timeout) {
+        public static void setdefaulttimeout(object timeout) {
             if (timeout == null) {
                 DefaultTimeout = null;
             } else {
@@ -1202,120 +1156,120 @@ namespace IronPython.Modules {
 
         #region Exported constants
 
-        public static object AF_APPLETALK = (int)AddressFamily.AppleTalk;
-        public static object AF_DECnet = (int)AddressFamily.DecNet;
-        public static object AF_INET = (int)AddressFamily.InterNetwork;
-        public static object AF_INET6 = (int)AddressFamily.InterNetworkV6;
-        public static object AF_IPX = (int)AddressFamily.Ipx;
-        public static object AF_IRDA = (int)AddressFamily.Irda;
-        public static object AF_SNA = (int)AddressFamily.Sna;
-        public static object AF_UNSPEC = (int)AddressFamily.Unspecified;
-        public static object AI_CANONNAME = (int)0x2;
-        public static object AI_NUMERICHOST = (int)0x4;
-        public static object AI_PASSIVE = (int)0x1;
-        public static object EAI_AGAIN = (int)SocketError.TryAgain;
-        public static object EAI_BADFLAGS = (int)SocketError.InvalidArgument;
-        public static object EAI_FAIL = (int)SocketError.NoRecovery;
-        public static object EAI_FAMILY = (int)SocketError.AddressFamilyNotSupported;
-        public static object EAI_MEMORY = (int)SocketError.NoBufferSpaceAvailable;
-        public static object EAI_NODATA = (int)SocketError.HostNotFound; // not SocketError.NoData, like you would think
-        public static object EAI_NONAME = (int)SocketError.HostNotFound;
-        public static object EAI_SERVICE = (int)SocketError.TypeNotFound;
-        public static object EAI_SOCKTYPE = (int)SocketError.SocketNotSupported;
-        public static object EAI_SYSTEM = (int)SocketError.SocketError;
-        public static object EBADF = (int)0x9;
-        public static object INADDR_ALLHOSTS_GROUP = unchecked((int)0xe0000001);
-        public static object INADDR_ANY = (int)0x00000000;
-        public static object INADDR_BROADCAST = unchecked((int)0xFFFFFFFF);
-        public static object INADDR_LOOPBACK = unchecked((int)0x7F000001);
-        public static object INADDR_MAX_LOCAL_GROUP = unchecked((int)0xe00000FF);
-        public static object INADDR_NONE = unchecked((int)0xFFFFFFFF);
-        public static object INADDR_UNSPEC_GROUP = unchecked((int)0xE0000000);
-        public static object IPPORT_RESERVED = 1024;
-        public static object IPPORT_USERRESERVED = 5000;
-        public static object IPPROTO_AH = (int)ProtocolType.IPSecAuthenticationHeader;
-        public static object IPPROTO_DSTOPTS = (int)ProtocolType.IPv6DestinationOptions;
-        public static object IPPROTO_ESP = (int)ProtocolType.IPSecEncapsulatingSecurityPayload;
-        public static object IPPROTO_FRAGMENT = (int)ProtocolType.IPv6FragmentHeader;
-        public static object IPPROTO_GGP = (int)ProtocolType.Ggp;
-        public static object IPPROTO_HOPOPTS = (int)ProtocolType.IPv6HopByHopOptions;
-        public static object IPPROTO_ICMP = (int)ProtocolType.Icmp;
-        public static object IPPROTO_ICMPV6 = (int)ProtocolType.IcmpV6;
-        public static object IPPROTO_IDP = (int)ProtocolType.Idp;
-        public static object IPPROTO_IGMP = (int)ProtocolType.Igmp;
-        public static object IPPROTO_IP = (int)ProtocolType.IP;
-        public static object IPPROTO_IPV4 = (int)ProtocolType.IPv4;
-        public static object IPPROTO_IPV6 = (int)ProtocolType.IPv6;
-        public static object IPPROTO_MAX = 256;
-        public static object IPPROTO_ND = (int)ProtocolType.ND;
-        public static object IPPROTO_NONE = (int)ProtocolType.IPv6NoNextHeader;
-        public static object IPPROTO_PUP = (int)ProtocolType.Pup;
-        public static object IPPROTO_RAW = (int)ProtocolType.Raw;
-        public static object IPPROTO_ROUTING = (int)ProtocolType.IPv6RoutingHeader;
-        public static object IPPROTO_TCP = (int)ProtocolType.Tcp;
-        public static object IPPROTO_UDP = (int)ProtocolType.Udp;
-        public static object IPV6_HOPLIMIT = (int)SocketOptionName.HopLimit;
-        public static object IPV6_JOIN_GROUP = (int)SocketOptionName.AddMembership;
-        public static object IPV6_LEAVE_GROUP = (int)SocketOptionName.DropMembership;
-        public static object IPV6_MULTICAST_HOPS = (int)SocketOptionName.MulticastTimeToLive;
-        public static object IPV6_MULTICAST_IF = (int)SocketOptionName.MulticastInterface;
-        public static object IPV6_MULTICAST_LOOP = (int)SocketOptionName.MulticastLoopback;
-        public static object IPV6_PKTINFO = (int)SocketOptionName.PacketInformation;
-        public static object IPV6_UNICAST_HOPS = (int)SocketOptionName.IpTimeToLive;
-        public static object IP_ADD_MEMBERSHIP = (int)SocketOptionName.AddMembership;
-        public static object IP_DROP_MEMBERSHIP = (int)SocketOptionName.DropMembership;
-        public static object IP_HDRINCL = (int)SocketOptionName.HeaderIncluded;
-        public static object IP_MULTICAST_IF = (int)SocketOptionName.MulticastInterface;
-        public static object IP_MULTICAST_LOOP = (int)SocketOptionName.MulticastLoopback;
-        public static object IP_MULTICAST_TTL = (int)SocketOptionName.MulticastTimeToLive;
-        public static object IP_OPTIONS = (int)SocketOptionName.IPOptions;
-        public static object IP_TOS = (int)SocketOptionName.TypeOfService;
-        public static object IP_TTL = (int)SocketOptionName.IpTimeToLive;
-        public static object MSG_DONTROUTE = (int)SocketFlags.DontRoute;
-        public static object MSG_OOB = (int)SocketFlags.OutOfBand;
-        public static object MSG_PEEK = (int)SocketFlags.Peek;
-        public static object NI_DGRAM = 0x0010;
-        public static object NI_MAXHOST = 1025;
-        public static object NI_MAXSERV = 32;
-        public static object NI_NAMEREQD = 0x0004;
-        public static object NI_NOFQDN = 0x0001;
-        public static object NI_NUMERICHOST = 0x0002;
-        public static object NI_NUMERICSERV = 0x0008;
-        public static object SHUT_RD = (int)SocketShutdown.Receive;
-        public static object SHUT_RDWR = (int)SocketShutdown.Both;
-        public static object SHUT_WR = (int)SocketShutdown.Send;
-        public static object SOCK_DGRAM = (int)System.Net.Sockets.SocketType.Dgram;
-        public static object SOCK_RAW = (int)System.Net.Sockets.SocketType.Raw;
-        public static object SOCK_RDM = (int)System.Net.Sockets.SocketType.Rdm;
-        public static object SOCK_SEQPACKET = (int)System.Net.Sockets.SocketType.Seqpacket;
-        public static object SOCK_STREAM = (int)System.Net.Sockets.SocketType.Stream;
-        public static object SOL_IP = (int)SocketOptionLevel.IP;
-        public static object SOL_IPV6 = (int)SocketOptionLevel.IPv6;
-        public static object SOL_SOCKET = (int)SocketOptionLevel.Socket;
-        public static object SOL_TCP = (int)SocketOptionLevel.Tcp;
-        public static object SOL_UDP = (int)SocketOptionLevel.Udp;
-        public static object SOMAXCONN = (int)SocketOptionName.MaxConnections;
-        public static object SO_ACCEPTCONN = (int)SocketOptionName.AcceptConnection;
-        public static object SO_BROADCAST = (int)SocketOptionName.Broadcast;
-        public static object SO_DEBUG = (int)SocketOptionName.Debug;
-        public static object SO_DONTROUTE = (int)SocketOptionName.DontRoute;
-        public static object SO_ERROR = (int)SocketOptionName.Error;
-        public static object SO_EXCLUSIVEADDRUSE = (int)SocketOptionName.ExclusiveAddressUse;
-        public static object SO_KEEPALIVE = (int)SocketOptionName.KeepAlive;
-        public static object SO_LINGER = (int)SocketOptionName.Linger;
-        public static object SO_OOBINLINE = (int)SocketOptionName.OutOfBandInline;
-        public static object SO_RCVBUF = (int)SocketOptionName.ReceiveBuffer;
-        public static object SO_RCVLOWAT = (int)SocketOptionName.ReceiveLowWater;
-        public static object SO_RCVTIMEO = (int)SocketOptionName.ReceiveTimeout;
-        public static object SO_REUSEADDR = (int)SocketOptionName.ReuseAddress;
-        public static object SO_SNDBUF = (int)SocketOptionName.SendBuffer;
-        public static object SO_SNDLOWAT = (int)SocketOptionName.SendLowWater;
-        public static object SO_SNDTIMEO = (int)SocketOptionName.SendTimeout;
-        public static object SO_TYPE = (int)SocketOptionName.Type;
-        public static object SO_USELOOPBACK = (int)SocketOptionName.UseLoopback;
-        public static object TCP_NODELAY = (int)SocketOptionName.NoDelay;
+        public const int AF_APPLETALK = (int)AddressFamily.AppleTalk;
+        public const int AF_DECnet = (int)AddressFamily.DecNet;
+        public const int AF_INET = (int)AddressFamily.InterNetwork;
+        public const int AF_INET6 = (int)AddressFamily.InterNetworkV6;
+        public const int AF_IPX = (int)AddressFamily.Ipx;
+        public const int AF_IRDA = (int)AddressFamily.Irda;
+        public const int AF_SNA = (int)AddressFamily.Sna;
+        public const int AF_UNSPEC = (int)AddressFamily.Unspecified;
+        public const int AI_CANONNAME = (int)0x2;
+        public const int AI_NUMERICHOST = (int)0x4;
+        public const int AI_PASSIVE = (int)0x1;
+        public const int EAI_AGAIN = (int)SocketError.TryAgain;
+        public const int EAI_BADFLAGS = (int)SocketError.InvalidArgument;
+        public const int EAI_FAIL = (int)SocketError.NoRecovery;
+        public const int EAI_FAMILY = (int)SocketError.AddressFamilyNotSupported;
+        public const int EAI_MEMORY = (int)SocketError.NoBufferSpaceAvailable;
+        public const int EAI_NODATA = (int)SocketError.HostNotFound; // not SocketError.NoData, like you would think
+        public const int EAI_NONAME = (int)SocketError.HostNotFound;
+        public const int EAI_SERVICE = (int)SocketError.TypeNotFound;
+        public const int EAI_SOCKTYPE = (int)SocketError.SocketNotSupported;
+        public const int EAI_SYSTEM = (int)SocketError.SocketError;
+        public const int EBADF = (int)0x9;
+        public const int INADDR_ALLHOSTS_GROUP = unchecked((int)0xe0000001);
+        public const int INADDR_ANY = (int)0x00000000;
+        public const int INADDR_BROADCAST = unchecked((int)0xFFFFFFFF);
+        public const int INADDR_LOOPBACK = unchecked((int)0x7F000001);
+        public const int INADDR_MAX_LOCAL_GROUP = unchecked((int)0xe00000FF);
+        public const int INADDR_NONE = unchecked((int)0xFFFFFFFF);
+        public const int INADDR_UNSPEC_GROUP = unchecked((int)0xE0000000);
+        public const int IPPORT_RESERVED = 1024;
+        public const int IPPORT_USERRESERVED = 5000;
+        public const int IPPROTO_AH = (int)ProtocolType.IPSecAuthenticationHeader;
+        public const int IPPROTO_DSTOPTS = (int)ProtocolType.IPv6DestinationOptions;
+        public const int IPPROTO_ESP = (int)ProtocolType.IPSecEncapsulatingSecurityPayload;
+        public const int IPPROTO_FRAGMENT = (int)ProtocolType.IPv6FragmentHeader;
+        public const int IPPROTO_GGP = (int)ProtocolType.Ggp;
+        public const int IPPROTO_HOPOPTS = (int)ProtocolType.IPv6HopByHopOptions;
+        public const int IPPROTO_ICMP = (int)ProtocolType.Icmp;
+        public const int IPPROTO_ICMPV6 = (int)ProtocolType.IcmpV6;
+        public const int IPPROTO_IDP = (int)ProtocolType.Idp;
+        public const int IPPROTO_IGMP = (int)ProtocolType.Igmp;
+        public const int IPPROTO_IP = (int)ProtocolType.IP;
+        public const int IPPROTO_IPV4 = (int)ProtocolType.IPv4;
+        public const int IPPROTO_IPV6 = (int)ProtocolType.IPv6;
+        public const int IPPROTO_MAX = 256;
+        public const int IPPROTO_ND = (int)ProtocolType.ND;
+        public const int IPPROTO_NONE = (int)ProtocolType.IPv6NoNextHeader;
+        public const int IPPROTO_PUP = (int)ProtocolType.Pup;
+        public const int IPPROTO_RAW = (int)ProtocolType.Raw;
+        public const int IPPROTO_ROUTING = (int)ProtocolType.IPv6RoutingHeader;
+        public const int IPPROTO_TCP = (int)ProtocolType.Tcp;
+        public const int IPPROTO_UDP = (int)ProtocolType.Udp;
+        public const int IPV6_HOPLIMIT = (int)SocketOptionName.HopLimit;
+        public const int IPV6_JOIN_GROUP = (int)SocketOptionName.AddMembership;
+        public const int IPV6_LEAVE_GROUP = (int)SocketOptionName.DropMembership;
+        public const int IPV6_MULTICAST_HOPS = (int)SocketOptionName.MulticastTimeToLive;
+        public const int IPV6_MULTICAST_IF = (int)SocketOptionName.MulticastInterface;
+        public const int IPV6_MULTICAST_LOOP = (int)SocketOptionName.MulticastLoopback;
+        public const int IPV6_PKTINFO = (int)SocketOptionName.PacketInformation;
+        public const int IPV6_UNICAST_HOPS = (int)SocketOptionName.IpTimeToLive;
+        public const int IP_ADD_MEMBERSHIP = (int)SocketOptionName.AddMembership;
+        public const int IP_DROP_MEMBERSHIP = (int)SocketOptionName.DropMembership;
+        public const int IP_HDRINCL = (int)SocketOptionName.HeaderIncluded;
+        public const int IP_MULTICAST_IF = (int)SocketOptionName.MulticastInterface;
+        public const int IP_MULTICAST_LOOP = (int)SocketOptionName.MulticastLoopback;
+        public const int IP_MULTICAST_TTL = (int)SocketOptionName.MulticastTimeToLive;
+        public const int IP_OPTIONS = (int)SocketOptionName.IPOptions;
+        public const int IP_TOS = (int)SocketOptionName.TypeOfService;
+        public const int IP_TTL = (int)SocketOptionName.IpTimeToLive;
+        public const int MSG_DONTROUTE = (int)SocketFlags.DontRoute;
+        public const int MSG_OOB = (int)SocketFlags.OutOfBand;
+        public const int MSG_PEEK = (int)SocketFlags.Peek;
+        public const int NI_DGRAM = 0x0010;
+        public const int NI_MAXHOST = 1025;
+        public const int NI_MAXSERV = 32;
+        public const int NI_NAMEREQD = 0x0004;
+        public const int NI_NOFQDN = 0x0001;
+        public const int NI_NUMERICHOST = 0x0002;
+        public const int NI_NUMERICSERV = 0x0008;
+        public const int SHUT_RD = (int)SocketShutdown.Receive;
+        public const int SHUT_RDWR = (int)SocketShutdown.Both;
+        public const int SHUT_WR = (int)SocketShutdown.Send;
+        public const int SOCK_DGRAM = (int)System.Net.Sockets.SocketType.Dgram;
+        public const int SOCK_RAW = (int)System.Net.Sockets.SocketType.Raw;
+        public const int SOCK_RDM = (int)System.Net.Sockets.SocketType.Rdm;
+        public const int SOCK_SEQPACKET = (int)System.Net.Sockets.SocketType.Seqpacket;
+        public const int SOCK_STREAM = (int)System.Net.Sockets.SocketType.Stream;
+        public const int SOL_IP = (int)SocketOptionLevel.IP;
+        public const int SOL_IPV6 = (int)SocketOptionLevel.IPv6;
+        public const int SOL_SOCKET = (int)SocketOptionLevel.Socket;
+        public const int SOL_TCP = (int)SocketOptionLevel.Tcp;
+        public const int SOL_UDP = (int)SocketOptionLevel.Udp;
+        public const int SOMAXCONN = (int)SocketOptionName.MaxConnections;
+        public const int SO_ACCEPTCONN = (int)SocketOptionName.AcceptConnection;
+        public const int SO_BROADCAST = (int)SocketOptionName.Broadcast;
+        public const int SO_DEBUG = (int)SocketOptionName.Debug;
+        public const int SO_DONTROUTE = (int)SocketOptionName.DontRoute;
+        public const int SO_ERROR = (int)SocketOptionName.Error;
+        public const int SO_EXCLUSIVEADDRUSE = (int)SocketOptionName.ExclusiveAddressUse;
+        public const int SO_KEEPALIVE = (int)SocketOptionName.KeepAlive;
+        public const int SO_LINGER = (int)SocketOptionName.Linger;
+        public const int SO_OOBINLINE = (int)SocketOptionName.OutOfBandInline;
+        public const int SO_RCVBUF = (int)SocketOptionName.ReceiveBuffer;
+        public const int SO_RCVLOWAT = (int)SocketOptionName.ReceiveLowWater;
+        public const int SO_RCVTIMEO = (int)SocketOptionName.ReceiveTimeout;
+        public const int SO_REUSEADDR = (int)SocketOptionName.ReuseAddress;
+        public const int SO_SNDBUF = (int)SocketOptionName.SendBuffer;
+        public const int SO_SNDLOWAT = (int)SocketOptionName.SendLowWater;
+        public const int SO_SNDTIMEO = (int)SocketOptionName.SendTimeout;
+        public const int SO_TYPE = (int)SocketOptionName.Type;
+        public const int SO_USELOOPBACK = (int)SocketOptionName.UseLoopback;
+        public const int TCP_NODELAY = (int)SocketOptionName.NoDelay;
 
-        public static object has_ipv6 = (int)1;
+        public const int has_ipv6 = (int)1;
 
         #endregion
 
@@ -1479,7 +1433,7 @@ namespace IronPython.Modules {
         /// </summary>
         private static string RemoveLocalDomain(string fqdn) {
             char[] DNS_SEP = new char[] { '.' };
-            string[] myName = GetFQDN().Split(DNS_SEP, 2);
+            string[] myName = getfqdn().Split(DNS_SEP, 2);
             string[] otherName = fqdn.Split(DNS_SEP, 2);
 
             if (myName.Length < 2 || otherName.Length < 2) return fqdn;
@@ -1638,8 +1592,7 @@ namespace IronPython.Modules {
                 }                               
             }
 
-            public object Socket {
-                [PythonName("_sock")]
+            public object _sock {
                 get {
                     return _userSocket;
                 }
@@ -1650,31 +1603,33 @@ namespace IronPython.Modules {
         public class FileObject : PythonFile {
             private const int DefaultBufferSize = 8192;
             public static object default_bufsize = DefaultBufferSize;
-            public static object name = "<socket>";
+            public static new object name = "<socket>";
 
-            public FileObject(SocketObj socket)
-                : this(socket, "rb", -1) {
+            public FileObject(CodeContext/*!*/ context, socket socket)
+                : this(context, socket, "rb", -1) {
             }
 
-            public FileObject(SocketObj socket, string mode)
-                : this(socket, mode, -1) {
+            public FileObject(CodeContext/*!*/ context, socket socket, string mode)
+                : this(context, socket, mode, -1) {
             }
 
-            public FileObject(SocketObj socket, string mode, int bufsize) {
-                Initialize(new NetworkStream(socket.socket), System.Text.Encoding.Default, mode);
-                socket.socket.SendBufferSize = socket.socket.ReceiveBufferSize = GetBufferSize(bufsize);
+            public FileObject(CodeContext/*!*/ context, socket socket, string mode, int bufsize)
+                : base(PythonContext.GetContext(context)) {
+                __init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);
+                socket._socket.SendBufferSize = socket._socket.ReceiveBufferSize = GetBufferSize(bufsize);
             }
 
-            public FileObject(object socket)
-                : this(socket, "rb", -1) {
+            public FileObject(CodeContext/*!*/ context, object socket)
+                : this(context, socket, "rb", -1) {
             }
 
-            public FileObject(object socket, string mode)
-                : this(socket, mode, -1) {
+            public FileObject(CodeContext/*!*/ context, object socket, string mode)
+                : this(context, socket, mode, -1) {
             }
 
-            public FileObject(object socket, string mode, int bufsize) {
-                Initialize(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), System.Text.Encoding.Default, mode);
+            public FileObject(CodeContext/*!*/ context, object socket, string mode, int bufsize)
+                : base(PythonContext.GetContext(context)) {
+                __init__(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), System.Text.Encoding.Default, mode);
             }
 
             private static int GetBufferSize(int size) {

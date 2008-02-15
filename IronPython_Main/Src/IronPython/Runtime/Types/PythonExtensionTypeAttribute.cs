@@ -38,7 +38,6 @@ namespace IronPython.Runtime.Types {
         internal static Dictionary<SymbolId, OperatorMapping> _pythonOperatorTable;
         private static Dictionary<OperatorMapping, SymbolId> _reverseOperatorTable;
 
-        private static ContextId _Context = DefaultContext.Id;
 
         static PythonExtensionTypeAttribute() {
             InitializeOperatorTable();
@@ -60,20 +59,14 @@ namespace IronPython.Runtime.Types {
             }
 
             _type = DynamicHelpers.GetPythonTypeFromType(base.Extends);
-
-            PythonTypeContext ctx = new PythonTypeContext();
-            ctx.IsPythonType = true;
-            _type.SetContextTag(DefaultContext.Id, ctx);
+            _type.IsPythonType = true;
             _extension = true;
         }
 
         internal PythonExtensionTypeAttribute(PythonType pythonType)
             : base(pythonType.UnderlyingSystemType, null) {
             _type = pythonType;
-
-            PythonTypeContext ctx = new PythonTypeContext();
-            ctx.IsPythonType = true;
-            _type.SetContextTag(DefaultContext.Id, ctx);
+            _type.IsPythonType = true;
         }
 
         internal ExtensionNameTransformer Transformer {
@@ -144,7 +137,7 @@ namespace IronPython.Runtime.Types {
                     PropertyInfo pi = (PropertyInfo)mi;
                     nt = NameConverter.TryGetName(_type, pi, pi.GetGetMethod(true) ?? pi.GetSetMethod(true), out name);
                     if ((nt & NameType.Python) != 0) {
-                        yield return new TransformedName(name, _Context);
+                        yield return new TransformedName(name, DefaultContext.Id);
                     } else if (nt != NameType.None) {
                         yield return new TransformedName(name, ContextId.Empty);
                     }
@@ -158,7 +151,7 @@ namespace IronPython.Runtime.Types {
                         // no PythonName, remove Get or Set from name.
                         if (name == methinfo.Name) name = ExtensionPropertyInfo.GetName(methinfo);
 
-                        yield return new TransformedName(name, _Context);
+                        yield return new TransformedName(name, DefaultContext.Id);
                     }
                     break;
             }
@@ -179,9 +172,9 @@ namespace IronPython.Runtime.Types {
                     NameType nt = NameConverter.TryGetName(_type, (MethodInfo)mi, out name);
                     if ((nt & NameType.Python) != 0) {
                         if (nt == NameType.ClassMethod) {
-                            yield return new TransformedName(name, CreateClassMethod, _Context);
+                            yield return new TransformedName(name, CreateClassMethod, DefaultContext.Id);
                         } else {
-                            yield return new TransformedName(name, _Context);
+                            yield return new TransformedName(name, DefaultContext.Id);
                         }
 
                         // we do this weird thing where we publish our extension methods in the CLR context under their CLR names.
@@ -221,19 +214,19 @@ namespace IronPython.Runtime.Types {
                 if (regular) {
                     if (_reverseOperatorTable.TryGetValue(opmap, out sym)) {
                         // Python supports the operator and exposes it under a name
-                        yield return new TransformedName(SymbolTable.IdToString(sym), opmap, _Context);
+                        yield return new TransformedName(SymbolTable.IdToString(sym), opmap, DefaultContext.Id);
                     } else {
                         // we support the operator but don't have a name for it
-                        yield return new TransformedName(opmap, _Context);
+                        yield return new TransformedName(opmap, DefaultContext.Id);
                     }
                 }
 
                 if (reverse) {
                     opmap = opmap.GetReversed();
                     if (_reverseOperatorTable.TryGetValue(opmap, out sym)) {
-                        yield return new TransformedName(SymbolTable.IdToString(sym), opmap, _Context);
+                        yield return new TransformedName(SymbolTable.IdToString(sym), opmap, DefaultContext.Id);
                     } else {
-                        yield return new TransformedName(opmap, _Context);
+                        yield return new TransformedName(opmap, DefaultContext.Id);
                     }
                 }
             } else {
@@ -247,9 +240,9 @@ namespace IronPython.Runtime.Types {
                                 
                 if ((nt & NameType.Python) != 0) {
                     if (_pythonOperatorTable.TryGetValue(SymbolTable.StringToId(name), out opmap)) {
-                        Debug.Assert(opmap != null); 
-                        
-                        yield return new TransformedName(name, opmap, _Context);
+                        Debug.Assert(opmap != null);
+
+                        yield return new TransformedName(name, opmap, DefaultContext.Id);
                     }
 
                     // we do this weird thing where we publish our extension methods in the CLR context under their CLR names.
@@ -330,7 +323,7 @@ namespace IronPython.Runtime.Types {
                 Debug.Assert(cm != null,
                     String.Format("Replacing existing method {0} on {1}\nExisting Method: {2}", mi.Name, mi.DeclaringType, existing));
 
-                cm.func.AddMethod(method);
+                cm._func.AddMethod(method);
                 return existing;
             } else {
                 object [] attrs = mi.GetCustomAttributes(typeof(PythonClassMethodAttribute), false);

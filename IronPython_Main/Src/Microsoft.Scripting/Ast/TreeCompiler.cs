@@ -26,16 +26,14 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(expression, "expression");
 
-            CodeBlock cb = Ast.CodeBlock("<expression>", expression.Type);
+            CodeBlock cb = Ast.CodeBlock("<expression>", expression.Type, new Variable[0], new Variable[0]);
             if (expression.Type != typeof(void)) {
                 cb.Body = Ast.Return(
                     expression
                 );
             } else {
                 cb.Body = Ast.Block(
-                    Ast.Statement(
-                        expression
-                    ),
+                    expression,
                     Ast.Return()
                 );
             }
@@ -46,7 +44,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(expression, "expression");
 
-            CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void));
+            CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void), new Variable[0], new Variable[0]);
             cb.Body = Ast.Block(
                 expression,
                 Ast.Return()

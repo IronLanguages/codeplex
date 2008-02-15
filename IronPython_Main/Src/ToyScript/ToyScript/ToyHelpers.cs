@@ -22,8 +22,8 @@ using Microsoft.Scripting.Runtime;
 
 namespace ToyScript {
     public static class ToyHelpers {
-        public static void Print(object o) {
-            ScriptDomainManager.CurrentManager.SharedIO.OutputWriter.WriteLine(o ?? "<null>");
+        public static void Print(CodeContext context, object o) {
+            context.LanguageContext.DomainManager.SharedIO.OutputWriter.WriteLine(o ?? "<null>");
         }
 
         public static Type DateTime {

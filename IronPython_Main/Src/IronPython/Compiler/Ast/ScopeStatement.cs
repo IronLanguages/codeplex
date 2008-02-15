@@ -41,14 +41,6 @@ namespace IronPython.Compiler.Ast {
             set { _parent = value; }
         }
 
-        protected abstract MSAst.CodeBlock Block { get; }
-
-        internal void SetParent(MSAst.CodeBlock target) {
-            if (_parent != null) {
-                target.Parent = _parent.Block;
-            }
-        }
-
         internal bool ContainsImportStar {
             get { return _importStar; }
             set { _importStar = value; }
@@ -78,21 +70,21 @@ namespace IronPython.Compiler.Ast {
             get { return false; }
         }
 
-        protected virtual void CreateVariables(MSAst.CodeBlock block) {
+        internal virtual void CreateVariables(AstGenerator ag) {
             if (_variables != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _variables) {
                     // Publish variables for this context only (there may be references to the global variables
                     // in the dictionary also that were used for name binding lookups
                     // Do not publish parameters, they will get created separately.
-                    if (kv.Value.Scope == this && kv.Value.Kind  != VariableKind.Parameter) {
-                        kv.Value.Transform(block);
+                    if (kv.Value.Scope == this && kv.Value.Kind != VariableKind.Parameter) {
+                        kv.Value.Transform(ag);
                     }
                 }
             }
 
             // Require the context emits local dictionary
             if (NeedsLocalsDictionary) {
-                block.EmitLocalDictionary = true;
+                ag.Block.Dictionary = true;
             }
         }
 

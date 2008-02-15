@@ -534,7 +534,7 @@ namespace IronPython.Modules {
 
                 if (_protocol >= 2) {
                     object code;
-                    if (PythonCopyReg.ExtensionRegistry.TryGetValue(PythonTuple.MakeTuple(moduleName, name), out code)) {
+                    if (PythonCopyReg._extension_registry.TryGetValue(PythonTuple.MakeTuple(moduleName, name), out code)) {
                         int intCode = (int)code;
                         if (IsUInt8(code)) {
                             Write(Opcode.Ext1);
@@ -683,7 +683,7 @@ namespace IronPython.Modules {
                 object reduceCallable, result;
                 PythonType objType = DynamicHelpers.GetPythonType(obj);
 
-                if (PythonCopyReg.DispatchTable.TryGetValue(objType, out reduceCallable)) {
+                if (PythonCopyReg.dispatch_table.TryGetValue(objType, out reduceCallable)) {
                     result = PythonCalls.Call(reduceCallable, obj);
                 } else if (PythonOps.TryGetBoundAttr(context, obj, Symbols.ReduceExtended, out reduceCallable)) {
                     if (obj is PythonType) {
@@ -854,7 +854,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteFloat64(object value) {
                 Debug.Assert(DynamicHelpers.GetPythonType(value).Equals(TypeCache.Double));
-                Write(PythonStruct.Pack(">d", value));
+                Write(PythonStruct.pack(">d", value));
             }
 
             /// <summary>
@@ -862,7 +862,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt8(object value) {
                 Debug.Assert(IsUInt8(value));
-                Write(PythonStruct.Pack("B", value));
+                Write(PythonStruct.pack("B", value));
             }
 
             /// <summary>
@@ -870,7 +870,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteUInt16(object value) {
                 Debug.Assert(IsUInt16(value));
-                Write(PythonStruct.Pack("<H", value));
+                Write(PythonStruct.pack("<H", value));
             }
 
             /// <summary>
@@ -878,7 +878,7 @@ namespace IronPython.Modules {
             /// </summary>
             private void WriteInt32(object value) {
                 Debug.Assert(IsInt32(value));
-                Write(PythonStruct.Pack("<i", value));
+                Write(PythonStruct.pack("<i", value));
             }
 
             /// <summary>
@@ -1202,7 +1202,7 @@ namespace IronPython.Modules {
                 object moduleName;
                 if (PythonOps.TryGetBoundAttr(context, obj, Symbols.Module, out moduleName)) {
                     // TODO: Global SystemState
-                    if (!PythonContext.GetImporter(context).TryGetExistingModule(Converter.ConvertToString(moduleName), out module)) {
+                    if (!Importer.TryGetExistingModule(context, Converter.ConvertToString(moduleName), out module)) {
                         module = Builtin.__import__(context, Converter.ConvertToString(moduleName));
                     }
 
@@ -1450,7 +1450,7 @@ namespace IronPython.Modules {
 
             public object find_global(CodeContext/*!*/ context, object module, object attr) {
                 object moduleObject;
-                if (!PythonContext.GetImporter(context).TryGetExistingModule(Converter.ConvertToString(module), out moduleObject)) {
+                if (!Importer.TryGetExistingModule(context, Converter.ConvertToString(module), out moduleObject)) {
                     moduleObject = Builtin.__import__(context, Converter.ConvertToString(module));
                 }
                 return PythonOps.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
@@ -1469,7 +1469,7 @@ namespace IronPython.Modules {
             }
 
             private void PopMark(int markIndex) {
-                _stack.DeleteSlice(markIndex, _stack.Count);
+                _stack.__delslice__(markIndex, _stack.Count);
             }
 
             /// <summary>
@@ -1501,7 +1501,7 @@ namespace IronPython.Modules {
             private void LoadAppends(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
                 object seq = _stack[markIndex - 1];
-                object stackSlice = _stack.GetSlice(markIndex + 1, _stack.Count);
+                object stackSlice = _stack.__getslice__(markIndex + 1, _stack.Count);
                 if (seq is List) {
                     ((List)seq).Extend(stackSlice);
                 } else {
@@ -1631,17 +1631,17 @@ namespace IronPython.Modules {
             }
 
             private void LoadExt1(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt8()];
+                PythonTuple global = (PythonTuple)PythonCopyReg._inverted_registry[(int)ReadUInt8()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt2(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[(int)ReadUInt16()];
+                PythonTuple global = (PythonTuple)PythonCopyReg._inverted_registry[(int)ReadUInt16()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
             private void LoadExt4(CodeContext/*!*/ context) {
-                PythonTuple global = (PythonTuple)PythonCopyReg.InvertedRegistry[ReadInt32()];
+                PythonTuple global = (PythonTuple)PythonCopyReg._inverted_registry[ReadInt32()];
                 _stack.Append(find_global(context, global[0], global[1]));
             }
 
@@ -1683,7 +1683,7 @@ namespace IronPython.Modules {
 
             private void LoadList(CodeContext/*!*/ context) {
                 int markIndex = MarkIndex;
-                object list = _stack.GetSlice(markIndex + 1, _stack.Count);
+                object list = _stack.__getslice__(markIndex + 1, _stack.Count);
                 PopMark(markIndex);
                 _stack.Append(list);
             }

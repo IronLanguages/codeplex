@@ -25,8 +25,8 @@ from System import Environment
 from sys import exec_prefix
 
 extraArgs = ""
-if "-X:GenerateAsSnippets" in Environment.GetCommandLineArgs():
-    extraArgs += " -X:GenerateAsSnippets"
+if "-X:TupleBasedOptimizedScopes" in Environment.GetCommandLineArgs():
+    extraArgs += " -X:TupleBasedOptimizedScopes"
 
 def test_strings():
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
@@ -97,6 +97,8 @@ def test_interactive_mode():
 # Test sys.exitfunc
 
 def test_sys_exitfunc():
+    from Microsoft.Scripting.Runtime import ScriptDomainManager
+        
     inputScript = testpath.test_inputs_dir + "\\exitFuncRuns.py"
     ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
     (result, output, output2, exitCode) = ipi.StartAndRunToCompletion()
@@ -104,13 +106,20 @@ def test_sys_exitfunc():
     AreEqual(output.find('hello world') > -1, True)
     ipi.End()
     
+    args = extraArgs
+    
+    if ScriptDomainManager.Options.DebugMode:
+        args = "-D " + args	
+
     inputScript = testpath.test_inputs_dir + "\\exitFuncRaises.py"
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs + " \"" + inputScript + "\"")
+    ipi = IronPythonInstance(executable, exec_prefix, args + " \"" + inputScript + "\"")
     (result, output, output2, exitCode) = ipi.StartAndRunToCompletion()
     AreEqual(exitCode, 0)
     AreEqual(output2.find('Error in sys.exitfunc:') > -1, True)
-    AreEqual("-X:GenerateAsSnippets" in Environment.GetCommandLineArgs() or 
-             output2.find('exitFuncRaises.py, line 19, in foo') > -1, True)
+    
+    if ScriptDomainManager.Options.DebugMode:
+        AreEqual(output2.find('exitFuncRaises.py, line 19, in foo') > -1, True)
+		
     ipi.End()
 
 #############################################################################
@@ -627,6 +636,22 @@ def test_future_division():
     AreEqual(response, "2.75")
     ipi.End()
 
+
+#############################################################################
+# CP2206
+def test_future_with():
+    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
+    AreEqual(ipi.Start(), True)
+    ipi.ExecuteLine("from __future__ import with_statement")
+    ipi.ExecutePartialLine("class K(object):")
+    ipi.ExecutePartialLine("    def __enter__(self): return 3.14")
+    ipi.ExecutePartialLine("    def __exit__(self, type, value, tb): return False")
+    ipi.ExecuteLine("")
+    ipi.ExecutePartialLine("with K() as d:")
+    ipi.ExecutePartialLine("    print d")
+    response = ipi.ExecuteLine("")
+    AreEqual(response, "3.14")
+    ipi.End()
 
 
 #------------------------------------------------------------------------------

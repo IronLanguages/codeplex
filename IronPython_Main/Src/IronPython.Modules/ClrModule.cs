@@ -45,6 +45,11 @@ namespace IronPython.Modules {
 
         #region Public methods
 
+        // TODO: should be a property
+        public static IScriptEnvironment/*!*/ GetCurrentRuntime(CodeContext/*!*/ context) {
+            return context.LanguageContext.DomainManager.Environment;
+        }
+
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
             if (references == null) throw new ArgumentTypeException("Expected string or Assembly, got NoneType");
             if (references.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -117,11 +122,12 @@ namespace IronPython.Modules {
         }
 #endif
 
-        public static Assembly/*!*/ LoadAssemblyByName(string/*!*/ name) {
+        public static Assembly/*!*/ LoadAssemblyByName(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) {
                 throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
             }
-            return ScriptDomainManager.CurrentManager.PAL.LoadAssembly(name);
+
+            return PythonContext.GetContext(context).DomainManager.PAL.LoadAssembly(name);
         }
 
         public static object Use(CodeContext context, string/*!*/ name) {
@@ -199,7 +205,7 @@ namespace IronPython.Modules {
             Assembly asm = null;
 
             try {
-                asm = LoadAssemblyByName(name);
+                asm = LoadAssemblyByName(context, name);
             } catch { }
 
             // note we don't explicit call to get the file version
@@ -221,7 +227,7 @@ namespace IronPython.Modules {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
 
 #if SILVERLIGHT
-            Assembly asm = ScriptDomainManager.CurrentManager.PAL.LoadAssemblyFromPath(file);
+            Assembly asm = context.LanguageContext.DomainManager.PAL.LoadAssemblyFromPath(file);
 #else
             Assembly asm = LoadAssemblyFromFile(context, file);
 #endif
@@ -249,7 +255,7 @@ namespace IronPython.Modules {
         private static void AddReferenceByName(CodeContext/*!*/ context, string name) {
             if (name == null) throw new ArgumentTypeException("Expected string, got NoneType");
 
-            Assembly asm = LoadAssemblyByName(name);
+            Assembly asm = LoadAssemblyByName(context, name);
 
             if (asm == null) {
                 throw new IOException(String.Format("Could not add reference to assembly {0}", name));

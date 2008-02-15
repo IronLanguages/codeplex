@@ -140,7 +140,7 @@ namespace IronPython.Runtime.Operations {
             get { return StringOps.GetItem(Value, slice); }
         }
 
-        public object GetSlice(int start, int stop) {
+        public object __getslice__(int start, int stop) {
             return StringOps.GetSlice(Value, start, stop);
         }
 
@@ -149,12 +149,12 @@ namespace IronPython.Runtime.Operations {
         #region IPythonContainer Members
 
         [SpecialName, PythonName("__len__")]
-        public virtual int GetLength() {
+        public virtual int __len__() {
             return Value.Length;
         }
 
         [SpecialName, PythonName("__contains__")]
-        public virtual bool ContainsValue(object value) {
+        public virtual bool __contains__(object value) {
             if (value is string) return Value.Contains((string)value);
             else if (value is ExtensibleString) return Value.Contains(((ExtensibleString)value).Value);
 
@@ -197,10 +197,6 @@ namespace IronPython.Runtime.Operations {
             }
             return PythonOps.ToString(x);
         }
-
-#if !SILVERLIGHT // EncodingInfo
-        private static Dictionary<string, EncodingInfoWrapper> codecs;
-#endif
 
         #region Python Constructors
 
@@ -271,7 +267,7 @@ namespace IronPython.Runtime.Operations {
         public static string GetItem(string s, Slice slice) {
             if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
             int start, stop, step;
-            slice.Indices(s.Length, out start, out stop, out step);
+            slice.indices(s.Length, out start, out stop, out step);
             if (step == 1) {
                 return stop > start ? s.Substring(start, stop - start) : String.Empty;
             } else {
@@ -1193,12 +1189,10 @@ namespace IronPython.Runtime.Operations {
                 case "utf_8_sig": encoding = Encoding.UTF8; return true;
             }
 #else
-            if (codecs == null) MakeCodecsDict();
-
             name = NormalizeEncodingName(name);
 
             EncodingInfoWrapper encInfo;
-            if (codecs.TryGetValue(name, out encInfo)) {
+            if (CodecsInfo.Codecs.TryGetValue(name, out encInfo)) {
                 encoding = (Encoding)encInfo.GetEncoding().Clone();
                 return true;
             }
@@ -1481,55 +1475,60 @@ namespace IronPython.Runtime.Operations {
         }
 
 #if !SILVERLIGHT
-        private static void MakeCodecsDict() {
-            Dictionary<string, EncodingInfoWrapper> d = new Dictionary<string, EncodingInfoWrapper>();
-            EncodingInfo[] encs = Encoding.GetEncodings();
-            for (int i = 0; i < encs.Length; i++) {
-                string normalizedName = NormalizeEncodingName(encs[i].Name);
+        class CodecsInfo {
+            public static readonly Dictionary<string, EncodingInfoWrapper> Codecs = MakeCodecsDict();
 
-                // setup well-known mappings, for everything
-                // else we'll store as lower case w/ _                
-                switch (normalizedName) {
-                    case "us_ascii":
-                        d["cp" + encs[i].CodePage.ToString()] = d[normalizedName] = d["us"] = d["ascii"] = d["646"] = d["us_ascii"] = new AsciiEncodingInfoWrapper();
-                        continue;
-                    case "iso_8859_1":
-                        d["8859"] = d["latin_1"] = d["latin1"] = d["iso 8859_1"] = d["iso8859_1"] = d["cp819"] = d["819"] = d["latin"] = d["latin1"] = d["l1"] = encs[i];
-                        break;
-                    case "utf_7":
-                        d["u7"] = d["unicode-1-1-utf-7"] = encs[i];
-                        break;
-                    case "utf_8":
-                        d["utf_8_sig"] = encs[i];
-                        d["utf_8"] = d["utf8"] = d["u8"] = new EncodingInfoWrapper(encs[i], new byte[0]);
-                        continue;
-                    case "utf_16":
-                        d["utf_16_le"] = d["utf_16le"] = new EncodingInfoWrapper(encs[i], new byte[0]);
-                        break;                        
-                    case "unicodefffe": // big endian unicode                    
-                        // strip off the pre-amble, CPython doesn't include it.
-                        d["utf_16_be"] = d["utf_16be"] = new EncodingInfoWrapper(encs[i], new byte[0]);
-                        break;
-                }                
+            private static Dictionary<string, EncodingInfoWrapper> MakeCodecsDict() {
+                Dictionary<string, EncodingInfoWrapper> d = new Dictionary<string, EncodingInfoWrapper>();
+                EncodingInfo[] encs = Encoding.GetEncodings();
+                for (int i = 0; i < encs.Length; i++) {
+                    string normalizedName = NormalizeEncodingName(encs[i].Name);
 
-                // publish under normalized name (all lower cases, -s replaced with _s)
-                d[normalizedName] = encs[i];
-                // publish under Windows code page as well...                
-                d["windows-" + encs[i].GetEncoding().WindowsCodePage.ToString()] = encs[i];
-                // publish under code page number as well...
-                d["cp" + encs[i].CodePage.ToString()] = d[encs[i].CodePage.ToString()] = encs[i];
-            }
+                    // setup well-known mappings, for everything
+                    // else we'll store as lower case w/ _                
+                    switch (normalizedName) {
+                        case "us_ascii":
+                            d["cp" + encs[i].CodePage.ToString()] = d[normalizedName] = d["us"] = d["ascii"] = d["646"] = d["us_ascii"] = new AsciiEncodingInfoWrapper();
+                            continue;
+                        case "iso_8859_1":
+                            d["8859"] = d["latin_1"] = d["latin1"] = d["iso 8859_1"] = d["iso8859_1"] = d["cp819"] = d["819"] = d["latin"] = d["latin1"] = d["l1"] = encs[i];
+                            break;
+                        case "utf_7":
+                            d["u7"] = d["unicode-1-1-utf-7"] = encs[i];
+                            break;
+                        case "utf_8":
+                            d["utf_8_sig"] = encs[i];
+                            d["utf_8"] = d["utf8"] = d["u8"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                            continue;
+                        case "utf_16":
+                            d["utf_16_le"] = d["utf_16le"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                            break;
+                        case "unicodefffe": // big endian unicode                    
+                            // strip off the pre-amble, CPython doesn't include it.
+                            d["utf_16_be"] = d["utf_16be"] = new EncodingInfoWrapper(encs[i], new byte[0]);
+                            break;
+                    }
 
-            d["raw_unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(true));
-            d["unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(false));
-            codecs = d;
+                    // publish under normalized name (all lower cases, -s replaced with _s)
+                    d[normalizedName] = encs[i];
+                    // publish under Windows code page as well...                
+                    d["windows-" + encs[i].GetEncoding().WindowsCodePage.ToString()] = encs[i];
+                    // publish under code page number as well...
+                    d["cp" + encs[i].CodePage.ToString()] = d[encs[i].CodePage.ToString()] = encs[i];
+                }
+
+                d["raw_unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(true));
+                d["unicode_escape"] = new EncodingInfoWrapper(new UnicodeEscapeEncoding(false));
+
 
 #if DEBUG
-            // all codecs should be stored in lowercase because we only look up from lowercase strings
-            foreach (KeyValuePair<string, EncodingInfoWrapper> kvp in codecs) {
-                Debug.Assert(kvp.Key.ToLower() == kvp.Key);
-            }
+                // all codecs should be stored in lowercase because we only look up from lowercase strings
+                foreach (KeyValuePair<string, EncodingInfoWrapper> kvp in d) {
+                    Debug.Assert(kvp.Key.ToLower() == kvp.Key);
+                }
 #endif
+                return d;
+            }
         }
 
         class EncodingInfoWrapper {

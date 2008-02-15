@@ -163,13 +163,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             //
             // ComRuntimeHelpers.CheckThrowException(hresult, excepInfo, argErr, ThisParameter);
             //
-            expr = Ast.Statement(
-                Ast.Call(
-                    typeof(ComRuntimeHelpers).GetMethod("CheckThrowException"),
-                    Ast.ReadDefined(hresult),
-                    Ast.ReadDefined(excepInfo),
-                    Ast.ReadDefined(argErr),
-                    GetDispCallable()));
+            expr = Ast.Call(
+                typeof(ComRuntimeHelpers).GetMethod("CheckThrowException"),
+                Ast.ReadDefined(hresult),
+                Ast.ReadDefined(excepInfo),
+                Ast.ReadDefined(argErr),
+                GetDispCallable()
+            );
             tryStatements.Add(expr);
 
             //
@@ -195,8 +195,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             foreach (ArgBuilder argBuilder in argBuilders) {
                 Expression updateFromReturn = argBuilder.UpdateFromReturn(_methodBinderContext, parametersForUpdates);
                 if (updateFromReturn != null) {
-                    expr = Ast.Statement(updateFromReturn);
-                    tryStatements.Add(expr);
+                    tryStatements.Add(updateFromReturn);
                 }
             }
 
@@ -210,11 +209,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             //
             // _dispatchObject.ReleaseDispatchPointer(_dispatchPointer);
             //
-            expr = Ast.Statement(
-                Ast.Call(
-                    Ast.ReadDefined(_dispatchObject),
-                    typeof(IDispatchObject).GetMethod("ReleaseDispatchPointer"),
-                    Ast.ReadDefined(_dispatchPointer)));
+            expr = Ast.Call(
+                Ast.ReadDefined(_dispatchObject),
+                typeof(IDispatchObject).GetMethod("ReleaseDispatchPointer"),
+                Ast.ReadDefined(_dispatchPointer)
+            );
             finallyStatements.Add(expr);
 
             //
@@ -229,20 +228,20 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             // _invokeResult.Clear()
             //
 
-            expr = Ast.Statement(
-                Ast.Call(
-                    Ast.ReadDefined(_invokeResult),
-                    typeof(Variant).GetMethod("Clear")));
+            expr = Ast.Call(
+                Ast.ReadDefined(_invokeResult),
+                typeof(Variant).GetMethod("Clear")
+            );
             finallyStatements.Add(expr);
 
             //
             // _dispIdsOfKeywordArgsPinned.Free()
             //
             if (_dispIdsOfKeywordArgsPinned != null) {
-                expr = Ast.Statement(
-                    Ast.Call(
-                        Ast.ReadDefined(_dispIdsOfKeywordArgsPinned),
-                        typeof(GCHandle).GetMethod("Free")));
+                expr = Ast.Call(
+                    Ast.ReadDefined(_dispIdsOfKeywordArgsPinned),
+                    typeof(GCHandle).GetMethod("Free")
+                );
                 finallyStatements.Add(expr);
             }
 

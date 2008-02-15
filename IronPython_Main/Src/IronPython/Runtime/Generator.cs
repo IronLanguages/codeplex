@@ -27,7 +27,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("generator")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonSystemType("generator")]
     public sealed class PythonGenerator : Generator, IEnumerable, IEnumerable<object> {
         private NextTarget _next;
 
@@ -74,9 +74,9 @@ namespace IronPython.Runtime {
         // Value sent by generator.send().
         // Since send() could send an exception, we need to keep this different from throwable's value.
         private object _sendValue;
-        
+
         public PythonGenerator(CodeContext context, NextTarget next)
-        : base(context) {
+            : base(context) {
             _next = next;
         }
 
@@ -86,7 +86,7 @@ namespace IronPython.Runtime {
         ~PythonGenerator() {
             try {
                 // This may run the users generator.
-                this.Close();
+                this.close();
 
             } catch (Exception e) {
                 // An unhandled exceptions on the finalizer could tear down the process, so catch it.
@@ -104,7 +104,7 @@ namespace IronPython.Runtime {
         }
 #endif // !SILVERLIGHT
 
-        public override bool MoveNext() {
+        protected override bool MoveNext() {
             _started = true;
             bool ret = false;
             object next = null;
@@ -155,34 +155,35 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("next")]
-        public object Next() {
+        public object next() {
             if (!MoveNext()) {
                 throw PythonOps.StopIteration();
             }
             return Current;
         }
 
-        // See PEP 342 (http://python.org/dev/peps/pep-0342/) for details of new methods on Generator.
-        // Full signature including default params for throw is:
-        //    throw(type, value=None, traceback=None)
-        // Use multiple overloads to resolve the default parameters.
-        [PythonName("throw")]
-        public object Throw(object type) {
-            return Throw(type, null, null);
-        }
-        [PythonName("throw")]
-        public object Throw(object type, object value) {
-            return Throw(type, value, null);
+        /// <summary>
+        /// See PEP 342 (http://python.org/dev/peps/pep-0342/) for details of new methods on Generator.
+        /// Full signature including default params for throw is:
+        ///    throw(type, value=None, traceback=None)
+        /// Use multiple overloads to resolve the default parameters.
+        /// </summary>
+        public object @throw(object type) {
+            return @throw(type, null, null);
         }
 
-        // Throw(...) is like Raise(...) being called from the yield point within the generator.
-        // Note it must come from inside the generator so that the traceback matches, and so that it can 
-        // properly cooperate with any try/catch/finallys inside the generator body.
-        //
-        // If the generator catches the exception and yields another value, that is the return value of g.throw().
-        [PythonName("throw")]
-        public object Throw(object type, object value, object traceback) {            
+        public object @throw(object type, object value) {
+            return @throw(type, value, null);
+        }
+
+        /// <summary>
+        /// Throw(...) is like Raise(...) being called from the yield point within the generator.
+        /// Note it must come from inside the generator so that the traceback matches, and so that it can 
+        /// properly cooperate with any try/catch/finallys inside the generator body.
+        /// 
+        /// If the generator catches the exception and yields another value, that is the return value of g.throw().
+        /// </summary>
+        public object @throw(object type, object value, object traceback) {            
             // The Pep342 explicitly says "The type argument must not be None". 
             // According to CPython 2.5's implementation, a null type argument should:
             // - throw a TypeError exception (just as Raise(None) would) *outside* of the generator's body
@@ -214,10 +215,11 @@ namespace IronPython.Runtime {
             return Current;
         }
 
-        // send() was added in Pep342. It sends a result back into the generator, and the expression becomes
-        // the result of yield when used as an expression.
-        [PythonName("send")]
-        public object Send(object value) {
+        /// <summary>
+        /// send() was added in Pep342. It sends a result back into the generator, and the expression becomes
+        /// the result of yield when used as an expression.
+        /// </summary>
+        public object send(object value) {
             Debug.Assert(_throwable == null);
 
             // CPython2.5's behavior is that Send(non-null) on unstaretd generator should:
@@ -228,49 +230,13 @@ namespace IronPython.Runtime {
             }
 
             _sendValue = value;
-            return Next();
+            return next();
         }
-
-
-        // Helper called from generated code after yield statement. 
-        // Keepin this in a helper method:
-        // - reduces generated code size
-        // - allows better coupling with PythonGenerator.Throw()
-        // - avoids throws from emitted code (which can be harder to debug).
-        public object CheckThrowableAndReturnSendValue() {
-            // Since this method is called from the generator body's execution, the generator must be running 
-            // and not closed.
-            Debug.Assert(!_closed); 
-            if (_sendValue != null) {
-                // Can't Send() and Throw() at the same time.
-                Debug.Assert(_throwable == null);
-
-                object sendValueBackup = _sendValue;
-                _sendValue = null;
-                return sendValueBackup;
-            }
-            CheckThrowable();
-            return null;
-        }
-
-        // Called to throw an exception set by Throw().
-        private void CheckThrowable() {
-            if (this._throwable != null) {
-                object throwableBackup = _throwable;
-
-                // Clear it so that any future Next()/MoveNext() call doesn't pick up the exception again.
-                _throwable = null;
-
-                // This may invoke user code such as __init__, thus MakeException may throw. 
-                // Since this is invoked from the generator's body, the generator can catch this exception. 
-                Exception e = PythonOps.MakeException(Context, throwableBackup, _value, _traceback);
-                throw e;
-            }
-        }
-
-        // Close introduced in Pep 342.
-        [PythonName("close")]
-        public void Close() {
+        
+        /// <summary>
+        /// Close introduced in Pep 342.
+        /// </summary>
+        public void close() {
             // This is nop if the generator is already closed.
 
             // Optimization to avoid throwing + catching an exception if we're already closed.
@@ -280,7 +246,7 @@ namespace IronPython.Runtime {
 
             // This function body is the psuedo code straight from Pep 342.
             try {
-                this.Throw(new GeneratorExitException());
+                this.@throw(new GeneratorExitException());
 
                 // Generator should not have exited normally. 
                 throw new RuntimeException("generator ignored GeneratorExit");
@@ -298,8 +264,7 @@ namespace IronPython.Runtime {
         
         #region IEnumerable Members
 
-        [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             return this;
         }
 
@@ -309,6 +274,51 @@ namespace IronPython.Runtime {
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
             return this;
+        }
+
+        #endregion
+
+        #region Internal implementation details
+
+        /// <summary>
+        /// Helper called from generated code after yield statement. 
+        /// Keepin this in a helper method:
+        /// - reduces generated code size
+        /// - allows better coupling with PythonGenerator.Throw()
+        /// - avoids throws from emitted code (which can be harder to debug).
+        /// </summary>
+        /// <returns></returns>
+        internal object CheckThrowableAndReturnSendValue() {
+            // Since this method is called from the generator body's execution, the generator must be running 
+            // and not closed.
+            Debug.Assert(!_closed);
+            if (_sendValue != null) {
+                // Can't Send() and Throw() at the same time.
+                Debug.Assert(_throwable == null);
+
+                object sendValueBackup = _sendValue;
+                _sendValue = null;
+                return sendValueBackup;
+            }
+            CheckThrowable();
+            return null;
+        }
+
+        /// <summary>
+        /// Called to throw an exception set by Throw().
+        /// </summary>
+        private void CheckThrowable() {
+            if (this._throwable != null) {
+                object throwableBackup = _throwable;
+
+                // Clear it so that any future Next()/MoveNext() call doesn't pick up the exception again.
+                _throwable = null;
+
+                // This may invoke user code such as __init__, thus MakeException may throw. 
+                // Since this is invoked from the generator's body, the generator can catch this exception. 
+                Exception e = PythonOps.MakeException(Context, throwableBackup, _value, _traceback);
+                throw e;
+            }
         }
 
         #endregion

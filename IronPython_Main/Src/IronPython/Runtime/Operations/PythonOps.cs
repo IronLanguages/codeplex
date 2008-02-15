@@ -65,15 +65,17 @@ namespace IronPython.Runtime.Operations {
         /// <summary> stored for copy_reg module, used for reduce protocol </summary>
         public static BuiltinFunction PythonReconstructor;
 
-        private static FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+        private static readonly FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
         private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
-        private static FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
-        private static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();
+        private static readonly FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
+        private static readonly Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+        private static readonly Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+        private static readonly Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();
+        private static readonly FastDynamicSite<object, object, object> _getIndexSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.GetItem));
+        private static readonly Dictionary<Type, FastDynamicSite<object, string>> _toStrSites = new Dictionary<Type, FastDynamicSite<object, string>>();
 
         // Site for implementing callable() builtin function and Python.IsCallable.
-        private static DynamicSite<object, bool> _isCallableSites = DynamicSite<object, bool>.Create(DoOperationAction.Make(Operators.IsCallable));
+        private static readonly DynamicSite<object, bool> _isCallableSites = DynamicSite<object, bool>.Create(DoOperationAction.Make(Operators.IsCallable));
 
         #endregion
 
@@ -108,9 +110,7 @@ namespace IronPython.Runtime.Operations {
         public static bool IsCallable(object o) {
             return IsCallable(DefaultContext.Default, o);
         }
-
-        
-
+       
         public static bool IsCallable(CodeContext/*!*/ context, object o) {
             // This tells if an object can be called, but does not make a claim about the parameter list.
             // In 1.x, we could check for certain interfaces like ICallable*, but those interfaces were deprecated
@@ -251,7 +251,6 @@ namespace IronPython.Runtime.Operations {
                 "...";
         }
 
-        private static Dictionary<Type, FastDynamicSite<object, string>> _toStrSites = new Dictionary<Type, FastDynamicSite<object, string>>();
         public static string ToString(object o) {
             string x = o as string;
             Array ax;
@@ -294,7 +293,7 @@ namespace IronPython.Runtime.Operations {
 
             Method m = o as Method;
             if (m != null) {
-                fo = m.Function as PythonFunction;
+                fo = m.im_func as PythonFunction;
             }
 
             minArgCnt = 0;
@@ -307,7 +306,7 @@ namespace IronPython.Runtime.Operations {
 
                     // take into account unbound methods / bound methods
                     if (m != null) {
-                        if (m.Self != null) {
+                        if (m.im_self != null) {
                             maxArgCnt--;
                             minArgCnt--;
                         }
@@ -646,13 +645,25 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            int icount;
-            if(!Converter.TryConvertToIndex(count, out icount)) {
-                throw TypeError("can't multiply sequence by non-int of type '{0}'", DynamicHelpers.GetPythonType(count).Name);
-            }
+            int icount = GetSequenceMultiplier(sequence, count);
 
             if (icount < 0) icount = 0;
             return multiplier(sequence, icount);
+        }
+
+        internal static int GetSequenceMultiplier(object sequence, object count) {
+            int icount;
+            if (!Converter.TryConvertToIndex(count, out icount)) {
+                PythonTuple pt = null;
+                if (count is OldInstance || !DynamicHelpers.GetPythonType(count).IsSystemType) {
+                    pt = Builtin.TryCoerce(DefaultContext.Default, count, sequence) as PythonTuple;
+                }
+
+                if (pt == null || !Converter.TryConvertToIndex(pt[0], out icount)) {
+                    throw TypeError("can't multiply sequence by non-int of type '{0}'", DynamicHelpers.GetPythonType(count).Name);
+                }
+            }
+            return icount;
         }
 
         private static FastDynamicSite<object, object, object> EqualSharedSite =
@@ -1098,8 +1109,10 @@ namespace IronPython.Runtime.Operations {
             if (ic != null) return ic.Count;
 
             object objres;
-            if (!DynamicHelpers.GetPythonType(o).TryInvokeUnaryOperator(DefaultContext.Default, Operators.Length, o, out objres))
+            if (!PythonTypeOps.TryInvokeUnaryOperator(DefaultContext.Default, o, Symbols.Length, out objres)) {
                 throw PythonOps.TypeError("len() of unsized object");
+            }
+
             int res = (int)objres;
             if (res < 0) {
                 throw PythonOps.ValueError("__len__ should return >= 0, got {0}", res);
@@ -1219,8 +1232,6 @@ namespace IronPython.Runtime.Operations {
             return PythonCalls.Call(func, allArgs.GetObjectArray());
         }
 
-        private static FastDynamicSite<object, object, object> _getIndexSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.GetItem));
-
         public static object GetIndex(object o, object index) {
             return _getIndexSite.Invoke(o, index);
         }
@@ -1243,7 +1254,7 @@ namespace IronPython.Runtime.Operations {
                     seq[(int)index] = value;
                     return;
                 } else if ((slice = index as Slice) != null) {
-                    if (slice.Step == null) {
+                    if (slice.step == null) {
                         SetDeprecatedSlice(o, value, seq, slice);
                     } else {
                         seq[slice] = value;
@@ -1261,7 +1272,7 @@ namespace IronPython.Runtime.Operations {
             int start, stop;
             slice.DeprecatedFixed(o, out start, out stop);
 
-            seq.SetSlice(start, stop, value);
+            seq.__setslice__(start, stop, value);
         }
 
         private static void SlowSetIndex(object o, object index, object value) {
@@ -1296,16 +1307,16 @@ namespace IronPython.Runtime.Operations {
 
                 Slice slice;
                 if (index is int) {
-                    seq.DeleteItem((int)index);
+                    seq.__delitem__((int)index);
                     return;
                 } else if ((slice = index as Slice) != null) {
-                    if (slice.Step == null) {
+                    if (slice.step == null) {
                         int start, stop;
                         slice.DeprecatedFixed(o, out start, out stop);
 
-                        seq.DeleteSlice(start, stop);
+                        seq.__delslice__(start, stop);
                     } else
-                        seq.DeleteItem((Slice)index);
+                        seq.__delitem__((Slice)index);
 
                     return;
                 }
@@ -2252,7 +2263,7 @@ namespace IronPython.Runtime.Operations {
         /// import spam.eggs
         /// </summary>
         public static object ImportTop(CodeContext/*!*/ context, string fullName) {
-            return PythonContext.GetImporter(context).Import(context, fullName, null);
+            return Importer.Import(context, fullName, null);
         }
 
         /// <summary>
@@ -2264,7 +2275,7 @@ namespace IronPython.Runtime.Operations {
         /// <param name="fullName"></param>
         /// <returns></returns>
         public static object ImportBottom(CodeContext/*!*/ context, string fullName) {
-            object module = PythonContext.GetImporter(context).Import(context, fullName, null);
+            object module = Importer.Import(context, fullName, null);
 
             if (fullName.IndexOf('.') >= 0) {
                 // Extract bottom from the imported module chain
@@ -2283,7 +2294,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import eggs1, eggs2 
         /// </summary>
         public static object ImportWithNames(CodeContext/*!*/ context, string fullName, string[] names) {
-            return PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple(names));
+            return Importer.Import(context, fullName, PythonTuple.MakeTuple(names));
         }
 
 
@@ -2295,7 +2306,7 @@ namespace IronPython.Runtime.Operations {
         /// Called repeatedly for all elements being imported (a, b, c, d above)
         /// </summary>
         public static object ImportFrom(CodeContext/*!*/ context, object module, string name) {
-            return PythonContext.GetImporter(context).ImportFrom(context, module, name);
+            return Importer.ImportFrom(context, module, name);
         }
 
         /// <summary>
@@ -2304,7 +2315,7 @@ namespace IronPython.Runtime.Operations {
         /// from spam import *
         /// </summary>
         public static void ImportStar(CodeContext/*!*/ context, string fullName) {
-            object newmod = PythonContext.GetImporter(context).Import(context, fullName, PythonTuple.MakeTuple("*"));
+            object newmod = Importer.Import(context, fullName, PythonTuple.MakeTuple("*"));
 
             Scope scope = newmod as Scope;
             if (scope != null) {
@@ -2387,7 +2398,7 @@ namespace IronPython.Runtime.Operations {
 
             // TODO: use SourceUnitReader when available
             if ((pf = code as PythonFile) != null) {
-                List lines = pf.ReadLines();
+                List lines = pf.readlines();
 
                 StringBuilder fullCode = new StringBuilder();
                 for (int i = 0; i < lines.Count; i++) {
@@ -2614,7 +2625,7 @@ namespace IronPython.Runtime.Operations {
             object pyExcep = PythonExceptions.ToPython(ex);
 
             TraceBack tb = CreateTraceBack(ex);
-            PythonContext pc =PythonContext.GetContext(context);
+            PythonContext pc = PythonContext.GetContext(context);
             pc.SystemExceptionTraceBack = tb;
 
             StringException se = pyExcep as StringException;
@@ -2939,7 +2950,7 @@ namespace IronPython.Runtime.Operations {
         /// deprecated form of slicing.
         /// </summary>
         public static bool IsNumericObject(object value) {
-            return value is int || value is ExtensibleInt || value is BigInteger || value is Extensible<BigInteger> || value is bool;
+            return value is int || value is Extensible<int> || value is BigInteger || value is Extensible<BigInteger> || value is bool;
         }
 
         /// <summary>
@@ -2950,7 +2961,7 @@ namespace IronPython.Runtime.Operations {
             return t == typeof(int) ||
                 t == typeof(bool) ||
                 t == typeof(BigInteger) ||
-                t.IsSubclassOf(typeof(ExtensibleInt)) ||
+                t.IsSubclassOf(typeof(Extensible<int>)) ||
                 t.IsSubclassOf(typeof(Extensible<BigInteger>));
         }
 
@@ -3235,6 +3246,10 @@ namespace IronPython.Runtime.Operations {
             --PythonFunction.Depth;
         }
 
+        public static bool ShouldEnforceRecursion() {
+            return PythonFunction.EnforceRecursion;
+        }
+
         #endregion
 
         public static object ReturnConversionResult(object value) {
@@ -3253,6 +3268,48 @@ namespace IronPython.Runtime.Operations {
 
         public static CallAction MakeSimpleCallAction(int count) {
             return CallAction.Make(count);
+        }
+
+        public static PythonTuple ValidateCoerceResult(object coerceResult) {
+            if (coerceResult == null || coerceResult == PythonOps.NotImplemented) {
+                return null;
+            }
+
+            PythonTuple pt = coerceResult as PythonTuple;
+            if (pt == null) throw PythonOps.TypeError("coercion should return None, NotImplemented, or 2-tuple, got {0}", PythonTypeOps.GetName(coerceResult));
+            return pt;
+        }
+
+        public static object GetCoerceResultOne(PythonTuple coerceResult) {
+            return coerceResult._data[0];
+        }
+
+        public static object GetCoerceResultTwo(PythonTuple coerceResult) {
+            return coerceResult._data[1];
+        }
+
+        public static object MethodCheckSelf(Method method, object self) {
+            return method.CheckSelf(self);
+        }
+
+        public static object GeneratorCheckThrowableAndReturnSendValue(PythonGenerator self) {
+            return self.CheckThrowableAndReturnSendValue();
+        }
+
+        public static ItemEnumerable CreateItemEnumerable(object baseObject) {
+            return ItemEnumerable.Create(baseObject);
+        }
+
+        public static IEnumerable CreatePythonEnumerable(object baseObject) {
+            return PythonEnumerable.Create(baseObject);
+        }
+
+        public static IEnumerator CreateItemEnumerator(object baseObject) {
+            return ItemEnumerator.Create(baseObject);
+        }
+
+        public static IEnumerator CreatePythonEnumerator(object baseObject) {
+            return PythonEnumerator.Create(baseObject);
         }
     }
 }

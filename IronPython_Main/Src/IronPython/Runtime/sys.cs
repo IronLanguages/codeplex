@@ -29,11 +29,11 @@ using IronPython.Runtime.Operations;
 [assembly: PythonModule("sys", typeof(IronPython.Runtime.SysModule))]
 namespace IronPython.Runtime {
     public static class SysModule {
-        public static object api_version = 0;
+        public const int api_version = 0;
         // argv is set by PythonContext and only on the initial load
-        public static string byteorder = BitConverter.IsLittleEndian ? "little" : "big";
+        public static readonly string byteorder = BitConverter.IsLittleEndian ? "little" : "big";
         // builtin_module_names is set by PythonContext and updated on reload
-        public static string copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
+        public const string copyright = "Copyright (c) Microsoft Corporation. All rights reserved.";
 
         public static void displayhook(object value) {
             throw PythonOps.NotImplementedError("IronPython does not support sys.displayhook");
@@ -100,25 +100,25 @@ namespace IronPython.Runtime {
         }
 
         // hex_version is set by PythonContext
-        public static object maxint = Int32.MaxValue;
-        public static object maxunicode = (int)ushort.MaxValue;
+        public const int maxint = Int32.MaxValue;
+        public const int maxunicode = (int)ushort.MaxValue;
 
         // modules is set by PythonContext and only on the initial load
 
         // path is set by PythonContext and only on the initial load
 
 #if SILVERLIGHT
-        public static string platform = "silverlight";
+        public const string platform = "silverlight";
 #else
-        public static string platform = "cli";
+        public const string platform = "cli";
 #endif
 
         // default to location of IronPython.dll, host can override by calling ScriptEngine.InitializeModules
         // In Silverlight the 1 host always sets this
 #if SILVERLIGHT
-        public static string prefix;
+        public const string prefix = "";
 #else
-        public static string prefix = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        public static readonly string prefix = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 #endif
 
         // ps1 and ps2 are set by PythonContext and only on the initial load
@@ -154,6 +154,29 @@ namespace IronPython.Runtime {
 
         // version and version_info are set by PythonContext
 
-        public static object winver = "2.5";
+        public static string winver = "2.5";
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            dict[SymbolTable.StringToId("stdin")] = dict[SymbolTable.StringToId("__stdin__")];
+            dict[SymbolTable.StringToId("stdout")] = dict[SymbolTable.StringToId("__stdout__")];
+            dict[SymbolTable.StringToId("stderr")] = dict[SymbolTable.StringToId("__stderr__")];
+
+            // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
+            // engine elsewhere. For now, we initialize them just once to some default value
+            dict[SymbolTable.StringToId("warnoptions")] = List.Make();
+
+            PublishBuiltinModuleNames(context, dict);
+            context.SetHostVariables(dict);
+        }
+
+        private static void PublishBuiltinModuleNames(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            object[] keys = new object[context.Builtins.Keys.Count];
+            int index = 0;
+            foreach (object key in context.Builtins.Keys) {
+                keys[index++] = key;
+            }
+            dict[SymbolTable.StringToId("builtin_module_names")] = PythonTuple.MakeTuple(keys);
+        }
+
     }
 }

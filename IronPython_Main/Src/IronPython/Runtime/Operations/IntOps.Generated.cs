@@ -35,7 +35,7 @@ using IronPython.Runtime.Operations;
 [assembly: PythonExtensionType(typeof(Byte), typeof(ByteOps))]
 [assembly: PythonExtensionType(typeof(Int16), typeof(Int16Ops))]
 [assembly: PythonExtensionType(typeof(UInt16), typeof(UInt16Ops))]
-[assembly: PythonExtensionType(typeof(Int32), typeof(Int32Ops), DerivationType=typeof(ExtensibleInt))]
+[assembly: PythonExtensionType(typeof(Int32), typeof(Int32Ops), EnableDerivation=true)]
 [assembly: PythonExtensionType(typeof(UInt32), typeof(UInt32Ops))]
 [assembly: PythonExtensionType(typeof(Int64), typeof(Int64Ops))]
 [assembly: PythonExtensionType(typeof(UInt64), typeof(UInt64Ops))]

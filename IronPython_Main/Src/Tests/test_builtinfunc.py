@@ -21,6 +21,19 @@ for stuff in [bool, True, False]:
 
 items = globals().items() #4716
 
+def cp946():
+    if "hasattr" not in dir(__builtins__):
+        raise "hasattr should be in __builtins__"
+    if "HasAttr" in dir(__builtins__):
+        raise "HasAttr should not be in __builtins__"
+
+cp946()
+import sys
+if sys.platform=="cli":
+    import clr
+cp946()
+
+
 #-----------------------------------------------------------------------------------
 from lib.assert_util import *
 

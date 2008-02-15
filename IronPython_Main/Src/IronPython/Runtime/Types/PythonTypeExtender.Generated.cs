@@ -94,13 +94,12 @@ namespace IronPython.Runtime.Types {
             pyOp[Symbols.Repr] = new OperatorMapping(Operators.CodeRepresentation, true, false, false);
             pyOp[Symbols.Length] = new OperatorMapping(Operators.Length, true, false, false);
             pyOp[Symbols.Call] = new OperatorMapping(Operators.Call, false, true, false);
-            pyOp[Symbols.DivMod] = new OperatorMapping(Operators.DivMod, false, true, false);
-            pyOp[Symbols.ReverseDivMod] = new OperatorMapping(Operators.ReverseDivMod, false, true, false);
+            pyOp[Symbols.DivMod] = new OperatorMapping(Operators.DivMod, false, true, false, true);
+            pyOp[Symbols.ReverseDivMod] = new OperatorMapping(Operators.ReverseDivMod, false, true, false, true);
             pyOp[Symbols.String] = new OperatorMapping(Operators.ConvertToString, true, false, false);
             pyOp[Symbols.GeneratorNext] = new OperatorMapping(Operators.MoveNext, true, false, false);
             pyOp[Symbols.GetBoundAttr] = new OperatorMapping(Operators.GetBoundMember, false, true, false);
             pyOp[Symbols.Unassign] = new OperatorMapping(Operators.Unassign, true, false, false);
-            pyOp[Symbols.Coerce] = new OperatorMapping(Operators.Coerce, false, true, false);
             pyOp[Symbols.GetDescriptor] = new OperatorMapping(Operators.GetDescriptor, false, false, true);
             pyOp[Symbols.Missing] = new OperatorMapping(Operators.Missing, false, true, false);
             pyOp[Symbols.OperatorPower] = new OperatorMapping(Operators.Power, false, true, true);

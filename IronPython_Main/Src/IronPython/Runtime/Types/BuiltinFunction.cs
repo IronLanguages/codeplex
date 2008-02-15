@@ -379,15 +379,14 @@ namespace IronPython.Runtime.Types {
 
         #region Public Python APIs
 
-        public string __module__ {
-            get {
-                if (Targets.Count > 0) {
-                    PythonType declaringType = DynamicHelpers.GetPythonTypeFromType(DeclaringType);
+        [PropertyMethod]
+        public string Get__module__(CodeContext/*!*/ context) {
+            if (Targets.Count > 0) {
+                PythonType declaringType = DynamicHelpers.GetPythonTypeFromType(DeclaringType);
 
-                    return PythonTypeOps.GetModuleName(declaringType.UnderlyingSystemType);
-                }
-                return null;
+                return PythonTypeOps.GetModuleName(context, declaringType.UnderlyingSystemType);
             }
+            return null;
         }
 
         /// <summary>

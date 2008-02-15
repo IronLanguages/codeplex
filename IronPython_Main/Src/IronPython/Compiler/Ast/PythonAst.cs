@@ -34,7 +34,7 @@ namespace IronPython.Compiler.Ast {
         private readonly bool _printExpressions;
         private readonly bool _withStatement;
         private PythonVariable _docVariable;
-        private MSAst.CodeBlock _block;
+
         /// <summary>
         /// The globals that free variables in the functions bind to,
         /// then need to be separated into their own dictionary so that
@@ -88,24 +88,20 @@ namespace IronPython.Compiler.Ast {
             set { _docVariable = value; }
         }
 
-        protected override MSAst.CodeBlock Block {
-            get { return _block; }
-        }
-
         internal override bool IsGlobal {
             get { return true; }
         }
 
-        protected override void CreateVariables(MSAst.CodeBlock block) {
+        internal override void CreateVariables(AstGenerator ag) {
             if (_globals != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _globals) {
                     if (kv.Value.Scope == this) {
-                        kv.Value.Transform(block);
+                        kv.Value.Transform(ag);
                     }
                 }
             }
 
-            base.CreateVariables(block);
+            base.CreateVariables(ag);
         }
 
         internal PythonVariable EnsureGlobalVariable(PythonNameBinder binder, SymbolId name) {
@@ -140,39 +136,35 @@ namespace IronPython.Compiler.Ast {
             throw new InvalidOperationException();
         }
 
-        internal MSAst.CodeBlock TransformToAst(AstGenerator ag, CompilerContext context) {
+        internal MSAst.CodeBlock TransformToAst(CompilerContext context) {
+            // Create the ast generator
+            // Use the PrintExpression value for the body (global level code)
             string name = context.SourceUnit.HasPath ? context.SourceUnit.Id : "<undefined>";
-            MSAst.CodeBlock ast = Ast.CodeBlock(_body.Span, name);
-            ast.IsGlobal = true;
-
-            _block = ast;
+            AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);
+            ag.Block.Global = true;
 
             // Create the variables
-            CreateVariables(ast);
+            CreateVariables(ag);
 
-            // Use the PrintExpression value for the body (global level code)
-            AstGenerator body = new AstGenerator(ast, ag.Context, _printExpressions);
-
-            MSAst.Expression bodyStmt = body.Transform(_body);            
-
+            MSAst.Expression bodyStmt = ag.Transform(_body);            
             MSAst.Expression docStmt;
 
-            if (_isModule && _body.Documentation != null) {
-                docStmt = Ast.Statement(
-                    Ast.Assign(
-                        _docVariable.Variable,
-                        Ast.Constant(_body.Documentation)
-                    )
+            string doc = ag.GetDocumentation(_body);
+            if (_isModule && doc != null) {
+                docStmt = Ast.Assign(
+                    _docVariable.Variable,
+                    Ast.Constant(doc)
                 );
             } else {
                 docStmt = Ast.Empty();
             }
 
-            ast.Body = Ast.Block(
+            ag.Block.Body = Ast.Block(
                 docStmt,
                 bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
             );
-            return ast;
+
+            return ag.Block.MakeLambda();
         }
 
         public override void Walk(PythonWalker walker) {

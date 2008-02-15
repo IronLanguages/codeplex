@@ -30,7 +30,7 @@ if int(ca[0].DebuggingFlags & System.Diagnostics.DebuggableAttribute.DebuggingMo
     print "not debug version of ipy.exe: skip"
     sys.exit(0)
 
-switches = ['-O', '-D', '-X:SaveAssemblies', '-X:StaticMethods']
+switches = ['-D', '-X:SaveAssemblies']
 
 for x in switches:
     if x not in System.Environment.GetCommandLineArgs():
@@ -39,7 +39,7 @@ for x in switches:
 
 process = System.Diagnostics.Process()
 process.StartInfo.FileName = sys.executable
-process.StartInfo.Arguments = '-O -D -X:SaveAssemblies -X:StaticMethods badil.py'
+process.StartInfo.Arguments = '-D -X:SaveAssemblies badil.py'
 process.StartInfo.CreateNoWindow = True
 process.StartInfo.UseShellExecute = False
 process.StartInfo.RedirectStandardInput = True

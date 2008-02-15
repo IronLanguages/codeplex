@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Types {
         private PythonType _toExtend;
         private Type _extensionType;
         private ExtensionNameTransformer _transform;
-        private Dictionary<OperatorMapping, OperatorInfo> _operImpl;
+        private Dictionary<OperatorMapping, CallableOperatorInfo> _operImpl;
 
         private PythonTypeExtender(PythonType toExtend, Type extensionType, ExtensionNameTransformer nameTransform) {
             _toExtend = toExtend;
@@ -144,7 +144,7 @@ namespace IronPython.Runtime.Types {
 
         private void PublishOperators() {
             if (_operImpl != null) {
-                foreach (KeyValuePair<OperatorMapping, OperatorInfo> op in _operImpl) {
+                foreach (KeyValuePair<OperatorMapping, CallableOperatorInfo> op in _operImpl) {
                     PythonTypeSlot callable = (PythonTypeSlot)op.Value.Callable;
                     PythonType dt = _toExtend;
 
@@ -224,12 +224,12 @@ namespace IronPython.Runtime.Types {
         private void StoreOperator(MethodInfo mi) {
             FunctionType baseFunctionType = FunctionType.Method | FunctionType.OpsFunction;
             foreach(TransformedName name in _transform(mi, TransformReason.Operator)) {
-                OperatorInfo info;
+                CallableOperatorInfo info;
                 OperatorMapping op = name.Operator;
                 FunctionType ft = baseFunctionType;
 
                 if (op != null) {
-                    if (_operImpl == null) _operImpl = new Dictionary<OperatorMapping, OperatorInfo>();
+                    if (_operImpl == null) _operImpl = new Dictionary<OperatorMapping, CallableOperatorInfo>();
                     
                     if (op.IsBinary && op.Operator != Operators.GetItem) ft |= FunctionType.BinaryOperator;                    
                     if (op.IsReversed)  ft |= FunctionType.ReversedOperator;
@@ -238,7 +238,7 @@ namespace IronPython.Runtime.Types {
                     if (!_operImpl.TryGetValue(op, out info)) {
                         object bf = BuiltinFunction.MakeMethod(name.Name ?? mi.Name, mi, ft).GetDescriptor();
 
-                        _operImpl[op] = info = new OperatorInfo(bf, name.Context);
+                        _operImpl[op] = info = new CallableOperatorInfo(bf, name.Context);
                     } else {
                         info.Callable = ExtendMethod(mi, ft, info.Callable);
                     }
@@ -269,14 +269,14 @@ namespace IronPython.Runtime.Types {
 
         private void StoreOperator(FieldInfo fi) {
             foreach (TransformedName name in _transform(fi, TransformReason.Operator)) {
-                OperatorInfo info;
+                CallableOperatorInfo info;
                 OperatorMapping op = name.Operator;
 
                 if (op != null) {
-                    if (_operImpl == null) _operImpl = new Dictionary<OperatorMapping, OperatorInfo>();
+                    if (_operImpl == null) _operImpl = new Dictionary<OperatorMapping, CallableOperatorInfo>();
 
                     if (!_operImpl.TryGetValue(op, out info)) {
-                        _operImpl[op] = new OperatorInfo(fi.GetValue(null), name.Context);
+                        _operImpl[op] = new CallableOperatorInfo(fi.GetValue(null), name.Context);
                     } else {
                         throw new InvalidOperationException(String.Format("operators name collision with PythonTypeSlot.  Field: {0}, Transformed Name: {1}", fi.Name, name.Name));
                     }
@@ -370,11 +370,11 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        class OperatorInfo {
+        class CallableOperatorInfo {
             public ContextId Context;
             public object Callable;
 
-            public OperatorInfo(object callable, ContextId context) {
+            public CallableOperatorInfo(object callable, ContextId context) {
                 Callable = callable;
                 Context = context;
             }

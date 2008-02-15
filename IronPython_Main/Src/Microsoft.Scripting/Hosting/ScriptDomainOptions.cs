@@ -24,31 +24,33 @@ using Microsoft.Scripting.Generation;
 namespace Microsoft.Scripting.Hosting {
     [Serializable]
     public sealed class ScriptDomainOptions {
-        private bool _debugMode = true;
-        private bool _engineDebug;
-        private bool _verbose;
+        private bool _debugMode;
+        private bool _privateBinding;
+
         private bool _traceBackSupport = true;
-        private bool _debugCodeGen = true;
         private bool _trackPerformance;
         private bool _optimizeEnvironments = true;
         private bool _frames;
-        private AssemblyGenAttributes _assemblyGenAttributes = AssemblyGenAttributes.GenerateDebugAssemblies;
-        private string _binariesDirectory;
-        private bool _privateBinding;
-        private bool _generateModulesAsSnippets;
-        private bool _bufferedStdOutAndError = true;
-        private bool _showASTs = false;
-        private bool _dumpASTs = false;
-        private bool _showRules = false;
-        private bool _cachePointersInApartment = false;
-        
-        public ScriptDomainOptions() {
-        }
 
-        #region Public accessors
+        private bool _verbose;
+        private bool _ilDebug;
+        private bool _showASTs;
+        private bool _dumpASTs;
+        private bool _showRules;
+        private bool _cachePointersInApartment;
+        private bool _tupleBasedOptimizedScopes;
 
         /// <summary>
-        ///  Is this a debug mode? "__debug__" is defined, and Asserts are active
+        /// Whether the application is in debug mode.
+        /// This means:
+        /// 
+        /// 1) Symbols are emitted for debuggable methods (methods associated with SourceUnit).
+        /// 2) Debuggable methods are emitted to non-collectable types (this is due to CLR limitations on dynamic method debugging).
+        /// 3) Dynamic stack frames of debuggable methods are recorded at run-time 
+        /// 4) JIT optimization is disabled for all methods
+        /// 5) Languages may disable optimizations based on this value.
+        /// 
+        /// TODO: host visible, move to ScriptRuntime
         /// </summary>
         public bool DebugMode {
             get { return _debugMode; }
@@ -56,45 +58,27 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
-        /// corresponds to the "-v" command line parameter
+        /// Ignore CLR visibility checks.
+        /// TODO: host visible, move to ScriptRuntime
         /// </summary>
-        public bool Verbose {
-            get { return _verbose; }
-            set { _verbose = value; }
+        public bool PrivateBinding {
+            get { return _privateBinding; }
+            set { _privateBinding = value; }
         }
 
-        /// <summary>
-        /// Is the engine in debug mode? This is useful for debugging the engine itself
-        /// </summary>
-        public bool EngineDebug {
-            get { return _engineDebug; }
-            set { 
-                _engineDebug = value;
-#if DEBUG
-                if (value) _assemblyGenAttributes |= AssemblyGenAttributes.VerifyAssemblies;
-                else _assemblyGenAttributes &= ~AssemblyGenAttributes.VerifyAssemblies;
-#endif
-            }
-        }
-
+        // TODO: review
         public bool DynamicStackTraceSupport {
             get { return _traceBackSupport; }
             set { _traceBackSupport = value; }
         }
 
+        // TODO: review
         public bool TrackPerformance {
             get { return _trackPerformance; }
             set { _trackPerformance = value; }
         }
 
-        /// <summary>
-        /// Should optimized code gen be disabled.
-        /// </summary>
-        public bool DebugCodeGeneration {
-            get { return _debugCodeGen; }
-            set { _debugCodeGen = value; }
-        }
-
+        // TODO: review
         /// <summary>
         /// Closures, generators and environments can use the optimized
         /// generated environments FunctionEnvironment2 .. 32 
@@ -105,6 +89,7 @@ namespace Microsoft.Scripting.Hosting {
             set { _optimizeEnvironments = value; }
         }
 
+        // TODO: review
         /// <summary>
         /// Generate functions using custom frames. Allocate the locals on frames.
         /// </summary>
@@ -113,57 +98,14 @@ namespace Microsoft.Scripting.Hosting {
             set { _frames = value; }
         }
 
-        public AssemblyGenAttributes AssemblyGenAttributes {
-            get { return _assemblyGenAttributes; }
-            set { _assemblyGenAttributes = value; }
-        }
-
-        public string BinariesDirectory {
-            get { return _binariesDirectory; }
-            set { _binariesDirectory = value; }
-        }
-
-        public bool PrivateBinding {
-            get { return _privateBinding; }
-            set { _privateBinding = value; }
-        }
+        #region Internal Debugging Options
 
         /// <summary>
-        /// true to import modules as though a sequence of snippets 
+        /// Write IL to a text file as it is generated.
         /// </summary>
-        public bool GenerateModulesAsSnippets {
-            get { return _generateModulesAsSnippets; }
-            set { _generateModulesAsSnippets = value; }
-        }
-
-        // obsolete:
-        public bool BufferedStandardOutAndError {
-            get { return _bufferedStdOutAndError; }
-            set { _bufferedStdOutAndError = value; }
-        }
-
-
-        /// <summary>
-        ///  Should we strip out all doc strings (the -OO command line option)?
-        /// </summary>
-        private bool stripDocStrings = false;
-
-        public bool StripDocStrings {
-            get { return stripDocStrings; }
-            set { stripDocStrings = value; }
-        }
-
-        /// <summary>
-        ///  The runtime assembly was built in Debug/Release mode.
-        /// </summary>
-        public bool DebugAssembly {
-            get {
-#if DEBUG
-                return true;
-#else
-                return false;
-#endif
-            }
+        public bool ILDebug {
+            get { return _ilDebug; }
+            set { _ilDebug = value; }
         }
 
         /// <summary>
@@ -173,6 +115,7 @@ namespace Microsoft.Scripting.Hosting {
             get { return _showASTs; }
             set { _showASTs = value; }
         }
+
         /// <summary>
         /// Write out generated Abstract Syntax Trees as files in the current directory
         /// </summary>
@@ -190,6 +133,14 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         /// <summary>
+        /// Use a tuple for optimized scope storage (experimental).
+        /// </summary>
+        public bool TupleBasedOptimizedScopes {
+            get { return _tupleBasedOptimizedScopes; }
+            set { _tupleBasedOptimizedScopes = value; }
+        }
+
+        /// <summary>
         /// An RCW object represents a COM object which could potentially be in another apartment. So access
         /// to the COM interface pointer needs to be done in an apartment-safe way. Marshal.GetIDispatchForObject
         /// gives out the the appropriate interface pointer (and doing marshalling of the COM object to the current
@@ -199,8 +150,21 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         public bool CachePointersInApartment {
             get { return _cachePointersInApartment; }
-            set { 
-                _cachePointersInApartment = value; 
+            set {
+                _cachePointersInApartment = value;
+            }
+        }
+
+        // TODO: review
+        public bool Verbose {
+            get { return _verbose; }
+            set { _verbose = value; }
+        }
+
+        // TODO: internal (test only)
+        public bool EmitsUncollectableCode {
+            get {
+                return Snippets.Shared.SaveSnippets || _debugMode;
             }
         }
 

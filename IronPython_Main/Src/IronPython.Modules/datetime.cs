@@ -28,15 +28,16 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("datetime", typeof(IronPython.Modules.PythonDateTime))]
 namespace IronPython.Modules {
     public class PythonDateTime {
-        public static object MAXYEAR = DateTime.MaxValue.Year;
-        public static object MINYEAR = DateTime.MinValue.Year;
+        public static readonly int MAXYEAR = DateTime.MaxValue.Year;
+        public static readonly int MINYEAR = DateTime.MinValue.Year;
 
-        [PythonType("timedelta")]
-        public class PythonTimeDelta : ICodeFormattable {
+        [PythonSystemType]
+        public class timedelta : ICodeFormattable {
             internal int _days;
             internal int _seconds;
             internal int _microseconds;
@@ -45,19 +46,24 @@ namespace IronPython.Modules {
             private bool _fWithDaysAndSeconds = false; // whether _tsWithDaysAndSeconds initialized
             private bool _fWithSeconds = false;
 
-            internal static PythonTimeDelta _DayResolution = new PythonTimeDelta(1, 0, 0);
+            internal static readonly timedelta _DayResolution = new timedelta(1, 0, 0);
+            // class attributes:
+            public static readonly timedelta resolution = new timedelta(0, 0, 1);
+            public static readonly timedelta min = new timedelta(-MAXDAYS, 0, 0);
+            public static readonly timedelta max = new timedelta(MAXDAYS, 86399, 999999);
 
             private const int MAXDAYS = 999999999;
             private const double SECONDSPERDAY = 24 * 60 * 60;
 
-            internal PythonTimeDelta(double days, double seconds, double microsecond)
+            internal timedelta(double days, double seconds, double microsecond)
                 : this(days, seconds, microsecond, 0, 0, 0, 0) {
             }
-            internal PythonTimeDelta(TimeSpan ts, double microsecond)
+
+            internal timedelta(TimeSpan ts, double microsecond)
                 : this(ts.Days, ts.Seconds, microsecond, ts.Milliseconds, ts.Minutes, ts.Hours, 0) {
             }
 
-            public PythonTimeDelta(double days, double seconds, double microseconds, double milliseconds, double minutes, double hours, double weeks) {
+            public timedelta(double days, double seconds, double microseconds, double milliseconds, double minutes, double hours, double weeks) {
                 double totalDays = weeks * 7 + days;
                 double totalSeconds = ((totalDays * 24 + hours) * 60 + minutes) * 60 + seconds;
 
@@ -89,8 +95,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("__new__")]
-            public static PythonTimeDelta Make(CodeContext context, PythonType cls,
+            public static timedelta __new__(CodeContext context, PythonType cls,
                 [DefaultParameterValue(0D)] double days,
                 [DefaultParameterValue(0D)] double seconds,
                 [DefaultParameterValue(0D)] double microseconds,
@@ -98,31 +103,25 @@ namespace IronPython.Modules {
                 [DefaultParameterValue(0D)] double minutes,
                 [DefaultParameterValue(0D)] double hours,
                 [DefaultParameterValue(0D)] double weeks) {
-                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonTimeDelta))) {
-                    return new PythonTimeDelta(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(timedelta))) {
+                    return new timedelta(days, seconds, microseconds, milliseconds, minutes, hours, weeks);
                 } else {
-                    PythonTimeDelta delta = cls.CreateInstance(context, days, seconds, microseconds, milliseconds, minutes, hours, weeks) as PythonTimeDelta;
+                    timedelta delta = cls.CreateInstance(context, days, seconds, microseconds, milliseconds, minutes, hours, weeks) as timedelta;
                     if (delta == null) throw PythonOps.TypeError("{0} is not a subclass of datetime.timedelta", cls);
                     return delta;
                 }
             }
 
-            // class attributes:
-            public static PythonTimeDelta resolution = new PythonTimeDelta(0, 0, 1);
-            public static PythonTimeDelta min = new PythonTimeDelta(-MAXDAYS, 0, 0);
-            public static PythonTimeDelta max = new PythonTimeDelta(MAXDAYS, 86399, 999999);
-
             // instance attributes:
-            public int Days {
-                [PythonName("days")]
+            public int days {
                 get { return _days; }
             }
-            public int Seconds {
-                [PythonName("seconds")]
+
+            public int seconds {
                 get { return _seconds; }
             }
-            public int MicroSeconds {
-                [PythonName("microseconds")]
+
+            public int microseconds {
                 get { return _microseconds; }
             }
 
@@ -135,6 +134,7 @@ namespace IronPython.Modules {
                     return _tsWithDaysAndSeconds;
                 }
             }
+
             internal TimeSpan TimeSpanWithSeconds {
                 get {
                     if (!_fWithSeconds) {
@@ -146,77 +146,79 @@ namespace IronPython.Modules {
             }
 
             // supported operations:
-            public static PythonTimeDelta operator +(PythonTimeDelta self, PythonTimeDelta other) {
-                return new PythonTimeDelta(self._days + other._days, self._seconds + other._seconds, self._microseconds + other._microseconds);
+            public static timedelta operator +(timedelta self, timedelta other) {
+                return new timedelta(self._days + other._days, self._seconds + other._seconds, self._microseconds + other._microseconds);
             }
 
-            public static PythonTimeDelta operator -(PythonTimeDelta self, PythonTimeDelta other) {
-                return new PythonTimeDelta(self._days - other._days, self._seconds - other._seconds, self._microseconds - other._microseconds);
+            public static timedelta operator -(timedelta self, timedelta other) {
+                return new timedelta(self._days - other._days, self._seconds - other._seconds, self._microseconds - other._microseconds);
             }
 
-            public static PythonTimeDelta operator -(PythonTimeDelta self) {
-                return new PythonTimeDelta(-self._days, -self._seconds, -self._microseconds);
+            public static timedelta operator -(timedelta self) {
+                return new timedelta(-self._days, -self._seconds, -self._microseconds);
             }
 
-            public static PythonTimeDelta operator +(PythonTimeDelta self) {
-                return new PythonTimeDelta(self._days, self._seconds, self._microseconds);
+            public static timedelta operator +(timedelta self) {
+                return new timedelta(self._days, self._seconds, self._microseconds);
             }
 
-            public static PythonTimeDelta operator *(PythonTimeDelta self, int other) {
-                return new PythonTimeDelta(self._days * other, self._seconds * other, self._microseconds * other);
+            public static timedelta operator *(timedelta self, int other) {
+                return new timedelta(self._days * other, self._seconds * other, self._microseconds * other);
             }
 
-            public static PythonTimeDelta operator *(int other, PythonTimeDelta self) {
-                return new PythonTimeDelta(self._days * other, self._seconds * other, self._microseconds * other);
+            public static timedelta operator *(int other, timedelta self) {
+                return new timedelta(self._days * other, self._seconds * other, self._microseconds * other);
             }
 
-            public static PythonTimeDelta operator /(PythonTimeDelta self, int other) {
-                return new PythonTimeDelta((double)self._days / other, (double)self._seconds / other, (double)self._microseconds / other);
+            public static timedelta operator /(timedelta self, int other) {
+                return new timedelta((double)self._days / other, (double)self._seconds / other, (double)self._microseconds / other);
             }
 
-            [SpecialName, PythonName("__pos__")]
-            public PythonTimeDelta Positive() { return +this; }
-            [SpecialName, PythonName("__neg__")]
-            public PythonTimeDelta Negate() { return -this; }
-            [SpecialName, PythonName("__abs__")]
-            public PythonTimeDelta Abs() { return (_days > 0) ? this : -this; }
-            [SpecialName, PythonName("__mul__")]
-            public PythonTimeDelta Mulitply(object y) {
-                return this * Converter.ConvertToInt32(y);
+            public static timedelta operator *(timedelta self, BigInteger other) {
+                return self * other.ToInt32();
             }
-            [SpecialName, PythonName("__rmul__")]
-            public PythonTimeDelta ReverseMulitply(object y) {
-                return this * Converter.ConvertToInt32(y);
+
+            public static timedelta operator *(BigInteger other, timedelta self) {
+                return other.ToInt32() * self;
             }
-            [SpecialName, PythonName("__floordiv__")]
-            public PythonTimeDelta FloorDivide(object y) {
+
+            public static timedelta operator /(timedelta self, BigInteger other) {
+                return self / other.ToInt32();
+            }
+
+            public timedelta __pos__() { return +this; }
+            public timedelta __neg__() { return -this; }
+            public timedelta __abs__() { return (_days > 0) ? this : -this; }
+
+            [SpecialName]
+            public timedelta FloorDivide(object y) {
                 return this / Converter.ConvertToInt32(y);
             }
-            [SpecialName, PythonName("__rfloordiv__")]
-            public PythonTimeDelta ReverseFloorDivide(object y) {
+
+            [SpecialName]
+            public timedelta ReverseFloorDivide(object y) {
                 return this / Converter.ConvertToInt32(y);
             }
 
-            [SpecialName, PythonName("__nonzero__")]
-            public bool NonZero() {
+            public bool __nonzero__() {
                 return this._days != 0 || this._seconds != 0 || this._microseconds != 0;
             }
 
-            [PythonName("__reduce__")]
-            public PythonTuple Reduce() {
+            public PythonTuple __reduce__() {
                 return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_days, _seconds, _microseconds));
             }
-            [PythonName("__getnewargs__")]
-            public static object GetNewArgs(int days, int seconds, int microseconds) {
-                return PythonTuple.MakeTuple(new PythonTimeDelta(days, seconds, microseconds, 0, 0, 0, 0));
+
+            public static object __getnewargs__(int days, int seconds, int microseconds) {
+                return PythonTuple.MakeTuple(new timedelta(days, seconds, microseconds, 0, 0, 0, 0));
             }
 
             public override bool Equals(object obj) {
-                PythonTimeDelta delta = obj as PythonTimeDelta;
+                timedelta delta = obj as timedelta;
                 if (delta == null) return false;
 
                 return this._days == delta._days && this._seconds == delta._seconds && this._microseconds == delta._microseconds;
             }
+
             public override int GetHashCode() {
                 return this._days ^ this._seconds ^ this._microseconds;
             }
@@ -242,7 +244,7 @@ namespace IronPython.Modules {
             #region Rich Comparison Members
 
             private int CompareTo(object other) {
-                PythonTimeDelta delta = other as PythonTimeDelta;
+                timedelta delta = other as timedelta;
                 if (delta == null)
                     throw PythonOps.TypeError("can't compare datetime.timedelta to {0}", PythonTypeOps.GetName(other));
 
@@ -255,19 +257,19 @@ namespace IronPython.Modules {
                 return this._microseconds - delta._microseconds;
             }
 
-            public static bool operator >(PythonTimeDelta self, object other) {
+            public static bool operator >(timedelta self, object other) {
                 return self.CompareTo(other) > 0;
             }
 
-            public static bool operator <(PythonTimeDelta self, object other) {
+            public static bool operator <(timedelta self, object other) {
                 return self.CompareTo(other) < 0;
             }
 
-            public static bool operator >=(PythonTimeDelta self, object other) {
+            public static bool operator >=(timedelta self, object other) {
                 return self.CompareTo(other) >= 0;
             }
 
-            public static bool operator <=(PythonTimeDelta self, object other) {
+            public static bool operator <=(timedelta self, object other) {
                 return self.CompareTo(other) <= 0;
             }
 
@@ -275,7 +277,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public string ToCodeString(CodeContext context) {
+            string ICodeFormattable.ToCodeString(CodeContext context) {
                 if (_seconds == 0 && _microseconds == 0) {
                     return String.Format("datetime.timedelta({0})", _days);
                 } else if (_microseconds == 0) {
@@ -288,7 +290,7 @@ namespace IronPython.Modules {
             #endregion
         }
 
-        internal static void ThrowIfInvalid(PythonTimeDelta delta, string funcname) {
+        internal static void ThrowIfInvalid(timedelta delta, string funcname) {
             if (delta != null) {
                 if (delta._microseconds != 0 || delta._seconds % 60 != 0) {
                     throw PythonOps.ValueError("tzinfo.{0}() must return a whole number of minutes", funcname);
@@ -300,7 +302,9 @@ namespace IronPython.Modules {
                 }
             }
         }
+
         internal enum InputKind { Year, Month, Day, Hour, Minute, Second, Microsecond }
+        
         internal static void ValidateInput(InputKind kind, int value) {
             switch (kind) {
                 case InputKind.Year:
@@ -342,18 +346,23 @@ namespace IronPython.Modules {
             }
         }
 
-        internal static bool IsNaiveTimeZone(PythonTimeZoneInformation tz) {
+        internal static bool IsNaiveTimeZone(tzinfo tz) {
             if (tz == null) return true;
-            if (tz.UtcOffset(null) == null) return true;
+            if (tz.utcoffset(null) == null) return true;
             return false;
         }
 
-        [PythonType("date")]
-        public class PythonDate : ICodeFormattable {
+        [PythonSystemType]
+        public class date : ICodeFormattable {
             private DateTime _dateTime;
-            protected PythonDate() { }
+            // class attributes
+            public static readonly date min = new date(new DateTime(1, 1, 1));
+            public static readonly date max = new date(new DateTime(9999, 12, 31));
+            public static readonly timedelta resolution = timedelta._DayResolution;
 
-            public PythonDate(int year, int month, int day) {
+            protected date() { }
+
+            public date(int year, int month, int day) {
                 PythonDateTime.ValidateInput(InputKind.Year, year);
                 PythonDateTime.ValidateInput(InputKind.Month, month);
                 PythonDateTime.ValidateInput(InputKind.Day, day);
@@ -361,54 +370,44 @@ namespace IronPython.Modules {
                 _dateTime = new DateTime(year, month, day);
             }
 
-            internal PythonDate(DateTime value) {
+            internal date(DateTime value) {
                 _dateTime = value.Date; // no hour, minute, second
             }
 
-            [PythonName("__new__")]
-            public static PythonDate Make(CodeContext context, PythonType cls, int year, int month, int day) {
-                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonDate))) {
-                    return new PythonDate(year, month, day);
+            public static date __new__(CodeContext context, PythonType cls, int year, int month, int day) {
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(date))) {
+                    return new date(year, month, day);
                 } else {
-                    PythonDate date = cls.CreateInstance(context, year, month, day) as PythonDate;
+                    date date = cls.CreateInstance(context, year, month, day) as date;
                     if (date == null) throw PythonOps.TypeError("{0} is not a subclass of datetime.date", cls);
                     return date;
                 }
             }
 
             // other constructors, all class methods
-            [PythonName("today")]
-            public static object Today() {
-                return new PythonDate(DateTime.Today);
+            public static object today() {
+                return new date(DateTime.Today);
             }
 
-            [PythonName("fromordinal")]
-            public static PythonDate FromOrdinal(int d) {
-                return new PythonDate(min._dateTime.AddDays(d - 1));
+            public static date fromordinal(int d) {
+                return new date(min._dateTime.AddDays(d - 1));
             }
 
-            [PythonName("fromtimestamp")]
-            public static PythonDate FromTimestamp(double timestamp) {
+            public static date fromtimestamp(double timestamp) {
                 DateTime dt = new DateTime((long)(timestamp * 1e7));
-                return new PythonDate(dt.Year, dt.Month, dt.Day);
+                return new date(dt.Year, dt.Month, dt.Day);
             }
-
-            // class attributes
-            public static PythonDate min = new PythonDate(new DateTime(1, 1, 1));
-            public static PythonDate max = new PythonDate(new DateTime(9999, 12, 31));
-            public static PythonTimeDelta resolution = PythonTimeDelta._DayResolution;
 
             // instance attributes
-            public int Year {
-                [PythonName("year")]
+            public int year {
                 get { return _dateTime.Year; }
             }
-            public int Month {
-                [PythonName("month")]
+
+            public int month {
                 get { return _dateTime.Month; }
             }
-            public int Day {
-                [PythonName("day")]
+
+            public int day {
                 get { return _dateTime.Day; }
             }
 
@@ -418,56 +417,50 @@ namespace IronPython.Modules {
             }
 
             // supported operations
-            public static PythonDate operator +([NotNull]PythonDate self, [NotNull]PythonTimeDelta other) {
+            public static date operator +([NotNull]date self, [NotNull]timedelta other) {
                 try {
-                    return new PythonDate(self._dateTime.AddDays(other.Days));
+                    return new date(self._dateTime.AddDays(other.days));
                 } catch {
                     throw PythonOps.OverflowError("date value out of range");
                 }
             }
-            public static PythonDate operator +([NotNull]PythonTimeDelta other, [NotNull]PythonDate self) {
+            public static date operator +([NotNull]timedelta other, [NotNull]date self) {
                 try {
-                    return new PythonDate(self._dateTime.AddDays(other.Days));
+                    return new date(self._dateTime.AddDays(other.days));
                 } catch {
                     throw PythonOps.OverflowError("date value out of range");
                 }
             }
 
-            [SpecialName, PythonName("__radd__")]
-            public object ReverseAdd(PythonTimeDelta delta) { return this + delta; }
-            public static PythonDate operator -(PythonDate self, PythonTimeDelta delta) {
+            public static date operator -(date self, timedelta delta) {
                 try {
-                    return new PythonDate(self._dateTime.AddDays(-1 * delta.Days));
+                    return new date(self._dateTime.AddDays(-1 * delta.days));
                 } catch {
                     throw PythonOps.OverflowError("date value out of range");
                 }
             }
-            public static PythonTimeDelta operator -(PythonDate self, PythonDate other) {
+
+            public static timedelta operator -(date self, date other) {
                 TimeSpan ts = self._dateTime - other._dateTime;
-                return new PythonTimeDelta(0, ts.TotalSeconds, ts.Milliseconds * 1000);
+                return new timedelta(0, ts.TotalSeconds, ts.Milliseconds * 1000);
             }
 
-            [SpecialName, PythonName("__nonzero__")]
-            public bool NonZero() { return true; }
+            public bool __nonzero__() { return true; }
 
-            [PythonName("__reduce__")]
-            public virtual PythonTuple Reduce() {
+            public virtual PythonTuple __reduce__() {
                 return PythonTuple.MakeTuple(DynamicHelpers.GetPythonTypeFromType(this.GetType()), PythonTuple.MakeTuple(_dateTime.Year, _dateTime.Month, _dateTime.Day));
             }
 
-            [PythonName("__getnewargs__")]
-            public static object GetNewArgs(CodeContext context, int year, int month, int day) {
-                return PythonTuple.MakeTuple(PythonDate.Make(context, DynamicHelpers.GetPythonTypeFromType(typeof(PythonDate)), year, month, day));
+            public static object __getnewargs__(CodeContext context, int year, int month, int day) {
+                return PythonTuple.MakeTuple(date.__new__(context, DynamicHelpers.GetPythonTypeFromType(typeof(date)), year, month, day));
             }
 
-            [PythonName("replace")]
-            public object Replace() {
+            public object replace() {
                 return this;
             }
 
             // instance methods
-            [PythonName("replace")]
-            public virtual PythonDate Replace([ParamDictionary]IAttributesCollection dict) {
+            public virtual date replace([ParamDictionary]IAttributesCollection dict) {
                 int year2 = _dateTime.Year;
                 int month2 = _dateTime.Month;
                 int day2 = _dateTime.Day;
@@ -484,24 +477,20 @@ namespace IronPython.Modules {
                     }
                 }
 
-                return new PythonDate(year2, month2, day2);
+                return new date(year2, month2, day2);
             }
 
-            [PythonName("timetuple")]
-            public virtual object GetTimeTuple() {
+            public virtual object timetuple() {
                 return PythonTime.GetDateTimeTuple(_dateTime);
             }
 
-            [PythonName("toordinal")]
-            public int ToOrdinal() {
+            public int toordinal() {
                 return (_dateTime - min._dateTime).Days + 1;
             }
 
-            [PythonName("weekday")]
-            public int Weekday() { return PythonTime.Weekday(_dateTime); }
+            public int weekday() { return PythonTime.Weekday(_dateTime); }
 
-            [PythonName("isoweekday")]
-            public int IsoWeekday() { return PythonTime.IsoWeekday(_dateTime); }
+            public int isoweekday() { return PythonTime.IsoWeekday(_dateTime); }
 
             private DateTime FirstDayOfIsoYear(int year) {
                 DateTime firstDay = new DateTime(year, 1, 1);
@@ -527,8 +516,7 @@ namespace IronPython.Modules {
                 return firstIsoDay;
             }
 
-            [PythonName("isocalendar")]
-            public PythonTuple GetIsoCalendar() {
+            public PythonTuple isocalendar() {
                 DateTime firstDayOfLastIsoYear = FirstDayOfIsoYear(_dateTime.Year - 1);
                 DateTime firstDayOfThisIsoYear = FirstDayOfIsoYear(_dateTime.Year);
                 DateTime firstDayOfNextIsoYear = FirstDayOfIsoYear(_dateTime.Year + 1);
@@ -548,32 +536,29 @@ namespace IronPython.Modules {
                 return PythonTuple.MakeTuple(year, days / 7 + 1, days % 7 + 1);
             }
 
-            [PythonName("isoformat")]
-            public string IsoFormat() {
+            public string isoformat() {
                 return _dateTime.ToString("yyyy-MM-dd");
             }
 
             public override string ToString() {
-                return IsoFormat();
+                return isoformat();
             }
 
-            [PythonName("ctime")]
-            public string GetCTime() {
+            public string ctime() {
                 return _dateTime.ToString("ddd MMM ", CultureInfo.InvariantCulture) + 
                     string.Format(CultureInfo.InvariantCulture, "{0,2}", _dateTime.Day) + 
                     _dateTime.ToString(" HH:mm:ss yyyy", CultureInfo.InvariantCulture);
             }
 
-            [PythonName("strftime")]
-            public string Format(string dateFormat) {
-                return PythonTime.FormatTime(dateFormat, _dateTime);
+            public string strftime(string dateFormat) {
+                return PythonTime.strftime(dateFormat, _dateTime);
             }
 
             public override bool Equals(object obj) {
                 if (obj == null) return false;
 
-                if (obj.GetType() == typeof(PythonDate)) {
-                    PythonDate other = (PythonDate)obj;
+                if (obj.GetType() == typeof(date)) {
+                    date other = (date)obj;
                     return this._dateTime == other._dateTime;
                 } else {
                     return false;
@@ -587,7 +572,7 @@ namespace IronPython.Modules {
             #region Rich Comparison Members
 
             protected virtual int CompareTo(object other) {
-                PythonDate date = other as PythonDate;
+                date date = other as date;
                 return this._dateTime.CompareTo(date._dateTime);
             }
 
@@ -602,8 +587,8 @@ namespace IronPython.Modules {
                 if (other.GetType() != GetType()) {
                     // if timetuple is defined on the other object go ahead and let it try the compare,
                     // but only if it's a user-defined object
-                    if (!(GetType() == typeof(PythonDate) && other.GetType() == typeof(PythonDateTimeCombo) ||
-                        GetType() == typeof(PythonDateTimeCombo) & other.GetType() == typeof(PythonDate))) {
+                    if (!(GetType() == typeof(date) && other.GetType() == typeof(datetime) ||
+                        GetType() == typeof(datetime) & other.GetType() == typeof(date))) {
 
                         if (PythonOps.HasAttr(DefaultContext.Default, other, SymbolTable.StringToId("timetuple"))) {
                             return false;
@@ -617,40 +602,38 @@ namespace IronPython.Modules {
             }
 
             [return: MaybeNotImplemented]
-            public static object operator >(PythonDate self, object other) {
+            public static object operator >(date self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
                 return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) > 0);
             }
 
             [return: MaybeNotImplemented]
-            public static object operator <(PythonDate self, object other) {
+            public static object operator <(date self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
                 return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) < 0);
             }
 
             [return: MaybeNotImplemented]
-            public static object operator >=(PythonDate self, object other) {
+            public static object operator >=(date self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
                 return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) >= 0);
             }
 
             [return: MaybeNotImplemented]
-            public static object operator <=(PythonDate self, object other) {
+            public static object operator <=(date self, object other) {
                 if (!self.CheckType(other)) return PythonOps.NotImplemented;
 
                 return Microsoft.Scripting.Runtime.RuntimeHelpers.BooleanToObject(self.CompareTo(other) <= 0);
             }
 
-            [SpecialName, PythonName("__eq__")]
-            public bool RichEquals(object other) {
+            public bool __eq__(object other) {
                 return Equals(other);
             }
 
-            [SpecialName, PythonName("__ne__")]
-            public bool RichNotEquals(object other) {
+            public bool __ne__(object other) {
                 return !Equals(other);
             }
 
@@ -658,28 +641,34 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public virtual string ToCodeString(CodeContext context) {
+            string ICodeFormattable.ToCodeString(CodeContext context) {
                 return string.Format("datetime.date({0}, {1}, {2})", _dateTime.Year, _dateTime.Month, _dateTime.Day);
             }
 
             #endregion
         }
 
-        [PythonType("datetime")]
-        public class PythonDateTimeCombo : PythonDate {
+        [PythonSystemType]
+        public class datetime : date, ICodeFormattable {
             internal int _lostMicroseconds;
-            internal PythonTimeZoneInformation _tz;
+            internal tzinfo _tz;
+
+            // class attributes
+            public new static readonly datetime max = new datetime(DateTime.MaxValue, 999, null);
+            public new static readonly datetime min = new datetime(DateTime.MinValue, 0, null);
+            public new static readonly timedelta resolution = timedelta.resolution;
+
 
             private UnifiedDateTime _utcDateTime;
 
-            public PythonDateTimeCombo(int year,
+            public datetime(int year,
                 int month,
                 int day,
                [DefaultParameterValue(0)]int hour,
                [DefaultParameterValue(0)]int minute,
                [DefaultParameterValue(0)]int second,
                [DefaultParameterValue(0)]int microsecond,
-               [DefaultParameterValue(null)]PythonTimeZoneInformation tzinfo) {
+               [DefaultParameterValue(null)]tzinfo tzinfo) {
 
                 PythonDateTime.ValidateInput(InputKind.Year, year);
                 PythonDateTime.ValidateInput(InputKind.Month, month);
@@ -694,7 +683,7 @@ namespace IronPython.Modules {
                 _tz = tzinfo;
             }
 
-            internal PythonDateTimeCombo(DateTime dt, int lostMicroseconds, PythonTimeZoneInformation tzinfo) {
+            internal datetime(DateTime dt, int lostMicroseconds, tzinfo tzinfo) {
                 this.InternalDateTime = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
                 this._lostMicroseconds = dt.Millisecond * 1000 + lostMicroseconds;
                 this._tz = tzinfo;
@@ -720,83 +709,66 @@ namespace IronPython.Modules {
             }
 
             // other constructors, all class methods:
-            [PythonName("today")]
-            public new static object Today() {
-                return new PythonDateTimeCombo(DateTime.Now, 0, null);
+            public new static object today() {
+                return new datetime(DateTime.Now, 0, null);
             }
 
-            [PythonName("now")]
-            public static object Now([DefaultParameterValue(null)]PythonTimeZoneInformation tz) {
+            public static object now([DefaultParameterValue(null)]tzinfo tz) {
                 if (tz != null) {
-                    return tz.FromUtc(new PythonDateTimeCombo(DateTime.UtcNow, 0, tz));
+                    return tz.fromutc(new datetime(DateTime.UtcNow, 0, tz));
                 } else {
-                    return new PythonDateTimeCombo(DateTime.Now, 0, null);
+                    return new datetime(DateTime.Now, 0, null);
                 }
             }
 
-            [PythonName("utcnow")]
-            public static object UtcNow() {
-                return new PythonDateTimeCombo(DateTime.UtcNow, 0, null);
+            public static object utcnow() {
+                return new datetime(DateTime.UtcNow, 0, null);
             }
 
-            [PythonName("fromtimestamp")]
-            public static object FromTimeStamp(double timestamp, [DefaultParameterValue(null)] PythonTimeZoneInformation tz) {
+            public static object fromtimestamp(double timestamp, [DefaultParameterValue(null)] tzinfo tz) {
                 DateTime dt = new DateTime((long)(timestamp * 1e7));
 
                 if (tz != null) {
                     dt = dt.ToUniversalTime();
-                    PythonDateTimeCombo pdtc = new PythonDateTimeCombo(dt, 0, tz);
-                    return tz.FromUtc(pdtc);
+                    datetime pdtc = new datetime(dt, 0, tz);
+                    return tz.fromutc(pdtc);
                 } else {
-                    return new PythonDateTimeCombo(dt, 0, null);
+                    return new datetime(dt, 0, null);
                 }
             }
 
-            [PythonName("utcfromtimestamp")]
-            public static PythonDateTimeCombo UtcFromTimestamp(double timestamp) {
+            public static datetime utcfromtimestamp(double timestamp) {
                 DateTime dt = new DateTime((long)(timestamp * 1e7));
                 dt = dt = dt.ToUniversalTime();
-                return new PythonDateTimeCombo(dt, 0, null);
+                return new datetime(dt, 0, null);
             }
 
-            [PythonName("fromordinal")]
-            public new static PythonDateTimeCombo FromOrdinal(int d) {
-                return new PythonDateTimeCombo(DateTime.MinValue + new TimeSpan(d - 1, 0, 0, 0), 0, null);
+            public new static datetime fromordinal(int d) {
+                return new datetime(DateTime.MinValue + new TimeSpan(d - 1, 0, 0, 0), 0, null);
             }
 
-            [PythonName("combine")]
-            public static object Combine(PythonDate date, PythonDateTimeTime time) {
-                return new PythonDateTimeCombo(date.Year, date.Month, date.Day, time.Hour, time.Minute, time.Second, time.Microsecond, time.TimeZoneInfo);
+            public static object combine(date date, time time) {
+                return new datetime(date.year, date.month, date.day, time.hour, time.minute, time.second, time.microsecond, time.tzinfo);
             }
-
-            // class attributes
-            public new static object max = new PythonDateTimeCombo(DateTime.MaxValue, 999, null);
-            public new static object min = new PythonDateTimeCombo(DateTime.MinValue, 0, null);
-            public new static object resolution = PythonTimeDelta.resolution;
 
             // instance attributes
-            public int Hour {
-                [PythonName("hour")]
+            public int hour {
                 get { return InternalDateTime.Hour; }
             }
 
-            public int Minute {
-                [PythonName("minute")]
+            public int minute {
                 get { return InternalDateTime.Minute; }
             }
 
-            public int Second {
-                [PythonName("second")]
+            public int second {
                 get { return InternalDateTime.Second; }
             }
 
-            public int Microsecond {
-                [PythonName("microsecond")]
+            public int microsecond {
                 get { return InternalDateTime.Millisecond * 1000 + _lostMicroseconds; }
             }
 
-            public object TimeZoneInformation {
-                [PythonName("tzinfo")]
+            public object tzinfo {
                 get { return _tz; }
             }
 
@@ -808,9 +780,9 @@ namespace IronPython.Modules {
                         _utcDateTime.DateTime = InternalDateTime;
                         _utcDateTime.LostMicroseconds = _lostMicroseconds;
 
-                        PythonTimeDelta delta = this.GetUtcOffset();
+                        timedelta delta = this.utcoffset();
                         if (delta != null) {
-                            PythonDateTimeCombo utced = this - delta;
+                            datetime utced = this - delta;
                             _utcDateTime.DateTime = utced.InternalDateTime;
                             _utcDateTime.LostMicroseconds = utced._lostMicroseconds;
                         }
@@ -820,62 +792,58 @@ namespace IronPython.Modules {
             }
 
             // supported operations
-            public static PythonDateTimeCombo operator +([NotNull]PythonDateTimeCombo date, [NotNull]PythonTimeDelta delta) {
+            public static datetime operator +([NotNull]datetime date, [NotNull]timedelta delta) {
                 try {
-                    return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                    return new datetime(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
                 } catch (ArgumentException) {
                     throw new OverflowException("date value out of range");
                 }
-            }
-            public static PythonDateTimeCombo operator +([NotNull]PythonTimeDelta delta, [NotNull]PythonDateTimeCombo date) {
-                try {
-                    return new PythonDateTimeCombo(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
-                } catch (ArgumentException) {
-                    throw new OverflowException("date value out of range");
-                }
-            }
-            [SpecialName, PythonName("__radd__")]
-            public new PythonDateTimeCombo ReverseAdd(PythonTimeDelta delta) { return this + delta; }
-            public static PythonDateTimeCombo operator -(PythonDateTimeCombo date, PythonTimeDelta delta) {
-                return new PythonDateTimeCombo(date.InternalDateTime.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
             }
 
-            public static PythonTimeDelta operator -(PythonDateTimeCombo date, PythonDateTimeCombo other) {
+            public static datetime operator +([NotNull]timedelta delta, [NotNull]datetime date) {
+                try {
+                    return new datetime(date.InternalDateTime.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+                } catch (ArgumentException) {
+                    throw new OverflowException("date value out of range");
+                }
+            }
+
+            public static datetime operator -(datetime date, timedelta delta) {
+                return new datetime(date.InternalDateTime.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
+            }
+
+            public static timedelta operator -(datetime date, datetime other) {
                 if (CheckTzInfoBeforeCompare(date, other)) {
-                    return new PythonTimeDelta(date.InternalDateTime - other.InternalDateTime, date._lostMicroseconds - other._lostMicroseconds);
+                    return new timedelta(date.InternalDateTime - other.InternalDateTime, date._lostMicroseconds - other._lostMicroseconds);
                 } else {
-                    return new PythonTimeDelta(date.UtcDateTime.DateTime - other.UtcDateTime.DateTime, date.UtcDateTime.LostMicroseconds - other.UtcDateTime.LostMicroseconds);
+                    return new timedelta(date.UtcDateTime.DateTime - other.UtcDateTime.DateTime, date.UtcDateTime.LostMicroseconds - other.UtcDateTime.LostMicroseconds);
                 }
             }
 
             // instance methods
-            [PythonName("date")]
-            public PythonDate ToDate() {
-                return new PythonDate(Year, Month, Day);
+            public date date() {
+                return new date(year, month, day);
             }
 
-            [PythonName("time")]
             [Documentation("gets the datetime w/o the time zone component")]
-            public PythonDateTimeTime GetTime() {
-                return new PythonDateTimeTime(Hour, Minute, Second, Microsecond, null);
+            public time time() {
+                return new time(hour, minute, second, microsecond, null);
             }
 
-            [PythonName("timetz")]
-            public object GetTimeWithTimeZone() {
-                return new PythonDateTimeTime(Hour, Minute, Second, Microsecond, _tz);
+            public object timetz() {
+                return new time(hour, minute, second, microsecond, _tz);
             }
 
-            [PythonName("replace")]
             [Documentation("gets a new datetime object with the fields provided as keyword arguments replaced.")]
-            public override PythonDate Replace([ParamDictionary]IAttributesCollection dict) {
-                int year = Year;
-                int month = Month;
-                int day = Day;
-                int hour = Hour;
-                int minute = Minute;
-                int second = Second;
-                int microsecond = Microsecond;
-                PythonTimeZoneInformation tz = _tz;
+            public override date replace([ParamDictionary]IAttributesCollection dict) {
+                int lyear = year;
+                int lmonth = month;
+                int lday = day;
+                int lhour = hour;
+                int lminute = minute;
+                int lsecond = second;
+                int lmicrosecond = microsecond;
+                tzinfo tz = _tz;
 
                 foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
                     string key = kvp.Key as string;
@@ -883,38 +851,37 @@ namespace IronPython.Modules {
 
                     switch (key) {
                         case "year":
-                            year = (int)kvp.Value;
+                            lyear = (int)kvp.Value;
                             break;
                         case "month":
-                            month = (int)kvp.Value;
+                            lmonth = (int)kvp.Value;
                             break;
                         case "day":
-                            day = (int)kvp.Value;
+                            lday = (int)kvp.Value;
                             break;
                         case "hour":
-                            hour = (int)kvp.Value;
+                            lhour = (int)kvp.Value;
                             break;
                         case "minute":
-                            minute = (int)kvp.Value;
+                            lminute = (int)kvp.Value;
                             break;
                         case "second":
-                            second = (int)kvp.Value;
+                            lsecond = (int)kvp.Value;
                             break;
                         case "microsecond":
-                            microsecond = (int)kvp.Value;
+                            lmicrosecond = (int)kvp.Value;
                             break;
                         case "tzinfo":
-                            tz = kvp.Value as PythonTimeZoneInformation;
+                            tz = kvp.Value as tzinfo;
                             break;
                         default:
                             throw PythonOps.TypeError("{0} is an invalid keyword argument for this function", kvp.Key);
                     }
                 }
-                return new PythonDateTimeCombo(year, month, day, hour, minute, second, microsecond, tz);
+                return new datetime(lyear, lmonth, lday, lhour, lminute, lsecond, lmicrosecond, tz);
             }
 
-            [PythonName("astimezone")]
-            public object AsTimeZone(PythonTimeZoneInformation tz) {
+            public object astimezone(tzinfo tz) {
                 if (tz == null)
                     throw PythonOps.TypeError("astimezone() argument 1 must be datetime.tzinfo, not None");
 
@@ -924,56 +891,50 @@ namespace IronPython.Modules {
                 if (tz == _tz)
                     return this;
 
-                PythonDateTimeCombo utc = this - GetUtcOffset();
+                datetime utc = this - utcoffset();
                 utc._tz = tz;
-                return tz.FromUtc(utc);
+                return tz.fromutc(utc);
             }
 
-            [PythonName("utcoffset")]
-            public PythonTimeDelta GetUtcOffset() {
+            public timedelta utcoffset() {
                 if (_tz == null) return null;
-                PythonTimeDelta delta = _tz.UtcOffset(this);
+                timedelta delta = _tz.utcoffset(this);
                 PythonDateTime.ThrowIfInvalid(delta, "utcoffset");
                 return delta;
             }
 
-            [PythonName("dst")]
-            public PythonTimeDelta dst() {
+            public timedelta dst() {
                 if (_tz == null) return null;
-                PythonTimeDelta delta = _tz.DaylightSavingTime(this);
+                timedelta delta = _tz.dst(this);
                 PythonDateTime.ThrowIfInvalid(delta, "dst");
                 return delta;
             }
 
-            [PythonName("tzname")]
-            public object GetTimeZoneName() {
+            public object tzname() {
                 if (_tz == null) return null;
-                return _tz.TimeZoneName(this);
+                return _tz.tzname(this);
             }
 
-            [PythonName("timetuple")]
-            public override object GetTimeTuple() {
+            public override object timetuple() {
                 return PythonTime.GetDateTimeTuple(InternalDateTime, _tz);
             }
 
-            [PythonName("utctimetuple")]
-            public object GetUtcTimeTuple() {
+            public object utctimetuple() {
                 if (_tz == null)
                     return PythonTime.GetDateTimeTuple(InternalDateTime, false);
                 else {
-                    PythonDateTimeCombo dtc = this - GetUtcOffset();
+                    datetime dtc = this - utcoffset();
                     return PythonTime.GetDateTimeTuple(dtc.InternalDateTime, false);
                 }
             }
 
-            [PythonName("isoformat")]
-            public string IsoFormat([DefaultParameterValue('T')]char sep) {
+            public string isoformat([DefaultParameterValue('T')]char sep) {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendFormat("{0:d4}-{1:d2}-{2:d2}{3}{4:d2}:{5:d2}:{6:d2}", Year, Month, Day, sep, Hour, Minute, Second);
+                sb.AppendFormat("{0:d4}-{1:d2}-{2:d2}{3}{4:d2}:{5:d2}:{6:d2}", year, month, day, sep, hour, minute, second);
 
-                if (Microsecond != 0) sb.AppendFormat(".{0:d6}", Microsecond);
+                if (microsecond != 0) sb.AppendFormat(".{0:d6}", microsecond);
 
-                PythonTimeDelta delta = GetUtcOffset();
+                timedelta delta = utcoffset();
                 if (delta != null) {
                     if (delta.TimeSpanWithDaysAndSeconds >= TimeSpan.Zero) {
                         sb.AppendFormat("+{0:d2}:{1:d2}", delta.TimeSpanWithDaysAndSeconds.Hours, delta.TimeSpanWithDaysAndSeconds.Minutes);
@@ -985,10 +946,10 @@ namespace IronPython.Modules {
                 return sb.ToString();
             }
 
-            internal static bool CheckTzInfoBeforeCompare(PythonDateTimeCombo self, PythonDateTimeCombo other) {
+            internal static bool CheckTzInfoBeforeCompare(datetime self, datetime other) {
                 if (self._tz != other._tz) {
-                    PythonTimeDelta offset1 = self.GetUtcOffset();
-                    PythonTimeDelta offset2 = other.GetUtcOffset();
+                    timedelta offset1 = self.utcoffset();
+                    timedelta offset2 = other.utcoffset();
 
                     if ((offset1 == null && offset2 != null) || (offset1 != null && offset2 == null))
                         throw PythonOps.TypeError("can't compare offset-naive and offset-aware times");
@@ -1000,7 +961,7 @@ namespace IronPython.Modules {
             }
 
             public override bool Equals(object obj) {
-                PythonDateTimeCombo other = obj as PythonDateTimeCombo;
+                datetime other = obj as datetime;
                 if (other == null) return false;
 
                 if (CheckTzInfoBeforeCompare(this, other)) {
@@ -1021,7 +982,7 @@ namespace IronPython.Modules {
             }
 
             public override string ToString() {
-                return IsoFormat(' ');
+                return isoformat(' ');
             }
 
             #region IRichComparable Members
@@ -1030,7 +991,7 @@ namespace IronPython.Modules {
                 if (other == null)
                     throw PythonOps.TypeError("can't compare datetime.datetime to NoneType");
 
-                PythonDateTimeCombo combo = other as PythonDateTimeCombo;
+                datetime combo = other as datetime;
                 if (combo == null)
                     throw PythonOps.TypeError("can't compare datetime.datetime to {0}", PythonTypeOps.GetName(other));
 
@@ -1056,7 +1017,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public override string ToCodeString(CodeContext context) {
+            string ICodeFormattable.ToCodeString(CodeContext context) {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendFormat("datetime.datetime({0}, {1}, {2}, {3}, {4}",
                     InternalDateTime.Year,
@@ -1065,16 +1026,16 @@ namespace IronPython.Modules {
                     InternalDateTime.Hour,
                     InternalDateTime.Minute);
 
-                if (Microsecond != 0) {
-                    sb.AppendFormat(", {0}, {1}", Second, Microsecond);
+                if (microsecond != 0) {
+                    sb.AppendFormat(", {0}, {1}", second, microsecond);
                 } else {
-                    if (Second != 0) {
-                        sb.AppendFormat(", {0}", Second);
+                    if (second != 0) {
+                        sb.AppendFormat(", {0}", second);
                     }
                 }
 
                 if (_tz != null) {
-                    sb.AppendFormat(", tzinfo={0}", _tz.TimeZoneName(this).ToLower());
+                    sb.AppendFormat(", tzinfo={0}", _tz.tzname(this).ToLower());
                 }
                 sb.AppendFormat(")");
                 return sb.ToString();
@@ -1106,19 +1067,23 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonType("time")]
-        public class PythonDateTimeTime : ICodeFormattable {
+        [PythonSystemType]
+        public class time : ICodeFormattable {
             internal TimeSpan _timeSpan;
             internal int _lostMicroseconds;
-            internal PythonTimeZoneInformation _tz;
-
+            internal tzinfo _tz;
             private UnifiedTime _utcTime;
+            
+            // class attributes:
+            public static readonly time max = new time(23, 59, 59, 999999, null);
+            public static readonly time min = new time(0, 0, 0, 0, null);
+            public static readonly timedelta resolution = timedelta.resolution;
 
-            public PythonDateTimeTime([DefaultParameterValue(0)]int hour,
+            public time([DefaultParameterValue(0)]int hour,
                 [DefaultParameterValue(0)]int minute,
                 [DefaultParameterValue(0)]int second,
                 [DefaultParameterValue(0)]int microsecond,
-                [DefaultParameterValue(null)]PythonTimeZoneInformation tzinfo) {
+                [DefaultParameterValue(null)]tzinfo tzinfo) {
 
                 PythonDateTime.ValidateInput(InputKind.Hour, hour);
                 PythonDateTime.ValidateInput(InputKind.Minute, minute);
@@ -1131,40 +1096,30 @@ namespace IronPython.Modules {
                 this._tz = tzinfo;
             }
 
-            internal PythonDateTimeTime(TimeSpan timeSpan, int lostMicroseconds, PythonTimeZoneInformation tzinfo) {
+            internal time(TimeSpan timeSpan, int lostMicroseconds, tzinfo tzinfo) {
                 this._timeSpan = timeSpan;
                 this._lostMicroseconds = lostMicroseconds;
                 this._tz = tzinfo;
             }
 
-            // class attributes:
-            public static object max = new PythonDateTimeTime(23, 59, 59, 999999, null);
-            public static object min = new PythonDateTimeTime(0, 0, 0, 0, null);
-            public static object resolution = PythonTimeDelta.resolution;
-
             // instance attributes:
-            public int Hour {
-                [PythonName("hour")]
+            public int hour {
                 get { return _timeSpan.Hours; }
             }
 
-            public int Minute {
-                [PythonName("minute")]
+            public int minute {
                 get { return _timeSpan.Minutes; }
             }
 
-            public int Second {
-                [PythonName("second")]
+            public int second {
                 get { return _timeSpan.Seconds; }
             }
 
-            public int Microsecond {
-                [PythonName("microsecond")]
+            public int microsecond {
                 get { return _timeSpan.Milliseconds * 1000 + _lostMicroseconds; }
             }
 
-            public PythonTimeZoneInformation TimeZoneInfo {
-                [PythonName("tzinfo")]
+            public tzinfo tzinfo {
                 get { return _tz; }
             }
 
@@ -1176,9 +1131,9 @@ namespace IronPython.Modules {
                         _utcTime.TimeSpan = _timeSpan;
                         _utcTime.LostMicroseconds = _lostMicroseconds;
 
-                        PythonTimeDelta delta = this.GetUtcOffset();
+                        timedelta delta = this.utcoffset();
                         if (delta != null) {
-                            PythonDateTimeTime utced = this - delta;
+                            time utced = this - delta;
                             _utcTime.TimeSpan = utced._timeSpan;
                             _utcTime.LostMicroseconds = utced._lostMicroseconds;
                         }
@@ -1188,36 +1143,33 @@ namespace IronPython.Modules {
             }
 
             // supported operations
-            public static PythonDateTimeTime operator +(PythonDateTimeTime date, PythonTimeDelta delta) {
-                return new PythonDateTimeTime(date._timeSpan.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
+            public static time operator +(time date, timedelta delta) {
+                return new time(date._timeSpan.Add(delta.TimeSpanWithDaysAndSeconds), delta._microseconds + date._lostMicroseconds, date._tz);
             }
 
-            public static PythonDateTimeTime operator -(PythonDateTimeTime date, PythonTimeDelta delta) {
-                return new PythonDateTimeTime(date._timeSpan.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
+            public static time operator -(time date, timedelta delta) {
+                return new time(date._timeSpan.Subtract(delta.TimeSpanWithDaysAndSeconds), date._lostMicroseconds - delta._microseconds, date._tz);
             }
 
-            [SpecialName, PythonName("__nonzero__")]
-            public bool NonZero() {
+            public bool __nonzero__() {
                 return this.UtcTime.TimeSpan.Ticks != 0 || this.UtcTime.LostMicroseconds != 0;
             }
 
-            public static explicit operator bool(PythonDateTimeTime time) {
-                return time.NonZero();
+            public static explicit operator bool(time time) {
+                return time.__nonzero__();
             }
 
             // instance methods
-            [PythonName("replace")]
-            public object Replace() {
+            public object replace() {
                 return this;
             }
 
-            [PythonName("replace")]
-            public object Replace([ParamDictionary]IAttributesCollection dict) {
-                int hour = Hour;
-                int minute = Minute;
-                int second = Second;
-                int microsecond = Microsecond;
-                PythonTimeZoneInformation tz = TimeZoneInfo;
+            public object replace([ParamDictionary]IAttributesCollection dict) {
+                int lhour = hour;
+                int lminute = minute;
+                int lsecond = second;
+                int lmicrosecond = microsecond;
+                tzinfo tz = tzinfo;
 
                 foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
                     string key = kvp.Key as string;
@@ -1225,36 +1177,36 @@ namespace IronPython.Modules {
 
                     switch (key) {
                         case "hour":
-                            hour = (int)kvp.Value;
+                            lhour = (int)kvp.Value;
                             break;
                         case "minute":
-                            minute = (int)kvp.Value;
+                            lminute = (int)kvp.Value;
                             break;
                         case "second":
-                            second = (int)kvp.Value;
+                            lsecond = (int)kvp.Value;
                             break;
                         case "microsecond":
-                            microsecond = (int)kvp.Value;
+                            lmicrosecond = (int)kvp.Value;
                             break;
                         case "tzinfo":
-                            tz = kvp.Value as PythonTimeZoneInformation;
+                            tz = kvp.Value as tzinfo;
                             break;
                     }
                 }
-                return new PythonDateTimeTime(hour, minute, second, microsecond, tz);
+                return new time(lhour, lminute, lsecond, lmicrosecond, tz);
             }
-            [PythonName("isoformat")]
-            public object GetIsoFormat() {
+
+            public object isoformat() {
                 return ToString();
             }
 
             public override string ToString() {
                 StringBuilder sb = new StringBuilder();
-                sb.AppendFormat("{0:d2}:{1:d2}:{2:d2}", Hour, Minute, Second);
+                sb.AppendFormat("{0:d2}:{1:d2}:{2:d2}", hour, minute, second);
 
-                if (Microsecond != 0) sb.AppendFormat(".{0:d6}", Microsecond);
+                if (microsecond != 0) sb.AppendFormat(".{0:d6}", microsecond);
 
-                PythonTimeDelta delta = GetUtcOffset();
+                timedelta delta = utcoffset();
                 if (delta != null) {
                     if (delta.TimeSpanWithDaysAndSeconds >= TimeSpan.Zero) {
                         sb.AppendFormat("+{0:d2}:{1:d2}", delta.TimeSpanWithDaysAndSeconds.Hours, delta.TimeSpanWithDaysAndSeconds.Minutes);
@@ -1266,42 +1218,38 @@ namespace IronPython.Modules {
                 return sb.ToString();
             }
 
-            [PythonName("strftime")]
-            public object FormatTime(string format) {
-                return PythonTime.FormatTime(format,
+            public object strftime(string format) {
+                return PythonTime.strftime(format,
                     new DateTime(1900, 1, 1, _timeSpan.Hours, _timeSpan.Minutes, _timeSpan.Seconds, _timeSpan.Milliseconds));
             }
 
-            [PythonName("utcoffset")]
-            public PythonTimeDelta GetUtcOffset() {
+            public timedelta utcoffset() {
                 if (_tz == null) return null;
-                PythonTimeDelta delta = _tz.UtcOffset(null);
+                timedelta delta = _tz.utcoffset(null);
                 PythonDateTime.ThrowIfInvalid(delta, "utcoffset");
                 return delta;
             }
 
-            [PythonName("dst")]
-            public object DaylightSavingsTime() {
+            public object dst() {
                 if (_tz == null) return null;
-                PythonTimeDelta delta = _tz.DaylightSavingTime(null);
+                timedelta delta = _tz.dst(null);
                 PythonDateTime.ThrowIfInvalid(delta, "dst");
                 return delta;
             }
 
-            [PythonName("tzname")]
-            public object TimeZoneName() {
+            public object tzname() {
                 if (_tz == null) return null;
-                return _tz.TimeZoneName(null);
+                return _tz.tzname(null);
             }
 
             public override int GetHashCode() {
                 return this.UtcTime.GetHashCode();
             }
 
-            internal static bool CheckTzInfoBeforeCompare(PythonDateTimeTime self, PythonDateTimeTime other) {
+            internal static bool CheckTzInfoBeforeCompare(time self, time other) {
                 if (self._tz != other._tz) {
-                    PythonTimeDelta offset1 = self.GetUtcOffset();
-                    PythonTimeDelta offset2 = other.GetUtcOffset();
+                    timedelta offset1 = self.utcoffset();
+                    timedelta offset2 = other.utcoffset();
 
                     if ((offset1 == null && offset2 != null) || (offset1 != null && offset2 == null))
                         throw PythonOps.TypeError("can't compare offset-naive and offset-aware times");
@@ -1313,7 +1261,7 @@ namespace IronPython.Modules {
             }
 
             public override bool Equals(object obj) {
-                PythonDateTimeTime other = obj as PythonDateTimeTime;
+                time other = obj as time;
                 if (other == null) return false;
 
                 if (CheckTzInfoBeforeCompare(this, other)) {
@@ -1329,7 +1277,7 @@ namespace IronPython.Modules {
             /// Helper function for doing the comparisons.  time has no __cmp__ method
             /// </summary>
             private int CompareTo(object other) {
-                PythonDateTimeTime other2 = other as PythonDateTimeTime;
+                time other2 = other as time;
                 if (other2 == null)
                     throw PythonOps.TypeError("can't compare datetime.time to {0}", PythonTypeOps.GetName(other));
 
@@ -1342,19 +1290,19 @@ namespace IronPython.Modules {
                 }
             }
 
-            public static bool operator >(PythonDateTimeTime self, object other) {
+            public static bool operator >(time self, object other) {
                 return self.CompareTo(other) > 0;
             }
 
-            public static bool operator <(PythonDateTimeTime self, object other) {
+            public static bool operator <(time self, object other) {
                 return self.CompareTo(other) < 0;
             }
 
-            public static bool operator >=(PythonDateTimeTime self, object other) {
+            public static bool operator >=(time self, object other) {
                 return self.CompareTo(other) >= 0;
             }
 
-            public static bool operator <=(PythonDateTimeTime self, object other) {
+            public static bool operator <=(time self, object other) {
                 return self.CompareTo(other) <= 0;
             }
 
@@ -1364,17 +1312,17 @@ namespace IronPython.Modules {
 
             public string ToCodeString(CodeContext context) {
                 StringBuilder sb = new StringBuilder();
-                if (Microsecond != 0)
-                    sb.AppendFormat("datetime.time({0}, {1}, {2}, {3}", Hour, Minute, Second, Microsecond);
-                else if (Second != 0)
-                    sb.AppendFormat("datetime.time({0}, {1}, {2}", Hour, Minute, Second);
+                if (microsecond != 0)
+                    sb.AppendFormat("datetime.time({0}, {1}, {2}, {3}", hour, minute, second, microsecond);
+                else if (second != 0)
+                    sb.AppendFormat("datetime.time({0}, {1}, {2}", hour, minute, second);
                 else
-                    sb.AppendFormat("datetime.time({0}, {1}", Hour, Minute);
+                    sb.AppendFormat("datetime.time({0}, {1}", hour, minute);
 
-                string tzname = TimeZoneName() as string;
-                if (tzname != null) {
+                string ltzname = tzname() as string;
+                if (ltzname != null) {
                     // TODO: calling __repr__?
-                    sb.AppendFormat(", tzinfo={0}", tzname.ToLower());
+                    sb.AppendFormat(", tzinfo={0}", ltzname.ToLower());
                 }
 
                 sb.AppendFormat(")");
@@ -1406,34 +1354,33 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonType("tzinfo")]
-        public class PythonTimeZoneInformation {
-            [PythonName("fromutc")]
-            public virtual object FromUtc(PythonDateTimeCombo dt) {
-                PythonTimeDelta dtOffset = UtcOffset(dt);
+        [PythonSystemType]
+        public class tzinfo {
+            public virtual object fromutc(datetime dt) {
+                timedelta dtOffset = utcoffset(dt);
                 if (dtOffset == null)
                     throw PythonOps.ValueError("fromutc: non-None utcoffset() result required");
 
-                PythonTimeDelta dtDst = DaylightSavingTime(dt);
+                timedelta dtDst = dst(dt);
                 if (dtDst == null)
                     throw PythonOps.ValueError("fromutc: non-None dst() result required");
 
-                PythonTimeDelta delta = dtOffset - dtDst;
+                timedelta delta = dtOffset - dtDst;
                 dt = dt + delta; // convert to standard LOCAL time
                 dtDst = dt.dst();
 
                 return dt + dtDst;
             }
-            [PythonName("dst")]
-            public virtual PythonTimeDelta DaylightSavingTime(object dt) {
+
+            public virtual timedelta dst(object dt) {
                 throw new NotImplementedException();
             }
-            [PythonName("tzname")]
-            public virtual string TimeZoneName(object dt) {
+
+            public virtual string tzname(object dt) {
                 throw new NotImplementedException();
             }
-            [PythonName("utcoffset")]
-            public virtual PythonTimeDelta UtcOffset(object dt) {
+
+            public virtual timedelta utcoffset(object dt) {
                 throw new NotImplementedException();
             }
         }

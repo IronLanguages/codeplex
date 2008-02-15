@@ -53,7 +53,6 @@ namespace IronPython.Runtime.Types {
     [PythonType("classobj")]
     [Serializable]
     public sealed class OldClass :
-        IConstructorWithCodeContext,
 #if !SILVERLIGHT // ICustomTypeDescriptor
  ICustomTypeDescriptor,
 #endif
@@ -496,14 +495,6 @@ namespace IronPython.Runtime.Types {
 
         string ICodeFormattable.ToCodeString(CodeContext context) {
             return string.Format("<class {0} at {1}>", FullName, PythonOps.HexId(this));
-        }
-
-        #endregion
-
-        #region IConstructorWithCodeContext Members
-
-        object IConstructorWithCodeContext.Construct(CodeContext context, params object[] args) {
-            return Call(context, args);
         }
 
         #endregion

@@ -35,6 +35,7 @@ simple_primitives_data = [
      ("mDouble", float, 2.5, 4.5)
      ]
      
+#Test calling simple types to validate marshalling.
 def test_types():
     for funcName, type, inp, output in simple_primitives_data:        
         func = getattr(com_obj, funcName)
@@ -46,6 +47,7 @@ def test_types():
     com_obj.mIDispatch(strongBoxIDisp);
     AreEqual(strongBoxIDisp.Value, com_obj)
     
+#Test different signatures of the functions
 def test_calling_signatures():
     f1 = 2.5;
     f2 = 5.5;
@@ -53,7 +55,7 @@ def test_calling_signatures():
     b = StrongBox[float](f2)
     com_obj.mTwoInOutParams(a,b) #The function adds two to every parameter
     AreEqual(a.Value, f1+2) 
-    AreEqual(b.Value, f2+2)
+    AreEqual(b.Value, f1 + f2+2)
     
     if not preferComDispatch:    
         a = StrongBox[System.Decimal](3)    
@@ -65,6 +67,7 @@ def test_calling_signatures():
     b = StrongBox[System.DateTime](now)
     com_obj.mOutAndInOutParams(a,b)
     
+#Try calling the COM function with params passed in as if they were in params. 
 def test_as_inparams():
     for funcName, type, inp, output in simple_primitives_data:
         func = getattr(com_obj, funcName)
@@ -72,6 +75,36 @@ def test_as_inparams():
 
     com_obj.mIDispatch(com_obj)
     com_obj.mTwoInOutParams(2,4)
-		
+	
+#Validate ref params - they should have the same behaviour as in/out params.
+def test_ref_params():
+    f1 = 3.5;
+    a = StrongBox[float](f1)
+    com_obj.mSingleRefParam(a)
+    AreEqual(a.Value, f1+ 2)
+    
+    com_obj.mSingleRefParam(5.2)    
+    	
+    str1 = "a"
+    a = StrongBox[str](str1)
+    b = StrongBox[object](com_obj)
+    com_obj.mTwoRefParams(a,b)
+    AreEqual(a.Value, "a")
+    AreEqual(b.Value, com_obj)
+    
+#Try passing null to methods which accept pointers. TypeError should be thrown for all except strings
+def test_passing_null():
+	#Merlin Bug 323996
+    if not preferComDispatch:
+        AreEqual(com_obj.mBstr(None), "a")
+        AssertError(TypeError, com_obj.mByte, None)
+        AssertError(TypeError, com_obj.mSingleRefParam, None) 
+    
+        b = StrongBox[object](None)
+        AssertError(TypeError, com_obj.mTwoRefParams, "a",b)
+        
+        a = StrongBox[object](None)
+        AssertError(TypeError, com_obj.mTwoInOutParams, None, 3)
+
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

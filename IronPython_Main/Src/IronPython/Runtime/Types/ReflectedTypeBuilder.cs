@@ -900,6 +900,8 @@ namespace IronPython.Runtime.Types {
             ot["TrueDivide"] = new OperatorMapping(Operators.TrueDivide, false, true, false, true);
             ot["FloorDivide"] = new OperatorMapping(Operators.FloorDivide, false, true, false, true);
 
+            ot["DivMod"] = new OperatorMapping(Operators.DivMod, false, true, false, true);
+
             ot["Abs"] = new OperatorMapping(Operators.AbsoluteValue, true, false, false);
 
             ot["Power"] = new OperatorMapping(Operators.Power, false, true, true, true);

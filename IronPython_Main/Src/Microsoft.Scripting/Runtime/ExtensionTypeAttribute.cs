@@ -77,7 +77,7 @@ namespace Microsoft.Scripting.Runtime {
                 } else {
                     Type curType = extensionType;
                     do {
-                        Debug.Assert(!ExtensionTypeToType.ContainsKey(curType));
+                        //Debug.Assert(!ExtensionTypeToType.ContainsKey(curType));
 
                         ExtensionTypeToType[curType] = extendedType;
                         curType = curType.BaseType;

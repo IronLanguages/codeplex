@@ -145,6 +145,7 @@
     <Compile Include="Actions\MethodTracker.cs" />
     <Compile Include="Actions\NamespaceTracker.cs" />
     <Compile Include="Actions\NestedTypeTracker.cs" />
+    <Compile Include="Actions\OperatorInfo.cs" />
     <Compile Include="Actions\PropertyTracker.cs" />
     <Compile Include="Actions\ReflectedPropertyTracker.cs" />
     <Compile Include="Actions\RuleCache.cs" />
@@ -178,10 +179,13 @@
     <Compile Include="Actions\TrackerTypes.cs" />
     <Compile Include="Actions\TypeGroup.cs" />
     <Compile Include="Actions\TypeTracker.cs" />
+    <Compile Include="Ast\LambdaBuilder.cs" />
     <Compile Include="Runtime\AssemblyTypeNames.cs" />
     <Compile Include="Ast\AbstractInterpreter.cs" />
+    <Compile Include="Ast\AnalyzedTree.cs" />
     <Compile Include="Ast\AstRewriter.Generated.cs" />
     <Compile Include="Ast\AstWriter.cs" />
+    <Compile Include="Ast\AstWriter.Generated.cs" />
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\CatchRecord.cs" />
@@ -205,6 +209,8 @@
     <Compile Include="Ast\InterpreterData.cs" />
     <Compile Include="Ast\IntrinsicExpression.cs" />
     <Compile Include="Ast\ISpan.cs" />
+    <Compile Include="Ast\DlrCompiler.cs" />
+    <Compile Include="Ast\TryStatementInfo.cs" />
     <Compile Include="Ast\VariableBinder.cs" />
     <Compile Include="Ast\Walker.cs" />
     <Compile Include="Ast\AbstractValue.cs" />
@@ -383,7 +389,6 @@
     <Compile Include="Hosting\TokenTriggers.cs" />
     <Compile Include="Runtime\IdDispenser.cs" />
     <Compile Include="Runtime\ImplicitConversionMethodAttribute.cs" />
-    <Compile Include="Runtime\IConstructorWithCodeContext.cs" />
     <Compile Include="Runtime\InvariantContext.cs" />
     <Compile Include="IValueEquality.cs" />
     <Compile Include="Runtime\LanguageContext.cs" />
@@ -404,7 +409,6 @@
     <Compile Include="Hosting\ParserSink.cs" />
     <Compile Include="Generation\EnvironmentSlot.cs" />
     <Compile Include="Hosting\ScriptEngine.cs" />
-    <Compile Include="Hosting\SingletonEngineFactory.cs" />
     <Compile Include="Runtime\ScriptDomainManager.cs" />
     <Compile Include="Hosting\ScriptIO.cs" />
     <Compile Include="Hosting\ScriptModule.Remote.cs" />
@@ -440,7 +444,6 @@
     <Compile Include="Shell\SuperConsole.cs" />
     <Compile Include="Tuple.cs" />
     <Compile Include="Generation\AssemblyGen.cs" />
-    <Compile Include="Generation\AssemblyGenAttributes.cs" />
     <Compile Include="Generation\CodeGenOptions.cs" />
     <Compile Include="Generation\CompilerHelpers.cs" />
     <Compile Include="Generation\SlotFactory.cs" />

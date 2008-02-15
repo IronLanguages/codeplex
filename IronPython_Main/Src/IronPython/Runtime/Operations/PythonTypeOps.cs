@@ -36,8 +36,9 @@ using Microsoft.Scripting.Actions;
 namespace IronPython.Runtime.Operations {
     public static class PythonTypeOps {
         private static object _DefaultNewInst;
-        private static Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
-        private static Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction> _functions = new Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction>();
+        private static readonly Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
+        private static readonly Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction> _functions = new Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction>();
+        private static readonly Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker, ReflectedEvent>();
 
         [PythonName("__bases__")]
         public static readonly PythonTypeSlot BasesSlot = new PythonTypeBasesSlot();
@@ -49,7 +50,6 @@ namespace IronPython.Runtime.Operations {
         public static readonly PythonTypeSlot MroSlot = new PythonTypeMroSlot();
         [OperatorSlot]
         public static readonly PythonTypeSlot Call = new PythonTypeOps.TypeCaller();
-        private static Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker,ReflectedEvent>();
 
         [StaticExtensionMethod("__new__")]
         public static object Make(CodeContext/*!*/ context, object cls, string name, PythonTuple bases, IAttributesCollection dict) {
@@ -111,6 +111,7 @@ namespace IronPython.Runtime.Operations {
             return DynamicHelpers.GetPythonType(o);
         }
 
+        // TODO: This shouldn't exist, Python doesn't define __eq__ on classes
         [SpecialName]
         public static bool Equals(PythonType self, PythonType other) {
             if (self == null) {
@@ -123,7 +124,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PythonName("mro")]
-        public static object GetMethodResolutionOrder(object self) {
+        public static object GetMethodResolutionOrder(PythonType self) {
             throw PythonOps.NotImplementedError("mro is not implemented on type, use __mro__ instead");
         }
 
@@ -145,7 +146,7 @@ namespace IronPython.Runtime.Operations {
 
             if (self.IsSystemType) {
                 if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(self.UnderlyingSystemType)) {
-                    string module = GetModule(self);
+                    string module = GetModule(context, self);
                     if (module != "__builtin__") {
                         return string.Format("<type '{0}.{1}'>", module, self.Name);
                     }
@@ -169,16 +170,16 @@ namespace IronPython.Runtime.Operations {
         }
 
         [PropertyMethod, PythonName("__module__")]
-        public static string GetModule(PythonType self) {
-            return GetModuleName(self.UnderlyingSystemType);
+        public static string GetModule(CodeContext/*!*/ context, PythonType self) {
+            return GetModuleName(context, self.UnderlyingSystemType);
         }
 
-        internal static string GetModuleName(Type type) {
+        internal static string GetModuleName(CodeContext/*!*/ context, Type type) {
             if (IsRuntimeAssembly(type.Assembly) || PythonTypeCustomizer.IsPythonType(type)) {
                 Type curType = type;
                 while (curType != null) {
                     string moduleName;
-                    if (PythonContext.BuiltinModuleNames.TryGetValue(curType, out moduleName)) {
+                    if (PythonContext.GetContext(context).BuiltinModuleNames.TryGetValue(curType, out moduleName)) {
                         return moduleName;
                     }
 
@@ -480,6 +481,20 @@ namespace IronPython.Runtime.Operations {
             }
 
             return res;
+        }
+
+        internal static bool TryInvokeUnaryOperator(CodeContext context, object o, SymbolId si, out object value) {
+            PythonTypeSlot pts;
+            PythonType pt = DynamicHelpers.GetPythonType(o);
+            object callable;
+            if (DynamicHelpers.GetPythonType(o).TryResolveSlot(context, si, out pts) &&
+                pts.TryGetBoundValue(context, o, pt, out callable)) {
+                value = PythonCalls.Call(callable);
+                return true;
+            }
+
+            value = null;
+            return false;
         }
     }
 }

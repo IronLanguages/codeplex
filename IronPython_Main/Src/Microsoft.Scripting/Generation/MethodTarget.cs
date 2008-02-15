@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Generation {
         }
         
         internal object CallReflected(CodeContext context, object[] args) {
-            if (ScriptDomainManager.Options.EngineDebug) {
+            if (context.LanguageContext.Options.PerfStats) {
                 PerfTrack.NoteEvent(PerfTrack.Categories.Methods, this);
             }
 

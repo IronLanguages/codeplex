@@ -32,6 +32,7 @@ namespace ToyScript.Parser.Ast {
                 Span,
                 Ast.Call(
                     typeof(ToyHelpers).GetMethod("Print"),
+                    Ast.CodeContext(),
                     Ast.ConvertHelper(
                         _expression.Generate(tg),
                         typeof(object)

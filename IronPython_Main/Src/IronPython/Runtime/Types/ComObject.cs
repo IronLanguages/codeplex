@@ -48,13 +48,13 @@ namespace IronPython.Runtime.Types {
 
     public static class ComOps {
         [SpecialName]
-        public static object GetBoundMember([StaticThis]object self, string name) {
+        public static object GetBoundMember(CodeContext/*!*/ context, [StaticThis]object self, string name) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 Debug.Assert(self.GetType().IsCOMObject); // // Strongly-typed RCWs are subtypes of System.__ComObject
                 return PythonOps.NotImplemented; // The caller should fall back to other means to resolve the member
             }
 
-            ComObject com = ComObject.ObjectToComObject(self);
+            ComObject com = ComObject.ObjectToComObject(context, self);
             object value;
             if (com.TryGetAttr(DefaultContext.DefaultCLS, SymbolTable.StringToId(name), out value)) {
                 return value;
@@ -63,7 +63,7 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName]
-        public static void SetMember([StaticThis]object self, string name, object value) {
+        public static void SetMember(CodeContext/*!*/ context, [StaticThis]object self, string name, object value) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
                 PythonType pyType = DynamicHelpers.GetPythonTypeFromType(self.GetType());
@@ -71,13 +71,13 @@ namespace IronPython.Runtime.Types {
                 return;
             }
 
-            ComObject com = ComObject.ObjectToComObject(self);
+            ComObject com = ComObject.ObjectToComObject(context, self);
             com.SetAttr(DefaultContext.Default, SymbolTable.StringToId(name), value);
             return;
         }
 
         [SpecialName]
-        public static IList<SymbolId> GetMemberNames([StaticThis]object self) {
+        public static IList<SymbolId> GetMemberNames(CodeContext/*!*/ context, [StaticThis]object self) {
             List<SymbolId> ret = new List<SymbolId>();
 
             if (!ComObject.Is__ComObject(self.GetType())) {
@@ -91,7 +91,7 @@ namespace IronPython.Runtime.Types {
             }
 
             if (self != null) {
-                ComObject com = ComObject.ObjectToComObject(self);
+                ComObject com = ComObject.ObjectToComObject(context, self);
                 IList<SymbolId> subAttrNames = com.GetAttrNames(DefaultContext.Default);
                 foreach (SymbolId id in subAttrNames) {
                     if (id == Symbols.Doc || id == Symbols.Module || id == Symbols.Init) continue;
@@ -104,13 +104,13 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName, PythonName("__repr__")]
-        public static string ComObjectToString(object self) {
+        public static string ComObjectToString(CodeContext/*!*/ context, object self) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
                 return self.ToString();
             }
 
-            ComObject com = ComObject.ObjectToComObject(self);
+            ComObject com = ComObject.ObjectToComObject(context, self);
 
             return com.ToString();
         }
@@ -250,7 +250,7 @@ namespace IronPython.Runtime.Types {
         /// This is the factory method to get the ComObject corresponding to an RCW
         /// </summary>
         /// <returns></returns>
-        internal static ComObject ObjectToComObject(object rcw) {
+        internal static ComObject ObjectToComObject(CodeContext/*!*/ context, object rcw) {
             Debug.Assert(Is__ComObject(rcw.GetType()));
 
             // Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
@@ -266,7 +266,7 @@ namespace IronPython.Runtime.Types {
                     return (ComObject)data;
                 }
 
-                ComObject comObjectInfo = CreateComObject(rcw);
+                ComObject comObjectInfo = CreateComObject(context, rcw);
                 if (!Marshal.SetComObjectData(rcw, _ComObjectInfoKey, comObjectInfo)) {
                     throw new COMException("Marshal.SetComObjectData failed");
                 }
@@ -275,7 +275,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        static ComObject CreateComObject(object rcw) {
+        static ComObject CreateComObject(CodeContext/*!*/ context, object rcw) {
             PythonEngineOptions engineOptions;
             engineOptions = PythonOps.GetLanguageContext().Options as PythonEngineOptions;
             ComDispatch.IDispatch dispatchObject = rcw as ComDispatch.IDispatch;
@@ -286,7 +286,7 @@ namespace IronPython.Runtime.Types {
             ComObject comObject;
             
             // First check if we can associate metadata with the COM object
-            comObject = ComObjectWithTypeInfo.CheckClassInfo(rcw);
+            comObject = ComObjectWithTypeInfo.CheckClassInfo(context, rcw);
             if (comObject != null) {
                 return comObject;
             }
@@ -369,13 +369,13 @@ namespace IronPython.Runtime.Types {
             _comInterface = DynamicHelpers.GetPythonTypeFromType(comInterface);
         }
 
-        internal static ComObjectWithTypeInfo CheckClassInfo(object rcw) {
-            ComObjectWithTypeInfo comObjectWithTypeInfo = CheckIProvideClassInfo(rcw);
+        internal static ComObjectWithTypeInfo CheckClassInfo(CodeContext/*!*/ context, object rcw) {
+            ComObjectWithTypeInfo comObjectWithTypeInfo = CheckIProvideClassInfo(context, rcw);
             if (comObjectWithTypeInfo != null) {
                 return comObjectWithTypeInfo;
             }
 
-            return CheckIDispatchTypeInfo(rcw);
+            return CheckIDispatchTypeInfo(context, rcw);
         }
 
         public override string ToString() {
@@ -433,15 +433,15 @@ namespace IronPython.Runtime.Types {
             return typeAttr;
         }
 
-        private static Type ConvertTypeLibToAssembly(IntPtr typeInfoPtr, Guid typeInfoGuid) {
-            if (ScriptDomainManager.Options.Verbose)
+        private static Type ConvertTypeLibToAssembly(CodeContext/*!*/ context, IntPtr typeInfoPtr, Guid typeInfoGuid) {
+            if (context.LanguageContext.DomainManager.GlobalOptions.Verbose)
                 Console.WriteLine("Generating Interop assembly for type " + typeInfoGuid);
 
             // This can be very slow. If this is taking a long time, you need to add a reference
             // to the Primary Interop Assembly using clr.AddReference
             Type interfaceType = Marshal.GetTypeForITypeInfo(typeInfoPtr);
 
-            if (ScriptDomainManager.Options.Verbose) {
+            if (context.LanguageContext.DomainManager.GlobalOptions.Verbose) {
                 if (interfaceType == null)
                     Console.WriteLine("Could not find COM interface " + typeInfoGuid);
                 else
@@ -465,7 +465,7 @@ namespace IronPython.Runtime.Types {
             return ComTypeCache[typeInfoGuid];
         }
 
-        private static Type GetInterfaceForTypeInfo(IntPtr typeInfoPtr) {
+        private static Type GetInterfaceForTypeInfo(CodeContext/*!*/ context, IntPtr typeInfoPtr) {
             Debug.Assert(typeInfoPtr != IntPtr.Zero);
 
             ComTypes.TYPELIBATTR typeLibAttr;
@@ -503,7 +503,7 @@ namespace IronPython.Runtime.Types {
             }
 
             // Try creating an Interop assembly on the fly
-            return ConvertTypeLibToAssembly(typeInfoPtr, typeInfoGuid);
+            return ConvertTypeLibToAssembly(context, typeInfoPtr, typeInfoGuid);
         }
 
         private static void PublishComTypes(Assembly interopAssembly) {
@@ -529,7 +529,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static ComObjectWithTypeInfo CheckIDispatchTypeInfo(object rcw) {
+        private static ComObjectWithTypeInfo CheckIDispatchTypeInfo(CodeContext/*!*/ context, object rcw) {
             ComDispatch.IDispatch dispatch = rcw as ComDispatch.IDispatch;
 
             if (dispatch == null) {
@@ -545,7 +545,7 @@ namespace IronPython.Runtime.Types {
             ComObjectWithTypeInfo ret;
             try {
                 typeInfoPtr = Marshal.GetIUnknownForObject(typeInfo);
-                ret = CheckTypeInfo(rcw, typeInfoPtr);
+                ret = CheckTypeInfo(context, rcw, typeInfoPtr);
             } finally {
                 if (typeInfoPtr != IntPtr.Zero) {
                     Marshal.Release(typeInfoPtr);
@@ -555,7 +555,7 @@ namespace IronPython.Runtime.Types {
             return ret;
         }
 
-        private static ComObjectWithTypeInfo CheckIProvideClassInfo(object rcw) {
+        private static ComObjectWithTypeInfo CheckIProvideClassInfo(CodeContext/*!*/ context, object rcw) {
             ComDispatch.IProvideClassInfo provideClassInfo = rcw as ComDispatch.IProvideClassInfo;
 
             if (provideClassInfo == null) {
@@ -567,7 +567,7 @@ namespace IronPython.Runtime.Types {
             try {
                 provideClassInfo.GetClassInfo(out typeInfoPtr);
 
-                ret = CheckTypeInfo(rcw, typeInfoPtr);
+                ret = CheckTypeInfo(context, rcw, typeInfoPtr);
             } finally {
                 if (typeInfoPtr != IntPtr.Zero) Marshal.Release(typeInfoPtr);
             }
@@ -575,8 +575,8 @@ namespace IronPython.Runtime.Types {
             return ret;
         }
 
-        private static ComObjectWithTypeInfo CheckTypeInfo(object rcw, IntPtr typeInfoPtr) {
-            Type comInterface = GetInterfaceForTypeInfo(typeInfoPtr);
+        private static ComObjectWithTypeInfo CheckTypeInfo(CodeContext/*!*/ context, object rcw, IntPtr typeInfoPtr) {
+            Type comInterface = GetInterfaceForTypeInfo(context, typeInfoPtr);
             if (comInterface != null) {
                 // We have successfully found metadata for the COM object!
                 return new ComObjectWithTypeInfo(rcw, comInterface);

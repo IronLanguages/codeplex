@@ -32,8 +32,8 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Runtime.Operations {
 
     public static partial class BigIntegerOps {
-        private static BigInteger DecimalMax = BigInteger.Create(Decimal.MaxValue);
-        private static BigInteger DecimalMin = BigInteger.Create(Decimal.MinValue);        
+        private static readonly BigInteger DecimalMax = BigInteger.Create(Decimal.MaxValue);
+        private static readonly BigInteger DecimalMin = BigInteger.Create(Decimal.MinValue);        
 
         [StaticExtensionMethod("__new__")]
         public static object Make(CodeContext context, PythonType cls, string s, int radix) {
@@ -342,7 +342,8 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        internal static object DivMod(BigInteger x, BigInteger y) {
+        [SpecialName, PythonName("__divmod__")]
+        public static PythonTuple DivMod(BigInteger x, BigInteger y) {
             BigInteger div, mod;
             div = DivMod(x, y, out mod);
             return PythonTuple.MakeTuple(div, mod);
@@ -496,28 +497,6 @@ namespace IronPython.Runtime.Operations {
         [SpecialName, PythonName("__cmp__")]
         public static int Compare(CodeContext context, BigInteger x, bool y) {
             return Compare(x, y ? 1 : 0);
-        }
-
-        [SpecialName, PythonName("__cmp__")]
-        [return: MaybeNotImplemented]
-        public static object Compare(CodeContext context, BigInteger x, object y) {
-            if (y == null) return 1;
-
-            BigInteger bi;
-            if (!Converter.TryConvertToBigInteger(y, out bi)) {
-                object res;
-                if(DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
-                    if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                        return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
-                    }
-                }
-                return PythonOps.NotImplemented;
-            }
-
-            BigInteger diff = x - bi;
-            if (diff == 0) return 0;
-            else if (diff < 0) return -1;
-            else return 1;
         }
 
         [PythonName("__long__")]

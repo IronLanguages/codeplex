@@ -25,7 +25,8 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("xrange")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
+    [PythonSystemType("xrange")]
     public class XRange : ISequence, IEnumerable, IEnumerable<int> {
         private int _start, _stop, _step, _length;
 
@@ -53,8 +54,8 @@ namespace IronPython.Runtime {
         }
 
         #region ISequence Members
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+
+        public int __len__() {
             return _length;
         }
 
@@ -72,7 +73,7 @@ namespace IronPython.Runtime {
             return (int)temp;
         }
 
-        public bool ContainsValue(object value) {
+        public bool __contains__(object value) {
             throw new NotImplementedException();
         }
 
@@ -102,8 +103,7 @@ namespace IronPython.Runtime {
             throw PythonOps.TypeError("unsupported operand type(s) for *: 'xrange' and 'int'");
         }
 
-        [PythonName("__getslice__")]
-        public virtual object GetSlice(int start, int stop) {
+        public virtual object __getslice__(int start, int stop) {
             throw PythonOps.TypeError("sequence index must be integer");
         }
 
@@ -115,8 +115,7 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        [PythonName("__reversed__")]
-        public object Reversed() {
+        public object __reversed__() {
             return new XRangeIterator(new XRange(_stop - _step, _start - _step, -_step));
         }
 

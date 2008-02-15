@@ -244,7 +244,7 @@ namespace IronPython.Runtime.Types {
             builder.AddOperator(Operators.GetItem,
                 delegate(CodeContext context, object self, object other, out object ret) {
                     Slice slice = other as Slice;
-                    if (slice != null && slice.Step == null) {
+                    if (slice != null && slice.step == null) {
                         object getSlice;
                         if (dt.TryGetBoundMember(context, self, Symbols.GetSlice, out getSlice)) {
                             int start, stop;
@@ -275,7 +275,7 @@ namespace IronPython.Runtime.Types {
             builder.AddOperator(Operators.DeleteItem,
                 delegate(CodeContext context, object self, object other, out object ret) {
                     Slice slice = other as Slice;
-                    if (slice != null && slice.Step == null) {
+                    if (slice != null && slice.step == null) {
                         object delSlice;
                         if (dt.TryGetBoundMember(context, self, Symbols.DeleteSlice, out delSlice)) {
                             int start, stop;
@@ -306,7 +306,7 @@ namespace IronPython.Runtime.Types {
             builder.AddOperator(Operators.SetItem,
                 delegate(CodeContext context, object self, object value1, object value2, out object ret) {
                     Slice slice = value1 as Slice;
-                    if (slice != null && slice.Step == null) {
+                    if (slice != null && slice.step == null) {
                         object setSlice;
                         if (dt.TryGetBoundMember(context, self, Symbols.SetSlice, out setSlice)) {
                             int start, stop;

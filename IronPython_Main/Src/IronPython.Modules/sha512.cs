@@ -38,23 +38,19 @@ namespace IronPython.Modules {
         private static readonly int digestSize = hasher512.HashSize / 8;
         private const int blockSize = 1;
 
-        [PythonName("sha512")]
-        public static Sha512Object Sha512(object data) {
+        public static Sha512Object sha512(object data) {
             return new Sha512Object(hasher512, data);
         }
 
-        [PythonName("sha512")]
-        public static Sha512Object Sha512() {
+        public static Sha512Object sha512() {
             return new Sha512Object(hasher512);
         }
 
-        [PythonName("sha384")]
-        public static Sha384Object Sha384(object data) {
+        public static Sha384Object sha384(object data) {
             return new Sha384Object(hasher384, data);
         }
 
-        [PythonName("sha384")]
-        public static Sha384Object Sha384() {
+        public static Sha384Object sha384() {
             return new Sha384Object(hasher384);
         }
 
@@ -64,19 +60,22 @@ namespace IronPython.Modules {
             internal Sha384Object(HashAlgorithm hasher, object initialData)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialData);
+                update(initialData);
             }
 
             private Sha384Object(HashAlgorithm hasher, byte[] initialBytes)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialBytes);
+                update(initialBytes);
             }
 
             [Documentation("copy() -> object (copy of this object)")]
-            [PythonName("copy")]
-            public object Clone() {
+            public Sha384Object copy() {
                 return new Sha384Object(_hasher, _bytes);
+            }
+
+            object ICloneable.Clone() {
+                return copy();
             }
         }
 
@@ -86,19 +85,22 @@ namespace IronPython.Modules {
             internal Sha512Object(HashAlgorithm hasher, object initialData)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialData);
+                update(initialData);
             }
 
             private Sha512Object(HashAlgorithm hasher, byte[] initialBytes)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialBytes);
+                update(initialBytes);
             }
 
             [Documentation("copy() -> object (copy of this object)")]
-            [PythonName("copy")]
-            public object Clone() {
+            public Sha512Object copy() {
                 return new Sha512Object(_hasher, _bytes);
+            }
+
+            object ICloneable.Clone() {
+                return copy();
             }
         }        
     }
@@ -112,7 +114,7 @@ namespace IronPython.Modules {
             _hasher = hasher;
         }
 
-        internal void Update(byte[] newBytes) {
+        internal void update(byte[] newBytes) {
             byte[] updatedBytes = new byte[_bytes.Length + newBytes.Length];
             Array.Copy(_bytes, updatedBytes, _bytes.Length);
             Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
@@ -121,21 +123,18 @@ namespace IronPython.Modules {
         }
 
         [Documentation("update(string) -> None (update digest with string data)")]
-        [PythonName("update")]
-        public void Update(object newData) {
-            Update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
+        public void update(object newData) {
+            update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
         }
 
 
         [Documentation("digest() -> int (current digest value)")]
-        [PythonName("digest")]
-        public string Digest() {
+        public string digest() {
             return StringOps.FromByteArray(_hash);
         }
 
         [Documentation("hexdigest() -> string (current digest as hex digits)")]
-        [PythonName("hexdigest")]
-        public string HexDigest() {
+        public string hexdigest() {
             StringBuilder result = new StringBuilder(2 * _hash.Length);
             for (int i = 0; i < _hash.Length; i++) {
                 result.Append(_hash[i].ToString("x2"));

@@ -112,13 +112,13 @@ namespace IronPython.Hosting {
                         Environment.Exit(1);
                     }
 #endif
-                    string fullPath = ScriptDomainManager.CurrentManager.PAL.GetFullPath(Options.FileName);
-                    DefaultContext.DefaultPythonContext.AddToPath(Path.GetDirectoryName(fullPath));
+                    string fullPath = _context.DomainManager.PAL.GetFullPath(Options.FileName);
+                    _context.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
 
-            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(string).Assembly);
-            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
+            _context.DomainManager.LoadAssembly(typeof(string).Assembly);
+            _context.DomainManager.LoadAssembly(typeof(System.Diagnostics.Debug).Assembly);
 
             InitializePath();
             InitializeArguments();
@@ -157,7 +157,7 @@ namespace IronPython.Hosting {
 
         
         private void InitializePath() {
-            DefaultContext.DefaultPythonContext.AddToPath(ScriptDomainManager.CurrentManager.PAL.CurrentDirectory);
+            _context.AddToPath(_context.DomainManager.PAL.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -247,15 +247,9 @@ namespace IronPython.Hosting {
                     } catch (Exception e) {
                         if (e is SystemExitException) throw;
                         Console.Write(Engine.FormatException(e), Style.Error);
-                    } finally {
-                        Engine.DumpDebugInfo();
                     }
                 } else {
-                    try {
-                        Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
-                    } finally {
-                        Engine.DumpDebugInfo();
-                    }
+                    Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
                 }
             }
 #endif
@@ -278,7 +272,7 @@ namespace IronPython.Hosting {
         protected override string ReadLine(int autoIndentSize) {
             string res = base.ReadLine(autoIndentSize);
 
-            ScriptDomainManager.CurrentManager.DispatchCommand(null);
+            _context.DomainManager.DispatchCommand(null);
 
             return res;
         }
@@ -352,9 +346,6 @@ namespace IronPython.Hosting {
         
         private int RunFileWorker(string fileName) {
             try {
-                // TODO: move to compiler options
-                ScriptDomainManager.Options.AssemblyGenAttributes |= Microsoft.Scripting.Generation.AssemblyGenAttributes.EmitDebugInfo;
-                
                 ScriptCode compiledCode;
                 PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized, Options.SkipFirstSourceLine, out compiledCode);
 

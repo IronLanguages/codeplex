@@ -36,18 +36,31 @@ namespace IronPython.Runtime.Calls {
 
     public class PythonDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;
+        private bool _testCoerceRecursionCheck, _disallowCoercion;
+
         public PythonDoOperationBinderHelper(CodeContext context, DoOperationAction action)
             : base(context, action) {
         }
 
         public StandardRule<T> MakeRule(object[] args) {
+            // we're using the user defined flag here because there's no DLR custom actions yet.
+            if ((Action.Operation & Operators.UserDefinedFlag) != 0) {
+                _disallowCoercion = true;
+            }
+
             _args = args;
             return MakeNewRule(PythonTypeOps.ObjectTypes(args));
         }
 
         public bool IsComparision {
             get {
-                return Action.IsComparision;
+                return CompilerHelpers.IsComparisonOperator(Operation);
+            }
+        }
+
+        public bool IsInPlace {
+            get {
+                return CompilerHelpers.InPlaceOperatorToOperator(Operation) != Operators.None;
             }
         }
 
@@ -72,19 +85,15 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakeDynamicMatchRule(PythonType[] types) {
+            Debug.Assert(!IsComparision);    // fully implemented            
+
             //TODO figure out caching strategy for these
             StandardRule<T> ret = new StandardRule<T>();
             PythonBinderHelper.MakeTest(ret, types);
             if (Action.IsUnary) {
                 MakeDynamicTarget(DynamicInvokeUnaryOperation, ret);
-            } else if (Action.IsInPlace) {
-                MakeDynamicTarget(DynamicInvokeInplaceOperation, ret);
-            } else if (IsComparision) {
-                if (Action.Operation == Operators.Compare) {
-                    MakeDynamicTarget(DynamicInvokeSortCompareOperation, ret);
-                } else {
-                    MakeDynamicTarget(DynamicInvokeCompareOperation, ret);
-                }
+            } else if (IsInPlace) {
+                MakeDynamicTarget(DynamicInvokeInplaceOperation, ret);            
             } else {
                 MakeDynamicTarget(DynamicInvokeBinaryOperation, ret);
             }
@@ -100,7 +109,7 @@ namespace IronPython.Runtime.Calls {
                     null,
                     action.Method,
                     Ast.CodeContext(),
-                    Ast.Constant(this.Action.Operation),
+                    Ast.Constant(Operation),
                     rule.Parameters[0],
                     rule.Parameters[1]
                 );
@@ -113,7 +122,7 @@ namespace IronPython.Runtime.Calls {
                     null,
                     action.Method,
                     Ast.CodeContext(),
-                    Ast.Constant(Action.Operation),
+                    Ast.Constant(Operation),
                     rule.Parameters[0]
                 );
             rule.Target = rule.MakeReturn(Binder, expr);
@@ -121,18 +130,14 @@ namespace IronPython.Runtime.Calls {
 
 
         private StandardRule<T> MakeRuleForNoMatch(PythonType[] types) {
-            if (IsComparision) {
-                return MakeDynamicMatchRule(types);
-            } else {
-                // we get the error message w/ {0}, {1} so that TypeError formats it correctly
-                return PythonBinderHelper.TypeError<T>(
-                       MakeBinaryOpErrorMessage(Action.Operation, "{0}", "{1}"),
-                       types);
-            }
+            // we get the error message w/ {0}, {1} so that TypeError formats it correctly
+            return PythonBinderHelper.TypeError<T>(
+                   MakeBinaryOpErrorMessage(Operation, "{0}", "{1}"),
+                   types);
         }
-
+        
         protected StandardRule<T> MakeNewRule(PythonType[] types) {
-            if (Action.Operation == Operators.IsCallable) {
+            if (Operation == Operators.IsCallable) {
                 // This will break in cross-language cases. Eg, if this rule applies to x,
                 // then Python's callable(x) will invoke this rule, but Ruby's callable(x) 
                 // will use the Ruby language binder instead and miss this rule, and thus 
@@ -140,36 +145,20 @@ namespace IronPython.Runtime.Calls {
                 return PythonBinderHelper.MakeIsCallableRule<T>(this.Context, _args[0]);
             }
 
-            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem ||
-                Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice ||
-                Action.Operation == Operators.DeleteItem || Action.Operation == Operators.DeleteSlice) {
+            if (Operation == Operators.GetItem || Operation == Operators.SetItem ||
+                Operation == Operators.GetSlice || Operation == Operators.SetSlice ||
+                Operation == Operators.DeleteItem || Operation == Operators.DeleteSlice) {
                 // Indexers need to see if the index argument is an expandable tuple.  This will
                 // be captured in the AbstractValue in the future but today is captured in the
                 // real value.
                 return MakeIndexerRule(types);
-            } 
-
-            for (int i = 0; i < types.Length; i++) {
-                if (types[i].Version == PythonType.DynamicVersion) {
-                    return MakeDynamicMatchRule(types);
-                }
             }
 
-            Operators op = Action.Operation;
+            Operators op = Operation;
             if (op == Operators.MemberNames) {
                 return MakeMemberNamesRule(types);
             } else if (op == Operators.CallSignatures) {
                 return MakeCallSignatureRule(Binder, CompilerHelpers.GetMethodTargets(_args[0]), types);
-            }
-
-            if (Action.IsInPlace) {
-                PythonType xType = types[0];
-                PythonTypeSlot xSlot;
-                if (xType.TryLookupSlot(Context, Symbols.OperatorToSymbol(op), out xSlot)) {
-                    // TODO optimize calls to explicit inplace methods
-                    return MakeDynamicMatchRule(types);
-                }
-                op = Action.DirectOperation;
             }
 
             if (Action.IsUnary) {
@@ -177,15 +166,9 @@ namespace IronPython.Runtime.Calls {
                 return MakeUnaryRule(types, op);
             }
 
-            if (types[0] == TypeCache.Object && types[1] == TypeCache.Object) {
-                return MakeDynamicMatchRule(types);
-            }
-
             if (IsComparision) {
                 return MakeComparisonRule(types, op);
             }
-
-            
 
             return MakeSimpleRule(types, op);
         }
@@ -250,8 +233,20 @@ namespace IronPython.Runtime.Calls {
         }
 
         private StandardRule<T> MakeSimpleRule(PythonType[] types, Operators oper) {
-            SymbolId op = Symbols.OperatorToSymbol(oper);
-            SymbolId rop = Symbols.OperatorToReversedSymbol(oper);
+            SymbolId op, rop;
+
+            if (Action.IsInPlace) {
+                oper = Action.DirectOperation;
+            }
+
+            if (!IsReverseOperator(oper)) {
+                op = Symbols.OperatorToSymbol(oper);
+                rop = Symbols.OperatorToReversedSymbol(oper);
+            } else {
+                // coming back after coercion, just try reverse operator.
+                rop = Symbols.OperatorToSymbol(oper);
+                op = Symbols.OperatorToReversedSymbol(oper);
+            }
 
             MethodBinder fbinder, rbinder;
             PythonTypeSlot fSlot = null, rSlot = null;
@@ -273,6 +268,8 @@ namespace IronPython.Runtime.Calls {
             return MakeRuleForBinaryOperator(types, oper, fCand, rCand, fSlot, rSlot);
         }
 
+        #region Comparisons
+
         private StandardRule<T> MakeComparisonRule(PythonType[] types, Operators op) {
             if (op == Operators.Compare) {
                 return MakeSortComparisonRule(types, op);
@@ -282,48 +279,41 @@ namespace IronPython.Runtime.Calls {
             PythonType yType = types[1];
             SymbolId opSym = Symbols.OperatorToSymbol(op);
             SymbolId ropSym = Symbols.OperatorToReversedSymbol(op);
-
-            MethodBinder fbind, rbind, cbind, rcbind;
-            // forward
-            if (!TryGetBinder(types, opSym, SymbolId.Empty, out fbind)) {
-                return MakeDynamicMatchRule(types);
-            }
-
             // reverse
             PythonType[] rTypes = new PythonType[] { types[1], types[0] };
-            if (!TryGetBinder(rTypes, ropSym, SymbolId.Empty, out rbind)) {
-                return MakeDynamicMatchRule(types);
-            }
 
-            // __cmp__ 
-            if (!TryGetBinder(types, Symbols.Cmp, SymbolId.Empty, out cbind)) {
-                return MakeDynamicMatchRule(types);
-            }
+            SlotOrFunction fop, rop, cmp, rcmp;
+            fop = GetSlotOrFunction(types, opSym);
+            rop = GetSlotOrFunction(rTypes, ropSym);
+            cmp = GetSlotOrFunction(types, Symbols.Cmp);
+            rcmp = GetSlotOrFunction(rTypes, Symbols.Cmp);
 
-            // reversed __cmp__ 
-            if (!TryGetBinder(rTypes, Symbols.Cmp, SymbolId.Empty, out rcbind)) {
-                return MakeDynamicMatchRule(types);
-            }
-
-            // fallback binder, depending on what comparison call a helper
-            // which always yields a value.
-            BindingTarget forward = ComparisonTargetFromBinder(fbind, types);
-            BindingTarget reverse = ComparisonTargetFromBinder(rbind, rTypes);
-            BindingTarget fcmp = ComparisonTargetFromBinder(cbind, types);
-            BindingTarget rcmp = ComparisonTargetFromBinder(rcbind, rTypes);
-
-            BindingTarget fTarget, rTarget, fCmpTarget, rCmpTarget;
-            GetCombinedTargets(forward, reverse, out fTarget, out rTarget);
-            GetCombinedTargets(fcmp, rcmp, out fCmpTarget, out rCmpTarget);
+            SlotOrFunction.GetCombinedTargets(fop, rop, out fop, out rop);
+            SlotOrFunction.GetCombinedTargets(cmp, rcmp, out cmp, out rcmp);
 
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             List<Expression> stmts = new List<Expression>();
-            if (MakeOneTarget(fTarget, rule, stmts, false, types)) {
-                if (MakeOneTarget(rTarget, rule, stmts, true, types)) {
-                    if (MakeOneCompare(fCmpTarget, rule, stmts, false, types)) {
-                        if (MakeOneCompare(rCmpTarget, rule, stmts, true, types)) {
+            // first try __op__ or __rop__ and return the value
+            if (MakeOneCompareGeneric(fop, rule, stmts, false, types, MakeCompareReturn)) {
+                if (MakeOneCompareGeneric(rop, rule, stmts, true, types, MakeCompareReturn)) {
+                    
+                    // then try __cmp__ or __rcmp__ and compare the resulting int appropriaetly
+                    if (ShouldCoerce(xType, yType, true)) {
+                        stmts.Add(DoCoerce(rule, Operators.Compare, types, false, delegate(Expression e) {
+                            return GetCompareTest(e, false);
+                        }));
+                    }
+                    
+                    if (MakeOneCompareGeneric(cmp, rule, stmts, false, types, MakeCompareTest)) {
+                        if (ShouldCoerce(yType, xType, true)) {
+                            stmts.Add(DoCoerce(rule, Operators.Compare, rTypes, true, delegate(Expression e) {
+                                return GetCompareTest(e, true);
+                            }));
+                        }
+
+                        if (MakeOneCompareGeneric(rcmp, rule, stmts, true, types, MakeCompareTest)) {
                             stmts.Add(MakeFallbackCompare(rule));
                         }
                     }
@@ -351,33 +341,23 @@ namespace IronPython.Runtime.Calls {
 
             // collect all the comparison methods, most likely we won't need them all.
             PythonType[] rTypes = new PythonType[] { types[1], types[0] };
-            MethodBinder cbind, rcbind, eqbind, reqbind, ltbind, gtbind, rltbind, rgtbind;
+            SlotOrFunction cfunc, rcfunc, eqfunc, reqfunc, ltfunc, gtfunc, rltfunc, rgtfunc;
 
-            if (!TryGetBinder(types, Symbols.Cmp, SymbolId.Empty, out cbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(rTypes, Symbols.Cmp, SymbolId.Empty, out rcbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(types, Symbols.OperatorEquals, SymbolId.Empty, out eqbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(rTypes, Symbols.OperatorEquals, SymbolId.Empty, out reqbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(types, Symbols.OperatorLessThan, SymbolId.Empty, out ltbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(rTypes, Symbols.OperatorGreaterThan, SymbolId.Empty, out rgtbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(types, Symbols.OperatorGreaterThan, SymbolId.Empty, out gtbind)) return MakeDynamicMatchRule(types);
-            if (!TryGetBinder(rTypes, Symbols.OperatorLessThan, SymbolId.Empty, out rltbind)) return MakeDynamicMatchRule(types);
-
-            // then resolve any overloads down to candidates based upon our argument types...
-            BindingTarget fcand = ComparisonTargetFromBinder(cbind, types);
-            BindingTarget rcand = ComparisonTargetFromBinder(rcbind, rTypes);
-            BindingTarget eqcand = ComparisonTargetFromBinder(eqbind, types);
-            BindingTarget reqcand = ComparisonTargetFromBinder(reqbind, rTypes);
-            BindingTarget ltcand = ComparisonTargetFromBinder(ltbind, types);
-            BindingTarget rgtcand = ComparisonTargetFromBinder(rgtbind, rTypes);
-            BindingTarget gtcand = ComparisonTargetFromBinder(gtbind, types);
-            BindingTarget rltcand = ComparisonTargetFromBinder(rltbind, rTypes);
+            cfunc = GetSlotOrFunction(types, Symbols.Cmp);
+            rcfunc = GetSlotOrFunction(rTypes, Symbols.Cmp);
+            eqfunc = GetSlotOrFunction(types, Symbols.OperatorEquals);
+            reqfunc = GetSlotOrFunction(rTypes, Symbols.OperatorEquals);
+            ltfunc = GetSlotOrFunction(types, Symbols.OperatorLessThan);
+            gtfunc = GetSlotOrFunction(types, Symbols.OperatorGreaterThan);
+            rltfunc = GetSlotOrFunction(rTypes, Symbols.OperatorLessThan);
+            rgtfunc = GetSlotOrFunction(rTypes, Symbols.OperatorGreaterThan);
 
             // inspect forward and reverse versions so we can pick one or both.
-            BindingTarget cTarget, rcTarget, eqTarget, reqTarget, ltTarget, rgtTarget, gtTarget, rltTarget;
-            GetCombinedTargets(fcand, rcand, out cTarget, out rcTarget);
-            GetCombinedTargets(eqcand, reqcand, out eqTarget, out reqTarget);
-            GetCombinedTargets(ltcand, rgtcand, out ltTarget, out rgtTarget);
-            GetCombinedTargets(gtcand, rltcand, out gtTarget, out rltTarget);
+            SlotOrFunction cTarget, rcTarget, eqTarget, reqTarget, ltTarget, rgtTarget, gtTarget, rltTarget;
+            SlotOrFunction.GetCombinedTargets(cfunc, rcfunc, out cTarget, out rcTarget);
+            SlotOrFunction.GetCombinedTargets(eqfunc, reqfunc, out eqTarget, out reqTarget);
+            SlotOrFunction.GetCombinedTargets(ltfunc, rgtfunc, out ltTarget, out rgtTarget);
+            SlotOrFunction.GetCombinedTargets(gtfunc, rltfunc, out gtTarget, out rltTarget);
 
             PythonType xType = types[0];
             PythonType yType = types[1];
@@ -402,38 +382,53 @@ namespace IronPython.Runtime.Calls {
             bool tryRich = true, more = true;
             if (xType == yType && cTarget != null) {
                 // if the types are equal try __cmp__ first
-                more = more &&
-                    MakeOneComparisonTarget(cTarget, rule, stmts, types, false);
+                if (ShouldCoerce(xType, yType, true)) {
+                    // need to try __coerce__ first.
+                    stmts.Add(DoCoerce(rule, Operators.Compare, types, false));
+                }
+
+                more = more && MakeOneCompareGeneric(cTarget, rule, stmts, false, types, MakeCompareReverse);
 
                 if (xType != TypeCache.OldInstance) {
                     // try __cmp__ backwards for new-style classes and don't fallback to
                     // rich comparisons if available
-                    more = more && MakeOneComparisonTarget(rcTarget, rule, stmts, types, true);
+                    more = more && MakeOneCompareGeneric(rcTarget, rule, stmts, true, types, MakeCompareReverse);
                     tryRich = false;
                 }
             }
 
             if (tryRich) {
                 // try eq
-                more = more &&
-                    MakeOneComparisonTarget(eqTarget, rule, stmts, types, false, 0) &&
-                    MakeOneComparisonTarget(reqTarget, rule, stmts, types, true, 0);
+                if (more) {
+                    MakeOneCompareGeneric(eqTarget, rule, stmts, false, types, MakeCompareToZero);
+                    MakeOneCompareGeneric(reqTarget, rule, stmts, true, types, MakeCompareToZero);
 
-                // try less than & reverse
-                more = more &&
-                    MakeOneComparisonTarget(ltTarget, rule, stmts, types, false, -1) &&
-                    MakeOneComparisonTarget(rgtTarget, rule, stmts, types, true, -1);
+                    // try less than & reverse
+                    MakeOneCompareGeneric(ltTarget, rule, stmts, false, types, MakeCompareToNegativeOne);
+                    MakeOneCompareGeneric(rgtTarget, rule, stmts, true, types, MakeCompareToNegativeOne);
 
-                // try greater than & reverse
-                more = more &&
-                    MakeOneComparisonTarget(gtTarget, rule, stmts, types, false, 1) &&
-                    MakeOneComparisonTarget(rltTarget, rule, stmts, types, true, 1);
+                    // try greater than & reverse
+                    MakeOneCompareGeneric(gtTarget, rule, stmts, false, types, MakeCompareToOne);
+                    MakeOneCompareGeneric(rltTarget, rule, stmts, true, types, MakeCompareToOne);
+                }
             }
 
             if (xType != yType) {
-                more = more &&
-                    MakeOneComparisonTarget(cTarget, rule, stmts, types, false) &&
-                    MakeOneComparisonTarget(rcTarget, rule, stmts, types, true);
+                if (more && ShouldCoerce(xType, yType, true)) {
+                    // need to try __coerce__ first.
+                    stmts.Add(DoCoerce(rule, Operators.Compare, types, false));
+                }
+
+                more = more && MakeOneCompareGeneric(cTarget, rule, stmts, false, types, MakeCompareReverse);
+
+                if (more && ShouldCoerce(yType, xType, true)) {
+                    // try __coerce__ first
+                    stmts.Add(DoCoerce(rule, Operators.Compare, rTypes, true, delegate(Expression e) {
+                        return ReverseCompareValue(e);
+                    }));
+                }
+
+                more = more && MakeOneCompareGeneric(rcTarget, rule, stmts, true, types, MakeCompareReverse);
             }
 
             if (more) {
@@ -445,29 +440,454 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
+        private class SlotOrFunction {
+            private readonly BindingTarget _function;
+            private readonly PythonTypeSlot _slot;
+            public static readonly SlotOrFunction Empty = new SlotOrFunction();
+
+            private SlotOrFunction() {
+            }
+
+            public SlotOrFunction(BindingTarget function) {
+                _function = function;
+            }
+
+            public SlotOrFunction(PythonTypeSlot slot) {
+                _slot = slot;
+            }
+
+            public NarrowingLevel NarrowingLevel {
+                get {
+                    if (_function != null) {
+                        return _function.NarrowingLevel;
+                    }
+
+                    return NarrowingLevel.None;
+                }
+            }
+
+            public Type ReturnType {
+                get {
+                    if (_function != null) return _function.ReturnType;
+
+                    return typeof(object);
+                }
+            }
+
+            public bool MaybeNotImplemented {
+                get {
+                    if (_function != null) {
+                        return ReturnsNotImplemented(_function);
+                    }
+
+                    return true;
+                }
+            }
+
+            public bool Success {
+                get {
+                    return _slot != null || _function != null;
+                }
+            }
+
+            public Expression MakeCall(StandardRule<T> rule, IList<Expression> args) {
+                if (_function != null) {
+                    return _function.MakeExpression(rule, args);
+                } else {
+                    Variable tmp = rule.GetTemporary(typeof(object), "slotVal");
+
+                    return Ast.Comma(
+                        PythonBinderHelper.MakeTryGetTypeMember<T>(
+                            rule, 
+                            _slot, 
+                            tmp, 
+                            args[0], 
+                            Ast.Call(
+                                typeof(DynamicHelpers).GetMethod("GetPythonType"),
+                                args[0]
+                            )
+                        ),
+                        Ast.Action.Call(typeof(object), Ast.Read(tmp), args[1])
+                    );
+                }
+            }
+
+            public static void GetCombinedTargets(SlotOrFunction fCand, SlotOrFunction rCand, out SlotOrFunction fTarget, out SlotOrFunction rTarget) {
+                fTarget = rTarget = null;
+
+                if (fCand.Success) {
+                    if (rCand.Success) {
+                        if (fCand.NarrowingLevel <= rCand.NarrowingLevel) {
+                            fTarget = fCand;
+                            rTarget = rCand;
+                        } else {
+                            fTarget = null;
+                            rTarget = rCand;
+                        }
+                    } else {
+                        fTarget = fCand;
+                    }
+                } else if (rCand.Success) {
+                    rTarget = rCand;
+                } 
+            }
+        }
+
+        private SlotOrFunction GetSlotOrFunction(PythonType[] types, SymbolId op) {
+            MethodBinder binder;
+            PythonTypeSlot slot;
+
+            if (TryGetBinder(types, op, SymbolId.Empty, out binder)) {
+                if (binder != null) {
+                    BindingTarget bt = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
+                    if (bt != null && bt.Success) {
+                        return new SlotOrFunction(bt);
+                    }
+                }
+            } else if (types[0].TryResolveSlot(Context, op, out slot)) {
+                return new SlotOrFunction(slot);
+            }
+
+            return SlotOrFunction.Empty;
+        }
+
+        /// <summary>
+        /// Helper to handle a comparison operator call.  Checks to see if the call can
+        /// return NotImplemented and allows the caller to modify the expression that
+        /// is ultimately returned (e.g. to turn __cmp__ into a bool after a comparison)
+        /// </summary>
+        private bool MakeOneCompareGeneric(SlotOrFunction target, StandardRule<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Function<Expression, StandardRule<T>, bool, Expression> returner) {
+            if (target == null || !target.Success) return true;
+
+            Variable tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
+            Expression call = target.MakeCall(rule, CheckTypesAndReverse(rule, reverse, types));
+            Expression assign = Ast.Assign(tmp, call);
+            Expression ret = returner(Ast.ReadDefined(tmp), rule, reverse);
+
+            if (target.MaybeNotImplemented) {
+                stmts.Add(
+                    Ast.IfThen(
+                        Ast.NotEqual(
+                            assign,
+                            Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))
+                        ),
+                        ret)
+                    );
+                return true;
+            } else {
+                stmts.Add(Ast.Comma(assign, ret));
+                return false;
+            }
+        }
+        
+        private static BinaryExpression ReverseCompareValue(Expression retVal) {
+            return Ast.Multiply(
+                Ast.ConvertHelper(
+                    retVal,
+                    typeof(int)
+                ),
+                Ast.Constant(-1)
+            );
+        }
+
+        /// <summary>
+        /// Checks if a coercion check should be performed.  We perform coercion under the following
+        /// situations:
+        ///     1. Old instances performing a binary operator (excluding rich comparisons)
+        ///     2. User-defined new instances calling __cmp__ but only if we wouldn't dispatch to a built-in __coerce__ on the parent type
+        ///     
+        /// This matches the behavior of CPython.
+        /// </summary>
+        /// <returns></returns>
+        private bool ShouldCoerce(PythonType xType, PythonType yType, bool isCompare) {
+            if (_disallowCoercion) return false;
+
+            if (xType == TypeCache.OldInstance) return true;
+
+            if (isCompare && !xType.IsSystemType && yType.IsSystemType) {
+                if (yType == TypeCache.Int32 ||
+                    yType == TypeCache.BigInteger ||
+                    yType == TypeCache.Double ||
+                    yType == TypeCache.Complex64) {
+
+                    // only coerce new style types that define __coerce__ and
+                    // only when comparing against built-in types which
+                    // define __coerce__
+                    PythonTypeSlot pts;
+                    if (xType.TryResolveSlot(Context, Symbols.Coerce, out pts)) {
+                        // don't call __coerce__ if it's declared on the base type
+                        BuiltinMethodDescriptor bmd = pts as BuiltinMethodDescriptor;
+                        if (bmd == null)  return true;
+
+                        if (bmd.__name__ != "__coerce__" &&
+                            bmd.DeclaringType != typeof(int) &&
+                            bmd.DeclaringType != typeof(BigInteger) &&
+                            bmd.DeclaringType != typeof(double) &&
+                            bmd.DeclaringType != typeof(Complex64)) {
+                            return true;
+                        }
+
+                        foreach (PythonType pt in xType.ResolutionOrder) {
+                            if (pt.UnderlyingSystemType == bmd.DeclaringType) {
+                                // inherited __coerce__
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private Expression GetCompareTest(Expression expr, bool reverse) {
+            if (expr.Type == typeof(int)) {
+                // fast path, just do a compare in IL
+                return GetCompareNode(reverse, expr);
+            } else {
+                return Ast.Call(
+                    GetCompareMethod(reverse),
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("CompareToZero"),
+                        Ast.ConvertHelper(expr, typeof(object))
+                    )
+                );
+            }
+        }
+
+        private Expression MakeCompareReturn(Expression expr, StandardRule<T> rule, bool reverse) {
+            return rule.MakeReturn(Binder, expr);
+        }
+
+        private Expression MakeCompareReverse(Expression expr, StandardRule<T> rule, bool reverse) {
+            Expression res = expr;
+            if (reverse) {
+                res = ReverseCompareValue(expr);
+            }
+
+            return MakeCompareReturn(res, rule, reverse);
+        }
+
+        private Expression MakeCompareTest(Expression expr, StandardRule<T> rule, bool reverse) {
+            return MakeCompareReturn(GetCompareTest(expr, reverse), rule, reverse);
+        }
+
+        private Expression MakeCompareToZero(Expression expr, StandardRule<T> rule, bool reverse) {
+            return MakeValueCheck(rule, 0, expr);
+        }
+
+        private Expression MakeCompareToOne(Expression expr, StandardRule<T> rule, bool reverse) {
+            return MakeValueCheck(rule, 1, expr);
+        }
+
+        private Expression MakeCompareToNegativeOne(Expression expr, StandardRule<T> rule, bool reverse) {
+            return MakeValueCheck(rule, -1, expr);
+        }
+
+        private Expression MakeValueCheck(StandardRule<T> rule, int val, Expression test) {
+            if (test.Type != typeof(bool)) {
+                test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
+            }
+            return Ast.IfThen(
+                test,
+                rule.MakeReturn(Binder, Ast.Constant(val))
+            );
+        }
+
+        private Expression GetCompareNode(bool reverse, Expression expr) {
+            switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Operation) : Operation) {
+                case Operators.Equals: return Ast.Equal(expr, Ast.Constant(0));
+                case Operators.NotEquals: return Ast.NotEqual(expr, Ast.Constant(0));
+                case Operators.GreaterThan: return Ast.GreaterThan(expr, Ast.Constant(0));
+                case Operators.GreaterThanOrEqual: return Ast.GreaterThanEquals(expr, Ast.Constant(0));
+                case Operators.LessThan: return Ast.LessThan(expr, Ast.Constant(0));
+                case Operators.LessThanOrEqual: return Ast.LessThanEquals(expr, Ast.Constant(0));
+                default: throw new InvalidOperationException();
+            }
+        }
+
+        private MethodInfo GetCompareMethod(bool reverse) {
+            string name;
+
+            switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Operation) : Operation) {
+                case Operators.Equals: name = "CompareEqual"; break;
+                case Operators.NotEquals: name = "CompareNotEqual"; break;
+                case Operators.GreaterThan: name = "CompareGreaterThan"; break;
+                case Operators.GreaterThanOrEqual: name = "CompareGreaterThanOrEqual"; break;
+                case Operators.LessThan: name = "CompareLessThan"; break;
+                case Operators.LessThanOrEqual: name = "CompareLessThanOrEqual"; break;
+                default: throw new InvalidOperationException();
+            }
+
+            return typeof(PythonOps).GetMethod(name);
+        }
+
+        private Expression MakeFallbackCompare(StandardRule<T> block) {
+            return block.MakeReturn(Binder,
+                Ast.Call(
+                    GetComparisonFallbackMethod(Operation),
+                    Ast.ConvertHelper(block.Parameters[0], typeof(object)),
+                    Ast.ConvertHelper(block.Parameters[1], typeof(object))
+                )
+            );
+        }
+
+        #endregion
+
         private StandardRule<T> MakeRuleForBinaryOperator(PythonType[] types, Operators oper, BindingTarget fCand, BindingTarget rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
             BindingTarget fTarget, rTarget;
 
-            if (!GetCombinedTargets(fCand, rCand, out fTarget, out rTarget) &&
-                fSlot == null &&
-                rSlot == null) {
-                return MakeRuleForNoMatch(types);
-            }
-
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
-
             List<Expression> stmts = new List<Expression>();
+
+            if (Action.IsInPlace) {
+                // in place operator, see if there's a specific method that handles it.
+                SlotOrFunction function = GetSlotOrFunction(types, Symbols.OperatorToSymbol(Operation));
+
+                // we don't do a coerce for in place operators if the lhs implements __iop__
+                if (!MakeOneCompareGeneric(function, rule, stmts, false, types, MakeCompareReturn)) {
+                    // the method handles it and always returns a useful value.
+                    rule.Target = Ast.Block(stmts);
+                    return rule;
+                }
+            }
+
+            if (!GetCombinedTargets(fCand, rCand, out fTarget, out rTarget) &&
+                fSlot == null &&
+                rSlot == null &&
+                !ShouldCoerce(types[0], types[1], false) &&
+                !ShouldCoerce(types[1], types[0], false) &&
+                stmts.Count == 0) {
+                return MakeRuleForNoMatch(types);
+            }
+            
+            if (ShouldCoerce(types[0], types[1], false) && (oper != Operators.Mod || !types[0].IsSubclassOf(TypeCache.String))) {
+                // need to try __coerce__ first.
+                stmts.Add(DoCoerce(rule, oper, types, false));
+            }
+
             if (MakeOneTarget(fTarget, fSlot, rule, stmts, false, types)) {
+                if (ShouldCoerce(types[1], types[0], false)) {
+                    // need to try __coerce__ on the reverse first                    
+                    stmts.Add(DoCoerce(rule, oper, new PythonType[] { types[1], types[0] }, true));
+                }
+
                 if (rSlot != null) {
                     stmts.Add(MakeSlotCall(rSlot, rule, true));
                     stmts.Add(MakeBinaryThrow(rule));
                 } else if (MakeOneTarget(rTarget, rSlot, rule, stmts, false, types)) {
+                    // need to fallback to throwing or coercion
                     stmts.Add(MakeBinaryThrow(rule));
-                }
+                } 
             }
+
             rule.Target = Ast.Block(stmts);
             return rule;
+        }
+
+        private Expression DoCoerce(StandardRule<T> rule, Operators op, PythonType[] types, bool reverse) {
+            return DoCoerce(rule, op, types, reverse, delegate(Expression e) {
+                return e;
+            });
+        }
+
+        /// <summary>
+        /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
+        /// </summary>
+        private Expression DoCoerce(StandardRule<T> rule, Operators op, PythonType[] types, bool reverse, Function<Expression, Expression> returnTransform) {
+            Variable coerceResult = rule.GetTemporary(typeof(object), "coerceResult");
+            Variable coerceTuple = rule.GetTemporary(typeof(PythonTuple), "coerceTuple");
+
+            if (!_testCoerceRecursionCheck) {
+                // during coercion we need to enforce recursion limits if
+                // they're enabled and the rule's test needs to reflect this.
+                rule.AddTest(
+                    Ast.Equal(
+                        Ast.Call(typeof(PythonOps).GetMethod("ShouldEnforceRecursion")),
+                        Ast.Constant(PythonFunction.EnforceRecursion)
+                    )
+                );
+                // we can't interpret this rule because in the recursion case
+                // we use too much stack running the same actions over and
+                // over again.
+                rule.CanInterpretTarget = false;
+                _testCoerceRecursionCheck = true; 
+            }
+
+            Expression self, other;
+            if (reverse) {
+                self = Ast.ConvertHelper(rule.Parameters[1], types[0].UnderlyingSystemType);
+                other = Ast.ConvertHelper(rule.Parameters[0], types[1].UnderlyingSystemType);
+            } else {
+                self = Ast.ConvertHelper(rule.Parameters[0], types[0].UnderlyingSystemType);
+                other = Ast.ConvertHelper(rule.Parameters[1], types[1].UnderlyingSystemType);
+            }
+
+            // tmp = self.__coerce__(other)
+            // if tmp != null && tmp != NotImplemented && (tuple = PythonOps.ValidateCoerceResult(tmp)) != null:
+            //      return operation(tuple[0], tuple[1])                        
+            SlotOrFunction slot = GetSlotOrFunction(types, Symbols.Coerce);
+            
+            if (slot.Success) {
+                return Ast.If(
+                    Ast.AndAlso(
+                        Ast.Not(
+                            Ast.TypeIs(
+                                Ast.Assign(
+                                    coerceResult,
+                                    slot.MakeCall(
+                                        rule,
+                                        new Expression[] { self, other }
+                                    )
+                                ),
+                                typeof(OldInstance)
+                            )
+                        ),
+                        Ast.NotEqual(
+                            Ast.Assign(
+                                coerceTuple,
+                                Ast.Call(
+                                    typeof(PythonOps).GetMethod("ValidateCoerceResult"),
+                                    Ast.Read(coerceResult)
+                                )
+                            ),
+                            Ast.Constant(null)
+                        )
+                    ),
+                    PythonBinderHelper.AddRecursionCheck(
+                        rule.MakeReturn(
+                            Binder,
+                            returnTransform(
+                                Ast.Action.Operator(
+                                    op | Operators.UserDefinedFlag,     // TODO: Replace w/ custom action
+                                    typeof(object),
+                                    reverse ? CoerceTwo(coerceTuple) : CoerceOne(coerceTuple),
+                                    reverse ? CoerceOne(coerceTuple) : CoerceTwo(coerceTuple)
+                                )
+                            )
+                        )
+                    )
+                );
+            }
+
+            return Ast.Empty();
+        }
+
+        private static MethodCallExpression CoerceTwo(Variable coerceTuple) {
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("GetCoerceResultTwo"),
+                Ast.Read(coerceTuple)
+            );
+        }
+
+        private static MethodCallExpression CoerceOne(Variable coerceTuple) {
+            return Ast.Call(
+                typeof(PythonOps).GetMethod("GetCoerceResultOne"),
+                Ast.Read(coerceTuple)
+            );
         }
 
         #region Indexer rule support
@@ -505,7 +925,7 @@ namespace IronPython.Runtime.Calls {
 
             GetIndexOperators(out item, out slice, out mandatoryArgs);
 
-            if (types.Length == mandatoryArgs + 1 && IsSlice && HasOnlyNumericTypes(types, Action.Operation == Operators.SetSlice)) {
+            if (types.Length == mandatoryArgs + 1 && IsSlice && HasOnlyNumericTypes(types, Operation == Operators.SetSlice)) {
                 // two slice indexes, all int arguments, need to call __*slice__ if it exists
                 callSlice = TryGetStaticFunction(slice, indexedType, out itemFunc);
                 if(itemFunc == null || !callSlice) {
@@ -521,7 +941,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             // make the Callable object which does the actual call to the function or slot
-            Callable callable = Callable.MakeCallable(Binder, Action.Operation, itemFunc, itemSlot);
+            Callable callable = Callable.MakeCallable(Binder, Operation, itemFunc, itemSlot);
             if (callable == null) {
                 return PythonBinderHelper.TypeError<T>("'{0}' object is unsubscriptable", types[0]);
             }
@@ -570,14 +990,14 @@ namespace IronPython.Runtime.Calls {
         /// </summary>
         private Expression[] GetItemSliceArguments(StandardRule<T> rule, PythonType[] types) {
             Expression[] args;
-            if (Action.Operation == Operators.SetSlice) {
+            if (Operation == Operators.SetSlice) {
                 args = new Expression[] { 
                             Ast.ConvertHelper(rule.Parameters[0], types[0]), 
                             GetSetSlice(rule), 
                             Ast.ConvertHelper(rule.Parameters[rule.Parameters.Count - 1], types[types.Length - 1])
                         };
             } else {
-                Debug.Assert(Action.Operation == Operators.GetSlice || Action.Operation == Operators.DeleteSlice);
+                Debug.Assert(Operation == Operators.GetSlice || Operation == Operators.DeleteSlice);
 
                 args = new Expression[] { 
                     Ast.ConvertHelper(rule.Parameters[0], types[0]),
@@ -967,12 +1387,12 @@ namespace IronPython.Runtime.Calls {
 
         private bool IsSlice {
             get {
-                return Action.Operation == Operators.GetSlice || Action.Operation == Operators.SetSlice || Action.Operation == Operators.DeleteSlice;
+                return Operation == Operators.GetSlice || Operation == Operators.SetSlice || Operation == Operators.DeleteSlice;
             }
         }
 
         private void FixArgsForIndex(PythonType[] types, Expression[] args, Type[] callTypes) {
-            if (Action.Operation == Operators.GetItem || Action.Operation == Operators.SetItem || Action.Operation == Operators.DeleteItem) {
+            if (Operation == Operators.GetItem || Operation == Operators.SetItem || Operation == Operators.DeleteItem) {
                 Debug.Assert(args.Length == types.Length && types.Length == callTypes.Length);
 
                 for (int i = 1; i < types.Length; i++) {
@@ -996,7 +1416,7 @@ namespace IronPython.Runtime.Calls {
         /// a get/set/delete and the minimum number of arguments required for each of those.
         /// </summary>
         private void GetIndexOperators(out SymbolId item, out SymbolId slice, out int mandatoryArgs) {
-            switch (Action.Operation) {
+            switch (Operation) {
                 case Operators.GetItem:
                 case Operators.GetSlice:
                     item = Symbols.GetItem;
@@ -1102,6 +1522,32 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse, PythonType[] types) {
+            IList<Expression> vars = CheckTypesAndReverse(block, reverse, types);
+
+            return target.MakeExpression(block, vars);
+        }
+
+        private static IList<Expression> CheckTypesAndReverse(StandardRule<T> block, bool reverse, PythonType[] types) {
+            IList<Expression> vars = ReverseArgs(block, reverse, ref types);
+
+            // add casts to the known types to avoid full conversions that MakeExpression will emit.
+            vars = CheckTypes(types, vars);
+            return vars;
+        }
+
+        private static IList<Expression> CheckTypes(PythonType[] types, IList<Expression> vars) {
+            if (types != null) {
+                vars = ArrayUtils.MakeArray(vars);
+                for (int i = 0; i < types.Length; i++) {
+                    if (types[i] != null) {
+                        vars[i] = Ast.ConvertHelper(vars[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
+                    }
+                }
+            }
+            return vars;
+        }
+
+        private static IList<Expression> ReverseArgs(StandardRule<T> block, bool reverse, ref PythonType[] types) {
             IList<Expression> vars = block.Parameters;
             if (reverse) {
                 Expression[] newVars = new Expression[2];
@@ -1115,76 +1561,8 @@ namespace IronPython.Runtime.Calls {
                     newTypes[1] = types[0];
                     types = newTypes;
                 }
-            } 
-
-            // add casts to the known types to avoid full conversions that MakeExpression will emit.
-            if (types != null) {
-                vars = ArrayUtils.MakeArray(vars);
-                for (int i = 0; i < types.Length; i++) {
-                    if (types[i] != null) {
-                        vars[i] = Ast.ConvertHelper(vars[i], CompilerHelpers.GetVisibleType(types[i].UnderlyingSystemType));
-                    }
-                }
             }
-
-            return target.MakeExpression(block, vars);
-        }
-
-        private bool MakeOneComparisonTarget(BindingTarget target, StandardRule<T> rule, List<Expression> stmts, PythonType[] types, bool reverse) {
-            return MakeOneComparisonTarget(target, rule, stmts, types, reverse, null);
-        }
-
-        private bool MakeOneComparisonTarget(BindingTarget target, StandardRule<T> rule, List<Expression> stmts, PythonType[] types, bool reverse, int? val) {
-            if (target == null) return true;
-
-            if (ReturnsNotImplemented(target)) {
-                Variable tmp = rule.GetTemporary(target.ReturnType, "tmp");
-                Expression body;
-                if (val != null) {
-                    body = MakeValueCheck(rule, val, tmp);
-                } else {
-                    body = reverse ?
-                        rule.MakeReturn(Binder,
-                            Ast.Multiply(
-                                Ast.Convert(
-                                    Ast.ReadDefined(tmp),
-                                    typeof(int)),
-                                Ast.Constant(-1))) :
-                        rule.MakeReturn(Binder, Ast.ReadDefined(tmp));
-                }
-                stmts.Add(Ast.IfThen(
-                    Ast.NotEqual(
-                        Ast.Assign(tmp, MakeCall(target, rule, reverse)),
-                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
-                    body));
-            } else {
-                Expression call = MakeCall(target, rule, reverse);
-                if (val == null) {
-                    if (reverse) {
-                        call = Ast.Multiply(call, Ast.Constant(-1));
-                    }
-                    stmts.Add(rule.MakeReturn(Binder, call));
-                    return false;
-                }
-
-                Debug.Assert(call.Type == typeof(bool));
-                Variable var = rule.GetTemporary(call.Type, "tmp");
-                stmts.Add(Ast.Statement(Ast.Assign(var, call)));
-                stmts.Add(MakeValueCheck(rule, val, var));
-            }
-
-            return true;
-        }
-
-        private Expression MakeValueCheck(StandardRule<T> rule, int? val, Variable var) {
-            Expression test = Ast.ReadDefined(var);
-            if (test.Type != typeof(bool)) {
-                test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
-            }
-            return Ast.IfThen(
-                test,
-                rule.MakeReturn(Binder, Ast.Constant(val))
-            );
+            return vars;
         }
 
         private bool MakeOneTarget(BindingTarget target, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
@@ -1281,7 +1659,7 @@ namespace IronPython.Runtime.Calls {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
-                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
+                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Operation))),
                     Ast.ConvertHelper(block.Parameters[0], typeof(object))
                 )
             );
@@ -1291,89 +1669,13 @@ namespace IronPython.Runtime.Calls {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
-                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Action.Operation))),
+                    Ast.Constant(SymbolTable.IdToString(Symbols.OperatorToSymbol(Operation))),
                     Ast.ConvertHelper(block.Parameters[0], typeof(object)),
                     Ast.ConvertHelper(block.Parameters[1], typeof(object))
                 )
             );
         }
-
-        private bool MakeOneCompare(BindingTarget target, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
-            if (target == null || !target.Success) return true;
-
-            if (ReturnsNotImplemented(target)) {
-                Variable tmp = block.GetTemporary(target.ReturnType, "tmp");
-                stmts.Add(Ast.IfThen(
-                    Ast.NotEqual(
-                        Ast.Assign(tmp, MakeCall(target, block, reverse, types)),
-                        Ast.ReadField(null, typeof(PythonOps).GetField("NotImplemented"))),
-                    MakeCompareTest(Ast.ReadDefined(tmp), block, reverse)));
-                return true;
-            } else {
-                stmts.Add(MakeCompareTest(MakeCall(target, block, reverse, types), block, reverse));
-                return false;
-            }
-        }
-
-        private Expression MakeCompareTest(Expression expr, StandardRule<T> block, bool reverse) {
-            if (expr.Type == typeof(int)) {
-                // fast path, just do a compare in IL
-                return block.MakeReturn(Binder,
-                    GetCompareNode(reverse, expr)
-                );
-            } else {
-                return block.MakeReturn(Binder,
-                    Ast.Call(
-                        GetCompareMethod(reverse),
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("CompareToZero"),
-                            Ast.ConvertHelper(expr, typeof(object))
-                        )
-                    )
-                );
-            }
-        }
-
-        private Expression GetCompareNode(bool reverse, Expression expr) {
-            switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Action.Operation) : Action.Operation) {
-                case Operators.Equals: return Ast.Equal(expr, Ast.Constant(0));
-                case Operators.NotEquals: return Ast.NotEqual(expr, Ast.Constant(0));
-                case Operators.GreaterThan: return Ast.GreaterThan(expr, Ast.Constant(0));
-                case Operators.GreaterThanOrEqual: return Ast.GreaterThanEquals(expr, Ast.Constant(0));
-                case Operators.LessThan: return Ast.LessThan(expr, Ast.Constant(0));
-                case Operators.LessThanOrEqual: return Ast.LessThanEquals(expr, Ast.Constant(0));
-                default: throw new InvalidOperationException();
-            }
-        }
-
-        private MethodInfo GetCompareMethod(bool reverse) {
-            string name;
-
-            switch (reverse ? CompilerHelpers.OperatorToReverseOperator(Action.Operation) : Action.Operation) {
-                case Operators.Equals: name = "CompareEqual"; break;
-                case Operators.NotEquals: name = "CompareNotEqual"; break;
-                case Operators.GreaterThan: name = "CompareGreaterThan"; break;
-                case Operators.GreaterThanOrEqual: name = "CompareGreaterThanOrEqual"; break;
-                case Operators.LessThan: name = "CompareLessThan"; break;
-                case Operators.LessThanOrEqual: name = "CompareLessThanOrEqual"; break;
-                default: throw new InvalidOperationException();
-            }
-
-            return typeof(PythonOps).GetMethod(name);
-        }
-
-        private Expression MakeFallbackCompare(StandardRule<T> block) {
-            return block.MakeReturn(Binder,
-                Ast.Call(
-                    GetComparisonFallbackMethod(Action.Operation),
-                    Ast.ConvertHelper(block.Parameters[0], typeof(object)),
-                    Ast.ConvertHelper(block.Parameters[1], typeof(object))
-                )
-            );
-        }
-
-
-
+        
         /// <summary>
         /// Gets the logically combined targets.  If the 1st target is preferred over the 2nd one 
         /// we'll return both.
@@ -1820,6 +2122,16 @@ namespace IronPython.Runtime.Calls {
             }
 
             return o as BuiltinFunction;
+        }
+
+        private Operators Operation {
+            get {
+                return (Action.Operation & ~Operators.UserDefinedFlag);
+            }
+        }
+        
+        private static bool IsReverseOperator(Operators op) {
+            return op >= Operators.ReverseAdd && op <= Operators.ReverseXor;
         }
     }
 }

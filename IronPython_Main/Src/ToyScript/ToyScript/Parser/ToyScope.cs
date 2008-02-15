@@ -25,12 +25,11 @@ using MSAst = Microsoft.Scripting.Ast;
 namespace ToyScript.Parser {
     class ToyScope {
         private ToyScope _parent;
-        private MSAst.CodeBlock _block;
+        private MSAst.LambdaBuilder _block;
         private Dictionary<string, MSAst.Variable> _variables = new Dictionary<string, MSAst.Variable>();
 
         public ToyScope(string name, ToyScope parent) {
-            name = name ?? "<toyblock>";
-            _block = MSAst.Ast.CodeBlock(name);
+            _block = MSAst.Ast.Lambda(name ?? "<toyblock>", typeof(object));
             _parent = parent;
         }
 
@@ -89,7 +88,7 @@ namespace ToyScript.Parser {
 
         public MSAst.CodeBlock FinishScope(MSAst.Expression body) {
             _block.Body = body;
-            return _block;
+            return _block.MakeLambda();
         }
     }
 }

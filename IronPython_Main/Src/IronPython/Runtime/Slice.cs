@@ -24,50 +24,135 @@ using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
-    [PythonType("slice")]
+    [PythonSystemType("slice")]
     public sealed class Slice : IComparable, IValueEquality, ISlice {
-        private readonly object start, stop, step;
+        private readonly object _start, _stop, _step;
 
         public Slice(object stop) : this(null, stop, null) { }
+
         public Slice(object start, object stop) : this(start, stop, null) { }
+
         public Slice(object start, object stop, object step) {
-            this.start = start; this.stop = stop; this.step = step;
+            _start = start;
+            _stop = stop;
+            _step = step;
         }
+
+        #region Python Public API Surface
+
+        public object start {
+            get { return _start; }
+        }
+
+        public object stop {
+            get { return _stop; }
+        }
+
+        public object step {
+            get { return _step; }
+        }
+
+        public int __cmp__(Slice obj) {
+            return PythonOps.CompareArrays(new object[] { _start, _stop, _step }, 3,
+                new object[] { obj._start, obj._stop, obj._step }, 3);
+        }
+
+        public void indices(int len, out int ostart, out int ostop, out int ostep) {
+            int count;
+            PythonOps.FixSlice(len, _start, _stop, _step, out ostart, out ostop, out ostep, out count);
+        }
+
+        public void indices(object len, out int ostart, out int ostop, out int ostep) {
+            int count;
+            PythonOps.FixSlice(Converter.ConvertToIndex(len), _start, _stop, _step, out ostart, out ostop, out ostep, out count);
+        }
+
+        public static bool operator >(Slice self, Slice other) {
+            return self.__cmp__(other) > 0;
+        }
+
+        public static bool operator <(Slice self, Slice other) {
+            return self.__cmp__(other) < 0;
+        }
+
+        #endregion
+
+        #region Object overrides
+
+        public override string ToString() {
+            return string.Format("slice({0}, {1}, {2})", PythonOps.StringRepr(_start), PythonOps.StringRepr(_stop), PythonOps.StringRepr(_step));
+        }
+
+        public override bool Equals(object obj) {
+            Slice s = obj as Slice;
+            if (s == null) return false;
+
+            return (PythonOps.Compare(_start, s._start) == 0) &&
+                (PythonOps.Compare(_stop, s._stop) == 0) &&
+                (PythonOps.Compare(_step, s._step) == 0);
+        }
+
+        public override int GetHashCode() {
+            int hash = 0;
+            if (_start != null) hash ^= _start.GetHashCode();
+            if (_stop != null) hash ^= _stop.GetHashCode();
+            if (_step != null) hash ^= _step.GetHashCode();
+            return hash;
+        }
+
+        #endregion
+
+        #region IComparable Members
+
+        int IComparable.CompareTo(object obj) {
+            Slice other = obj as Slice;
+            if (other == null) throw new ArgumentException("expected slice");
+            return __cmp__(other);
+        }
+
+        #endregion
+
+        #region IValueEquality Members
+
+        public int GetValueHashCode() {
+            throw PythonOps.TypeErrorForUnhashableType("slice");
+        }
+
+        /// <summary>
+        /// slice is sealed so equality doesn't need to be virtual and can be the IValueEquality
+        /// interface implementation
+        /// </summary>
+        public bool ValueEquals(object other) {
+            return Equals(other);
+        }
+
+        public bool ValueNotEquals(object other) {
+            return !Equals(other);
+        }
+
+        #endregion
 
         #region ISlice Members
 
-        public object Start {
-            [PythonName("start")]
+        object ISlice.Start {
             get { return start; }
         }
 
-        public object Stop {
-            [PythonName("stop")]
+        object ISlice.Stop {
             get { return stop; }
         }
 
-        public object Step {
-            [PythonName("step")]
+        object ISlice.Step {
             get { return step; }
         }
 
         #endregion
 
-        [PythonName("indices")]
-        public void Indices(int len, out int ostart, out int ostop, out int ostep) {
-            int count;
-            PythonOps.FixSlice(len, start, stop, step, out ostart, out ostop, out ostep, out count);
-        }
-
-        [PythonName("indices")]
-        public void Indices(object len, out int ostart, out int ostop, out int ostep) {
-            int count;
-            PythonOps.FixSlice(Converter.ConvertToIndex(len), start, stop, step, out ostart, out ostop, out ostep, out count);
-        }
+        #region Internal Implementation details
 
         internal static void FixSliceArguments(int size, ref int start, ref int stop) {
             start = start < 0 ? 0 : start > size ? size : start;
-            stop  = stop  < 0 ? 0 : stop  > size ? size : stop;
+            stop = stop < 0 ? 0 : stop > size ? size : stop;
         }
 
         /// <summary>
@@ -83,8 +168,8 @@ namespace IronPython.Runtime {
             bool calcedLength = false;  // only call __len__ once, even if we need it twice
             int length = 0;
 
-            if (start != null) {
-                newStart = Converter.ConvertToIndex(start);
+            if (_start != null) {
+                newStart = Converter.ConvertToIndex(_start);
                 if (newStart < 0) {
                     calcedLength = true;
                     length = PythonOps.Length(self);
@@ -95,8 +180,8 @@ namespace IronPython.Runtime {
                 newStart = 0;
             }
 
-            if (stop != null) {
-                newStop = Converter.ConvertToIndex(stop);
+            if (_stop != null) {
+                newStop = Converter.ConvertToIndex(_stop);
                 if (newStop < 0) {
                     if (!calcedLength) length = PythonOps.Length(self);
 
@@ -108,66 +193,13 @@ namespace IronPython.Runtime {
 
         }
 
-        #region Object overrides
-
-        public override string ToString() {
-            return string.Format("slice({0}, {1}, {2})", PythonOps.StringRepr(start), PythonOps.StringRepr(stop), PythonOps.StringRepr(step));
-        }
-
-        public override bool Equals(object obj) {
-            Slice s = obj as Slice;
-            if (s == null) return false;
-
-            return (PythonOps.Compare(start, s.start) == 0) &&
-                (PythonOps.Compare(stop, s.stop) == 0) &&
-                (PythonOps.Compare(step, s.step) == 0);
-        }
-
-        public override int GetHashCode() {
-            int hash = 0;
-            if (start != null) hash ^= start.GetHashCode();
-            if (stop != null) hash ^= stop.GetHashCode();
-            if (step != null) hash ^= step.GetHashCode();
-            return hash;
-        }
-
-        #endregion
-
-        [PythonName("__cmp__")]
-        public int CompareTo(object obj) {
-            Slice s = obj as Slice;
-            if (s == null) throw new ArgumentException("expected slice");
-            return PythonOps.CompareArrays(new object[] { start, stop, step }, 3,
-                new object[] { s.start, s.stop, s.step }, 3);
-        }
-
-        #region IValueEquality Members
-
-        public int GetValueHashCode() {
-            throw PythonOps.TypeErrorForUnhashableType("slice");
-        }
-        
-        // slice is sealed so equality doesn't need to be virtual and can be the IValueEquality
-        // interface implementation
-        [PythonName("__eq__")]  
-        public bool ValueEquals(object other) {
-            return Equals(other);
-        }
-
-        [PythonName("__ne__")]
-        public bool ValueNotEquals(object other) {
-            return !Equals(other);
-        }
-
-        #endregion
-
         internal delegate void SliceAssign(int index, object value);
 
         internal void DoSliceAssign(SliceAssign assign, int size, object value) {
             int ostart, ostop, ostep;
-            Indices(size, out ostart, out ostop, out ostep);
+            indices(size, out ostart, out ostop, out ostep);
 
-            if (this.step == null) throw PythonOps.ValueError("cannot do slice assignment w/ no step");
+            if (this._step == null) throw PythonOps.ValueError("cannot do slice assignment w/ no step");
 
             DoSliceAssign(assign, ostart, ostop, ostep, value);
         }
@@ -195,8 +227,8 @@ namespace IronPython.Runtime {
         }
 
         private static void SequenceSliceAssign(SliceAssign assign, int start, int n, int step, ISequence lst) {
-            if (lst.GetLength() < n) throw PythonOps.ValueError("too few items in the enumerator. need {0}", n);
-            else if (lst.GetLength() != n) throw PythonOps.ValueError("too many items in the enumerator need {0}", n);
+            if (lst.__len__() < n) throw PythonOps.ValueError("too few items in the enumerator. need {0}", n);
+            else if (lst.__len__() != n) throw PythonOps.ValueError("too many items in the enumerator need {0}", n);
 
             for (int i = 0, index = start; i < n; i++, index += step) {
                 assign(index, lst[i]);
@@ -223,21 +255,15 @@ namespace IronPython.Runtime {
 
             if (Object.ReferenceEquals(self, null) || object.ReferenceEquals(other, null)) return false;
 
-            return PythonOps.EqualRetBool(self.start, other.start) &&
-                PythonOps.EqualRetBool(self.stop, other.stop) &&
-                PythonOps.EqualRetBool(self.step, other.step);
+            return PythonOps.EqualRetBool(self._start, other._start) &&
+                PythonOps.EqualRetBool(self._stop, other._stop) &&
+                PythonOps.EqualRetBool(self._step, other._step);
         }
 
         //public static bool operator !=(Slice self, Slice other) {
         //    return !EqualsWorker(self, other);
         //}
 
-        public static bool operator >(Slice self, Slice other) {
-            return self.CompareTo(other) > 0;
-        }
-
-        public static bool operator <(Slice self, Slice other) {
-            return self.CompareTo(other) < 0;
-        }
+        #endregion
     }
 }

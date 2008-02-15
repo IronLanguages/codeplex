@@ -17,10 +17,11 @@ import clr
 import System
 
 clr.AddReference("Microsoft.Scripting")
-from Microsoft.Scripting.Runtime import CallTarget0;
-from Microsoft.Scripting.Generation import CompilerHelpers
+from Microsoft.Scripting.Runtime import CallTarget0
+from Microsoft.Scripting.Generation import Snippets
 
 paramTypes = System.Array[System.Type]([])
-cg = CompilerHelpers.CreateDynamicMethod("test", System.Object, paramTypes)
-cg.Emit(System.Reflection.Emit.OpCodes.Ret)
-cg.CreateDelegate[CallTarget0](clr.Reference[System.Reflection.MethodInfo]())
+
+ilgen = Snippets.Shared.CreateDynamicMethod("test", System.Object, paramTypes, False)
+ilgen.Emit(System.Reflection.Emit.OpCodes.Ret)
+ilgen.CreateDelegate[CallTarget0](clr.Reference[System.Reflection.MethodInfo]())

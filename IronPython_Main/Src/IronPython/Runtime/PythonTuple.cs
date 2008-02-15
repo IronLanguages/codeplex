@@ -31,7 +31,7 @@ using Microsoft.Scripting.Math;
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("tuple")]
     public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
-        internal static PythonTuple EMPTY = new PythonTuple();
+        internal static readonly PythonTuple EMPTY = new PythonTuple();
 
         #region Python Constructors
 
@@ -152,15 +152,15 @@ namespace IronPython.Runtime {
 
         #region ISequence Members
         [PythonName("__len__")]
-        public virtual int GetLength() {
+        public virtual int __len__() {
             return _data.Length;
         }
 
         public bool ContainsValueWrapper(object item) {
-            return ContainsValue(item);
+            return __contains__(item);
         }
 
-        public virtual bool ContainsValue(object value) {
+        public virtual bool __contains__(object value) {
             return ArrayOps.Contains(_data, _data.Length, value);
         }
 
@@ -183,7 +183,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__getslice__")]
-        public virtual object GetSlice(int start, int stop) {
+        public virtual object __getslice__(int start, int stop) {
             Slice.FixSliceArguments(_data.Length, ref start, ref stop);
 
             return MakeTuple(ArrayOps.GetSlice(_data, start, stop));
@@ -198,7 +198,7 @@ namespace IronPython.Runtime {
         #endregion
 
         #region binary operators
-        public static PythonTuple operator +(PythonTuple x, PythonTuple y) {
+        public static PythonTuple operator +([NotNull]PythonTuple x, [NotNull]PythonTuple y) {
             return MakeTuple(ArrayOps.Add(x._data, x._data.Length, y._data, y._data.Length));
         }
 
@@ -216,11 +216,11 @@ namespace IronPython.Runtime {
             return MultiplyWorker(x, n);
         }
 
-        public static object operator *(PythonTuple self, object count) {
+        public static object operator *([NotNull]PythonTuple self, object count) {
             return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, true);
         }
 
-        public static object operator *(object count, PythonTuple self) {
+        public static object operator *(object count, [NotNull]PythonTuple self) {
             return PythonOps.MultiplySequence<PythonTuple>(MultiplyWorker, self, count, false);
         }
 
@@ -233,7 +233,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return GetLength(); }
+            get { return __len__(); }
         }
 
         public void CopyTo(Array array, int index) {
@@ -395,7 +395,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__contains__")]
         public virtual bool Contains(object item) {
-            return this.ContainsValue(item);
+            return this.__contains__(item);
         }
 
         void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
@@ -405,7 +405,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection<object>.Count {
-            get { return GetLength(); }
+            get { return __len__(); }
         }
 
         bool ICollection<object>.IsReadOnly {

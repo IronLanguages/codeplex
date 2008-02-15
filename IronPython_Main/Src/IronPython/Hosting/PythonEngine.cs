@@ -40,6 +40,6 @@ namespace IronPython.Hosting {
 
     public sealed class PythonEngine {
         // Work around until tests are updated.
-        public static ScriptEngine CurrentEngine = ScriptDomainManager.CurrentManager.GetEngine("py");
+        public static IScriptEngine CurrentEngine = ScriptEnvironment.Create().GetEngine("py");
     }
 }

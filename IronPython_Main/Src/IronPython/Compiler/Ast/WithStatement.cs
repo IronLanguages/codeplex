@@ -167,10 +167,8 @@ namespace IronPython.Compiler.Ast {
                 ).Catch(typeof(Exception), exception.Variable,
                     Ast.Block(
                         // Python specific exception handling code
-                        Ast.Statement(
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
-                            )
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod("ClearDynamicStackFrames")
                         ),
                         // exc = False
                         AstGenerator.MakeAssignment(

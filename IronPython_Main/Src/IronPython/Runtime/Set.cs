@@ -34,11 +34,11 @@ namespace IronPython.Runtime {
     /// Common interface shared by both Set and FrozenSet
     /// </summary>
     public interface ISet : IEnumerable, IEnumerable<object> {
-        int GetLength();
+        int __len__();
 
-        bool Contains(object value);
-        bool IsSubset(object set);
-        bool IsSuperset(CodeContext context, object set);
+        bool __contains__(object value);
+        bool issubset(object set);
+        bool issuperset(CodeContext context, object set);
 
         // private methods used for operations between set types.
         ISet PrivDifference(IEnumerable set);
@@ -89,7 +89,7 @@ namespace IronPython.Runtime {
         public static object GetHashableSetIfSet(object o) {
             SetCollection asSet = o as SetCollection;
             if (asSet != null) {
-                return FrozenSetCollection.Make(asSet.GetEnumerator());
+                return FrozenSetCollection.Make(((IEnumerable)asSet).GetEnumerator());
             }
             return o;
         }
@@ -134,7 +134,7 @@ namespace IronPython.Runtime {
 
             IEnumerator ie = PythonOps.GetEnumerator(y);
             while (ie.MoveNext()) {
-                if (x.Contains(ie.Current))
+                if (x.__contains__(ie.Current))
                     res.PrivAdd(ie.Current);
             }
             res.PrivFreeze();
@@ -147,7 +147,7 @@ namespace IronPython.Runtime {
 
             IEnumerator ie = PythonOps.GetEnumerator(y);
             while (ie.MoveNext()) {
-                if (res.Contains(ie.Current)) {
+                if (res.__contains__(ie.Current)) {
                     res.PrivRemove(ie.Current);
                 }
             }
@@ -161,7 +161,7 @@ namespace IronPython.Runtime {
             Debug.Assert(res != null);
 
             foreach (object o in otherSet) {
-                if (res.Contains(o)) {
+                if (res.__contains__(o)) {
                     res.PrivRemove(o);
                 } else {
                     res.PrivAdd(o);
@@ -184,7 +184,7 @@ namespace IronPython.Runtime {
         public static bool IsSubset(ISet x, object y) {
             SetCollection set = new SetCollection(PythonOps.GetEnumerator(y));
             foreach (object o in x) {
-                if (!set.Contains(o)) {
+                if (!set.__contains__(o)) {
                     return false;
                 }
             }
@@ -201,21 +201,19 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Mutable set class
     /// </summary>
-    [PythonType("set")]
+    [PythonSystemType("set")]
     public class SetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
         PythonDictionary items;
 
         #region Set contruction
 
-        [PythonName("__init__")]
-        public void Initialize() {
-            Clear();
+        public void __init__() {
+            clear();
         }
 
-        [PythonName("__init__")]
-        public void Initialize(object setData) {
-            Clear();
-            Update(setData);
+        public void __init__(object setData) {
+            clear();
+            update(setData);
         }
 
         public SetCollection() {
@@ -229,7 +227,7 @@ namespace IronPython.Runtime {
         internal SetCollection(IEnumerator setData) {
             items = new PythonDictionary();
             while (setData.MoveNext()) {
-                Add(setData.Current);
+                add(setData.Current);
             }
         }
 
@@ -240,46 +238,51 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ISet
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+
+        public int __len__() {
             return items.Count;
         }
 
-        [SpecialName, PythonName("__contains__")]
-        public bool Contains(object value) {
+        public bool __contains__(object value) {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
 
             PythonOps.Hash(value);    // make sure we have a hashable item
             return items.ContainsKey(value);
         }
-        [PythonName("issubset")]
-        public bool IsSubset(object set) {
+
+        public bool issubset(object set) {
             return SetHelpers.IsSubset(this, set);
         }
-        [PythonName("issuperset")]
-        public bool IsSuperset(CodeContext context, object set) {
+
+        public bool issuperset(CodeContext context, object set) {
             return this >= new SetCollection(PythonOps.GetEnumerator(set));
         }
 
         ISet ISet.PrivDifference(IEnumerable set) {
-            return (ISet)Difference(set);
+            return (ISet)difference(set);
         }
+
         ISet ISet.PrivIntersection(IEnumerable set) {
-            return (ISet)Intersection(set);
+            return (ISet)intersection(set);
         }
+
         ISet ISet.PrivSymmetricDifference(IEnumerable set) {
-            return (ISet)SymmetricDifference(set);
+            return (ISet)symmetric_difference(set);
         }
+
         ISet ISet.PrivUnion(IEnumerable set) {
-            return (ISet)Union(set);
+            return (ISet)union(set);
         }
+
         void ISet.PrivAdd(object adding) {
-            Add(adding);
+            add(adding);
         }
+
         void ISet.PrivRemove(object removing) {
-            Remove(removing);
+            remove(removing);
         }
+
         void ISet.PrivFreeze() {
             // nop for non-frozen sets.
         }
@@ -295,33 +298,27 @@ namespace IronPython.Runtime {
 
         #region NonOperator Operations
 
-        [PythonName("union")]
-        public object Union(object s) {
+        public object union(object s) {
             return SetHelpers.Union(this, s);
         }
 
-        [PythonName("intersection")]
-        public object Intersection(object s) {
+        public object intersection(object s) {
             return SetHelpers.Intersection(this, s);
         }
 
-        [PythonName("difference")]
-        public object Difference(object s) {
+        public object difference(object s) {
             return SetHelpers.Difference(this, s);
         }
 
-        [PythonName("symmetric_difference")]
-        public object SymmetricDifference(object s) {
+        public object symmetric_difference(object s) {
             return SetHelpers.SymmetricDifference(this, s);
         }
 
-        [PythonName("copy")]
-        public SetCollection Copy() {
-            return new SetCollection(this.GetEnumerator());
+        public SetCollection copy() {
+            return new SetCollection(((IEnumerable)this).GetEnumerator());
         }
 
-        [PythonName("__reduce__")]
-        public PythonTuple Reduce() {
+        public PythonTuple __reduce__() {
             return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
@@ -332,7 +329,7 @@ namespace IronPython.Runtime {
             if (o.Length != 0) {
                 IEnumerator setData = PythonOps.GetEnumerator(o[0]);
                 while (setData.MoveNext()) {
-                    Add(setData.Current);
+                    add(setData.Current);
                 }
             }
         }
@@ -340,59 +337,54 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Mutating Members
+
         /// <summary>
         /// Appends one IEnumerable to an existing set
         /// </summary>
         /// <param name="s"></param>
-        [PythonName("update")]
-        public void Update(object s) {
+        public void update(object s) {
             IEnumerator ie = PythonOps.GetEnumerator(s);
             while (ie.MoveNext()) {
                 object o = ie.Current;
-                if (!Contains(o)) {
-                    Add(o);
+                if (!__contains__(o)) {
+                    add(o);
                 }
             }
         }
 
-        [PythonName("add")]
-        public void Add(object o) {
+        public void add(object o) {
             PythonOps.Hash(o);// make sure we're hashable
             if (!items.ContainsKey(o)) {
                 items.Add(o, o);
             }
         }
 
-        [PythonName("intersection_update")]
-        public void IntersectionUpdate(object s) {
-            SetCollection set = Intersection(s) as SetCollection;
+        public void intersection_update(object s) {
+            SetCollection set = intersection(s) as SetCollection;
             items = set.items;
         }
 
-        [PythonName("difference_update")]
-        public void DifferenceUpdate(object s) {
+        public void difference_update(object s) {
             SetCollection set = new SetCollection(PythonOps.GetEnumerator(s));
             foreach (object o in set) {
-                if (Contains(o)) {
-                    Remove(o);
+                if (__contains__(o)) {
+                    remove(o);
                 }
             }
         }
 
-        [PythonName("symmetric_difference_update")]
-        public void SymmetricDifferenceUpdate(object s) {
+        public void symmetric_difference_update(object s) {
             SetCollection set = new SetCollection(PythonOps.GetEnumerator(s));
             foreach (object o in set) {
-                if (Contains(o)) {
-                    Remove(o);
+                if (__contains__(o)) {
+                    remove(o);
                 } else {
-                    Add(o);
+                    add(o);
                 }
             }
         }
 
-        [PythonName("remove")]
-        public void Remove(object o) {
+        public void remove(object o) {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             PythonOps.Hash(o);
@@ -401,15 +393,13 @@ namespace IronPython.Runtime {
             items.Remove(o);
         }
 
-        [PythonName("discard")]
-        public void Discard(object o) {
+        public void discard(object o) {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             items.Remove(o);
         }
 
-        [PythonName("pop")]
-        public object Pop() {
+        public object pop() {
             foreach (object o in items.Keys) {
                 items.Remove(o);
                 return o;
@@ -417,120 +407,107 @@ namespace IronPython.Runtime {
             throw PythonOps.KeyError("pop from an empty set");
         }
 
-        [PythonName("clear")]
-        public void Clear() {
+        public void clear() {
             items.Clear();
         }
+
         #endregion
 
         #region Operators
 
-        [SpecialName, PythonName("__iand__")]
+        [SpecialName]
         public SetCollection InPlaceAnd(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for &=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
-            IntersectionUpdate(set);
+            intersection_update(set);
             return this;
         }
 
-        [SpecialName, PythonName("__ior__")]
+        [SpecialName]
         public SetCollection InPlaceOr(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for |=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
-            Update(set);
+            update(set);
             return this;
         }
 
-        [SpecialName, PythonName("__isub__")]
+        [SpecialName]
         public SetCollection InPlaceSubtract(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for -=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
-            DifferenceUpdate(set);
+            difference_update(set);
             return this;
         }
 
-        [SpecialName, PythonName("__ixor__")]
+        [SpecialName]
         public SetCollection InPlaceXor(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
-            SymmetricDifferenceUpdate(set);
+            symmetric_difference_update(set);
             return this;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), SpecialName, PythonName("__cmp__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), SpecialName]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        public static object BitwiseAnd(SetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.Intersection(y);
+        public int __cmp__(object o) {
+            throw PythonOps.TypeError("cannot compare sets using cmp()");
+        }
+
+        public static object operator &(SetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.intersection(y);
             }
 
             SetCollection setc = y as SetCollection;
             if (setc != null) {
-                return setc.Intersection(x);
+                return setc.intersection(x);
             }
 
             return SetHelpers.MakeSet(x, y.PrivIntersection(x));
         }
 
-        public static object operator &(SetCollection x, ISet y) {
-            return BitwiseAnd(x, y);
-        }
-
-
-        public static object BitwiseOr(SetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.Union(y);
+        public static object operator |(SetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.union(y);
             }
 
             SetCollection setc = y as SetCollection;
             if (setc != null) {
-                return setc.Union(x);
+                return setc.union(x);
             }
 
             return SetHelpers.MakeSet(x, y.PrivUnion(x));
         }
 
-        public static object operator |(SetCollection x, ISet y) {
-            return BitwiseOr(x, y);
-        }
-
-        public static object Xor(SetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.SymmetricDifference(y);
+        public static object operator ^(SetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.symmetric_difference(y);
             }
 
             SetCollection setc = y as SetCollection;
             if (setc != null) {
-                return setc.SymmetricDifference(x);
+                return setc.symmetric_difference(x);
             }
 
             return SetHelpers.MakeSet(x, y.PrivSymmetricDifference(x));
         }
 
-        public static object operator ^(SetCollection x, ISet y) {
-            return Xor(x, y);
-        }
-
-        public static object Subtract(SetCollection x, ISet y) {
-            return x.Difference(y);
-        }
-
         public static object operator -(SetCollection x, ISet y) {
-            return x.Difference(y);
+            return x.difference(y);
         }
 
         #endregion
 
         #region IEnumerable Members
 
-        public IEnumerator GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             int count = this.items.Count;
 
             foreach (object o in items.Keys) {
@@ -545,6 +522,7 @@ namespace IronPython.Runtime {
         #endregion
 
         #region Object overrides
+        
         public override string ToString() {
             return (SetHelpers.SetToString(this, this.items.Keys));
         }
@@ -557,10 +535,10 @@ namespace IronPython.Runtime {
             ISet s = other as ISet;
             if (s == null) throw PythonOps.TypeError("can only compare to a set");
 
-            if (s.GetLength() >= self.GetLength()) return false;
+            if (s.__len__() >= self.__len__()) return false;
 
             foreach (object o in s) {
-                if (!self.Contains(o)) return false;
+                if (!self.__contains__(o)) return false;
             }
             return true;
         }
@@ -569,10 +547,10 @@ namespace IronPython.Runtime {
             ISet s = other as ISet;
             if (s == null) throw PythonOps.TypeError("can only compare to a set");
 
-            if (s.GetLength() <= self.GetLength()) return false;
+            if (s.__len__() <= self.__len__()) return false;
 
             foreach (object o in self) {
-                if (!s.Contains(o)) {
+                if (!s.__contains__(o)) {
                     return false;
                 }
             }
@@ -580,49 +558,44 @@ namespace IronPython.Runtime {
         }
 
         public static bool operator >=(SetCollection self, object other) {
-            return self > other || self.ValueEquals(other);
+            return self > other || ((IValueEquality)self).ValueEquals(other);
         }
 
         public static bool operator <=(SetCollection self, object other) {
-            return self < other || self.ValueEquals(other);
+            return self < other || ((IValueEquality)self).ValueEquals(other);
         }
 
-        #endregion
-
-        #region Custom Rich Equality 
-        
-        // default conversion of protocol methods only allow's our specific type for equality,
-        // sets can do __eq__ / __ne__ against any type though
-
-        [SpecialName, PythonName("__eq__")]
-        public virtual bool RichEquals(object other) {
-            return ValueEquals(other);
-        }
-
-        [SpecialName, PythonName("__ne__")]
-        public virtual bool RichNotEquals(object other) {
-            return !ValueEquals(other);
-        }
-        
         #endregion
 
         #region IValueEquality Members
 
-        public int GetValueHashCode() {
+        // default conversion of protocol methods only allow's our specific type for equality,
+        // sets can do __eq__ / __ne__ against any type though.  That's why we have a seperate
+        // __eq__ / __ne__ here.
+
+        int IValueEquality.GetValueHashCode() {
             throw PythonOps.TypeError("set objects are unhashable");
         }
 
-        public bool ValueEquals(object other) {
+        bool IValueEquality.ValueEquals(object other) {
             ISet set = other as ISet;
             if (set != null) {
-                if (set.GetLength() != GetLength()) return false;
-                return set.IsSubset(this) && this.IsSubset(set);
+                if (set.__len__() != __len__()) return false;
+                return set.issubset(this) && this.issubset(set);
             }
             return false;
         }
 
-        public bool ValueNotEquals(object other) {
-            return !ValueEquals(other);
+        bool IValueEquality.ValueNotEquals(object other) {
+            return !((IValueEquality)this).ValueEquals(other);
+        }
+
+        public bool __eq__(object other) {
+            return ((IValueEquality)this).ValueEquals(other);
+        }
+
+        public bool __ne__(object other) {
+            return ((IValueEquality)this).ValueNotEquals(other);
         }
 
         #endregion
@@ -645,7 +618,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        string ICodeFormattable.ToCodeString(CodeContext context) {
             return ToString();
         }
 
@@ -676,9 +649,9 @@ namespace IronPython.Runtime {
     /// <summary>
     /// Non-mutable set class
     /// </summary>
-    [PythonType("frozenset")]
+    [PythonSystemType("frozenset")]
     public class FrozenSetCollection : ISet, IValueEquality, ICodeFormattable, ICollection {
-        internal static FrozenSetCollection EMPTY = new FrozenSetCollection();
+        internal static readonly FrozenSetCollection EMPTY = new FrozenSetCollection();
 
         PythonDictionary items;
         int hashCode;
@@ -687,8 +660,8 @@ namespace IronPython.Runtime {
 #endif
 
         #region Set Construction
-        [StaticExtensionMethod("__new__")]
-        public static FrozenSetCollection NewInst(CodeContext context, object cls) {
+
+        public static FrozenSetCollection __new__(CodeContext context, object cls) {
             if (cls == TypeCache.FrozenSet) {
                 return EMPTY;
             } else {
@@ -700,8 +673,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static FrozenSetCollection NewInst(CodeContext context, object cls, object setData) {
+        public static FrozenSetCollection __new__(CodeContext context, object cls, object setData) {
             if (cls == TypeCache.FrozenSet) {
                 FrozenSetCollection fs = setData as FrozenSetCollection;
                 if (fs != null) {
@@ -772,13 +744,12 @@ namespace IronPython.Runtime {
         #endregion
 
         #region ISet
-        [SpecialName, PythonName("len")]
-        public int GetLength() {
+
+        public int __len__() {
             return items.Count;
         }
 
-        [SpecialName, PythonName("__contains__")]
-        public bool Contains(object value) {
+        public bool __contains__(object value) {
             // promote sets to FrozenSet's for contains checks (so we get a hash code)
             value = SetHelpers.GetHashableSetIfSet(value);
 
@@ -786,27 +757,28 @@ namespace IronPython.Runtime {
             return items.ContainsKey(value);
         }
 
-        [PythonName("issubset")]
-        public bool IsSubset(object set) {
+        public bool issubset(object set) {
             return SetHelpers.IsSubset(this, set);
         }
 
-        [PythonName("issuperset")]
-        public bool IsSuperset(CodeContext context, object set) {
+        public bool issuperset(CodeContext context, object set) {
             return this >= FrozenSetCollection.Make(set);
         }
 
         ISet ISet.PrivDifference(IEnumerable set) {
-            return (ISet)Difference(set);
+            return (ISet)difference(set);
         }
+
         ISet ISet.PrivIntersection(IEnumerable set) {
-            return (ISet)Intersection(set);
+            return (ISet)intersection(set);
         }
+
         ISet ISet.PrivSymmetricDifference(IEnumerable set) {
-            return (ISet)SymmetricDifference(set);
+            return (ISet)symmetric_difference(set);
         }
+
         ISet ISet.PrivUnion(IEnumerable set) {
-            return (ISet)Union(set);
+            return (ISet)union(set);
         }
 
         void ISet.PrivAdd(object adding) {
@@ -837,28 +809,23 @@ namespace IronPython.Runtime {
 
         #region NonOperator operations
 
-        [PythonName("union")]
-        public object Union(object s) {
+        public object union(object s) {
             return SetHelpers.Union(this, s);
         }
 
-        [PythonName("intersection")]
-        public object Intersection(object s) {
+        public object intersection(object s) {
             return (SetHelpers.Intersection(this, s));
         }
 
-        [PythonName("difference")]
-        public object Difference(object s) {
+        public object difference(object s) {
             return SetHelpers.Difference(this, s);
         }
 
-        [PythonName("symmetric_difference")]
-        public object SymmetricDifference(object s) {
+        public object symmetric_difference(object s) {
             return SetHelpers.SymmetricDifference(this, s);
         }
 
-        [PythonName("copy")]
-        public object Copy() {
+        public object copy() {
             // Python behavior: If we're a non-derived frozen set, we return ourselves. 
             // If we're a derived frozen set we make a new set of our type that contains our
             // contents.
@@ -870,23 +837,22 @@ namespace IronPython.Runtime {
             return (set);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), PythonName("__init__")]
-        public void Init(params object[] o) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
+        public void __init__(params object[] o) {
             // nop
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o"), SpecialName, PythonName("__cmp__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "o")]
+        [SpecialName]
         public int Compare(object o) {
             throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        [SpecialName, PythonName("__len__")]
-        public int OperatorLength() {
-            return GetLength();
+        public int __cmp__(object o) {
+            throw PythonOps.TypeError("cannot compare sets using cmp()");
         }
 
-        [PythonName("__reduce__")]
-        public PythonTuple Reduce() {
+        public PythonTuple __reduce__() {
             return SetHelpers.Reduce(items, DynamicHelpers.GetPythonTypeFromType(typeof(SetCollection)));
         }
 
@@ -894,14 +860,14 @@ namespace IronPython.Runtime {
 
         #region Operators
 
-        public static object BitwiseAnd(FrozenSetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.Intersection(y);
+        public static object operator &(FrozenSetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.intersection(y);
             }
 
             FrozenSetCollection setc = y as FrozenSetCollection;
             if (setc != null) {
-                return setc.Intersection(x);
+                return setc.intersection(x);
             }
 
             ISet newset = SetHelpers.MakeSet(x, y.PrivIntersection(x));
@@ -909,19 +875,14 @@ namespace IronPython.Runtime {
             return newset;
         }
 
-        public static object operator &(FrozenSetCollection x, ISet y) {
-            return BitwiseAnd(x, y);
-        }
-
-
-        public static object BitwiseOr(FrozenSetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.Union(y);
+        public static object operator |(FrozenSetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.union(y);
             }
 
             FrozenSetCollection setc = y as FrozenSetCollection;
             if (setc != null) {
-                return setc.Union(x);
+                return setc.union(x);
             }
 
             ISet newset = SetHelpers.MakeSet(x, y.PrivUnion(x));
@@ -929,18 +890,14 @@ namespace IronPython.Runtime {
             return newset;
         }
 
-        public static object operator |(FrozenSetCollection x, ISet y) {
-            return BitwiseOr(x, y);
-        }
-
-        public static object Xor(FrozenSetCollection x, ISet y) {
-            if (y.GetLength() < x.GetLength()) {
-                return x.SymmetricDifference(y);
+        public static object operator ^(FrozenSetCollection x, ISet y) {
+            if (y.__len__() < x.__len__()) {
+                return x.symmetric_difference(y);
             }
 
             FrozenSetCollection setc = y as FrozenSetCollection;
             if (setc != null) {
-                return setc.SymmetricDifference(x);
+                return setc.symmetric_difference(x);
             }
 
             ISet newset = SetHelpers.MakeSet(x, y.PrivSymmetricDifference(x));
@@ -948,31 +905,21 @@ namespace IronPython.Runtime {
             return newset;
         }
 
-        public static object operator ^(FrozenSetCollection x, ISet y) {
-            return Xor(x, y);
-        }
-
-
-        public static object Subtract(FrozenSetCollection x, ISet y) {
-            return x.Difference(y);
-        }
-
         public static object operator -(FrozenSetCollection x, ISet y) {
-            return x.Difference(y);
+            return x.difference(y);
         }
-
 
         #endregion
 
         #region IEnumerable Members
 
-        public IEnumerator GetEnumerator() {
+        IEnumerator IEnumerable.GetEnumerator() {
             return items.Keys.GetEnumerator();
         }
 
         #endregion
 
-        void CalculateHashCode() {
+        private void CalculateHashCode() {
             // hash code needs be stable across collections (even if keys are
             // added in different order) and needs to be fairly collision free.
             hashCode = 6551;
@@ -992,9 +939,11 @@ namespace IronPython.Runtime {
         }
 
         #region Object Overrides
+
         public override string ToString() {
             return (SetHelpers.SetToString(this, this.items.Keys));
         }
+
         #endregion
 
         #region IRichComparable
@@ -1003,10 +952,10 @@ namespace IronPython.Runtime {
             ISet s = other as ISet;
             if (s == null) throw PythonOps.TypeError("can only compare to a set");
 
-            if (s.GetLength() >= self.GetLength()) return false;
+            if (s.__len__() >= self.__len__()) return false;
 
             foreach (object o in s) {
-                if (!self.Contains(o)) return false;
+                if (!self.__contains__(o)) return false;
             }
             return true;
         }
@@ -1015,10 +964,10 @@ namespace IronPython.Runtime {
             ISet s = other as ISet;
             if (s == null) throw PythonOps.TypeError("can only compare to a set");
 
-            if (s.GetLength() <= self.GetLength()) return false;
+            if (s.__len__() <= self.__len__()) return false;
 
             foreach (object o in self) {
-                if (!s.Contains(o)) {
+                if (!s.__contains__(o)) {
                     return false;
                 }
             }
@@ -1026,22 +975,18 @@ namespace IronPython.Runtime {
         }
 
         public static bool operator >=(FrozenSetCollection self, object other) {
-            return self > other  || self.ValueEquals(other);
+            return self > other || ((IValueEquality)self).ValueEquals(other);
         }
 
         public static bool operator <=(FrozenSetCollection self, object other) {
-            return self < other  || self.ValueEquals(other);
+            return self < other || ((IValueEquality)self).ValueEquals(other);
         }
-
-        #endregion
-
-        #region Custom Rich Equality
 
         #endregion
 
         #region IValueEquality Members
 
-        public int GetValueHashCode() {
+        int IValueEquality.GetValueHashCode() {
 #if DEBUG
             // make sure we never change the hashcode we hand out in debug builds.
             // if we do then it means we somehow called PrivAdd/PrivRemove after
@@ -1053,22 +998,28 @@ namespace IronPython.Runtime {
         }
         
         // default conversion of protocol methods only allow's our specific type for equality,
-        // sets can do __eq__ / __ne__ against any type though.  Decorating w/ the PythonName
-        // is enough to supress the generation in ReflectedTypeBuilder.
+        // sets can do __eq__ / __ne__ against any type though.  That's why we have a seperate
+        // __eq__ / __ne__ here.
 
-        [SpecialName, PythonName("__eq__")]
-        public bool ValueEquals(object other) {
+        bool IValueEquality.ValueEquals(object other) {
             ISet set = other as ISet;
             if (set != null) {
-                if (set.GetLength() != GetLength()) return false;
-                return set.IsSubset(this) && this.IsSubset(set);
+                if (set.__len__() != __len__()) return false;
+                return set.issubset(this) && this.issubset(set);
             }
             return false;
         }
 
-        [SpecialName, PythonName("__ne__")]
-        public bool ValueNotEquals(object other) {
-            return !ValueEquals(other);
+        bool IValueEquality.ValueNotEquals(object other) {
+            return !((IValueEquality)this).ValueEquals(other);
+        }
+
+        public bool __eq__(object other) {
+            return ((IValueEquality)this).ValueEquals(other);
+        }
+
+        public bool __ne__(object other) {
+            return ((IValueEquality)this).ValueNotEquals(other);
         }
 
         #endregion
@@ -1083,7 +1034,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        string ICodeFormattable.ToCodeString(CodeContext context) {
             return ToString();
         }
 

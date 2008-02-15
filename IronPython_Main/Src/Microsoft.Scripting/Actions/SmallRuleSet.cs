@@ -109,7 +109,7 @@ namespace Microsoft.Scripting.Actions {
             PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "GenerateRule");
 
             MethodInfo mi = typeof(T).GetMethod("Invoke");
-            Compiler cg = ScriptDomainManager.CurrentManager.Snippets.Assembly.DefineMethod(
+            Compiler cg = Snippets.Shared.DefineMethod(
                 StubName,
                 mi.ReturnType,
                 ReflectionUtils.GetParameterTypes(mi.GetParameters()),
@@ -117,7 +117,6 @@ namespace Microsoft.Scripting.Actions {
             );
 
             cg.EmitLineInfo = false;
-            cg.Binder = context.LanguageContext.Binder;
 
             if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
                 cg.ContextSlot = new PropertySlot(cg.ArgumentSlots[0], typeof(FastDynamicSite).GetProperty("Context"));

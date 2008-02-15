@@ -541,8 +541,8 @@ if is_cli and not is_silverlight:
     
     wkdir = testpath.public_testdir
     
-    if "-X:GenerateAsSnippets" in Environment.GetCommandLineArgs():
-	    ipi = IronPythonInstance(executable, wkdir, "-X:GenerateAsSnippets")
+    if "-X:TupleBasedOptimizedScopes" in Environment.GetCommandLineArgs():
+	    ipi = IronPythonInstance(executable, wkdir, "-X:TupleBasedOptimizedScopes")
     else:
 	    ipi = IronPythonInstance(executable, wkdir, "")
 

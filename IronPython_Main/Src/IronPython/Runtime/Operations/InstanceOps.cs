@@ -66,11 +66,11 @@ namespace IronPython.Runtime.Operations {
     ///     get: added for types that implement IDescriptor
     /// </summary>
     public static class InstanceOps {
-        internal static BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
-        internal static BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
-        internal static BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
-        internal static BuiltinFunction NonDefaultNewInst = CreateNonDefaultNew();
-        internal static BuiltinMethodDescriptor Init = CreateInitMethod();
+        internal static readonly BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
+        internal static readonly BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
+        internal static readonly BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
+        internal static readonly BuiltinFunction NonDefaultNewInst = CreateNonDefaultNew();
+        internal static readonly BuiltinMethodDescriptor Init = CreateInitMethod();
 
         static InstanceOps() {
             // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
@@ -307,7 +307,7 @@ namespace IronPython.Runtime.Operations {
         public static bool NotEqualsMethod(object x, object y) {
             return !x.Equals(y);
         }
-
+        
         public static object GetMethod(CodeContext context, object self, object instance, [Optional]object typeContext) {
             PythonTypeSlot dts = self as PythonTypeSlot;
             PythonType dt = typeContext as PythonType;

@@ -18,7 +18,9 @@ using MSAst = Microsoft.Scripting.Ast;
 namespace IronPython.Compiler.Ast {
     public abstract class Statement : Node {
         public virtual string Documentation {
-            get { return null; }
+            get {
+                return null;
+            }
         }
 
         internal abstract MSAst.Expression Transform(AstGenerator ag);

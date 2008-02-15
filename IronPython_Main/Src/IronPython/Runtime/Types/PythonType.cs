@@ -49,7 +49,7 @@ namespace IronPython.Runtime.Types {
 #if !SILVERLIGHT
     [DebuggerDisplay("PythonType: {Name}")]
 #endif
-    public class PythonType : ICustomMembers, IConstructorWithCodeContext, IDynamicObject {
+    public class PythonType : ICustomMembers, IDynamicObject {
         private string _name;                               // the name of the type
         internal PythonTypeAttributes _attrs;              // attributes of the type
         private List<PythonType> _resolutionOrder;        // the search order for methods in the type
@@ -74,14 +74,14 @@ namespace IronPython.Runtime.Types {
         private Type _impersonationType;                    // the type we should pretend to be
         private List<ConversionInfo> _conversions;          // list of built-in conversions 
         private List<bool> _allowKeywordCtor;               // true if a context disallows keyword args constructing the type.
-        private bool _extended;
+        private bool _extended, _isPythonType;
         private DynamicSite<object, object[], object> _ctorSite;
 
         public const int DynamicVersion = Int32.MinValue;   // all lookups should be dynamic
         private static int MasterVersion = 1, MasterAlternateVersion;
-        private static Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
+        private static readonly Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
         internal static PythonType _pythonTypeType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
-        private static WeakReference[] _emptyWeakRef = new WeakReference[0];
+        private static readonly WeakReference[] _emptyWeakRef = new WeakReference[0];
         private static PythonType _nullType = DynamicHelpers.GetPythonTypeFromType(typeof(None));
 
         public PythonType(Type underlyingSystemType) {
@@ -151,7 +151,7 @@ namespace IronPython.Runtime.Types {
         /// Creates an instance of the object using keyword parameters.
         /// </summary>
         public object CreateInstance(CodeContext context, object[] args, string[] names) {
-            Contract.RequiresNotNull(names, "names");
+            Contract.RequiresNotNull(args, "args");
             Contract.RequiresNotNull(names, "names");
 
             Initialize();
@@ -487,14 +487,6 @@ namespace IronPython.Runtime.Types {
 
         }
 
-        #region IConstructorWithCodeContext Members
-
-        object IConstructorWithCodeContext.Construct(CodeContext context, params object[] args) {
-            return CreateInstance(context, args);
-        }
-
-        #endregion
-
         internal PythonTypeBuilder Builder {
             get {
                 return (PythonTypeBuilder)_builder;
@@ -580,10 +572,13 @@ namespace IronPython.Runtime.Types {
                     // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
                     // a minimal level of interop until then.
                     StandardRule<T> rule = new StandardRule<T>();
+
+                    // calling NonDefaultNew(context, type, args)
                     Expression call = Ast.ComplexCallHelper(
-                        Ast.Convert(rule.Parameters[0], typeof(IConstructorWithCodeContext)),
-                        typeof(IConstructorWithCodeContext).GetMethod("Construct"),
-                        ArrayUtils.Insert((Expression)Ast.CodeContext(), ArrayUtils.RemoveFirst(rule.Parameters))
+                        typeof(InstanceOps).GetMethod("NonDefaultNew"),
+                        ArrayUtils.Insert<Expression>((Expression)Ast.CodeContext(), 
+                                           Ast.Convert(rule.Parameters[0], typeof(PythonType)), 
+                                           ArrayUtils.RemoveFirst(rule.Parameters))
                     );
 
                     rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
@@ -1538,6 +1533,15 @@ namespace IronPython.Runtime.Types {
             }
             internal set {
                 _hasGetAttribute = value;
+            }
+        }
+
+        internal bool IsPythonType {
+            get {
+                return _isPythonType;
+            }
+            set {
+                _isPythonType = value;
             }
         }
 

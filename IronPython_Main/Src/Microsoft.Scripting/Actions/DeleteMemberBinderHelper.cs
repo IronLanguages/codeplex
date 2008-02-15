@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Actions {
                 MemberGroup group = Binder.GetMember(Action, type, StringName);
                 if (group.Count != 0) {
                     if (group[0].MemberType == TrackerTypes.Property) {
-                        MethodInfo del = ((PropertyTracker)group[0]).GetDeleteMethod(ScriptDomainManager.Options.PrivateBinding);
+                        MethodInfo del = ((PropertyTracker)group[0]).GetDeleteMethod(PrivateBinding);
                         if (del != null) {
                             MakePropertyDeleteStatement(del);
                             return Body;

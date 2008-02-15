@@ -59,7 +59,7 @@ namespace IronPython.Runtime.Operations {
         #region Python APIs
 
         [OperatorSlot]
-        public static PythonTypeSlot Call = new ArrayCallSlot();
+        public static readonly PythonTypeSlot Call = new ArrayCallSlot();
 
 
         [PythonName("__contains__")]
@@ -321,7 +321,7 @@ namespace IronPython.Runtime.Operations {
 
         internal static object[] GetSlice(object[] data, Slice slice) {
             int start, stop, step;
-            slice.Indices(data.Length, out start, out stop, out step);
+            slice.indices(data.Length, out start, out stop, out step);
 
             if (step == 1) return GetSlice(data, start, stop);
             
@@ -339,7 +339,7 @@ namespace IronPython.Runtime.Operations {
             if (data.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
 
             int start, stop, step;
-            slice.Indices(size, out start, out stop, out step);
+            slice.indices(size, out start, out stop, out step);
 
             if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
                 if (data.GetType().GetElementType() == typeof(object))

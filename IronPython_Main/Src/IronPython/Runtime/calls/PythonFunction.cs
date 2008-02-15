@@ -601,7 +601,7 @@ namespace IronPython.Runtime.Calls {
                 Expression[] invokeArgs = GetArgumentsForRule(args);
 
                 if (invokeArgs != null) {
-                    return AddRecursionCheck(AddInitialization(MakeFunctionInvoke(invokeArgs)));
+                    return PythonBinderHelper.AddRecursionCheck(AddInitialization(MakeFunctionInvoke(invokeArgs)));
                 }
 
                 return MakeBadArgumentRule();
@@ -819,11 +819,9 @@ namespace IronPython.Runtime.Calls {
                 EnsureInit();
 
                 _init.Add(
-                    Ast.Statement(
-                        Ast.ComplexCallHelper(
-                            typeof(PythonOps).GetMethod("AddParamsArguments"),
-                            args.ToArray()
-                        )
+                    Ast.ComplexCallHelper(
+                        typeof(PythonOps).GetMethod("AddParamsArguments"),
+                        args.ToArray()
                     )
                 );
             }
@@ -857,14 +855,12 @@ namespace IronPython.Runtime.Calls {
             /// <param name="kvp"></param>
             private void MakeDictionaryAddition(KeyValuePair<SymbolId, Expression> kvp) {
                 _init.Add(
-                    Ast.Statement(
-                        Ast.Call(
-                            typeof(PythonOps).GetMethod("AddDictionaryArgument"),
-                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                            Ast.Constant(SymbolTable.IdToString(kvp.Key)),
-                            Ast.ConvertHelper(kvp.Value, typeof(object)),
-                            Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IAttributesCollection))
-                        )
+                    Ast.Call(
+                        typeof(PythonOps).GetMethod("AddDictionaryArgument"),
+                        Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                        Ast.Constant(SymbolTable.IdToString(kvp.Key)),
+                        Ast.ConvertHelper(kvp.Value, typeof(object)),
+                        Ast.ConvertHelper(Ast.ReadDefined(_dict), typeof(IAttributesCollection))
                     )
                 );
             }
@@ -1091,14 +1087,13 @@ namespace IronPython.Runtime.Calls {
                 _dict = _rule.GetTemporary(typeof(PythonDictionary), "$dict");
 
                 EnsureInit();
-                _init.Add(Ast.Statement(
-                        Ast.Assign(
-                            _dict,
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("CopyAndVerifyDictionary"),
-                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                Ast.ConvertHelper(userDict, typeof(IDictionary))
-                            )
+                _init.Add(
+                    Ast.Assign(
+                        _dict,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CopyAndVerifyDictionary"),
+                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                            Ast.ConvertHelper(userDict, typeof(IDictionary))
                         )
                     )
                 );
@@ -1116,24 +1111,21 @@ namespace IronPython.Runtime.Calls {
                 EnsureInit();
 
                 _init.Add(
-                    Ast.Statement(
-                        Ast.Assign(
-                            _params,
-                            Ast.Call(
-                                typeof(PythonOps).GetMethod("CopyAndVerifyParamsList"),
-                                Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
-                                Ast.ConvertHelper(userList, typeof(object))
-                            )
+                    Ast.Assign(
+                        _params,
+                        Ast.Call(
+                            typeof(PythonOps).GetMethod("CopyAndVerifyParamsList"),
+                            Ast.ConvertHelper(GetFunctionParam(), typeof(PythonFunction)),
+                            Ast.ConvertHelper(userList, typeof(object))
                         )
                     )
                 );
 
-                _init.Add(Ast.Statement(
-                        Ast.Assign(_paramsLen,
-                            Ast.Add(
-                                Ast.ReadProperty(Ast.ReadDefined(_params), typeof(List).GetProperty("Count")),
-                                Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
-                            )
+                _init.Add(
+                    Ast.Assign(_paramsLen,
+                        Ast.Add(
+                            Ast.ReadProperty(Ast.ReadDefined(_params), typeof(List).GetProperty("Count")),
+                            Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                         )
                     )
                 );
@@ -1242,26 +1234,6 @@ namespace IronPython.Runtime.Calls {
                     }
                     return false;
                 }
-            }
-
-            /// <summary>
-            /// Adds a try/finally which enforces recursion limits around the target method.
-            /// </summary>
-            private Expression AddRecursionCheck(Expression stmt) {
-                if (EnforceRecursion) {
-                    stmt = Ast.Block(
-                        Ast.Statement(
-                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame"))
-                        ),
-                        Ast.TryFinally(
-                            stmt,
-                            Ast.Statement(
-                                Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
-                            )
-                        )
-                    );
-                }
-                return stmt;
             }
 
             private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {

@@ -125,6 +125,7 @@ namespace Microsoft.Scripting.Hosting {
         private LocalScriptHost CreateLocalHost(IScriptEnvironment environment, RemoteScriptHost remoteHost) {
             LocalScriptHost result = ReflectionUtils.CreateInstance<LocalScriptHost>(_localHostType, environment);
             result.SetRemoteHost(remoteHost);
+
             return result;
 
         }
@@ -189,7 +190,9 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="InvalidImplementationException">The host type failed to instantiate.</exception>
         internal ScriptHost CreateHostLocally(IScriptEnvironment environment) {
             Debug.Assert(environment != null);
-            return ReflectionUtils.CreateInstance<ScriptHost>(_hostType, environment);
+            ScriptHost res = ReflectionUtils.CreateInstance<ScriptHost>(_hostType, environment);
+            res.PAL = environment.PAL;
+            return res;
         }
     }
 }

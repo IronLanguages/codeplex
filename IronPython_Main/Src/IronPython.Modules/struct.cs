@@ -28,8 +28,7 @@ namespace IronPython.Modules {
     public static class PythonStruct {
 
         #region Public API Surface
-        [PythonName("pack")]
-        public static string Pack(string fmt, params object[] values) {
+        public static string pack(string fmt, params object[] values) {
             int count = 1;
             int curObj = 0;
             StringBuilder res = new StringBuilder();
@@ -141,8 +140,7 @@ namespace IronPython.Modules {
             return res.ToString();
         }
 
-        [PythonName("unpack")]
-        public static PythonTuple Unpack(string fmt, string @string) {
+        public static PythonTuple unpack(string fmt, string @string) {
             string data = @string;
             int count = 1;
             int curIndex = 0;
@@ -257,8 +255,7 @@ namespace IronPython.Modules {
             return new PythonTuple(res);
         }
 
-        [PythonName("calcsize")]
-        public static int CalculateSize(string fmt) {
+        public static int calcsize(string fmt) {
             int len = 0;
             int count = 1;
             for (int i = 0; i < fmt.Length; i++) {

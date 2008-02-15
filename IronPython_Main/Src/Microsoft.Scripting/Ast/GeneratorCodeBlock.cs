@@ -16,10 +16,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Emit;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -47,13 +46,9 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Type _next;
 
-        // TODO: Move
-        private List<YieldTarget> _topTargets;
-
-        internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next)
-            : base(span, name, typeof(object)) {
+        internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next, ReadOnlyCollection<Variable> parameters, List<Variable> variables)
+            : base(span, name, typeof(object), parameters, variables, false, true) {
             _generator = generator;
-            Debug.Assert(generator.IsSubclassOf(typeof(Generator)));
             _next = next;
         }
 
@@ -64,27 +59,24 @@ namespace Microsoft.Scripting.Ast {
         public Type DelegateType {
             get { return _next; }
         }
-
-        internal IList<YieldTarget> TopTargets {
-            get { return _topTargets; }
-        }
-        
-        internal int BuildYieldTargets() {
-            Debug.Assert(_topTargets == null);
-            int temps;
-            YieldLabelBuilder.BuildYieldTargets(this, out _topTargets, out temps);
-            return temps;
-        }
     }
 
     public static partial class Ast {
-        public static CodeBlock Generator(SourceSpan span, string name, Type generator, Type next) {
+        public static CodeBlock Generator(SourceSpan span, string name, Type generator, Type next, Variable[] parameters, Variable[] variables) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(generator, "generator");
             Contract.RequiresNotNull(next, "next");
             Contract.Requires(TypeUtils.CanAssign(typeof(Generator), generator), "generator", "The generator type must inherit from Generator");
+            Contract.RequiresNotNullItems(parameters, "parameters");
+            Contract.RequiresNotNullItems(variables, "variables");
 
-            return new GeneratorCodeBlock(span, name, generator, next);
+            CodeBlock block = new GeneratorCodeBlock(span, name, generator, next, CollectionUtils.ToReadOnlyCollection(parameters), new List<Variable>(variables));
+
+            // TODO: Remove when variable no longer has block.
+            SetBlock(parameters, block);
+            SetBlock(variables, block);
+
+            return block;
         }
     }
 }

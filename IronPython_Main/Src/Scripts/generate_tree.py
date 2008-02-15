@@ -174,8 +174,19 @@ def gen_ast_interpreter(cw):
 
         cw.write(text + (60 - len(text)) * " " + comment)
 
+def gen_ast_writer(cw):
+    for node in expressions:
+        if node.enabled:
+            text = "Write" + node.type + ","
+            comment = "//    " + node.kind
+        else:
+            text = ""
+            comment = "// ** " + node.kind
+
+        cw.write(text + (40 - len(text)) * " " + comment)
 
 generate.CodeGenerator("Expression Tree Node Types", gen_tree_nodes).doit()
 generate.CodeGenerator("DLR AST Walker", gen_scripting_walker).doit()
 generate.CodeGenerator("Ast Rewriter", gen_ast_rewriter).doit()
 generate.CodeGenerator("Ast Interpreter", gen_ast_interpreter).doit()
+generate.CodeGenerator("Ast Writer", gen_ast_writer).doit()

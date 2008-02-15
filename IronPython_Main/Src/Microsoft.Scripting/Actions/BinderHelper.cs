@@ -206,12 +206,18 @@ namespace Microsoft.Scripting.Actions {
                         mostSpecificTypes[j] = currentSet[j];
                     } else {
                         // All sets should have compatible types in each slot
-                        Debug.Assert(currentSet[j].IsAssignableFrom(mostSpecificTypes[j]));
+                        Debug.Assert(currentSet[j] == null || currentSet[j].IsAssignableFrom(mostSpecificTypes[j]));
                     }
                 }
             }
 
             return MakeNecessaryTests(rule, mostSpecificTypes, arguments);
+        }
+
+        protected bool PrivateBinding {
+            get {
+                return Context.LanguageContext.DomainManager.GlobalOptions.PrivateBinding;
+            }
         }
     }
 }

@@ -13,9 +13,11 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Collections.ObjectModel;
 
 /*
  * The data flow.
@@ -122,11 +124,11 @@ namespace Microsoft.Scripting.Ast {
 
         CodeBlock _block;
 
-        Dictionary<Variable, int> _indices = new Dictionary<Variable,int>();
+        Dictionary<Variable, int> _indices = new Dictionary<Variable, int>();
 
         private FlowChecker(CodeBlock block) {
             List<Variable> variables = block.Variables;
-            List<Variable> parameters = block.Parameters;
+            ReadOnlyCollection<Variable> parameters = block.Parameters;
 
             _bits = new BitArray((variables.Count + parameters.Count) * 2);
             int index = 0;
@@ -205,10 +207,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private void PushStatement(BitArray ba) {
-            PushStatement(ba, null);
-        }
-
         private void PushStatement(BitArray ba, Expression expression) {
             if (_exit == null) {
                 _exit = new List<ExitState>();
@@ -217,7 +215,10 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private ExitState PeekStatement(Expression expression) {
-            Debug.Assert(_exit != null && _exit.Count > 0);
+            // all branch targets should be known by now
+            if (_exit == null || _exit.Count == 0) {
+                throw new InvalidOperationException("Branching with no known targets.");
+            }
             if (expression == null) {
                 return _exit[_exit.Count - 1];
             } else {
@@ -226,7 +227,8 @@ namespace Microsoft.Scripting.Ast {
                         return _exit[i];
                     }
                 }
-                return default(ExitState);
+                // code tries to branch to an expression thet we do not know.
+                throw new InvalidOperationException("Branch target is not accessible.");
             }
         }
 
@@ -253,7 +255,6 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-
         // BreakStatement
         protected internal override bool Walk(BreakStatement node) {
             ExitState exit = PeekStatement(node.Statement);
@@ -262,7 +263,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ContinueStatement
-        protected internal override bool Walk(ContinueStatement node) { return true; }
+        protected internal override bool Walk(ContinueStatement node) {
+            // this will verify that the branch is valid.
+            PeekStatement(node.Statement);
+            return true;
+        }
 
         // DelStatement
         protected internal override bool Walk(DeleteStatement node) {
@@ -325,7 +330,7 @@ namespace Microsoft.Scripting.Ast {
 
             // Prepare loop exit state
             BitArray exit = new BitArray(_bits.Length, true);
-            PushStatement(exit);
+            PushStatement(exit, node);
 
             // Loop will be flown starting from the current state
             _bits = loop;
@@ -359,7 +364,7 @@ namespace Microsoft.Scripting.Ast {
             BitArray opte = new BitArray(_bits);
             BitArray exit = new BitArray(_bits.Length, true);
 
-            PushStatement(exit);
+            PushStatement(exit, node);
             WalkNode(node.Body);
             WalkNode(node.Increment);
             PopStatement();
@@ -452,7 +457,7 @@ namespace Microsoft.Scripting.Ast {
                 // The state to accumulate results into
                 BitArray result = new BitArray(_bits.Length, true);
 
-                PushStatement(result);
+                PushStatement(result, node);
 
                 for (int i = 0; i < count; i++) {
                     if (cases[i].IsDefault) {

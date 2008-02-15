@@ -40,11 +40,24 @@ namespace Microsoft.Scripting.Ast {
             internal Label returnStart;
         }
 
-        private readonly ILGen _ilg;
+        /// <summary>
+        /// The compiler which contains the compilation-wide information
+        /// such as other code blocks and their Compilers.
+        /// </summary>
+        private DlrCompiler _compiler;
 
+        /// <summary>
+        /// The code block information for the code block being compiled.
+        /// This may be null in the cases where Compiler is still being
+        /// used outside of the purpose of compiling the ASTs (sometimes
+        /// it is used to generate odd dynamic method here and there,
+        /// those will go away eventually and this field will be required)
+        /// </summary>
+        private CodeBlockInfo _info;
+
+        private readonly ILGen _ilg;
         private CodeGenOptions _options;
         private readonly TypeGen _typeGen;
-        private readonly ISymbolDocumentWriter _debugSymbolWriter;
         private ScopeAllocator _allocator;
 
         private readonly MethodBase _method;
@@ -54,9 +67,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly List<Slot> _freeSlots = new List<Slot>();
 
         private Nullable<ReturnBlock> _returnBlock;
-
-        // TODO: Where does this belong?
-        private Dictionary<CodeBlock, Compiler> _codeBlockImplementations;
 
         // Key slots
         private EnvironmentSlot _environmentSlot;   // reference to function's own environment
@@ -68,9 +78,9 @@ namespace Microsoft.Scripting.Ast {
         private int _currentLine;                   // last line number emitted to avoid dupes
 
         private Slot[] _argumentSlots;
-        private SourceUnit _source;
-        private ActionBinder _binder;
-
+        private SourceUnit _source;                 
+        private bool _emitDebugSymbols;
+        
         private readonly ConstantPool _constantPool;
 
         private bool _generator;                    // true if emitting generator, false otherwise
@@ -85,10 +95,8 @@ namespace Microsoft.Scripting.Ast {
         // This flag should always be flowed through to other Compiler objects created from this one.
         private bool _interpretedMode = false;
 
-        // The variable references for the current block/rule
-        private Dictionary<Variable, VariableReference> _references;
-
-        internal Compiler(TypeGen typeGen, AssemblyGen assemblyGen, MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
+        internal Compiler(TypeGen typeGen, AssemblyGen/*!*/ assemblyGen, MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, 
+            IList<Type>/*!*/ paramTypes, ConstantPool constantPool) {
             Contract.Requires(typeGen == null || typeGen.AssemblyGen == assemblyGen, "assemblyGen");
             Contract.Requires(constantPool == null || mi.IsStatic, "constantPool");
 
@@ -96,22 +104,16 @@ namespace Microsoft.Scripting.Ast {
             _method = mi;
             _constantPool = constantPool;
 
-            if (_typeGen == null) {
-                DynamicMethod = true;
-            } else {
-                _debugSymbolWriter = typeGen.AssemblyGen.SymbolWriter;
-            }
-
-            ILDebug = assemblyGen.ILDebug;
-#if !SILVERLIGHT
-            if (ILDebug) {
-                _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes, _debugSymbolWriter != null);
-            } else {
-                _ilg = new ILGen(ilg);
-            }
-#else
+            // TODO:
+//#if !SILVERLIGHT
+            //if (ScriptDomainManager.Options.ILDebug) {
+            //    _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes, _debugSymbolWriter != null);
+            //} else {
+            //    _ilg = new ILGen(ilg);
+            //}
+//#else
             _ilg = new ILGen(ilg);
-#endif
+//#endif
 
             int firstArg;
             if (constantPool != null) {
@@ -133,8 +135,6 @@ namespace Microsoft.Scripting.Ast {
 
             EmitLineInfo = ScriptDomainManager.Options.DynamicStackTraceSupport;
 
-            _codeBlockImplementations = new Dictionary<CodeBlock, Compiler>();
-
             NoteCompilerCreation(mi);
         }
 
@@ -144,13 +144,14 @@ namespace Microsoft.Scripting.Ast {
 
         #region Properties
 
-        internal ILGen IL {
-            get { return _ilg; }
+        internal DlrCompiler TheCompiler {
+            get {
+                return _compiler;
+            }
         }
 
-        internal Dictionary<Variable, VariableReference> References {
-            get { return _references; }
-            set { _references = value; }
+        internal ILGen IL {
+            get { return _ilg; }
         }
 
         internal bool DynamicMethod {
@@ -162,22 +163,6 @@ namespace Microsoft.Scripting.Ast {
                     _options |= CodeGenOptions.DynamicMethod;
                 } else {
                     _options &= ~CodeGenOptions.DynamicMethod;
-                }
-            }
-        }
-
-        /// <summary>
-        /// True if Compiler should output a text file containing the generated IL, false otherwise.
-        /// </summary>
-        private bool ILDebug {
-            get {
-                return (_options & CodeGenOptions.ILDebug) != 0;
-            }
-            set {
-                if (value) {
-                    _options |= CodeGenOptions.ILDebug;
-                } else {
-                    _options &= ~CodeGenOptions.ILDebug;
                 }
             }
         }
@@ -226,8 +211,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal bool EmitDebugInfo {
-            get { return _debugSymbolWriter != null; }
+        internal bool EmitDebugSymbols {
+            get { return _emitDebugSymbols; }
         }
 
         internal MethodBase Method {
@@ -319,22 +304,19 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void SetSource(SourceUnit source) {
-            Contract.RequiresNotNull(source, "source");
-            _source = source;
-            _binder = _source.LanguageContext.Binder;
+        internal void SetDebugSymbols(SourceUnit source) {
+            SetDebugSymbols(source, _typeGen != null && _typeGen.AssemblyGen.IsDebuggable && source != null &&
+                source.LanguageContext.DomainManager.GlobalOptions.DebugMode);
         }
 
-        internal ActionBinder Binder {
-            get {
-                if (_binder == null) {
-                    throw new InvalidOperationException("no Binder has been set");
-                }
-                return _binder;
-            }
-            set {
-                _binder = value;
-            }
+        internal void SetDebugSymbols(SourceUnit source, bool emitSymbols) {
+            Debug.Assert(!emitSymbols || source != null, 
+                "Cannot emit symbols w/o source unit.");
+            Debug.Assert(!emitSymbols || _typeGen != null && _typeGen.AssemblyGen.IsDebuggable, 
+                "Cannot emit symbols to a dynamic method or a non-debuggable module");
+
+            _source = source;
+            _emitDebugSymbols = emitSymbols;
         }
 
         private TargetBlockType BlockType {
@@ -400,15 +382,20 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         internal static CallTargetWithContext0 CompileTopLevelCodeBlock(SourceUnit source, CodeBlock block) {
             // 1. Analyze
-            AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeBlock(block);
 
-            // 2. Generate the code
-            Compiler cg = CompilerHelpers.CreateDynamicCodeGenerator(source);
+            // 2. Create DlrCompiler
+            DlrCompiler tc = new DlrCompiler(at);
+
+            // 3. Create the code block compiler
+            Compiler cg = Snippets.Shared.DefineMethod("Initialize", typeof(object),
+                new Type[] { typeof(CodeContext) }, null, new ConstantPool(), source);
+
+            cg.ContextSlot = cg.GetArgumentSlot(0);
             cg.Allocator = CompilerHelpers.CreateFrameAllocator();
+            cg.InitializeCompilerAndBlock(tc, block);
 
-            // TODO: Cleanup!
-            cg.References = block.References;
-
+            // 4. Generate code
             cg.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
                     new PropertySlot(cg.ContextSlot,
@@ -416,7 +403,8 @@ namespace Microsoft.Scripting.Ast {
                     typeof(Scope).GetProperty("Dict"))
                 );
 
-            cg.EmitFunctionImplementation(block);
+            CodeBlockInfo cbi = at.GetCbi(block);
+            cg.EmitFunctionImplementation(cbi);
 
             cg.Finish();
 
@@ -431,27 +419,30 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>The compiled delegate.</returns>
         internal static T CompileCodeBlock<T>(CodeBlock block) {
             // 1. Analyze
-            AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeBlock(block);
 
-            // 2. Create signature
+            // 2. Create The Compiler
+            DlrCompiler tc = new DlrCompiler(at);
+
+            // 3. Create signature
             List<Type> types;
             List<SymbolId> names;
             string name;
             Compiler.ComputeSignature(block, false, false, out types, out names, out name);
 
-            // 3. Create Compiler
-            Compiler c = CompilerHelpers.CreateDynamicCodeGenerator(name, block.ReturnType, types, null);
+            // 4. Create code block compiler
+            Compiler c = Snippets.Shared.DefineMethod(name, block.ReturnType, types, null);
             c.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, c);
 
-            // TODO: Cleanup !!!
-            c.References = block.References;
+            // 5. Initialize the compiler
+            c.InitializeCompilerAndBlock(tc, block);
 
-            // 4. Emit
-            Compiler.EmitBody(c, block);
+            // 6. Emit
+            Compiler.EmitBody(c, at.GetCbi(block));
 
             c.Finish();
 
-            // 5. Return the delegate.
+            // 7. Return the delegate.
             return (T)(object)c.CreateDelegate(typeof(T));
         }
 
@@ -464,16 +455,16 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // 1. Analyze
-            AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeBlock(block);
 
-            // 2. Generate the code.
+            // 2. Finish initialization
+            InitializeCompilerAndBlock(new DlrCompiler(at), block);
+
+            // 3. Generate the code.
             EmitStackTraceTryBlockStart();
 
-            // TODO: Cleanup!
-            _references = block.References;
-
-            // emit the actual body
-            EmitBody(this, block);
+            // 4. Emit the actual body
+            EmitBody(this, at.GetCbi(block));
 
             string displayName = _source.GetSymbolDocument(block.Start.Line) ?? block.Name;
 
@@ -482,14 +473,16 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
-        private static void AnalyzeBlock(CodeBlock block) {
+        private static AnalyzedTree AnalyzeBlock(CodeBlock block) {
             DumpBlock(block);
 
             ForestRewriter.Rewrite(block);
-            ClosureBinder.Bind(block);
+            AnalyzedTree at = ClosureBinder.Bind(block);
             FlowChecker.Check(block);
 
             DumpBlock(block);
+
+            return at;
         }
 
         [Conditional("DEBUG")]
@@ -810,7 +803,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitPosition(SourceLocation start, SourceLocation end) {
-            if (EmitDebugInfo) {
+            if (_emitDebugSymbols) {
 
                 Debug.Assert(start != SourceLocation.Invalid);
                 Debug.Assert(end != SourceLocation.Invalid);
@@ -821,10 +814,9 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(start.Line > 0 && end.Line > 0);
 
                 MarkSequencePoint(
-                    _debugSymbolWriter,
                     start.Line, start.Column,
                     end.Line, end.Column
-                    );
+                );
 
                 Emit(OpCodes.Nop);
             }
@@ -833,9 +825,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitSequencePointNone() {
-            if (EmitDebugInfo) {
+            if (_emitDebugSymbols) {
                 MarkSequencePoint(
-                    _debugSymbolWriter,
                     SourceLocation.None.Line, SourceLocation.None.Column,
                     SourceLocation.None.Line, SourceLocation.None.Column
                 );
@@ -861,7 +852,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(name, "name");
 
             LocalBuilder lb = DeclareLocal(type);
-            if (EmitDebugInfo) lb.SetLocalSymInfo(name);
+            if (_emitDebugSymbols) lb.SetLocalSymInfo(name);
             return new LocalSlot(lb, this);
         }
 
@@ -1189,16 +1180,10 @@ namespace Microsoft.Scripting.Ast {
             if (!DynamicMethod) {
                 res = _typeGen.DefineMethod(name, retType, paramTypes, paramNames, constantPool);
             } else {
-                if (_source != null && CompilerHelpers.NeedDebuggableDynamicCodeGenerator(_source)) {
-                    res = CompilerHelpers.CreateDebuggableDynamicCodeGenerator(_source, name, retType, paramTypes, paramNames, constantPool);
-                } else {
-                    res = CompilerHelpers.CreateDynamicCodeGenerator(name, retType, paramTypes, constantPool);
-                }
+                res = Snippets.Shared.DefineMethod(name, retType, paramTypes, paramNames, constantPool, _source);
             }
 
-            if (_source != null) {
-                res.SetSource(_source);
-            }
+            res.SetDebugSymbols(_source, _emitDebugSymbols);
             res.InterpretedMode = _interpretedMode;
             return res;
         }
@@ -1215,12 +1200,19 @@ namespace Microsoft.Scripting.Ast {
             _ilg.EndExceptionBlock();
         }
 
-        private void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
-            if (_source != null) {
+        private void MarkSequencePoint(int startLine, int startColumn, int endLine, int endColumn) {
+            Debug.Assert(_source != null);
+
+            string url = _source.GetSymbolDocument(startLine) ?? _source.Id;
+
+            if (!String.IsNullOrEmpty(url)) {
+                ISymbolDocumentWriter writer = _typeGen.AssemblyGen.GetSymbolWriter(url, _source.LanguageContext);
+
                 startLine = _source.MapLine(startLine);
                 endLine = _source.MapLine(endLine);
+
+                _ilg.MarkSequencePoint(writer, startLine, startColumn, endLine, endColumn);
             }
-            _ilg.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
 
         #region ILGen forwards - will go away
@@ -1433,6 +1425,10 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(typeGen != null);
             string full_method_name = ((method.DeclaringType != null) ? method.DeclaringType.Name + "." : "") + method.Name;
 
+            if (full_method_name.Length > 100) {
+                full_method_name = full_method_name.Substring(0, 100);
+            }
+
             string filename = String.Format("gen_{0}_{1}.il", IOUtils.ToValidFileName(full_method_name),
                 System.Threading.Interlocked.Increment(ref _Count));
 
@@ -1449,7 +1445,7 @@ namespace Microsoft.Scripting.Ast {
                     SymbolGuids.DocumentType_Text);
             }
 
-            TextWriter txt = new StreamWriter(ScriptDomainManager.CurrentManager.PAL.OpenOutputFileStream(filename));
+            TextWriter txt = new StreamWriter(filename);
             DebugILGen dig = new DebugILGen(il, txt, doc);
 
             dig.WriteLine(String.Format("{0} {1} (", method.Name, method.Attributes));
@@ -1515,29 +1511,34 @@ namespace Microsoft.Scripting.Ast {
             return temp;
         }
 
-        /// <summary>
-        /// Returns the Compiler implementing the code block.
-        /// Emits the code block implementation if it hasn't been emitted yet.
-        /// </summary>
-        private Compiler ProvideCodeBlockImplementation(CodeBlock block, bool hasContextParameter, bool hasThis) {
-            Assert.NotNull(block);
-            Compiler impl;
-
-            // emit the code block method if it has:
-            if (!_codeBlockImplementations.TryGetValue(block, out impl)) {
-                impl = CreateMethod(this, block, hasContextParameter, hasThis);
-                impl.Binder = _binder;
-                impl.EmitFunctionImplementation(block);
-                impl.Finish();
-
-                _codeBlockImplementations.Add(block, impl);
-            }
-
-            return impl;
+        private Slot GetVariableSlot(Variable variable) {
+            return _info.References[variable].Slot;
         }
 
-        private Slot GetVariableSlot(Variable variable) {
-            return _references[variable].Slot;
+        internal void InitializeCompilerAndBlock(DlrCompiler tc, CodeBlock block) {
+            Debug.Assert(tc != null);
+            Debug.Assert(block != null);
+
+            _compiler = tc;
+            _info = GetCbi(block);
+        }
+
+        internal void InitializeRule(DlrCompiler tc, CodeBlockInfo top) {
+            Debug.Assert(tc != null);
+            Debug.Assert(top != null);
+
+            _compiler = tc;
+            _info = top;
+        }
+
+        private CodeBlockInfo GetCbi(CodeBlock cb) {
+            Debug.Assert(TheCompiler != null);
+            return TheCompiler.GetCbi(cb);
+        }
+
+        private TryStatementInfo GetTsi(TryStatement node) {
+            Debug.Assert(_info != null);
+            return _info.TryGetTsi(node);
         }
 
         #region IDisposable Members

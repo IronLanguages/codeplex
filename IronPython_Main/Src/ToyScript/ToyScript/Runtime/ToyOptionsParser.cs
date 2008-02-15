@@ -23,6 +23,7 @@ using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using ToyScript;
 
 namespace Microsoft.Scripting.Helpers {
     public class DefaultOptionsParser : OptionsParser {
@@ -38,7 +39,7 @@ namespace Microsoft.Scripting.Helpers {
             set { _engineOptions = value; }
         }
 
-        public DefaultOptionsParser() {
+        public DefaultOptionsParser(ToyLanguageContext context) : base(context) {
         }
 
         public override void Parse(string[] args) {

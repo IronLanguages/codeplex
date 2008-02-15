@@ -11,7 +11,7 @@ namespace IronPython.Runtime {
     /// </summary>
     [Serializable]
     sealed class PythonAsciiEncoding : Encoding {
-        internal static Encoding Instance = MakeNonThrowing();
+        internal static readonly Encoding Instance = MakeNonThrowing();
 
         internal PythonAsciiEncoding()
             : base() {

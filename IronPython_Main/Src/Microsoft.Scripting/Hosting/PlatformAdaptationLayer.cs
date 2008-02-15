@@ -38,6 +38,7 @@ namespace Microsoft.Scripting.Hosting {
     }
 #endif
 
+    [Serializable]
     public class PlatformAdaptationLayer {
 
 #if SILVERLIGHT
@@ -48,17 +49,29 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         // TODO: remove the need for this
+        // TODO: does this list need to be complete?
         private void LoadSilverlightAssemblyNameMapping() {
+            // non-trasparent assemblies
             AssemblyName clrAssembly = new AssemblyName(typeof(object).Assembly.FullName);
-            foreach (string asm in new string[] { "mscorlib", "System", "System.Core", "System.Xml" }) {
+            foreach (string asm in new string[] {
+                "mscorlib",
+                "System",
+                "System.Core",
+                "System.Net",
+                "System.Runtime.Serialization",
+                "System.ServiceModel.Web",
+                "System.Windows",
+                "System.Windows.Browser",
+                "System.Xml",
+                "System.Xml.Dtd",
+                "System.Xml.Serialization",
+                "Microsoft.VisualBasic",
+            }) {
                 clrAssembly.Name = asm;
                 _assemblyFullNames.Add(asm.ToLower(), clrAssembly.FullName);
             }
 
-            _assemblyFullNames.Add("system.silverlight", "System.SilverLight, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
-            _assemblyFullNames.Add("system.windows", "System.Windows, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
-            _assemblyFullNames.Add("microsoft.visualbasic", "Microsoft.VisualBasic, Version=2.0.5.0, PublicKeyToken=7cec85d7bea7798e");
-
+            // transparent assemblies
             AssemblyName dlrAssembly = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);            
             foreach (string asm in new string[] {
                 "Microsoft.Scripting",
@@ -70,7 +83,11 @@ namespace Microsoft.Scripting.Hosting {
                 "Microsoft.JScript.Compiler",
                 "Microsoft.JScript.Runtime",
                 "Microsoft.VisualBasic.Compiler",
-                "Microsoft.VisualBasic.Scripting"}) {
+                "Microsoft.VisualBasic.Scripting",
+                "System.ServiceModel",
+                "System.ServiceModel.Syndication",
+                "System.Xml.Linq",
+            }) {
                 dlrAssembly.Name = asm;
                 _assemblyFullNames.Add(asm.ToLower(), dlrAssembly.FullName);
             }

@@ -26,8 +26,9 @@ namespace Microsoft.Scripting.Hosting {
     /// Provides a StreamContentProvider for a stream of content backed by a file on disk.
     /// </summary>
     [Serializable]
-    public class FileStreamContentProvider : StreamContentProvider {
+    internal class FileStreamContentProvider : StreamContentProvider {
         private readonly string/*!*/ _path;
+        private readonly PALHolder/*!*/ _pal;
 
         public string/*!*/ Path {
             get { return _path; }
@@ -35,16 +36,35 @@ namespace Microsoft.Scripting.Hosting {
 
         #region Construction
 
-        internal FileStreamContentProvider(string/*!*/ path) {
+        internal FileStreamContentProvider(PlatformAdaptationLayer/*!*/ manager, string/*!*/ path) {
             Contract.RequiresNotNull(path, "path");
 
             _path = path;
+            _pal = new PALHolder(manager);
         }        
 
         #endregion
 
         public override Stream GetStream() {
-            return ScriptDomainManager.CurrentManager.PAL.OpenInputFileStream(Path);
+            return _pal.GetStream(Path);
+        }
+
+        [Serializable]
+        private class PALHolder 
+#if !SILVERLIGHT
+            : MarshalByRefObject 
+#endif
+        {
+            [NonSerialized]
+            private readonly PlatformAdaptationLayer/*!*/ _pal;
+
+            public PALHolder(PlatformAdaptationLayer/*!*/ pal) {
+                _pal = pal;
+            }
+
+            public Stream GetStream(string path) {
+                return _pal.OpenInputFileStream(path);
+            }
         }
     }
 }

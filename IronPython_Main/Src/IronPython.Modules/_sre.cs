@@ -22,11 +22,10 @@ using IronPython.Runtime;
 [assembly: PythonModule("_sre", typeof(IronPython.Modules.PythonSRegEx))]
 namespace IronPython.Modules {
     public static class PythonSRegEx {
-        public static object MAGIC = 20031017;
-        public static object CODESIZE = 2;
+        public const int MAGIC = 20031017;
+        public const int CODESIZE = 2;
 
-        [PythonName("getlower")]
-        public static object GetLower(object val, object encoding) {
+        public static object getlower(object val, object encoding) {
             int encInt = Converter.ConvertToInt32(val);
             int charVal = Converter.ConvertToInt32(val);
 
@@ -37,8 +36,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("compile")]
-        public static object Compile(object a, object b, object c, object d, object e, object f) {
+        public static object compile(object a, object b, object c, object d, object e, object f) {
             return null;
         }
     }

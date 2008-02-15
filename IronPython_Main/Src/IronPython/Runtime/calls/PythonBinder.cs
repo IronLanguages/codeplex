@@ -35,11 +35,15 @@ namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
     public class PythonBinder : ActionBinder {
+        private PythonContext/*!*/ _context;
         private static Dictionary<string, string[]> _memberMapping;
         private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
 
-        public PythonBinder(CodeContext context)
+        public PythonBinder(PythonContext/*!*/ pythonContext, CodeContext context)
             : base(context) {
+            Contract.RequiresNotNull(pythonContext, "pythonContext");
+
+            _context = pythonContext;
         }
 
         private StandardRule<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
@@ -244,8 +248,30 @@ namespace IronPython.Runtime.Calls {
             if (res.Count > 0) {
                 return res;
             }
+            
+            // try mapping __*__ methods to .NET method names
+            OperatorMapping opMap;
+            if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(
+                SymbolTable.StringToId(name),
+                out opMap)) {
 
-            if (ScriptDomainManager.Options.PrivateBinding) {
+                if (IsUnfilterOperator(type, opMap)) {
+                    OperatorInfo opInfo = OperatorInfo.GetOperatorInfo(opMap.Operator);
+                    if (opInfo != null) {
+                        res = base.GetMember(action, type, opInfo.Name);
+                        if (res.Count > 0) {
+                            return res;
+                        }
+
+                        res = base.GetMember(action, type, opInfo.AlternateName);
+                        if (res.Count > 0) {
+                            return res;
+                        }
+                    }
+                }
+            }
+
+            if (_context.DomainManager.GlobalOptions.PrivateBinding) {
                 // in private binding mode Python exposes private members under a mangled name.
                 string header = "_" + type.Name + "__";
                 if (name.StartsWith(header)) {
@@ -283,6 +309,26 @@ namespace IronPython.Runtime.Calls {
             }
 
             return res;
+        }
+
+        private static bool IsUnfilterOperator(Type type, OperatorMapping opMap) {
+            if (type == typeof(int)) {
+                // Python doesn't define __eq__ on int, .NET does
+                return opMap.Operator != Operators.Equals;
+            } else if (type == typeof(BigInteger)) {
+                switch(opMap.Operator) {
+                    // Python's big int only defines __cmp__
+                    case Operators.LessThan:
+                    case Operators.GreaterThan:
+                    case Operators.Equals:
+                    case Operators.NotEquals:
+                    case Operators.LessThanOrEqual:
+                    case Operators.GreaterThanOrEqual:
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         public override Expression MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
@@ -409,15 +455,19 @@ namespace IronPython.Runtime.Calls {
             // the alternate builder will get a chance to initialize the type.
             DynamicHelpers.GetPythonTypeFromType(t);
 
+            List<Type> list = new List<Type>();
+
+            // Python includes the types themselves so we can use extension properties w/ CodeContext
+            list.Add(t); 
+
             Type res;
             if (_extTypes.TryGetValue(t, out res)) {
-                List<Type> list = new List<Type>();
                 list.Add(res);
-                list.AddRange(base.GetExtensionTypes(t));
-                return list;
             }
 
-            return base.GetExtensionTypes(t);
+            list.AddRange(base.GetExtensionTypes(t));
+
+            return list;
         }
 
         internal static void RegisterType(Type extended, Type extension) {
@@ -503,15 +553,16 @@ namespace IronPython.Runtime.Calls {
             ReflectedPropertyTracker rpt = propertyTracker as ReflectedPropertyTracker;
             if (rpt != null) {
                 return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property,
-                    rpt.GetGetMethod(ScriptDomainManager.Options.PrivateBinding),
-                    rpt.GetSetMethod(ScriptDomainManager.Options.PrivateBinding),
+                    rpt.GetGetMethod(_context.DomainManager.GlobalOptions.PrivateBinding),
+                    rpt.GetSetMethod(_context.DomainManager.GlobalOptions.PrivateBinding),
                     NameType.Property));
             }
 
             return Ast.RuntimeConstant(new ReflectedExtensionProperty(
                 new ExtensionPropertyInfo(
                     rpt.DeclaringType,
-                    rpt.GetGetMethod(ScriptDomainManager.Options.PrivateBinding) ?? rpt.GetSetMethod(ScriptDomainManager.Options.PrivateBinding)
+                    rpt.GetGetMethod(_context.DomainManager.GlobalOptions.PrivateBinding) ?? 
+                        rpt.GetSetMethod(_context.DomainManager.GlobalOptions.PrivateBinding)
                 ),
                 NameType.Property)
             );

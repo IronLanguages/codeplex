@@ -32,8 +32,6 @@ namespace Microsoft.Scripting.Actions {
         private Type[] _types;                                      // types of our arguments
         private StandardRule<T> _rule = new StandardRule<T>();      // the rule we're building and returning
 
-        private static OperatorInfo[] _infos = MakeOperatorTable(); // table of Operators, names, and alt names for looking up methods.
-        
         public DoOperationBinderHelper(CodeContext context, DoOperationAction action, object[] args)
             : base(context, action) {
             _args = args;
@@ -50,7 +48,7 @@ namespace Microsoft.Scripting.Actions {
                 }
             }
 
-            OperatorInfo info = GetOperatorInfo(Action.Operation);
+            OperatorInfo info = OperatorInfo.GetOperatorInfo(Action.Operation);
             if (Action.IsComparision) {
                 MakeComparisonRule(info);
             } else {
@@ -60,9 +58,9 @@ namespace Microsoft.Scripting.Actions {
             return _rule;
         }
 
-        #region Comparison Operator
+        #region Comparison operator
 
-        private StandardRule<T> MakeComparisonRule(DoOperationBinderHelper<T>.OperatorInfo info) {
+        private StandardRule<T> MakeComparisonRule(OperatorInfo info) {
             // check the first type if it has an applicable method
             MethodInfo[] targets = GetApplicableMembers(info);            
             if (targets.Length > 0 && TryMakeBindingTarget(targets)) {
@@ -82,7 +80,7 @@ namespace Microsoft.Scripting.Actions {
 
             // try inverting the operator & result (e.g. if looking for Equals try NotEquals, LessThan for GreaterThan)...
             Operators revOp = GetInvertedOperator(info.Operator);
-            OperatorInfo revInfo = GetOperatorInfo(revOp);
+            OperatorInfo revInfo = OperatorInfo.GetOperatorInfo(revOp);
             Debug.Assert(revInfo != null);
 
             // try the 1st type's opposite function result negated 
@@ -206,7 +204,7 @@ namespace Microsoft.Scripting.Actions {
             Operators op = CompilerHelpers.InPlaceOperatorToOperator(info.Operator) ;
             if (op != Operators.None) {
                 // recurse to try and get the non-inplace action...
-                return MakeOperatorRule(GetOperatorInfo(op));
+                return MakeOperatorRule(OperatorInfo.GetOperatorInfo(op));
             }
 
             if (_types.Length == 2 &&
@@ -398,10 +396,10 @@ namespace Microsoft.Scripting.Actions {
 
                 if (pi != null) {
                     if (op == Operators.GetItem) {
-                        MethodInfo method = pi.GetGetMethod(ScriptDomainManager.Options.PrivateBinding);
+                        MethodInfo method = pi.GetGetMethod(PrivateBinding);
                         if (method != null) methods.Add(method);
                     } else if (op == Operators.SetItem) {
-                        MethodInfo method = pi.GetSetMethod(ScriptDomainManager.Options.PrivateBinding);
+                        MethodInfo method = pi.GetSetMethod(PrivateBinding);
                         if (method != null) methods.Add(method);
                     }
                 }
@@ -612,103 +610,6 @@ namespace Microsoft.Scripting.Actions {
             }
 
             return methods.ToArray();
-        }
-
-        private OperatorInfo GetOperatorInfo(Operators op) {
-            foreach (OperatorInfo info in _infos) {
-                if (info.Operator == op) return info;
-            }
-            return null;
-        }
-
-        #endregion
-
-        #region Operator Info
-
-        private static OperatorInfo[] MakeOperatorTable() {
-            List<OperatorInfo> res = new List<OperatorInfo>();
-
-            // alternate names from: http://msdn2.microsoft.com/en-us/library/2sk3x8a7(vs.71).aspx
-            //   different in:
-            //    comparisons all support alternative names, Xor is "ExclusiveOr" not "Xor"
-
-            // unary operators as defined in Partition I Architecture 9.3.1:
-            res.Add(new OperatorInfo(Operators.Decrement,           "op_Decrement",                 "Decrement"));      // --
-            res.Add(new OperatorInfo(Operators.Increment,           "op_Increment",                 "Increment"));      // ++
-            res.Add(new OperatorInfo(Operators.Negate,              "op_UnaryNegation",             "Negate"));         // - (unary)
-            res.Add(new OperatorInfo(Operators.Positive,            "op_UnaryPlus",                 "Plus"));           // + (unary)
-            res.Add(new OperatorInfo(Operators.Not,                 "op_LogicalNot",                null));             // !
-            res.Add(new OperatorInfo(Operators.IsTrue,              "op_True",                      null));             // not defined
-            res.Add(new OperatorInfo(Operators.IsFalse,             "op_False",                     null));             // not defined
-            //res.Add(new OperatorInfo(Operators.AddressOf,           "op_AddressOf",                 null));             // & (unary)
-            res.Add(new OperatorInfo(Operators.OnesComplement,      "op_OnesComplement",            "OnesComplement")); // ~
-            //res.Add(new OperatorInfo(Operators.PointerDereference,  "op_PointerDereference",        null));             // * (unary)
-
-            // binary operators as defined in Partition I Architecture 9.3.2:
-            res.Add(new OperatorInfo(Operators.Add,                 "op_Addition",                  "Add"));            // +
-            res.Add(new OperatorInfo(Operators.Subtract,            "op_Subtraction",               "Subtract"));       // -
-            res.Add(new OperatorInfo(Operators.Multiply,            "op_Multiply",                  "Multiply"));       // *
-            res.Add(new OperatorInfo(Operators.Divide,              "op_Division",                  "Divide"));         // /
-            res.Add(new OperatorInfo(Operators.Mod,                 "op_Modulus",                   "Mod"));            // %
-            res.Add(new OperatorInfo(Operators.Xor,                 "op_ExclusiveOr",               "ExclusiveOr"));    // ^
-            res.Add(new OperatorInfo(Operators.BitwiseAnd,          "op_BitwiseAnd",                "BitwiseAnd"));     // &
-            res.Add(new OperatorInfo(Operators.BitwiseOr,           "op_BitwiseOr",                 "BitwiseOr"));      // |
-            res.Add(new OperatorInfo(Operators.And,                 "op_LogicalAnd",                "And"));            // &&
-            res.Add(new OperatorInfo(Operators.Or,                  "op_LogicalOr",                 "Or"));             // ||
-            res.Add(new OperatorInfo(Operators.Assign,              "op_Assign",                    "Assign"));         // =
-            res.Add(new OperatorInfo(Operators.LeftShift,           "op_LeftShift",                 "LeftShift"));      // <<
-            res.Add(new OperatorInfo(Operators.RightShift,          "op_RightShift",                "RightShift"));     // >>
-            res.Add(new OperatorInfo(Operators.RightShiftSigned,    "op_SignedRightShift",          "RightShift"));     // not defined
-            res.Add(new OperatorInfo(Operators.RightShiftUnsigned,  "op_UnsignedRightShift",        "RightShift"));     // not defined
-            res.Add(new OperatorInfo(Operators.Equals,              "op_Equality",                  "Equals"));         // ==   
-            res.Add(new OperatorInfo(Operators.GreaterThan,         "op_GreaterThan",               "GreaterThan"));    // >
-            res.Add(new OperatorInfo(Operators.LessThan,            "op_LessThan",                  "LessThan"));       // <
-            res.Add(new OperatorInfo(Operators.NotEquals,           "op_Inequality",                "NotEquals"));      // != 
-            res.Add(new OperatorInfo(Operators.GreaterThanOrEqual,  "op_GreaterThanOrEqual",        "GreaterThanOrEqual"));        // >=
-            res.Add(new OperatorInfo(Operators.LessThanOrEqual,     "op_LessThanOrEqual",           "LessThanOrEqual"));        // <=
-            res.Add(new OperatorInfo(Operators.InPlaceMultiply,     "op_MultiplicationAssignment",  "Multiply"));       // *=
-            res.Add(new OperatorInfo(Operators.InPlaceSubtract,     "op_SubtractionAssignment",     "Subtract"));       // -=
-            res.Add(new OperatorInfo(Operators.InPlaceXor,          "op_ExclusiveOrAssignment",     "Xor"));            // ^=
-            res.Add(new OperatorInfo(Operators.InPlaceLeftShift,    "op_LeftShiftAssignment",       "LeftShift"));      // <<=
-            res.Add(new OperatorInfo(Operators.InPlaceRightShift,   "op_RightShiftAssignment",      "RightShift"));     // >>=
-            res.Add(new OperatorInfo(Operators.InPlaceRightShiftUnsigned, "op_UnsignedRightShiftAssignment", "UnsignedRightShift"));     // >>=
-            res.Add(new OperatorInfo(Operators.InPlaceMod,          "op_ModulusAssignment",         "Mod"));            // %=
-            res.Add(new OperatorInfo(Operators.InPlaceAdd,          "op_AdditionAssignment",        "Add"));            // += 
-            res.Add(new OperatorInfo(Operators.InPlaceBitwiseAnd,   "op_BitwiseAndAssignment",      "BitwiseAnd"));     // &=
-            res.Add(new OperatorInfo(Operators.InPlaceBitwiseOr,    "op_BitwiseOrAssignment",       "BitwiseOr"));      // |=
-            res.Add(new OperatorInfo(Operators.InPlaceDivide,       "op_DivisionAssignment",        "Divide"));         // /=
-            res.Add(new OperatorInfo(Operators.Comma,               "op_Comma",                     null));             // ,
-
-            // DLR Extended operators:
-            res.Add(new OperatorInfo(Operators.Compare,             "op_Compare",                   "Compare"));        // not defined
-            res.Add(new OperatorInfo(Operators.GetItem,             "get_Item",                     "GetItem"));        // x[y]
-            res.Add(new OperatorInfo(Operators.SetItem,             "set_Item",                     "SetItem"));        // x[y] = z
-            res.Add(new OperatorInfo(Operators.DeleteItem,          "del_Item",                     "DeleteItem"));     // not defined
-
-            res.Add(new OperatorInfo(Operators.GetEnumerator,       "GetEnumerator",                null));
-            res.Add(new OperatorInfo(Operators.Dispose,             "Dispose",                      null));
-
-            res.Add(new OperatorInfo(Operators.MemberNames,         "GetMemberNames",               null));
-            res.Add(new OperatorInfo(Operators.CodeRepresentation,  "ToCodeString",                 null));
-            res.Add(new OperatorInfo(Operators.CallSignatures,      "GetCallSignatures",            null));
-            res.Add(new OperatorInfo(Operators.Documentation,       "GetDocumentation",             null));
-            res.Add(new OperatorInfo(Operators.IsCallable,          "IsCallable",                   null));
-
-
-
-            return res.ToArray();
-        }
-        
-        class OperatorInfo {
-            public Operators Operator;
-            public string Name;
-            public string AlternateName;
-
-            public OperatorInfo(Operators op, string name, string altName) {
-                Operator = op;
-                Name = name;
-                AlternateName = altName;
-            }
         }
 
         #endregion

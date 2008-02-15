@@ -35,30 +35,31 @@ namespace IronPython.Modules {
     /// Python regular expression module.
     /// </summary>
     public static class PythonRegex {
+        private static readonly Random r = new Random(DateTime.Now.Millisecond);
+
         #region CONSTANTS
 
         // short forms
-        public static object I = 0x02;
-        public static object L = 0x04;
-        public static object M = 0x08;
-        public static object S = 0x10;
-        public static object U = 0x20;
-        public static object X = 0x40;
+        public const int I = 0x02;
+        public const int L = 0x04;
+        public const int M = 0x08;
+        public const int S = 0x10;
+        public const int U = 0x20;
+        public const int X = 0x40;
 
         // long forms
-        public static object IGNORECASE = 0x02;
-        public static object LOCALE = 0x04;
-        public static object MULTILINE = 0x08;
-        public static object DOTALL = 0x10;
-        public static object UNICODE = 0x20;
-        public static object VERBOSE = 0x40;
+        public const int IGNORECASE = 0x02;
+        public const int LOCALE = 0x04;
+        public const int MULTILINE = 0x08;
+        public const int DOTALL = 0x10;
+        public const int UNICODE = 0x20;
+        public const int VERBOSE = 0x40;
 
         #endregion
 
         #region Public API Surface
 
-        [PythonName("compile")]
-        public static RE_Pattern Compile(object pattern) {
+        public static RE_Pattern compile(object pattern) {
             try {
                 return new RE_Pattern(ValidatePattern(pattern));
             } catch (ArgumentException e) {
@@ -66,20 +67,19 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("compile")]
-        public static RE_Pattern Compile(object pattern, object flags) {
+        public static RE_Pattern compile(object pattern, object flags) {
             try {
                 return new RE_Pattern(ValidatePattern(pattern), Converter.ConvertToInt32(flags));
             } catch (ArgumentException e) {
                 throw PythonExceptions.CreateThrowable(error, e.Message);
             }
         }
-        public static string engine = "cli reg ex";
+
+        public const string engine = "cli reg ex";
 
         public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "re", "");
 
-        [PythonName("escape")]
-        public static string Escape(string text) {
+        public static string escape(string text) {
             if (text == null) throw PythonOps.TypeError("text must not be None");
 
             for (int i = 0; i < text.Length; i++) {
@@ -109,13 +109,11 @@ namespace IronPython.Modules {
             return text;
         }
 
-        [PythonName("findall")]
-        public static object FindAll(object pattern, string @string) {
-            return FindAll(pattern, @string, 0);
+        public static object findall(object pattern, string @string) {
+            return findall(pattern, @string, 0);
         }
 
-        [PythonName("findall")]
-        public static object FindAll(object pattern, string @string, int flags) {
+        public static object findall(object pattern, string @string, int flags) {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
@@ -162,66 +160,56 @@ namespace IronPython.Modules {
             return new List(matches);
         }
 
-        [PythonName("finditer")]
-        public static object FindIter(object pattern, object @string) {
-            return FindIter(pattern, @string, 0);
+        public static object finditer(object pattern, object @string) {
+            return finditer(pattern, @string, 0);
         }
 
-        [PythonName("finditer")]
-        public static object FindIter(object pattern, object @string, int flags) {
+        public static object finditer(object pattern, object @string, int flags) {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
 
             string str = ValidateString(@string, "string");
             return MatchIterator(pat.FindAllWorker(str, 0, str.Length), pat, str);
         }
 
-        [PythonName("match")]
-        public static object Match(object pattern, object @string) {
-            return Match(pattern, @string, 0);
+        public static object match(object pattern, object @string) {
+            return match(pattern, @string, 0);
         }
 
-        [PythonName("match")]
-        public static object Match(object pattern, object @string, int flags) {
-            return new RE_Pattern(ValidatePattern(pattern), flags).Match(ValidateString(@string, "string"));
+        public static object match(object pattern, object @string, int flags) {
+            return new RE_Pattern(ValidatePattern(pattern), flags).match(ValidateString(@string, "string"));
         }
 
-        [PythonName("search")]
-        public static object Search(object pattern, object @string) {
-            return Search(pattern, @string, 0);
-        }
-        [PythonName("search")]
-        public static object Search(object pattern, object @string, int flags) {
-            return new RE_Pattern(ValidatePattern(pattern), flags).Search(ValidateString(@string, "string"));
+        public static object search(object pattern, object @string) {
+            return search(pattern, @string, 0);
         }
 
-        [PythonName("split")]
-        public static object Split(object pattern, object @string) {
-            return Split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
+        public static object search(object pattern, object @string, int flags) {
+            return new RE_Pattern(ValidatePattern(pattern), flags).search(ValidateString(@string, "string"));
         }
-        [PythonName("split")]
-        public static object Split(object pattern, object @string, int maxSplit) {
-            return new RE_Pattern(ValidatePattern(pattern)).Split(ValidateString(@string, "string"),
+
+        public static object split(object pattern, object @string) {
+            return split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
+        }
+
+        public static object split(object pattern, object @string, int maxSplit) {
+            return new RE_Pattern(ValidatePattern(pattern)).split(ValidateString(@string, "string"),
                 maxSplit);
         }
 
-        [PythonName("sub")]
-        public static object Substitute(object pattern, object repl, object @string) {
-            return Substitute(pattern, repl, @string, Int32.MaxValue);
+        public static object sub(object pattern, object repl, object @string) {
+            return sub(pattern, repl, @string, Int32.MaxValue);
         }
 
-        [PythonName("sub")]
-        public static object Substitute(object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).Substitute(repl, ValidateString(@string, "string"), count);
+        public static object sub(object pattern, object repl, object @string, int count) {
+            return new RE_Pattern(ValidatePattern(pattern)).sub(repl, ValidateString(@string, "string"), count);
         }
 
-        [PythonName("subn")]
-        public static object SubGetCount(object pattern, object repl, object @string) {
-            return SubGetCount(pattern, repl, @string, Int32.MaxValue);
+        public static object subn(object pattern, object repl, object @string) {
+            return subn(pattern, repl, @string, Int32.MaxValue);
         }
 
-        [PythonName("subn")]
-        public static object SubGetCount(object pattern, object repl, object @string, int count) {
-            return new RE_Pattern(ValidatePattern(pattern)).SubGetCount(repl, ValidateString(@string, "string"), count);
+        public static object subn(object pattern, object repl, object @string, int count) {
+            return new RE_Pattern(ValidatePattern(pattern)).subn(repl, ValidateString(@string, "string"), count);
 
         }
 
@@ -231,7 +219,7 @@ namespace IronPython.Modules {
         /// <summary>
         /// Compiled reg-ex pattern
         /// </summary>
-        [PythonType("RE_Pattern")]
+        [PythonSystemType]
         public class RE_Pattern : IWeakReferenceable {
             internal Regex _re;
             private PythonDictionary _groups;
@@ -254,8 +242,7 @@ namespace IronPython.Modules {
                 this._compileFlags = flags;
             }
 
-            [PythonName("match")]
-            public RE_Match Match(object text) {
+            public RE_Match match(object text) {
                 string input = ValidateString(text, "text");
                 return RE_Match.makeMatch(_re.Match(input), this, input, 0, input.Length);
             }
@@ -267,15 +254,13 @@ namespace IronPython.Modules {
                 return position;
             }
 
-            [PythonName("match")]
-            public RE_Match Match(object text, int pos) {
+            public RE_Match match(object text, int pos) {
                 string input = ValidateString(text, "text");
                 pos = FixPosition(input, pos);
                 return RE_Match.makeMatch(_re.Match(input, pos), this, input, pos, input.Length);
             }
 
-            [PythonName("match")]
-            public RE_Match Match(object text, [DefaultParameterValue(0)]int pos, int endpos) {
+            public RE_Match match(object text, [DefaultParameterValue(0)]int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 pos = FixPosition(input, pos);
                 endpos = FixPosition(input, endpos);
@@ -287,36 +272,30 @@ namespace IronPython.Modules {
                     endpos);
             }
 
-            [PythonName("search")]
-            public RE_Match Search(object text) {
+            public RE_Match search(object text) {
                 string input = ValidateString(text, "text");
                 return RE_Match.make(_re.Match(input), this, input);
             }
 
-            [PythonName("search")]
-            public RE_Match Search(object text, int pos) {
+            public RE_Match search(object text, int pos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.make(_re.Match(input, pos, input.Length - pos), this, input);
             }
 
-            [PythonName("search")]
-            public RE_Match Search(object text, int pos, int endpos) {
+            public RE_Match search(object text, int pos, int endpos) {
                 string input = ValidateString(text, "text");
                 return RE_Match.make(_re.Match(input, pos, Math.Max(endpos - pos, 0)), this, input);
             }
 
-            [PythonName("findall")]
-            public object FindAll(string @string) {
-                return FindAll(@string, 0, null);
+            public object findall(string @string) {
+                return findall(@string, 0, null);
             }
 
-            [PythonName("findall")]
-            public object FindAll(string @string, int pos) {
-                return FindAll(@string, pos, null);
+            public object findall(string @string, int pos) {
+                return findall(@string, pos, null);
             }
 
-            [PythonName("findall")]
-            public object FindAll(object @string, int pos, object endpos) {
+            public object findall(object @string, int pos, object endpos) {
                 MatchCollection mc = FindAllWorker(ValidateString(@string, "text"), pos, endpos);
 
                 return FixFindAllMatch(this, mc);
@@ -331,31 +310,26 @@ namespace IronPython.Modules {
                 return _re.Matches(against, pos);
             }
 
-            [PythonName("finditer")]
-            public object FindIter(object @string) {
+            public object finditer(object @string) {
                 string input = ValidateString(@string, "string");
                 return MatchIterator(FindAllWorker(input, 0, input.Length), this, input);
             }
 
-            [PythonName("finditer")]
-            public object FindIter(object @string, int pos) {
+            public object finditer(object @string, int pos) {
                 string input = ValidateString(@string, "string");
                 return MatchIterator(FindAllWorker(input, pos, input.Length), this, input);
             }
 
-            [PythonName("finditer")]
-            public object FindIter(object @string, int pos, int endpos) {
+            public object finditer(object @string, int pos, int endpos) {
                 string input = ValidateString(@string, "string");
                 return MatchIterator(FindAllWorker(input, pos, endpos), this, input);
             }
 
-            [PythonName("split")]
-            public object Split(object @string) {
-                return Split(@string, 0);
+            public object split(object @string) {
+                return split(@string, 0);
             }
 
-            [PythonName("split")]
-            public object Split(object @string, int maxSplit) {
+            public object split(object @string, int maxSplit) {
                 List result = new List();
                 // fast path for negative maxSplit ( == "make no splits")
                 if (maxSplit < 0)
@@ -390,13 +364,11 @@ namespace IronPython.Modules {
                 return result;
             }
 
-            [PythonName("sub")]
-            public string Substitute(object repl, object @string) {
-                return Substitute(repl, ValidateString(@string, "string"), Int32.MaxValue);
+            public string sub(object repl, object @string) {
+                return sub(repl, ValidateString(@string, "string"), Int32.MaxValue);
             }
 
-            [PythonName("sub")]
-            public string Substitute(object repl, object @string, int count) {
+            public string sub(object repl, object @string, int count) {
                 if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
@@ -427,13 +399,11 @@ namespace IronPython.Modules {
                     count);
             }
 
-            [PythonName("subn")]
-            public object SubGetCount(object repl, string @string) {
-                return SubGetCount(repl, @string, Int32.MaxValue);
+            public object subn(object repl, string @string) {
+                return subn(repl, @string, Int32.MaxValue);
             }
 
-            [PythonName("subn")]
-            public object SubGetCount(object repl, object @string, int count) {
+            public object subn(object repl, object @string, int count) {
                 if (repl == null) throw PythonOps.TypeError("NoneType is not valid repl");
                 //  if 'count' is omitted or 0, all occurrences are replaced
                 if (count == 0) count = Int32.MaxValue;
@@ -471,15 +441,13 @@ namespace IronPython.Modules {
                 return PythonTuple.MakeTuple(res, totalCount);
             }
 
-            public int Flags {
-                [PythonName("flags")]
+            public int flags {
                 get {
                     return _compileFlags;
                 }
             }
 
-            public PythonDictionary GroupIndex {
-                [PythonName("groupindex")]
+            public PythonDictionary groupindex {
                 get {
                     if (_groups == null) {
                         PythonDictionary d = new PythonDictionary();
@@ -496,8 +464,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            public string Pattern {
-                [PythonName("pattern")]
+            public string pattern {
                 get {
                     return _pre.UserPattern;
                 }
@@ -506,23 +473,23 @@ namespace IronPython.Modules {
 
             #region IWeakReferenceable Members
 
-            public WeakRefTracker GetWeakRef() {
+            WeakRefTracker IWeakReferenceable.GetWeakRef() {
                 return _weakRefTracker;
             }
 
-            public bool SetWeakRef(WeakRefTracker value) {
+            bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
                 _weakRefTracker = value;
                 return true;
             }
 
-            public void SetFinalizer(WeakRefTracker value) {
-                SetWeakRef(value);
+            void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+                ((IWeakReferenceable)this).SetWeakRef(value);
             }
 
             #endregion
         }
 
-        [PythonType("RE_Match")]
+        [PythonSystemType]
         public class RE_Match {
             RE_Pattern _pattern;
             private Match _m;
@@ -565,18 +532,15 @@ namespace IronPython.Modules {
 
             #region Public API Surface
 
-            [PythonName("end")]
-            public int End() {
+            public int end() {
                 return _m.Index + _m.Length;
             }
 
-            [PythonName("start")]
-            public int Start() {
+            public int start() {
                 return _m.Index;
             }
 
-            [PythonName("start")]
-            public int Start(object group) {
+            public int start(object group) {
                 int grpIndex = GetGroupIndex(group);
                 if (!_m.Groups[grpIndex].Success) {
                     return -1;
@@ -584,8 +548,7 @@ namespace IronPython.Modules {
                 return _m.Groups[grpIndex].Index;
             }
 
-            [PythonName("end")]
-            public int End(object group) {
+            public int end(object group) {
                 int grpIndex = GetGroupIndex(group);
                 if (!_m.Groups[grpIndex].Success) {
                     return -1;
@@ -593,9 +556,8 @@ namespace IronPython.Modules {
                 return _m.Groups[grpIndex].Index + _m.Groups[grpIndex].Length;
             }
 
-            [PythonName("group")]
-            public object Group(object index, params object[] additional) {
-                if (additional.Length == 0) return Group(index);
+            public object group(object index, params object[] additional) {
+                if (additional.Length == 0) return group(index);
 
                 object[] res = new object[additional.Length + 1];
                 res[0] = _m.Groups[GetGroupIndex(index)].Success ? _m.Groups[GetGroupIndex(index)].Value : null;
@@ -606,26 +568,22 @@ namespace IronPython.Modules {
                 return PythonTuple.MakeTuple(res);
             }
 
-            [PythonName("group")]
-            public object Group(object index) {
+            public object group(object index) {
                 int pos = GetGroupIndex(index);
                 Group g = _m.Groups[pos];
                 return g.Success ? g.Value : null;
 
             }
 
-            [PythonName("group")]
-            public object Group() {
-                return Group(0);
+            public object group() {
+                return group(0);
             }
 
-            [PythonName("groups")]
-            public object Groups() {
-                return Groups(null);
+            public object groups() {
+                return groups(null);
             }
 
-            [PythonName("groups")]
-            public object Groups(object @default) {
+            public object groups(object @default) {
                 object[] ret = new object[_m.Groups.Count - 1];
                 for (int i = 1; i < _m.Groups.Count; i++) {
                     if (!_m.Groups[i].Success) {
@@ -637,8 +595,7 @@ namespace IronPython.Modules {
                 return PythonTuple.MakeTuple(ret);
             }
 
-            [PythonName("expand")]
-            public object Expand(object template) {
+            public object expand(object template) {
                 string strTmp = ValidateString(template, "template");
 
                 StringBuilder res = new StringBuilder();
@@ -673,9 +630,8 @@ namespace IronPython.Modules {
                 return res.ToString();
             }
 
-            [PythonName("groupdict")]
-            public object GroupDict() {
-                return GroupDict(null);
+            public object groupdict() {
+                return groupdict(null);
             }
             
             private static bool IsGroupNumber(string name) {
@@ -685,8 +641,7 @@ namespace IronPython.Modules {
                 return true;
             }
 
-            [PythonName("groupdict")]
-            public object GroupDict(object value) {
+            public object groupdict(object value) {
                 string[] groupNames = this._pattern._re.GetGroupNames();
                 Debug.Assert(groupNames.Length == this._m.Groups.Count);
                 PythonDictionary d = new PythonDictionary();
@@ -702,57 +657,50 @@ namespace IronPython.Modules {
                 return d;
             }
 
-            [PythonName("span")]
-            public object Span() {
-                return PythonTuple.MakeTuple(this.Start(), this.End());
+            public object span() {
+                return PythonTuple.MakeTuple(this.start(), this.end());
             }
 
-            [PythonName("span")]
-            public object Span(object group) {
-                return PythonTuple.MakeTuple(this.Start(group), this.End(group));
+            public object span(object group) {
+                return PythonTuple.MakeTuple(this.start(group), this.end(group));
             }
 
-            public int Position {
-                [PythonName("pos")]
+            public int pos {
                 get {
                     return _m.Index;
                 }
             }
 
-            public int EndPosition {
-                [PythonName("endpos")]
+            public int endpos {
                 get {
                     return _endPos;
                 }
             }
 
-            public string SearchValue {
-                [PythonName("string")]
+            public string @string {
                 get {
                     return _text;
                 }
             }
 
-            public object Regs {
-                [PythonName("regs")]
+            public object regs {
                 get {
                     object[] res = new object[_m.Groups.Count];
                     for (int i = 0; i < res.Length; i++) {
-                        res[i] = PythonTuple.MakeTuple(Start(i), End(i));
+                        res[i] = PythonTuple.MakeTuple(start(i), end(i));
                     }
 
                     return PythonTuple.MakeTuple(res);
                 }
             }
-            public object Pattern {
-                [PythonName("re")]
+
+            public object re {
                 get {
                     return _pattern;
                 }
             }
 
-            public object LastIndex {
-                [PythonName("lastindex")]
+            public object lastindex {
                 get {
                     //   -1 : initial value of lastindex
                     //    0 : no match found
@@ -791,21 +739,21 @@ namespace IronPython.Modules {
                 }
             }
 
-            public object LastGroup {
-                [PythonName("lastgroup")]
+            public object lastgroup {
                 get {
-                    if (LastIndex == null) return null;
+                    if (lastindex == null) return null;
 
                     // when group was not explicitly named, RegEx assigns the number as name
                     // This is different from C-Python, which returns None in such cases
 
-                    return this._pattern._re.GroupNameFromNumber((int)LastIndex);
+                    return this._pattern._re.GroupNameFromNumber((int)lastindex);
                 }
             }
 
             #endregion
 
             #region Private helper functions
+
             private void AppendGroup(StringBuilder sb, int index) {
                 sb.Append(_m.Groups[index].Value);
             }
@@ -820,12 +768,14 @@ namespace IronPython.Modules {
                 }
                 return grpIndex;
             }
+
             #endregion
         }
 
         #endregion
 
         #region Private helper functions
+
         private static IEnumerator MatchIterator(MatchCollection matches, RE_Pattern pattern, string input) {
             for (int i = 0; i < matches.Count; i++) {
                 yield return RE_Match.make(matches[i], pattern, input);
@@ -1004,7 +954,6 @@ namespace IronPython.Modules {
             return res;
         }
 
-        static Random r = new Random(DateTime.Now.Millisecond);
         private static string GetRandomString() {
             return r.Next(Int32.MaxValue / 2, Int32.MaxValue).ToString();
         }

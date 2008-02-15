@@ -37,8 +37,6 @@ namespace IronPython.Compiler.Ast {
         private PythonVariable _docVariable;        // Variable for the __doc__ attribute
         private PythonVariable _modNameVariable;    // Variable for the module's __name__
 
-        private MSAst.CodeBlock _block;
-
         public ClassDefinition(SymbolId name, Expression[] bases, Statement body) {
             _name = name;
             _bases = bases;
@@ -82,10 +80,6 @@ namespace IronPython.Compiler.Ast {
             set { _modNameVariable = value; }
         }
 
-        protected override MSAst.CodeBlock Block {
-            get { return _block; }
-        }
-
         internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
             PythonVariable variable;
 
@@ -106,54 +100,47 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            Debug.Assert(_block == null);
-
-            MSAst.CodeBlock block = Ast.CodeBlock(_name);
-            block.IsVisible = false;
-
-            _block = block;
-            block.EmitLocalDictionary = true;
-
             MSAst.Expression bases = Ast.NewArray(
                 typeof(object[]),
                 ag.TransformAndConvert(_bases, typeof(object))
             );
 
-            SetParent(block);
-            CreateVariables(block);
+            AstGenerator body = new AstGenerator(ag, SourceSpan.None, SymbolTable.IdToString(_name), false, false);
+
+            CreateVariables(body);
 
             // Create the body
-            AstGenerator body = new AstGenerator(block, ag.Context);
             MSAst.Expression bodyStmt = body.Transform(_body);
             MSAst.Expression modStmt =
-                Ast.Statement(
-                    Ast.Assign(
-                        _modVariable.Variable,
-                        Ast.Read(_modNameVariable.Variable)
-                    )
+                Ast.Assign(
+                    _modVariable.Variable,
+                    Ast.Read(_modNameVariable.Variable)
                 );
 
             MSAst.Expression docStmt;
-            if (_body.Documentation != null) {
+            string doc = ag.GetDocumentation(_body);
+            if (doc != null) {
                 docStmt =
-                    Ast.Statement(
-                        Ast.Assign(
-                            _docVariable.Variable,
-                            Ast.Constant(_body.Documentation)
-                        )
+                    Ast.Assign(
+                        _docVariable.Variable,
+                        Ast.Constant(doc)
                     );
             } else {
                 docStmt = Ast.Empty();
             }
 
             MSAst.Expression returnStmt = Ast.Return(Ast.CodeContext());
-            block.Body = Ast.Block(
+
+            body.Block.Dictionary = true;
+            body.Block.Visible = false;
+            body.Block.Body = Ast.Block(
                 modStmt,
                 docStmt,
                 bodyStmt,
                 returnStmt
             );
 
+            MSAst.CodeBlock block = body.Block.MakeLambda();
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 Ast.CodeContext(),

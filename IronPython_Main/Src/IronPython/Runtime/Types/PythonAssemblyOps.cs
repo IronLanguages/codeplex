@@ -30,11 +30,11 @@ using Microsoft.Scripting.Runtime;
 [assembly: PythonExtensionType(typeof(Assembly), typeof(PythonAssemblyOps))]
 namespace IronPython.Runtime.Types {
     public static class PythonAssemblyOps {
-        private static Dictionary<Assembly, TopNamespaceTracker> assemblyMap = new Dictionary<Assembly, TopNamespaceTracker>();
+        private static readonly Dictionary<Assembly, TopNamespaceTracker> assemblyMap = new Dictionary<Assembly, TopNamespaceTracker>();
 
         [SpecialName]
-        public static object GetBoundMember(Assembly self, string name) {
-            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(self);
+        public static object GetBoundMember(CodeContext/*!*/ context, Assembly self, string name) {
+            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(context, self);
 
             if (name == "__dict__") {
                 return new WrapperDictionary(reflectedAssembly);
@@ -51,8 +51,8 @@ namespace IronPython.Runtime.Types {
         }
 
         [SpecialName]
-        public static IList<SymbolId> GetMemberNames(Assembly self) {
-            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(self);
+        public static IList<SymbolId> GetMemberNames(CodeContext/*!*/ context, Assembly self) {
+            TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(context, self);
 
             ICollection<object> res = reflectedAssembly.Keys;
             List<SymbolId> ret = new List<SymbolId>();
@@ -72,14 +72,14 @@ namespace IronPython.Runtime.Types {
             return "<Assembly " + asmSelf.FullName + ">";
         }
 
-        private static TopNamespaceTracker GetReflectedAssembly(Assembly assem) {
+        private static TopNamespaceTracker GetReflectedAssembly(CodeContext/*!*/ context, Assembly assem) {
             Debug.Assert(assem != null);
             lock (assemblyMap) {
                 TopNamespaceTracker reflectedAssembly;
                 if (assemblyMap.TryGetValue(assem, out reflectedAssembly))
                     return reflectedAssembly;
 
-                reflectedAssembly = new TopNamespaceTracker();
+                reflectedAssembly = new TopNamespaceTracker(context.LanguageContext.DomainManager);
                 reflectedAssembly.LoadAssembly(assem);
                 assemblyMap[assem] = reflectedAssembly;
 

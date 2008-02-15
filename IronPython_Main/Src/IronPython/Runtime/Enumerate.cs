@@ -22,6 +22,7 @@ using System.Runtime.CompilerServices;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     /* 
@@ -30,41 +31,42 @@ namespace IronPython.Runtime {
      */
 
     [PythonType("enumerate")]
+    [Documentation("enumerate(iterable) -> iterator for index, value of iterable")]
     public class Enumerate : IEnumerator, IEnumerator<object> {
-        private readonly IEnumerator iter;
-        private int index = 0;
+        private readonly IEnumerator _iter;
+        private int _index;
+
         public Enumerate(object iter) {
-            this.iter = PythonOps.GetEnumerator(iter);
+            this._iter = PythonOps.GetEnumerator(iter);
         }
-
-        public static string Documentation {
-            [PythonName("__doc__")]
-            get {
-                return "enumerate(iterable) -> iterator for index, value of iterable";
-            }
-        }
-
+       
         #region IEnumerator Members
 
-        public void Reset() {
+        void IEnumerator.Reset() {
             throw new NotImplementedException();
         }
 
-        public object Current {
+        object IEnumerator.Current {
             get {
-                return PythonTuple.MakeTuple(index++, iter.Current);
+                return PythonTuple.MakeTuple(_index++, _iter.Current);
             }
         }
 
-        public bool MoveNext() {
-            return iter.MoveNext();
+        object IEnumerator<object>.Current {
+            get {
+                return ((IEnumerator)this).Current;
+            }
+        }
+
+        bool IEnumerator.MoveNext() {
+            return _iter.MoveNext();
         }
 
         #endregion
 
         #region IDisposable Members
 
-        public void Dispose() {
+        void IDisposable.Dispose() {
             Dispose(true);
 
             GC.SuppressFinalize(this);
@@ -76,7 +78,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonType("ReversedEnumerator")]
+    [PythonSystemType("ReversedEnumerator")]
     public class ReversedEnumerator : IEnumerator, IEnumerator<object> {
         private readonly object _getItemMethod;
         private object _current;
@@ -88,18 +90,23 @@ namespace IronPython.Runtime {
             this._getItemMethod = getitem;
         }
 
-        [SpecialName, PythonName("__len__")]
-        public int Length() { return _index; }
+        public int __len__() { return _index; }
 
         #region IEnumerator implementation
 
-        public object Current {
+        object IEnumerator.Current {
             get {
                 return _current;
             }
         }
 
-        public bool MoveNext() {
+        object IEnumerator<object>.Current {
+            get {
+                return ((IEnumerator)this).Current;
+            }
+        }
+
+        bool IEnumerator.MoveNext() {
             if (_index > 0) {
                 _index--;
                 _current = PythonCalls.Call(_getItemMethod, _index);
@@ -107,7 +114,7 @@ namespace IronPython.Runtime {
             } else return false;
         }
 
-        public void Reset() {
+        void IEnumerator.Reset() {
             _index = _savedIndex;
         }
 
@@ -115,7 +122,7 @@ namespace IronPython.Runtime {
 
         #region IDisposable Members
 
-        public void Dispose() {
+        void IDisposable.Dispose() {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -126,29 +133,27 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonType("SentinelIterator")]
+    [PythonSystemType("SentinelIterator")]
     public sealed class SentinelIterator : IEnumerator, IEnumerator<object> {
-        private readonly object target;
-        private readonly object sentinel;
-        private object current;
-        private bool sinkState;
+        private readonly object _target;
+        private readonly object _sentinel;
+        private object _current;
+        private bool _sinkState;
 
         public SentinelIterator(object target, object sentinel) {
-            this.target = target;
-            this.sentinel = sentinel;
-            this.current = null;
-            this.sinkState = false;
+            this._target = target;
+            this._sentinel = sentinel;
+            this._current = null;
+            this._sinkState = false;
         }
 
-        [PythonName("__iter__")]
-        public object GetIterator() {
+        public object __iter__() {
             return this;
         }
 
-        [PythonName("next")]
-        public object Next() {
-            if (MoveNext()) {
-                return Current;
+        public object next() {
+            if (((IEnumerator)this).MoveNext()) {
+                return ((IEnumerator)this).Current;
             } else {
                 throw PythonOps.StopIteration();
             }
@@ -156,24 +161,30 @@ namespace IronPython.Runtime {
 
         #region IEnumerator implementation
 
-        public object Current {
+        object IEnumerator.Current {
             get {
-                return current;
+                return _current;
             }   
         }
 
-        public bool MoveNext() {
-            if (sinkState) return false;
+        object IEnumerator<object>.Current {
+            get {
+                return _current;
+            }
+        }
 
-            current = PythonCalls.Call(target);
+        bool IEnumerator.MoveNext() {
+            if (_sinkState) return false;
 
-            bool hit = PythonOps.EqualRetBool(sentinel, current);
-            if (hit) sinkState = true;
+            _current = PythonCalls.Call(_target);
+
+            bool hit = PythonOps.EqualRetBool(_sentinel, _current);
+            if (hit) _sinkState = true;
 
             return !hit;
         }
 
-        public void Reset() {
+        void IEnumerator.Reset() {
             throw new NotImplementedException();
         }
 
@@ -181,7 +192,7 @@ namespace IronPython.Runtime {
 
         #region IDisposable Members
 
-        public void Dispose() {
+        void IDisposable.Dispose() {
         }
 
         #endregion
@@ -191,7 +202,7 @@ namespace IronPython.Runtime {
      * Enumeraters exposed to .NET code
      * 
      */
-    [PythonType("enumerator")]
+    [PythonSystemType("enumerator")]
     public class PythonEnumerator : IEnumerator {
         private readonly object _baseObject;
         private object _nextMethod;
@@ -270,15 +281,14 @@ namespace IronPython.Runtime {
 
         #endregion
 
-        [PythonName("__iter__")]
-        public object GetEnumerator() {
+        public object __iter__() {
             return this;
         }
     }
 
-    [PythonType("enumerable")]
+    [PythonSystemType("enumerable")]
     public class PythonEnumerable : IEnumerable {
-        object iterator;
+        private object _iterator;
 
         public static bool TryCreate(object baseEnumerator, out IEnumerable enumerator) {
             Debug.Assert(!(baseEnumerator is IEnumerable) || baseEnumerator is IPythonObject);   // we shouldn't re-wrap things that don't need it
@@ -307,26 +317,25 @@ namespace IronPython.Runtime {
         }
 
         private PythonEnumerable(object iterator) {
-            this.iterator = iterator;
+            this._iterator = iterator;
         }
 
         #region IEnumerable Members
 
-        [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
-            return new PythonEnumerator(iterator);
+        IEnumerator IEnumerable.GetEnumerator() {
+            return new PythonEnumerator(_iterator);
         }
 
         #endregion
     }
 
-    [PythonType("item-enumerator")]
+    [PythonSystemType("item-enumerator")]
     public class ItemEnumerator : IEnumerator {
-        private readonly object getItemMethod;
-        private object current = null;
-        private int index = 0;
+        private readonly object _getItemMethod;
+        private object _current;
+        private int _index;
 
-        public static bool TryCreate(object baseObject, out IEnumerator enumerator) {
+        internal static bool TryCreate(object baseObject, out IEnumerator enumerator) {
             object getitem;
 
             if (PythonOps.TryGetBoundAttr(baseObject, Symbols.GetItem, out getitem)) {
@@ -338,7 +347,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static IEnumerator Create(object baseObject) {
+        internal static IEnumerator Create(object baseObject) {
             IEnumerator res;
             if (!TryCreate(baseObject, out res)) {
                 throw PythonOps.TypeError("cannot convert {0} to IEnumerator", PythonTypeOps.GetName(baseObject));
@@ -347,50 +356,50 @@ namespace IronPython.Runtime {
         }
 
         internal ItemEnumerator(object getItemMethod) {
-            this.getItemMethod = getItemMethod;
+            this._getItemMethod = getItemMethod;
         }
 
         #region IEnumerator members
 
-        public object Current {
+        object IEnumerator.Current {
             get {
-                return current;
+                return _current;
             }
         }
 
-        public bool MoveNext() {
-            if (index < 0) {
+        bool IEnumerator.MoveNext() {
+            if (_index < 0) {
                 return false;
             }
 
             try {
-                current = PythonCalls.Call(getItemMethod, index);
-                index++;
+                _current = PythonCalls.Call(_getItemMethod, _index);
+                _index++;
                 return true;
             } catch (IndexOutOfRangeException) {
-                current = null;
-                index = -1;     // this is the end
+                _current = null;
+                _index = -1;     // this is the end
                 return false;
             } catch (StopIterationException) {
-                current = null;
-                index = -1;     // this is the end
+                _current = null;
+                _index = -1;     // this is the end
                 return false;
             }
         }
 
-        public void Reset() {
-            index = 0;
-            current = null;
+        void IEnumerator.Reset() {
+            _index = 0;
+            _current = null;
         }
 
         #endregion
     }
 
-    [PythonType("item-enumerable")]
+    [PythonSystemType("item-enumerable")]
     public class ItemEnumerable : IEnumerable {
-        object getitem;
+        private object _getitem;
 
-        public static bool TryCreate(object baseObject, out ItemEnumerable ie) {
+        internal static bool TryCreate(object baseObject, out ItemEnumerable ie) {
             object getitem;
 
             if (PythonOps.TryGetBoundAttr(baseObject, Symbols.GetItem, out getitem)) {
@@ -402,7 +411,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static ItemEnumerable Create(object baseObject) {
+        internal static ItemEnumerable Create(object baseObject) {
             ItemEnumerable res;
             if (!TryCreate(baseObject, out res)) {
                 throw PythonOps.TypeError("cannot convert {0} to IEnumerable", PythonTypeOps.GetName(baseObject));
@@ -411,15 +420,17 @@ namespace IronPython.Runtime {
         }
 
         private ItemEnumerable(object getitem) {
-            this.getitem = getitem;
+            this._getitem = getitem;
         }
 
+        public IEnumerator __iter__() {
+            return ((IEnumerable)this).GetEnumerator();
+        }
 
         #region IEnumerable Members
 
-        [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
-            return new ItemEnumerator(getitem);
+        IEnumerator IEnumerable.GetEnumerator() {
+            return new ItemEnumerator(_getitem);
         }
 
         #endregion

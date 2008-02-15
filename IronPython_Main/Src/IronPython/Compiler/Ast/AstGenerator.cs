@@ -28,27 +28,52 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using Microsoft.Scripting.Runtime;
+    using IronPython.Runtime;
 
     internal class AstGenerator {
-        private readonly MSAst.CodeBlock _block;
+        private readonly MSAst.LambdaBuilder _block;
         private List<MSAst.Variable> _temps;
         private readonly CompilerContext _context;
         private readonly bool _print;
         private int _loopDepth = 0;
 
-        public AstGenerator(MSAst.CodeBlock block, CompilerContext context)
-            : this(block, context, false) {
-        }
+        private bool _generator;
 
-        public AstGenerator(MSAst.CodeBlock block, CompilerContext context, bool print) {
-            Assert.NotNull(context);
-
-            _block = block;
-            _context = context;
+        private AstGenerator(SourceSpan span, string name, bool generator, bool print) {
             _print = print;
+            _generator = generator;
+
+            _block = Ast.Lambda(span, name, typeof(object));
         }
 
-        public MSAst.CodeBlock Block {
+        internal AstGenerator(AstGenerator parent, SourceSpan span, string name, bool generator, bool print)
+            : this(span, name, generator, print) {
+            Assert.NotNull(parent);
+            _context = parent.Context;
+
+            _block.Parent = parent.Block;
+        }
+
+        internal AstGenerator(CompilerContext context, SourceSpan span, string name, bool generator, bool print)
+            : this(span, name, generator, print) {
+            Assert.NotNull(context);
+            _context = context;
+        }
+
+        public bool Optimize {
+            get { return ((PythonContext)_context.SourceUnit.LanguageContext).PythonOptions.Optimize; }
+        }
+
+        public bool StripDocStrings {
+            get { return ((PythonContext)_context.SourceUnit.LanguageContext).PythonOptions.StripDocStrings; }
+        }
+
+        public bool DebugMode {
+            get { return _context.SourceUnit.LanguageContext.DomainManager.GlobalOptions.DebugMode; }
+        }
+
+        public MSAst.LambdaBuilder Block {
             get { return _block; }
         }
 
@@ -58,6 +83,10 @@ namespace IronPython.Compiler.Ast {
 
         public bool PrintExpressions {
             get { return _print; }
+        }
+
+        internal bool IsGenerator {
+            get { return _generator; }
         }
 
         public void EnterLoop() {
@@ -73,7 +102,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast) {
-            return new AstGenerator(null, context).Transform(ast);
+            return ast.TransformToAst(context);
         }
 
         public void AddError(string message, SourceSpan span) {
@@ -106,9 +135,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         public void FreeTemp(MSAst.Variable temp) {
-            if (this.Block is MSAst.GeneratorCodeBlock) {
+            if (IsGenerator) {
                 return;
             }
+
             if (_temps == null) {
                 _temps = new List<MSAst.Variable>();
             }
@@ -150,6 +180,14 @@ namespace IronPython.Compiler.Ast {
             return to.IsAssignableFrom(from) && (to.IsValueType == from.IsValueType);
         }
 
+        public string GetDocumentation(Statement stmt) {
+            if (StripDocStrings) {
+                return null;
+            }
+
+            return stmt.Documentation;
+        }
+        
         #region Utility methods
 
         public MSAst.Expression Transform(Expression from) {
@@ -202,16 +240,6 @@ namespace IronPython.Compiler.Ast {
                     expression = Ast.Convert(expression, typeof(void));
                 }
                 return expression;
-            }
-        }
-
-        internal MSAst.CodeBlock Transform(PythonAst from) {
-            if (from == null) {
-                return null;
-            } else {
-                MSAst.CodeBlock ret = from.TransformToAst(this, _context);
-                Debug.Assert(_loopDepth == 0);
-                return ret;
             }
         }
 

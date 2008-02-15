@@ -172,7 +172,7 @@ namespace Microsoft.Scripting.Actions {
 
         public void AddRule(object[] args, StandardRule<T> rule) {
             LinkedList<StandardRule<T>> list = GetRuleList(args);
-            lock (args) {
+            lock (list) {
                 list.AddLast(rule);
             }
         }

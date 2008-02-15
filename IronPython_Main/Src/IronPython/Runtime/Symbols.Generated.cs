@@ -16,6 +16,7 @@
 using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime {
     public static partial class Symbols {
@@ -1323,6 +1324,9 @@ namespace IronPython.Runtime {
                 case Operators.ConvertToInt32: return Symbols.ConvertToInt;
                 case Operators.ConvertToOctal: return Symbols.ConvertToOctal;
                 case Operators.ConvertToString: return Symbols.String;
+                case Operators.DivMod: return Symbols.DivMod;
+                case Operators.ReverseDivMod: return Symbols.ReverseDivMod;
+                case Operators.Compare: return Symbols.Cmp;
 
                 default:
                     throw new InvalidOperationException(op.ToString());
@@ -1358,8 +1362,16 @@ namespace IronPython.Runtime {
                 // *** END GENERATED CODE ***
 
                 #endregion
+                case Operators.DivMod: return Symbols.ReverseDivMod;
+                case Operators.ReverseDivMod: return Symbols.DivMod;
                 default:
-                    throw new InvalidOperationException();
+                    Operators rev = CompilerHelpers.OperatorToReverseOperator(op);
+                    if (rev != Operators.None) {
+                        return OperatorToSymbol(rev);
+                    }
+
+                    System.Diagnostics.Debug.Assert(false);
+                    throw new InvalidOperationException(op.ToString() + " cannot be reversed");
             }
         }
 

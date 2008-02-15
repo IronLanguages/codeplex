@@ -180,7 +180,7 @@ namespace Microsoft.Scripting.Actions {
             NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
-            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem)) {
+            foreach (TypeName typeName in AssemblyTypeNames.GetTypeNames(assem, _topPackage.DomainManager.GlobalOptions.PrivateBinding)) {
                 NamespaceTracker package;
                 Debug.Assert(typeName.Namespace != String.Empty);
                 if (typeName.Namespace == previousFullNamespace) {

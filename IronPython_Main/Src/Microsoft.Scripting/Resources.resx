@@ -120,6 +120,9 @@
   <data name="AmbigiousModule" xml:space="preserve">
     <value>ambigious module resolution, could be {0} or {1}</value>
   </data>
+  <data name="BindingTarget_BindingFailed" xml:space="preserve">
+    <value>An expression cannot be produced because the method binding was unsuccessful.</value>
+  </data>
   <data name="CantAddCasing" xml:space="preserve">
     <value>can't add another casing for identifier {0}</value>
   </data>

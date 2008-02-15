@@ -33,10 +33,14 @@ namespace Microsoft.Scripting.Actions {
     public class TopNamespaceTracker : NamespaceTracker {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
         private int _lastDiscovery = 0;
+        private readonly ScriptDomainManager/*!*/ _manager;
 
-        public TopNamespaceTracker()
+        public TopNamespaceTracker(ScriptDomainManager/*!*/ manager)
             : base(null) {
+            Contract.RequiresNotNull(manager, "manager");
             SetTopPackage(this);
+
+            _manager = manager;
         }       
 
         #region Public API Surface
@@ -105,6 +109,12 @@ namespace Microsoft.Scripting.Actions {
                     DiscoverAllTypes(_packageAssemblies[i]);
                 }
                 _lastDiscovery = _packageAssemblies.Count;
+            }
+        }
+
+        public ScriptDomainManager/*!*/ DomainManager {
+            get {
+                return _manager;
             }
         }
     }

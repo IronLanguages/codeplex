@@ -18,7 +18,10 @@ skiptest("win32")
 skiptest("silverlight")  #no time.clock or GetTotalMemory
 
 from System import Environment  
-skipMemoryCheck = '-X:StaticMethods' in Environment.GetCommandLineArgs()
+import clr
+skipMemoryCheck = clr.GetCurrentRuntime().GlobalOptions.EmitsUncollectableCode
+
+print skipMemoryCheck 
 
 from time import clock
 

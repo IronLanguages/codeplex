@@ -30,6 +30,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+using System.Threading;
 using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("imp", typeof(IronPython.Modules.PythonImport))]
@@ -44,25 +45,22 @@ namespace IronPython.Modules {
         internal const int PythonFrozen = 7;
         internal const int PythonCodeResource = 8;
         internal const int SearchError = 0;
+        private static long lock_count;
 
-        [PythonName("get_magic")]
-        public static string GetMagic() {
+        public static string get_magic() {
             return "";
         }
 
-        [PythonName("get_suffixes")]
-        public static List GetSuffixes() {
+        public static List get_suffixes() {
             return List.MakeList(PythonTuple.MakeTuple(".py", "U", PythonSource));
         }
 
-        [PythonName("find_module")]
-        public static PythonTuple FindModule(CodeContext/*!*/ context, string/*!*/ name) {
+        public static PythonTuple find_module(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("find_module() argument 1 must be string, not None");
             return FindBuiltinOrSysPath(context, name);
         }
 
-        [PythonName("find_module")]
-        public static PythonTuple FindModule(CodeContext/*!*/ context, string/*!*/ name, List path) {
+        public static PythonTuple find_module(CodeContext/*!*/ context, string/*!*/ name, List path) {
             if (name == null) throw PythonOps.TypeError("find_module() argument 1 must be string, not None");
 
             if (path == null) {
@@ -72,8 +70,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("load_module")]
-        public static object LoadModule(CodeContext/*!*/ context, string name, PythonFile file, string filename, PythonTuple/*!*/ description) {
+        public static object load_module(CodeContext/*!*/ context, string name, PythonFile file, string filename, PythonTuple/*!*/ description) {
             if (description == null) {
                 throw PythonOps.TypeError("load_module() argument 4 must be 3-item sequence, not None");
             }
@@ -86,7 +83,7 @@ namespace IronPython.Modules {
             // already loaded? do reload()
             PythonModule module = pythonContext.GetModuleByName(name);
             if (module != null) {
-                pythonContext.Importer.ReloadModule(module.Scope);
+                Importer.ReloadModule(context, module.Scope);
                 return module.Scope;
             }
 
@@ -106,59 +103,51 @@ namespace IronPython.Modules {
         }
 
         [Documentation("new_module(name) -> module\nCreates a new module without adding it to sys.modules.")]
-        [PythonName("new_module")]
-        public static Scope/*!*/ NewModule(CodeContext/*!*/ context, string/*!*/ name) {
+        public static Scope/*!*/ new_module(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("new_module() argument 1 must be string, not None");
 
             return PythonContext.GetContext(context).CreateModule(name).Scope;
         }
 
-        private static long lock_count;
-
-        [PythonName("lock_held")]
-        public static bool IsLockHeld() {
+        public static bool lock_held() {
             return lock_count != 0;
         }
 
-        [PythonName("acquire_lock")]
-        public static void AcquireLock() {
-            lock_count++;
+        public static void acquire_lock() {
+            Interlocked.Increment(ref lock_count);
         }
 
-        [PythonName("release_lock")]
-        public static void ReleaseLock() {
-            if (lock_count <= 0) {
-                throw PythonOps.RuntimeError("not holding the import lock");
-            }
-            lock_count--;
+        public static void release_lock() {
+            long prevCount;
+            do {
+                prevCount = lock_count;
+                if (prevCount == 0) throw PythonOps.RuntimeError("not holding the import lock");
+            } while (Interlocked.CompareExchange(ref lock_count, prevCount - 1, prevCount) != prevCount);
         }
 
-        public static object PY_SOURCE = PythonSource;
-        public static object PY_COMPILED = PythonCompiled;
-        public static object C_EXTENSION = CExtension;
-        public static object PY_RESOURCE = PythonResource;
-        public static object PKG_DIRECTORY = PackageDirectory;
-        public static object C_BUILTIN = CBuiltin;
-        public static object PY_FROZEN = PythonFrozen;
-        public static object PY_CODERESOURCE = PythonCodeResource;
-        public static object SEARCH_ERROR = SearchError;
+        public const int PY_SOURCE = PythonSource;
+        public const int PY_COMPILED = PythonCompiled;
+        public const int C_EXTENSION = CExtension;
+        public const int PY_RESOURCE = PythonResource;
+        public const int PKG_DIRECTORY = PackageDirectory;
+        public const int C_BUILTIN = CBuiltin;
+        public const int PY_FROZEN = PythonFrozen;
+        public const int PY_CODERESOURCE = PythonCodeResource;
+        public const int SEARCH_ERROR = SearchError;
 
-        [PythonName("init_builtin")]
-        public static object InitBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
+        public static object init_builtin(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("init_builtin() argument 1 must be string, not None");
             return LoadBuiltinModule(context, name);
         }
 
-        [PythonName("init_frozen")]
-        public static object InitFrozen(string name) {
+        public static object init_frozen(string name) {
             return null;
         }
 
-        [PythonName("is_builtin")]
-        public static int IsBuiltin(CodeContext/*!*/ context, string/*!*/ name) {
+        public static int is_builtin(CodeContext/*!*/ context, string/*!*/ name) {
             if (name == null) throw PythonOps.TypeError("is_builtin() argument 1 must be string, not None");
             Type ty;
-            if (PythonContext.Builtins.TryGetValue(name, out ty)) {
+            if (PythonContext.GetContext(context).Builtins.TryGetValue(name, out ty)) {
                 if (ty.Assembly == typeof(PythonContext).Assembly) {
                     // supposedly these can't be re-initialized and return -1 to
                     // indicate that here, but CPython does allow passing them
@@ -172,37 +161,31 @@ namespace IronPython.Modules {
             return 0;
         }
 
-        [PythonName("is_frozen")]
-        public static bool IsFrozen(string name) {
+        public static bool is_frozen(string name) {
             return false;
         }
 
 #if !SILVERLIGHT
 
-        [PythonName("load_compiled")]
-        public static object LoadCompiled(string name, string pathname) {
+        public static object load_compiled(string name, string pathname) {
             return null;
         }
 
-        [PythonName("load_compiled")]
-        public static object LoadCompiled(string name, string pathname, PythonFile file) {
+        public static object load_compiled(string name, string pathname, PythonFile file) {
             return null;
         }
 
-        [PythonName("load_dynamic")]
-        public static object LoadDynamic(string name, string pathname) {
+        public static object load_dynamic(string name, string pathname) {
             return null;
         }
 
-        [PythonName("load_dynamic")]
-        public static object LoadDynamic(string name, string pathname, PythonFile file) {
+        public static object load_dynamic(string name, string pathname, PythonFile file) {
             return null;
         }
 
 #endif
 
-        [PythonName("load_source")]
-        public static object LoadSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
+        public static object load_source(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname) {
             if (name == null) throw PythonOps.TypeError("load_source() argument 1 must be string, not None");
             if (pathname == null) throw PythonOps.TypeError("load_source() argument 2 must be string, not None");
             
@@ -213,8 +196,7 @@ namespace IronPython.Modules {
             return pythonContext.CompileAndInitializeModule(name, pathname, codeUnit);
         }
 
-        [PythonName("load_source")]
-        public static object LoadSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname, PythonFile/*!*/ file) {
+        public static object load_source(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname, PythonFile/*!*/ file) {
             if (name == null) throw PythonOps.TypeError("load_source() argument 1 must be string, not None");
             if (pathname == null) throw PythonOps.TypeError("load_source() argument 2 must be string, not None");
             if (pathname == null) throw PythonOps.TypeError("load_source() argument 3 must be file, not None");
@@ -269,7 +251,7 @@ namespace IronPython.Modules {
                 return BuiltinModuleTuple(name);
             }
             Type ty;
-            if (PythonContext.Builtins.TryGetValue(name, out ty)) {
+            if (PythonContext.GetContext(context).Builtins.TryGetValue(name, out ty)) {
                 return BuiltinModuleTuple(name);
             }
 
@@ -281,7 +263,7 @@ namespace IronPython.Modules {
         }
 
         private static Scope/*!*/ LoadPythonSource(PythonContext/*!*/ context, string/*!*/ name, PythonFile/*!*/ file, string/*!*/ fileName) {
-            SourceUnit sourceUnit = context.CreateSnippet(file.Read(), String.IsNullOrEmpty(fileName) ? null : fileName, SourceCodeKind.File);
+            SourceUnit sourceUnit = context.CreateSnippet(file.read(), String.IsNullOrEmpty(fileName) ? null : fileName, SourceCodeKind.File);
             return context.CompileAndInitializeModule(name, fileName, sourceUnit).Scope;
         }
 
@@ -290,14 +272,15 @@ namespace IronPython.Modules {
             
             string initPath = Path.Combine(path, "__init__.py");
             
-            SourceUnit codeUnit = context.CreateFileUnit(initPath, context.DefaultEncoding);
+            SourceUnit codeUnit = 
+                context.CreateFileUnit(initPath, context.DefaultEncoding);
             return context.CompileAndInitializeModule(moduleName, initPath, codeUnit).Scope;
         }
 #endif
 
         private static object LoadBuiltinModule(CodeContext/*!*/ context, string/*!*/ name) {
             Assert.NotNull(context, name);
-            return PythonContext.GetImporter(context).ImportBuiltin(context, name);
+            return Importer.ImportBuiltin(context, name);
         }
 
         #endregion

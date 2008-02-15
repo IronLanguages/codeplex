@@ -162,7 +162,7 @@ namespace IronPython.Runtime {
 
         #region binary operators
 
-        public static List operator +(List l1, List l2) {
+        public static List operator +([NotNull]List l1, [NotNull]List l2) {
             object[] them = l2.GetObjectArray();
             lock (l1) {
                 object[] ret = new object[l1._size + them.Length];
@@ -174,7 +174,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static List operator *(List l, int count) {
+        public static List operator *([NotNull]List l, int count) {
             return MultiplyWorker(l, count);
         }
 
@@ -182,11 +182,11 @@ namespace IronPython.Runtime {
             return MultiplyWorker(l, count);
         }
 
-        public static object operator *(List self, object count) {
+        public static object operator *([NotNull]List self, object count) {
             return PythonOps.MultiplySequence<List>(MultiplyWorker, self, count, true);
         }
 
-        public static object operator *(object count, List self) {
+        public static object operator *(object count, [NotNull]List self) {
             return PythonOps.MultiplySequence<List>(MultiplyWorker, self, count, false);
         }
 
@@ -225,15 +225,15 @@ namespace IronPython.Runtime {
         #region IPythonContainer Members
 
         [PythonName("__len__")]
-        public virtual int GetLength() {
+        public virtual int __len__() {
             return _size;
         }
 
         public bool ContainsValueWrapper(object value) {
-            return ContainsValue(value);
+            return __contains__(value);
         }
 
-        public bool ContainsValue(object value) {
+        public bool __contains__(object value) {
             lock (this) {
                 for (int i = 0; i < _size; i++) {
                     object thisIndex = _data[i];
@@ -273,7 +273,7 @@ namespace IronPython.Runtime {
         }
 
         [SpecialName, PythonName("__imul__")]
-        public object InPlaceMultiply(int count) {
+        public List InPlaceMultiply(int count) {
             lock (this) {
                 int n = this._size;
                 int newCount = n * count;
@@ -293,11 +293,15 @@ namespace IronPython.Runtime {
 
         [SpecialName, PythonName("__imul__")]
         public object InPlaceMultiply(object count) {
-            return InPlaceMultiply(Converter.ConvertToIndex(count));
+            return PythonOps.MultiplySequence<List>(InPlaceMultiplyWorker, this, count, true);
+        }
+
+        private static List InPlaceMultiplyWorker(List self, int count) {
+            return self.InPlaceMultiply(count);
         }
 
         [PythonName("__getslice__")]
-        public virtual object GetSlice(int start, int stop) {
+        public virtual object __getslice__(int start, int stop) {
             lock (this) {
                 Slice.FixSliceArguments(_size, ref start, ref stop);
                 
@@ -308,13 +312,13 @@ namespace IronPython.Runtime {
 
         internal object[] GetSliceAsArray(int start, int stop) {
             if (start < 0) start = 0;
-            if (stop > GetLength()) stop = GetLength();
+            if (stop > __len__()) stop = __len__();
 
             lock (this) return ArrayOps.GetSlice(_data, start, stop);
         }
 
         [PythonName("__setslice__")]
-        public virtual void SetSlice(int start, int stop, object value) {
+        public virtual void __setslice__(int start, int stop, object value) {
             Slice.FixSliceArguments(_size, ref start, ref stop);
             if (start > stop) return;
 
@@ -322,7 +326,7 @@ namespace IronPython.Runtime {
         }
 
         [PythonName("__delslice__")]
-        public virtual void DeleteSlice(int start, int stop) {
+        public virtual void __delslice__(int start, int stop) {
             lock (this) {
                 Slice.FixSliceArguments(_size, ref start, ref stop);
                 if (start > stop) return;
@@ -340,7 +344,7 @@ namespace IronPython.Runtime {
                 if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
 
                 int start, stop, step;
-                slice.Indices(_size, out start, out stop, out step);
+                slice.indices(_size, out start, out stop, out step);
 
                 if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) return new List();
 
@@ -365,14 +369,14 @@ namespace IronPython.Runtime {
             set {
                 if (slice == null) throw PythonOps.TypeError("list indicies must be integer or slice, not None");
 
-                if (slice.Step != null) {
+                if (slice.step != null) {
                     // try to assign back to self: make a copy first
                     if (this == value) value = new List(value);
 
                     slice.DoSliceAssign(this.SliceAssign, _size, value);
                 } else {
                     int start, stop, step;
-                    slice.Indices(_size, out start, out stop, out step);
+                    slice.indices(_size, out start, out stop, out step);
                     if (start > stop) return;
 
                     SliceNoStep(start, stop, value);
@@ -422,23 +426,23 @@ namespace IronPython.Runtime {
         }
 
         [SpecialName, PythonName("__delitem__")]
-        public virtual void DeleteItem(int index) {
+        public virtual void __delitem__(int index) {
             lock (this) RawDelete(PythonOps.FixIndex(index, _size));
         }
 
         [SpecialName, PythonName("__delitem__")]
-        public virtual void DeleteItem(object index) {
-            DeleteItem(Converter.ConvertToIndex(index));
+        public virtual void __delitem__(object index) {
+            __delitem__(Converter.ConvertToIndex(index));
         }
 
         [SpecialName, PythonName("__delitem__")]
-        public void DeleteItem(Slice slice) {
+        public void __delitem__(Slice slice) {
             if (slice == null) throw PythonOps.TypeError("list indicies must be integers or slices");
 
             lock (this) {
                 int start, stop, step;
                 // slice is sealed, indicies can't be user code...
-                slice.Indices(_size, out start, out stop, out step);
+                slice.indices(_size, out start, out stop, out step);
 
                 if (step > 0 && (start >= stop)) return;
                 if (step < 0 && (start <= stop)) return;
@@ -692,7 +696,7 @@ namespace IronPython.Runtime {
         }
 
         private class DefaultPythonComparer : IComparer {
-            public static DefaultPythonComparer Instance = new DefaultPythonComparer();
+            public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
             private FastDynamicSite<object, object, int> site = FastDynamicSite<object, object, int>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Compare));
             public DefaultPythonComparer() { }
 
@@ -982,7 +986,7 @@ namespace IronPython.Runtime {
 
         [PythonName("__contains__")]
         public virtual bool Contains(object value) {
-            return ContainsValue(value);
+            return __contains__(value);
         }
 
         public void Clear() {
@@ -1025,7 +1029,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return GetLength(); }
+            get { return __len__(); }
         }
 
         public void CopyTo(Array array, int index) {
@@ -1194,7 +1198,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection<object>.Count {
-            get { return GetLength(); }
+            get { return __len__(); }
         }
 
         bool ICollection<object>.IsReadOnly {

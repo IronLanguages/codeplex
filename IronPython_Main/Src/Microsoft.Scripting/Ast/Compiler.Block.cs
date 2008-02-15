@@ -23,6 +23,7 @@ using System.Threading;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
 
@@ -89,49 +90,51 @@ namespace Microsoft.Scripting.Ast {
             cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(SymbolId) }));
         }
 
-        private static void CreateEnvironmentFactory(CodeBlock block, bool generator) {
-            if (block.HasEnvironment) {
+        private static void CreateEnvironmentFactory(CodeBlockInfo cbi, bool generator) {
+            if (cbi.HasEnvironment) {
+                CodeBlock cb = cbi.CodeBlock;
+
                 // Get the environment size
                 int size = 0;
 
                 if (generator) {
-                    size += block.GeneratorTemps;
+                    size += cbi.GeneratorTemps;
 
-                    foreach (Variable var in block.Variables) {
+                    foreach (Variable var in cb.Variables) {
                         if (var.IsTemporary) {
                             size++;
                         }
                     }
                 }
 
-                foreach (Variable parm in block.Parameters) {
+                foreach (Variable parm in cb.Parameters) {
                     if (parm.Lift) size++;
                 }
-                foreach (Variable var in block.Variables) {
+                foreach (Variable var in cb.Variables) {
                     if (var.Lift) size++;
                 }
 
                 // Find the right environment factory for the size of elements to store
-                block.EnvironmentFactory = CreateEnvironmentFactory(size);
+                cbi.EnvironmentFactory = CreateEnvironmentFactory(size);
             }
         }
 
-        private static EnvironmentSlot EmitEnvironmentAllocation(Compiler cg, CodeBlock block) {
-            Debug.Assert(block.EnvironmentFactory != null);
+        private static EnvironmentSlot EmitEnvironmentAllocation(Compiler cg, CodeBlockInfo cbi) {
+            Debug.Assert(cbi.EnvironmentFactory != null);
 
             cg.EmitDebugMarker("-- ENV ALLOC START --");
 
-            block.EnvironmentFactory.EmitStorage(cg);
+            cbi.EnvironmentFactory.EmitStorage(cg);
             cg.Emit(OpCodes.Dup);
             // Store the environment reference in the local
-            EnvironmentSlot environmentSlot = block.EnvironmentFactory.CreateEnvironmentSlot(cg);
+            EnvironmentSlot environmentSlot = cbi.EnvironmentFactory.CreateEnvironmentSlot(cg);
             environmentSlot.EmitSet(cg);
 
             // Emit the names array for the environment constructor
-            cg.EmitEnvironmentIDs(block);
+            cg.EmitEnvironmentIDs(cbi.CodeBlock);
             // Emit code to generate the new instance of the environment
 
-            block.EnvironmentFactory.EmitNewEnvironment(cg);
+            cbi.EnvironmentFactory.EmitNewEnvironment(cg);
 
             cg.EmitDebugMarker("-- ENV ALLOC END --");
 
@@ -141,41 +144,44 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates a slot for context of type CodeContext from an environment slot.
         /// </summary>
-        private static Slot CreateEnvironmentContext(Compiler cg, CodeBlock block) {
+        private static Slot CreateEnvironmentContext(Compiler cg, bool visible) {
             // update CodeContext so it contains the nested scope for the locals
             //  ctxSlot = new CodeContext(currentCodeContext, locals)
             Slot ctxSlot = cg.GetNamedLocal(typeof(CodeContext), "$frame");
             cg.EnvironmentSlot.EmitGetDictionary(cg);
             cg.EmitCodeContext();
-            cg.EmitBoolean(block.IsVisible);
+            cg.EmitBoolean(visible);
             cg.EmitCall(typeof(RuntimeHelpers), "CreateNestedCodeContext");
             ctxSlot.EmitSet(cg);
             return ctxSlot;
         }
 
-        private static void CreateSlots(Compiler cg, CodeBlock block) {
-            Contract.RequiresNotNull(cg, "cg");
+        private static void CreateSlots(Compiler cg, CodeBlockInfo cbi) {
+            Debug.Assert(cg != null);
+            Debug.Assert(cbi != null);
 
-            if (block.HasEnvironment) {
+            CodeBlock cb = cbi.CodeBlock;
+
+            if (cbi.HasEnvironment) {
                 // we're an environment slot, we need our own environment slot, and we're
                 // going to update our Context slot to point to a CodeContext which has
                 // its Locals pointing at our Environment.
-                cg.EnvironmentSlot = EmitEnvironmentAllocation(cg, block);
-                cg.ContextSlot = CreateEnvironmentContext(cg, block);
+                cg.EnvironmentSlot = EmitEnvironmentAllocation(cg, cbi);
+                cg.ContextSlot = CreateEnvironmentContext(cg, cb.IsVisible);
             }
 
-            cg.Allocator.Block = block;
+            cg.Allocator.Block = cb;
 
-            CreateAccessSlots(cg, block);
+            CreateAccessSlots(cg, cbi);
 
-            foreach (Variable prm in block.Parameters) {
-                prm.Allocate(cg);
+            foreach (Variable prm in cb.Parameters) {
+                prm.Allocate(cg, cbi);
             }
-            foreach (Variable var in block.Variables) {
-                var.Allocate(cg);
+            foreach (Variable var in cb.Variables) {
+                var.Allocate(cg, cbi);
             }
-            foreach (VariableReference r in block.References.Values) {
-                r.CreateSlot(cg);
+            foreach (VariableReference r in cbi.References.Values) {
+                r.CreateSlot(cg, cbi);
                 Debug.Assert(r.Slot != null);
             }
 
@@ -183,37 +189,41 @@ namespace Microsoft.Scripting.Ast {
             cg.Allocator.GlobalAllocator.PrepareForEmit(cg);
         }
 
-        private static void CreateAccessSlots(Compiler cg, CodeBlock block) {
-            CreateClosureAccessSlots(cg, block);
-            CreateScopeAccessSlots(cg, block);
+        private static void CreateAccessSlots(Compiler cg, CodeBlockInfo cbi) {
+            CreateClosureAccessSlots(cg, cbi);
+            CreateScopeAccessSlots(cg, cbi);
         }
 
-        private static void CreateClosureAccessSlots(Compiler cg, CodeBlock block) {
+        private static void CreateClosureAccessSlots(Compiler cg, CodeBlockInfo cbi) {
             ScopeAllocator allocator = cg.Allocator;
+            CodeBlock cb = cbi.CodeBlock;
 
             // Current context is accessed via environment slot, if any
-            if (block.HasEnvironment) {
-                allocator.AddClosureAccessSlot(block, cg.EnvironmentSlot);
+            if (cbi.HasEnvironment) {
+                allocator.AddClosureAccessSlot(cb, cg.EnvironmentSlot);
             }
 
-            if (block.IsClosure) {
+            if (cbi.IsClosure) {
                 Slot scope = cg.GetLocalTmp(typeof(Scope));
                 cg.EmitCodeContext();
                 cg.EmitPropertyGet(typeof(CodeContext), "Scope");
-                if (block.HasEnvironment) {
+                if (cbi.HasEnvironment) {
                     cg.EmitPropertyGet(typeof(Scope), "Parent");
                 }
                 scope.EmitSet(cg);
 
-                CodeBlock current = block;
+                CodeBlockInfo currentInfo = cbi;
+                CodeBlock current = cb;
                 do {
                     CodeBlock parent = current.Parent;
-                    if (parent.EnvironmentFactory != null) {
+                    CodeBlockInfo parentInfo = cg.GetCbi(parent);
+
+                    if (parentInfo.EnvironmentFactory != null) {
                         scope.EmitGet(cg);
 
-                        cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parent.EnvironmentFactory.StorageType));
+                        cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parentInfo.EnvironmentFactory.StorageType));
 
-                        Slot storage = new LocalSlot(cg.DeclareLocal(parent.EnvironmentFactory.StorageType), cg);
+                        Slot storage = new LocalSlot(cg.DeclareLocal(parentInfo.EnvironmentFactory.StorageType), cg);
                         storage.EmitSet(cg);
                         allocator.AddClosureAccessSlot(parent, storage);
                     }
@@ -223,28 +233,32 @@ namespace Microsoft.Scripting.Ast {
                     scope.EmitSet(cg);
 
                     current = parent;
-                } while (current != null && current.IsClosure);
+                    currentInfo = parentInfo;
+                } while (current != null && currentInfo.IsClosure);
 
                 cg.FreeLocalTmp(scope);
             }
         }
 
-        private static void CreateScopeAccessSlots(Compiler cg, CodeBlock block) {
+        private static void CreateScopeAccessSlots(Compiler cg, CodeBlockInfo cbi) {
             ScopeAllocator allocator = cg.Allocator;
             for (; ; ) {
                 if (allocator == null) {
                     // TODO: interpreted mode anomaly
                     break;
                 }
-                if (allocator.Block != null && !allocator.Block.IsClosure) {
-                    break;
+                if (allocator.Block != null) {
+                    CodeBlockInfo abCbi = cg.GetCbi(allocator.Block);
+                    if (!abCbi.IsClosure) {
+                        break;
+                    }
                 }
                 allocator = allocator.Parent;
             }
 
             while (allocator != null) {
                 if (allocator.Block != null) {
-                    foreach (VariableReference reference in block.References.Values) {
+                    foreach (VariableReference reference in cbi.References.Values) {
                         if (!reference.Variable.Lift && reference.Variable.Block == allocator.Block) {
                             Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Block);
                             if (accessSlot != null) {
@@ -280,10 +294,9 @@ namespace Microsoft.Scripting.Ast {
         private static void EmitDelegateConstruction(Compiler cg, CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
             FlowChecker.Check(block);
 
-            bool hasContextParameter = block.ExplicitCodeContextExpression == null &&
-                (block.IsClosure ||
-                !(cg.ContextSlot is StaticFieldSlot));
+            CodeBlockInfo cbi = cg.GetCbi(block);
 
+            bool hasContextParameter = cbi.IsClosure || !(cg.ContextSlot is StaticFieldSlot);
             bool hasThis = block.HasThis();
             bool createWrapperMethod = block.ParameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(block, hasContextParameter, hasThis, stronglyTyped));
 
@@ -291,7 +304,7 @@ namespace Microsoft.Scripting.Ast {
 
             // TODO: storing implementations on code gen doesn't allow blocks being referenced from different methods
             // the implementations should be stored on some kind of Module when available
-            Compiler impl = cg.ProvideCodeBlockImplementation(block, hasContextParameter, hasThis);
+            Compiler impl = cg.TheCompiler.ProvideCodeBlockImplementation(cg, block, hasContextParameter, hasThis);
 
             // if the method has more than our maximum # of args wrap
             // it in a method that takes an object[] instead.
@@ -330,7 +343,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static Type[] GetParameterTypes(CodeBlock block, bool hasContextParameter) {
-            List<Variable> parameters = block.Parameters;
+            ReadOnlyCollection<Variable> parameters = block.Parameters;
             Type[] result = new Type[parameters.Count + (hasContextParameter ? 1 : 0)];
             int j = 0;
             if (hasContextParameter) {
@@ -405,12 +418,10 @@ namespace Microsoft.Scripting.Ast {
             return prefix + "$" + Interlocked.Increment(ref _Counter);
         }
 
-        // TODO: Rename To CreateCodeBlockCompiler or something such
         /// <summary>
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
-        /// <returns></returns>
-        private static Compiler CreateMethod(Compiler outer, CodeBlock block, bool hasContextParameter, bool hasThis) {
+        internal static Compiler CreateCodeBlockCompiler(Compiler outer, CodeBlock block, bool hasContextParameter, bool hasThis) {
             List<Type> paramTypes = new List<Type>();
             List<SymbolId> paramNames = new List<SymbolId>();
             Compiler impl;
@@ -422,21 +433,9 @@ namespace Microsoft.Scripting.Ast {
             impl = outer.DefineMethod(implName, block.ReturnType,
                 paramTypes, SymbolTable.IdsToStrings(paramNames), GetStaticDataForBody(outer));
 
-            // TODO: Cleanup!
-            impl.References = block.References;
+            impl.InitializeCompilerAndBlock(outer.TheCompiler, block);
 
-            if (block.ExplicitCodeContextExpression != null) {
-                Slot localContextSlot = impl.GetLocalTmp(typeof(CodeContext));
-
-                // cannot access code context slot during emit:
-                impl.EmitExpression(block.ExplicitCodeContextExpression);
-
-                localContextSlot.EmitSet(impl);
-                impl.ContextSlot = localContextSlot;
-
-            } else {
-                impl.ContextSlot = hasContextParameter ? impl.GetArgumentSlot(0) : outer.ContextSlot;
-            }
+            impl.ContextSlot = hasContextParameter ? impl.GetArgumentSlot(0) : outer.ContextSlot;
 
             if (block.ParameterArray) {
                 impl.ParamsSlot = impl.GetArgumentSlot(lastParamIndex);
@@ -456,7 +455,7 @@ namespace Microsoft.Scripting.Ast {
             paramTypes.Add(typeof(object[]));
 
             if (outer == null) {
-                result = CompilerHelpers.CreateDynamicCodeGenerator(implName, typeof(object), paramTypes, staticData);
+                result = Snippets.Shared.DefineMethod(implName, typeof(object), paramTypes, staticData);
             } else {
                 result = outer.DefineMethod(implName, typeof(object), paramTypes.ToArray(), null, staticData);
             }
@@ -536,11 +535,11 @@ namespace Microsoft.Scripting.Ast {
             return wrapper;
         }
 
-        private void EmitFunctionImplementation(CodeBlock block) {
-            EmitStackTraceTryBlockStart();
+        // Called by DlrCompiler
+        internal void EmitFunctionImplementation(CodeBlockInfo block) {
+            CodeBlock cb = block.CodeBlock;
 
-            // TODO: Cleanup!
-            _references = block.References;
+            EmitStackTraceTryBlockStart();
 
             // emit the actual body
             EmitBody(this, block);
@@ -548,16 +547,16 @@ namespace Microsoft.Scripting.Ast {
             string displayName;
 
             if (_source != null) {
-                displayName = _source.GetSymbolDocument(block.Start.Line) ?? block.Name;
+                displayName = _source.GetSymbolDocument(cb.Start.Line) ?? cb.Name;
             } else {
-                displayName = block.Name;
+                displayName = cb.Name;
             }
 
-            EmitStackTraceFaultBlock(block.Name, displayName);
+            EmitStackTraceFaultBlock(cb.Name, displayName);
         }
 
         private void EmitStackTraceTryBlockStart() {
-            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
+            if (ScriptDomainManager.Options.DebugMode && ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a try for traceback support
                 PushTryBlock();
                 BeginExceptionBlock();
@@ -565,7 +564,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitStackTraceFaultBlock(string name, string displayName) {
-            if (ScriptDomainManager.Options.DynamicStackTraceSupport) {
+            if (ScriptDomainManager.Options.DebugMode && ScriptDomainManager.Options.DynamicStackTraceSupport) {
                 // push a fault block (runs only if there's an exception, doesn't handle the exception)
                 PopTargets();
                 if (IsDynamicMethod) {
@@ -595,40 +594,42 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // Used by TreeCompiler
-        private static void EmitBody(Compiler cg, CodeBlock block) {
-            GeneratorCodeBlock gcb = block as GeneratorCodeBlock;
+        private static void EmitBody(Compiler cg, CodeBlockInfo cbi) {
+            GeneratorCodeBlock gcb = cbi.CodeBlock as GeneratorCodeBlock;
             if (gcb != null) {
-                EmitGeneratorCodeBlockBody(cg, gcb);
+                EmitGeneratorCodeBlockBody(cg, cbi);
             } else {
-                EmitCodeBlockBody(cg, block);
+                EmitCodeBlockBody(cg, cbi);
             }
         }
 
-        private static void EmitCodeBlockBody(Compiler cg, CodeBlock block) {
-            Debug.Assert(block.GetType() == typeof(CodeBlock));
+        private static void EmitCodeBlockBody(Compiler cg, CodeBlockInfo cbi) {
+            CodeBlock cb = cbi.CodeBlock;
 
-            CreateEnvironmentFactory(block, false);
-            CreateSlots(cg, block);
+            Debug.Assert(cb.GetType() == typeof(CodeBlock));
+
+            CreateEnvironmentFactory(cbi, false);
+            CreateSlots(cg, cbi);
             if (cg.InterpretedMode) {
-                foreach (VariableReference vr in block.References.Values) {
-                    if (vr.Variable.Kind == Variable.VariableKind.Local && vr.Variable.Block == block) {
+                foreach (VariableReference vr in cbi.References.Values) {
+                    if (vr.Variable.Kind == Variable.VariableKind.Local && vr.Variable.Block == cb) {
                         vr.Slot.EmitSetUninitialized(cg);
                     }
                 }
             }
 
-            cg.EmitBlockStartPosition(block);
+            cg.EmitBlockStartPosition(cb);
 
-            cg.EmitExpression(block.Body);
+            cg.EmitExpressionAndPop(cb.Body);
 
-            cg.EmitBlockEndPosition(block);
+            cg.EmitBlockEndPosition(cb);
 
-            //TODO skip if Body is guaranteed to return
-            if (block.ReturnType != typeof(void)) {
-                if (TypeUtils.CanAssign(typeof(object), block.ReturnType)) {
+            // TODO: Skip if Body is guaranteed to return
+            if (cb.ReturnType != typeof(void)) {
+                if (TypeUtils.CanAssign(typeof(object), cb.ReturnType)) {
                     cg.EmitNull();
                 } else {
-                    cg.EmitMissingValue(block.ReturnType);
+                    cg.EmitMissingValue(cb.ReturnType);
                 }
             }
             cg.EmitReturn();
@@ -649,7 +650,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             } else {
                 Block body = block.Body as Block;
-                if (block != null) {
+                if (body != null) {
                     for (int i = 0; i < body.Expressions.Count; i++) {
                         span = body.Expressions[i] as ISpan;
                         if (span != null && span.Start.IsValid) {
@@ -686,16 +687,20 @@ namespace Microsoft.Scripting.Ast {
 
         #region GeneratorCodeBlock
 
-        private static void EmitGeneratorCodeBlockBody(Compiler cg, GeneratorCodeBlock block) {
+        private static void EmitGeneratorCodeBlockBody(Compiler cg, CodeBlockInfo cbi) {
+            Debug.Assert(cbi.CodeBlock.GetType() == typeof(GeneratorCodeBlock));
+
+            GeneratorCodeBlock gcb = (GeneratorCodeBlock)cbi.CodeBlock;
+
             if (!cg.HasAllocator) {
                 // In the interpreted case, we do not have an allocator yet
                 Debug.Assert(cg.InterpretedMode);
                 cg.Allocator = CompilerHelpers.CreateFrameAllocator();
             }
 
-            cg.Allocator.Block = block;
-            CreateEnvironmentFactory(block, true);
-            EmitGeneratorBody(cg, block);
+            cg.Allocator.Block = gcb;
+            CreateEnvironmentFactory(cbi, true);
+            EmitGeneratorBody(cg, cbi, gcb);
             cg.EmitReturn();
         }
 
@@ -703,9 +708,9 @@ namespace Microsoft.Scripting.Ast {
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
         /// <returns></returns>
-        private static Compiler CreateMethod(Compiler _impl, GeneratorCodeBlock block) {
+        private static Compiler CreateMethod(Compiler impl, GeneratorCodeBlock block) {
             // Create the GenerateNext function
-            Compiler ncg = _impl.DefineMethod(
+            Compiler ncg = impl.DefineMethod(
                 GetGeneratorMethodName(block.Name),     // Method Name
                 typeof(bool),                           // Return Type
                 new Type[] {                            // signature
@@ -713,17 +718,20 @@ namespace Microsoft.Scripting.Ast {
                     typeof(object).MakeByRefType()
                 },
                 _GeneratorSigNames,                     // param names
-                GetStaticDataForBody(_impl));
+                GetStaticDataForBody(impl));
 
             Slot generator = ncg.GetArgumentSlot(0);
             ncg.ContextSlot = new PropertySlot(generator, typeof(Generator).GetProperty("Context"));
 
             // Namespace without er factory - all locals must exist ahead of time
-            ncg.Allocator = new ScopeAllocator(_impl.Allocator, null);
+            ncg.Allocator = new ScopeAllocator(impl.Allocator, null);
             ncg.Allocator.Block = null;       // No scope is active at this point
 
             // We are emitting generator, mark the Compiler
             ncg.IsGenerator = true;
+
+            // Inherit the compiler
+            ncg.InitializeCompilerAndBlock(impl.TheCompiler, block);
 
             return ncg;
         }
@@ -732,40 +740,38 @@ namespace Microsoft.Scripting.Ast {
         /// Emits the body of the function that creates a Generator object.  Also creates another
         /// Compiler for the inner method which implements the user code defined in the generator.
         /// </summary>
-        private static void EmitGeneratorBody(Compiler impl, GeneratorCodeBlock block) {
+        private static void EmitGeneratorBody(Compiler impl, CodeBlockInfo cbi, GeneratorCodeBlock block) {
             Compiler ncg = CreateMethod(impl, block);
             ncg.EmitLineInfo = impl.EmitLineInfo;
-
-            // TODO: Cleanup!
-            ncg.References = block.References;
+            ncg.InitializeCompilerAndBlock(impl.TheCompiler, block);
 
             ncg.Allocator.GlobalAllocator.PrepareForEmit(ncg);
 
             Slot flowedContext = impl.ContextSlot;
             // If there are no locals in the generator than we don't need the environment
-            if (block.HasEnvironment) {
+            if (cbi.HasEnvironment) {
                 // Environment creation is emitted into outer function that returns the generator
                 // function and then flowed into the generator method on each call via the Generator
                 // instance.
-                impl.EnvironmentSlot = EmitEnvironmentAllocation(impl, block);
-                flowedContext = CreateEnvironmentContext(impl, block);
+                impl.EnvironmentSlot = EmitEnvironmentAllocation(impl, cbi);
+                flowedContext = CreateEnvironmentContext(impl, block.IsVisible);
 
-                InitializeGeneratorEnvironment(impl, block);
+                InitializeGeneratorEnvironment(impl, cbi, block);
 
                 // Promote env storage to local variable
                 // envStorage = ((FunctionEnvironment)context.Locals).Tuple
-                block.EnvironmentFactory.EmitGetStorageFromContext(ncg);
+                cbi.EnvironmentFactory.EmitGetStorageFromContext(ncg);
 
-                ncg.EnvironmentSlot = block.EnvironmentFactory.CreateEnvironmentSlot(ncg);
+                ncg.EnvironmentSlot = cbi.EnvironmentFactory.CreateEnvironmentSlot(ncg);
                 ncg.EnvironmentSlot.EmitSet(ncg);
 
-                CreateGeneratorTemps(ncg, block);
+                CreateGeneratorTemps(ncg, cbi);
             }
 
-            CreateReferenceSlots(ncg, block);
+            CreateReferenceSlots(ncg, cbi);
 
             // Emit the generator body 
-            EmitGenerator(ncg, block);
+            EmitGenerator(ncg, cbi, block);
 
             flowedContext.EmitGet(impl);
             impl.EmitDelegateConstruction(ncg, block.DelegateType);
@@ -776,15 +782,15 @@ namespace Microsoft.Scripting.Ast {
             return name + "$g" + _GeneratorCounter++;
         }
 
-        private static void CreateReferenceSlots(Compiler cg, GeneratorCodeBlock block) {
-            CreateAccessSlots(cg, block);
-            foreach (VariableReference r in block.References.Values) {
-                r.CreateSlot(cg);
+        private static void CreateReferenceSlots(Compiler cg, CodeBlockInfo cbi) {
+            CreateAccessSlots(cg, cbi);
+            foreach (VariableReference r in cbi.References.Values) {
+                r.CreateSlot(cg, cbi);
                 Debug.Assert(r.Slot != null);
             }
         }
 
-        private static void CreateGeneratorTemps(Compiler cg, GeneratorCodeBlock block) {
+        private static void CreateGeneratorTemps(Compiler cg, CodeBlockInfo block) {
             for (int i = 0; i < block.GeneratorTemps; i++) {
                 cg.Allocator.AddGeneratorTemp(
                     block.EnvironmentFactory.MakeEnvironmentReference(
@@ -796,18 +802,18 @@ namespace Microsoft.Scripting.Ast {
 
         // The slots for generators are created in 2 steps. In the outer function,
         // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
-        private static void InitializeGeneratorEnvironment(Compiler cg, GeneratorCodeBlock block) {
+        private static void InitializeGeneratorEnvironment(Compiler cg, CodeBlockInfo cbi, GeneratorCodeBlock block) {
             cg.Allocator.AddClosureAccessSlot(block, cg.EnvironmentSlot);
             foreach (Variable p in block.Parameters) {
-                p.Allocate(cg);
+                p.Allocate(cg, cbi);
             }
             foreach (Variable d in block.Variables) {
-                d.Allocate(cg);
+                d.Allocate(cg, cbi);
             }
         }
 
-        private static void EmitGenerator(Compiler ncg, GeneratorCodeBlock block) {
-            IList<YieldTarget> topTargets = block.TopTargets;
+        private static void EmitGenerator(Compiler ncg, CodeBlockInfo cbi, GeneratorCodeBlock block) {
+            IList<YieldTarget> topTargets = cbi.TopTargets;
             Debug.Assert(topTargets != null);
 
             Label[] jumpTable = new Label[topTargets.Count];

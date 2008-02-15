@@ -29,7 +29,7 @@ using IronPython.Runtime.Types;
 
 
 namespace IronPython.Runtime.Calls {
-    [PythonType("instancemethod")]
+    [PythonSystemType("instancemethod")]
     public sealed partial class Method : PythonTypeSlot, IWeakReferenceable, ICustomMembers, IDynamicObject {
         private object _func;
         private object _inst;
@@ -47,34 +47,29 @@ namespace IronPython.Runtime.Calls {
             this._inst = instance;
         }
 
-        public string Name {
-            [PythonName("__name__")]
+        public string __name__ {
             get { return (string)PythonOps.GetBoundAttr(DefaultContext.Default, _func, Symbols.Name); }
         }
 
-        public string Documentation {
-            [PythonName("__doc__")]
+        public string __doc__ {
             get {
                 return PythonOps.GetBoundAttr(DefaultContext.Default, _func, Symbols.Doc) as string;
             }
         }
 
-        public object Function {
-            [PythonName("im_func")]
+        public object im_func {
             get {
                 return _func;
             }
         }
 
-        public object Self {
-            [PythonName("im_self")]
+        public object im_self {
             get {
                 return _inst;
             }
         }
 
-        public object DeclaringClass {
-            [PythonName("im_class")]
+        public object im_class {
             get {
                 // we could have an OldClass (or any other object) here if the user called the ctor directly
                 return PythonOps.ToPythonType(_declaringClass as PythonType) ?? _declaringClass;
@@ -82,7 +77,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Exception BadSelf(object got) {
-            OldClass dt = DeclaringClass as OldClass;            
+            OldClass dt = im_class as OldClass;            
 
             string firstArg;
             if (got == null) {
@@ -92,16 +87,16 @@ namespace IronPython.Runtime.Calls {
             }
 
             return PythonOps.TypeError("unbound method {0}() must be called with {1} instance as first argument (got {2} instead)",
-                Name,
-                (dt != null) ? dt.Name : DeclaringClass,
+                __name__,
+                (dt != null) ? dt.Name : im_class,
                 firstArg);
         }
 
         /// <summary>
-        /// Validates that the current self object is usable for this method.  Called from generated code.
+        /// Validates that the current self object is usable for this method.  
         /// </summary>
-        public object CheckSelf(object self) {
-            if (!PythonOps.IsInstance(self, DeclaringClass)) throw BadSelf(self);
+        internal object CheckSelf(object self) {
+            if (!PythonOps.IsInstance(self, im_class)) throw BadSelf(self);
             return self;
         }
 
@@ -120,12 +115,12 @@ namespace IronPython.Runtime.Calls {
 
         #region Object Overrides
         private string DeclaringClassAsString() {
-            if (DeclaringClass == null) return "?";
-            PythonType dt = DeclaringClass as PythonType;
+            if (im_class == null) return "?";
+            PythonType dt = im_class as PythonType;
             if (dt != null) return PythonTypeOps.GetName(dt);
-            OldClass oc = DeclaringClass as OldClass;
+            OldClass oc = im_class as OldClass;
             if (oc != null) return oc.Name;
-            return DeclaringClass.ToString();
+            return im_class.ToString();
         }
 
         public override string ToString() {
@@ -160,14 +155,13 @@ namespace IronPython.Runtime.Calls {
         
         #endregion
 
-        #region IDescriptor Members
-        [PythonName("__get__")]
-        public object GetAttribute(object instance) { return GetAttribute(instance, DeclaringClass); }
+        #region Descriptor Protocol Members
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
-            if (this.Self == null) {
-                if (owner == DeclaringClass || PythonOps.IsSubClass((PythonType)owner, DeclaringClass)) {
+        public object __get__(object instance) { return __get__(instance, im_class); }
+
+        public object __get__(object instance, object owner) {
+            if (this.im_self == null) {
+                if (owner == im_class || PythonOps.IsSubClass((PythonType)owner, im_class)) {
                     return new Method(_func, instance, owner);
                 }
             }
@@ -194,11 +188,11 @@ namespace IronPython.Runtime.Calls {
 
         #region ICustomMembers Members
 
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundCustomMember(context, name, out value);
+        bool ICustomMembers.TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
+            return ((ICustomMembers)this).TryGetBoundCustomMember(context, name, out value);
         }
 
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+        bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
             if (name == Symbols.Module) {
                 // Get the module name from the function and pass that out.  Note that CPython's method has
                 // no __module__ attribute and this value can be gotten via a call to method.__getattribute__ 
@@ -213,16 +207,16 @@ namespace IronPython.Runtime.Calls {
             return PythonOps.TryGetBoundAttr(context, _func, name, out value);
         }
 
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
+        void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {
             TypeCache.Method.SetMember(context, this, name, value);
         }
 
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
+        bool ICustomMembers.DeleteCustomMember(CodeContext context, SymbolId name) {
             TypeCache.Method.DeleteMember(context, this, name);
             return true;
         }
 
-        public IList<object> GetMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
             List ret = new List();
             foreach(SymbolId si in TypeCache.Method.GetMemberNames(context, this)) {
                 ret.AddNoLock(SymbolTable.IdToString(si));
@@ -241,7 +235,7 @@ namespace IronPython.Runtime.Calls {
             return ret;
         }
 
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
+        IDictionary<object, object> ICustomMembers.GetCustomMemberDictionary(CodeContext context) {
             return TypeCache.Method.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
         }
 
@@ -250,7 +244,7 @@ namespace IronPython.Runtime.Calls {
         #region PythonTypeSlot Overrides
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = GetAttribute(instance, owner);
+            value = __get__(instance, owner);
             return true;
         }
 
@@ -275,6 +269,7 @@ namespace IronPython.Runtime.Calls {
             // get default rule:
             return null;
         }
+
         private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
@@ -302,7 +297,7 @@ namespace IronPython.Runtime.Calls {
                     Ast.NotEqual(
                         Ast.ReadProperty(
                             Ast.Convert(rule.Parameters[0], typeof(Method)),
-                            typeof(Method).GetProperty("Self")
+                            typeof(Method).GetProperty("im_self")
                         ),
                         Ast.Null()
                     ),
@@ -319,7 +314,7 @@ namespace IronPython.Runtime.Calls {
             Expression[] args = ArrayUtils.MakeArray(rule.Parameters);
             args[0] = Ast.ReadProperty(
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
-                typeof(Method).GetProperty("Function")
+                typeof(Method).GetProperty("im_func")
             );
             Expression self;
 
@@ -366,8 +361,8 @@ namespace IronPython.Runtime.Calls {
 
         private static Expression CheckSelf<T>(StandardRule<T> rule, Expression self) {
             return Ast.Call(
+                typeof(PythonOps).GetMethod("MethodCheckSelf"),
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
-                typeof(Method).GetMethod("CheckSelf"),
                 Ast.ConvertHelper(self, typeof(object))
             );
         }
@@ -376,13 +371,13 @@ namespace IronPython.Runtime.Calls {
             Expression[] args = ArrayUtils.Insert(
                 (Expression)Ast.ReadProperty(
                     Ast.Convert(rule.Parameters[0], typeof(Method)),
-                    typeof(Method).GetProperty("Function")
+                    typeof(Method).GetProperty("im_func")
                 ),
                 rule.Parameters);
 
             args[1] = Ast.ReadProperty(
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
-                typeof(Method).GetProperty("Self")
+                typeof(Method).GetProperty("im_self")
             );
             return args;
         }

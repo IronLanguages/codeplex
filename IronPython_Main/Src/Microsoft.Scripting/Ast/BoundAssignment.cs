@@ -44,42 +44,42 @@ namespace Microsoft.Scripting.Ast {
         /// Performs an assignment variable = value
         /// </summary>
         public static Expression Write(Variable variable, Variable value) {
-            return Statement(Assign(variable, Ast.Read(value)));
+            return Assign(variable, Ast.Read(value));
         }
 
         /// <summary>
         /// Performs an assignment variable = value
         /// </summary>
         public static Expression Write(Variable variable, Expression value) {
-            return Statement(Assign(variable, value));
+            return Assign(variable, value);
         }
 
         /// <summary>
         /// Performs an assignment variable.field = value
         /// </summary>
         public static Expression Write(Variable variable, FieldInfo field, Expression value) {
-            return Statement(AssignField(Read(variable), field, value));
+            return AssignField(Read(variable), field, value);
         }
 
         /// <summary>
         /// Performs an assignment variable.field = value
         /// </summary>
         public static Expression Write(Variable variable, FieldInfo field, Variable value) {
-            return Statement(AssignField(Read(variable), field, Read(value)));
+            return AssignField(Read(variable), field, Read(value));
         }
 
         /// <summary>
         /// Performs an assignment variable = right.field
         /// </summary>
         public static Expression Write(Variable variable, Variable right, FieldInfo field) {
-            return Statement(Assign(variable, ReadField(Read(right), field)));
+            return Assign(variable, ReadField(Read(right), field));
         }
 
         /// <summary>
         /// Performs an assignment variable.leftField = right.rightField
         /// </summary>
         public static Expression Write(Variable variable, FieldInfo leftField, Variable right, FieldInfo rightField) {
-            return Statement(AssignField(Read(variable), leftField, ReadField(Read(right), rightField)));
+            return AssignField(Read(variable), leftField, ReadField(Read(right), rightField));
         }
 
         /// <summary>

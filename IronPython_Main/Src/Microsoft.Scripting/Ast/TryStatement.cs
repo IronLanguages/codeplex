@@ -13,9 +13,6 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Diagnostics;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
@@ -26,34 +23,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression _finally;
         private readonly SourceLocation _start;
         private readonly SourceLocation _end;
-
-        private TargetLabel _target;    // The entry point into the try statement
-
-        /// <summary>
-        /// One or more of the catch blocks includes yield.
-        /// </summary>
-        private bool _yieldInCatch;
-
-        /// <summary>
-        /// Labels for the yields inside a try block.
-        /// </summary>
-        private List<YieldTarget> _tryYields;               // TODO: Move to Compiler !!!
-
-        /// <summary>
-        /// Labels for the yields inside the catch clause.
-        /// This is only valid for the try statement with a 'finally' clause,
-        /// in which case we need to enter the outer try, and then dispatch
-        /// to the yield labels
-        /// For try statement without finally, the yields contained within
-        /// catch are hoisted outside of the try and as such don't need
-        /// to be tracked
-        /// </summary>
-        private List<YieldTarget> _catchYields;
-
-        /// <summary>
-        /// Labels for the yields inside a finally block.
-        /// </summary>
-        private List<YieldTarget> _finallyYields;
 
         /// <summary>
         /// Called by <see cref="TryStatementBuilder"/>.
@@ -96,80 +65,6 @@ namespace Microsoft.Scripting.Ast {
 
         public SourceLocation End {
             get { return _end; }
-        }
-
-        // TODO: Move to Compiler
-        internal List<YieldTarget> TryYields {
-            get { return _tryYields; }
-        }
-
-        // TODO: Move to Compiler
-        internal bool YieldInCatch {
-            get { return _yieldInCatch; }
-        }
-
-        // TODO: Move to Compiler
-        internal List<YieldTarget> CatchYields {
-            get { return _catchYields; }
-        }
-
-        // TODO: Move to Compiler
-        internal List<YieldTarget> FinallyYields {
-            get { return _finallyYields; }
-        }
-
-        // TODO: Move to Compiler
-        internal TargetLabel Target {
-            get { return _target; }
-        }
-
-        private TargetLabel EnsureTopTarget() {
-            if (_target == null) {
-                _target = new TargetLabel();
-            }
-            return _target;
-        }
-
-        internal static void AddYieldTarget(ref List<YieldTarget> list, TargetLabel target, int index) {
-            if (list == null) {
-                list = new List<YieldTarget>();
-            }
-            list.Add(new YieldTarget(index, target));
-        }
-
-        internal TargetLabel AddTryYieldTarget(TargetLabel label, int index) {
-            // Yield inside try stays inside try block, so we need to
-            // remember the target label.
-
-            AddYieldTarget(ref _tryYields, label, index);
-            return EnsureTopTarget();
-        }
-
-        internal TargetLabel AddCatchYieldTarget(TargetLabel label, int index, int handler) {
-            // Yields inside catch blocks are hoisted out of the catch.
-            // If the catch block has a finally, though, it will get wrapped in
-            // another try block, in which case the direct jump is not possible
-            // and code must route through the top target.
-
-            Debug.Assert(_handlers != null && handler < _handlers.Count);
-            CatchBlock cb = _handlers[handler];
-
-            cb.Yield = true;
-            _yieldInCatch = true;
-
-            if (_finally != null) {
-                AddYieldTarget(ref _catchYields, label, index);
-                return EnsureTopTarget();
-            } else {
-                return label;
-            }
-        }
-
-        internal TargetLabel AddFinallyYieldTarget(TargetLabel label, int index) {
-            // Yields inside finally stay inside finally so we need to keep track
-            // of them.
-            AddYieldTarget(ref _finallyYields, label, index);
-            return EnsureTopTarget();
         }
 
         internal int GetGeneratorTempCount() {

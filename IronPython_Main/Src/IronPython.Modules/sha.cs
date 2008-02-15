@@ -37,84 +37,78 @@ namespace IronPython.Modules {
         private static readonly int digestSize = hasher.HashSize / 8;
         private const int blockSize = 1;
 
-        public static int DigestSize {
+        public static int digest_size {
             [Documentation("Size of the resulting digest in bytes (constant)")]
-            [PythonName("digest_size")]
             get { return digestSize; }
         }
 
-        public static int BlockSize {
+        public static int blocksize {
             [Documentation("Block size")]
-            [PythonName("blocksize")]
             get { return blockSize; }
         }
 
         [Documentation("new([data]) -> object (object used to calculate hash)")]
-        [PythonName("new")]
-        public static ShaObject Make(object data) {
-            return new ShaObject(data);
+        public static sha @new(object data) {
+            return new sha(data);
         }
 
         [Documentation("new([data]) -> object (object used to calculate hash)")]
-        [PythonName("new")]
-        public static ShaObject Make() {
-            return new ShaObject();
+        public static sha @new() {
+            return new sha();
         }
 
         [Documentation("new([data]) -> object (object used to calculate hash)")]
-        [PythonType("sha")]
-        public class ShaObject : ICloneable {
-            byte[] bytes;
-            byte[] hash;
+        public class sha : ICloneable {
+            byte[] _bytes;
+            byte[] _hash;
 
-            public ShaObject() : this(new byte[0]) { }
+            public sha() : this(new byte[0]) { }
 
-            public ShaObject(object initialData) {
-                bytes = new byte[0];
-                Update(initialData);
+            public sha(object initialData) {
+                _bytes = new byte[0];
+                update(initialData);
             }
 
-            private ShaObject(byte[] initialBytes) {
-                bytes = new byte[0];
-                Update(initialBytes);
+            private sha(byte[] initialBytes) {
+                _bytes = new byte[0];
+                update(initialBytes);
             }
 
             [Documentation("update(string) -> None (update digest with string data)")]
-            [PythonName("update")]
-            public void Update(object newData) {
-                Update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
+            public void update(object newData) {
+                update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
             }
 
-            private void Update(byte[] newBytes) {
-                byte[] updatedBytes = new byte[bytes.Length + newBytes.Length];
-                Array.Copy(bytes, updatedBytes, bytes.Length);
-                Array.Copy(newBytes, 0, updatedBytes, bytes.Length, newBytes.Length);
-                bytes = updatedBytes;
-                hash = hasher.ComputeHash(bytes);
+            private void update(byte[] newBytes) {
+                byte[] updatedBytes = new byte[_bytes.Length + newBytes.Length];
+                Array.Copy(_bytes, updatedBytes, _bytes.Length);
+                Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
+                _bytes = updatedBytes;
+                _hash = hasher.ComputeHash(_bytes);
             }
 
             [Documentation("digest() -> int (current digest value)")]
-            [PythonName("digest")]
-            public string Digest() {
-                return StringOps.FromByteArray(hash);
+            public string digest() {
+                return StringOps.FromByteArray(_hash);
             }
 
             [Documentation("hexdigest() -> string (current digest as hex digits)")]
-            [PythonName("hexdigest")]
-            public string HexDigest() {
-                StringBuilder result = new StringBuilder(2 * hash.Length);
-                for (int i = 0; i < hash.Length; i++) {
-                    result.Append(hash[i].ToString("x2"));
+            public string hexdigest() {
+                StringBuilder result = new StringBuilder(2 * _hash.Length);
+                for (int i = 0; i < _hash.Length; i++) {
+                    result.Append(_hash[i].ToString("x2"));
                 }
                 return result.ToString();
             }
 
             [Documentation("copy() -> object (copy of this object)")]
-            [PythonName("copy")]
-            public object Clone() {
-                return new ShaObject(bytes);
+            public sha copy() {
+                return new sha(_bytes);
             }
 
+            object ICloneable.Clone() {
+                return copy();
+            }
         }
     }
 }

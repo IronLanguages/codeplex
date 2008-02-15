@@ -27,8 +27,7 @@ namespace IronPython.Modules {
     public static class PythonBinaryAscii {
         public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "binascii", "");       
 
-        [PythonName("a2b_uu")]
-        public static string DecodeUUEncoding(string data) {
+        public static string a2b_uu(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length < 1) throw PythonOps.ValueError("data is too short");
 
@@ -40,8 +39,7 @@ namespace IronPython.Modules {
             return res.ToString(0, data[0] - 32);
         }
 
-        [PythonName("b2a_uu")]
-        public static string EncodeUUEncoding(string data) {
+        public static string b2a_uu(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length > 45) throw PythonOps.ValueError("at most 45 characters");
 
@@ -55,8 +53,7 @@ namespace IronPython.Modules {
             return res.ToString();
         }
 
-        [PythonName("a2b_base64")]
-        public static object DecodeBase64(string data) {
+        public static object a2b_base64(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length == 0) return String.Empty;
 
@@ -76,23 +73,7 @@ namespace IronPython.Modules {
             return res.ToString();
         }
 
-        private static string RemoveWhiteSpace(string data) {
-            StringBuilder str = null;
-            for (int i = 0; i < data.Length; i++) {
-                if (data[i] == '\r' || data[i] == '\n' || data[i] == ' ') {
-                    if (str == null) {
-                        str = new StringBuilder(data, 0, i, data.Length);
-                    }                    
-                } else if (str != null) {
-                    str.Append(data[i]);
-                }
-            }
-            if (str != null) data = str.ToString();
-            return data;
-        }
-
-        [PythonName("b2a_base64")]
-        public static object EncodeBase64(string data) {
+        public static object b2a_base64(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (data.Length == 0) return String.Empty;
 
@@ -109,69 +90,54 @@ namespace IronPython.Modules {
             return res.ToString();
         }
 
-        [PythonName("a2b_qp")]
-        public static object DecodeQuotedPrintable(object data) {
+        public static object a2b_qp(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("a2b_qp")]
-        public static object DecodeQuotedPrintable(object data, object header) {
+        public static object a2b_qp(object data, object header) {
             throw new NotImplementedException();
         }
-        [PythonName("b2a_qp")]
-        public static object EncodeQuotedPrintable(object data) {
+        public static object b2a_qp(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("b2a_qp")]
-        public static object EncodeQuotedPrintable(object data, object quotetabs) {
+        public static object b2a_qp(object data, object quotetabs) {
             throw new NotImplementedException();
         }
-        [PythonName("b2a_qp")]
-        public static object EncodeQuotedPrintable(object data, object quotetabs, object istext) {
+        public static object b2a_qp(object data, object quotetabs, object istext) {
             throw new NotImplementedException();
         }
 
-        [PythonName("b2a_qp")]
-        public static object EncodeQuotedPrintable(object data, object quotetabs, object istext, object header) {
+        public static object b2a_qp(object data, object quotetabs, object istext, object header) {
             throw new NotImplementedException();
         }
-        [PythonName("a2b_hqx")]
-        public static object DecodeHqx(object data) {
+        public static object a2b_hqx(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("rledecode_hqx")]
-        public static object RleDecodeHqx(object data) {
+        public static object rledecode_hqx(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("rlecode_hqx")]
-        public static object RlecodeHqx(object data) {
+        public static object rlecode_hqx(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("b2a_hqx")]
-        public static object EncodeHqx(object data) {
+        public static object b2a_hqx(object data) {
             throw new NotImplementedException();
         }
-        [PythonName("crc_hqx")]
-        public static object GetHqxCrc(object data, object crc) {
+        public static object crc_hqx(object data, object crc) {
             throw new NotImplementedException();
         }
-        [PythonName("crc32")]
-        public static object GetCrc32(object data, object crc) {
+        public static object crc32(object data, object crc) {
             throw new NotImplementedException();
         }
-        [PythonName("b2a_hex")]
-        public static object EncodeHex(string data) {
+        public static object b2a_hex(string data) {
             StringBuilder sb = new StringBuilder(data.Length * 2);
             for (int i = 0; i < data.Length; i++) {
                 sb.AppendFormat("{0:x2}", (int)data[i]);
             }
             return sb.ToString();
         }
-        [PythonName("hexlify")]
-        public static object Hexlify(string data) {
-            return EncodeHex(data);
+        public static object hexlify(string data) {
+            return b2a_hex(data);
         }
-        [PythonName("a2b_hex")]
-        public static object DecodeHex(string data) {
+        public static object a2b_hex(string data) {
             if (data == null) throw PythonOps.TypeError("expected string, got NoneType");
             if ((data.Length & 0x01) != 0) throw PythonOps.ValueError("string must be even lengthed");
             StringBuilder res = new StringBuilder(data.Length / 2);
@@ -188,12 +154,13 @@ namespace IronPython.Modules {
             }
             return res.ToString();
         }
-        [PythonName("unhexlify")]
-        public static object DecodeHexlify(string hexstr) {
-            return DecodeHex(hexstr);
+
+        public static object unhexlify(string hexstr) {
+            return a2b_hex(hexstr);
         }
 
         #region Private implementation
+
         private delegate char EncodeChar(int val);
         private delegate int DecodeByte(char val);
 
@@ -298,6 +265,21 @@ namespace IronPython.Modules {
             }
 
             return res;
+        }
+
+        private static string RemoveWhiteSpace(string data) {
+            StringBuilder str = null;
+            for (int i = 0; i < data.Length; i++) {
+                if (data[i] == '\r' || data[i] == '\n' || data[i] == ' ') {
+                    if (str == null) {
+                        str = new StringBuilder(data, 0, i, data.Length);
+                    }
+                } else if (str != null) {
+                    str.Append(data[i]);
+                }
+            }
+            if (str != null) data = str.ToString();
+            return data;
         }
 
         #endregion

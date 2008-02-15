@@ -49,13 +49,9 @@ namespace IronPython.Compiler.Ast {
         }
 
         public override string Documentation {
-            get {
-                if (_statements.Length > 0 && _statements[0] is ExpressionStatement) {
-                    ExpressionStatement es = (ExpressionStatement)_statements[0];
-                    if (es.Expression is ConstantExpression) {
-                        object val = ((ConstantExpression)es.Expression).Value;
-                        if (val is string && !ScriptDomainManager.Options.StripDocStrings) return (string)val;
-                    }
+            get {                
+                if (_statements.Length > 0) {
+                    return _statements[0].Documentation;
                 }
                 return null;
             }

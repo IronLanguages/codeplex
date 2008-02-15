@@ -26,12 +26,12 @@ namespace IronPython.Runtime.Operations {
 
         // *** BEGIN GENERATED CODE ***
 
-        private static FastDynamicSite<object, object> _callSite0 = RuntimeHelpers.CreateSimpleCallSite<object, object>(DefaultContext.Default);
-        private static FastDynamicSite<object, object, object> _callSite1 = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
-        private static FastDynamicSite<object, object, object, object> _callSite2 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object>(DefaultContext.Default);
-        private static FastDynamicSite<object, object, object, object, object> _callSite3 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object>(DefaultContext.Default);
-        private static FastDynamicSite<object, object, object, object, object, object> _callSite4 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object, object>(DefaultContext.Default);
-        private static FastDynamicSite<object, object, object, object, object, object, object> _callSite5 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object, object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object> _callSite0 = RuntimeHelpers.CreateSimpleCallSite<object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object, object> _callSite1 = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object, object, object> _callSite2 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object, object, object, object> _callSite3 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object, object, object, object, object> _callSite4 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object, object>(DefaultContext.Default);
+        private static readonly FastDynamicSite<object, object, object, object, object, object, object> _callSite5 = RuntimeHelpers.CreateSimpleCallSite<object, object, object, object, object, object, object>(DefaultContext.Default);
 
         public static object CallWithContext(CodeContext context, object func) {
             return _callSite0.Invoke(func);

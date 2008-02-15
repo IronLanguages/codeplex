@@ -42,21 +42,15 @@ namespace IronPython.Compiler.Ast {
         // This needs to be injected at any yield suspension points, mainly:
         // - at the start of the generator body
         // - after each yield statement.
-        static internal MSAst.Expression CreateCheckThrowStatement(AstGenerator ag, SourceSpan span) {
-            MSAst.Expression s2 = Ast.Statement(CreateCheckThrowExpression(ag, span));
-            return s2;
-        }
-
         static internal MSAst.Expression CreateCheckThrowExpression(AstGenerator ag, SourceSpan span) {
-            MSAst.GeneratorCodeBlock gcb = ag.Block as MSAst.GeneratorCodeBlock;
-            if (gcb == null) {
+            if (!ag.IsGenerator) {
                 // This can fail if yield is used outside of a function body. 
                 // Normally, we'd like the parser to catch this and just assert there. But yield could be in practically any expression,
                 // and the parser can't catch all cases. 
-                
+
                 // Consider using ag.AddError(). However, consumers expect Expression transforms to be non-null, so if we don't throw,
                 // we'd still need to return something. 
-                throw PythonOps.SyntaxError(IronPython.Resources.MisplacedYield, ag.Context.SourceUnit, span, IronPython.Hosting.ErrorCodes.SyntaxError);                
+                throw PythonOps.SyntaxError(IronPython.Resources.MisplacedYield, ag.Context.SourceUnit, span, IronPython.Hosting.ErrorCodes.SyntaxError);
             }
 
             Type tGenerator = typeof(IronPython.Runtime.PythonGenerator);
@@ -64,10 +58,10 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression instance = Ast.GeneratorInstanceExpression(tGenerator);
             Debug.Assert(instance.Type == tGenerator);
 
-            MSAst.Expression s2 =
-                Ast.Call(
-                    instance,
-                    tGenerator.GetMethod("CheckThrowableAndReturnSendValue"));
+            MSAst.Expression s2 = Ast.Call(
+                typeof(PythonOps).GetMethod("GeneratorCheckThrowableAndReturnSendValue"),
+                instance
+            );
             return s2;
         }
 

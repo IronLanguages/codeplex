@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Types {
         private string _name;
         private SlotInfo _slotInfo;
 
-        private static Dictionary<SlotInfo, SlotValue> _methods = new Dictionary<SlotInfo, SlotValue>();
+        private static readonly Dictionary<SlotInfo, SlotValue> _methods = new Dictionary<SlotInfo, SlotValue>();
                 
         public ReflectedSlotProperty(string name, Type type, int index) {
             _slotInfo = new SlotInfo(index, type);
@@ -148,10 +148,11 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotGetValue, MethodInfo> CreateGetter() {
-            DynamicILGen getter = CompilerHelpers.CreateDynamicMethod(
+            DynamicILGen getter = Snippets.Shared.CreateDynamicMethod(
                 "get_" + _slotInfo.Index.ToString(),
                 typeof(object),
-                new Type[] { typeof(object) }
+                new Type[] { typeof(object) },
+                false
             );
 
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");
@@ -172,10 +173,11 @@ namespace IronPython.Runtime.Types {
         }
 
         private KeyValuePair<SlotSetValue, MethodInfo> CreateSetter() {
-            DynamicILGen setter = CompilerHelpers.CreateDynamicMethod(
+            DynamicILGen setter = Snippets.Shared.CreateDynamicMethod(
                 "set_" + _slotInfo.Index.ToString(),
                 typeof(void),
-                new Type[] { typeof(object), typeof(object) }
+                new Type[] { typeof(object), typeof(object) },
+                false
             );
 
             PropertyInfo slotTuple = _slotInfo.Type.GetProperty("$SlotValues");

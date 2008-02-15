@@ -27,7 +27,7 @@ using System.CodeDom.Compiler;
 namespace Microsoft.Scripting {
     public abstract class Tuple {
         public const int MaxSize = 128;
-        private static Dictionary<Type, int> _sizeDict = new Dictionary<Type, int>();
+        private static readonly Dictionary<Type, int> _sizeDict = new Dictionary<Type, int>();
 
         public abstract object GetValue(int index);
         public abstract void SetValue(int index, object value);

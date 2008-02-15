@@ -44,10 +44,6 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static Expression Statement(Expression expression) {
-            return Statement(SourceSpan.None, expression);
-        }
-
         public static Expression Statement(SourceSpan span, Expression expression) {
             Contract.RequiresNotNull(expression, "expression");
             return new ExpressionStatement(span.Start, span.End, expression);

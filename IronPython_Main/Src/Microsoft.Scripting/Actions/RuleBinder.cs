@@ -25,20 +25,20 @@ namespace Microsoft.Scripting.Actions {
     /// Rule binder resolves variables in the rule and nested lambdas.
     /// </summary>
     class RuleBinder : VariableBinder {
-        private readonly Dictionary<Variable, VariableReference> _top = new Dictionary<Variable, VariableReference>();
+        private readonly CodeBlockInfo _top = new CodeBlockInfo(null);
         private readonly Type _result;
 
         /// <summary>
         /// RuleBinder entry point
         /// </summary>
-        internal static Dictionary<Variable, VariableReference> Bind(Expression test, Expression target, Type result) {
+        internal static AnalyzedRule Bind(Expression test, Expression target, Type result) {
             RuleBinder rb = new RuleBinder(result);
             rb.WalkNode(test);
             rb.WalkNode(target);
 
             rb.BindTheScopes();
 
-            return rb._top;
+            return new AnalyzedRule(rb._top, rb.Blocks, rb.Infos);
         }
 
         private RuleBinder(Type result) {
@@ -65,8 +65,8 @@ namespace Microsoft.Scripting.Actions {
             Debug.Assert(variable != null);
             if (Stack == null || Stack.Count == 0) {
                 // Top level reference inside the rule.
-                if (!_top.ContainsKey(variable)) {
-                    _top[variable] = new VariableReference(variable);
+                if (!_top.References.ContainsKey(variable)) {
+                    _top.References[variable] = new VariableReference(variable);
                 }
             } else {
                 // Call base class for reference within a code block.

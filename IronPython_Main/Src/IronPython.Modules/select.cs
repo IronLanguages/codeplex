@@ -55,8 +55,7 @@ namespace IronPython.Modules {
             + "Note that select() on IronPython works only with sockets; it will not work with\n"
             + "files or other objects."
             )]
-        [PythonName("select")]
-        public static PythonTuple Select(CodeContext context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
+        public static PythonTuple select(CodeContext context, object iwtd, object owtd, object ewtd, [DefaultParameterValue(null)] object timeout) {
             List readerList, writerList, errorList;
             Dictionary<Socket, object> readerOriginals, writerOriginals, errorOriginals;
             ProcessSocketSequence(context, iwtd, out readerList, out readerOriginals);
@@ -132,9 +131,9 @@ namespace IronPython.Modules {
         /// </summary>
         private static Socket ObjectToSocket(CodeContext context, object obj) {
             Socket socket;
-            PythonSocket.SocketObj pythonSocket = obj as PythonSocket.SocketObj;
+            PythonSocket.socket pythonSocket = obj as PythonSocket.socket;
             if (pythonSocket != null) {
-                return pythonSocket.socket;
+                return pythonSocket._socket;
             }
 
             Int64 handle;
@@ -147,7 +146,7 @@ namespace IronPython.Modules {
             if (handle < 0) {
                 throw PythonOps.ValueError("file descriptor cannot be a negative number ({0})", handle);
             }
-            socket = PythonSocket.SocketObj.HandleToSocket(handle);
+            socket = PythonSocket.socket.HandleToSocket(handle);
             if (socket == null) {
                 SocketException e = new SocketException((int)SocketError.NotSocket);
                 throw PythonExceptions.CreateThrowable(error, PythonTuple.MakeTuple(e.ErrorCode, e.Message));
