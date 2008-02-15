@@ -31,10 +31,8 @@ namespace IronPython.Runtime {
     }
 
     public interface ISequence {
-        [SpecialName, PythonName("__len__")]
-        int GetLength();
-        [PythonName("__contains__")]
-        bool ContainsValue(object value);
+        int __len__();
+        bool __contains__(object value);
 
         object this[int index] {
             get;
@@ -44,8 +42,7 @@ namespace IronPython.Runtime {
         }
 
         // deprecated __getslice__ method
-        [PythonName("__getslice__")]
-        object GetSlice(int start, int stop);
+        object __getslice__(int start, int stop);
     }
 
     public interface IMutableSequence : ISequence {
@@ -58,16 +55,12 @@ namespace IronPython.Runtime {
             set;
         }
 
-        [PythonName("__delitem__")]
-        void DeleteItem(int index);
-        [PythonName("__delitem__")]
-        void DeleteItem(Slice slice);
+        void __delitem__(int index);
+        void __delitem__(Slice slice);
 
         // deprecated __setslice__ and __delslice__ methods
-        [PythonName("__setslice__")]
-        void SetSlice(int start, int stop, object value);
-        [PythonName("__delslice__")]
-        void DeleteSlice(int start, int stop);
+        void __setslice__(int start, int stop, object value);
+        void __delslice__(int start, int stop);
     }
 
     /// <summary>

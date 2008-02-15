@@ -125,12 +125,12 @@ namespace IronPython.Runtime.Operations {
             return x - (quotient * y);
         }
 
-        #endregion
-
-        internal static object DivMod(Complex64 x, Complex64 y) {
-            return PythonTuple.MakeTuple(x / y, Mod(x, y));
+        [SpecialName, PythonName("__divmod__")]
+        public static PythonTuple DivMod(Complex64 x, Complex64 y) {
+            return PythonTuple.MakeTuple(FloorDivide(x, y), Mod(x, y));
         }
 
+        #endregion
 
         #region Unary operators
 
@@ -165,7 +165,7 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [SpecialName, PythonName("__coerce__")]
+        [PythonName("__coerce__")]
         public static object Coerce(Complex64 x, object y) {
             Complex64 right;
             if (Converter.TryConvertToComplex64(y, out right)) return PythonTuple.MakeTuple(x, right);
@@ -187,65 +187,7 @@ namespace IronPython.Runtime.Operations {
 
             return x.Imag.ToString("G") + "j";
         }
-
-
-        /// <summary>
-        /// Used when user calls cmp(x,y) versus x > y, if the values are the same we return 0.
-        /// </summary>
-        public static int TrueCompare(CodeContext context, object x, object y) {
-            // Complex vs. null is 1 (when complex is on the lhs)
-            // Complex vs. another type is -1 (when complex is on the lhs)
-            // If two complex values are equal we return 0
-            // Otherwise we throw because it's an un-ordered comparison
-            if (x is Complex64) {
-                Complex64 us = (Complex64)x;
-
-                // Complex vs null, 1
-                if (y == null) return 1;
-
-                // Compex vs Complex, if they're equal we return 0, otherwize we throw
-                Complex64 them = new Complex64();
-                bool haveOther = false;
-                if (y is Complex64) {
-                    them = (Complex64)y;
-                    haveOther = true;
-                } else if (y is Extensible<Complex64>) {
-                    them = ((Extensible<Complex64>)y).Value;
-                    haveOther = true;
-                } else {
-                    object res;
-
-                    if (DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context, Operators.Coerce, y, x, out res)) {
-                        if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                            return PythonOps.Compare(((PythonTuple)res)[1], ((PythonTuple)res)[0]);
-                        }
-                    }
-                }
-
-
-                if (haveOther) {
-                    if (us.Imag == them.Imag && us.Real == them.Real) return 0;
-                    throw PythonOps.TypeError("complex is not an ordered type");
-                }
-
-                // Complex vs user type, check what the user type says
-                object ret;
-                if (DynamicHelpers.GetPythonType(y).TryInvokeBinaryOperator(context,
-                    Operators.Compare,
-                    y,
-                    x,
-                    out ret) && ret != PythonOps.NotImplemented) {
-                    return ((int)ret) * -1;
-                }
-
-                // Otherwise all types are less than complex
-                return -1;
-            } else {
-                System.Diagnostics.Debug.Assert(y is Complex64);
-                return -1 * TrueCompare(context, y, x);
-            }
-        }
-
+        
         // Unary Operations
         [SpecialName]
         public static double Abs(Complex64 x) {

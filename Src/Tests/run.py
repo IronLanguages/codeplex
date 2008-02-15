@@ -22,7 +22,7 @@ The following options are available:
   -M option (Extension mode)
     -M:0 : launch ip with ""
            this is the default choice if -M: is not specified    
-    -M:1 : launch ip with "-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 300"
+    -M:1 : launch ip with "-O -D -X:TupleBasedOptimizedScopes -X:MaxRecursion 300"
     -M:2 : launch ip with "-O -D -X:SaveAssemblies"
     -M:D : launch ip with all supported modes (i.e., -M:0, -M:1, ...)
     -M:"-O -D -X:SaveAssemblies" (use DOUBLE QUOTE)
@@ -67,7 +67,7 @@ MODES_TO_RUN = []
 
 #Supported test modes
 M0 = ""
-M1 = "-O -D -X:GenerateAsSnippets -X:NoOptimize -X:MaxRecursion 300"
+M1 = "-O -D -X:TupleBasedOptimizedScopes -X:MaxRecursion 300"
 M2 = "-O -D -X:SaveAssemblies -X:AssembliesDir %s" % environ["TMP"]
 
 #Supported verbosity levels

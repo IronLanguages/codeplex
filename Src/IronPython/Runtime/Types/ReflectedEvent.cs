@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Types {
         private bool _clsOnly;
         private EventInfo/*!*/ _eventInfo;
         private WeakHash<object, HandlerList/*!*/> _handlerLists;
-        private static object _staticTarget = new object();
+        private static readonly object _staticTarget = new object();
 
         internal ReflectedEvent(EventInfo eventInfo, bool clsOnly) {
             Assert.NotNull(eventInfo);
@@ -56,14 +56,14 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
+        internal override bool TryGetValue(CodeContext/*!*/ context, object instance, PythonType owner, out object value) {
             Assert.NotNull(context, owner);
 
             value = new BoundEvent(this, instance, (PythonType)owner);
             return true;
         }
 
-        internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
+        internal override bool TrySetValue(CodeContext/*!*/ context, object instance, PythonType owner, object value) {
             Assert.NotNull(context);
             BoundEvent et = value as BoundEvent;
 
@@ -87,16 +87,16 @@ namespace IronPython.Runtime.Types {
             return true;
         }
 
-        internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
+        internal override bool IsSetDescriptor(CodeContext/*!*/ context, PythonType owner) {
             return true;
         }
 
-        internal override bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {
+        internal override bool TryDeleteValue(CodeContext/*!*/ context, object instance, PythonType owner) {
             Assert.NotNull(context, owner);
             throw ReadOnlyException(DynamicHelpers.GetPythonTypeFromType(Info.DeclaringType));
         }
 
-        internal override bool IsVisible(CodeContext context, PythonType owner) {
+        internal override bool IsVisible(CodeContext/*!*/ context, PythonType owner) {
             // events aren't visible w/o importing clr.
             return !_clsOnly || context.ModuleContext.ShowCls;
         }
@@ -156,12 +156,12 @@ namespace IronPython.Runtime.Types {
             // this one's correct, InPlaceAdd is wrong but we still have some dependencies on the wrong name.
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")] // TODO: fix
             [SpecialName]
-            public object op_AdditionAssignment(object func) {
-                return InPlaceAdd(func);
+            public object op_AdditionAssignment(CodeContext/*!*/ context, object func) {
+                return InPlaceAdd(context, func);
             }
 
             [SpecialName]
-            public object InPlaceAdd(object func) {
+            public object InPlaceAdd(CodeContext/*!*/ context, object func) {
                 Assert.NotNull(func);
 
                 MethodInfo add = _event.Info.GetAddMethod(true);
@@ -190,7 +190,7 @@ namespace IronPython.Runtime.Types {
                     add = CompilerHelpers.GetCallableMethod(add);
                 }
 
-                if ((add.IsPublic && add.DeclaringType.IsPublic) || ScriptDomainManager.Options.PrivateBinding) {
+                if ((add.IsPublic && add.DeclaringType.IsPublic) || PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
                     add.Invoke(_instance, new object[] { handler });
                 } else {
                     throw new ArgumentTypeException("cannot add to private event");
@@ -205,7 +205,7 @@ namespace IronPython.Runtime.Types {
             }
 
             [SpecialName]
-            public object InPlaceSubtract(CodeContext context, object func) {
+            public object InPlaceSubtract(CodeContext/*!*/ context, object func) {
                 Assert.NotNull(context, func);
 
                 MethodInfo remove = _event.Info.GetRemoveMethod(true);
@@ -221,7 +221,7 @@ namespace IronPython.Runtime.Types {
                 }
 
                 bool isRemovePublic = remove.IsPublic && remove.DeclaringType.IsPublic;
-                if (isRemovePublic || ScriptDomainManager.Options.PrivateBinding) {
+                if (isRemovePublic || PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
 
                     Delegate handler;
 
@@ -290,7 +290,7 @@ namespace IronPython.Runtime.Types {
                 _handlers.Add(new KeyValuePair<object, Delegate>(callableObject, handler));
             }
 
-            public Delegate RemoveHandler(CodeContext context, object callableObject) {
+            public Delegate RemoveHandler(CodeContext/*!*/ context, object callableObject) {
                 Assert.NotNull(context);
 
                 List<KeyValuePair<object, Delegate>> copyOfHandlers = _handlers.GetCopyForRead();
@@ -315,7 +315,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        public string/*!*/ ToCodeString(CodeContext context) {
+        public string/*!*/ ToCodeString(CodeContext/*!*/ context) {
             return string.Format("<event# {0} on {1}>", Info.Name, Info.DeclaringType.Name);
         }
 

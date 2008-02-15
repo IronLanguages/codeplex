@@ -220,9 +220,6 @@ def test_W():
 # Test -?
 # TestCommandLine(("-?",), ("regexp", usageRegex))
 
-# Test -X:NoOptimize
-TestCommandLine(("-X:NoOptimize", "-c", "from System import Console; Console.WriteLine('System')"), "System\n")
-
 # Test -X:FastEval
 TestCommandLine(("-X:Interpret", "-c", "2+2"), "")
 TestCommandLine(("-X:Interpret", "-c", "eval('2+2')"), "")
@@ -242,6 +239,7 @@ TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
 TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
 TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
 
+# This feature is disabled for now. The option is recognized though ignored. See work item #378344.
 # Test -X:ILDebug
 for fName in nt.listdir(tmpdir):
     if re.match('.*\.il$', fName):

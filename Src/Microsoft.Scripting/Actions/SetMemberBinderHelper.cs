@@ -122,7 +122,7 @@ namespace Microsoft.Scripting.Actions {
 
             // Allow access to protected getters TODO: this should go, it supports IronPython semantics.
             if (setter != null && !setter.IsPublic && !(setter.IsFamily || setter.IsFamilyOrAssembly)) {
-                if (!ScriptDomainManager.Options.PrivateBinding) {
+                if (!PrivateBinding) {
                     setter = null;
                 }
             }

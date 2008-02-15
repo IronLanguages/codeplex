@@ -25,19 +25,177 @@ using Microsoft.Scripting.Runtime;
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
+using System.Runtime.CompilerServices;
 
 
 namespace IronPython.Runtime.Types {
-    [PythonType("dictproxy")]
+    [PythonSystemType("dictproxy")]
     public class DictProxy : IDictionary, IEnumerable {
-        private PythonType _dt;
+        private readonly PythonType/*!*/ _dt;
         
-        public DictProxy(PythonType dt) {
+        public DictProxy(PythonType/*!*/ dt) {
             Debug.Assert(dt != null);
             _dt = dt;
         }
 
-        public object GetIndex(CodeContext context, object index) {
+        #region Python Public API Surface
+
+        [SpecialName]
+        public bool DeleteItem(object key) {
+            throw PythonOps.TypeError("cannot delete from dictproxy");
+        }
+
+        public int __len__() {
+            return _dt.GetMemberNames(DefaultContext.Default).Count;
+        }
+
+        public bool __contains__(object value) {
+            return has_key(value);
+        }
+
+        public bool has_key(object key) {
+            object dummy;
+            return TryGetValue(key, out dummy);
+        }
+
+        public object keys(CodeContext context) {
+            return new List(_dt.GetMemberDictionary(context).Keys);
+        }
+
+        public object values(CodeContext context) {
+            List res = new List();
+            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
+                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
+
+                if (dts != null) {
+                    res.AddNoLock(dts.Value);
+                } else {
+                    res.AddNoLock(kvp.Value);
+                }
+            }
+
+            return res;
+        }
+
+        public List items(CodeContext context) {
+            List res = new List();
+            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
+                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
+
+                object val;
+                if (dts != null) {
+                    val = dts.Value;
+                } else {
+                    val = kvp.Value;
+                }
+
+                res.Add(PythonTuple.MakeTuple(kvp.Key, val));
+            }
+
+            return res;
+        }
+
+        #endregion
+
+        #region Object overrides
+
+        public override bool Equals(object obj) {
+            DictProxy proxy = obj as DictProxy;
+            if (proxy == null) return false;
+
+            return proxy._dt == _dt;
+        }
+
+        public override int GetHashCode() {
+            return ~_dt.GetHashCode();
+        }
+
+        #endregion
+
+        #region IDictionary Members
+      
+        public object this[object key] {
+            get {
+                return GetIndex(DefaultContext.Default, key);
+            }
+            set {
+                throw PythonOps.TypeError("cannot assign to dictproxy");
+            }
+        }
+
+        bool IDictionary.Contains(object key) {
+            return has_key(key);
+        }
+
+        #endregion              
+
+        #region IEnumerable Members
+
+        System.Collections.IEnumerator IEnumerable.GetEnumerator() {
+            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
+        }
+
+        #endregion
+
+        #region IDictionary Members
+
+        void IDictionary.Add(object key, object value) {
+            this[key] = value;
+        }
+
+        void IDictionary.Clear() {
+            throw new InvalidOperationException();
+        }
+
+        IDictionaryEnumerator IDictionary.GetEnumerator() {
+            throw new NotImplementedException();
+        }
+
+        bool IDictionary.IsFixedSize {
+            get { return true; }
+        }
+
+        bool IDictionary.IsReadOnly {
+            get { return true; }
+        }
+
+        ICollection IDictionary.Keys {
+            get { throw new NotImplementedException(); }
+        }
+
+        void IDictionary.Remove(object key) {
+            throw new InvalidOperationException();
+        }
+
+        ICollection IDictionary.Values {
+            get { throw new NotImplementedException(); }
+        }
+
+        #endregion
+
+        #region ICollection Members
+
+        void ICollection.CopyTo(Array array, int index) {
+            throw new NotImplementedException();
+        }
+
+        int ICollection.Count {
+            get { return __len__();  }
+        }
+
+        bool ICollection.IsSynchronized {
+            get { return false; }
+        }
+
+        object ICollection.SyncRoot {
+            get { return this; }
+        }
+
+        #endregion
+
+        #region Internal implementation details
+
+        private object GetIndex(CodeContext context, object index) {
             string strIndex = index as string;
             if (strIndex != null) {
                 PythonTypeSlot dts;
@@ -58,31 +216,7 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.KeyError(index.ToString());
         }
 
-        public override bool Equals(object obj) {
-            DictProxy proxy = obj as DictProxy;
-            if (proxy == null) return false;
-
-            return proxy._dt == _dt;
-        }
-
-        public override int GetHashCode() {
-            return ~_dt.GetHashCode();
-        }
-
-        #region IDictionary Members
-
-        public object GetValue(object key) {
-            return GetIndex(DefaultContext.Default, key);
-        }
-
-        public object GetValue(object key, object defaultValue) {
-            object res;
-            if (TryGetValue(key, out res))
-                return res;
-            return defaultValue;
-        }
-
-        public bool TryGetValue(object key, out object value) {
+        private bool TryGetValue(object key, out object value) {
             string strIndex = key as string;
             if (strIndex != null) {
                 PythonTypeSlot dts;
@@ -101,141 +235,7 @@ namespace IronPython.Runtime.Types {
             value = null;
             return false;
         }
-
-        public object this[object key] {
-            get {
-                return GetIndex(DefaultContext.Default, key);
-            }
-            set {
-                throw PythonOps.TypeError("cannot assign to dictproxy");
-            }
-        }
-
-        public bool DeleteItem(object key) {
-            throw PythonOps.TypeError("cannot delete from dictproxy");
-        }
-
-        public int GetLength() {
-            return _dt.GetMemberNames(DefaultContext.Default).Count;
-        }
-
-        [PythonName("__contains__")]
-        public bool ContainsValue(object value) {
-            return Contains(value);
-        }
-
-        #endregion
-
-        [PythonName("has_key")]
-        public bool Contains(object key) {
-            object dummy;
-            return TryGetValue(key, out dummy);
-        }
-
-        [PythonName("keys")]
-        public object GetKeys(CodeContext context) {
-            return new List(_dt.GetMemberDictionary(context).Keys);
-        }
-
-        [PythonName("values")]
-        public object GetValues(CodeContext context) {
-            List res = new List();
-            foreach(KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)){
-                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
-
-                if (dts != null) {
-                    res.AddNoLock(dts.Value);
-                } else {
-                    res.AddNoLock(kvp.Value);
-                }
-            }
-
-            return res;
-        }
-
-
-        [PythonName("items")]
-        public List GetItems(CodeContext context) {
-            List res = new List();
-            foreach (KeyValuePair<object, object> kvp in _dt.GetMemberDictionary(context)) {
-                PythonTypeUserDescriptorSlot dts = kvp.Value as PythonTypeUserDescriptorSlot;
-
-                object val;
-                if (dts != null) {
-                    val = dts.Value;
-                } else {
-                    val = kvp.Value;
-                }
-
-                res.Add(PythonTuple.MakeTuple(kvp.Key, val));
-            }
-
-            return res;
-        }
-
-        #region IEnumerable Members
-
-        [PythonName("__iter__")]
-        public System.Collections.IEnumerator GetEnumerator() {
-            return DictionaryOps.iterkeys(_dt.GetMemberDictionary(DefaultContext.Default).AsObjectKeyedDictionary());
-        }
-
-        #endregion
-
-        #region IDictionary Members
-
-        public void Add(object key, object value) {
-            this[key] = value;
-        }
-
-        public void Clear() {
-            throw new InvalidOperationException();
-        }
-
-        IDictionaryEnumerator IDictionary.GetEnumerator() {
-            throw new NotImplementedException();
-        }
-
-        public bool IsFixedSize {
-            get { return true; }
-        }
-
-        public bool IsReadOnly {
-            get { return true; }
-        }
-
-        public ICollection Keys {
-            get { throw new NotImplementedException(); }
-        }
-
-        public void Remove(object key) {
-            throw new InvalidOperationException();
-        }
-
-        public ICollection Values {
-            get { throw new NotImplementedException(); }
-        }
-
-        #endregion
-
-        #region ICollection Members
-
-        public void CopyTo(Array array, int index) {
-            throw new NotImplementedException();
-        }
-
-        public int Count {
-            get { return GetLength();  }
-        }
-
-        public bool IsSynchronized {
-            get { return false; }
-        }
-
-        public object SyncRoot {
-            get { return this; }
-        }
-
+        
         #endregion
     }
 }

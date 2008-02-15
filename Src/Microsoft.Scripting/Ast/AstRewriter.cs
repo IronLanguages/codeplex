@@ -190,7 +190,7 @@ namespace Microsoft.Scripting.Ast {
             VerifyTemps();
 
             // Block starts with an empty stack
-            Expression body = RewriteExpression(this, block.Body, Stack.Empty);
+            Expression body = RewriteExpressionFreeTemps(this, block.Body, Stack.Empty);
 
             VerifyTemps();
 
@@ -206,7 +206,7 @@ namespace Microsoft.Scripting.Ast {
             // The rule test starts on empty stack.
             Expression test = RewriteExpressionFreeTemps(this, rule.Test, Stack.Empty);
             // So does the target
-            Expression target = RewriteExpression(this, rule.Target, Stack.Empty);
+            Expression target = RewriteExpressionFreeTemps(this, rule.Target, Stack.Empty);
 
             VerifyTemps();
 
@@ -951,7 +951,7 @@ namespace Microsoft.Scripting.Ast {
                 Expression saveArg;
                 expression = ar.ToTemp(expression, out saveArg);
                 return Ast.Block(
-                    Ast.Statement(saveArg),
+                    saveArg,
                     Ast.Yield(new SourceSpan(node.Start, node.End), expression)
                 );
             } else {

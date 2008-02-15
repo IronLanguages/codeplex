@@ -23,7 +23,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
-    [PythonType("buffer")]
+    [PythonSystemType("buffer")]
     public class PythonBuffer : ICodeFormattable {
         private object _object;
         private int _offset;
@@ -91,7 +91,7 @@ namespace IronPython.Runtime {
                     }
                 } else {
                     IPythonArray pa = (IPythonArray)o;
-                    _size = pa.GetLength();
+                    _size = pa.__len__();
                 }
             }
             this._object = o;
@@ -100,7 +100,6 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        [SpecialName, PythonName("__str__")]
         public override string ToString() {
             return GetSelectedRange().ToString();
         }
@@ -128,7 +127,7 @@ namespace IronPython.Runtime {
             if (_isarray) {
                 IPythonArray arr = _object as IPythonArray;
                 if (arr != null) {
-                    return arr.ConvertToString();
+                    return arr.tostring();
                 }
             }
             return PythonOps.GetIndex(_object, GetSlice());
@@ -174,8 +173,7 @@ namespace IronPython.Runtime {
             return _object.GetHashCode() ^ _offset ^ (_size<<16 | (_size>>16));
         }
 
-        [SpecialName, PythonName("__len__")]
-        public int GetLength() {
+        public int __len__() {
             return _size;
         }
 
@@ -187,7 +185,6 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        [SpecialName, PythonName("__repr__")]
         public string ToCodeString(CodeContext context) {
             return string.Format("<read-only buffer for 0x{0:X16}, size {1}, offset {2} at 0x{3:X16}>",
                 PythonOps.Id(_object), _size, _offset, PythonOps.Id(this));
@@ -200,6 +197,6 @@ namespace IronPython.Runtime {
     /// A marker interface so we can recognize and access sequence members on our array objects.
     /// </summary>
     internal interface IPythonArray : ISequence {
-        string ConvertToString();
+        string tostring();
     }
 }

@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Ast;
@@ -27,62 +26,38 @@ using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
     public class TypeGen {
-        private readonly AssemblyGen _myAssembly;
-        private readonly TypeBuilder _myType;
+        private readonly AssemblyGen/*!*/ _myAssembly;
+        private readonly TypeBuilder/*!*/ _myType;
+
         private Slot _contextSlot;
         private ConstructorBuilder _initializer; // The .cctor() of the type
         private Compiler _initGen; // The IL generator for the .cctor()
-        private Dictionary<object, Slot> _constants = new Dictionary<object, Slot>();
-        private Dictionary<SymbolId, Slot> _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
-        private List<TypeGen> _nestedTypeGens = new List<TypeGen>();
+        private Dictionary<object, Slot>/*!*/ _constants = new Dictionary<object, Slot>();
+        private Dictionary<SymbolId, Slot>/*!*/ _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
+        private List<TypeGen>/*!*/ _nestedTypeGens = new List<TypeGen>();
         private ConstructorBuilder _defaultCtor;
-        private ActionBinder _binder;
 
         private static readonly Type[] SymbolIdIntCtorSig = new Type[] { typeof(int) };
-
-        public TypeGen(AssemblyGen myAssembly, TypeBuilder myType) {
-            this._myAssembly = myAssembly;
-            this._myType = myType;
-        }
-
-        [Confined]
-        public override string/*!*/ ToString() {
-            return _myType.ToString();
-        }
 
         /// <summary>
         /// Gets the Compiler associated with the Type Initializer (cctor) creating it if necessary.
         /// </summary>
-        internal Compiler TypeInitializer {
+        internal Compiler/*!*/ TypeInitializer {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
-                    _initGen = CreateCodeGen(_initializer, _initializer.GetILGenerator(), ArrayUtils.EmptyTypes);
+                    _initGen = CreateCompiler(_initializer, _initializer.GetILGenerator(), ArrayUtils.EmptyTypes);
                 }
                 return _initGen;
             }
         }
 
-        internal Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes) {
-            return CreateCodeGen(mi, ilg, paramTypes, null);
+        public AssemblyGen/*!*/ AssemblyGen {
+            get { return _myAssembly; }
         }
 
-        internal Compiler CreateCodeGen(MethodBase mi, ILGenerator ilg, IList<Type> paramTypes, ConstantPool constantPool) {
-            Compiler ret = new Compiler(this, _myAssembly, mi, ilg, paramTypes, constantPool);
-            if (_binder != null) ret.Binder = _binder;
-            if (_contextSlot != null) ret.ContextSlot = _contextSlot;
-            return ret;
-        }
-
-        public Type FinishType() {
-            if (_initGen != null) _initGen.Emit(OpCodes.Ret);
-
-            Type ret = _myType.CreateType();
-            foreach (TypeGen ntb in _nestedTypeGens) {
-                ntb.FinishType();
-            }
-            //Console.WriteLine("finished: " + ret.FullName);
-            return ret;
+        public TypeBuilder/*!*/ TypeBuilder {
+            get { return _myType; }
         }
 
         public ConstructorBuilder DefaultConstructor {
@@ -94,14 +69,45 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public ActionBinder Binder {
-            get {
-                return _binder;
-            }
-            set {
-                _binder = value;
-            }
+        public TypeGen(AssemblyGen/*!*/ myAssembly, TypeBuilder/*!*/ myType) {
+            Assert.NotNull(myAssembly, myType);
+
+            _myAssembly = myAssembly;
+            _myType = myType;
         }
+
+        [Confined]
+        public override string/*!*/ ToString() {
+            return _myType.ToString();
+        }
+
+        private Compiler/*!*/ CreateCompiler(MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type/*!*/>/*!*/ paramTypes) {
+            return CreateCompiler(mi, ilg, paramTypes, null);
+        }
+
+        private Compiler/*!*/ CreateCompiler(MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type/*!*/>/*!*/ paramTypes, ConstantPool constantPool) {
+            Compiler ret = new Compiler(this, _myAssembly, mi, ilg, paramTypes, constantPool);
+            if (_contextSlot != null) ret.ContextSlot = _contextSlot;
+
+            ret.DynamicMethod = false;
+
+            // TODO: unverifiable code emitted in optimized scope's .cctor if enabled (TestAst will hit this), see bug #374698
+            // ret.CacheConstants = true;
+
+            return ret;
+        }
+
+        public Type/*!*/ FinishType() {
+            if (_initGen != null) _initGen.Emit(OpCodes.Ret);
+
+            Type ret = _myType.CreateType();
+            foreach (TypeGen ntb in _nestedTypeGens) {
+                ntb.FinishType();
+            }
+            //Console.WriteLine("finished: " + ret.FullName);
+            return ret;
+        }
+
 
         public void AddCodeContextField() {
             FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
@@ -125,7 +131,7 @@ namespace Microsoft.Scripting.Generation {
             return new StaticFieldSlot(fb);
         }
 
-        internal Compiler DefineExplicitInterfaceImplementation(MethodInfo baseMethod) {
+        internal Compiler/*!*/ DefineExplicitInterfaceImplementation(MethodInfo/*!*/ baseMethod) {
             Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
@@ -137,7 +143,7 @@ namespace Microsoft.Scripting.Generation {
                 attrs,
                 baseMethod.ReturnType,
                 baseSignature);
-            Compiler ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
+            Compiler ret = CreateCompiler(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
@@ -150,16 +156,18 @@ namespace Microsoft.Scripting.Generation {
             MethodAttributes.Abstract | MethodAttributes.ReservedMask;
 
         // TODO: Remove
-        internal Compiler DefineMethodOverride(MethodInfo baseMethod) {
+        internal Compiler/*!*/ DefineMethodOverride(MethodInfo baseMethod) {
             MethodAttributes finalAttrs = baseMethod.Attributes & ~MethodAttributesToEraseInOveride;
             Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
-            Compiler ret = CreateCodeGen(mb, mb.GetILGenerator(), baseSignature);
+            Compiler ret = CreateCompiler(mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
 
-        public ILGen DefineMethod(string name, Type returnType, Type[] parameterTypes, string[] parameterNames) {
+        public ILGen/*!*/ DefineMethod(string/*!*/ name, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes,
+            string/*!*/[] parameterNames) {
+
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(returnType, "returnType");
             Contract.RequiresNotNullItems(parameterTypes, "parameterTypes");
@@ -171,37 +179,43 @@ namespace Microsoft.Scripting.Generation {
             MethodBuilder mb = _myType.DefineMethod(name, CompilerHelpers.PublicStatic, returnType, parameterTypes);
 
             if (parameterNames != null) {
-                for (int i = 0; i < parameterNames.Length; i++) {
-                    ParameterBuilder pb = mb.DefineParameter(i + 1, ParameterAttributes.None, parameterNames[i]);
-                }
+                DefineParameterNames(mb, 1, parameterNames);
             }
+
             return new ILGen(mb.GetILGenerator());
         }
 
-        internal Compiler DefineMethod(string name, Type retType, IList<Type> paramTypes, IList<string> paramNames, ConstantPool constantPool) {
+        internal Compiler/*!*/ DefineMethod(string/*!*/ name, Type/*!*/ retType, IList<Type/*!*/>/*!*/ paramTypes,
+            IList<string> paramNames, ConstantPool constantPool) {
+
+            Assert.NotNull(name, retType);
+            
             Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
 
             MethodBuilder mb = _myType.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
-            Compiler res = CreateCodeGen(mb, mb.GetILGenerator(), parameterTypes, constantPool);
+            Compiler res = CreateCompiler(mb, mb.GetILGenerator(), parameterTypes, constantPool);
 
             if (paramNames != null) {
                 // parameters are index from 1, with constant pool we need to skip the first arg
-                int offset = constantPool != null ? 2 : 1;
-                for (int i = 0; i < paramNames.Count; i++) {
-                    ParameterBuilder pb = res.DefineParameter(i + offset, ParameterAttributes.None, paramNames[i]);
-                }
+                DefineParameterNames(mb, constantPool != null ? 2 : 1, paramNames);
             }
             return res;
         }
 
-        internal Compiler DefineConstructor(Type[] paramTypes) {
-            ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
-            return CreateCodeGen(cb, cb.GetILGenerator(), paramTypes);
+        private static void DefineParameterNames(MethodBuilder/*!*/ mb, int startIndex, IList<string/*!*/>/*!*/ names) {
+            for (int i = 0; i < names.Count; i++) {
+                mb.DefineParameter(i + startIndex, ParameterAttributes.None, names[i]);
+            }
         }
 
-        internal Compiler DefineStaticConstructor() {
+        internal Compiler/*!*/ DefineConstructor(Type/*!*/[]/*!*/ paramTypes) {
+            ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
+            return CreateCompiler(cb, cb.GetILGenerator(), paramTypes);
+        }
+
+        internal Compiler/*!*/ DefineStaticConstructor() {
             ConstructorBuilder cb = _myType.DefineTypeInitializer();
-            return CreateCodeGen(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
+            return CreateCompiler(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
         }
 
         public void SetCustomAttribute(Type type, object[] values) {
@@ -223,7 +237,6 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Constants
         /// </summary>
-
         internal Slot GetOrMakeConstant(object value) {
             Debug.Assert(!(value is CompilerConstant));
 
@@ -290,15 +303,6 @@ namespace Microsoft.Scripting.Generation {
 
             value.EmitGet(cg);
             cg.EmitNew(typeof(SymbolId), SymbolIdIntCtorSig);
-        }
-
-
-        public AssemblyGen AssemblyGen {
-            get { return _myAssembly; }
-        }
-
-        public TypeBuilder TypeBuilder {
-            get { return _myType; }
         }
     }
 }

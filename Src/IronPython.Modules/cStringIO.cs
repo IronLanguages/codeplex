@@ -168,8 +168,8 @@ namespace IronPython.Modules {
     }
 
     public static class PythonStringIO {
-        public static object InputType = DynamicHelpers.GetPythonType(typeof(StringI));
-        public static object OutputType = DynamicHelpers.GetPythonType(typeof(StringO));
+        public static PythonType InputType = DynamicHelpers.GetPythonType(typeof(StringI));
+        public static PythonType OutputType = DynamicHelpers.GetPythonType(typeof(StringO));
 
         public class StringI : IEnumerable<string>, IEnumerable {
             private StringStream _sr;

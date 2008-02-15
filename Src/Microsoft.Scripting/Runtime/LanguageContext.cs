@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Runtime {
 #endif
     {
         private readonly ScriptDomainManager/*!*/ _domainManager;
-        private static ModuleGlobalCache _noCache;
+        private static readonly ModuleGlobalCache _noCache = new ModuleGlobalCache(ModuleGlobalCache.NotCaching);
         private ActionBinder _binder;
         private readonly ContextId _id;
 
@@ -264,10 +264,6 @@ namespace Microsoft.Scripting.Runtime {
         /// the value from the base method when the value should not be cached.
         /// </summary>
         protected internal virtual ModuleGlobalCache GetModuleCache(SymbolId name) {
-            if (_noCache == null) {
-                Interlocked.CompareExchange<ModuleGlobalCache>(ref _noCache, new ModuleGlobalCache(ModuleGlobalCache.NotCaching), null);
-            }
-
             return _noCache;
         }
 
@@ -278,10 +274,6 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         #endregion
-
-        public virtual bool IsTrue(object obj) {
-            return false;
-        }
 
         /// <summary>
         /// Calls the function with given arguments
@@ -500,8 +492,8 @@ namespace Microsoft.Scripting.Runtime {
 
         public SourceUnit CreateFileUnit(string/*!*/ path, Encoding encoding, SourceCodeKind kind) {
             Contract.RequiresNotNull(path, "path");
-
-            TextContentProvider provider = new EngineTextContentProvider(this, new FileStreamContentProvider(path), encoding ?? StringUtils.DefaultEncoding);
+            
+            TextContentProvider provider = new EngineTextContentProvider(this, new FileStreamContentProvider(DomainManager.PAL, path), encoding ?? StringUtils.DefaultEncoding);
             return CreateSourceUnit(provider, path, kind);
         }
 

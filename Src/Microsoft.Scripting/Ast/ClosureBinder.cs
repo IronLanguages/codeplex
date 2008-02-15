@@ -14,25 +14,27 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// The ClosureBinder resolves variable references across code blocks.
     /// </summary>
     class ClosureBinder : VariableBinder {
-
         /// <summary>
         /// ClosureBinder entry point.
         /// </summary>
-        internal static void Bind(CodeBlock ast) {
+        internal static AnalyzedTree Bind(CodeBlock ast) {
             ClosureBinder cb = new ClosureBinder();
             // Collect the code blocks
             cb.WalkNode(ast);
             cb.BindTheScopes();
+
+            return new AnalyzedTree(cb.Blocks, cb.Infos);
         }
 
+        /// <summary>
+        /// Private constructor so that only the class can create self.
+        /// </summary>
         private ClosureBinder() {
         }
 

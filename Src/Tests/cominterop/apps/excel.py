@@ -97,64 +97,57 @@ def _test_excel():
         if ex: ex.Quit()
         else: print "ex is %s" % ex
 
+def excel_events_helper(ex):
+    ex.Workbooks.Add()
+    ws = ex.ActiveSheet
+    
+    # test single event is firing
+    add_worksheet_event(ws)
+    ex.ActiveCell.Offset[1, 0].Activate()
+    AreEqual(selection_counter, 1)
+
+    # test events chaining is working
+    add_worksheet_event(ws)
+    ex.ActiveCell.Offset[1, 0].Activate()
+    AreEqual(selection_counter, 3)
+
+    # test removing event from a chain
+    remove_worksheet_event(ws)
+    ex.ActiveCell.Offset[1, 0].Activate()
+    AreEqual(selection_counter, 4)
+
+    # test removing event alltogether
+    remove_worksheet_event(ws)
+    ex.ActiveCell.Offset[1, 0].Activate()
+    AreEqual(selection_counter, 4)
+
+    if "-X:Interpret" in System.Environment.CommandLine:
+        print "Rowan Work Item 312901"
+        ws = None
+        System.GC.Collect()
+        System.GC.WaitForPendingFinalizers()
+        return
+            
+    add_worksheet_event(ws)
+    ex.ActiveCell.Offset[1, 0].Activate()
+    AreEqual(selection_counter, 5)
 
 def test_excelevents():
+    import gc
     ex = None
     try: 
         ex = CreateApplication() 
         ex.DisplayAlerts = False 
         #ex.Visible = True
-        wb = ex.Workbooks.Add()
                 
-        ws = ex.ActiveSheet
-        
         global selection_counter
         selection_counter = 0
 
-        # test single event is firing
-        add_worksheet_event(ws)
-        ex.ActiveCell.Offset[1, 0].Activate()
-        AreEqual(selection_counter, 1)
+        # we need all temps/locals allocated for worksheets to be in a separate function
+        # in order to be collected by GC
+        excel_events_helper(ex)
 
-        # test events chaining is working
-        add_worksheet_event(ws)
-        ex.ActiveCell.Offset[1, 0].Activate()
-        AreEqual(selection_counter, 3)
-
-        # test removing event from a chain
-        remove_worksheet_event(ws)
-        ex.ActiveCell.Offset[1, 0].Activate()
-        AreEqual(selection_counter, 4)
-
-        # test removing event alltogether
-        remove_worksheet_event(ws)
-        ex.ActiveCell.Offset[1, 0].Activate()
-        AreEqual(selection_counter, 4)
-
-        if "-X:Interpret" in System.Environment.CommandLine:
-            print "Rowan Work Item 312901"
-            ws = None
-            System.GC.Collect()
-            System.GC.WaitForPendingFinalizers()
-            return
-                
-        add_worksheet_event(ws)
-        ex.ActiveCell.Offset[1, 0].Activate()
-        AreEqual(selection_counter, 5)
-
-        # test GCing RCW detaches the event handler
-
-        # NOTICE: You might wonder why we call "add_worksheet_event"
-        # NOTICE: and "remove_worksheet_event" instead of just inlining
-        # NOTICE: ws.Event_SelectionChange += selection_change_eventhandler
-        # NOTICE: The reason is that IPy emits code with local vars
-        # NOTICE: for temporary variables. These vars are scoped to the current
-        # NOTICE: frame. As a result GC.Collect would not collect the object 
-        # NOTICE: returned by ws.Event_SelectionChange which holds a references to Worksheet.
-        # NOTICE: which will prevent the event handler from unadvising.
-
-        ws = None
-        System.GC.Collect()
+        gc.collect()
         System.GC.WaitForPendingFinalizers()
 
         ex.ActiveCell.Offset[1, 0].Activate()
@@ -162,9 +155,7 @@ def test_excelevents():
 
     finally:
         # clean up outstanding RCWs 
-        ws = None
-        wb = None
-        System.GC.Collect()
+        gc.collect()
         System.GC.WaitForPendingFinalizers()
                 
         if ex: ex.Quit()

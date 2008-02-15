@@ -43,7 +43,6 @@ namespace IronPython.Compiler.Ast {
         private bool _canSetSysExcInfo;
 
         private PythonVariable _variable;               // The variable corresponding to the function name
-        private MSAst.CodeBlock _block;
 
         public FunctionDefinition(SymbolId name, Parameter[] parameters, SourceUnit sourceUnit)
             : this(name, parameters, null, sourceUnit) {
@@ -93,10 +92,6 @@ namespace IronPython.Compiler.Ast {
         internal PythonVariable Variable {
             get { return _variable; }
             set { _variable = value; }
-        }
-
-        protected override MSAst.CodeBlock Block {
-            get { return _block; }
         }
 
         private static FunctionAttributes ComputeFlags(Parameter[] parameters) {
@@ -216,24 +211,10 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Expression TransformToFunctionExpression(AstGenerator ag) {
-            Debug.Assert(_block == null);
-            MSAst.CodeBlock code;
-            if (IsGenerator) {
-                code = Ast.Generator(
-                    SourceSpan.None,
-                    SymbolTable.IdToString(_name),
-                    typeof(PythonGenerator),
-                    typeof(PythonGenerator.NextTarget)
-                );
-            } else {
-                code = Ast.CodeBlock(_name);
-            }
-            _block = code; //???
-
-            SetParent(code);
+            string name = SymbolTable.IdToString(_name);
 
             // Create AST generator to generate the body with
-            AstGenerator bodyGen = new AstGenerator(code, ag.Context);
+            AstGenerator bodyGen = new AstGenerator(ag, SourceSpan.None, name, IsGenerator, false);
 
             // Transform the parameters.
             // Populate the list of the parameter names and defaults.
@@ -243,7 +224,7 @@ namespace IronPython.Compiler.Ast {
 
             // Create variables and references. Since references refer to
             // parameters, do this after parameters have been created.
-            CreateVariables(code);
+            CreateVariables(bodyGen);
 
             // Initialize parameters - unpack tuples.
             // Since tuples unpack into locals, this must be done after locals have been created.
@@ -254,14 +235,14 @@ namespace IronPython.Compiler.Ast {
             // The exception traceback needs to come from the generator's method body, and so we must do the check and throw
             // from inside the generator.
             if (IsGenerator) {
-                MSAst.Expression s1 = YieldExpression.CreateCheckThrowStatement(bodyGen, SourceSpan.None);
+                MSAst.Expression s1 = YieldExpression.CreateCheckThrowExpression(bodyGen, SourceSpan.None);
                 statements.Add(s1);
             }
 
             // Transform the body and add the resulting statements into the list
             TransformBody(bodyGen, statements);
 
-            if (ScriptDomainManager.Options.DebugMode) {
+            if (ag.DebugMode) {
                 // add beginning and ending break points for the function.
                 if (statements.Count == 0 || GetExpressionStart(statements[0]) != Body.Start) {
                     statements.Insert(0, Ast.Empty(new SourceSpan(Body.Start, Body.Start)));
@@ -283,31 +264,32 @@ namespace IronPython.Compiler.Ast {
             // Skip this if we're a generator. For generators, the try finally is handled by the PythonGenerator class 
             //  before it's invoked. This is because the restoration must occur at every place the function returns from 
             //  a yield point. That's different than the finally semantics in a generator.
-            if (!IsGenerator && this._canSetSysExcInfo) 
-            {
+            if (!IsGenerator && this._canSetSysExcInfo) {
                 MSAst.BoundExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
                 MSAst.Expression s = Ast.Try(
-                    Ast.Statement(
-                        Ast.Assign(
-                            extracted.Variable,
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod("SaveCurrentException")                                
-                            )
+                    Ast.Assign(
+                        extracted.Variable,
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod("SaveCurrentException")
                         )
                     ),
                     body
                 ).Finally(
-                    Ast.Statement(
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod("RestoreCurrentException"), extracted
-                        )
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("RestoreCurrentException"), extracted
                     )
                 );
                 body = s;
             }
-            code.Body = body;
 
-            
+            bodyGen.Block.Body = body;
+
+            MSAst.CodeBlock code;
+            if (IsGenerator) {
+                code = bodyGen.Block.MakeGenerator(typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
+            } else {
+                code = bodyGen.Block.MakeLambda();
+            }
 
             FunctionAttributes flags = ComputeFlags(_parameters);
 
@@ -319,7 +301,7 @@ namespace IronPython.Compiler.Ast {
                 Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
                 Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
                 Ast.Constant(flags),                                                            // 6. flags
-                Ast.Constant(_body.Documentation, typeof(string)),                              // 7. doc string or null
+                Ast.Constant(ag.GetDocumentation(_body), typeof(string)),                       // 7. doc string or null
                 Ast.Constant(this.Start.Line),                                                  // 8. line number
                 Ast.Constant(_sourceUnit.GetSymbolDocument(this.Start.Line), typeof(string))    // 9. filename
             );

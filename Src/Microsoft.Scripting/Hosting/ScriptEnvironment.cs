@@ -49,6 +49,9 @@ namespace Microsoft.Scripting.Hosting {
 
         IScriptScope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit);
 
+        PlatformAdaptationLayer PAL {
+            get;
+        }
 #if OBSOLETE
         IScriptScope CompileModule(string name, SourceUnit sourceCode);
         IScriptScope CompileModule(string name, CompilerOptions options, ErrorSink errorSink, IAttributesCollection dictionary, SourceUnit sourceCode);
@@ -74,7 +77,7 @@ namespace Microsoft.Scripting.Hosting {
         private readonly ScriptDomainManager/*!*/ _manager;
         private readonly ScriptIO/*!*/ _io;
         private IScriptScope/*!*/ _globals;
-            
+          
         public IScriptHost Host {
             get { return _manager.Host; }
         }
@@ -84,6 +87,7 @@ namespace Microsoft.Scripting.Hosting {
             get { return _manager.GlobalOptions; }
             set { _manager.GlobalOptions = value; }
         }
+
 
         public ScriptIO/*!*/ IO {
             get { return _io; }
@@ -95,6 +99,10 @@ namespace Microsoft.Scripting.Hosting {
             _io = new ScriptIO(_manager.SharedIO);
         }
 
+        public static IScriptEnvironment Create() {
+            return Create(null);
+        }
+
         public static IScriptEnvironment Create(ScriptEnvironmentSetup setup) {
             ScriptDomainManager manager;
             if (!ScriptDomainManager.TryCreateLocal(setup, out manager))
@@ -103,19 +111,11 @@ namespace Microsoft.Scripting.Hosting {
             return manager.Environment;
         }
 
-        public static IScriptEnvironment GetEnvironment() {
-            return ScriptDomainManager.CurrentManager.Environment;
-        }
-
 #if !SILVERLIGHT
         RemoteWrapper ILocalObject.Wrap() {
             return new RemoteScriptEnvironment(_manager);
         }
         
-        public static IScriptEnvironment Create() {
-            return Create(null);
-        }
-
         public static IScriptEnvironment Create(ScriptEnvironmentSetup setup, AppDomain domain) {
             Contract.RequiresNotNull(domain, "domain");
 
@@ -128,17 +128,6 @@ namespace Microsoft.Scripting.Hosting {
                 throw new InvalidOperationException("Environment already created in the specified AppDomain");
 
             return rse;
-        }
-
-        public static IScriptEnvironment GetEnvironment(AppDomain domain) {
-            Contract.RequiresNotNull(domain, "domain");
-
-            if (domain == AppDomain.CurrentDomain) {
-                return GetEnvironment();
-            }
-
-            // TODO:
-            throw new NotImplementedException("TODO");
         }
 #endif
         public string[] GetRegisteredFileExtensions() {
@@ -245,6 +234,18 @@ namespace Microsoft.Scripting.Hosting {
         internal IScriptEngine InvariantEngine {
             get {
                 return GetEngine(typeof(InvariantContext));
+            }
+        }
+
+        internal ScriptDomainManager DomainManager {
+            get {
+                return _manager;
+            }
+        }
+
+        public PlatformAdaptationLayer PAL {
+            get {
+                return DomainManager.PAL;
             }
         }
     }

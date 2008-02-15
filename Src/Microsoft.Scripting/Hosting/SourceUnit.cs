@@ -66,8 +66,6 @@ namespace Microsoft.Scripting.Hosting {
 
         /// <summary>
         /// LanguageContext of the language of the unit.
-        /// 
-        /// TODO: Internal
         /// </summary>
         public LanguageContext LanguageContext {
             get { return _context; }

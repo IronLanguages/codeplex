@@ -341,10 +341,10 @@ namespace IronPython.Runtime {
 
 #if !SILVERLIGHT // XML doc
 
-        private static object _CachedDocLockObject = new object();
+        private static readonly object _CachedDocLockObject = new object();
+        private static readonly List<Assembly> _AssembliesWithoutXmlDoc = new List<Assembly>();
         private static XPathDocument _CachedDoc;
         private static string _CachedDocName;
-        private static List<Assembly> _AssembliesWithoutXmlDoc = new List<Assembly>();
 
         private static string GetXmlName(Type type) {
             StringBuilder res = new StringBuilder();

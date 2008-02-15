@@ -15,7 +15,6 @@
 
 using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     sealed class YieldLabelBuilder : CodeBlockWalker {
@@ -26,15 +25,15 @@ namespace Microsoft.Scripting.Ast {
                 Finally
             };
 
-            private readonly TryStatement _try;
+            private readonly TryStatementInfo _tsi;
             private TryStatementState _state;
             private int _handler;
 
-            public ExceptionBlock(TryStatement statement) {
-                Debug.Assert(statement != null);
+            public ExceptionBlock(TryStatementInfo tsi) {
+                Debug.Assert(tsi != null);
 
                 _state = TryStatementState.Try;
-                _try = statement;
+                _tsi = tsi;
             }
 
             internal TryStatementState State {
@@ -54,11 +53,11 @@ namespace Microsoft.Scripting.Ast {
             internal TargetLabel AddYieldTarget(TargetLabel label, int index) {
                 switch (State) {
                     case TryStatementState.Try:
-                        return _try.AddTryYieldTarget(label, index);
+                        return _tsi.AddTryYieldTarget(label, index);
                     case TryStatementState.Handler:
-                        return _try.AddCatchYieldTarget(label, index, _handler);
+                        return _tsi.AddCatchYieldTarget(label, index, _handler);
                     case TryStatementState.Finally:
-                        return _try.AddFinallyYieldTarget(label, index);
+                        return _tsi.AddFinallyYieldTarget(label, index);
 
                     default:
                         Debug.Assert(false, "Invalid try statement state " + State.ToString());
@@ -67,6 +66,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        private Dictionary<TryStatement, TryStatementInfo> _infos;
         private readonly Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
         private readonly List<YieldTarget> _topTargets = new List<YieldTarget>();
         private int _temps;
@@ -74,23 +74,27 @@ namespace Microsoft.Scripting.Ast {
         private YieldLabelBuilder() {
         }
 
-        internal static void BuildYieldTargets(GeneratorCodeBlock g, out List<YieldTarget> topTargets, out int temps) {
-            YieldLabelBuilder b = new YieldLabelBuilder();
-            b.WalkNode(g.Body);
-            topTargets = b._topTargets;
-            temps = b._temps;
+        internal static void BuildYieldTargets(GeneratorCodeBlock gcb, CodeBlockInfo cbi) {
+            YieldLabelBuilder ylb = new YieldLabelBuilder();
+            ylb.WalkNode(gcb.Body);
+
+            // Populate results into the CodeBlockInfo
+            cbi.PopulateGeneratorInfo(ylb._infos, ylb._topTargets, ylb._temps);
         }
 
         #region AstWalker method overloads
 
         protected internal override bool Walk(TryStatement node) {
-            ExceptionBlock block = new ExceptionBlock(node);
+            TryStatementInfo tsi = new TryStatementInfo(node);
+            ExceptionBlock block = new ExceptionBlock(tsi);
 
             _tryBlocks.Push(block);
             WalkNode(node.Body);
 
             IList<CatchBlock> handlers = node.Handlers;
             if (handlers != null) {
+                tsi.CreateCatchFlags(handlers.Count);
+
                 block.State = ExceptionBlock.TryStatementState.Handler;
                 for (int handler = 0; handler < handlers.Count; handler++) {
                     block.Handler = handler;
@@ -105,6 +109,12 @@ namespace Microsoft.Scripting.Ast {
 
             Debug.Assert((object)block == (object)_tryBlocks.Peek());
             _tryBlocks.Pop();
+
+            // Remember the TryStatementInfo for code generation.
+            if (_infos == null) {
+                _infos = new Dictionary<TryStatement, TryStatementInfo>();
+            }
+            _infos[node] = tsi;
 
             return false;
         }

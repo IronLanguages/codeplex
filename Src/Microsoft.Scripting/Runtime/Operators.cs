@@ -422,7 +422,6 @@ namespace Microsoft.Scripting.Runtime {
         SetDescriptor,              // user defined data descriptor
         DeleteDescriptor,           // user defined data descriptor
         MoveNext,                   // iterator protocol
-        Coerce,                     // coersion
         Unassign,                   // finalization
 
         IdMask = 0x7fffffff,

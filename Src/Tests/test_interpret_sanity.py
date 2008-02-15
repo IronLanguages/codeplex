@@ -22,14 +22,11 @@ import sys
 
 load_iron_python_test()
 import IronPythonTest
-pe = IronPythonTest.TestHelpers.GetEngine()
 
 
 #Rowan Work Item 312902
 @skip("interpreted")
 def test_interpreted():
-    global pe
-
     # IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode is tested at compile time:
     # it will take effect not immediately, but in modules we import
     save = IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode

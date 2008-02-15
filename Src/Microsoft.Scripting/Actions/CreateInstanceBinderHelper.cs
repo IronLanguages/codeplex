@@ -31,27 +31,6 @@ namespace Microsoft.Scripting.Actions {
             : base(context, action, args) {
         }
 
-        public override StandardRule<T> MakeRule() {
-            Type t = CompilerHelpers.GetType(Arguments[0]);
-            if (typeof(IConstructorWithCodeContext).IsAssignableFrom(t)) {
-                // TODO: This should go away when IConstructorWCC goes away.
-                Debug.Assert(!Action.Signature.HasKeywordArgument());
-
-                Expression call = Ast.SimpleCallHelper(
-                    Rule.Parameters[0],
-                    typeof(IConstructorWithCodeContext).GetMethod("Construct"),
-                    GetICallableParameters(Rule)
-                );
-
-                Rule.Target = Rule.MakeReturn(Binder, call);
-                Rule.MakeTest(t);
-
-                return Rule;
-            }
-            
-            return base.MakeRule();
-        }
-
         protected override MethodBase[] GetTargetMethods() {
             object target = Arguments[0];
             Type t = GetTargetType(target);

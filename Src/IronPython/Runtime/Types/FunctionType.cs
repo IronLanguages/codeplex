@@ -38,7 +38,17 @@ namespace Microsoft.Scripting {
         OpsFunction = 0x0010,
         /// <summary>True if this is a __r*__ method for a CLS overloaded operator method</summary>
         ReversedOperator = 0x0020,
-        /// <summary>This method represents a binary operator method for a CLS overloaded operator method</summary>
+        /// <summary>
+        /// This method represents a binary operator method for a CLS overloaded operator method.
+        /// 
+        /// Being a binary operator causes the following special behaviors to kick in:
+        ///     A failed binding at call time returns NotImplemented instead of raising an exception
+        ///     A reversed operator will automatically be created if:
+        ///         1. The parameters are both of the instance type
+        ///         2. The parameters are in reversed order (other, this)
+        ///         
+        /// This enables simple .NET operator methods to be mapped into the Python semantics.
+        /// </summary>
         BinaryOperator = 0x0040,
     }
 }

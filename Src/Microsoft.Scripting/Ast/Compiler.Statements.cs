@@ -335,12 +335,15 @@ namespace Microsoft.Scripting.Ast {
             // Codegen is affected by presence/absence of loop control statements
             // (break/continue) or return/yield statement in finally clause
             TryFlowResult flow = TryFlowAnalyzer.Analyze(node.FinallyStatement);
+            // This will return null if we are not in a generator
+            // or if the try statement is unaffected by yields
+            TryStatementInfo tsi = GetTsi(node);
 
             EmitPosition(node.Start, node.Header);
 
             // If there's a yield anywhere, go for a complex codegen
-            if (YieldInBlock(node.TryYields) || node.YieldInCatch || YieldInBlock(node.FinallyYields)) {
-                EmitGeneratorTry(node, flow);
+            if (tsi != null && (YieldInBlock(tsi.TryYields) || tsi.YieldInCatch || YieldInBlock(tsi.FinallyYields))) {
+                EmitGeneratorTry(tsi, node, flow);
             } else {
                 EmitSimpleTry(node, flow);
             }
@@ -350,7 +353,7 @@ namespace Microsoft.Scripting.Ast {
             return block != null && block.Count > 0;
         }
 
-        private void EmitGeneratorTry(TryStatement node, TryFlowResult flow) {
+        private void EmitGeneratorTry(TryStatementInfo tsi, TryStatement node, TryFlowResult flow) {
             //
             // Initialize the flow control flag
             //
@@ -373,8 +376,8 @@ namespace Microsoft.Scripting.Ast {
             // Entering the try block
             //******************************************************************
 
-            if (node.Target != null) {
-                MarkLabel(node.Target.EnsureLabel(this));
+            if (tsi.Target != null) {
+                MarkLabel(tsi.Target.EnsureLabel(this));
             }
 
             //******************************************************************
@@ -391,12 +394,12 @@ namespace Microsoft.Scripting.Ast {
                 // If there is a yield in any catch, that catch will be hoisted
                 // and we need to dispatch to it from here
                 //**************************************************************
-                if (node.YieldInCatch) {
-                    EmitYieldDispatch(node.CatchYields);
+                if (tsi.YieldInCatch) {
+                    EmitYieldDispatch(tsi.CatchYields);
                 }
 
-                if (YieldInBlock(node.FinallyYields)) {
-                    foreach (YieldTarget yt in node.FinallyYields) {
+                if (YieldInBlock(tsi.FinallyYields)) {
+                    foreach (YieldTarget yt in tsi.FinallyYields) {
                         GotoRouter.EmitGet(this);
                         EmitInt(yt.Index);
                         Emit(OpCodes.Beq, endFinallyBlock);
@@ -419,7 +422,7 @@ namespace Microsoft.Scripting.Ast {
             //******************************************************************
 
             // First, emit the dispatch within the try block
-            EmitYieldDispatch(node.TryYields);
+            EmitYieldDispatch(tsi.TryYields);
 
             // Then, emit the actual body
             EmitExpressionAndPop(node.Body);
@@ -433,10 +436,12 @@ namespace Microsoft.Scripting.Ast {
                 List<CatchRecord> catches = new List<CatchRecord>();
                 PushExceptionBlock(TargetBlockType.Catch, flowControlFlag);
 
-                foreach (CatchBlock cb in node.Handlers) {
+                ReadOnlyCollection<CatchBlock> handlers = node.Handlers;
+                for (int index = 0; index < handlers.Count; index++) {
+                    CatchBlock cb = handlers[index];
                     BeginCatchBlock(cb.Test);
 
-                    if (cb.Yield) {
+                    if (tsi.CatchBlockYields(index)) {
                         // The catch block body contains yield, therefore
                         // delay the body emit till after the try block.
                         Slot slot = GetLocalTmp(cb.Test);
@@ -497,7 +502,7 @@ namespace Microsoft.Scripting.Ast {
                 Emit(OpCodes.Endfinally);
                 MarkLabel(noExit);
 
-                EmitYieldDispatch(node.FinallyYields);
+                EmitYieldDispatch(tsi.FinallyYields);
 
                 // Emit the finally body
 
@@ -528,11 +533,11 @@ namespace Microsoft.Scripting.Ast {
 
             // Clear the target labels
 
-            ClearLabels(node.TryYields);
-            ClearLabels(node.CatchYields);
+            ClearLabels(tsi.TryYields);
+            ClearLabels(tsi.CatchYields);
 
-            if (node.Target != null) {
-                node.Target.Clear();
+            if (tsi.Target != null) {
+                tsi.Target.Clear();
             }
         }
 

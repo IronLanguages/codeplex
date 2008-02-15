@@ -60,10 +60,6 @@ namespace IronPythonTest {
         public static LanguageContext GetContext(CodeContext context) {
             return context.LanguageContext;
         }
-
-        public static IScriptEngine GetEngine() {
-            return ScriptEnvironment.GetEnvironment().GetEngine(typeof(PythonContext));
-        }
     }
 
     public delegate int IntIntDelegate(int arg);
@@ -129,7 +125,9 @@ namespace IronPythonTest {
         public EngineTest() {
             // Load a script with all the utility functions that are required
             // pe.ExecuteFile(InputTestDirectory + "\\EngineTests.py");
-            _env = ScriptEnvironment.GetEnvironment();
+            _env = ScriptEnvironment.Create(null);
+            _env.LoadAssembly(typeof(string).Assembly);
+            _env.LoadAssembly(typeof(Debug).Assembly);
             _pe = _env.GetEngine("py");
         }
 
@@ -451,8 +449,7 @@ del customSymbol", SourceCodeKind.Statements));
             long memoryUsed = finalMemory - initialMemory;
             const long memoryThreshold = 100000;
 
-            // Skip the memory check if running with -X:StaticMethods extension
-            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-X:StaticMethods") == -1) {
+            if (!_env.GlobalOptions.EmitsUncollectableCode) {
                 if (memoryUsed > memoryThreshold)
                     throw new Exception(String.Format("ScenarioGC used {0} bytes of memory. The threshold is {1} bytes", memoryUsed, memoryThreshold));
             }
@@ -602,7 +599,6 @@ del customSymbol", SourceCodeKind.Statements));
                 } catch (IronPython.Runtime.Exceptions.ImportException) { }
 
                 File.WriteAllText(tempFile1, "from lib.assert_util import *");
-
                 _pe.SetScriptSourceSearchPaths(new string[] { Common.ScriptTestDirectory });
 
                 _pe.Execute(scope, _pe.CreateScriptSourceFromFile(tempFile1));
@@ -612,7 +608,7 @@ del customSymbol", SourceCodeKind.Statements));
             }
         }
 
-        // Options.ClrDebuggingEnabled
+        // Options.DebugMode
 #endif
         delegate void ThrowExceptionDelegate();
         static void ThrowException() {
@@ -620,35 +616,23 @@ del customSymbol", SourceCodeKind.Statements));
         }
 
 #if !SILVERLIGHT
-        public void ScenarioClrDebuggingEnabled() {
+        public void ScenarioStackFrameLineInfo() {
             const string lineNumber = "raise.py:line";
 
-            if (PythonEngine.CurrentEngine.Options.InterpretedMode) {
+            if (_pe.Options.InterpretedMode) {
                 // Disable this test in interpreted mode, since in this case
                 // the CLR stack traces do not include the python source file and line number.
                 return;
             }
 
-            try {
-                _pe.Options.ClrDebuggingEnabled = true;
-                IScriptScope scope = _pe.Runtime.CreateScope();
-                try {
-                    SourceUnit su = _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py");
-                    _pe.Execute(scope, su);
-                    throw new Exception("We should not get here");
-                } catch (IronPython.Runtime.Exceptions.StringException e1) {
-                    if (!e1.StackTrace.Contains(lineNumber))
-                        throw new Exception("Debugging is not enabled even though Options.ClrDebuggingEnabled is specified");
-                }
+            bool oldDebug = ScriptDomainManager.Options.DebugMode;
 
-                _pe.Options.ClrDebuggingEnabled = false;
-                try {
-                    _pe.Execute(scope, _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py"));
-                    throw new Exception("We should not get here");
-                } catch (StringException e2) {
-                    if (e2.StackTrace.Contains(lineNumber))
-                        throw new Exception("Debugging is enabled even though Options.ClrDebuggingEnabled is not specified");
-                }
+            try {
+                IScriptScope scope = _pe.Runtime.CreateScope();
+
+                TestLineInfo(scope, lineNumber, false);
+                TestLineInfo(scope, lineNumber, true);
+                TestLineInfo(scope, lineNumber, false);
 
                 // Ensure that all APIs work
                 AreEqual(_pe.Execute<int>(scope, _pe.CreateScriptSourceFromString("x")), 1);
@@ -657,7 +641,18 @@ del customSymbol", SourceCodeKind.Statements));
                 //d = pe.CreateMethod<IntIntDelegate>("var = arg + x\nreturn var");
                 //AreEqual(d(100), 101);
             } finally {
-                PythonEngine.CurrentEngine.Options.ClrDebuggingEnabled = false;
+                ScriptDomainManager.Options.DebugMode = oldDebug;
+            }
+        }
+
+        private void TestLineInfo(IScriptScope scope, string lineNumber, bool debuggable) {
+            ScriptDomainManager.Options.DebugMode = debuggable;
+            try {
+                _pe.Execute(scope, _pe.CreateScriptSourceFromFile(Common.InputTestDirectory + "\\raise.py"));
+                throw new Exception("We should not get here");
+            } catch (StringException e2) {
+                if (debuggable != e2.StackTrace.Contains(lineNumber))
+                    throw new Exception("Debugging is enabled even though Options.DebugMode is not specified");
             }
         }
 

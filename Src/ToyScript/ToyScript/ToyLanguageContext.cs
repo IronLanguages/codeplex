@@ -55,7 +55,7 @@ namespace ToyScript {
 
         public override ServiceType GetService<ServiceType>(params object[] args) {
             if (typeof(ServiceType) == typeof(OptionsParser)) {
-                return (ServiceType)(object)new DefaultOptionsParser();
+                return (ServiceType)(object)new DefaultOptionsParser(this);
             } else if (typeof(ServiceType) == typeof(CommandLine)) {
                 return (ServiceType)(object)new ToyCommandLine();
             }

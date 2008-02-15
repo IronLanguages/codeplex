@@ -32,15 +32,6 @@ using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler {
 
-    // TODO: rename states
-    public enum LexicalState {
-        EXPR_FNAME,
-        EXPR_BEG,
-        EXPR_END,
-        EXPR_ENDARG,
-        Initial = EXPR_BEG,
-    }
-
     /// <summary>
     /// IronPython tokenizer
     /// </summary>

@@ -66,6 +66,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </summary>
         private IScriptEnvironment _environment;
         private IScriptScope _defaultModule;
+        private PlatformAdaptationLayer _pal;
 
         /// <summary>
         /// Default module for convenience. Lazily init'd.
@@ -94,7 +95,7 @@ namespace Microsoft.Scripting.Hosting {
         internal ScriptHost() {
             _environment = null;
         }
-
+        
         #endregion
 
 #if !SILVERLIGHT
@@ -119,11 +120,12 @@ namespace Microsoft.Scripting.Hosting {
         /// </remarks>
         public virtual string NormalizePath(string path) {
             Contract.RequiresNotNull(path, "path");
-            return (path.Length > 0) ? ScriptDomainManager.CurrentManager.PAL.GetFullPath(path) : "";
+
+            return (path.Length > 0) ? PAL.GetFullPath(path) : "";
         }
 
         public virtual string[] GetSourceFileNames(string mask, string searchPattern) {
-            return ScriptDomainManager.CurrentManager.PAL.GetFiles(mask, searchPattern);
+            return PAL.GetFiles(mask, searchPattern);
         }
 
         #endregion
@@ -149,9 +151,10 @@ namespace Microsoft.Scripting.Hosting {
             Contract.RequiresNotNull(engine, "engine");
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(encoding, "encoding");
-            
-            if (ScriptDomainManager.CurrentManager.PAL.FileExists(path)) {     
-                return engine.CreateScriptSource(new FileStreamContentProvider(path), NormalizePath(path), encoding, kind);
+
+            if (PAL.FileExists(path)) {                
+                FileStreamContentProvider contProvider = new FileStreamContentProvider(PAL, path);
+                return engine.CreateScriptSource(contProvider, NormalizePath(path), encoding, kind);
             }
 
             return null;
@@ -178,19 +181,19 @@ namespace Microsoft.Scripting.Hosting {
                 foreach (string extension in _environment.GetRegisteredFileExtensions()) {
                     string fullPath = Path.Combine(directory, name + extension);
 
-                    if (ScriptDomainManager.CurrentManager.PAL.FileExists(fullPath)) {
+                    if (PAL.FileExists(fullPath)) {
                         if (result != null) {
                             throw new InvalidOperationException(String.Format(Resources.AmbigiousModule, fullPath, finalPath));
                         }
 
-                        ScriptEngine engine;
-                        if (!ScriptDomainManager.CurrentManager.TryGetEngine(extension, out engine)) {
-                            // provider may have been unregistered, let's pick another one: 
-                            continue;    
-                        }
+                        try {
+                            IScriptEngine engine = _environment.GetEngineByFileExtension(extension);
 
-                        result = TryGetSourceFileUnit(engine, fullPath, StringUtils.DefaultEncoding, SourceCodeKind.File);
-                        finalPath = fullPath;
+                            result = TryGetSourceFileUnit(engine, fullPath, StringUtils.DefaultEncoding, SourceCodeKind.File);
+                            finalPath = fullPath;
+                        } catch (ArgumentException) {
+                            // engine has been unregistered
+                        }
                     }
                 }
             }
@@ -220,6 +223,15 @@ namespace Microsoft.Scripting.Hosting {
         }
 
         #endregion
+
+        public PlatformAdaptationLayer PAL {
+            get {
+                return _pal;
+            }
+            internal set {
+                _pal = value;
+            }
+        }
     }
 
 }

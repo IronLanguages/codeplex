@@ -52,15 +52,13 @@ namespace ToyScript.Parser.Ast {
 
             tg.PopScope();
 
-            return Ast.Statement(
-                Ast.Assign(
-                    tg.GetOrMakeLocal(_name),
-                    Ast.Call(
-                        typeof(ToyFunction).GetMethod("Create"),
-                        Ast.Constant(_name),
-                        Ast.NewArray(typeof(string[]), names),
-                        Ast.CodeBlockExpression(block, false)
-                    )
+            return Ast.Assign(
+                tg.GetOrMakeLocal(_name),
+                Ast.Call(
+                    typeof(ToyFunction).GetMethod("Create"),
+                    Ast.Constant(_name),
+                    Ast.NewArray(typeof(string[]), names),
+                    Ast.CodeBlockExpression(block, false)
                 )
             );
         }

@@ -43,10 +43,10 @@ namespace Microsoft.Scripting.Actions {
         private bool _error;                        // true if the rule represents an error
 
         // TODO revisit these fields and their uses when CodeBlock moves down
-        internal Variable[] _paramVariables;                            // TODO: Remove me when we can refer to params as expressions
-        internal List<Variable> _temps;                                 // TODO: Remove me when ASTs can have free-floating variables
-        internal Dictionary<Variable, VariableReference> _references;   // TODO: Remove me when the above 2 are gone
-        private bool _canInterpretTarget = true;                        // true if we can interpret this rule
+        internal Variable[] _paramVariables;        // TODO: Remove me when we can refer to params as expressions
+        internal List<Variable> _temps;             // TODO: Remove me when ASTs can have free-floating variables
+        internal AnalyzedRule _analyzed;            // TODO: Remove me when the above 2 are gone
+        private bool _canInterpretTarget = true;    // true if we can interpret this rule
 
         internal StandardRule() { }
 
@@ -97,7 +97,7 @@ namespace Microsoft.Scripting.Actions {
             if (_temps == null) {
                 _temps = new List<Variable>();
             }
-            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), null, type);
+            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), type);
             _temps.Add(ret);
             return ret;
         }
@@ -192,7 +192,7 @@ namespace Microsoft.Scripting.Actions {
         /// This should go away once the interpreter can support all the features required by the generated 
         /// target statements
         /// </summary>
-        internal bool CanInterpretTarget {
+        public bool CanInterpretTarget {
             get { return _canInterpretTarget; }
             set {
                 // InterpretedMode has not yet been updated to deal with CanInterpretTarget=false
@@ -407,7 +407,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Variable MakeParameter(int index, string name, Type type) {
-            Variable ret = Variable.Parameter(null, SymbolTable.StringToId(name), type);
+            Variable ret = Variable.Parameter(SymbolTable.StringToId(name), type);
             ret.ParameterIndex = index;
             return ret;
         }
@@ -471,15 +471,18 @@ namespace Microsoft.Scripting.Actions {
             lock (this) {
                 // First, finish binding my variable references
                 // And rewrite the AST if needed
-                if (_references == null) {
+                if (_analyzed == null) {
                     AstRewriter.RewriteRule(this);
-                    _references = RuleBinder.Bind(_test, _target, ReturnType);
+                    _analyzed = RuleBinder.Bind(_test, _target, ReturnType);
                 }
 
-                cg.References = _references;
+                CodeBlockInfo top = _analyzed.Top;
+                DlrCompiler tc = new DlrCompiler(_analyzed);
 
-                foreach (VariableReference vr in _references.Values) {
-                    vr.CreateSlot(cg);
+                cg.InitializeRule(tc, top);
+
+                foreach (VariableReference vr in top.References.Values) {
+                    vr.CreateSlot(cg, top);
                 }
 
                 if (_test != null) {

@@ -144,9 +144,9 @@ namespace IronPython.Runtime.Operations {
             PythonTypeSlot pts;
             StandardRule<T> rule = null;
             if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {                
-                rule = MakeIterRule<T>(context, typeof(PythonEnumerable));
+                rule = MakeIterRule<T>(context, "CreatePythonEnumerable");
             } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {                
-                rule = MakeIterRule<T>(context, typeof(ItemEnumerable));
+                rule = MakeIterRule<T>(context, "CreateItemEnumerable");
             }
             return rule;
         }
@@ -156,19 +156,19 @@ namespace IronPython.Runtime.Operations {
             PythonTypeSlot pts;
             StandardRule<T> rule = null;
             if (pt.TryResolveSlot(context, Symbols.Iterator, out pts)) {
-                rule = MakeIterRule<T>(context, typeof(PythonEnumerator));
+                rule = MakeIterRule<T>(context, "CreatePythonEnumerator");
             } else if (pt.TryResolveSlot(context, Symbols.GetItem, out pts)) {
-                rule = MakeIterRule<T>(context, typeof(ItemEnumerator));
+                rule = MakeIterRule<T>(context, "CreateItemEnumerator");
             }
             return rule;
         }
 
-        private static StandardRule<T> MakeIterRule<T>(CodeContext context, Type t) {
+        private static StandardRule<T> MakeIterRule<T>(CodeContext context, string methodName) {
             StandardRule<T> res = new StandardRule<T>();
             res.Target = res.MakeReturn(
                     context.LanguageContext.Binder,
                     Ast.Call(
-                        t.GetMethod("Create"),
+                        typeof(PythonOps).GetMethod(methodName),
                         res.Parameters[0]
                     )
                 );
@@ -1082,9 +1082,9 @@ namespace IronPython.Runtime.Operations {
             rule.Target =
                 Ast.IfThenElse(
                     Ast.Call(
-                        typeof(PythonOps).GetMethod("SlotTryGetValue"),
+                        typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
                         Ast.CodeContext(),
-                        Ast.WeakConstant(dts),
+                        Ast.ConvertHelper(Ast.WeakConstant(dts), typeof(PythonTypeSlot)),
                         Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
                         Ast.Convert(Ast.WeakConstant(sdo.PythonType), typeof(PythonType)),
                         Ast.Read(tmp)
@@ -1129,6 +1129,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static class RuleBuilderCache<T> {
+            private static readonly Dictionary<SetMemberKey, TemplatedRuleBuilder<T>> SetMemberBuilders = new Dictionary<SetMemberKey, TemplatedRuleBuilder<T>>();
+
             private struct SetMemberKey {
                 public SetMemberKey(Type type, bool version, string templateType) {
                     Type = type;
@@ -1154,8 +1156,6 @@ namespace IronPython.Runtime.Operations {
 
                 builder.CopyTemplateToRule(context, rule);                
             }
-
-            private static Dictionary<SetMemberKey, TemplatedRuleBuilder<T>> SetMemberBuilders = new Dictionary<SetMemberKey, TemplatedRuleBuilder<T>>();
         }
 
 

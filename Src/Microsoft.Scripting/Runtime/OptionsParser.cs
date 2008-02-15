@@ -45,8 +45,12 @@ namespace Microsoft.Scripting.Runtime {
         private ScriptDomainOptions _globalOptions;
         private string[] _args;
         private int _current = -1;
+        private readonly LanguageContext/*!*/ _context;
 
-        protected OptionsParser() {
+        protected OptionsParser(LanguageContext/*!*/ context) {
+            Contract.RequiresNotNull(context, "context");
+
+            _context = context;
         }
 
         public ScriptDomainOptions GlobalOptions { 
@@ -129,30 +133,33 @@ namespace Microsoft.Scripting.Runtime {
                     IgnoreRemainingArgs();
                     break;
 
-                case "-O": GlobalOptions.DebugMode = false; break;
-                case "-D": GlobalOptions.EngineDebug = true; break;
+                case "-D": 
+                    GlobalOptions.DebugMode = true; 
+                    break;
 
                 case "-X:AssembliesDir":
 
                     string dir = PopNextArg();
 
-                    if (!ScriptDomainManager.CurrentManager.PAL.DirectoryExists(dir)) {
+                    if (!_context.DomainManager.PAL.DirectoryExists(dir)) {
                         throw new InvalidOptionException(String.Format("Directory '{0}' doesn't exist.", dir));
                     }
 
-                    GlobalOptions.BinariesDirectory = dir;
+                    Snippets.Shared.SnippetsDirectory = dir;
                     break;
 
-                case "-OO":
-                    GlobalOptions.DebugMode = false;
-                    GlobalOptions.StripDocStrings = true;
-                    break;
-
+                // TODO: remove (needed by SNAP right now)
+                case "-X:StaticMethods": break;
+                case "-X:NoOptimize": break;
+                
                 case "-X:Interpret": EngineOptions.InterpretedMode = true; break;
                 case "-X:Frames": GlobalOptions.Frames = true; break;
-                case "-X:GenerateAsSnippets": GlobalOptions.GenerateModulesAsSnippets = true; break;
-                case "-X:GenerateReleaseAssemblies": GlobalOptions.AssemblyGenAttributes &= ~AssemblyGenAttributes.GenerateDebugAssemblies; break;
-                case "-X:ILDebug": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.ILDebug; break;
+
+                // TODO: remove (needed by SNAP right now)
+                case "-X:GenerateAsSnippets":
+                case "-X:TupleBasedOptimizedScopes": GlobalOptions.TupleBasedOptimizedScopes = true; break;
+
+                case "-X:ILDebug": GlobalOptions.ILDebug = true; break;
 
                 case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
                 // TODO: #if !IRONPYTHON_WINDOW
@@ -161,19 +168,16 @@ namespace Microsoft.Scripting.Runtime {
                 case "-X:TabCompletion": ConsoleOptions.TabCompletion = true; break;
                 case "-X:AutoIndent": ConsoleOptions.AutoIndent = true; break;
                 //#endif
-                case "-X:NoOptimize": GlobalOptions.DebugCodeGeneration = true; break;
-                case "-X:Optimize": GlobalOptions.DebugCodeGeneration = false; break;
                 case "-X:NoTraceback": GlobalOptions.DynamicStackTraceSupport = false; break;
 
                 case "-X:ShowRules": GlobalOptions.ShowRules = true; break;
                 case "-X:DumpASTs": GlobalOptions.DumpASTs = true; break;
                 case "-X:ShowASTs": GlobalOptions.ShowASTs = true; break;
 
-
+                case "-X:PerfStats": EngineOptions.PerfStats = true; break;
                 case "-X:PrivateBinding": GlobalOptions.PrivateBinding = true; break;
-                case "-X:SaveAssemblies": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.SaveAndReloadAssemblies; break;
+                case "-X:SaveAssemblies": Snippets.Shared.SaveSnippets = true; break;
                 case "-X:ShowClrExceptions": EngineOptions.ShowClrExceptions = true; break;
-                case "-X:StaticMethods": GlobalOptions.AssemblyGenAttributes |= AssemblyGenAttributes.GenerateStaticMethods; break;
                 case "-X:TrackPerformance": // accepted but ignored on retail builds
 #if DEBUG
                     GlobalOptions.TrackPerformance = true;
@@ -238,13 +242,8 @@ namespace Microsoft.Scripting.Runtime {
                 { "-i",                          "Inspect interactively after running script" },
 #endif                                      
                 { "-V",                          "Print the version number and exit" },
-                { "-O",                          "Enable optimizations" },
-#if DEBUG                                   
-                { "-D",                          "EngineDebug mode" },
-#endif                                      
-                { "-OO",                         "Remove doc-strings in addition to the -O optimizations" },
-                                            
-                                            
+                { "-D",                          "Enable application debugging" },
+
                 { "-X:AutoIndent",               "" },
                 { "-X:AssembliesDir",            "Set the directory for saving generated assemblies" },
 #if !SILVERLIGHT                            
@@ -254,10 +253,9 @@ namespace Microsoft.Scripting.Runtime {
                 { "-X:ExceptionDetail",          "Enable ExceptionDetail mode" },
                 { "-X:Interpret",                "Enable interpreted mode" },
                 { "-X:Frames",                   "Generate custom frames" },
-                { "-X:GenerateAsSnippets",       "Generate code to run in snippet mode" },
-                { "-X:ILDebug",                  "Output generated IL code to a text file for debugging" },
+                { "-X:TupleBasedOptimizedScopes","Use tuples for optimized scopes" },
+                { "-X:ILDebug",                   "Output generated IL code to a text file for debugging" },
                 { "-X:MaxRecursion",             "Set the maximum recursion level" },
-                { "-X:NoOptimize",               "Disable JIT optimization in generated code" },
                 { "-X:NoTraceback",              "Do not emit traceback code" },
                 { "-X:PassExceptions",           "Do not catch exceptions that are unhandled by script code" },
                 { "-X:PrivateBinding",           "Enable binding to private members" },
@@ -266,7 +264,6 @@ namespace Microsoft.Scripting.Runtime {
                 { "-X:ShowClrExceptions",        "Display CLS Exception information" },
                 { "-X:ShowRules",                "Show the AST for rules generated" },
                 { "-X:SlowOps",                  "Enable fast ops" },
-                { "-X:StaticMethods",            "Generate static methods only" },
 #if !SILVERLIGHT
                 { "-X:TabCompletion",            "Enable TabCompletion mode" },
 #endif
@@ -279,6 +276,12 @@ namespace Microsoft.Scripting.Runtime {
             environmentVariables = new string[0, 0];
 
             comments = null;
+        }
+
+        protected LanguageContext/*!*/ LanguageContext {
+            get {
+                return _context;
+            }
         }
     }
 }

@@ -105,14 +105,11 @@ namespace Microsoft.Scripting.Runtime {
                 delegateParams[i] = _parameters[i].ParameterType;
             }
 
-            AssemblyGen snippets = ScriptDomainManager.CurrentManager.Snippets.Assembly;
-
             // Create new constant pool
             ConstantPool constants = new ConstantPool();
 
             // Create the method
-            Compiler cg = snippets.DefineMethod(ToString(), _returnType, delegateParams, constants);
-            cg.Binder = _binder;
+            Compiler cg = Snippets.Shared.DefineMethod(ToString(), _returnType, delegateParams, constants);
 
             // Add the space for the delegate target and save the index at which it was placed,
             // most likely zero.

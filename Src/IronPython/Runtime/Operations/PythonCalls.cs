@@ -22,8 +22,8 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {
-        private static DynamicSite<object, object[], object> _splatSite = MakeSplatSite();
-        private static DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite = MakeDictSplatSite();
+        private static readonly DynamicSite<object, object[], object> _splatSite = MakeSplatSite();
+        private static readonly DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite = MakeDictSplatSite();
 
         public static object Call(object func, params object[] args) {
             return _splatSite.Invoke(DefaultContext.Default, func, args);

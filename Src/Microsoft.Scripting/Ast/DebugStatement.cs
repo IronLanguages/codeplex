@@ -22,9 +22,7 @@ namespace Microsoft.Scripting.Ast {
         public static Expression DebugMarker(string marker) {
             Contract.RequiresNotNull(marker, "marker");
 #if DEBUG
-            return Statement(
-                CallDebugWriteLine(marker)
-            );
+            return CallDebugWriteLine(marker);
 #else
             return Empty();
 #endif

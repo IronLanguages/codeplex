@@ -37,23 +37,19 @@ namespace IronPython.Modules {
         private static readonly int digestSize = hasher256.HashSize / 8;
         private const int blockSize = 1;
 
-        [PythonName("sha256")]
-        public static Sha256Object Sha256(object data) {
+        public static Sha256Object sha256(object data) {
             return new Sha256Object(hasher256, data);
         }
 
-        [PythonName("sha256")]
-        public static Sha256Object Sha256() {
+        public static Sha256Object sha256() {
             return new Sha256Object(hasher256);
         }
 
-        [PythonName("sha224")]
-        public static Sha256Object Sha224(object data) {
+        public static Sha256Object sha224(object data) {
             throw new NotImplementedException();
         }
 
-        [PythonName("sha224")]
-        public static Sha256Object Sha224() {
+        public static Sha256Object sha224() {
             throw new NotImplementedException();
         }
 
@@ -63,19 +59,22 @@ namespace IronPython.Modules {
             internal Sha256Object(HashAlgorithm hasher, object initialData)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialData);
+                update(initialData);
             }
 
             private Sha256Object(HashAlgorithm hasher, byte[] initialBytes)
                 : base(hasher) {
                 _bytes = new byte[0];
-                Update(initialBytes);
+                update(initialBytes);
             }
 
             [Documentation("copy() -> object (copy of this object)")]
-            [PythonName("copy")]
-            public object Clone() {
+            public Sha256Object copy() {
                 return new Sha256Object(_hasher, _bytes);
+            }
+
+            object ICloneable.Clone() {
+                return copy();
             }
         }
     }

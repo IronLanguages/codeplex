@@ -89,7 +89,9 @@ console for testing purposes, and direct input to and from the instance.
         slurped = ""
         state = 0
         while state < 4:
-            (state, nextChar) = self.handlers[state](chr(self.reader.Read()))
+            c = self.reader.Read()
+            if c == -1: raise ValueError("unexpected end of input")
+            (state, nextChar) = self.handlers[state](chr(c))
             slurped += nextChar
             if slurped == '...': raise ValueError("found ... instead of >>>")
             
@@ -133,14 +135,14 @@ console for testing purposes, and direct input to and from the instance.
     # multiple calls to ExecutePartialLine before a final call to ExecuteLine
     def ExecutePartialLine(self, line):
         self.writer.Write(line+"\n")
-        ch = chr(self.reader.Read())
-        if ch <> '.' : raise AssertionError, 'missing the first dot'
-        ch = chr(self.reader.Read())
-        if ch <> '.' : raise AssertionError, 'missing the second dot'
-        ch = chr(self.reader.Read())
-        if ch <> '.' : raise AssertionError, 'missing the third dot'
-        ch = chr(self.reader.Read())
-        if ch <> ' ' : raise AssertionError, 'missing the last space char'
+        ch = self.reader.Read()
+        if ch == -1 or chr(ch) <> '.' : raise AssertionError, 'missing the first dot'
+        ch = self.reader.Read()
+        if ch == -1 or chr(ch) <> '.' : raise AssertionError, 'missing the second dot'
+        ch = self.reader.Read()
+        if ch == -1 or chr(ch) <> '.' : raise AssertionError, 'missing the third dot'
+        ch = self.reader.Read()
+        if ch == -1 or chr(ch) <> ' ' : raise AssertionError, 'missing the last space char'
 
     def End(self):
         if 'writer' in dir(self) and 'Close' in dir(self.writer):

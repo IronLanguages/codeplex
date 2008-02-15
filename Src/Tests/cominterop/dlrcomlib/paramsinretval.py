@@ -15,7 +15,7 @@
 
 # COM Interop tests for IronPython
 from lib.assert_util import skiptest
-skiptest("silverlight", "cli64")
+skiptest("silverlight")
 from lib.cominterop_util import *
 
 if is_cli:

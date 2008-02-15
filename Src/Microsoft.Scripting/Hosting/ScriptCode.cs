@@ -143,7 +143,20 @@ namespace Microsoft.Scripting {
         }
 
         public Scope/*!*/ MakeOptimizedScope() {
-            Scope scope = OptimizedModuleGenerator.Create(this).GenerateScope();
+            Scope scope;
+
+            // TODO:
+            // This is a "double-bug". Both of the following issues need to be fixed:
+            // 1) If the follwoing code is uncommented (a non-optimized scope is returned), interpretation tests will fail some assertions (bug #375352).
+            // 2) Interpreted mode shouldn't totaly give up optimized scopes. Optimized storage should be available for interpreter.
+            // But that would require decoupling optimized storage from compiled code.
+
+            //if (_languageContext.Options.InterpretedMode) {
+            //    scope = new Scope(_languageContext);
+            //} else {
+                scope = OptimizedModuleGenerator.Create(this).GenerateScope();
+            //}
+
             _languageContext.EnsureScopeExtension(scope);
             return scope;
         }

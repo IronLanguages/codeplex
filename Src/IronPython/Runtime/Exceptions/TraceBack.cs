@@ -24,87 +24,80 @@ using IronPython.Runtime;
 [module: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", Scope = "member", Target = "IronPython.Runtime.Exceptions.TraceBackFrame.Globals", MessageId = "Globals")]
 
 namespace IronPython.Runtime.Exceptions {
-    [PythonType("traceback")]
+    [PythonSystemType("traceback")]
     [Serializable]
     public class TraceBack {
-        TraceBack next;
-        TraceBackFrame frame;
-        int line, offset;
+        private TraceBack _next;
+        private TraceBackFrame _frame;
+        private int _line, _offset;
 
         public TraceBack(TraceBack nextTraceBack, TraceBackFrame fromFrame) {
-            next = nextTraceBack;
-            frame = fromFrame;
+            _next = nextTraceBack;
+            _frame = fromFrame;
         }
 
-        public TraceBack Next {
-            [PythonName("tb_next")]
+        public TraceBack tb_next {
             get {
-                return next;
+                return _next;
             }
         }
 
-        public object ModuleScope {
-            [PythonName("tb_frame")]
+        public object tb_frame {
             get {
-                return frame;
+                return _frame;
             }
         }
 
-        public int Line {
-            [PythonName("tb_lineno")]
+        public int tb_lineno {
             get {
-                return line;
+                return _line;
             }
         }
 
-        public int Offset {
-            [PythonName("tb_lasti")]
+        public int tb_lasti {
             get {
-                return offset;
+                return _offset;
             }
         }
 
         internal void SetLine(int lineNumber) {
-            line = lineNumber;
+            _line = lineNumber;
         }
 
         internal void SetOffset(int ilOffset) {
-            offset = ilOffset;
+            _offset = ilOffset;
         }
     }
 
-    [PythonType("frame")]
+    [PythonSystemType("frame")]
     [Serializable]
     public class TraceBackFrame {
         private object _globals;
         private object _locals;
         private object _code;
 
-        public object Globals {
-            [PythonName("f_globals")]
-            get {
-                return _globals;
-            }
-        }
-
-        public object Locals {
-            [PythonName("f_locals")]
-            get {
-                return _locals;
-            }
-        }
-
-        public object Code {
-            [PythonName("f_code")]
-            get {
-                return _code;
-            }
-        }
-
         public TraceBackFrame(object globals, object locals, object code) {
             this._globals = globals;
             this._locals = locals;
             this._code = code;
         }
+
+        public object f_globals {
+            get {
+                return _globals;
+            }
+        }
+
+        public object f_locals {
+            get {
+                return _locals;
+            }
+        }
+
+        public object f_code {
+            get {
+                return _code;
+            }
+        }        
     }
 }

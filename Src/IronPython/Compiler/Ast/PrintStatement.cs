@@ -99,7 +99,7 @@ namespace IronPython.Compiler.Ast {
                         );
                     }
 
-                    statements.Add(Ast.Statement(mce));
+                    statements.Add(mce);
                 }
 
                 return Ast.Block(Span, statements.ToArray());

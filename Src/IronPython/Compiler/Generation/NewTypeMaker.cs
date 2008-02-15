@@ -158,8 +158,8 @@ namespace IronPython.Compiler.Generation {
             List<string> res = new List<string>();
             ISequence seq = slots as ISequence;
             if (seq != null && !(seq is ExtensibleString)) {
-                res = new List<string>(seq.GetLength());
-                for (int i = 0; i < seq.GetLength(); i++) {
+                res = new List<string>(seq.__len__());
+                for (int i = 0; i < seq.__len__(); i++) {
                     res.Add(GetSlotName(seq[i]));
                 }
 
@@ -329,10 +329,10 @@ namespace IronPython.Compiler.Generation {
         }
 
         internal NewTypeMaker(PythonTuple baseClasses, NewTypeInfo typeInfo) {
-            this._baseType = typeInfo.BaseType;
-            this._baseClasses = baseClasses;
-            this._interfaceTypes = typeInfo.InterfaceTypes;
-            this._slots = typeInfo.Slots;
+            _baseType = typeInfo.BaseType;
+            _baseClasses = baseClasses;
+            _interfaceTypes = typeInfo.InterfaceTypes;
+            _slots = typeInfo.Slots;
         }
 
         private static IEnumerable<string> GetBaseName(MethodInfo mi, Dictionary<string, List<string>> specialNames) {
@@ -378,10 +378,8 @@ namespace IronPython.Compiler.Generation {
         }
 
         private Type CreateNewType() {
-            AssemblyGen ag = ScriptDomainManager.CurrentManager.Snippets.Assembly;
-
             string name = GetName();
-            _tg = ag.DefinePublicType(TypePrefix + name, _baseType).TypeBuilder;
+            _tg = Snippets.Shared.DefineType(TypePrefix + name, _baseType).TypeBuilder;
 
             ImplementInterfaces();
 

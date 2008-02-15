@@ -15,7 +15,7 @@
 
 # COM Interop tests for IronPython
 from lib.assert_util import skiptest
-skiptest("win32", "silverlight", "cli64")
+skiptest("win32", "silverlight")
 from lib.cominterop_util import *
 from System.Runtime.InteropServices import COMException
 from System import InvalidOperationException
@@ -96,5 +96,14 @@ def test_namedArgs():
     AssertError(StandardError, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "runonly":preferComDispatch, "bugid":"TODO"}) 
     AssertError(ArgumentTypeException, com_obj.SumArgs, 1, 2, 3, 4, 5, **{"a5":5, "skip":preferComDispatch, "bugid":"TODO"})
 
+#Verify that one is able to enumerate over the object in a loop
+#TODO: add more tests for enumerators - bad enumerator, different array sizes, different types.
+def test_enumerator():
+	#Both the following calls are bugs since we should be able to do [for x in com_obj] - Merlin 368789
+    if not preferComDispatch:
+        AreEqual( [x for x in com_obj.GetEnumerator()] , [ 42, True, "DLR"] )
+    else:
+        AreEqual( [x for x in com_obj.GetEnumerator] , [ 42, True, "DLR"] )
+        
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

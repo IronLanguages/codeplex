@@ -74,10 +74,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             Expression expr;
 
             // Marhsal.FreeBSTR(_unmanagedTemp)
-            expr = Ast.Statement(
-                Ast.Call(
-                    typeof(Marshal).GetMethod("FreeBSTR"),
-                    Ast.Read(_unmanagedTemp)));
+            expr = Ast.Call(
+                typeof(Marshal).GetMethod("FreeBSTR"),
+                Ast.Read(_unmanagedTemp)
+            );
             exprs.Add(expr);
             return exprs;
         }

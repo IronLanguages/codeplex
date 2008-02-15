@@ -26,6 +26,7 @@ using Utils = Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("property#")]
@@ -91,18 +92,6 @@ namespace IronPython.Runtime.Types {
             if (!TrySetValue(context, instance, DynamicHelpers.GetPythonType(instance), value)) {
                 throw new InvalidOperationException("cannot set property");
             }
-        }
-
-        public object __get__(object instance, object owner) {
-            if (Getter == null)
-                throw PythonOps.AttributeError("attribute '{0}' of '{1}' object is write-only",
-                    Name,
-                    PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(DeclaringType)));
-
-            object value;
-            TryGetValue(DefaultContext.Default, instance, owner as PythonType, out value);
-
-            return value;
         }
 
         public void __set__(object instance, object value) {

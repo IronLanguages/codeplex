@@ -196,16 +196,6 @@ OTHER_GLOBALS = {"AI_ADDRCONFIG" : 32,
                  "TCP_SYNCNT" : 7,
                  "TCP_WINDOW_CLAMP" : 10}
 
-@skip("win32")
-def test_HandleToSocket():
-    import clr
-    try:
-        s = socket.socket()
-        system_socket = socket.socket.HandleToSocket(s.fileno())
-        AreEqual(s.fileno(), system_socket.Handle.ToInt64())
-    finally:
-        s.close()
-    
 def test_getprotobyname():
     '''
     Tests socket.getprotobyname

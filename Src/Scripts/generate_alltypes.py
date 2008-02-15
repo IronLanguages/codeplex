@@ -428,9 +428,7 @@ def gen_all(cw):
         
     
 def gen_attr(cw, ty):
-    if ty.name == "Int32":
-        cw.write('[assembly: PythonExtensionType(typeof(%s), typeof(%sOps), DerivationType=typeof(ExtensibleInt))]' % (ty.name, ty.name))
-    elif ty.name == "Double":
+    if ty.name == "Int32" or ty.name == "Double":
         cw.write('[assembly: PythonExtensionType(typeof(%s), typeof(%sOps), EnableDerivation=true)]' % (ty.name, ty.name))
     else:
         cw.write('[assembly: PythonExtensionType(typeof(%s), typeof(%sOps))]' % (ty.name, ty.name))

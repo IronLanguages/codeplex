@@ -161,20 +161,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             #region non-public members
 
-            private static AssemblyGen _UnverifiableAssembly = GetUnverifiableAssembly();
-
-            private static AssemblyGen GetUnverifiableAssembly() {
-                AssemblyGen snippetsAssembly = ScriptDomainManager.CurrentManager.Snippets.Assembly;
-                if (!snippetsAssembly.VerifyAssemblies) {
-                    return snippetsAssembly;
-                }
-
-                AssemblyGen asm = new AssemblyGen("UnverifiableAssembly", null, null, AssemblyGenAttributes.None);
-                return asm;
-            }
-
 #if DEBUG
             private const int _dummyMarker = 0x10101010;
+
             /// <summary>
             /// Ensure that "value" is a local variable in some caller's frame. So converting
             /// the byref to an IntPtr is a safe operation. Alternatively, we could also allow 
@@ -199,19 +188,19 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             // *** BEGIN GENERATED CODE ***
 
-            private static ConvertByrefToPtrDelegate<SByte> _ConvertSByteByrefToPtr = (ConvertByrefToPtrDelegate<SByte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<SByte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(SByte)));
-            private static ConvertByrefToPtrDelegate<Int16> _ConvertInt16ByrefToPtr = (ConvertByrefToPtrDelegate<Int16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int16)));
-            private static ConvertByrefToPtrDelegate<Int32> _ConvertInt32ByrefToPtr = (ConvertByrefToPtrDelegate<Int32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int32)));
-            private static ConvertByrefToPtrDelegate<Int64> _ConvertInt64ByrefToPtr = (ConvertByrefToPtrDelegate<Int64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int64)));
-            private static ConvertByrefToPtrDelegate<Byte> _ConvertByteByrefToPtr = (ConvertByrefToPtrDelegate<Byte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Byte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Byte)));
-            private static ConvertByrefToPtrDelegate<UInt16> _ConvertUInt16ByrefToPtr = (ConvertByrefToPtrDelegate<UInt16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt16)));
-            private static ConvertByrefToPtrDelegate<UInt32> _ConvertUInt32ByrefToPtr = (ConvertByrefToPtrDelegate<UInt32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt32)));
-            private static ConvertByrefToPtrDelegate<UInt64> _ConvertUInt64ByrefToPtr = (ConvertByrefToPtrDelegate<UInt64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt64)));
-            private static ConvertByrefToPtrDelegate<IntPtr> _ConvertIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<IntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<IntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(IntPtr)));
-            private static ConvertByrefToPtrDelegate<UIntPtr> _ConvertUIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<UIntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UIntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UIntPtr)));
-            private static ConvertByrefToPtrDelegate<Single> _ConvertSingleByrefToPtr = (ConvertByrefToPtrDelegate<Single>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Single>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Single)));
-            private static ConvertByrefToPtrDelegate<Double> _ConvertDoubleByrefToPtr = (ConvertByrefToPtrDelegate<Double>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Double>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Double)));
-            private static ConvertByrefToPtrDelegate<Decimal> _ConvertDecimalByrefToPtr = (ConvertByrefToPtrDelegate<Decimal>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Decimal>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Decimal)));
+            private static readonly ConvertByrefToPtrDelegate<SByte> _ConvertSByteByrefToPtr = (ConvertByrefToPtrDelegate<SByte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<SByte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(SByte)));
+            private static readonly ConvertByrefToPtrDelegate<Int16> _ConvertInt16ByrefToPtr = (ConvertByrefToPtrDelegate<Int16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int16)));
+            private static readonly ConvertByrefToPtrDelegate<Int32> _ConvertInt32ByrefToPtr = (ConvertByrefToPtrDelegate<Int32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int32)));
+            private static readonly ConvertByrefToPtrDelegate<Int64> _ConvertInt64ByrefToPtr = (ConvertByrefToPtrDelegate<Int64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Int64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Int64)));
+            private static readonly ConvertByrefToPtrDelegate<Byte> _ConvertByteByrefToPtr = (ConvertByrefToPtrDelegate<Byte>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Byte>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Byte)));
+            private static readonly ConvertByrefToPtrDelegate<UInt16> _ConvertUInt16ByrefToPtr = (ConvertByrefToPtrDelegate<UInt16>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt16>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt16)));
+            private static readonly ConvertByrefToPtrDelegate<UInt32> _ConvertUInt32ByrefToPtr = (ConvertByrefToPtrDelegate<UInt32>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt32>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt32)));
+            private static readonly ConvertByrefToPtrDelegate<UInt64> _ConvertUInt64ByrefToPtr = (ConvertByrefToPtrDelegate<UInt64>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UInt64>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UInt64)));
+            private static readonly ConvertByrefToPtrDelegate<IntPtr> _ConvertIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<IntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<IntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(IntPtr)));
+            private static readonly ConvertByrefToPtrDelegate<UIntPtr> _ConvertUIntPtrByrefToPtr = (ConvertByrefToPtrDelegate<UIntPtr>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<UIntPtr>), _ConvertByrefToPtr.MakeGenericMethod(typeof(UIntPtr)));
+            private static readonly ConvertByrefToPtrDelegate<Single> _ConvertSingleByrefToPtr = (ConvertByrefToPtrDelegate<Single>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Single>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Single)));
+            private static readonly ConvertByrefToPtrDelegate<Double> _ConvertDoubleByrefToPtr = (ConvertByrefToPtrDelegate<Double>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Double>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Double)));
+            private static readonly ConvertByrefToPtrDelegate<Decimal> _ConvertDecimalByrefToPtr = (ConvertByrefToPtrDelegate<Decimal>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<Decimal>), _ConvertByrefToPtr.MakeGenericMethod(typeof(Decimal)));
 
             // *** END GENERATED CODE ***
 
@@ -221,12 +210,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             private static MethodInfo Create_ConvertByrefToPtr() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$ConvertByrefToPtr", typeof(object));
+                TypeGen type = Snippets.Shared.DefineUnsafeType("Type$ConvertByrefToPtr", typeof(object));
+
                 Type[] paramTypes = new Type[] { typeof(Variant).MakeByRefType() };
-                Compiler method = type.DefineMethod("ConvertByrefToPtr", typeof(IntPtr), paramTypes, null, null);
-                GenericTypeParameterBuilder[] typeParams = ((MethodBuilder)method.Method).DefineGenericParameters("T");
+                MethodBuilder mb = type.TypeBuilder.DefineMethod("ConvertByrefToPtr", MethodAttributes.Public | MethodAttributes.Static, typeof(IntPtr), paramTypes);
+                GenericTypeParameterBuilder[] typeParams = mb.DefineGenericParameters("T");
                 typeParams[0].SetGenericParameterAttributes(GenericParameterAttributes.NotNullableValueTypeConstraint);
-                ((MethodBuilder)method.Method).SetSignature(typeof(IntPtr), null, null, new Type[] { typeParams[0].MakeByRefType() }, null, null);
+                mb.SetSignature(typeof(IntPtr), null, null, new Type[] { typeParams[0].MakeByRefType() }, null, null);
+
+                ILGenerator method = mb.GetILGenerator();
 
                 method.Emit(OpCodes.Ldarg_0);
                 method.Emit(OpCodes.Conv_I);
@@ -234,7 +226,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 method.Emit(OpCodes.Dup);
                 method.Emit(OpCodes.Call, typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("AssertByrefPointsToStack"));
 #endif
-                method.EmitReturn();
+                method.Emit(OpCodes.Ret);
 
                 return type.TypeBuilder.CreateType().GetMethod("ConvertByrefToPtr");
             }
@@ -249,15 +241,17 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             private static IUnknownReleaseDelegate Create_IUnknownRelease() {
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$IUnknownRelease", typeof(object));
-                Compiler method = type.DefineMethod("IUnknownRelease", typeof(int), new Type[] { typeof(IntPtr) }, null, null);
+                TypeGen type = Snippets.Shared.DefineUnsafeType("Type$IUnknownRelease", typeof(object));
+                MethodBuilder mb = type.TypeBuilder.DefineMethod("IUnknownRelease", MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] { typeof(IntPtr) });
+
+                ILGenerator method = mb.GetILGenerator();
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 
                 // functionPtr = *(IntPtr*)(*(interfacePointer) + VTABLE_OFFSET)
 
                 int iunknownReleaseOffset = ((int)IDispatchMethodIndices.IUnknown_Release) * Marshal.SizeOf(typeof(IntPtr));
-                method.EmitArgGet(0);
+                method.Emit(OpCodes.Ldarg_0);
                 method.Emit(OpCodes.Ldind_I);
                 method.Emit(OpCodes.Ldc_I4, iunknownReleaseOffset);
                 method.Emit(OpCodes.Add);
@@ -266,16 +260,16 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
                 // return functionPtr(...)
 
-                method.EmitArgGet(0);
+                method.Emit(OpCodes.Ldarg_0);
                 method.Emit(OpCodes.Ldloc, functionPtr);
                 SignatureHelper signature = SignatureHelper.GetMethodSigHelper(CallingConvention.Winapi, typeof(int));
                 signature.AddArgument(typeof(IntPtr));
                 method.Emit(OpCodes.Calli, signature);
 
-                method.EmitReturn();
+                method.Emit(OpCodes.Ret);
 
-                type.FinishType();
-                return (IUnknownReleaseDelegate)method.CreateDelegate(typeof(IUnknownReleaseDelegate));
+                Type newType = type.FinishType();
+                return (IUnknownReleaseDelegate)Delegate.CreateDelegate(typeof(IUnknownReleaseDelegate), newType.GetMethod("IUnknownRelease"));
             }
 
             private static IntPtr GetIID_NULL() {
@@ -327,15 +321,17 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 paramTypes[argErrIndex] = typeof(uint).MakeByRefType();
 
                 // We dont use AssemblyGen.DefineMethod since that can create a anonymously-hosted DynamicMethod which cannot contain unverifiable code.
-                TypeGen type = _UnverifiableAssembly.DefinePublicType("Type$IDispatchInvoke", typeof(object));
-                Compiler method = type.DefineMethod("IDispatchInvoke", typeof(int), paramTypes, null, null);
+                TypeGen type = Snippets.Shared.DefineUnsafeType("Type$IDispatchInvoke", typeof(object));
+                MethodBuilder mb = type.TypeBuilder.DefineMethod("IDispatchInvoke", MethodAttributes.Public | MethodAttributes.Static, typeof(int), paramTypes);
+
+                ILGen method = new ILGen(mb.GetILGenerator());
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 
                 // functionPtr = *(IntPtr*)(*(dispatchPointer) + VTABLE_OFFSET)
 
                 int idispatchInvokeOffset = ((int)IDispatchMethodIndices.IDispatch_Invoke) * Marshal.SizeOf(typeof(IntPtr));
-                method.EmitArgGet(dispatchPointerIndex);
+                method.EmitLoadArg(dispatchPointerIndex);
                 method.Emit(OpCodes.Ldind_I);
                 method.Emit(OpCodes.Ldc_I4, idispatchInvokeOffset);
                 method.Emit(OpCodes.Add);
@@ -344,15 +340,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
                 // return functionPtr(...)
 
-                method.EmitArgGet(dispatchPointerIndex);
-                method.EmitArgGet(memberDispIdIndex);
+                method.EmitLoadArg(dispatchPointerIndex);
+                method.EmitLoadArg(memberDispIdIndex);
                 method.Emit(OpCodes.Ldsfld, typeof(ComRuntimeHelpers.UnsafeMethods).GetField("IID_NULL")); // riid
                 method.Emit(OpCodes.Ldc_I4_0); // lcid
-                method.EmitArgGet(flagsIndex);
-                method.EmitArgGet(dispParamsIndex);
-                method.EmitArgGet(resultIndex);
-                method.EmitArgGet(exceptInfoIndex);
-                method.EmitArgGet(argErrIndex);
+                method.EmitLoadArg(flagsIndex);
+                method.EmitLoadArg(dispParamsIndex);
+                method.EmitLoadArg(resultIndex);
+                method.EmitLoadArg(exceptInfoIndex);
+                method.EmitLoadArg(argErrIndex);
                 method.Emit(OpCodes.Ldloc, functionPtr);
                 SignatureHelper signature = SignatureHelper.GetMethodSigHelper(CallingConvention.Winapi, typeof(int));
                 Type[] invokeParamTypes = new Type[] { 
@@ -369,10 +365,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 signature.AddArguments(invokeParamTypes, null, null);
                 method.Emit(OpCodes.Calli, signature);
 
-                method.EmitReturn();
+                method.Emit(OpCodes.Ret);
 
-                type.FinishType();
-                return (IDispatchInvokeDelegate)method.CreateDelegate(typeof(IDispatchInvokeDelegate));
+                Type newType = type.FinishType();
+                return (IDispatchInvokeDelegate)Delegate.CreateDelegate(typeof(IDispatchInvokeDelegate), newType.GetMethod("IDispatchInvoke"));
             }
 
             #endregion

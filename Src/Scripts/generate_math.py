@@ -28,9 +28,8 @@ class Func:
     def write(self, cw):
         params = ["double v%d" % i for i in range(self.args)]
         args = ["v%d" % i for i in range(self.args)]
-        cw.write('[PythonName("%s")]' % self.name)
         cw.enter_block("public static double %s(%s)" %
-                       (self.name.title(), ", ".join(params)))
+                       (self.name, ", ".join(params)))
         cw.write("return Check(Math.%s(%s));" %
                  (self.cname, ", ".join(args)))
         cw.exit_block()

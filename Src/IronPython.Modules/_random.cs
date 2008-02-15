@@ -14,24 +14,84 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Math;
 using IronPython.Runtime;
+
+using Microsoft.Scripting.Math;
 
 [assembly: PythonModule("_random", typeof(IronPython.Modules.PythonRandom))]
 namespace IronPython.Modules {
     public static class PythonRandom {
-
-        [PythonType("Random")]
+        [PythonSystemType]
         public class Random {
-            System.Random rnd;
+            private System.Random _rnd;
 
             public Random() {
-                this.Seed();
+                seed();
             }
 
             public Random(object seed) {
-                this.Seed(seed);
+                this.seed(seed);
             }
+
+            #region Public API surface
+
+            public object getrandbits(int bits) {
+                int count = (bits + 7) / 8;
+                byte[] bytes = new byte[count];
+                _rnd.NextBytes(bytes);
+
+                if (bits <= 32) {
+                    return (int)getfour(bytes, 0, bits);
+                } else if (bits <= 64) {
+                    long a = getfour(bytes, 0, bits);
+                    long b = getfour(bytes, 32, bits);
+                    return a | (b << 32);
+                } else {
+                    count = (count + 3) / 4;
+                    uint[] data = new uint[count];
+                    for (int i = 0; i < count; i++) {
+                        data[i] = getfour(bytes, i * 32, bits);
+                    }
+                    int sign = (data[data.Length - 1] & 0x80000000) != 0 ? -1 : 1;
+                    return new BigInteger(sign, data);
+                }
+            }
+
+            public object getstate() {
+                return _rnd;
+            }
+
+            public void jumpahead(int count) {
+                _rnd.NextBytes(new byte[4096]);
+            }
+
+            public object random() {
+                return _rnd.NextDouble();
+            }
+
+            public void seed() {
+                seed(DateTime.Now);
+            }
+
+            public void seed(object s) {
+                int newSeed;
+                if (s is int) {
+                    newSeed = (int)s;
+                } else {
+                    newSeed = s.GetHashCode();
+                }
+                _rnd = new System.Random(newSeed);
+            }
+
+            public void setstate(object state) {
+                System.Random random = state as System.Random;
+                if (random != null) _rnd = random;
+                else throw IronPython.Runtime.Operations.PythonOps.TypeError("setstate: argument must be value returned from getstate()");
+            }
+
+            #endregion
+
+            #region Private implementation details
 
             private static uint getfour(byte[] bytes, int start, int end) {
                 uint four = 0;
@@ -52,66 +112,7 @@ namespace IronPython.Modules {
                 return four;
             }
 
-            [PythonName("getrandbits")]
-            public object GetRandomBits(int bits) {
-                int count = (bits + 7) / 8;
-                byte[] bytes = new byte[count];
-                rnd.NextBytes(bytes);
-
-                if (bits <= 32) {
-                    return (int)getfour(bytes, 0, bits);
-                } else if (bits <= 64) {
-                    long a = getfour(bytes, 0, bits);
-                    long b = getfour(bytes, 32, bits);
-                    return a | (b << 32);
-                } else {
-                    count = (count + 3) / 4;
-                    uint[] data = new uint[count];
-                    for (int i = 0; i < count; i++) {
-                        data[i] = getfour(bytes, i * 32, bits);
-                    }
-                    int sign = (data[data.Length - 1] & 0x80000000) != 0 ? -1 : 1;
-                    return new BigInteger(sign, data);
-                }
-            }
-
-            [PythonName("getstate")]
-            public object GetState() {
-                return rnd;
-            }
-
-            [PythonName("jumpahead")]
-            public void JumpAhead(int count) {
-                rnd.NextBytes(new byte[4096]);
-            }
-
-            [PythonName("random")]
-            public object NextRandom() {
-                return rnd.NextDouble();
-            }
-
-            [PythonName("seed")]
-            public void Seed() {
-                Seed(DateTime.Now);
-            }
-
-            [PythonName("seed")]
-            public void Seed(object s) {
-                int newSeed;
-                if (s is int) {
-                    newSeed = (int)s;
-                } else {
-                    newSeed = s.GetHashCode();
-                }
-                rnd = new System.Random(newSeed);
-            }
-
-            [PythonName("setstate")]
-            public void SetState(object state) {
-                System.Random random = state as System.Random;
-                if (random != null) rnd = random;
-                else throw IronPython.Runtime.Operations.PythonOps.TypeError("setstate: argument must be value returned from getstate()");
-            }
+            #endregion
         }
     }
 }

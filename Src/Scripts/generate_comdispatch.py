@@ -126,7 +126,7 @@ class VariantType:
     
     def write_ConvertByrefToPtrDelegates(self, cw):
         if self.isPrimitiveType and self.unmanagedRepresentationType == self.managedType:
-            cw.write("private static ConvertByrefToPtrDelegate<%s> _Convert%sByrefToPtr = (ConvertByrefToPtrDelegate<%s>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<%s>), _ConvertByrefToPtr.MakeGenericMethod(typeof(%s)));" % (5 * (self.unmanagedRepresentationType,)))
+            cw.write("private static readonly ConvertByrefToPtrDelegate<%s> _Convert%sByrefToPtr = (ConvertByrefToPtrDelegate<%s>)Delegate.CreateDelegate(typeof(ConvertByrefToPtrDelegate<%s>), _ConvertByrefToPtr.MakeGenericMethod(typeof(%s)));" % (5 * (self.unmanagedRepresentationType,)))
 
 variantTypes = [
   # VariantType('varEnum', 'managed_type')

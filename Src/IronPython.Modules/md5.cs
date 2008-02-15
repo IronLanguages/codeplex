@@ -37,78 +37,74 @@ namespace IronPython.Modules {
         private static readonly MD5CryptoServiceProvider _hasher = new MD5CryptoServiceProvider();
         private static readonly int _digestSize = _hasher.HashSize / 8;
 
-        public static int DigestSize {
+        public static int digest_size {
             [Documentation("Size of the resulting digest in bytes (constant)")]
-            [PythonName("digest_size")]
             get { return _digestSize; }
         }
 
         [Documentation("new([data]) -> object (new md5 object)")]
-        [PythonName("new")]
-        public static MD5Object Make(object data) {
-            return new MD5Object(data);
+        public static md5 @new(object data) {
+            return new md5(data);
         }
 
         [Documentation("new([data]) -> object (new md5 object)")]
-        [PythonName("new")]
-        public static MD5Object Make() {
-            return new MD5Object();
+        public static md5 @new() {
+            return new md5();
         }
 
         [Documentation("new([data]) -> object (object used to calculate MD5 hash)")]
-        [PythonType("md5")]
-        public class MD5Object : ICloneable {
-            byte[] bytes;
-            byte[] hash;
+        [PythonSystemType]
+        public class md5 : ICloneable {
+            byte[] _bytes;
+            byte[] _hash;
 
-            public MD5Object() : this(new byte[0]) { }
+            public md5() : this(new byte[0]) { }
 
-            public MD5Object(object initialData) {
-                bytes = new byte[0];
-                Update(initialData);
+            public md5(object initialData) {
+                _bytes = new byte[0];
+                update(initialData);
             }
 
-            private MD5Object(byte[] initialBytes) {
-                bytes = new byte[0];
-                Update(initialBytes);
+            private md5(byte[] initialBytes) {
+                _bytes = new byte[0];
+                update(initialBytes);
             }
 
             [Documentation("update(string) -> None (update digest with string data)")]
-            [PythonName("update")]
-            public void Update(object newData) {
-                Update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
+            public void update(object newData) {
+                update(StringOps.ToByteArray(Converter.ConvertToString(newData)));
             }
 
-            private void Update(byte[] newBytes) {
-                byte[] updatedBytes = new byte[bytes.Length + newBytes.Length];
-                Array.Copy(bytes, updatedBytes, bytes.Length);
-                Array.Copy(newBytes, 0, updatedBytes, bytes.Length, newBytes.Length);
-                bytes = updatedBytes;
-                hash = _hasher.ComputeHash(bytes);
+            private void update(byte[] newBytes) {
+                byte[] updatedBytes = new byte[_bytes.Length + newBytes.Length];
+                Array.Copy(_bytes, updatedBytes, _bytes.Length);
+                Array.Copy(newBytes, 0, updatedBytes, _bytes.Length, newBytes.Length);
+                _bytes = updatedBytes;
+                _hash = _hasher.ComputeHash(_bytes);
             }
 
             [Documentation("digest() -> int (current digest value)")]
-            [PythonName("digest")]
-            public string Digest() {
-                return StringOps.FromByteArray(hash);
+            public string digest() {
+                return StringOps.FromByteArray(_hash);
             }
 
             [Documentation("hexdigest() -> string (current digest as hex digits)")]
-            [PythonName("hexdigest")]
-            public string HexDigest() {
-                StringBuilder result = new StringBuilder(2 * hash.Length);
-                for (int i = 0; i < hash.Length; i++) {
-                    result.Append(hash[i].ToString("x2"));
+            public string hexdigest() {
+                StringBuilder result = new StringBuilder(2 * _hash.Length);
+                for (int i = 0; i < _hash.Length; i++) {
+                    result.Append(_hash[i].ToString("x2"));
                 }
                 return result.ToString();
             }
 
             [Documentation("copy() -> object (copy of this md5 object)")]
-            [PythonName("copy")]
-            public object Clone() {
-                return new MD5Object(bytes);
+            public md5 copy() {
+                return new md5(_bytes);
             }
 
+            object ICloneable.Clone() {
+                return copy();
+            }
         }
     }
 }

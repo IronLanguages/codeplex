@@ -37,12 +37,11 @@ namespace IronPython.Modules {
         private static int _stackSize;
 
         #region Public API Surface
-        public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(Lock));
+        public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(@lock));
         public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "thread", "");
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
-        [PythonName("start_new_thread")]
-        public static object StartNewThread(CodeContext context, object function, object args, object kwDict) {
+        public static object start_new_thread(CodeContext context, object function, object args, object kwDict) {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
@@ -53,8 +52,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("start_new_thread(function, args, [kwDict]) -> thread id\nCreates a new thread running the given function")]
-        [PythonName("start_new_thread")]
-        public static object StartNewThread(CodeContext context, object function, object args) {
+        public static object start_new_thread(CodeContext context, object function, object args) {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
@@ -65,35 +63,29 @@ namespace IronPython.Modules {
             return t.ManagedThreadId;
         }
 
-        [PythonName("interrupt_main")]
-        public static void InterruptMain() {
+        public static void interrupt_main() {
             throw PythonOps.NotImplementedError("interrupt_main not implemented");
             //throw new PythonKeyboardInterrupt();
         }
 
-        [PythonName("exit")]
-        public static void Exit() {
+        public static void exit() {
             PythonOps.SystemExit();
         }
 
         [Documentation("allocate_lock() -> lock object\nAllocates a new lock object that can be used for synchronization")]
-        [PythonName("allocate_lock")]
-        public static object AllocateLock() {
-            return new Lock();
+        public static object allocate_lock() {
+            return new @lock();
         }
 
-        [PythonName("get_ident")]
-        public static object GetIdentity() {
+        public static object get_ident() {
             return Thread.CurrentThread.ManagedThreadId;
         }
 
-        [PythonName("stack_size")]
-        public static int StackSize() {
+        public static int stack_size() {
             return _stackSize;
         }
 
-        [PythonName("stack_size")]
-        public static int StackSize(int size) {
+        public static int stack_size(int size) {
             if (size < 256 * 1024) throw PythonOps.ValueError("size too small: {0}", size);
 
             _stackSize = size;
@@ -102,35 +94,30 @@ namespace IronPython.Modules {
 
         // deprecated synonyms, wrappers over preferred names...
         [Documentation("start_new(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
-        [PythonName("start_new")]
-        public static object StartNew(CodeContext context, object function, object args) {
-            return StartNewThread(context, function, args);
+        public static object start_new(CodeContext context, object function, object args) {
+            return start_new_thread(context, function, args);
         }
 
-        [PythonName("exit_thread")]
-        public static void ExitThread() {
-            Exit();
+        public static void exit_thread() {
+            exit();
         }
 
-        [PythonName("allocate")]
-        public static object Allocate() {
-            return AllocateLock();
+        public static object allocate() {
+            return allocate_lock();
         }
 
         #endregion
 
-        [PythonType("lock")]
-        public class Lock {
+        [PythonSystemType]
+        public class @lock {
             AutoResetEvent blockEvent;
             Thread curHolder;
 
-            [PythonName("acquire")]
-            public object Acquire() {
-                return (Acquire(RuntimeHelpers.True));
+            public object acquire() {
+                return (acquire(RuntimeHelpers.True));
             }
 
-            [PythonName("acquire")]
-            public object Acquire(object waitflag) {
+            public object acquire(object waitflag) {
                 bool fWait = PythonOps.IsTrue(waitflag);
                 for (; ; ) {
                     if (Interlocked.CompareExchange<Thread>(ref curHolder, Thread.CurrentThread, null) == null) {
@@ -149,13 +136,11 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("release")]
-            public void Release(params object[] param) {
-                Release();
+            public void release(params object[] param) {
+                release();
             }
 
-            [PythonName("release")]
-            public void Release() {
+            public void release() {
                 if (Interlocked.Exchange<Thread>(ref curHolder, null) == null) {
                     throw PythonExceptions.CreateThrowable(error, "lock isn't held", null);
                 }
@@ -165,12 +150,11 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("locked")]
-            public bool IsLocked() {
+            public bool locked() {
                 return curHolder != null;
             }
 
-            void CreateBlockEvent() {
+            private void CreateBlockEvent() {
                 AutoResetEvent are = new AutoResetEvent(false);
                 if (Interlocked.CompareExchange<AutoResetEvent>(ref blockEvent, are, null) != null) {
                     are.Close();

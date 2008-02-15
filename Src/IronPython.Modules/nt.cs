@@ -40,14 +40,12 @@ namespace IronPython.Modules {
     public static class PythonNT {
         #region Public API Surface
 
-        [PythonName("abort")]
-        public static void Abort() {
+        public static void abort() {
             System.Environment.FailFast("IronPython os.abort");
         }
 
 
-        [PythonName("chdir")]
-        public static void ChangeDirectory(string path) {
+        public static void chdir(string path) {
             if (String.IsNullOrEmpty(path)) throw PythonExceptions.CreateThrowable(PythonExceptions.OSError, "Invalid argument");
 
             try {
@@ -57,72 +55,56 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("chmod")]
-        public static void ChangeMod(string path, int mode) {
+        public static void chmod(string path, int mode) {
             FileInfo fi = new FileInfo(path);
             if ((mode & S_IREAD) != 0) fi.Attributes |= FileAttributes.ReadOnly;
             else if ((mode & S_IWRITE) != 0) fi.Attributes &= ~(FileAttributes.ReadOnly);
         }
 
-        [PythonName("close")]
-        public static void CloseFileDescriptor(int fd) {
-            PythonFile pf = PythonFileManager.GetFileFromId(fd);
-            pf.Close();
+        public static void close(CodeContext/*!*/ context, int fd) {
+            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+            pf.close();
         }
 
-        public static object Environment {
-            [PythonName("environ")]
-            get {
-                return new EnvironmentDictionary();
-            }
-        }
+        public static object environ = new EnvironmentDictionary();
 
         public static object error = Builtin.OSError;
 
-        [PythonName("_exit")]
-        public static void ExitProcess(int code) {
-            ScriptDomainManager.CurrentManager.PAL.TerminateScriptExecution(code);
+        public static void _exit(CodeContext/*!*/ context, int code) {
+            PythonContext.GetContext(context).DomainManager.PAL.TerminateScriptExecution(code);
         }
 
-        [PythonName("fdopen")]
-        public static object FileForDescriptor(CodeContext context, int fd) {
-            return FileForDescriptor(context, fd, "r");
+        public static object fdopen(CodeContext/*!*/ context, int fd) {
+            return fdopen(context, fd, "r");
         }
 
-        [PythonName("fdopen")]
-        public static object FileForDescriptor(CodeContext context, int fd, string mode) {
-            return FileForDescriptor(context, fd, mode, 0);
+        public static object fdopen(CodeContext/*!*/ context, int fd, string mode) {
+            return fdopen(context, fd, mode, 0);
         }
 
-        [PythonName("fdopen")]
-        public static object FileForDescriptor(CodeContext context, int fd, string mode, int bufsize) {
-            PythonFile pf = PythonFileManager.GetFileFromId(fd);
+        public static object fdopen(CodeContext/*!*/ context, int fd, string mode, int bufsize) {
+            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
             return pf;
         }
 
-        [PythonName("fstat")]
-        public static object GetFileFStats(int fd) {
-            PythonFile pf = PythonFileManager.GetFileFromId(fd);
-            return GetFileStats(pf.FileName);
+        public static object fstat(CodeContext/*!*/context, int fd) {
+            PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+            return stat(pf.name);
         }
 
-        [PythonName("getcwd")]
-        public static string GetCurrentDirectory() {
+        public static string getcwd() {
             return Directory.GetCurrentDirectory();
         }
 
-        [PythonName("getcwdu")]
-        public static string GetCurrentDirectoryUnicode() {
+        public static string getcwdu() {
             return Directory.GetCurrentDirectory();
         }
 
-        [PythonName("getpid")]
-        public static int GetCurrentProcessId() {
+        public static int getpid() {
             return System.Diagnostics.Process.GetCurrentProcess().Id;
         }
 
-        [PythonName("listdir")]
-        public static List ListDirectory(string path) {
+        public static List listdir(string path) {
             List ret = List.Make();
             try {
                 string[] files = Directory.GetFiles(path);
@@ -138,13 +120,11 @@ namespace IronPython.Modules {
         // lstat(path) -> stat result
         // Like stat(path), but do not follow symbolic links.
         // 
-        [PythonName("lstat")]
-        public static object GetFileLStats(string path) {
-            return GetFileStats(path);
+        public static object lstat(string path) {
+            return stat(path);
         }
 
-        [PythonName("mkdir")]
-        public static void MakeDirectory(string path) {
+        public static void mkdir(string path) {
             if (Directory.Exists(path)) throw PythonOps.OSError("directory already exists");
 
             try {
@@ -154,8 +134,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("mkdir")]
-        public static void MakeDirectory(string path, int mode) {
+        public static void mkdir(string path, int mode) {
             if (Directory.Exists(path)) throw PythonOps.OSError("directory already exists");
             // we ignore mode
 
@@ -166,13 +145,11 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("open")]
-        public static object Open(CodeContext context, string filename, int flag) {
-            return Open(context, filename, flag, 0777);
+        public static object open(CodeContext context, string filename, int flag) {
+            return open(context, filename, flag, 0777);
         }
 
-        [PythonName("open")]
-        public static object Open(CodeContext/*!*/ context, string filename, int flag, int mode) {
+        public static object open(CodeContext/*!*/ context, string filename, int flag, int mode) {
             try {
                 FileStream fs = File.Open(filename, FileModeFromFlags(flag), FileAccessFromFlags(flag));
 
@@ -181,24 +158,21 @@ namespace IronPython.Modules {
                 else if (fs.CanWrite) mode2 = "w";
                 else mode2 = "r";
 
-                return PythonFileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2, false));
+                return PythonContext.GetContext(context).FileManager.AddToStrongMapping(PythonFile.Create(context, fs, filename, mode2, false));
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
         }
 
-        [PythonName("popen")]
-        public static PythonFile OpenPipedCommand(CodeContext context, string command) {
-            return OpenPipedCommand(context, command, "r");
+        public static PythonFile popen(CodeContext/*!*/ context, string command) {
+            return popen(context, command, "r");
         }
 
-        [PythonName("popen")]
-        public static PythonFile OpenPipedCommand(CodeContext context, string command, string mode) {
-            return OpenPipedCommand(context, command, mode, 4096);
+        public static PythonFile popen(CodeContext/*!*/ context, string command, string mode) {
+            return popen(context, command, mode, 4096);
         }
 
-        [PythonName("popen")]
-        public static PythonFile OpenPipedCommand(CodeContext context, string command, string mode, int bufsize) {
+        public static PythonFile popen(CodeContext/*!*/ context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "r";
             ProcessStartInfo psi = GetProcessInfo(command);
             psi.CreateNoWindow = true;  // ipyw shouldn't create a new console window
@@ -229,18 +203,15 @@ namespace IronPython.Modules {
             return res;
         }
 
-        [PythonName("popen2")]
-        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command) {
-            return OpenPipedCommandBoth(context, command, "t");
+        public static PythonTuple popen2(CodeContext/*!*/ context, string command) {
+            return popen2(context, command, "t");
         }
 
-        [PythonName("popen2")]
-        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command, string mode) {
-            return OpenPipedCommandBoth(context, command, "t", 4096);
+        public static PythonTuple popen2(CodeContext/*!*/ context, string command, string mode) {
+            return popen2(context, command, "t", 4096);
         }
 
-        [PythonName("popen2")]
-        public static PythonTuple OpenPipedCommandBoth(CodeContext context, string command, string mode, int bufsize) {
+        public static PythonTuple popen2(CodeContext/*!*/ context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
             if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
@@ -259,18 +230,15 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("popen3")]
-        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command) {
-            return OpenPipedCommandAll(context, command, "t");
+        public static PythonTuple popen3(CodeContext/*!*/ context, string command) {
+            return popen3(context, command, "t");
         }
 
-        [PythonName("popen3")]
-        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command, string mode) {
-            return OpenPipedCommandAll(context, command, "t", 4096);
+        public static PythonTuple popen3(CodeContext/*!*/ context, string command, string mode) {
+            return popen3(context, command, "t", 4096);
         }
 
-        [PythonName("popen3")]
-        public static PythonTuple OpenPipedCommandAll(CodeContext context, string command, string mode, int bufsize) {
+        public static PythonTuple popen3(CodeContext/*!*/ context, string command, string mode, int bufsize) {
             if (String.IsNullOrEmpty(mode)) mode = "t";
             if (mode != "t" && mode != "b") throw PythonOps.ValueError("mode must be 't' or 'b' (default is t)");
             if (mode == "t") mode = String.Empty;
@@ -292,8 +260,7 @@ namespace IronPython.Modules {
         }
 
 
-        [PythonName("putenv")]
-        public static void PutEnvironment(string varname, string value) {
+        public static void putenv(string varname, string value) {
             try {
                 System.Environment.SetEnvironmentVariable(varname, value);
             } catch (Exception e) {
@@ -301,27 +268,24 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("read")]
-        public static string ReadFromFileDescriptor(int fd, int buffersize) {
+        public static string read(CodeContext/*!*/ context, int fd, int buffersize) {
             try {
-                PythonFile pf = PythonFileManager.GetFileFromId(fd);
-                return pf.Read();
+                PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+                return pf.read();
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
         }
 
-        [PythonName("remove")]
-        public static void RemoveFile(string path) {
+        public static void remove(string path) {
             try {
-                UnlinkFile(path);
+                unlink(path);
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
         }
 
-        [PythonName("rename")]
-        public static void Rename(string src, string dst) {
+        public static void rename(string src, string dst) {
             try {
                 Directory.Move(src, dst);
             } catch (Exception e) {
@@ -329,8 +293,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("rmdir")]
-        public static void RemoveDirectory(string path) {
+        public static void rmdir(string path) {
             try {
                 Directory.Delete(path);
             } catch (Exception e) {
@@ -338,13 +301,11 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("spawnl")]
-        public static object SpawnProcess(int mode, string path, params object[] args) {
+        public static object spawnl(int mode, string path, params object[] args) {
             return SpawnProcessImpl(MakeProcess(), mode, path, args);
         }
 
-        [PythonName("spawnle")]
-        public static object SpawnProcessWithParamsArgsAndEnvironment(int mode, string path, params object[] args) {
+        public static object spawnle(int mode, string path, params object[] args) {
             if (args.Length < 1) {
                 throw PythonOps.TypeError("spawnle() takes at least three arguments ({0} given)", 2 + args.Length);
             }
@@ -358,13 +319,11 @@ namespace IronPython.Modules {
             return SpawnProcessImpl(process, mode, path, slicedArgs);
         }
 
-        [PythonName("spawnv")]
-        public static object SpawnProcess(int mode, string path, object args) {
+        public static object spawnv(int mode, string path, object args) {
             return SpawnProcessImpl(MakeProcess(), mode, path, args);
         }
 
-        [PythonName("spawnve")]
-        public static object SpawnProcess(int mode, string path, object args, object env) {
+        public static object spawnve(int mode, string path, object args, object env) {
             Process process = MakeProcess();
             SetEnvironment(process.StartInfo.EnvironmentVariables, env);
 
@@ -462,36 +421,34 @@ namespace IronPython.Modules {
             return sb.ToString();
         }
 
-        [PythonName("startfile")]
-        public static void StartFile(string filename) {
+        public static void startfile(string filename) {
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             process.StartInfo.FileName = filename;
             process.StartInfo.UseShellExecute = true;
             process.Start();
         }
 
-
-        [PythonType("stat_result")]
-        public class StatResult : ISequence {
+        [PythonSystemType]
+        public class stat_result : ISequence {
             // !!! We should convert this to be a subclass of Tuple (so that it implements
             // the whole tuple protocol) or at least use a Tuple for internal storage rather
             // than converting back and forth all the time. We also need to support constructors
             // with 11-13 arguments.
 
-            public static object n_fields = (object)13;
-            public static object n_sequence_fields = (object)10;
-            public static object n_unnamed_fields = (object)3;
+            public const int n_fields = 13;
+            public const int n_sequence_fields = 10;
+            public const int n_unnamed_fields = 3;
 
             internal BigInteger mode, ino, dev, nlink, uid, gid, size, atime, mtime, ctime;
 
-            internal StatResult() {
+            internal stat_result() {
             }
 
-            public StatResult(ISequence statResult, [DefaultParameterValue(null)]object dict) {
+            public stat_result(ISequence statResult, [DefaultParameterValue(null)]object dict) {
                 // dict is allowed by CPython's stat_result, but doesn't seem to do anything, so we ignore it here.
 
-                if (statResult.GetLength() != 10) {
-                    throw PythonOps.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.GetLength());
+                if (statResult.__len__() != 10) {
+                    throw PythonOps.TypeError("stat_result() takes a 10-sequence ({0}-sequence given)", statResult.__len__());
                 }
 
                 this.mode = Converter.ConvertToBigInteger(statResult[0]);
@@ -506,62 +463,61 @@ namespace IronPython.Modules {
                 this.ctime = Converter.ConvertToBigInteger(statResult[9]);
             }
 
-            public object StatATime {
-                [PythonName("st_atime")]
+            public object st_atime {
                 get {
                     return atime;
                 }
             }
-            public object StatCTime {
-                [PythonName("st_ctime")]
+
+            public object st_ctime {
                 get {
                     return ctime;
                 }
             }
-            public object StatDev {
-                [PythonName("st_dev")]
+
+            public object st_dev {
                 get {
                     return dev;
                 }
             }
-            public object StatGid {
-                [PythonName("st_gid")]
+
+            public object st_gid {
                 get {
                     return gid;
                 }
             }
-            public object StatIno {
-                [PythonName("st_ino")]
+
+            public object st_ino {
                 get {
                     return ino;
                 }
             }
-            public object StatMode {
-                [PythonName("st_mode")]
+
+            public object st_mode {
                 get {
                     return mode;
                 }
             }
-            public object StatMTime {
-                [PythonName("st_mtime")]
+
+            public object st_mtime {
                 get {
                     return mtime;
                 }
             }
-            public object StatNLink {
-                [PythonName("st_nlink")]
+
+            public object st_nlink {
                 get {
                     return nlink;
                 }
             }
-            public object StatSize {
-                [PythonName("st_size")]
+
+            public object st_size {
                 get {
                     return size;
                 }
             }
-            public object StatUid {
-                [PythonName("st_uid")]
+
+            public object st_uid {
                 get {
                     return uid;
                 }
@@ -571,15 +527,14 @@ namespace IronPython.Modules {
                 return MakeTuple().ToString();
             }
 
-            [PythonName("__reduce__")]
-            public PythonTuple Reduce() {
+            public PythonTuple __reduce__() {
                 PythonDictionary timeDict = new PythonDictionary(3);
-                timeDict["st_atime"] = StatATime;
-                timeDict["st_ctime"] = StatCTime;
-                timeDict["st_mtime"] = StatMTime;
+                timeDict["st_atime"] = st_atime;
+                timeDict["st_ctime"] = st_ctime;
+                timeDict["st_mtime"] = st_mtime;
 
                 return PythonTuple.MakeTuple(
-                    DynamicHelpers.GetPythonTypeFromType(typeof(StatResult)),
+                    DynamicHelpers.GetPythonTypeFromType(typeof(stat_result)),
                     PythonTuple.MakeTuple(MakeTuple(), timeDict)
                 );
             }
@@ -606,44 +561,40 @@ namespace IronPython.Modules {
                 }
             }
 
-            public object GetSlice(int start, int stop) {
-                return MakeTuple().GetSlice(start, stop);
+            public object __getslice__(int start, int stop) {
+                return MakeTuple().__getslice__(start, stop);
             }
 
-            #endregion
-
-            #region IPythonContainer Members
-
-            public int GetLength() {
+            int ISequence.__len__() {
                 return MakeTuple().Count;
             }
 
-            public bool ContainsValue(object item) {
-                return MakeTuple().ContainsValue(item);
+            bool ISequence.__contains__(object item) {
+                return MakeTuple().__contains__(item);
             }
 
             #endregion
 
             private PythonTuple MakeTuple() {
                 return PythonTuple.MakeTuple(
-                    StatMode,
-                    StatIno,
-                    StatDev,
-                    StatNLink,
-                    StatUid,
-                    StatGid,
-                    StatSize,
-                    StatATime,
-                    StatMTime,
-                    StatCTime
+                    st_mode,
+                    st_ino,
+                    st_dev,
+                    st_nlink,
+                    st_uid,
+                    st_gid,
+                    st_size,
+                    st_atime,
+                    st_mtime,
+                    st_ctime
                 );
             }
 
             #region Object overrides
 
             public override bool Equals(object obj) {
-                if (obj is StatResult) {
-                    return MakeTuple().Equals(((StatResult)obj).MakeTuple());
+                if (obj is stat_result) {
+                    return MakeTuple().Equals(((stat_result)obj).MakeTuple());
                 } else {
                     return MakeTuple().Equals(obj);
                 }
@@ -658,11 +609,10 @@ namespace IronPython.Modules {
         }
 
         [Documentation("stat(path) -> stat result\nGathers statistics about the specified file or directory")]
-        [PythonName("stat")]
-        public static object GetFileStats(string path) {
+        public static object stat(string path) {
             if (path == null) throw PythonOps.TypeError("expected string, got NoneType");
 
-            StatResult sr = new StatResult();
+            stat_result sr = new stat_result();
 
             try {
                 sr.atime = (long)Directory.GetLastAccessTime(path).Subtract(DateTime.MinValue).TotalSeconds;
@@ -687,18 +637,15 @@ namespace IronPython.Modules {
             return sr;
         }
 
-        [PythonName("tempnam")]
-        public static string GetTemporaryFileName() {
-            return GetTemporaryFileName(null);
+        public static string tempnam() {
+            return tempnam(null);
         }
 
-        [PythonName("tempnam")]
-        public static string GetTemporaryFileName(string dir) {
-            return GetTemporaryFileName(null, null);
+        public static string tempnam(string dir) {
+            return tempnam(null, null);
         }
 
-        [PythonName("tempnam")]
-        public static string GetTemporaryFileName(string dir, string prefix) {
+        public static string tempnam(string dir, string prefix) {
             try {
                 if (dir == null) dir = Path.GetTempPath();
                 else dir = Path.GetDirectoryName(dir);
@@ -709,8 +656,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("times")]
-        public static object GetProcessTimeInfo() {
+        public static object times() {
             System.Diagnostics.Process p = System.Diagnostics.Process.GetCurrentProcess();
 
             return PythonTuple.MakeTuple(p.UserProcessorTime.TotalSeconds,
@@ -720,8 +666,7 @@ namespace IronPython.Modules {
                 DateTime.Now.Subtract(p.StartTime).TotalSeconds);
         }
 
-        [PythonName("tmpfile")]
-        public static PythonFile GetTemporaryFile(CodeContext context) {
+        public static PythonFile tmpfile(CodeContext/*!*/ context) {
             try {
                 FileStream sw = new FileStream(Path.GetTempFileName(), FileMode.Open, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
 
@@ -732,13 +677,11 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("tmpnam")]
-        public static string GetTempPath() {
+        public static string tmpnam() {
             return Path.GetTempPath();
         }
 
-        [PythonName("unlink")]
-        public static void UnlinkFile(string path) {
+        public static void unlink(string path) {
             try {
                 File.Delete(path);
             } catch (Exception e) {
@@ -746,13 +689,11 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("unsetenv")]
-        public static void DeleteEnvironmentVariable(string varname) {
+        public static void unsetenv(string varname) {
             System.Environment.SetEnvironmentVariable(varname, null);
         }
 
-        [PythonName("urandom")]
-        public static object GetRandomData(int n) {
+        public static object urandom(int n) {
             RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
             byte[] data = new byte[n];
             rng.GetBytes(data);
@@ -760,8 +701,7 @@ namespace IronPython.Modules {
             return PythonBinaryReader.PackDataIntoString(data, n);
         }
 
-        [PythonName("utime")]
-        public static void SetFileTimes(string path, PythonTuple times) {
+        public static void utime(string path, PythonTuple times) {
             try {
                 FileInfo fi = new FileInfo(path);
                 if (times == null) {
@@ -781,8 +721,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonName("waitpid")]
-        public static PythonTuple WaitForProcess(int pid, object options) {
+        public static PythonTuple waitpid(int pid, object options) {
             System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             if (process == null) {
                 throw PythonOps.OSError("Cannot find process {0}", pid);
@@ -791,39 +730,38 @@ namespace IronPython.Modules {
             return PythonTuple.MakeTuple(pid, process.ExitCode);
         }
 
-        [PythonName("write")]
-        public static void WriteToFileDescriptor(int fd, string text) {
+        public static void write(CodeContext/*!*/ context, int fd, string text) {
             try {
-                PythonFile pf = PythonFileManager.GetFileFromId(fd);
-                pf.Write(text);
+                PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
+                pf.write(text);
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
         }
 
-        public static object O_APPEND = 0x8;
-        public static object O_CREAT = 0x100;
-        public static object O_TRUNC = 0x200;
+        public const int O_APPEND = 0x8;
+        public const int O_CREAT = 0x100;
+        public const int O_TRUNC = 0x200;
 
-        public static object O_EXCL = 0x400;
-        public static object O_NOINHERIT = 0x80;
+        public const int O_EXCL = 0x400;
+        public const int O_NOINHERIT = 0x80;
 
-        public static object O_RANDOM = 0x10;
-        public static object O_SEQUENTIAL = 0x20;
+        public const int O_RANDOM = 0x10;
+        public const int O_SEQUENTIAL = 0x20;
 
-        public static object O_SHORT_LIVED = 0x1000;
-        public static object O_TEMPORARY = 0x40;
+        public const int O_SHORT_LIVED = 0x1000;
+        public const int O_TEMPORARY = 0x40;
 
-        public static object O_WRONLY = 0x1;
-        public static object O_RDONLY = 0x0;
-        public static object O_RDWR = 0x2;
+        public const int O_WRONLY = 0x1;
+        public const int O_RDONLY = 0x0;
+        public const int O_RDWR = 0x2;
 
-        public static object O_BINARY = 0x8000;
-        public static object O_TEXT = 0x4000;
+        public const int O_BINARY = 0x8000;
+        public const int O_TEXT = 0x4000;
 
-        public static object P_WAIT = 0;
-        public static object P_NOWAIT = 1;
-        public static object P_NOWAITO = 3;
+        public const int P_WAIT = 0;
+        public const int P_NOWAIT = 1;
+        public const int P_NOWAITO = 3;
         // Not implemented:
         // public static object P_OVERLAY = 2;
         // public static object P_DETACH = 4;
@@ -888,18 +826,19 @@ namespace IronPython.Modules {
             private Process _process;
 
             [PythonName("__new__")]
-            public static object Make(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
+            public static object __new__(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
                 return new POpenFile(context, command, process, stream, mode);
             }
 
-            internal POpenFile(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
-                Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, command, mode);
+            internal POpenFile(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) 
+                : base(PythonContext.GetContext(context)) {
+                __init__(stream, PythonContext.GetContext(context).DefaultEncoding, command, mode);
                 this._process = process;
             }
 
             [PythonName("close")]
-            public override object Close() {
-                base.Close();
+            public override object close() {
+                base.close();
 
                 if (_process.HasExited && _process.ExitCode != 0) {
                     return _process.ExitCode;

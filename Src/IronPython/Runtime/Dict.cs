@@ -387,7 +387,7 @@ namespace IronPython.Runtime {
                     _fromkeysSite = RuntimeHelpers.CreateSimpleCallSite<PythonType, object>(DefaultContext.Default);
                 }
 
-                int n = xr.GetLength();
+                int n = xr.__len__();
                 object ret = _fromkeysSite.Invoke(cls);
                 if (ret.GetType() == typeof(PythonDictionary)) {
                     PythonDictionary dr = ret as PythonDictionary;

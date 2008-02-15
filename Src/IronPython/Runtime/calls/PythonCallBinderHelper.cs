@@ -34,7 +34,7 @@ namespace IronPython.Runtime.Calls {
         private List<Type[]> _testTypes = new List<Type[]>();
         private bool _canTemplate, _altVersion;
 
-        private static Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>> PythonCallTemplateBuilders = new Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>>();
+        private static readonly Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>> PythonCallTemplateBuilders = new Dictionary<ShareableTemplateKey, TemplatedRuleBuilder<T>>();
 
         public PythonCallBinderHelper(CodeContext context, CallAction action, object[] args)
             : base(context, action, args) {
@@ -84,14 +84,10 @@ namespace IronPython.Runtime.Calls {
             // then get the call to __del__ if we need one
             if (HasFinalizer(creating)) {
                 body.Add(
-                    Ast.Statement(
-                        Ast.Assign(allocatedInst, createExpr)
-                    )
+                    Ast.Assign(allocatedInst, createExpr)
                 );
                 body.Add(
-                    Ast.Statement(
-                        GetFinalizerInitialization(allocatedInst)
-                    )
+                    GetFinalizerInitialization(allocatedInst)
                 );
             }
 
@@ -99,15 +95,11 @@ namespace IronPython.Runtime.Calls {
             if (initCall != tmpRead) {
                 // init can fail but if __new__ returns a different type
                 // no exception is raised.
-                Expression initStmt = initCall != null ?
-                    Ast.Statement(initCall) :
-                    initAdapter.GetError(Binder, Rule);
+                Expression initStmt = initCall ?? initAdapter.GetError(Binder, Rule);
 
                 if (body.Count == 0) {
                     body.Add(
-                        Ast.Statement(
-                            Ast.Assign(allocatedInst, createExpr)
-                        )
+                        Ast.Assign(allocatedInst, createExpr)
                     );
                 }
 

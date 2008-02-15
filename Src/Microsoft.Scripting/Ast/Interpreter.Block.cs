@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Ast {
             // Make sure that locals owned by this block mask any identically-named variables in outer scopes
             if (!block.IsGlobal) {
                 foreach (Variable v in block.Variables) {
-                    if (v.Kind == Variable.VariableKind.Local && v.Uninitialized && v.Block == block) {
+                    if (v.Kind == Variable.VariableKind.Local && v.Unassigned && v.Block == block) {
                         Interpreter.EvaluateAssignVariable(context, v, Uninitialized.Instance);
                     }
                 }
@@ -253,14 +253,11 @@ namespace Microsoft.Scripting.Ast {
                 lastParamIndex = Compiler.ComputeDelegateSignature(block, delegateType, out paramTypes, out paramNames, out implName);
             }
 
-            impl = CompilerHelpers.CreateDynamicCodeGenerator(
-                    implName,
-                    typeof(object),
-                    paramTypes.ToArray(),
-                    new ConstantPool());
+            impl = Snippets.Shared.DefineMethod(implName, typeof(object), paramTypes.ToArray(), new ConstantPool());
+
             impl.InterpretedMode = true;
             impl.ContextSlot = impl.ArgumentSlots[0];
-            impl.SetSource(context);
+            impl.SetDebugSymbols(context);
             impl.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
                     new PropertySlot(impl.ContextSlot,

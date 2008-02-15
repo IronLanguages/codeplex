@@ -122,7 +122,7 @@ namespace IronPython.Runtime.Types {
                 // We could have an MBRO whos DeclaringType is completely different.  
                 // Therefore we special case it here and cast to the declaring type
                 Type selfType = CompilerHelpers.GetType(__self__);
-                if (!selfType.IsVisible && ScriptDomainManager.Options.PrivateBinding) {
+                if (!selfType.IsVisible && PythonContext.GetContext(context).DomainManager.GlobalOptions.PrivateBinding) {
                     helper.InstanceType = selfType;
                 } else {
                     selfType = CompilerHelpers.GetVisibleType(selfType);

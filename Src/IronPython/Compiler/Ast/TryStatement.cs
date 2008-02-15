@@ -279,22 +279,18 @@ namespace IronPython.Compiler.Ast {
             //     PythonOps.CheckThreadAbort(); 
             //  }
             return Ast.Try(
-                Ast.Statement(
-                    Ast.Assign(
-                        extracted.Variable,
-                        Ast.Call(
-                            AstGenerator.GetHelperMethod("SetCurrentException"),
-                            Ast.CodeContext(),
-                            exception
-                        )
+                Ast.Assign(
+                    extracted.Variable,
+                    Ast.Call(
+                        AstGenerator.GetHelperMethod("SetCurrentException"),
+                        Ast.CodeContext(),
+                        exception
                     )
                 ),
                 body
             ).Finally(
-                Ast.Statement(
-                    Ast.Call(
-                        AstGenerator.GetHelperMethod("CheckThreadAbort")
-                    )
+                Ast.Call(
+                    AstGenerator.GetHelperMethod("CheckThreadAbort")
                 )
             );
         }

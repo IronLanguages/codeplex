@@ -23,90 +23,86 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
-    [PythonType("super")]
+    [PythonSystemType("super")]
     public class Super : PythonTypeSlot, ICustomMembers {
-        private PythonType __thisclass__;
-        private object __self__;
-        private object __self_class__;
+        private PythonType _thisClass;
+        private object _self;
+        private object _selfClass;
 
         public Super() {
         }
 
-        [PythonName("__init__")]
-        public void Initialize(PythonType type) {
-            Initialize(type, null);
+        #region Python Public API Surface
+
+        public void __init__(PythonType type) {
+            __init__(type, null);
         }
 
-        [PythonName("__init__")]
-        public void Initialize(PythonType type, object obj) {
+        public void __init__(PythonType type, object obj) {
             if (obj != null) {
                 PythonType dt = obj as PythonType;
                 if (PythonOps.IsInstance(obj, type)) {
-                    this.__thisclass__ = type;
-                    this.__self__ = obj;
-                    this.__self_class__ = DynamicHelpers.GetPythonType(obj);
+                    this._thisClass = type;
+                    this._self = obj;
+                    this._selfClass = DynamicHelpers.GetPythonType(obj);
                 } else if (dt != null && dt.IsSubclassOf(type)) {
-                    this.__thisclass__ = type;
-                    this.__self_class__ = obj;
-                    this.__self__ = obj;
+                    this._thisClass = type;
+                    this._selfClass = obj;
+                    this._self = obj;
                 } else {
                     throw PythonOps.TypeError("super(type, obj): obj must be an instance or subtype of type {1}, not {0}", PythonTypeOps.GetName(obj), PythonTypeOps.GetName(type));
                 }
             } else {
-                this.__thisclass__ = type;
-                this.__self__ = null;
-                this.__self_class__ = null;
+                this._thisClass = type;
+                this._self = null;
+                this._selfClass = null;
             }
         }
 
-        public PythonType ThisClass {
-            [PythonName("__thisclass__")]
-            get { return __thisclass__; }
+        public PythonType __thisclass__ {
+            get { return _thisClass; }
         }
 
-        public object Self {
-            [PythonName("__self__")]
-            get { return __self__; }
+        public object __self__ {
+            get { return _self; }
         }
 
-        public object SelfClass {
-            [PythonName("__self_class__")]
-            get { return __self_class__; }
+        public object __self_class__ {
+            get { return _selfClass; }
         }
 
         public override string ToString() {
             string selfRepr;
-            if (__self__ == this)
+            if (_self == this)
                 selfRepr = "<super object>";
             else
-                selfRepr = PythonOps.StringRepr(__self__);
-            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(__thisclass__), selfRepr);
+                selfRepr = PythonOps.StringRepr(_self);
+            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(_thisClass), selfRepr);
         }
 
-        // TODO needed because ICustomMembers is too hard to implement otherwise.  Let's fix that and get rid of this.
-        private PythonType PythonType {
-            get {
-                if (GetType() == typeof(Super))
-                    return TypeCache.Super;
+        public object __get__(object instance, object owner) {
+            PythonType selfType = PythonType;
 
-                IPythonObject sdo = this as IPythonObject;
-                Debug.Assert(sdo != null);
-
-                return sdo.PythonType;
+            if (selfType == TypeCache.Super) {
+                Super res = new Super();
+                res.__init__(_thisClass, instance);
+                return res;
             }
+
+            return PythonCalls.Call(selfType, _thisClass, instance);
         }
 
-
+        #endregion
+        
         #region ICustomMembers Members
 
-        public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return TryGetBoundCustomMember(context, name, out value);
-
+        bool ICustomMembers.TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
+            return ((ICustomMembers)this).TryGetBoundCustomMember(context, name, out value);
         }
 
-        public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+        bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
             // first find where we are in the mro...
-            PythonType mroType = __self_class__ as PythonType;
+            PythonType mroType = _selfClass as PythonType;
 
             if (mroType != null) { // can be null if the user does super.__new__
                 IList<PythonType> mro = mroType.ResolutionOrder;
@@ -114,7 +110,7 @@ namespace IronPython.Runtime {
                 int lookupType;
                 bool foundThis = false;
                 for (lookupType = 0; lookupType < mro.Count; lookupType++) {
-                    if (mro[lookupType] == __thisclass__) {
+                    if (mro[lookupType] == _thisClass) {
                         foundThis = true;
                         break;
                     }
@@ -125,11 +121,11 @@ namespace IronPython.Runtime {
                     // search __thisclass__'s mro and return a method from one
                     // of it's bases.
                     lookupType = 0;
-                    mro = __thisclass__.ResolutionOrder;
+                    mro = _thisClass.ResolutionOrder;
                 }
 
                 // if we're super on a class then we have no self.
-                object self = __self__ == __self_class__ ? null : __self__;
+                object self = _self == _selfClass ? null : _self;
 
                 // then skip our class, and lookup in everything
                 // above us until we get a hit.
@@ -173,26 +169,27 @@ namespace IronPython.Runtime {
 
         private PythonType DescriptorContext {
             get {
-                if (!DynamicHelpers.GetPythonType(__self__).IsSubclassOf(__thisclass__)) {
-                    return __thisclass__;
+                if (!DynamicHelpers.GetPythonType(_self).IsSubclassOf(_thisClass)) {
+                    return _thisClass;
                 }
 
-                PythonType dt = __self_class__ as PythonType;
+                PythonType dt = _selfClass as PythonType;
                 if (dt != null) return dt;
 
-                return ((OldClass)__self_class__).TypeObject;
+                return ((OldClass)_selfClass).TypeObject;
             }
         }
-        public void SetCustomMember(CodeContext context, SymbolId name, object value) {
+
+        void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {
             PythonType.SetMember(context, this, name, value);
         }
 
-        public bool DeleteCustomMember(CodeContext context, SymbolId name) {
+        bool ICustomMembers.DeleteCustomMember(CodeContext context, SymbolId name) {
             PythonType.DeleteMember(context, this, name);
             return true;
         }
 
-        public IList<object> GetMemberNames(CodeContext context) {
+        IList<object> IMembersList.GetMemberNames(CodeContext context) {
             List res = new List();
             foreach (SymbolId si in PythonType.GetMemberNames(context, this)) {
                 res.AddNoLock(si.ToString());
@@ -200,31 +197,27 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
+        IDictionary<object, object> ICustomMembers.GetCustomMemberDictionary(CodeContext context) {
             return PythonType.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
         }
 
-        #endregion
+        // TODO needed because ICustomMembers is too hard to implement otherwise.  Let's fix that and get rid of this.
+        private PythonType PythonType {
+            get {
+                if (GetType() == typeof(Super))
+                    return TypeCache.Super;
 
-        #region IDescriptor Members
+                IPythonObject sdo = this as IPythonObject;
+                Debug.Assert(sdo != null);
 
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
-            PythonType selfType = PythonType;
-
-            if (selfType == TypeCache.Super) {
-                Super res = new Super();
-                res.Initialize(__thisclass__, instance);
-                return res;
+                return sdo.PythonType;
             }
-
-            return PythonCalls.Call(selfType, __thisclass__, instance);
         }
 
         #endregion
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
-            value = GetAttribute(instance, owner);
+            value = __get__(instance, owner);
             return true;
         }
     }

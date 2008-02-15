@@ -103,7 +103,7 @@ namespace Microsoft.Scripting.Generation {
             Contract.RequiresNotNull(parameters, "parameters");
 
             if (_target == null) {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException(Resources.BindingTarget_BindingFailed);
             }
 
             return _target.MakeExpression(rule, parameters, ArgumentTests);

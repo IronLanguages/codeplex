@@ -33,26 +33,26 @@ using Microsoft.Scripting.Runtime;
 
 [assembly: PythonModule("array", typeof(IronPython.Modules.ArrayModule))]
 namespace IronPython.Modules {
-    public static class ArrayModule  {
-        public static object ArrayType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonArray));
-        public static object array = ArrayType;
+    public static class ArrayModule {
+        public static readonly PythonType/*!*/ ArrayType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonArray));
+        public static readonly PythonType/*!*/ array = ArrayType;
 
-        [PythonType("array")]
-        public class PythonArray : IPythonArray, IValueEquality, IEnumerable, IWeakReferenceable, ICollection {
-            private ArrayData data;
-            private char typeCode;
-            private WeakRefTracker tracker;
+        [PythonSystemType("array")]
+        public class PythonArray : IPythonArray, IValueEquality, IEnumerable, IWeakReferenceable, ICollection, ICodeFormattable {
+            private ArrayData _data;
+            private char _typeCode;
+            private WeakRefTracker _tracker;
 
             public PythonArray(string type, [Optional]object initializer) {
                 if (type == null || type.Length != 1) throw PythonOps.TypeError("expected character, got {0}", DynamicHelpers.GetPythonType(type));
 
-                typeCode = type[0];
-                data = CreateData(typeCode);
+                _typeCode = type[0];
+                _data = CreateData(_typeCode);
 
-                if (initializer != Type.Missing) Extend(initializer);
+                if (initializer != Type.Missing) extend(initializer);
             }
 
-            private static ArrayData CreateData(char typecode) {                
+            private static ArrayData CreateData(char typecode) {
                 ArrayData data;
                 switch (typecode) {
                     case 'c': data = new ArrayData<char>(); break;
@@ -73,142 +73,134 @@ namespace IronPython.Modules {
                 return data;
             }
 
-            [SpecialName, PythonName("__iadd__")]
+            [SpecialName]
             public PythonArray InPlaceAdd(PythonArray other) {
-                if (TypeCode != other.TypeCode) throw PythonOps.TypeError("cannot add different typecodes");
+                if (typecode != other.typecode) throw PythonOps.TypeError("cannot add different typecodes");
 
-                if (other.data.Length != 0) {
-                    Extend(other);
+                if (other._data.Length != 0) {
+                    extend(other);
                 }
 
                 return this;
             }
 
-            [SpecialName, PythonName("__add__")]
-            public PythonArray Add(PythonArray other) {
-                if (TypeCode != other.TypeCode) throw PythonOps.TypeError("cannot add different typecodes");
+            [SpecialName]
+            public static PythonArray operator +(PythonArray self, PythonArray other) {
+                if (self.typecode != other.typecode) throw PythonOps.TypeError("cannot add different typecodes");
 
-                PythonArray res = new PythonArray(new string(TypeCode, 1), Type.Missing);
-                foreach (object o in this) {
-                    res.Append(o);
+                PythonArray res = new PythonArray(new string(self.typecode, 1), Type.Missing);
+                foreach (object o in self) {
+                    res.append(o);
                 }
-                
+
                 foreach (object o in other) {
-                    res.Append(o);
+                    res.append(o);
                 }
 
                 return res;
             }
 
-            [SpecialName, PythonName("__imul__")]
+            [SpecialName]
             public PythonArray InPlaceMultiply(int value) {
                 if (value <= 0) {
-                    data.Clear();
+                    _data.Clear();
                 } else {
-                    List myData = ToList();
+                    List myData = tolist();
 
                     for (int i = 0; i < (value - 1); i++) {
-                        Extend(myData);
+                        extend(myData);
                     }
                 }
                 return this;
             }
 
             public static PythonArray operator *(PythonArray array, int value) {
-                PythonArray data = new PythonArray(new string(array.TypeCode, 1), Type.Missing);
+                PythonArray data = new PythonArray(new string(array.typecode, 1), Type.Missing);
                 for (int i = 0; i < value; i++) {
-                    data.Extend(array);
+                    data.extend(array);
                 }
                 return data;
             }
 
             public static PythonArray operator *(int value, PythonArray array) {
-                PythonArray data = new PythonArray(new string(array.TypeCode, 1), Type.Missing);
+                PythonArray data = new PythonArray(new string(array.typecode, 1), Type.Missing);
                 for (int i = 0; i < value; i++) {
-                    data.Extend(array);
+                    data.extend(array);
                 }
                 return data;
             }
 
-            [PythonName("append")]
-            public void Append(object iterable) {
-                data.Append(iterable);
+            public void append(object iterable) {
+                _data.Append(iterable);
             }
 
-            [PythonName("buffer_info")]
-            public void BufferInfo() {
+            public void buffer_info() {
                 throw PythonOps.NotImplementedError("buffer_info not implemented");
             }
 
-            [PythonName("byteswap")]
-            public void ByteSwap() {
+            public void byteswap() {
                 Stream s = ToStream();
                 byte[] bytes = new byte[s.Length];
                 s.Read(bytes, 0, bytes.Length);
 
-                byte[] tmp = new byte[ItemSize];
-                for (int i = 0; i < bytes.Length; i += ItemSize) {
-                    for (int j = 0; j < ItemSize; j++) {
+                byte[] tmp = new byte[itemsize];
+                for (int i = 0; i < bytes.Length; i += itemsize) {
+                    for (int j = 0; j < itemsize; j++) {
                         tmp[j] = bytes[i + j];
                     }
-                    for (int j = 0; j < ItemSize; j++) {
-                        bytes[i + j] = tmp[ItemSize - (j+1)];
+                    for (int j = 0; j < itemsize; j++) {
+                        bytes[i + j] = tmp[itemsize - (j + 1)];
                     }
                 }
-                data.Clear();
+                _data.Clear();
                 MemoryStream ms = new MemoryStream(bytes);
                 FromStream(ms);
             }
 
-            [PythonName("count")]
-            public int Count(object x) {
+            public int count(object x) {
                 if (x == null) return 0;
 
-                return data.Count(x);
+                return _data.Count(x);
             }
 
-            [PythonName("extend")]
-            public void Extend(object iterable) {
+            public void extend(object iterable) {
                 PythonArray pa = iterable as PythonArray;
-                if (pa != null && TypeCode != pa.TypeCode) {
+                if (pa != null && typecode != pa.typecode) {
                     throw PythonOps.TypeError("cannot extend with different typecode");
                 }
 
                 IEnumerator ie = PythonOps.GetEnumerator(iterable);
                 while (ie.MoveNext()) {
-                    Append(ie.Current);
+                    append(ie.Current);
                 }
             }
 
-            [PythonName("fromlist")]
-            public void FromList(object iterable) {
+            public void fromlist(object iterable) {
                 IEnumerator ie = PythonOps.GetEnumerator(iterable);
 
                 List<object> items = new List<object>();
                 while (ie.MoveNext()) {
-                    if (!data.CanStore(ie.Current)) {
+                    if (!_data.CanStore(ie.Current)) {
                         throw PythonOps.TypeError("expected {0}, got {1}",
-                            PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(data.StorageType)),
+                            PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(_data.StorageType)),
                             PythonOps.StringRepr(DynamicHelpers.GetPythonType(ie.Current)));
                     }
                     items.Add(ie.Current);
                 }
 
-                Extend(items);
+                extend(items);
             }
 
-            [PythonName("fromfile")]
-            public void FromFile(PythonFile f, int n) {
-                int bytesNeeded = n * ItemSize;
-                string bytes = f.Read(bytesNeeded);
+            public void fromfile(PythonFile f, int n) {
+                int bytesNeeded = n * itemsize;
+                string bytes = f.read(bytesNeeded);
                 if (bytes.Length < bytesNeeded) throw PythonOps.EofError("file not large enough");
 
-                FromString(bytes);
+                fromstring(bytes);
             }
 
-            [PythonName("fromstring")]
-            public void FromString(string s) {
-                if ((s.Length % ItemSize) != 0) throw PythonOps.ValueError("string length not a multiple of itemsize");
+            public void fromstring(string s) {
+                if ((s.Length % itemsize) != 0) throw PythonOps.ValueError("string length not a multiple of itemsize");
                 byte[] bytes = new byte[s.Length];
                 for (int i = 0; i < bytes.Length; i++) {
                     bytes[i] = (byte)s[i];
@@ -218,130 +210,119 @@ namespace IronPython.Modules {
                 FromStream(ms);
             }
 
-            [PythonName("fromunicode")]
-            public void FromUnicode(CodeContext/*!*/ context, string s) {
+            public void fromunicode(CodeContext/*!*/ context, string s) {
                 if (s == null) throw PythonOps.TypeError("expected string");
                 if (s.Length == 0) throw PythonOps.ValueError("empty string");
-                if ((s.Length % ItemSize) != 0) throw PythonOps.ValueError("string length not a multiple of itemsize");
+                if ((s.Length % itemsize) != 0) throw PythonOps.ValueError("string length not a multiple of itemsize");
                 MemoryStream ms = new MemoryStream(PythonContext.GetContext(context).DefaultEncoding.GetBytes(s));
 
                 FromStream(ms);
             }
 
-            [PythonName("index")]
-            public int Index(object x) {
+            public int index(object x) {
                 if (x == null) throw PythonOps.ValueError("got None, expected value");
 
-                int res = data.Index(x);
+                int res = _data.Index(x);
                 if (res == -1) throw PythonOps.ValueError("x not found");
                 return res;
             }
 
-            [PythonName("insert")]
-            public void Insert(int i, object x) {
-                if (i > data.Length) i = data.Length;
-                if (i < 0) i = data.Length + i;
+            public void insert(int i, object x) {
+                if (i > _data.Length) i = _data.Length;
+                if (i < 0) i = _data.Length + i;
                 if (i < 0) i = 0;
 
-                data.Insert(i, x);
+                _data.Insert(i, x);
             }
 
-            public int ItemSize {
-                [PythonName("itemsize")]
+            public int itemsize {
                 get {
-                    return Marshal.SizeOf(data.StorageType);
+                    return Marshal.SizeOf(_data.StorageType);
                 }
             }
 
-            [PythonName("pop")]
-            public object Pop() {
-                return Pop(-1);
+            public object pop() {
+                return pop(-1);
             }
 
-            [PythonName("pop")]
-            public object Pop(int i) {
-                i = PythonOps.FixIndex(i, data.Length);
-                object res = data.GetData(i);
-                data.RemoveAt(i);
+            public object pop(int i) {
+                i = PythonOps.FixIndex(i, _data.Length);
+                object res = _data.GetData(i);
+                _data.RemoveAt(i);
                 return res;
             }
 
-            [PythonName("remove")]
-            public void Remove(object value) {
+            public void remove(object value) {
                 if (value == null) throw PythonOps.ValueError("got None, expected value");
 
-                data.Remove(value);
+                _data.Remove(value);
             }
 
-            [PythonName("reverse")]
-            public void Reverse() {
-                for (int index = 0; index < data.Length/2; index++) {
-                    int left = index, right= data.Length-(index+1);
+            public void reverse() {
+                for (int index = 0; index < _data.Length / 2; index++) {
+                    int left = index, right = _data.Length - (index + 1);
 
                     Debug.Assert(left != right);
-                    data.Swap(left, right);                    
+                    _data.Swap(left, right);
                 }
             }
 
             public virtual object this[int index] {
-                [PythonName("__getitem__")]
                 get {
-                    object val = data.GetData(PythonOps.FixIndex(index, data.Length));
-                    switch (TypeCode) {
-                        case 'b': return (int)(sbyte)val; 
-                        case 'B': return (int)(byte)val; 
+                    object val = _data.GetData(PythonOps.FixIndex(index, _data.Length));
+                    switch (typecode) {
+                        case 'b': return (int)(sbyte)val;
+                        case 'B': return (int)(byte)val;
                         case 'c':
                         case 'u': return new string((char)val, 1);
-                        case 'h': return (int)(short)val; 
+                        case 'h': return (int)(short)val;
                         case 'H': return (int)(ushort)val;
                         case 'l': return BigInteger.Create((int)val);
                         case 'i': return val;
                         case 'L': return BigInteger.Create((uint)val);
                         case 'I': return (int)(uint)val;
                         case 'f': return (double)(float)val;
-                        case 'd': return val; 
+                        case 'd': return val;
                         default:
                             throw PythonOps.ValueError("Bad type code (expected one of 'c', 'b', 'B', 'u', 'H', 'h', 'i', 'I', 'l', 'L', 'f', 'd')");
                     }
                 }
-                [PythonName("__setitem__")]
                 set {
-                    data.SetData(PythonOps.FixIndex(index, data.Length), value);
+                    _data.SetData(PythonOps.FixIndex(index, _data.Length), value);
                 }
             }
 
-            [SpecialName, PythonName("__delitem__")]
-            public void DeleteItem(int index) {
-                data.RemoveAt(PythonOps.FixIndex(index, data.Length));
+            public void __delitem__(int index) {
+                _data.RemoveAt(PythonOps.FixIndex(index, _data.Length));
             }
-            [SpecialName, PythonName("__delitem__")]
-            public void DeleteItem(Slice slice) {
+
+            public void __delitem__(Slice slice) {
                 if (slice == null) throw PythonOps.TypeError("expected Slice, got None");
 
                 int start, stop, step;
                 // slice is sealed, indices can't be user code...
-                slice.Indices(data.Length, out start, out stop, out step);
+                slice.indices(_data.Length, out start, out stop, out step);
 
                 if (step > 0 && (start >= stop)) return;
                 if (step < 0 && (start <= stop)) return;
 
                 if (step == 1) {
                     int i = start;
-                    for (int j = stop; j < data.Length; j++, i++) {
-                        data.SetData(i, data.GetData(j));
+                    for (int j = stop; j < _data.Length; j++, i++) {
+                        _data.SetData(i, _data.GetData(j));
                     }
                     for (i = 0; i < stop - start; i++) {
-                        data.RemoveAt(data.Length - 1);
+                        _data.RemoveAt(_data.Length - 1);
                     }
                     return;
                 }
                 if (step == -1) {
                     int i = stop + 1;
-                    for (int j = start + 1; j < data.Length; j++, i++) {
-                        data.SetData(i, data.GetData(j));
+                    for (int j = start + 1; j < _data.Length; j++, i++) {
+                        _data.SetData(i, _data.GetData(j));
                     }
                     for (i = 0; i < stop - start; i++) {
-                        data.RemoveAt(data.Length - 1);
+                        _data.RemoveAt(_data.Length - 1);
                     }
                     return;
                 }
@@ -368,16 +349,16 @@ namespace IronPython.Modules {
 
                 while (curr < stop && move < stop) {
                     if (move != skip) {
-                        data.SetData(curr++, data.GetData(move));
+                        _data.SetData(curr++, _data.GetData(move));
                     } else
                         skip += step;
                     move++;
                 }
-                while (stop < data.Length) {
-                    data.SetData(curr++, data.GetData(stop++));
+                while (stop < _data.Length) {
+                    _data.SetData(curr++, _data.GetData(stop++));
                 }
-                while(data.Length > curr) {
-                    data.RemoveAt(data.Length - 1);
+                while (_data.Length > curr) {
+                    _data.RemoveAt(_data.Length - 1);
                 }
             }
 
@@ -386,16 +367,16 @@ namespace IronPython.Modules {
                     if (index == null) throw PythonOps.TypeError("expected Slice, got None");
 
                     int start, stop, step;
-                    index.Indices(data.Length, out start, out stop, out step);
+                    index.indices(_data.Length, out start, out stop, out step);
 
-                    PythonArray pa = new PythonArray(new string(typeCode, 1), Type.Missing);
+                    PythonArray pa = new PythonArray(new string(_typeCode, 1), Type.Missing);
                     if (step < 0) {
                         for (int i = start; i > stop; i += step) {
-                            pa.data.Append(data.GetData(i));
+                            pa._data.Append(_data.GetData(i));
                         }
                     } else {
                         for (int i = start; i < stop; i += step) {
-                            pa.data.Append(data.GetData(i));
+                            pa._data.Append(_data.GetData(i));
                         }
                     }
                     return pa;
@@ -404,70 +385,66 @@ namespace IronPython.Modules {
                     if (index == null) throw PythonOps.TypeError("expected Slice, got None");
 
                     PythonArray pa = value as PythonArray;
-                    if (pa != null && pa.typeCode != typeCode) {
+                    if (pa != null && pa._typeCode != _typeCode) {
                         throw PythonOps.TypeError("bad array type");
                     }
 
-                    if (index.Step != null) {
-                        if (Object.ReferenceEquals(value, this)) value = this.ToList();
+                    if (index.step != null) {
+                        if (Object.ReferenceEquals(value, this)) value = this.tolist();
 
-                        index.DoSliceAssign(SliceAssign, data.Length, value);
+                        index.DoSliceAssign(SliceAssign, _data.Length, value);
                     } else {
                         int start, stop, step;
-                        index.Indices(data.Length, out start, out stop, out step);
+                        index.indices(_data.Length, out start, out stop, out step);
 
                         // replace between start & stop w/ values
                         IEnumerator ie = PythonOps.GetEnumerator(value);
 
-                        ArrayData newData = CreateData(TypeCode);
+                        ArrayData newData = CreateData(typecode);
                         for (int i = 0; i < start; i++) {
-                            newData.Append(data.GetData(i));
+                            newData.Append(_data.GetData(i));
                         }
 
                         while (ie.MoveNext()) {
                             newData.Append(ie.Current);
                         }
 
-                        for (int i = stop; i < data.Length; i++) {
-                            newData.Append(data.GetData(i));
+                        for (int i = stop; i < _data.Length; i++) {
+                            newData.Append(_data.GetData(i));
                         }
 
-                        data = newData;
+                        _data = newData;
                     }
                 }
             }
 
-            [PythonName("__getslice__")]
-            public object GetSlice(object start, object stop) {
+            public object __getslice__(object start, object stop) {
                 return this[new Slice(start, stop)];
             }
 
-            [PythonName("__setslice__")]
-            public void SetSlice(object start, object stop, object value) {
+            public void __setslice__(object start, object stop, object value) {
                 this[new Slice(start, stop)] = value;
             }
+
             private void SliceAssign(int index, object value) {
-                data.SetData(index, value);
+                _data.SetData(index, value);
             }
 
-            [PythonName("tofile")]
-            public void ToFile(PythonFile f) {
-                f.Write(ConvertToString());                
+            public void tofile(PythonFile f) {
+                f.write(tostring());
             }
 
-            [PythonName("tolist")]
-            public List ToList() {
+            public List tolist() {
                 List res = new List();
-                for (int i = 0; i < data.Length; i++) {
-                    res.AddNoLock(data.GetData(i));
+                for (int i = 0; i < _data.Length; i++) {
+                    res.AddNoLock(_data.GetData(i));
                 }
                 return res;
             }
 
-            [PythonName("tostring")]
-            public string ConvertToString() {
+            public string tostring() {
                 Stream s = ToStream();
-                byte [] bytes = new byte[s.Length];
+                byte[] bytes = new byte[s.Length];
                 s.Read(bytes, 0, (int)s.Length);
 
                 StringBuilder res = new StringBuilder();
@@ -477,9 +454,8 @@ namespace IronPython.Modules {
                 return res.ToString();
             }
 
-            [PythonName("tounicode")]
-            public string ToUnicode(CodeContext/*!*/ context) {
-                if (typeCode != 'u') throw PythonOps.ValueError("only 'u' arrays can be converted to unicode");
+            public string tounicode(CodeContext/*!*/ context) {
+                if (_typeCode != 'u') throw PythonOps.ValueError("only 'u' arrays can be converted to unicode");
 
                 Stream s = ToStream();
                 byte[] bytes = new byte[s.Length];
@@ -488,14 +464,12 @@ namespace IronPython.Modules {
                 return PythonContext.GetContext(context).DefaultEncoding.GetString(bytes, 0, bytes.Length);
             }
 
-            [PythonName("write")]
-            public void Write(PythonFile f) {
-                ToFile(f);
+            public void write(PythonFile f) {
+                tofile(f);
             }
 
-            public char TypeCode {
-                [PythonName("typecode")]
-                get { return typeCode; }
+            public char typecode {
+                get { return _typeCode; }
             }
 
             private abstract class ArrayData {
@@ -517,21 +491,21 @@ namespace IronPython.Modules {
             private Stream ToStream() {
                 MemoryStream ms = new MemoryStream();
                 BinaryWriter bw = new BinaryWriter(ms);
-                for (int i = 0; i < data.Length; i++) {
-                    switch (TypeCode) {
-                        case 'c': bw.Write((byte)(char)data.GetData(i)); break;
-                        case 'b': bw.Write((sbyte)data.GetData(i)); break;
-                        case 'B': bw.Write((byte)data.GetData(i)); break;
-                        case 'u': bw.Write((char)data.GetData(i)); break;
-                        case 'h': bw.Write((short)data.GetData(i)); break;
-                        case 'H': bw.Write((ushort)data.GetData(i)); break;
+                for (int i = 0; i < _data.Length; i++) {
+                    switch (typecode) {
+                        case 'c': bw.Write((byte)(char)_data.GetData(i)); break;
+                        case 'b': bw.Write((sbyte)_data.GetData(i)); break;
+                        case 'B': bw.Write((byte)_data.GetData(i)); break;
+                        case 'u': bw.Write((char)_data.GetData(i)); break;
+                        case 'h': bw.Write((short)_data.GetData(i)); break;
+                        case 'H': bw.Write((ushort)_data.GetData(i)); break;
                         case 'l':
-                        case 'i': bw.Write((int)data.GetData(i)); break;
+                        case 'i': bw.Write((int)_data.GetData(i)); break;
                         case 'L':
-                        case 'I': bw.Write((uint)data.GetData(i)); break;
-                        case 'f': bw.Write((float)data.GetData(i)); break;
-                        case 'd': bw.Write((double)data.GetData(i)); break;
-                    }                    
+                        case 'I': bw.Write((uint)_data.GetData(i)); break;
+                        case 'f': bw.Write((float)_data.GetData(i)); break;
+                        case 'd': bw.Write((double)_data.GetData(i)); break;
+                    }
                 }
                 ms.Seek(0, SeekOrigin.Begin);
                 return ms;
@@ -540,9 +514,9 @@ namespace IronPython.Modules {
             private void FromStream(Stream ms) {
                 BinaryReader br = new BinaryReader(ms);
 
-                for (int i = 0; i < ms.Length/ItemSize; i++) {
+                for (int i = 0; i < ms.Length / itemsize; i++) {
                     object value;
-                    switch (TypeCode) {
+                    switch (typecode) {
                         case 'c': value = (char)br.ReadByte(); break;
                         case 'b': value = (sbyte)br.ReadByte(); break;
                         case 'B': value = br.ReadByte(); break;
@@ -550,14 +524,14 @@ namespace IronPython.Modules {
                         case 'h': value = br.ReadInt16(); break;
                         case 'H': value = br.ReadUInt16(); break;
                         case 'i': value = br.ReadInt32(); break;
-                        case 'I': value = br.ReadUInt32(); break;                            
+                        case 'I': value = br.ReadUInt32(); break;
                         case 'l': value = br.ReadInt32(); break;
                         case 'L': value = br.ReadUInt32(); break;
                         case 'f': value = br.ReadSingle(); break;
                         case 'd': value = br.ReadDouble(); break;
                         default: throw new InvalidOperationException(); // should never happen
                     }
-                    data.Append(value);
+                    _data.Append(value);
                 }
             }
 
@@ -580,7 +554,7 @@ namespace IronPython.Modules {
                     if (!(value is T)) {
                         object newVal;
                         if (!Converter.TryConvert(value, typeof(T), out newVal)) {
-                            if(value != null && typeof(T).IsPrimitive && typeof(T) != typeof(char))
+                            if (value != null && typeof(T).IsPrimitive && typeof(T) != typeof(char))
                                 throw PythonOps.OverflowError("couldn't convert {1} to {0}",
                                     PythonOps.StringRepr(DynamicHelpers.GetPythonTypeFromType(typeof(T))),
                                     PythonOps.StringRepr(DynamicHelpers.GetPythonType(value)));
@@ -614,7 +588,7 @@ namespace IronPython.Modules {
                 public override int Index(object value) {
                     T other = GetValue(value);
 
-                    for(int i = 0; i<data.Count; i++) {
+                    for (int i = 0; i < data.Count; i++) {
                         if (data[i].Equals(other)) return i;
                     }
                     return -1;
@@ -658,7 +632,7 @@ namespace IronPython.Modules {
                         return false;
 
                     return true;
-                }                
+                }
 
                 public override Type StorageType {
                     get { return typeof(T); }
@@ -667,17 +641,17 @@ namespace IronPython.Modules {
 
             #region IValueEquality Members
 
-            public int GetValueHashCode() {
+            int IValueEquality.GetValueHashCode() {
                 throw PythonOps.TypeError("unhashable type");
             }
 
-            public bool ValueEquals(object other) {
+            bool IValueEquality.ValueEquals(object other) {
                 PythonArray pa = other as PythonArray;
                 if (pa == null) return false;
 
-                if (data.Length != pa.data.Length) return false;
-                for (int i = 0; i < data.Length; i++) {
-                    if (!data.GetData(i).Equals(pa.data.GetData(i))) {
+                if (_data.Length != pa._data.Length) return false;
+                for (int i = 0; i < _data.Length; i++) {
+                    if (!_data.GetData(i).Equals(pa._data.GetData(i))) {
                         return false;
                     }
                 }
@@ -685,144 +659,154 @@ namespace IronPython.Modules {
                 return true;
             }
 
-            public bool ValueNotEquals(object other) {
-                return !ValueEquals(other);
+            bool IValueEquality.ValueNotEquals(object other) {
+                return !((IValueEquality)this).ValueEquals(other);
             }
 
             #endregion
 
             #region IEnumerable Members
 
-            public IEnumerator GetEnumerator() {
-                for (int i = 0; i < data.Length; i++) {
-                    yield return data.GetData(i);
+            IEnumerator IEnumerable.GetEnumerator() {
+                for (int i = 0; i < _data.Length; i++) {
+                    yield return _data.GetData(i);
                 }
             }
 
             #endregion
 
-            public override string ToString() {
-                string res = "array('" + TypeCode.ToString() + "'";
-                if (data.Length == 0) {
+            #region ICodeFormattable Members
+
+            public string ToCodeString(CodeContext context) {
+                string res = "array('" + typecode.ToString() + "'";
+                if (_data.Length == 0) {
                     return res + ")";
                 }
                 StringBuilder sb = new StringBuilder(res);
-                if (TypeCode == 'c') sb.Append(", '");
+                if (typecode == 'c') sb.Append(", '");
                 else sb.Append(", [");
-                
-                for (int i = 0; i < data.Length; i++) {
-                    if (TypeCode == 'c') sb.Append((char)data.GetData(i));
+
+                for (int i = 0; i < _data.Length; i++) {
+                    if (typecode == 'c') sb.Append((char)_data.GetData(i));
                     else {
                         sb.Append(PythonOps.Repr(this[i]).ToString());
                         sb.Append(", ");
                     }
                 }
 
-                if (TypeCode == 'c') sb.Append("')");
+                if (typecode == 'c') sb.Append("')");
                 else sb.Append("])");
 
                 return sb.ToString();
             }
 
+            #endregion
+
             #region IWeakReferenceable Members
 
-            public WeakRefTracker GetWeakRef() {
-                return tracker;
+            WeakRefTracker IWeakReferenceable.GetWeakRef() {
+                return _tracker;
             }
 
-            public bool SetWeakRef(WeakRefTracker value) {
-                tracker = value;
+            bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
+                _tracker = value;
                 return true;
             }
 
-            public void SetFinalizer(WeakRefTracker value) {
-                tracker = value;
+            void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+                _tracker = value;
             }
 
             #endregion
 
             #region IPythonContainer Members
 
-            public int GetLength() {
-                return data.Length;
+            public int __len__() {
+                return _data.Length;
             }
 
-            public bool ContainsValue(object value) {
-                return data.Index(value) != -1;
+            public bool __contains__(object value) {
+                return _data.Index(value) != -1;
             }
 
             #endregion
 
             #region IRichComparable Members
 
-            [PythonName("__cmp__")]
-            [return: MaybeNotImplemented]
-            public object CompareTo(object other) {
+            private bool TryCompare(object other, out int res) {
                 PythonArray pa = other as PythonArray;
-                if (pa == null) return PythonOps.NotImplemented;
-                if (pa.TypeCode != TypeCode) return PythonOps.NotImplemented;
-
-                if (pa.data.Length != data.Length) {
-                    return data.Length - pa.data.Length;
+                if (pa == null || pa.typecode != typecode) {
+                    res = 0;
+                    return false;
                 }
 
-                for (int i = 0; i < pa.data.Length; i++) {
-                    int cmp = PythonOps.Compare(data.GetData(i), pa.data.GetData(i));
-                    if (cmp != 0) return RuntimeHelpers.Int32ToObject(cmp);
+                if (pa._data.Length != _data.Length) {
+                    res = _data.Length - pa._data.Length;
+                } else {
+                    res = 0;
+                    for (int i = 0; i < pa._data.Length && res == 0; i++) {
+                        res = PythonOps.Compare(_data.GetData(i), pa._data.GetData(i));
+                    }
                 }
 
-                return RuntimeHelpers.Int32ToObject(0);
+                return true;
             }
 
-            public object GreaterThan(object other) {
-                object res = CompareTo(other);
-                if (res == PythonOps.NotImplemented) return res;
+            [return: MaybeNotImplemented]
+            public object __cmp__(object other) {
+                int res;
+                if (!TryCompare(other, out res)) {
+                    return PythonOps.NotImplemented;
+                }
 
-                return RuntimeHelpers.BooleanToObject((int)res > 0);
+                return RuntimeHelpers.Int32ToObject(res);
             }
 
-            public object LessThan(object other) {
-                object res = CompareTo(other);
-                if (res == PythonOps.NotImplemented) return res;
+            [return: MaybeNotImplemented]
+            public static object operator >(PythonArray self, object other) {
+                int res;
+                if (!self.TryCompare(other, out res)) {
+                    return PythonOps.NotImplemented;
+                }
 
-                return RuntimeHelpers.BooleanToObject((int)res < 0);
+                return RuntimeHelpers.BooleanToObject(res > 0);
             }
 
-            public object GreaterThanOrEqual(object other) {
-                object res = CompareTo(other);
-                if (res == PythonOps.NotImplemented) return res;
+            [return: MaybeNotImplemented]
+            public static object operator <(PythonArray self, object other) {
+                int res;
+                if (!self.TryCompare(other, out res)) {
+                    return PythonOps.NotImplemented;
+                }
 
-                return RuntimeHelpers.BooleanToObject((int)res >= 0);
+                return RuntimeHelpers.BooleanToObject(res < 0);
             }
 
-            public object LessThanOrEqual(object other) {
-                object res = CompareTo(other);
-                if (res == PythonOps.NotImplemented) return res;
+            [return: MaybeNotImplemented]
+            public static object operator >=(PythonArray self, object other) {
+                int res;
+                if (!self.TryCompare(other, out res)) {
+                    return PythonOps.NotImplemented;
+                }
 
-                return RuntimeHelpers.BooleanToObject((int)res <= 0);
+                return RuntimeHelpers.BooleanToObject(res >= 0);
+            }
+
+            [return: MaybeNotImplemented]
+            public static object operator <=(PythonArray self, object other) {
+                int res;
+                if (!self.TryCompare(other, out res)) {
+                    return PythonOps.NotImplemented;
+                }
+
+                return RuntimeHelpers.BooleanToObject(res <= 0);
             }
 
             #endregion
 
             #region ISequence Members
 
-            public object AddSequence(object other) {
-                PythonArray pa = other as PythonArray;
-                if(pa != null) 
-                    return Add(pa);
-
-                throw PythonOps.TypeErrorForBadInstance("got {0}, expected array", other);
-            }
-
-            public object MultiplySequence(object count) {
-                if (count is int) {
-                    return this * (int)count;
-                }
-
-                throw PythonOps.TypeErrorForBadInstance("got {0}, expected int", count);
-            }
-
-            public object GetSlice(int start, int stop) {
+            object ISequence.__getslice__(int start, int stop) {
                 return this[new Slice(start, stop)];
             }
 
@@ -830,19 +814,19 @@ namespace IronPython.Modules {
 
             #region ICollection Members
 
-            public void CopyTo(Array array, int index) {
+            void ICollection.CopyTo(Array array, int index) {
                 throw new NotImplementedException();
             }
 
             int ICollection.Count {
-                get { return GetLength(); }
+                get { return __len__(); }
             }
 
-            public bool IsSynchronized {
+            bool ICollection.IsSynchronized {
                 get { return false; }
             }
 
-            public object SyncRoot {
+            object ICollection.SyncRoot {
                 get { return this; }
             }
 

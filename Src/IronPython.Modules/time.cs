@@ -77,13 +77,11 @@ namespace IronPython.Modules {
 #endif
         }
 
-        [PythonName("asctime")]
-        public static string AscTime() {
-            return AscTime(null);
+        public static string asctime() {
+            return asctime(null);
         }
 
-        [PythonName("asctime")]
-        public static string AscTime(object time) {
+        public static string asctime(object time) {
             DateTime dt;
             if (time is PythonTuple) {
                 dt = GetDateTimeFromTuple(time as PythonTuple);
@@ -97,43 +95,36 @@ namespace IronPython.Modules {
         }
 
 #if !SILVERLIGHT    // System.Diagnostics.Stopwatch
-        [PythonName("clock")]
-        public static double Clock() {
+        public static double clock() {
             InitStopWatch();
             return ((double)sw.ElapsedTicks) / Stopwatch.Frequency;
         }
 #endif
 
-        [PythonName("ctime")]
-        public static string CTime() {
-            return AscTime(LocalTime());
+        public static string ctime() {
+            return asctime(localtime());
         }
 
-        [PythonName("ctime")]
-        public static string CTime(object seconds) {
+        public static string ctime(object seconds) {
             if (seconds == null)
-                return CTime();
-            return AscTime(LocalTime(seconds));
+                return ctime();
+            return asctime(localtime(seconds));
         }
 
-        [PythonName("sleep")]
-        public static void Sleep(double tm) {
+        public static void sleep(double tm) {
             Thread.Sleep((int)(tm * 1000));
         }
 
-        [PythonName("time")]
-        public static double CurrentTime() {
+        public static double time() {
             return DateTime.Now.Ticks / 1.0e7;
         }
 
-        [PythonName("localtime")]
-        public static PythonTuple LocalTime() {
+        public static PythonTuple localtime() {
             return GetDateTimeTuple(DateTime.Now, DateTime.Now.IsDaylightSavingTime());
         }
 
-        [PythonName("localtime")]
-        public static PythonTuple LocalTime(object seconds) {
-            if (seconds == null) return LocalTime();
+        public static PythonTuple localtime(object seconds) {
+            if (seconds == null) return localtime();
 
             long intSeconds = GetDateTimeFromObject(seconds);
 
@@ -141,42 +132,35 @@ namespace IronPython.Modules {
             return GetDateTimeTuple(dt, dt.IsDaylightSavingTime());
         }
 
-        [PythonName("gmtime")]
-        public static PythonTuple UniversalTime() {
+        public static PythonTuple gmtime() {
             return GetDateTimeTuple(DateTime.Now.ToUniversalTime(), false);
         }
 
-        [PythonName("gmtime")]
-        public static PythonTuple UniversalTime(object seconds) {
-            if (seconds == null) return UniversalTime();
+        public static PythonTuple gmtime(object seconds) {
+            if (seconds == null) return gmtime();
 
             long intSeconds = GetDateTimeFromObject(seconds);
 
             return GetDateTimeTuple(new DateTime(intSeconds * TimeSpan.TicksPerSecond).ToUniversalTime(), false);
         }
 
-        [PythonName("mktime")]
-        public static double MakeTime(PythonTuple localTime) {
+        public static double mktime(PythonTuple localTime) {
             return GetDateTimeFromTuple(localTime).Ticks / 1.0e7;
         }
 
-        [PythonName("strftime")]
-        public static string FormatTime(string format) {
-            return FormatTime(format, DateTime.Now);
+        public static string strftime(string format) {
+            return strftime(format, DateTime.Now);
         }
 
-        [PythonName("strftime")]
-        public static string FormatTime(string format, PythonTuple dateTime) {
-            return FormatTime(format, GetDateTimeFromTuple(dateTime));
+        public static string strftime(string format, PythonTuple dateTime) {
+            return strftime(format, GetDateTimeFromTuple(dateTime));
         }
 
-        [PythonName("strptime")]
-        public static object ParseTime(string @string) {
+        public static object strptime(string @string) {
             return DateTime.Parse(@string, PythonLocale.currentLocale.Time.DateTimeFormat);
         }
 
-        [PythonName("strptime")]
-        public static object ParseString(string @string, string format) {
+        public static object strptime(string @string, string format) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, true, out postProc);
 
@@ -233,7 +217,7 @@ namespace IronPython.Modules {
             return GetDateTimeTuple(res);
         }
 
-        internal static string FormatTime(string format, DateTime dt) {
+        internal static string strftime(string format, DateTime dt) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, false, out postProc);
             StringBuilder res = new StringBuilder();
@@ -281,13 +265,13 @@ namespace IronPython.Modules {
             throw PythonOps.TypeError("expected int, got {0}", DynamicHelpers.GetPythonType(seconds));
         }
 
-        enum FormatInfoType {
+        private enum FormatInfoType {
             UserText,
             SimpleFormat,
             CustomFormat,
         }
 
-        class FormatInfo {
+        private class FormatInfo {
             public FormatInfo(string text) {
                 Type = FormatInfoType.SimpleFormat;
                 Text = text;
@@ -408,18 +392,18 @@ namespace IronPython.Modules {
             return GetDateTimeTuple(dt, null);
         }
 
-        internal static PythonTuple GetDateTimeTuple(DateTime dt, PythonDateTime.PythonTimeZoneInformation tz) {
+        internal static PythonTuple GetDateTimeTuple(DateTime dt, PythonDateTime.tzinfo tz) {
             int last = -1;
 
             if (tz == null) {
                 last = -1;
             } else {
-                PythonDateTime.PythonTimeDelta delta = tz.DaylightSavingTime(dt);
+                PythonDateTime.timedelta delta = tz.dst(dt);
                 PythonDateTime.ThrowIfInvalid(delta, "dst");
                 if (delta == null) {
                     last = -1;
                 } else {
-                    last = delta.NonZero() ? 1 : 0;
+                    last = delta.__nonzero__() ? 1 : 0;
                 }
             }
 

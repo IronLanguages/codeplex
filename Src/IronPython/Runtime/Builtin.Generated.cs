@@ -27,66 +27,66 @@ namespace IronPython.Runtime {
 
         // *** BEGIN GENERATED CODE ***
 
-        public static object SystemExit = PythonExceptions._SystemExit;
-        public static object KeyboardInterrupt = PythonExceptions.KeyboardInterrupt;
-        public static object Exception = PythonExceptions.Exception;
-        public static object GeneratorExit = PythonExceptions.GeneratorExit;
-        public static object StopIteration = PythonExceptions.StopIteration;
-        public static object StandardError = PythonExceptions.StandardError;
-        public static object ArithmeticError = PythonExceptions.ArithmeticError;
-        public static object FloatingPointError = PythonExceptions.FloatingPointError;
-        public static object OverflowError = PythonExceptions.OverflowError;
-        public static object ZeroDivisionError = PythonExceptions.ZeroDivisionError;
-        public static object AssertionError = PythonExceptions.AssertionError;
-        public static object AttributeError = PythonExceptions.AttributeError;
-        public static object EnvironmentError = PythonExceptions._EnvironmentError;
-        public static object IOError = PythonExceptions.IOError;
-        public static object OSError = PythonExceptions.OSError;
+        public static PythonType SystemExit = PythonExceptions._SystemExit;
+        public static PythonType KeyboardInterrupt = PythonExceptions.KeyboardInterrupt;
+        public static PythonType Exception = PythonExceptions.Exception;
+        public static PythonType GeneratorExit = PythonExceptions.GeneratorExit;
+        public static PythonType StopIteration = PythonExceptions.StopIteration;
+        public static PythonType StandardError = PythonExceptions.StandardError;
+        public static PythonType ArithmeticError = PythonExceptions.ArithmeticError;
+        public static PythonType FloatingPointError = PythonExceptions.FloatingPointError;
+        public static PythonType OverflowError = PythonExceptions.OverflowError;
+        public static PythonType ZeroDivisionError = PythonExceptions.ZeroDivisionError;
+        public static PythonType AssertionError = PythonExceptions.AssertionError;
+        public static PythonType AttributeError = PythonExceptions.AttributeError;
+        public static PythonType EnvironmentError = PythonExceptions._EnvironmentError;
+        public static PythonType IOError = PythonExceptions.IOError;
+        public static PythonType OSError = PythonExceptions.OSError;
 
         #if !SILVERLIGHT
-        public static object WindowsError = PythonExceptions._WindowsError;
+        public static PythonType WindowsError = PythonExceptions._WindowsError;
         #endif // !SILVERLIGHT
 
-        public static object VMSError = PythonExceptions.VMSError;
-        public static object EOFError = PythonExceptions.EOFError;
-        public static object ImportError = PythonExceptions.ImportError;
-        public static object LookupError = PythonExceptions.LookupError;
-        public static object IndexError = PythonExceptions.IndexError;
-        public static object KeyError = PythonExceptions.KeyError;
-        public static object MemoryError = PythonExceptions.MemoryError;
-        public static object NameError = PythonExceptions.NameError;
-        public static object UnboundLocalError = PythonExceptions.UnboundLocalError;
-        public static object ReferenceError = PythonExceptions.ReferenceError;
-        public static object RuntimeError = PythonExceptions.RuntimeError;
-        public static object NotImplementedError = PythonExceptions.NotImplementedError;
-        public static object SyntaxError = PythonExceptions._SyntaxError;
-        public static object IndentationError = PythonExceptions.IndentationError;
-        public static object TabError = PythonExceptions.TabError;
-        public static object SystemError = PythonExceptions.SystemError;
-        public static object TypeError = PythonExceptions.TypeError;
-        public static object ValueError = PythonExceptions.ValueError;
-        public static object UnicodeError = PythonExceptions.UnicodeError;
+        public static PythonType VMSError = PythonExceptions.VMSError;
+        public static PythonType EOFError = PythonExceptions.EOFError;
+        public static PythonType ImportError = PythonExceptions.ImportError;
+        public static PythonType LookupError = PythonExceptions.LookupError;
+        public static PythonType IndexError = PythonExceptions.IndexError;
+        public static PythonType KeyError = PythonExceptions.KeyError;
+        public static PythonType MemoryError = PythonExceptions.MemoryError;
+        public static PythonType NameError = PythonExceptions.NameError;
+        public static PythonType UnboundLocalError = PythonExceptions.UnboundLocalError;
+        public static PythonType ReferenceError = PythonExceptions.ReferenceError;
+        public static PythonType RuntimeError = PythonExceptions.RuntimeError;
+        public static PythonType NotImplementedError = PythonExceptions.NotImplementedError;
+        public static PythonType SyntaxError = PythonExceptions._SyntaxError;
+        public static PythonType IndentationError = PythonExceptions.IndentationError;
+        public static PythonType TabError = PythonExceptions.TabError;
+        public static PythonType SystemError = PythonExceptions.SystemError;
+        public static PythonType TypeError = PythonExceptions.TypeError;
+        public static PythonType ValueError = PythonExceptions.ValueError;
+        public static PythonType UnicodeError = PythonExceptions.UnicodeError;
 
         #if !SILVERLIGHT
-        public static object UnicodeDecodeError = PythonExceptions._UnicodeDecodeError;
+        public static PythonType UnicodeDecodeError = PythonExceptions._UnicodeDecodeError;
         #endif // !SILVERLIGHT
 
 
         #if !SILVERLIGHT
-        public static object UnicodeEncodeError = PythonExceptions._UnicodeEncodeError;
+        public static PythonType UnicodeEncodeError = PythonExceptions._UnicodeEncodeError;
         #endif // !SILVERLIGHT
 
-        public static object UnicodeTranslateError = PythonExceptions._UnicodeTranslateError;
-        public static object Warning = PythonExceptions.Warning;
-        public static object DeprecationWarning = PythonExceptions.DeprecationWarning;
-        public static object PendingDeprecationWarning = PythonExceptions.PendingDeprecationWarning;
-        public static object RuntimeWarning = PythonExceptions.RuntimeWarning;
-        public static object SyntaxWarning = PythonExceptions.SyntaxWarning;
-        public static object UserWarning = PythonExceptions.UserWarning;
-        public static object FutureWarning = PythonExceptions.FutureWarning;
-        public static object ImportWarning = PythonExceptions.ImportWarning;
-        public static object UnicodeWarning = PythonExceptions.UnicodeWarning;
-        public static object OverflowWarning = PythonExceptions.OverflowWarning;
+        public static PythonType UnicodeTranslateError = PythonExceptions._UnicodeTranslateError;
+        public static PythonType Warning = PythonExceptions.Warning;
+        public static PythonType DeprecationWarning = PythonExceptions.DeprecationWarning;
+        public static PythonType PendingDeprecationWarning = PythonExceptions.PendingDeprecationWarning;
+        public static PythonType RuntimeWarning = PythonExceptions.RuntimeWarning;
+        public static PythonType SyntaxWarning = PythonExceptions.SyntaxWarning;
+        public static PythonType UserWarning = PythonExceptions.UserWarning;
+        public static PythonType FutureWarning = PythonExceptions.FutureWarning;
+        public static PythonType ImportWarning = PythonExceptions.ImportWarning;
+        public static PythonType UnicodeWarning = PythonExceptions.UnicodeWarning;
+        public static PythonType OverflowWarning = PythonExceptions.OverflowWarning;
 
         // *** END GENERATED CODE ***
 

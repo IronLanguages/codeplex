@@ -121,24 +121,25 @@ function hello-helper
 {
 	set-alias exe $args[0]
 
+	$host.ui.write($args)
+	$host.ui.write(" ")
+	$host.ui.writeline($global:HELLO)
+	
 	$stuff = exe $args[1..$args.Length] $global:HELLO
 	if (! $?) 
 	{
-		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
-		show-failure "$args[0] terminated with a non-zero exit code."
-		
+		$host.ui.writeerrorline("Failed hello-helper (" + $args[0] + " " + $args[1..$args.Length] + " $global:HELLO)")
+		show-failure $args[0] + " terminated with a non-zero exit code."		
 	}
 	elseif ($stuff[0] -ne "Hello World 1st Line") 
 	{
-		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
-		show-failure "Missing output: Hello World 1st Line"
-		
+		$host.ui.writeerrorline("Failed hello-helper (" + $args[0] + " " + $args[1..$args.Length] + " $global:HELLO)")
+		show-failure "Missing output: Hello World 1st Line"		
 	}
 	elseif($stuff[1] -ne 6) 
 	{
-		$host.ui.writeerrorline("Failed hello-helper ($args[0] $args[1..$args.Length] $global:HELLO)")
-		show-failure "Missing output: 6"
-		
+		$host.ui.writeerrorline("Failed hello-helper (" + $args[0] + " " + $args[1..$args.Length] + " $global:HELLO)")
+		show-failure "Missing output: 6"		
 	}
 }
 
@@ -166,6 +167,7 @@ function test-pymodes($pyexe)
 
 	#------------------------------------------------------------------------------
 	## -c
+	echo ""
 	echo "Testing -c ..."
 	
 	$stuff = pyexe -c "True"
@@ -176,6 +178,7 @@ function test-pymodes($pyexe)
 	
 	#------------------------------------------------------------------------------
 	## -h
+	echo ""
 	echo "Testing -h ..."
 	
 	#Just a simple sanity check will suffice as there are differences in output
@@ -196,6 +199,7 @@ function test-pymodes($pyexe)
 	
 	#------------------------------------------------------------------------------
 	## -O
+	echo ""
 	echo "Testing -O ..."
 	
 	#This flag should only affect *.pyo files which IronPython does not 
@@ -208,6 +212,7 @@ function test-pymodes($pyexe)
 	
 	#------------------------------------------------------------------------------
 	## -v
+	echo ""
 	echo "Testing -v ..."
 
 	if(! $pyexe.Endswith("python.exe"))
@@ -239,6 +244,7 @@ function test-pymodes($pyexe)
 	
 	#------------------------------------------------------------------------------
 	## -OO
+	echo ""
 	echo "Testing -OO ..."
 	
 	#This flag should only affect *.pyo files which IronPython does not 
@@ -252,6 +258,7 @@ function test-pymodes($pyexe)
 
 	#------------------------------------------------------------------------------
 	## -Q arg
+	echo ""
 	echo "testing -Q ..."
 	
 	#check stdout first...
@@ -311,61 +318,68 @@ function saveassemblies-helper
 	mkdir $global:TEST_DIR\SaveAssembliesTemp > $null
 	pushd $global:TEST_DIR\SaveAssembliesTemp 
 	
-	#Test w/o the use of X:AssembliesDir
+	#####
+			
 	hello-helper $dlrexe "-X:SaveAssemblies" $args[1..$args.Length]
 	
-	$stuff = dir -Name
+	expect-files(("Snippets.dll"))
+	not-expect-files(("Snippets.pdb"))
 	
-	#REGRESSION TEST
-	if ($stuff -ne $null) {
-		show-failure "Expected behavior of -X:SaveAssemblies is to not generate any assemblies w/o use of '-D' flag: "
-		
-	}
-	
-	#Test w/o the use of X:AssembliesDir, but with -D option
-	hello-helper $dlrexe -D "-X:SaveAssemblies" $args[1..$args.Length]
-	$stuff = dir -Name
 	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp\*
+	
+	#####
+	
+	hello-helper $dlrexe -D "-X:SaveAssemblies" $args[1..$args.Length]
+	
+	expect-files(("Snippets.debug.dll", "Snippets.debug.pdb"))
+
+	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp\*
+
+	#####
+	
+	mkdir SnippetsDir > $null
+	
+	hello-helper $dlrexe -D "-X:SaveAssemblies" "-X:AssembliesDir" SnippetsDir $args[1..$args.Length]
+	
+	cd SnippetsDir
+	
+	expect-files(("Snippets.debug.dll", "Snippets.debug.pdb"))
+
 	popd
 	
-	foreach($expected in @("snippets1.dll", "debugSnippets2.dll", "debugSnippets2.pdb"))
+	rm -recurse -force $global:TEST_DIR\SaveAssembliesTemp
+}
+
+function expect-files($expected) 
+{
+    $actual = dir -Name
+	
+	foreach($file in $expected)
 	{
-		if (($stuff | select-string $expected) -eq $null) 
+		if (($actual | select-string $file) -eq $null) 
 		{
 			$host.ui.writeerrorline("Failed saveassemblies-helper!")
-			show-failure "Expected '$expected', but found '$stuff'" 
+			show-failure "Expected '$file', but found '$files'" 
 			
 		}
 	}
-	
-	#NO LONGER SEEMS RELEVANT
-	#foreach($expected in @("site.exe", "site.pdb"))
-	#{
-	#	if (($stuff | select-string $expected) -ne $null) 
-	#	{
-	#		$host.ui.writeerrorline("Failed saveassemblies-helper!")
-	#		show-failure "Found '$expected' in '$stuff'" 
-	#		
-	#	}
-	#}
-	
-	if (test-path $env:TMP\assemblies_dir) { rm -recurse -force $env:TMP\assemblies_dir }
-	mkdir $env:TMP\assemblies_dir > $null
-	hello-helper $dlrexe -D "-X:SaveAssemblies" "-X:AssembliesDir" $env:TMP\assemblies_dir $args[1..$args.Length]
-	
-	$stuff = dir $env:TMP\assemblies_dir -Name
-	echo "CodePlex Work Item 14833"
-	#foreach($expected in @("snippets1.dll", "debugSnippets2.dll", "debugSnippets2.pdb"))
-	#{
-	#	if (($stuff | select-string $expected) -eq $null) 
-	#	{
-	#		$host.ui.writeerrorline("Failed saveassemblies-helper (with usage of -X:SaveAssemblies with -X:AssembliesDir)!")
-	#		show-failure "Expected '$expected', but found '$stuff'" 	
-	#	}
-	#}
-	
-	#Should anything be done with the *.exe's?
 }
+
+function not-expect-files($notExpected) 
+{
+    $actual = dir -Name
+	
+	foreach($file in $notExpected)
+	{
+		if (($actual | select-string $file) -ne $null) 
+		{
+			$host.ui.writeerrorline("Failed saveassemblies-helper!")
+			show-failure "'$file' was not expected" 
+			
+		}
+	}
+}
+
 
 function exceptiondetail-helper
 {
@@ -446,18 +460,27 @@ function notraceback-helper
 
 	hello-helper $dlrexe "-X:NoTraceback"
 	
-	$stuff = dlrexe "-X:NoTraceback" $args[1..$args.Length] $global:TRACEBACK
-	if ($stuff -ne "No traceback") {show-failure "Failed: $stuff"; }
+	$host.ui.write($dlrexe)
+	$host.ui.write(" ")
+	$host.ui.write("-X:NoTraceback")
+	$host.ui.write(" ")
+	$host.ui.write($args[1..$args.Length])
+	$host.ui.write(" ")
+	$host.ui.writeline($global:TRACEBACK)
 	
-	$stuff = dlrexe $args[1..$args.Length] $global:TRACEBACK
-	if (!$global:IS_64)
-	{
-		if ($stuff -eq "No traceback") {show-failure "Failed: $stuff"; }
-	}
-	else
-	{
-		echo "CodePlex Work Item 11362"
-	}
+	$stuff = dlrexe "-X:NoTraceback" $args[1..$args.Length] $global:TRACEBACK
+	if ($stuff -ne "No traceback") {show-failure "Failed: '$stuff'"; }
+	
+	$host.ui.write($dlrexe)
+	$host.ui.write(" ")
+	$host.ui.write("-D")
+	$host.ui.write(" ")
+	$host.ui.write($args[1..$args.Length])
+	$host.ui.write(" ")
+	$host.ui.writeline($global:TRACEBACK)
+	
+	$stuff = dlrexe -D $args[1..$args.Length] $global:TRACEBACK
+	if ($stuff -eq "No traceback") {show-failure "Failed: '$stuff'"; }	
 }
 
 function showclrexceptions-helper
@@ -495,13 +518,14 @@ function test-dlrmodes($dlrexe)
 {	
 	set-alias dlrexe $dlrexe
 
+	echo ""
 	echo "Testing IronPython modes using $dlrexe"
 	echo ""
 
 	#------------------------------------------------------------------------------
 	echo "The following modes already have sufficient coverage in other tests:"
 	echo "    -X:AutoIndent (test_superconsole.py)"
-	echo "    -X:GenerateAsSnippets ('M1' RunTests.py option)"
+	echo "    -X:TupleBasedOptimizedScopes ('M1' RunTests.py option)"
 	echo "    -X:PrivateBinding (test_privateBinding.py)"
 	echo "    -X:SaveAssmeblies ('M2' RunTests.py option...need verification)"
 	echo "    -X:TabCompletion (test_superconsole.py)"
@@ -509,9 +533,8 @@ function test-dlrmodes($dlrexe)
 
 	#------------------------------------------------------------------------------
 	echo "The following modes are (or will soon be) undocumented and will not be tested:"
-	echo "    -X:IlDebug"
+	echo "    -X:ILDebug"
 	echo "    -X:PassExceptions"
-	echo "    -X:StaticMethods"
 	echo ""
 	
 	#------------------------------------------------------------------------------
@@ -529,46 +552,55 @@ function test-dlrmodes($dlrexe)
 
 	#------------------------------------------------------------------------------
 	## -X:AssembliesDir
+	echo ""
 	echo "Testing -X:AssembliesDir ..."	
 	assembliesdir-helper $dlrexe 
 	
 	#------------------------------------------------------------------------------
 	## -X:SaveAssemblies
+	echo ""
 	echo "Testing -X:SaveAssemblies ..."	
 	saveassemblies-helper $dlrexe 
 	
 	#------------------------------------------------------------------------------
 	## -X:ExceptionDetail
+	echo ""
 	echo "Testing -X:ExceptionDetail ..."
 	exceptiondetail-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
 	## -X:Interpret
+	echo ""
 	echo "-X:Interpret needs more coverage"
 	hello-helper $dlrexe "-X:Interpret"
 	
 	#------------------------------------------------------------------------------
 	## -X:MaxRecursion
+	echo ""
 	echo "Testing -X:MaxRecursion ..."
 	maxrecursion-helper $dlrexe	
 	
 	#------------------------------------------------------------------------------
 	## -X:MTA
+	echo ""
 	echo "-X:MTA needs more coverage"
 	mta-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
 	## -X:NoTraceback
+	echo ""
 	echo "Testing -X:NoTraceback ..."
 	notraceback-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
 	## -X:ShowClrExceptions
+	echo ""
 	echo "Testing -X:ShowClrExceptions ..."
 	showclrexceptions-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
 	#-- -X:ShowASTs
+	echo ""
 	echo "-X:ShowASTs needs more coverage"
 	
 	if ($global:IS_DEBUG)
@@ -610,6 +642,7 @@ function test-relatedpy($pyexe)
 	echo ""
 	
 	#-X:AutoIndent, -X:ColorfulConsole, -X:TabCompletion, -t, -tt
+	echo ""
 	echo "Testing -X:AutoIndent, -X:ColorfulConsole, -X:TabCompletion, -t, -tt ..."
 	#Just run a few sanity checks to make sure nothing breaks
 	hello-helper $pyexe "-X:AutoIndent" "-X:ColorfulConsole" "-X:TabCompletion" -t -tt
@@ -620,21 +653,24 @@ function test-relatedpy($pyexe)
 	hello-helper $pyexe -t -tt
 	
 	#-X:AssembliesDir, -X:SaveAssemblies
+	echo ""
 	echo "-X:AssembliesDir and -X:SaveAssemblies are already well tested together."
 	
 	#-X:ExceptionDetail, -X:NoTraceback, -X:ShowClrExceptions
+	echo ""
 	echo "Testing -X:ExceptionDetail, -X:NoTraceback, -X:ShowClrExceptions ..."
 	hello-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback" "-X:ShowClrExceptions"
 	exceptiondetail-helper $pyexe "-X:ShowClrExceptions" "-X:NoTraceback"
 	notraceback-helper $pyexe "-X:ExceptionDetail" "-X:ShowClrExceptions"
 	showclrexceptions-helper $pyexe "-X:ExceptionDetail" "-X:NoTraceback"
 	
-	#-X:Interpret, -X:NoOptimize, -O, -OO
-	echo "Testing -X:Interpret, -X:NoOptimize, -O, -OO ..."
-	hello-helper $pyexe "-X:Interpret" "-X:NoOptimize" -O -OO
+	#-X:Interpret, -O, -OO
+	echo ""
+	echo "Testing -X:Interpret, -O, -OO ..."
+	hello-helper $pyexe "-X:Interpret" -O -OO
 	
 	echo "Testing compatible IronPython modes together ..."
-	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:GenerateAsSnippets" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
+	hello-helper $pyexe -O -v -u -E -OO -Qwarn -S -t -tt "-X:AutoIndent" "-X:AssembliesDir" $env:TMP "-X:ColorfulConsole" "-X:ExceptionDetail" "-X:Interpret" "-X:Frames" "-X:TupleBasedOptimizedScopes" "-X:ILDebug" "-X:MaxRecursion" 5 "-X:NoOptimize" "-X:NoTraceback" "-X:PassExceptions" "-X:SaveAssemblies" "-X:ShowClrExceptions" "-X:StaticMethods" "-X:TabCompletion"
 }
 	
 ###############################################################################

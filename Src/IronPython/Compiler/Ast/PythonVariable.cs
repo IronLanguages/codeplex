@@ -84,9 +84,9 @@ namespace IronPython.Compiler.Ast {
             _variable = parameter;
         }
 
-        internal MSAst.Variable Transform(MSAst.CodeBlock block) {
+        internal MSAst.Variable Transform(AstGenerator ag) {
             Debug.Assert(_kind != MSAst.Variable.VariableKind.Parameter);
-            return _variable = block.CreateVariable(_name, _kind, _type);
+            return _variable = ag.Block.CreateVariable(_name, _kind, _type);
         }
     }
 }

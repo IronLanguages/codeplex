@@ -33,25 +33,25 @@ namespace Microsoft.Scripting.Ast {
         };
 
         private readonly SymbolId _name;
-
-        // TODO: Maybe we don't need this!
-        private readonly CodeBlock _block;
-
         private readonly VariableKind _kind;
         private readonly Type _type;
 
+        private readonly bool _parameterArray;      // should be part of parameter array
+
+
+        // TODO: REMOVE !!!
+        private CodeBlock _block;
+
         private int _parameter;                     // parameter index
-        private bool _parameterArray;               // should be part of parameter array
         private Storage _storage;                   // storage for the variable, used to create slots
 
         private bool _lift;             // Lift variable/parameter to closure
         private bool _unassigned;       // Variable ever referenced without being assigned
         private bool _uninitialized;    // Variable ever used either uninitialized or after deletion
         
-        private Variable(SymbolId name, VariableKind kind, CodeBlock block, Type type, bool parameterArray) {
+        private Variable(SymbolId name, VariableKind kind, Type type, bool parameterArray) {
             _name = name;
             _kind = kind;
-            _block = block;
 
             // enables case: 
             //
@@ -67,8 +67,9 @@ namespace Microsoft.Scripting.Ast {
             get { return _name; }
         }
 
-        public CodeBlock Block {
+        internal CodeBlock Block {
             get { return _block; }
+            set { _block = value; }
         }
 
         public VariableKind Kind {
@@ -125,7 +126,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void Allocate(Compiler cg) {
+        internal void Allocate(Compiler cg, CodeBlockInfo cbi) {
             Debug.Assert(cg.Allocator.Block == Block);
 
             switch (_kind) {
@@ -138,7 +139,7 @@ namespace Microsoft.Scripting.Ast {
                         // If lifting local into closure, allocate in the environment
                         if (_lift) {
                             // allocate space in the environment and set it to Uninitialized
-                            slot = AllocInEnv(cg);
+                            slot = AllocInEnv(cg, cbi);
                         } else {
                             // Allocate the storage
                             _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
@@ -147,7 +148,7 @@ namespace Microsoft.Scripting.Ast {
                             MarkLocal(slot);
                         }
                         // TODO: Remove!!!
-                        if (_uninitialized && _type == typeof(object)) {
+                        if (_unassigned && _type == typeof(object)) {
                             // Emit initialization (environments will be initialized all at once)
                             // Only set variables of type object to "Uninitialized"
                             slot.EmitSetUninitialized(cg);
@@ -157,7 +158,7 @@ namespace Microsoft.Scripting.Ast {
                 case VariableKind.Parameter:
                     // Lifting parameter into closure, allocate in env and move.
                     if (_lift) {
-                        Slot slot = AllocInEnv(cg);
+                        Slot slot = AllocInEnv(cg, cbi);
                         Slot src = GetArgumentSlot(cg);
                         // Copy the value from the parameter (src) into the environment (slot)
                         slot.EmitSet(cg, src);
@@ -180,10 +181,14 @@ namespace Microsoft.Scripting.Ast {
         /// Will allocate the storage in the environment and return slot to access
         /// the variable in the current scope (so that it can be initialized)
         /// </summary>
-        private Slot AllocInEnv(Compiler cg) {
+        private Slot AllocInEnv(Compiler cg, CodeBlockInfo cbi) {
             Debug.Assert(_storage == null);
-            Debug.Assert(_block.EnvironmentFactory != null, "Allocating in environment without environment factory.\nIs HasEnvironment set?");
-            _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+            Debug.Assert(_block == cbi.CodeBlock);
+
+            // TODO: We should verify this before coming here.
+            Debug.Assert(cbi.EnvironmentFactory != null, "Allocating in environment without environment factory.\nIs HasEnvironment set?");
+
+            _storage = cbi.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
             return _storage.CreateSlot(cg.Allocator.GetClosureAccessSlot(_block));
         }
 
@@ -193,7 +198,7 @@ namespace Microsoft.Scripting.Ast {
             return slot;
         }
 
-        internal Slot CreateSlot(Compiler cg) {
+        internal Slot CreateSlot(Compiler cg, CodeBlockInfo cbi) {
             switch (_kind) {
                 case VariableKind.Local:
                     if (_storage == null) {
@@ -212,7 +217,6 @@ namespace Microsoft.Scripting.Ast {
                             return CreateSlotForVariable(cg);
                         }
                     } else {
-                        //Debug.Assert(cg.Allocator.ActiveScope == _block);
                         return MarkLocal(GetArgumentSlot(cg));
                     }
 
@@ -233,7 +237,7 @@ namespace Microsoft.Scripting.Ast {
                         // which is not marked IsGenerator so the generator temps
                         // would go onto CLR stack rather than environment.
                         // TODO: Fix this once we have lifetime analysis in place.
-                        _storage = _block.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+                        _storage = cbi.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
                         return CreateSlotForVariable(cg);
                     } else {
                         return cg.GetNamedLocal(_type, SymbolTable.IdToString(_name));
@@ -279,26 +283,25 @@ namespace Microsoft.Scripting.Ast {
 
         #region Factory methods
 
-        // TODO: Make internal, currently used by Ruby.
-        public static Variable Parameter(CodeBlock block, SymbolId name, Type type) {
-            return Parameter(block, name, type, true);
+        public static Variable Parameter(SymbolId name, Type type) {
+            return Parameter(name, type, true);
         }
 
-        internal static Variable Parameter(CodeBlock block, SymbolId name, Type type, bool parameterArray) {
-            return new Variable(name, VariableKind.Parameter, block, type, parameterArray);
+        public static Variable Parameter(SymbolId name, Type type, bool parameterArray) {
+            return new Variable(name, VariableKind.Parameter, type, parameterArray);
         }
 
-        internal static Variable Local(SymbolId name, CodeBlock block, Type type) {
-            return new Variable(name,  VariableKind.Local, block, type, false);
+        public static Variable Local(SymbolId name, Type type) {
+            return new Variable(name,  VariableKind.Local, type, false);
         }
 
-        internal static Variable Temporary(SymbolId name, CodeBlock block, Type type) {
-            return new Variable(name, VariableKind.Temporary, block, type, false);
+        public static Variable Temporary(SymbolId name, Type type) {
+            return new Variable(name, VariableKind.Temporary, type, false);
         }
 
-        internal static Variable Create(SymbolId name, VariableKind kind, CodeBlock block, Type type) {
+        public static Variable Create(SymbolId name, VariableKind kind, Type type) {
             Contract.Requires(kind != VariableKind.Parameter, "kind");
-            return new Variable(name, kind, block, type, false);
+            return new Variable(name, kind, type, false);
         }
 
         #endregion

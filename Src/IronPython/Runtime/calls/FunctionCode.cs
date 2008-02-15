@@ -39,7 +39,7 @@ namespace IronPython.Runtime.Calls {
     /// object or a Function.   The user can explicitly call FunctionCode by
     /// passing it into exec or eval.
     /// </summary>
-    [PythonType("code")]
+    [PythonSystemType("code")]
     public class FunctionCode {
         #region Private member variables
         private Delegate _target;
@@ -52,7 +52,7 @@ namespace IronPython.Runtime.Calls {
         private int _lineNo;
         private FunctionAttributes _flags;      // future division, generator
         #endregion
-        private static DynamicSite<PythonFunction, object> _callSite = RuntimeHelpers.CreateSimpleCallSite<PythonFunction, object>();
+        private static readonly DynamicSite<PythonFunction, object> _callSite = RuntimeHelpers.CreateSimpleCallSite<PythonFunction, object>();
 
         internal FunctionCode(Delegate target) {
             _target = target;            
@@ -100,8 +100,7 @@ namespace IronPython.Runtime.Calls {
 
         #region Public Python API Surface
 
-        public object VarNames {
-            [PythonName("co_varnames")]
+        public object co_varnames {
             get {
                 if (_varnames == null) {
                     _varnames = GetArgNames();
@@ -110,8 +109,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public object ArgCount {
-            [PythonName("co_argcount")]
+        public object co_argcount {
             get {
                 if (_code != null) return 0;
                 int argCnt = _func.ArgNames.Length;
@@ -121,64 +119,55 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public object CallVars {
-            [PythonName("co_cellvars")]
+        public object co_cellvars {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object Code {
-            [PythonName("co_code")]
+        public object co_code {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object Consts {
-            [PythonName("co_consts")]
+        public object co_consts {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object Filename {
-            [PythonName("co_filename")]
+        public object co_filename {
             get {
                 return _filename;
             }
         }
 
-        public object FirstLineNumber {
-            [PythonName("co_firstlineno")]
+        public object co_firstlineno {
             get {
                 return _lineNo;
             }
         }
 
-        public object Flags {
-            [PythonName("co_flags")]
+        public object co_flags {
             get {
                 return (int)_flags;
             }
         }
 
-        public object FreeVars {
-            [PythonName("co_freevars")]
+        public object co_freevars {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object LineNumberTab {
-            [PythonName("co_lnotab")]
+        public object co_lnotab {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object Name {
-            [PythonName("co_name")]
+        public object co_name {
             get {
                 if (_func != null) return _func.__name__;
                 if (_code != null) return _code.GetType().Name;
@@ -187,29 +176,27 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public object Names {
-            [PythonName("co_names")]
+        public object co_names {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object NumberLocals {
-            [PythonName("co_nlocals")]
+        public object co_nlocals {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
 
-        public object StackSize {
-            [PythonName("co_stacksize")]
+        public object co_stacksize {
             get {
                 throw PythonOps.NotImplementedError("");
             }
         }
         #endregion
 
-        #region Public setters called from PythonFunction factory method
+        #region Internal API Surface
+
         internal void SetFilename(string sourceFile) {
             _filename = sourceFile;
         }
@@ -222,11 +209,7 @@ namespace IronPython.Runtime.Calls {
             _flags = flags;
         }
 
-        #endregion
-
-        #region Internal API Surface
-
-        public object Call(CodeContext context, Scope scope, bool tryEvaluate) {
+        internal object Call(CodeContext context, Scope scope, bool tryEvaluate) {
             if (_code != null) {
                 return _code.Run(scope, context.ModuleContext, tryEvaluate);
             } else if (_func != null) {
@@ -239,6 +222,7 @@ namespace IronPython.Runtime.Calls {
         #endregion
 
         #region Private helper functions
+
         private PythonTuple GetArgNames() {
             if (_code != null) return PythonTuple.MakeTuple();
 
@@ -271,6 +255,7 @@ namespace IronPython.Runtime.Calls {
                 }
             }
         }
+
         #endregion
 
         public override bool Equals(object obj) {

@@ -27,20 +27,8 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 
 namespace IronPython.Runtime.Operations {
 
-    public class ExtensibleInt : Extensible<int> {
-        public ExtensibleInt() : base() { }
-        public ExtensibleInt(int v) : base(v) { }
-
-        [PythonName("__cmp__")]
-        [return: MaybeNotImplemented]
-        public virtual object Compare(CodeContext context, object obj) {
-            return Int32Ops.Compare(context, Value, obj);
-        }
-    }
-
-
     public static partial class Int32Ops {
-        private static FastDynamicSite<object, object> _intSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
+        private static readonly FastDynamicSite<object, object> _intSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
 
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
@@ -290,12 +278,13 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [PythonName("__divmod__")]
+        [SpecialName, PythonName("__divmod__")]
         public static object DivMod(int x, int y) {
             return PythonTuple.MakeTuple(Divide(x, y), Mod(x, y));
         }
 
-        [PythonName("__divmod__")]
+        [SpecialName, PythonName("__divmod__")]
+        [return: MaybeNotImplemented]
         public static object DivMod(int x, object y) {
             return PythonOps.NotImplemented;
         }
@@ -328,49 +317,7 @@ namespace IronPython.Runtime.Operations {
         public static object GetNewArgs(CodeContext context, int self) {
             return PythonTuple.MakeTuple(Int32Ops.Make(context, TypeCache.Int32, self));
         }
-
-        [SpecialName, PythonName("__cmp__")]
-        [return: MaybeNotImplemented]
-        public static object Compare(CodeContext context, int self, object obj) {
-            if (obj == null) return RuntimeHelpers.Int32ToObject(1);
-
-            int otherInt;
-
-            if (obj is int) {
-                otherInt = (int)obj;
-            } else if (obj is ExtensibleInt) {
-                otherInt = ((ExtensibleInt)obj).Value;
-            } else if (obj is bool) {
-                otherInt = ((bool)obj) ? 1 : 0;
-            } else if (obj is double) {
-                // compare as double to avoid truncation issues
-                return DoubleOps.Compare(context, (double)self, (double)obj);
-            } else if (obj is Extensible<double>) {
-                // compare as double to avoid truncation issues
-                return DoubleOps.Compare(context, (double)self, ((Extensible<double>)obj).Value);
-            } else if (obj is Decimal) {
-                return DoubleOps.Compare(context, (double)self, (double)(decimal)obj);
-            } else if (obj is string) {
-                return PythonOps.NotImplemented; // just avoiding exception path here...
-            } else {
-                if (!Converter.TryConvertToInt32(obj, out otherInt)) {
-                    object res;
-                    if(DynamicHelpers.GetPythonType(obj).TryInvokeBinaryOperator(context,
-                        Operators.Coerce,
-                        obj,
-                        self, 
-                        out res)) {
-                        if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                            return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
-                        }
-                    }
-                    return PythonOps.NotImplemented;
-                }
-            }
-
-            return Compare(self, otherInt);
-        }
-
+        
         internal static object ReverseDivMod(int x, int y) {
             return DivMod(y, x);
         }
@@ -385,7 +332,7 @@ namespace IronPython.Runtime.Operations {
             return self;
         }
 
-        [SpecialName, PythonName("__coerce__")]
+        [PythonName("__coerce__")]
         public static object Coerce(CodeContext context, int x, object o) {
             // called via builtin.coerce()
             int val;

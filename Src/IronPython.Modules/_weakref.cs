@@ -35,14 +35,14 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Modules {
     public static class PythonWeakRef {
         static PythonWeakRef() {
-            PythonType.SetPythonType(typeof(PythonWeakRefProxy),
-                ProxyPythonTypeBuilder.Build(typeof(PythonWeakRefProxy)));
+            PythonType.SetPythonType(typeof(weakproxy),
+                ProxyPythonTypeBuilder.Build(typeof(weakproxy)));
 
-            PythonType.SetPythonType(typeof(PythonCallableWeakRefProxy),
-                ProxyPythonTypeBuilder.Build(typeof(PythonCallableWeakRefProxy)));
+            PythonType.SetPythonType(typeof(weakcallableproxy),
+                ProxyPythonTypeBuilder.Build(typeof(weakcallableproxy)));
 
-            ProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakRefProxy));
-            CallableProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonCallableWeakRefProxy));
+            ProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakproxy));
+            CallableProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakcallableproxy));
         }
 
         internal static IWeakReferenceable ConvertToWeakReferenceable(object obj) {
@@ -64,69 +64,60 @@ namespace IronPython.Modules {
             throw PythonOps.TypeError("cannot create weak reference to '{0}' object", PythonOps.GetPythonTypeName(obj));
         }
 
-        [PythonName("getweakrefcount")]
-        public static int GetWeakRefCount(object @object) {
-            return PythonWeakReference.GetWeakRefCount(@object);
+        public static int getweakrefcount(object @object) {
+            return @ref.GetWeakRefCount(@object);
         }
 
-        [PythonName("getweakrefs")]
-        public static List GetWeakRefs(object @object) {
-            return PythonWeakReference.GetWeakRefs(@object);
+        public static List getweakrefs(object @object) {
+            return @ref.GetWeakRefs(@object);
         }
 
-        public static object @ref = DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakReference));
-
-        [PythonName("proxy")]
-        public static object Proxy(CodeContext context, object @object) {
-            return Proxy(context, @object, null);
+        public static object proxy(CodeContext context, object @object) {
+            return proxy(context, @object, null);
         }
 
-        [PythonName("proxy")]
-        public static object Proxy(CodeContext context, object @object, object callback) {
+        public static object proxy(CodeContext context, object @object, object callback) {
             if (PythonOps.IsCallable(@object)) {
-                return PythonCallableWeakRefProxy.MakeNew(context, @object, callback);
+                return weakcallableproxy.MakeNew(context, @object, callback);
             } else {
-                return PythonWeakRefProxy.MakeNew(@object, callback);
+                return weakproxy.MakeNew(@object, callback);
             }
         }
 
         public static object CallableProxyType;
         public static object ProxyType;
-        public static object ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakReference));
+        public static object ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(@ref));
 
-        [PythonType("ref")]
-        public class PythonWeakReference : IValueEquality {
-
-            WeakHandle target;
-            int hashVal;
-            bool fHasHash;
+        [PythonSystemType]
+        public class @ref : IValueEquality {
+            private WeakHandle _target;
+            private int _hashVal;
+            private bool _fHasHash;
 
             #region Python Constructors
-            [PythonName("__new__")]
-            public static object MakeNew(CodeContext context, PythonType cls, object @object) {
+            public static object __new__(CodeContext context, PythonType cls, object @object) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
-                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakReference))) {
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(@ref))) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
                     if (wrt != null) {
                         for (int i = 0; i < wrt.HandlerCount; i++) {
-                            if (wrt.GetHandlerCallback(i) == null && wrt.GetWeakRef(i) is PythonWeakReference) {
+                            if (wrt.GetHandlerCallback(i) == null && wrt.GetWeakRef(i) is @ref) {
                                 return wrt.GetWeakRef(i);
                             }
                         }
                     }
 
-                    return new PythonWeakReference(@object);
+                    return new @ref(@object);
                 } else {
                     return cls.CreateInstance(context, @object);
                 }
             }
 
-            [PythonName("__new__")]
-            public static object MakeNew(CodeContext context, PythonType cls, object @object, object callback) {
-                if (callback == null) return MakeNew(context, cls, @object);
-                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakReference))) {
-                    return new PythonWeakReference(@object, callback);
+            public static object __new__(CodeContext context, PythonType cls, object @object, object callback) {
+                if (callback == null) return __new__(context, cls, @object);
+                if (cls == DynamicHelpers.GetPythonTypeFromType(typeof(@ref))) {
+                    return new @ref(@object, callback);
                 } else {
                     return cls.CreateInstance(context, @object, callback);
                 }
@@ -134,22 +125,22 @@ namespace IronPython.Modules {
             #endregion
 
             #region Constructors
-            public PythonWeakReference(object @object)
+            public @ref(object @object)
                 : this(@object, null) {
             }
 
-            public PythonWeakReference(object @object, object callback) {
+            public @ref(object @object, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, @object, callback);
-                this.target = new WeakHandle(@object, false);
+                this._target = new WeakHandle(@object, false);
             }
             #endregion
 
             #region Finalizer
-            ~PythonWeakReference() {
+            ~@ref() {
                 // remove our self from the chain...
                 try {
-                    if (target.IsAlive) {
-                        IWeakReferenceable iwr = target.Target as IWeakReferenceable;
+                    if (_target.IsAlive) {
+                        IWeakReferenceable iwr = _target.Target as IWeakReferenceable;
                         if (iwr != null) {
                             WeakRefTracker wrt = iwr.GetWeakRef();
                             if (wrt != null) {
@@ -160,7 +151,7 @@ namespace IronPython.Modules {
                             }
                         }
 
-                        target.Free();
+                        _target.Free();
                     }
                 } catch (InvalidOperationException) {
                     // target was freed
@@ -169,7 +160,8 @@ namespace IronPython.Modules {
             #endregion
 
             #region Static helpers
-            public static int GetWeakRefCount(object o) {
+
+            internal static int GetWeakRefCount(object o) {
                 IWeakReferenceable iwr = o as IWeakReferenceable;
                 if (iwr != null) {
                     WeakRefTracker wrt = iwr.GetWeakRef();
@@ -179,7 +171,7 @@ namespace IronPython.Modules {
                 return 0;
             }
 
-            public static List GetWeakRefs(object o) {
+            internal static List GetWeakRefs(object o) {
                 List l = new List();
                 IWeakReferenceable iwr = o as IWeakReferenceable;
                 if (iwr != null) {
@@ -197,11 +189,11 @@ namespace IronPython.Modules {
 
             [SpecialName]
             public object Call(CodeContext context) {
-                if (!target.IsAlive) {
+                if (!_target.IsAlive) {
                     throw PythonOps.ReferenceError("weak object has gone away");
                 }
                 try {
-                    object res = target.Target;
+                    object res = _target.Target;
                     GC.KeepAlive(this);
                     return res;
                 } catch (InvalidOperationException) {
@@ -212,24 +204,24 @@ namespace IronPython.Modules {
             #region IValueEquality Members
 
             int IValueEquality.GetValueHashCode() {
-                if (!fHasHash) {
-                    object refObj = target.Target;
+                if (!_fHasHash) {
+                    object refObj = _target.Target;
                     if (refObj == null) throw PythonOps.TypeError("weak object has gone away");
                     GC.KeepAlive(this);
-                    hashVal = refObj.GetHashCode();
-                    fHasHash = true;
+                    _hashVal = refObj.GetHashCode();
+                    _fHasHash = true;
                 }
-                return hashVal;
+                return _hashVal;
             }
 
             bool IValueEquality.ValueEquals(object other) {
                 if ((object)this == other) return true;
 
                 bool fResult = false;
-                PythonWeakReference wr = other as PythonWeakReference;
+                @ref wr = other as @ref;
                 if (wr != null) {
-                    object ourTarget = target.Target;
-                    object itsTarget = wr.target.Target;
+                    object ourTarget = _target.Target;
+                    object itsTarget = wr._target.Target;
 
                     GC.KeepAlive(this);
                     GC.KeepAlive(wr);
@@ -268,8 +260,8 @@ namespace IronPython.Modules {
             #endregion            
         }
 
-        [PythonType("weakproxy")]
-        public sealed class PythonWeakRefProxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, ICustomMembers {
+        [PythonSystemType]
+        public sealed class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, ICustomMembers {
             WeakHandle target;
 
             #region Python Constructors
@@ -280,27 +272,27 @@ namespace IronPython.Modules {
                     WeakRefTracker wrt = iwr.GetWeakRef();
                     if (wrt != null) {
                         for (int i = 0; i < wrt.HandlerCount; i++) {
-                            if (wrt.GetHandlerCallback(i) == null && wrt.GetWeakRef(i) is PythonWeakRefProxy) {
+                            if (wrt.GetHandlerCallback(i) == null && wrt.GetWeakRef(i) is weakproxy) {
                                 return wrt.GetWeakRef(i);
                             }
                         }
                     }
                 }
 
-                return new PythonWeakRefProxy(@object, callback);
+                return new weakproxy(@object, callback);
             }
             #endregion
 
             #region Constructors
 
-            private PythonWeakRefProxy(object target, object callback) {
+            private weakproxy(object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 this.target = new WeakHandle(target, false);
             }
             #endregion
 
             #region Finalizer
-            ~PythonWeakRefProxy() {
+            ~weakproxy() {
                 // remove our self from the chain...
                 try {
                     IWeakReferenceable iwr = target.Target as IWeakReferenceable;
@@ -341,7 +333,7 @@ namespace IronPython.Modules {
             }
             #endregion
 
-            #region ISuperDynamicObject Members
+            #region IPythonObject Members
 
             IAttributesCollection IPythonObject.Dict {
                 get {
@@ -372,19 +364,16 @@ namespace IronPython.Modules {
                 (GetObject() as IPythonObject).SetPythonType(newType);
             }
 
-            #endregion
-
-            #region IDynamicObject Members
-
             PythonType IPythonObject.PythonType {
                 get {
-                    return DynamicHelpers.GetPythonTypeFromType(typeof(PythonWeakRefProxy));
+                    return DynamicHelpers.GetPythonTypeFromType(typeof(weakproxy));
                 }
             }
 
             #endregion
 
             #region object overloads
+
             public override string ToString() {
                 return GetObject().ToString();
             }
@@ -403,7 +392,6 @@ namespace IronPython.Modules {
             }
 
             #endregion
-
 
             #region ICustomMembers Members
 
@@ -455,37 +443,37 @@ namespace IronPython.Modules {
             #endregion
 
             #region IValueEquality Members
-            public int GetValueHashCode() {
+
+            int IValueEquality.GetValueHashCode() {
                 throw PythonOps.TypeErrorForUnhashableType("weakproxy");
             }
 
-            public bool ValueEquals(object other) {
-                PythonWeakRefProxy wrp = other as PythonWeakRefProxy;
+            bool IValueEquality.ValueEquals(object other) {
+                weakproxy wrp = other as weakproxy;
                 if (wrp != null) return PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
 
                 return PythonOps.EqualRetBool(GetObject(), other);
             }
 
-            public bool ValueNotEquals(object other) {
-                PythonWeakRefProxy wrp = other as PythonWeakRefProxy;
+            bool IValueEquality.ValueNotEquals(object other) {
+                weakproxy wrp = other as weakproxy;
                 if (wrp != null) return !PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
 
                 return PythonSites.NotEqualsRetBool(GetObject(), other);
             }
             #endregion
 
-            [PythonName("__nonzero__")]
-            public object IsNonZero() {
+            public object __nonzero__() {
                 return Converter.ConvertToBoolean(GetObject());
             }
 
-            public static explicit operator bool(PythonWeakRefProxy self) {
+            public static explicit operator bool(weakproxy self) {
                 return Converter.ConvertToBoolean(self.GetObject());
             }
         }
 
-        [PythonType("weakcallableproxy")]
-        public sealed class PythonCallableWeakRefProxy :
+        [PythonSystemType]
+        public sealed class weakcallableproxy :
             IPythonObject,
             ICodeFormattable,            
             IProxyObject,
@@ -496,6 +484,7 @@ namespace IronPython.Modules {
             private WeakHandle _target;
 
             #region Python Constructors
+
             internal static object MakeNew(CodeContext context, object @object, object callback) {
                 IWeakReferenceable iwr = ConvertToWeakReferenceable(@object);
 
@@ -505,28 +494,31 @@ namespace IronPython.Modules {
                         for (int i = 0; i < wrt.HandlerCount; i++) {
 
                             if (wrt.GetHandlerCallback(i) == null &&
-                                wrt.GetWeakRef(i) is PythonCallableWeakRefProxy) {
+                                wrt.GetWeakRef(i) is weakcallableproxy) {
                                 return wrt.GetWeakRef(i);
                             }
                         }
                     }
                 }
 
-                return new PythonCallableWeakRefProxy(context, @object, callback);
+                return new weakcallableproxy(context, @object, callback);
             }
+
             #endregion
 
             #region Constructors
 
-            private PythonCallableWeakRefProxy(CodeContext context, object target, object callback) {
+            private weakcallableproxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 _target = new WeakHandle(target, false);
                 _site = FastDynamicSite<object, object[], object>.Create(context, CallAction.Make(new CallSignature(ArgumentKind.List)));
             }
+
             #endregion
 
             #region Finalizer
-            ~PythonCallableWeakRefProxy() {
+
+            ~weakcallableproxy() {
                 // remove our self from the chain...
                 try {
                     IWeakReferenceable iwr = _target.Target as IWeakReferenceable;
@@ -539,13 +531,15 @@ namespace IronPython.Modules {
                     // target was freed
                 }
             }
+
             #endregion
 
             #region private members
+
             /// <summary>
             /// gets the object or throws a reference exception
             /// </summary>
-            object GetObject() {
+            private object GetObject() {
                 object res;
                 if (!TryGetObject(out res)) {
                     throw PythonOps.ReferenceError("weakly referenced object no longer exists");
@@ -553,7 +547,7 @@ namespace IronPython.Modules {
                 return res;
             }
 
-            bool TryGetObject(out object result) {
+            private bool TryGetObject(out object result) {
                 try {
                     result = _target.Target;
                     if (result == null) return false;
@@ -564,6 +558,7 @@ namespace IronPython.Modules {
                     return false;
                 }
             }
+
             #endregion
 
             #region IPythonObject Members
@@ -594,16 +589,18 @@ namespace IronPython.Modules {
 
             PythonType IPythonObject.PythonType {
                 get {
-                    return DynamicHelpers.GetPythonTypeFromType(typeof(PythonCallableWeakRefProxy));
+                    return DynamicHelpers.GetPythonTypeFromType(typeof(weakcallableproxy));
                 }
             }
 
             #endregion
 
             #region object overloads
+
             public override string ToString() {
                 return GetObject().ToString();
             }
+
             #endregion
 
             #region ICodeFormattable Members
@@ -680,27 +677,26 @@ namespace IronPython.Modules {
 
             #region IValueEquality Members
 
-            public int GetValueHashCode() {
+            int IValueEquality.GetValueHashCode() {
                 throw PythonOps.TypeErrorForUnhashableType("weakcallableproxy");
             }
 
-            public bool ValueEquals(object other) {
-                PythonCallableWeakRefProxy wrp = other as PythonCallableWeakRefProxy;
+            bool IValueEquality.ValueEquals(object other) {
+                weakcallableproxy wrp = other as weakcallableproxy;
                 if (wrp != null) return GetObject().Equals(wrp.GetObject());
 
                 return PythonOps.EqualRetBool(GetObject(), other);
             }
 
-            public bool ValueNotEquals(object other) {
-                PythonCallableWeakRefProxy wrp = other as PythonCallableWeakRefProxy;
+            bool IValueEquality.ValueNotEquals(object other) {
+                weakcallableproxy wrp = other as weakcallableproxy;
                 if (wrp != null) return !GetObject().Equals(wrp.GetObject());
 
                 return PythonSites.NotEqualsRetBool(GetObject(), other);
             }
             #endregion
 
-            [PythonName("__nonzero__")]
-            public object IsNonZero() {
+            public object __nonzero__() {
                 return Converter.ConvertToBoolean(GetObject());
             }
         }
@@ -719,7 +715,7 @@ namespace IronPython.Modules {
         }
     }
 
-    [PythonType("slot-wrapper")]
+    [PythonSystemType]
     class SlotWrapper : PythonTypeSlot, ICodeFormattable {
         SymbolId name;
         PythonType type;
@@ -730,8 +726,8 @@ namespace IronPython.Modules {
         }
 
         #region IDescriptor Members
-        [PythonName("__get__")]
-        public object GetAttribute(object instance, object owner) {
+
+        public object __get__(object instance, object owner) {
             if (instance == null) return this;
 
             IProxyObject proxy = instance as IProxyObject;
@@ -748,7 +744,7 @@ namespace IronPython.Modules {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        string ICodeFormattable.ToCodeString(CodeContext context) {
             return String.Format("<slot wrapper {0} of {1} objects>",
                 PythonOps.StringRepr(SymbolTable.IdToString(name)),
                 PythonOps.StringRepr(type.Name));
@@ -781,7 +777,7 @@ namespace IronPython.Modules {
         #endregion
     }
 
-    [PythonType("method-wrapper")]
+    [PythonSystemType("method-wrapper")]
     public class GenericMethodWrapper {
         SymbolId name;
         IProxyObject target;

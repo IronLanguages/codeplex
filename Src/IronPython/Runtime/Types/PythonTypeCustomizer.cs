@@ -32,10 +32,10 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Types {
     class PythonTypeCustomizer : CoreReflectedTypeBuilder {
-        private static DocumentationDescriptor _docDescr = new DocumentationDescriptor();
+        private static readonly DocumentationDescriptor _docDescr = new DocumentationDescriptor();
+        private static readonly Dictionary<Type, string> _sysTypes = MakeSystemTypes();
+        private static readonly Dictionary<PythonType, Type> _inited = new Dictionary<PythonType, Type>();
         private static MethodInfo[] _equalsHelper, _notEqualsHelper;
-        private static Dictionary<Type, string> _sysTypes = MakeSystemTypes();
-        private static Dictionary<PythonType, Type> _inited = new Dictionary<PythonType, Type>();
 
         private PythonTypeCustomizer(PythonTypeBuilder builder) {
             Builder = builder;
@@ -302,6 +302,22 @@ namespace IronPython.Runtime.Types {
                 AddProtocolMethod(Symbols.GetDescriptor, "GetMethod");
                 // TODO: Set & delete
             }
+
+            // operator call -> __call__
+            MemberInfo[] callMethods = ArrayUtils.FindAll(type.GetMember("Call"), 
+                delegate(MemberInfo mi) {
+                    if (mi.MemberType != MemberTypes.Method) return false;
+
+                    return ((MethodInfo)mi).IsSpecialName;
+                }
+            );
+
+            if (callMethods.Length > 0) {
+                foreach(MemberInfo mi in callMethods) {
+                    MethodInfo meth = (MethodInfo)mi;
+                    StoreMethod("__call__", ContextId.Empty, meth, FunctionType.AlwaysVisible | (meth.IsStatic ? FunctionType.Function : FunctionType.Method));
+                }
+            }
         }
 
         /// <summary>
@@ -370,7 +386,7 @@ namespace IronPython.Runtime.Types {
 
                 AddProtocolMethod(Symbols.Repr, "ReprHelper");
             } else if (toStringMethod != null && toStringMethod.DeclaringType == sysType) {
-                if (sysType.IsDefined(typeof(PythonTypeAttribute), false)) {
+                if (sysType.IsDefined(typeof(PythonTypeAttribute), false) || sysType.IsDefined(typeof(PythonSystemTypeAttribute), false)) {
                     AddProtocolMethod(Symbols.Repr, "ToStringMethod");
                 } else {
                     AddProtocolMethod(Symbols.Repr, "FancyRepr");
@@ -423,7 +439,7 @@ namespace IronPython.Runtime.Types {
 
             if (reflectedCtors != null) {
                 object newVal;
-                if (reflectedCtors.Targets.Count == 1 && reflectedCtors.Targets[0].GetParameters().Length == 0) {
+                if (IsDefaultNew(reflectedCtors)) {
                     if (IsPythonType()) {
                         newVal = InstanceOps.New;
                     } else {
@@ -437,12 +453,27 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        private static bool IsDefaultNew(BuiltinFunction reflectedCtors) {
+            if(reflectedCtors.Targets.Count == 1) {
+                ParameterInfo[] pis = reflectedCtors.Targets[0].GetParameters();
+                if (pis.Length == 0) {
+                    return true;
+                }
+                
+                if (pis.Length == 1 && pis[0].ParameterType == typeof(CodeContext)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool IsPythonType() {
             return IsPythonType(Builder.UnfinishedType.UnderlyingSystemType);
         }
 
         public static bool IsPythonType(Type t) {
-            return t.IsDefined(typeof(PythonTypeAttribute), false) || _sysTypes.ContainsKey(t);
+            return t.IsDefined(typeof(PythonTypeAttribute), false) || _sysTypes.ContainsKey(t) || t.IsDefined(typeof(PythonSystemTypeAttribute), false);
         }
 
         private static string GetDocumentation(PythonType type) {

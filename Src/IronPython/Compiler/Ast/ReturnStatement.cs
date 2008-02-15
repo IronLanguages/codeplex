@@ -29,10 +29,10 @@ namespace IronPython.Compiler.Ast {
 
         public Expression Expression {
             get { return _expression; }
-        } 
+        }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            if ((_expression != null) && (ag.Block is MSAst.GeneratorCodeBlock)) {
+            if (_expression != null && ag.IsGenerator) {
                 // Return statements in Generators can not have an expression.
                 // Generators only return values via the yield keyword.
                 ag.AddError("'return' with argument inside generator", this.Span);
@@ -46,9 +46,8 @@ namespace IronPython.Compiler.Ast {
                         typeof(InvalidOperationException).GetConstructor(Type.EmptyTypes)
                     )
                 );
-
-
             }
+
             return Ast.Return(
                 Span,
                 ag.TransformOrConstantNull(_expression, typeof(object))

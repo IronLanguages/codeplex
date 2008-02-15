@@ -74,13 +74,9 @@ namespace Microsoft.Scripting.Runtime {
 
         #region Fields and Initialization
 
-        private static readonly object _singletonLock = new object();
-        private static ScriptDomainManager _singleton;
-
         private readonly Dictionary<Type, ScriptEngine>/*!*/ _engines = new Dictionary<Type, ScriptEngine>(); // TODO: Key Should be LC, not Type
         private readonly PlatformAdaptationLayer/*!*/ _pal;
         private readonly IScriptHost/*!*/ _host;
-        private readonly Snippets/*!*/ _snippets;
         private readonly ScriptEnvironment/*!*/ _environment;
         private readonly InvariantContext/*!*/ _invariantContext;
         private readonly SharedIO/*!*/ _sharedIO;
@@ -95,10 +91,9 @@ namespace Microsoft.Scripting.Runtime {
 
         // singletons:
         public PlatformAdaptationLayer/*!*/ PAL { get { return _pal; } }
-        public Snippets/*!*/ Snippets { get { return _snippets; } }
         public ScriptEnvironment/*!*/ Environment { get { return _environment; } }
         public SharedIO/*!*/ SharedIO { get { return _sharedIO; } }
-        private ScopeAttributesWrapper _scopeWrapper = new ScopeAttributesWrapper();
+        private ScopeAttributesWrapper _scopeWrapper;
         private Scope/*!*/ _globals;
         
         private static ScriptDomainOptions _options = new ScriptDomainOptions();// TODO: remove or reduce     
@@ -108,7 +103,7 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         private ScriptDomainManager(ScriptEnvironmentSetup/*!*/ setup) {
             Debug.Assert(setup != null);
-
+            _scopeWrapper = new ScopeAttributesWrapper(this);
             _sharedIO = new SharedIO();
 
             _invariantContext = new InvariantContext(this);
@@ -125,27 +120,12 @@ namespace Microsoft.Scripting.Runtime {
             // let setup register language contexts listed on it:
             setup.RegisterLanguages(this);
 
-            // initialize snippets:
-            _snippets = new Snippets();
-
             // create a local host unless a remote one has already been created:
             _host = setup.CreateScriptHost(_environment);
 
             // TODO: Belongs in ScriptEnvironment but can't go there yet
             // because GetEngine is overhere for SourceUnit support
             _environment.Globals = new ScriptScope(_environment.InvariantEngine, new Scope(_invariantContext, _scopeWrapper.Dict));
-        }
-        /// <summary>
-        /// Gets the <see cref="ScriptDomainManager"/> associated with the current AppDomain. 
-        /// If there is none, creates and initializes a new environment using setup information associated with the AppDomain 
-        /// or stored in a configuration file.
-        /// </summary>
-        public static ScriptDomainManager CurrentManager {
-            get {
-                ScriptDomainManager result;
-                TryCreateLocal(null, out result);
-                return result;
-            }
         }
 
         public IScriptHost/*!*/ Host {
@@ -158,28 +138,9 @@ namespace Microsoft.Scripting.Runtime {
         /// or <c>false</c> and the existing one ignoring the specified setup information.
         /// </summary>
         internal static bool TryCreateLocal(ScriptEnvironmentSetup setup, out ScriptDomainManager manager) {
+            manager = new ScriptDomainManager(setup ?? GetSetupInformation());
 
-            bool new_created = false;
-
-            if (_singleton == null) {
-
-                if (setup == null) {
-                    setup = GetSetupInformation();
-                }
-
-                lock (_singletonLock) {
-                    if (_singleton == null) {
-                        ScriptDomainManager singleton = new ScriptDomainManager(setup);
-                        Utilities.MemoryBarrier();
-                        _singleton = singleton;
-                        new_created = true;
-                    }
-                }
-
-            }
-
-            manager = _singleton;
-            return new_created;
+            return true;
         }
 
         private static ScriptEnvironmentSetup GetSetupInformation() {
@@ -215,12 +176,12 @@ namespace Microsoft.Scripting.Runtime {
         /// Singleton for each language.
         /// </summary>
         private sealed class LanguageRegistration {
-
-            private string _assemblyName;
-            private string _typeName;
+            private readonly ScriptDomainManager/*!*/ _domainManager;
+            private readonly string _assemblyName;
+            private readonly string _typeName;
             private LanguageContext _context;
             private Type _type;
-
+            
             [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")] // TODO: fix
             public string AssemblyName {
                 get { return _assemblyName; }
@@ -235,21 +196,19 @@ namespace Microsoft.Scripting.Runtime {
                 get { return _context; }
             }
 
-            public LanguageRegistration(Type type) {
+            public LanguageRegistration(ScriptDomainManager/*!*/ domainManager, Type type) {
                 Debug.Assert(type != null);
 
                 _type = type;
-                _assemblyName = null;
-                _typeName = null;
-                _context = null;
+                _domainManager = domainManager;
             }
 
-            public LanguageRegistration(string typeName, string assemblyName) {
+            public LanguageRegistration(ScriptDomainManager/*!*/ domainManager, string typeName, string assemblyName) {
                 Debug.Assert(typeName != null && assemblyName != null);
 
                 _assemblyName = assemblyName;
                 _typeName = typeName;
-                _context = null;
+                _domainManager = domainManager;
             }
 
             /// <summary>
@@ -257,12 +216,12 @@ namespace Microsoft.Scripting.Runtime {
             /// </summary>
             /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
             /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-            public LanguageContext LoadLanguageContext(ScriptDomainManager manager) {
+            public LanguageContext/*!*/ LoadLanguageContext(ScriptDomainManager manager) {
                 if (_context == null) {
                     
                     if (_type == null) {
                         try {
-                            _type = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(_assemblyName).GetType(_typeName, true);
+                            _type = _domainManager.PAL.LoadAssembly(_assemblyName).GetType(_typeName, true);
                         } catch (Exception e) {
                             throw new MissingTypeException(MakeAssemblyQualifiedName(_assemblyName, _typeName), e);
                         }
@@ -295,7 +254,7 @@ namespace Microsoft.Scripting.Runtime {
             lock (_languageRegistrationLock) {
                 if (!_languageTypes.TryGetValue(aq_name, out singleton_desc)) {
                     add_singleton_desc = true;
-                    singleton_desc = new LanguageRegistration(typeName, assemblyName);
+                    singleton_desc = new LanguageRegistration(this, typeName, assemblyName);
                 }
 
                 // check for conflicts:
@@ -319,7 +278,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        public bool RemoveLanguageMapping(string identifier) {
+        public bool RemoveLanguageMapping(string/*!*/ identifier) {
             Contract.RequiresNotNull(identifier, "identifier");
             
             lock (_languageRegistrationLock) {
@@ -334,7 +293,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="ArgumentException"><paramref name="type"/></exception>
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
-        internal LanguageContext GetLanguageContext(Type type) {
+        internal LanguageContext/*!*/ GetLanguageContext(Type/*!*/ type) {
             Contract.RequiresNotNull(type, "type");
             if (!type.IsSubclassOf(typeof(LanguageContext))) throw new ArgumentException("Invalid type - should be subclass of LanguageContext"); // TODO
 
@@ -342,7 +301,7 @@ namespace Microsoft.Scripting.Runtime {
             
             lock (_languageRegistrationLock) {
                 if (!_languageTypes.TryGetValue(type.AssemblyQualifiedName, out desc)) {
-                    desc = new LanguageRegistration(type);
+                    desc = new LanguageRegistration(this, type);
                     _languageTypes[type.AssemblyQualifiedName] = desc;
                 }
             }
@@ -353,6 +312,14 @@ namespace Microsoft.Scripting.Runtime {
 
             // not found, not registered:
             throw new ArgumentException(Resources.UnknownLanguageProviderType);
+        }
+
+        /// <summary>
+        /// Gets the language context of the specified type.  This can be used by language implementors
+        /// to get their LanguageContext for an already existing ScriptDomainManager.
+        /// </summary>
+        public TContextType/*!*/ GetLanguageContext<TContextType>() where TContextType : LanguageContext {
+            return (TContextType)GetLanguageContext(typeof(TContextType));
         }
 
         internal string[] GetLanguageIdentifiers(Type type, bool extensionsOnly) {
@@ -400,9 +367,13 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
         public ScriptEngine GetEngineByFileExtension(string/*!*/ extension) {
             LanguageContext lc;
             if (!TryGetLanguageContextByFileExtension(extension, out lc)) {
+                if (extension == null) {
+                    throw new ArgumentNullException("extension");
+                }
                 throw new ArgumentException(Resources.UnknownLanguageId);
             }
             return GetEngine(lc);
@@ -459,7 +430,7 @@ namespace Microsoft.Scripting.Runtime {
             return engine;
         }
 
-        public bool TryGetLanguageContextByFileExtension(string/*!*/ extension, out LanguageContext languageContext) {
+        public bool TryGetLanguageContextByFileExtension(string extension, out LanguageContext languageContext) {
             if (String.IsNullOrEmpty(extension)) {
                 languageContext = null;
                 return false;
@@ -700,7 +671,11 @@ namespace Microsoft.Scripting.Runtime {
 
         private class ScopeAttributesWrapper : IAttributesCollection {
             private IAttributesCollection/*!*/ _dict = new SymbolDictionary();
-            private TopNamespaceTracker/*!*/ _tracker = new TopNamespaceTracker();
+            private readonly TopNamespaceTracker/*!*/ _tracker;
+
+            public ScopeAttributesWrapper(ScriptDomainManager/*!*/ manager) {
+                _tracker = new TopNamespaceTracker(manager);
+            }
 
             public IAttributesCollection/*!*/ Dict {
                 get {

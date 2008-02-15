@@ -15,7 +15,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics;
 
 namespace Microsoft.Scripting.Ast {
@@ -26,12 +25,25 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// List to store all context statements for further processing - storage allocation
         /// </summary>
-        private List<CodeBlock> _blocks;
+        private List<CodeBlockInfo> _blocks;
+
+        /// <summary>
+        /// The dictionary of all code blocks and their infos in the tree.
+        /// </summary>
+        private Dictionary<CodeBlock, CodeBlockInfo> _infos;
 
         /// <summary>
         /// Stack to keep track of the code block nesting.
         /// </summary>
         private Stack<CodeBlockInfo> _stack;
+
+        protected List<CodeBlockInfo> Blocks {
+            get { return _blocks; }
+        }
+
+        protected Dictionary<CodeBlock, CodeBlockInfo> Infos {
+            get { return _infos; }
+        }
 
         protected Stack<CodeBlockInfo> Stack {
             get { return _stack; }
@@ -75,23 +87,25 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected internal override bool Walk(CodeBlock node) {
-            Push(node);
-            return true;
+            return Push(node);
         }
 
         protected internal override void PostWalk(CodeBlock node) {
-            ProcessAndPop(node);
+            CodeBlockInfo cbi = Pop();
+            Debug.Assert(cbi.CodeBlock == node);
         }
 
         protected internal override bool Walk(GeneratorCodeBlock node) {
-            Push(node);
-            return true;
+            return Push(node);
         }
 
         protected internal override void PostWalk(GeneratorCodeBlock node) {
-            int temps = node.BuildYieldTargets();
-            AddGeneratorTemps(temps);
-            ProcessAndPop(node);
+            CodeBlockInfo cbi = Pop();
+            Debug.Assert(cbi.CodeBlock == node);
+            Debug.Assert(cbi.TopTargets == null);
+
+            // Build the yield targets and store them in the cbi
+            YieldLabelBuilder.BuildYieldTargets(node, cbi);
         }
 
         #endregion
@@ -101,19 +115,36 @@ namespace Microsoft.Scripting.Ast {
             _stack.Peek().Reference(variable);
         }
 
-        private void Push(CodeBlock block) {
-            NonNullStack.Push(new CodeBlockInfo(block));
-        }
-
-        private void ProcessAndPop(CodeBlock block) {
-            if (_blocks == null) {
-                _blocks = new List<CodeBlock>();
+        private bool Push(CodeBlock block) {
+            if (_infos == null) {
+                _infos = new Dictionary<CodeBlock, CodeBlockInfo>();
+                _blocks = new List<CodeBlockInfo>();
             }
 
-            _blocks.Add(block);
-            CodeBlockInfo top = NonNullStack.Pop();
-            Debug.Assert(top.CodeBlock == block);
-            top.PublishReferences();
+            // We've seen this block already
+            // (referenced from multiple CodeBlockExpressions)
+            if (_infos.ContainsKey(block)) {
+                return false;
+            }
+
+            CodeBlockInfo cbi = new CodeBlockInfo(block);
+
+            // Add the block to the list.
+            // The blocks are added in prefix order so they
+            // will have to be reversed for name binding
+            _blocks.Add(cbi);
+
+            // Remember we saw the block already
+            _infos[block] = cbi;
+
+            // And push it on the stack.
+            NonNullStack.Push(cbi);
+
+            return true;
+        }
+
+        private CodeBlockInfo Pop() {
+            return NonNullStack.Pop();
         }
 
         private void AddGeneratorTemps(int count) {
@@ -125,31 +156,35 @@ namespace Microsoft.Scripting.Ast {
 
         protected void BindTheScopes() {
             if (_blocks != null) {
-                for (int i = 0; i < _blocks.Count; i++) {
-                    CodeBlock block = _blocks[i];
-                    if (!block.IsGlobal) {
-                        BindCodeBlock((CodeBlock)block);
+                // Process the blocks in post-order so that
+                // all children are processed before parent
+                int i = _blocks.Count;
+                while (i-- > 0) {
+                    CodeBlockInfo cbi = _blocks[i];
+                    if (!cbi.CodeBlock.IsGlobal) {
+                        BindCodeBlock(cbi);
                     }
                 }
             }
         }
 
-        private void BindCodeBlock(CodeBlock block) {
+        private void BindCodeBlock(CodeBlockInfo block) {
             // If the function is generator or needs custom frame,
             // lift locals to closure
-            if (block is GeneratorCodeBlock || block.EmitLocalDictionary) {
+            CodeBlock cb = block.CodeBlock;
+            if (cb is GeneratorCodeBlock || cb.EmitLocalDictionary) {
                 LiftLocalsToClosure(block);
             }
             ResolveClosure(block);
         }
 
-        private static void LiftLocalsToClosure(CodeBlock block) {
+        private static void LiftLocalsToClosure(CodeBlockInfo block) {
             // Lift all parameters
-            foreach (Variable p in block.Parameters) {
+            foreach (Variable p in block.CodeBlock.Parameters) {
                 p.LiftToClosure();
             }
             // Lift all locals
-            foreach (Variable d in block.Variables) {
+            foreach (Variable d in block.CodeBlock.Variables) {
                 if (d.Kind == Variable.VariableKind.Local) {
                     d.LiftToClosure();
                 }
@@ -157,11 +192,13 @@ namespace Microsoft.Scripting.Ast {
             block.HasEnvironment = true;
         }
 
-        private void ResolveClosure(CodeBlock block) {
+        private void ResolveClosure(CodeBlockInfo block) {
+            CodeBlock cb = block.CodeBlock;
+
             foreach (VariableReference r in block.References.Values) {
                 Debug.Assert(r.Variable != null);
 
-                if (r.Variable.Block == block) {
+                if (r.Variable.Block == cb) {
                     // local reference => no closure
                     continue;
                 }
@@ -177,12 +214,13 @@ namespace Microsoft.Scripting.Ast {
 
                 // Mark all parent scopes between the use and the definition
                 // as closures/environment
-                CodeBlock current = block;
+                CodeBlockInfo current = block;
                 do {
                     current.IsClosure = true;
 
-                    CodeBlock parent = current.Parent;
-                    if (parent == null) {
+                    CodeBlock parentBlock = current.CodeBlock.Parent;
+
+                    if (parentBlock == null) {
                         throw new ArgumentException(
                             String.Format(
                                 "Cannot resolve variable '{0}' " +
@@ -190,16 +228,21 @@ namespace Microsoft.Scripting.Ast {
                                 "and defined in code block {2}).\n" +
                                 "Is CodeBlock.Parent set correctly?",
                                 SymbolTable.IdToString(r.Variable.Name),
-                                block.Name ?? "<unnamed>",
+                                block.CodeBlock.Name ?? "<unnamed>",
                                 r.Variable.Block != null ? (r.Variable.Block.Name ?? "<unnamed>") : "<unknown>"
                             )
                         );
                     }
 
+                    CodeBlockInfo parent = GetCodeBlockInfo(parentBlock);
                     parent.HasEnvironment = true;
                     current = parent;
-                } while (current != r.Variable.Block);
+                } while (current.CodeBlock != r.Variable.Block);
             }
+        }
+
+        private CodeBlockInfo GetCodeBlockInfo(CodeBlock block) {
+            return _infos[block];
         }
 
         #endregion

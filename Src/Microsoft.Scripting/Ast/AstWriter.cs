@@ -25,7 +25,7 @@ using Microsoft.Scripting.Runtime;
 
 #if DEBUG
 namespace Microsoft.Scripting.Ast {
-    class AstWriter {
+    partial class AstWriter {
         [Flags]
         private enum Flow {
             None,
@@ -329,150 +329,16 @@ namespace Microsoft.Scripting.Ast {
                 return;
             }
 
-            switch (node.NodeType) {
-                case AstNodeType.Add:
-                case AstNodeType.And:
-                case AstNodeType.AndAlso:
-                case AstNodeType.ArrayIndex:
-                case AstNodeType.Divide:
-                case AstNodeType.Equal:
-                case AstNodeType.ExclusiveOr:
-                case AstNodeType.GreaterThan:
-                case AstNodeType.GreaterThanOrEqual:
-                case AstNodeType.LeftShift:
-                case AstNodeType.LessThan:
-                case AstNodeType.LessThanOrEqual:
-                case AstNodeType.Modulo:
-                case AstNodeType.Multiply:
-                case AstNodeType.NotEqual:
-                case AstNodeType.Or:
-                case AstNodeType.OrElse:
-                case AstNodeType.RightShift:
-                case AstNodeType.Subtract:
-                    Dump((BinaryExpression)node);
-                    break;
-                case AstNodeType.Call:
-                    Dump((MethodCallExpression)node);
-                    break;
-                case AstNodeType.Conditional:
-                    Dump((ConditionalExpression)node);
-                    break;
-                case AstNodeType.Constant:
-                    Dump((ConstantExpression)node);
-                    break;
-                case AstNodeType.Convert:
-                case AstNodeType.Negate:
-                case AstNodeType.Not:
-                case AstNodeType.OnesComplement:
-                    Dump((UnaryExpression)node);
-                    break;
-                case AstNodeType.New:
-                    Dump((NewExpression)node);
-                    break;
-                case AstNodeType.TypeIs:
-                    Dump((TypeBinaryExpression)node);
-                    break;
-                case AstNodeType.ActionExpression:
-                    Dump((ActionExpression)node);
-                    break;
-                case AstNodeType.ArrayIndexAssignment:
-                    Dump((ArrayIndexAssignment)node);
-                    break;
-                case AstNodeType.Block:
-                    Dump((Block)node);
-                    break;
-                case AstNodeType.BoundAssignment:
-                    Dump((BoundAssignment)node);
-                    break;
-                case AstNodeType.BoundExpression:
-                    Dump((BoundExpression)node);
-                    break;
-                case AstNodeType.BreakStatement:
-                    Dump((BreakStatement)node);
-                    break;
-                case AstNodeType.CodeBlockExpression:
-                    Dump((CodeBlockExpression)node);
-                    break;
-                case AstNodeType.CodeContextExpression:
-                    Out(".context");
-                    break;
-                case AstNodeType.GeneratorIntrinsic:
-                    Out(".gen_intrinsic");
-                    break;
-                case AstNodeType.ContinueStatement:
-                    Dump((ContinueStatement)node);
-                    break;
-                case AstNodeType.DeleteStatement:
-                    Dump((DeleteStatement)node);
-                    break;
-                case AstNodeType.DeleteUnboundExpression:
-                    Dump((DeleteUnboundExpression)node);
-                    break;
-                case AstNodeType.DoStatement:
-                    Dump((DoStatement)node);
-                    break;
-                case AstNodeType.EmptyStatement:
-                    Dump((EmptyStatement)node);
-                    break;
-                case AstNodeType.EnvironmentExpression:
-                    Out(".env");
-                    break;
-                case AstNodeType.ExpressionStatement:
-                    Dump((ExpressionStatement)node);
-                    break;
-                case AstNodeType.LabeledStatement:
-                    Dump((LabeledStatement)node);
-                    break;
-                case AstNodeType.LoopStatement:
-                    Dump((LoopStatement)node);
-                    break;
-                case AstNodeType.MemberAssignment:
-                    Dump((MemberAssignment)node);
-                    break;
-                case AstNodeType.MemberExpression:
-                    Dump((MemberExpression)node);
-                    break;
-                case AstNodeType.NewArrayExpression:
-                    Dump((NewArrayExpression)node);
-                    break;
-                case AstNodeType.ParamsExpression:
-                    Out(".params");
-                    break;
-                case AstNodeType.ReturnStatement:
-                    Dump((ReturnStatement)node);
-                    break;
-                case AstNodeType.ScopeStatement:
-                    Dump((ScopeStatement)node);
-                    break;
-                case AstNodeType.SwitchStatement:
-                    Dump((SwitchStatement)node);
-                    break;
-                case AstNodeType.ThrowStatement:
-                    Dump((ThrowStatement)node);
-                    break;
-                case AstNodeType.TryStatement:
-                    Dump((TryStatement)node);
-                    break;
-                case AstNodeType.UnboundAssignment:
-                    Dump((UnboundAssignment)node);
-                    break;
-                case AstNodeType.UnboundExpression:
-                    Dump((UnboundExpression)node);
-                    break;
-                case AstNodeType.YieldStatement:
-                    Dump((YieldStatement)node);
-                    break;
-                default:
-                    throw new InvalidOperationException("Unexpected node type: " + node.NodeType.ToString());
-            }
+            Debug.Assert((int)node.NodeType < _Writers.Length);
+            _Writers[(int)node.NodeType](this, node);
         }
 
         private void WalkNode(CodeBlock node) {
             GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
             if (gcb != null) {
-                DumpGeneratorCodeBlock(gcb);
+                WriteGeneratorCodeBlock(gcb);
             } else {
-                DumpCodeBlock(node);
+                WriteCodeBlock(node);
             }
         }
 
@@ -503,41 +369,44 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ActionExpression
-        private void Dump(ActionExpression node) {
-            Out(".action", Flow.Space);
-            
-            Out("(");
-            Out(node.Type.Name);
-            Out(")", Flow.Space);
+        private static void WriteActionExpression(AstWriter aw, Expression expr) {
+            ActionExpression node = (ActionExpression)expr;
+            aw.Out(".action", Flow.Space);
 
-            Out(FormatAction(node.Action));
-            Out("( // " + node.Action.ToString());
-            Indent();
-            NewLine();
+            aw.Out("(");
+            aw.Out(node.Type.Name);
+            aw.Out(")", Flow.Space);
+
+            aw.Out(FormatAction(node.Action));
+            aw.Out("( // " + node.Action.ToString());
+            aw.Indent();
+            aw.NewLine();
             foreach (Expression arg in node.Arguments) {
-                WalkNode(arg);
-                NewLine();
+                aw.WalkNode(arg);
+                aw.NewLine();
             }
-            Dedent();
-            Out(")");
+            aw.Dedent();
+            aw.Out(")");
         }
 
         // ArrayIndexAssignment
-        private void Dump(ArrayIndexAssignment node) {
-            WalkNode(node.Array);
-            Out("[");
-            WalkNode(node.Index);
-            Out("] = ");
-            WalkNode(node.Value);
+        private static void WriteArrayIndexAssignment(AstWriter aw, Expression expr) {
+            ArrayIndexAssignment node = (ArrayIndexAssignment)expr;
+            aw.WalkNode(node.Array);
+            aw.Out("[");
+            aw.WalkNode(node.Index);
+            aw.Out("] = ");
+            aw.WalkNode(node.Value);
         }
 
         // BinaryExpression
-        private void Dump(BinaryExpression node) {
+        private static void WriteBinaryExpression(AstWriter aw, Expression expr) {
+            BinaryExpression node = (BinaryExpression)expr;
             if (node.NodeType == AstNodeType.ArrayIndex) {
-                WalkNode(node.Left);
-                Out("[");
-                WalkNode(node.Right);
-                Out("]");
+                aw.WalkNode(node.Left);
+                aw.Out("[");
+                aw.WalkNode(node.Right);
+                aw.Out("]");
             } else {
                 string op;
                 switch (node.NodeType) {
@@ -562,48 +431,52 @@ namespace Microsoft.Scripting.Ast {
                     default:
                         throw new InvalidOperationException();
                 }
-                Out(Flow.Break, "(", Flow.None);
-                WalkNode(node.Left);
-                Out(Flow.Space, op, Flow.Space | Flow.Break);
-                WalkNode(node.Right);
-                Out(Flow.None, ")", Flow.Break);
+                aw.Out(Flow.Break, "(", Flow.None);
+                aw.WalkNode(node.Left);
+                aw.Out(Flow.Space, op, Flow.Space | Flow.Break);
+                aw.WalkNode(node.Right);
+                aw.Out(Flow.None, ")", Flow.Break);
             }
         }
 
         // BoundAssignment
-        private void Dump(BoundAssignment node) {
-            Out("(.bound " + SymbolTable.IdToString(node.Variable.Name) + ") = ");
-            WalkNode(node.Value);
+        private static void WriteBoundAssignment(AstWriter aw, Expression expr) {
+            BoundAssignment node = (BoundAssignment)expr;
+            aw.Out("(.bound " + SymbolTable.IdToString(node.Variable.Name) + ") = ");
+            aw.WalkNode(node.Value);
         }
 
         // BoundExpression
-        private void Dump(BoundExpression node) {
-            Out("(.bound ");
-            Out(SymbolTable.IdToString(node.Name));
-            Out(")");
+        private static void WriteBoundExpression(AstWriter aw, Expression expr) {
+            BoundExpression node = (BoundExpression)expr;
+            aw.Out("(.bound ");
+            aw.Out(SymbolTable.IdToString(node.Name));
+            aw.Out(")");
         }
 
         // CodeBlockExpression
-        private void Dump(CodeBlockExpression node) {
-            int id = Enqueue(node.Block);
-            Out(String.Format(".block ({0} #{1}", node.Block.Name, id));
-            Indent();
+        private static void WriteCodeBlockExpression(AstWriter aw, Expression expr) {
+            CodeBlockExpression node = (CodeBlockExpression)expr;
+            int id = aw.Enqueue(node.Block);
+            aw.Out(String.Format(".block ({0} #{1}", node.Block.Name, id));
+            aw.Indent();
             bool nl = false;
-            if (node.ForceWrapperMethod) { nl = true; Out(Flow.NewLine, "ForceWrapper"); }
-            if (node.IsStronglyTyped) { nl = true; Out(Flow.NewLine, "StronglyTyped"); }
-            Dedent();
-            Out(nl ? Flow.NewLine : Flow.None, ")");
+            if (node.ForceWrapperMethod) { nl = true; aw.Out(Flow.NewLine, "ForceWrapper"); }
+            if (node.IsStronglyTyped) { nl = true; aw.Out(Flow.NewLine, "StronglyTyped"); }
+            aw.Dedent();
+            aw.Out(nl ? Flow.NewLine : Flow.None, ")");
         }
 
         // ConditionalExpression
-        private void Dump(ConditionalExpression node) {
-            Out(".if (", Flow.Break);
-            WalkNode(node.Test);
-            Out(" ) {", Flow.Break);
-            WalkNode(node.IfTrue);
-            Out(Flow.Break, "} .else {", Flow.Break);
-            WalkNode(node.IfFalse);
-            Out("}", Flow.Break);
+        private static void WriteConditionalExpression(AstWriter aw, Expression expr) {
+            ConditionalExpression node = (ConditionalExpression)expr;
+            aw.Out(".if (", Flow.Break);
+            aw.WalkNode(node.Test);
+            aw.Out(" ) {", Flow.Break);
+            aw.WalkNode(node.IfTrue);
+            aw.Out(Flow.Break, "} .else {", Flow.Break);
+            aw.WalkNode(node.IfFalse);
+            aw.Out("}", Flow.Break);
         }
 
         private static string Constant(object value) {
@@ -634,13 +507,33 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // ConstantExpression
-        private void Dump(ConstantExpression node) {
-            Out(Constant(node.Value));
+        private static void WriteConstantExpression(AstWriter aw, Expression expr) {
+            ConstantExpression node = (ConstantExpression)expr;
+            aw.Out(Constant(node.Value));
         }
 
         // DeleteUnboundExpression
-        private void Dump(DeleteUnboundExpression node) {
-            Out(String.Format(".delname({0})", SymbolTable.IdToString(node.Name)));
+        private static void WriteDeleteUnboundExpression(AstWriter aw, Expression expr) {
+            DeleteUnboundExpression node = (DeleteUnboundExpression)expr;
+            aw.Out(String.Format(".delname({0})", SymbolTable.IdToString(node.Name)));
+        }
+
+        // IntrinsicExpression
+        private static void WriteIntrinsicExpression(AstWriter aw, Expression expr) {
+            switch (expr.NodeType) {
+                case AstNodeType.CodeContextExpression:
+                    aw.Out(".context");
+                    break;
+                case AstNodeType.GeneratorIntrinsic:
+                    aw.Out(".gen_intrinsic");
+                    break;
+                case AstNodeType.EnvironmentExpression:
+                    aw.Out(".env");
+                    break;
+                case AstNodeType.ParamsExpression:
+                    aw.Out(".params");
+                    break;
+            }
         }
 
         // Prints ".instanceField" or "declaringType.staticField"
@@ -655,255 +548,279 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // MemberAssignment
-        private void Dump(MemberAssignment node) {
-            OutMember(node.Expression, node.Member);
-            Out(" = ");
-            WalkNode(node.Value);
+        private static void WriteMemberAssignment(AstWriter aw, Expression expr) {
+            MemberAssignment node = (MemberAssignment)expr;
+            aw.OutMember(node.Expression, node.Member);
+            aw.Out(" = ");
+            aw.WalkNode(node.Value);
         }
 
         // MemberExpression
-        private void Dump(MemberExpression node) {
-            OutMember(node.Expression, node.Member);
+        private static void WriteMemberExpression(AstWriter aw, Expression expr) {
+            MemberExpression node = (MemberExpression)expr;
+            aw.OutMember(node.Expression, node.Member);
         }
 
         // MethodCallExpression
-        private void Dump(MethodCallExpression node) {
+        private static void WriteMethodCallExpression(AstWriter aw, Expression expr) {
+            MethodCallExpression node = (MethodCallExpression)expr;
             if (node.Instance != null) {
-                Out("(");
-                WalkNode(node.Instance);
-                Out(").");
+                aw.Out("(");
+                aw.WalkNode(node.Instance);
+                aw.Out(").");
             }
-            Out("(" + node.Method.ReflectedType.Name + "." + node.Method.Name + ")(");
+            aw.Out("(" + node.Method.ReflectedType.Name + "." + node.Method.Name + ")(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
-                NewLine(); Indent();
+                aw.NewLine(); aw.Indent();
                 foreach (Expression e in node.Arguments) {
-                    WalkNode(e);
-                    Out(",", Flow.NewLine);
+                    aw.WalkNode(e);
+                    aw.Out(",", Flow.NewLine);
                 }
-                Dedent();
+                aw.Dedent();
             }
-            Out(")");
+            aw.Out(")");
         }
 
         // NewArrayExpression
-        private void Dump(NewArrayExpression node) {
-            Out(".new " + node.Type.Name + " = {");
+        private static void WriteNewArrayExpression(AstWriter aw, Expression expr) {
+            NewArrayExpression node = (NewArrayExpression)expr;
+            aw.Out(".new " + node.Type.Name + " = {");
             if (node.Expressions != null && node.Expressions.Count > 0) {
-                NewLine(); Indent();
+                aw.NewLine(); aw.Indent();
                 foreach (Expression e in node.Expressions) {
-                    WalkNode(e);
-                    Out(",", Flow.NewLine);
+                    aw.WalkNode(e);
+                    aw.Out(",", Flow.NewLine);
                 }
-                Dedent();
+                aw.Dedent();
             }
-            Out("}");
+            aw.Out("}");
         }
 
         // NewExpression
-        private void Dump(NewExpression node) {
-            Out(".new " + node.Type.Name + "(");
+        private static void WriteNewExpression(AstWriter aw, Expression expr) {
+            NewExpression node = (NewExpression)expr;
+            aw.Out(".new " + node.Type.Name + "(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
-                NewLine(); Indent();
+                aw.NewLine(); aw.Indent();
                 foreach (Expression e in node.Arguments) {
-                    WalkNode(e);
-                    Out(",", Flow.NewLine);
+                    aw.WalkNode(e);
+                    aw.Out(",", Flow.NewLine);
                 }
-                Dedent();
+                aw.Dedent();
             }
-            Out(")");
+            aw.Out(")");
         }
 
         // TypeBinaryExpression
-        private void Dump(TypeBinaryExpression node) {
-            WalkNode(node.Expression);
-            Out(Flow.Space, ".is", Flow.Space);
-            Out(node.TypeOperand.Name);
+        private static void WriteTypeBinaryExpression(AstWriter aw, Expression expr) {
+            TypeBinaryExpression node = (TypeBinaryExpression)expr;
+            aw.WalkNode(node.Expression);
+            aw.Out(Flow.Space, ".is", Flow.Space);
+            aw.Out(node.TypeOperand.Name);
         }
 
         // UnaryExpression
-        private void Dump(UnaryExpression node) {
+        private static void WriteUnaryExpression(AstWriter aw, Expression expr) {
+            UnaryExpression node = (UnaryExpression)expr;
             switch (node.NodeType) {
                 case AstNodeType.Convert:
-                    Out("(" + node.Type.Name + ")");
+                    aw.Out("(" + node.Type.Name + ")");
                     break;
                 case AstNodeType.Not:
-                    Out(node.Type == typeof(bool) ? "!" : "~");
+                    aw.Out(node.Type == typeof(bool) ? "!" : "~");
                     break;
                 case AstNodeType.Negate:
-                    Out("-");
+                    aw.Out("-");
                     break;
                 case AstNodeType.OnesComplement:
-                    Out("~");
+                    aw.Out("~");
                     break;
             }
 
-            WalkNode(node.Operand);
+            aw.WalkNode(node.Operand);
         }
 
         // UnboundAssignment
-        private void Dump(UnboundAssignment node) {
-            Out(SymbolTable.IdToString(node.Name));
-            Out(" := ");
-            WalkNode(node.Value);
+        private static void WriteUnboundAssignment(AstWriter aw, Expression expr) {
+            UnboundAssignment node = (UnboundAssignment)expr;
+            aw.Out(SymbolTable.IdToString(node.Name));
+            aw.Out(" := ");
+            aw.WalkNode(node.Value);
         }
 
         // UnboundExpression
-        private void Dump(UnboundExpression node) {
-            Out(".unbound " + SymbolTable.IdToString(node.Name));
+        private static void WriteUnboundExpression(AstWriter aw, Expression expr) {
+            UnboundExpression node = (UnboundExpression)expr;
+            aw.Out(".unbound " + SymbolTable.IdToString(node.Name));
         }
 
         // Block
-        private void Dump(Block node) {
-            Out(node.Type != typeof(void) ? ".comma {" : "{");
-            NewLine(); Indent();
+        private static void WriteBlock(AstWriter aw, Expression expr) {
+            Block node = (Block)expr;
+            aw.Out(node.Type != typeof(void) ? ".comma {" : "{");
+            aw.NewLine(); aw.Indent();
             foreach (Expression s in node.Expressions) {
-                WalkNode(s);
-                NewLine();
+                aw.WalkNode(s);
+                aw.NewLine();
             }
-            Dedent();
-            Out("}", Flow.NewLine);
+            aw.Dedent();
+            aw.Out("}", Flow.NewLine);
         }
 
         // BreakStatement
-        private void Dump(BreakStatement node) {
-            Out(".break;", Flow.NewLine);
+        private static void WriteBreakStatement(AstWriter aw, Expression expr) {
+            BreakStatement node = (BreakStatement)expr;
+            aw.Out(".break;", Flow.NewLine);
         }
 
         // ContinueStatement
-        private void Dump(ContinueStatement node) {
-            Out(".continue;", Flow.NewLine);
+        private static void WriteContinueStatement(AstWriter aw, Expression expr) {
+            ContinueStatement node = (ContinueStatement)expr;
+            aw.Out(".continue;", Flow.NewLine);
         }
 
         // DeleteStatement
-        private void Dump(DeleteStatement node) {
-            Out(".del");
+        private static void WriteDeleteStatement(AstWriter aw, Expression expr) {
+            DeleteStatement node = (DeleteStatement)expr;
+            aw.Out(".del");
             if (node.Variable != null) {
-                Out(Flow.Space, SymbolTable.IdToString(node.Variable.Name));
+                aw.Out(Flow.Space, SymbolTable.IdToString(node.Variable.Name));
             }
-            NewLine();
+            aw.NewLine();
         }
 
         // DoStatement
-        private void Dump(DoStatement node) {
-            Out(".do {", Flow.NewLine);
-            Indent();
-            WalkNode(node.Body);
-            Dedent();
-            Out(Flow.NewLine, "} .while (");
-            WalkNode(node.Test);
-            Out(");");
+        private static void WriteDoStatement(AstWriter aw, Expression expr) {
+            DoStatement node = (DoStatement)expr;
+            aw.Out(".do {", Flow.NewLine);
+            aw.Indent();
+            aw.WalkNode(node.Body);
+            aw.Dedent();
+            aw.Out(Flow.NewLine, "} .while (");
+            aw.WalkNode(node.Test);
+            aw.Out(");");
         }
 
         // EmptyStatement
-        private void Dump(EmptyStatement node) {            
-            Out("/*empty*/;", Flow.NewLine);
+        private static void WriteEmptyStatement(AstWriter aw, Expression expr) {
+            EmptyStatement node = (EmptyStatement)expr;
+            aw.Out("/*empty*/;", Flow.NewLine);
         }
 
         // ExpressionStatement
-        private void Dump(ExpressionStatement node) {
-            WalkNode(node.Expression);
-            Out(";", Flow.NewLine);
+        private static void WriteExpressionStatement(AstWriter aw, Expression expr) {
+            ExpressionStatement node = (ExpressionStatement)expr;
+            aw.WalkNode(node.Expression);
+            aw.Out(";", Flow.NewLine);
         }
 
         // LabeledStatement
-        private void Dump(LabeledStatement node) {
-            Out(".labeled {", Flow.NewLine);
-            Indent();
-            WalkNode(node.Statement);
-            Dedent();
-            Out(Flow.NewLine, "}");
+        private static void WriteLabeledStatement(AstWriter aw, Expression expr) {
+            LabeledStatement node = (LabeledStatement)expr;
+            aw.Out(".labeled {", Flow.NewLine);
+            aw.Indent();
+            aw.WalkNode(node.Statement);
+            aw.Dedent();
+            aw.Out(Flow.NewLine, "}");
         }
 
         // LoopStatement
-        private void Dump(LoopStatement node) {
-            Out(".for (; ");
-            WalkNode(node.Test);
-            Out("; ");
-            WalkNode(node.Increment);
-            Out(") {", Flow.NewLine);
-            Indent();
-            WalkNode(node.Body);
-            Dedent();
-            Out(Flow.NewLine, "}");
+        private static void WriteLoopStatement(AstWriter aw, Expression expr) {
+            LoopStatement node = (LoopStatement)expr;
+            aw.Out(".for (; ");
+            aw.WalkNode(node.Test);
+            aw.Out("; ");
+            aw.WalkNode(node.Increment);
+            aw.Out(") {", Flow.NewLine);
+            aw.Indent();
+            aw.WalkNode(node.Body);
+            aw.Dedent();
+            aw.Out(Flow.NewLine, "}");
         }
 
         // ReturnStatement
-        private void Dump(ReturnStatement node) {
-            Out(".return", Flow.Space);
-            WalkNode(node.Expression);
-            Out(";", Flow.NewLine);
+        private static void WriteReturnStatement(AstWriter aw, Expression expr) {
+            ReturnStatement node = (ReturnStatement)expr;
+            aw.Out(".return", Flow.Space);
+            aw.WalkNode(node.Expression);
+            aw.Out(";", Flow.NewLine);
         }
 
         // ScopeStatement
-        private void Dump(ScopeStatement node) {
-            Out(".scope (");
-            WalkNode(node.Scope);
-            Out(") {", Flow.NewLine);
-            Indent();
-            WalkNode(node.Body);
-            Dedent();
-            Out("}", Flow.NewLine);
+        private static void WriteScopeStatement(AstWriter aw, Expression expr) {
+            ScopeStatement node = (ScopeStatement)expr;
+            aw.Out(".scope (");
+            aw.WalkNode(node.Scope);
+            aw.Out(") {", Flow.NewLine);
+            aw.Indent();
+            aw.WalkNode(node.Body);
+            aw.Dedent();
+            aw.Out("}", Flow.NewLine);
         }
 
         // SwitchStatement
-        private void Dump(SwitchStatement node) {
-            Out(".switch (");
-            WalkNode(node.TestValue);
-            Out(") {", Flow.NewLine);
+        private static void WriteSwitchStatement(AstWriter aw, Expression expr) {
+            SwitchStatement node = (SwitchStatement)expr;
+            aw.Out(".switch (");
+            aw.WalkNode(node.TestValue);
+            aw.Out(") {", Flow.NewLine);
             foreach (SwitchCase sc in node.Cases) {
                 if (sc.IsDefault) {
-                    Out(".default");
+                    aw.Out(".default");
                 } else {
-                    Out(".case " + sc.Value);
+                    aw.Out(".case " + sc.Value);
                 }
-                Out(":", Flow.NewLine);
-                Indent(); Indent();
-                WalkNode(sc.Body);
-                Dedent(); Dedent();
-                NewLine();
+                aw.Out(":", Flow.NewLine);
+                aw.Indent(); aw.Indent();
+                aw.WalkNode(sc.Body);
+                aw.Dedent(); aw.Dedent();
+                aw.NewLine();
             }
-            Out("}", Flow.NewLine);
+            aw.Out("}", Flow.NewLine);
         }
 
         // ThrowStatement
-        private void Dump(ThrowStatement node) {
-            Out(Flow.NewLine, ".throw (");
-            WalkNode(node.Exception);
-            Out(")", Flow.NewLine);
+        private static void WriteThrowStatement(AstWriter aw, Expression expr) {
+            ThrowStatement node = (ThrowStatement)expr;
+            aw.Out(Flow.NewLine, ".throw (");
+            aw.WalkNode(node.Exception);
+            aw.Out(")", Flow.NewLine);
         }
 
         // TryStatement
-        private void Dump(TryStatement node) {
-            Out(".try {", Flow.NewLine);
-            Indent();
-            WalkNode(node.Body);
-            Dedent();
+        private static void WriteTryStatement(AstWriter aw, Expression expr) {
+            TryStatement node = (TryStatement)expr;
+            aw.Out(".try {", Flow.NewLine);
+            aw.Indent();
+            aw.WalkNode(node.Body);
+            aw.Dedent();
             if (node.Handlers != null && node.Handlers.Count > 0) {
                 foreach (CatchBlock cb in node.Handlers) {
-                    Out("} .catch ( " + cb.Test.Name);
+                    aw.Out("} .catch ( " + cb.Test.Name);
                     if (cb.Variable != null) {
-                        Out(Flow.Space, SymbolTable.IdToString(cb.Variable.Name));
+                        aw.Out(Flow.Space, SymbolTable.IdToString(cb.Variable.Name));
                     }
-                    Out(") {", Flow.NewLine);
-                    Indent();
-                    WalkNode(cb.Body);
-                    Dedent();
+                    aw.Out(") {", Flow.NewLine);
+                    aw.Indent();
+                    aw.WalkNode(cb.Body);
+                    aw.Dedent();
                 }
             }
             if (node.FinallyStatement != null) {
-                Out("} .finally {", Flow.NewLine);
-                Indent();
-                WalkNode(node.FinallyStatement);
-                Dedent();
+                aw.Out("} .finally {", Flow.NewLine);
+                aw.Indent();
+                aw.WalkNode(node.FinallyStatement);
+                aw.Dedent();
             }
-            Out("}", Flow.NewLine);
+            aw.Out("}", Flow.NewLine);
         }
 
         // YieldStatement
-        private void Dump(YieldStatement node) {
-            Out(".yield ");
-            WalkNode(node.Expression);
-            Out(";", Flow.NewLine);
+        private static void WriteYieldStatement(AstWriter aw, Expression expr) {
+            YieldStatement node = (YieldStatement)expr;
+            aw.Out(".yield ");
+            aw.WalkNode(node.Expression);
+            aw.Out(";", Flow.NewLine);
         }
 
         private static string GetCodeBlockInfo(CodeBlock block) {
@@ -914,14 +831,8 @@ namespace Microsoft.Scripting.Ast {
             if (!block.IsVisible) {
                 info += " hidden,";
             }
-            if (block.IsClosure) {
-                info += " closure,";
-            }
             if (block.ParameterArray) {
                 info += " param array,";
-            }
-            if (block.HasEnvironment) {
-                info += " environment,";
             }
             if (block.EmitLocalDictionary) {
                 info += " local dict";
@@ -965,13 +876,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // CodeBlock
-        private void DumpCodeBlock(CodeBlock node) {
+        private void WriteCodeBlock(CodeBlock node) {
             Out(".codeblock", Flow.Space);
             DumpBlock(node);
         }
 
         // GeneratorCodeBlock
-        private void DumpGeneratorCodeBlock(GeneratorCodeBlock node) {
+        private void WriteGeneratorCodeBlock(GeneratorCodeBlock node) {
             Out(".generator", Flow.Space);
             DumpBlock(node);
         }

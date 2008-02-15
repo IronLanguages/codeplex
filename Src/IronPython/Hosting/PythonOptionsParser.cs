@@ -40,8 +40,9 @@ namespace IronPython.Hosting {
 
         public override ConsoleOptions ConsoleOptions { get { return _consoleOptions; } set { _consoleOptions = (PythonConsoleOptions)value; } } 
         public override EngineOptions EngineOptions { get { return _engineOptions; } set { _engineOptions = (PythonEngineOptions)value; } }
-        
-        public PythonOptionsParser(PythonContext/*!*/ context) {
+
+        public PythonOptionsParser(PythonContext/*!*/ context)
+            : base(context) {
             Assert.NotNull(context);
             _context = context;
         }
@@ -93,13 +94,26 @@ namespace IronPython.Hosting {
                     _consoleOptions.ModuleToRun = PeekNextArg();
                     _engineOptions.Arguments = PopRemainingArgs();                                   
                     break;
+
                 case "-x": _consoleOptions.SkipFirstSourceLine = true; break;
+                
+                // TODO: unbuffered stdout?
+                case "-u": break;
+
                 case "-v": GlobalOptions.Verbose = true; break;
-                case "-u": GlobalOptions.BufferedStandardOutAndError = false; break;
                 case "-S": _consoleOptions.SkipImportSite = true; break;
                 case "-E": _consoleOptions.IgnoreEnvironmentVariables = true; break;
                 case "-t": _engineOptions.IndentationInconsistencySeverity = Severity.Warning; break;
                 case "-tt": _engineOptions.IndentationInconsistencySeverity = Severity.Error; break;
+
+                case "-O":
+                    _engineOptions.Optimize = true;
+                    break;
+
+                case "-OO":
+                    _engineOptions.Optimize = true;
+                    _engineOptions.StripDocStrings = true;
+                    break;
 
                 case "-Q":
                     string level = PopNextArg();

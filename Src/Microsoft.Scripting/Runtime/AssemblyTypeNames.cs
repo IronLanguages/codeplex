@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Runtime {
     }
 
     internal class AssemblyTypeNames {
-        internal static IEnumerable<TypeName> GetTypeNames(Assembly assem) {
+        internal static IEnumerable<TypeName> GetTypeNames(Assembly assem, bool includePrivateTypes) {
 #if !SILVERLIGHT
             AssemblyName assemblyName = new AssemblyName(assem.FullName);
             switch (assemblyName.Name) {
@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 #endif
 
-            Type[] types = LoadTypesFromAssembly(assem);
+            Type[] types = LoadTypesFromAssembly(assem, includePrivateTypes);
 
             return GetTypeNames(types);
         }
@@ -85,8 +85,8 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        internal static Type[] LoadTypesFromAssembly(Assembly asm) {
-            if (ScriptDomainManager.Options.PrivateBinding) {
+        internal static Type[] LoadTypesFromAssembly(Assembly asm, bool includePrivateTypes) {
+            if (includePrivateTypes) {
                 return GetAllTypesFromAssembly(asm);
             }
 

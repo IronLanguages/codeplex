@@ -40,24 +40,24 @@ namespace IronPython.Modules {
 
         private static BuiltinFunction pythonReduceComplex;
 
-        public static PythonDictionary DispatchTable {
-            [PythonName("dispatch_table")] get { return dispatchTable; }
-            [PythonName("dispatch_table")] set { dispatchTable = value; }
+        public static PythonDictionary dispatch_table {
+            get { return dispatchTable; }
+            set { dispatchTable = value; }
         }
 
-        public static PythonDictionary ExtensionCache {
-            [PythonName("_extension_cache")] get { return extensionCache; }
-            [PythonName("_extension_cache")] set { extensionCache = value; }
+        public static PythonDictionary _extension_cache {
+            get { return extensionCache; }
+            set { extensionCache = value; }
         }
 
-        public static PythonDictionary ExtensionRegistry {
-            [PythonName("_extension_registry")] get { return extensionRegistry; }
-            [PythonName("_extension_registry")] set { extensionRegistry = value; }
+        public static PythonDictionary _extension_registry {
+            get { return extensionRegistry; }
+            set { extensionRegistry = value; }
         }
 
-        public static PythonDictionary InvertedRegistry {
-            [PythonName("_inverted_registry")] get { return invertedRegistry; }
-            [PythonName("_inverted_registry")] set { invertedRegistry = value; }
+        public static PythonDictionary _inverted_registry {
+            get { return invertedRegistry; }
+            set { invertedRegistry = value; }
         }
 
         public static BuiltinFunction PythonReduceComplex {
@@ -78,19 +78,19 @@ namespace IronPython.Modules {
         static PythonCopyReg() {
             pythonReduceComplex = BuiltinFunction.MakeMethod(
                 "pickle_complex",
-                typeof(PythonCopyReg).GetMethod("ReduceComplex"),
+                typeof(PythonCopyReg).GetMethod("pickle_complex"),
                 FunctionType.Function | FunctionType.AlwaysVisible
             );
 
             PythonReconstructor = BuiltinFunction.MakeMethod(
                 "_reconstructor",
-                typeof(PythonCopyReg).GetMethod("Reconstructor"),
+                typeof(PythonCopyReg).GetMethod("_reconstructor"),
                 FunctionType.Function | FunctionType.AlwaysVisible
             );
 
             PythonNewObject = BuiltinFunction.MakeMethod(
                 "__newobj__",
-                typeof(PythonCopyReg).GetMethod("NewObject"),
+                typeof(PythonCopyReg).GetMethod("__newobj__"),
                 FunctionType.Function | FunctionType.AlwaysVisible
             );
 
@@ -113,10 +113,9 @@ namespace IronPython.Modules {
             + "The constructor argument is ignored, and exists only for backwards\n"
             + "compatibility."
             )]
-        [PythonName("pickle")]
-        public static void RegisterReduceFunction(object type, object function, [DefaultParameterValue(null)] object constructor) {
+        public static void pickle(object type, object function, [DefaultParameterValue(null)] object ctor) {
             EnsureCallable(function, "reduction functions must be callable");
-            if (constructor != null) Constructor(constructor);
+            if (ctor != null) constructor(ctor);
             dispatchTable[type] = function;
         }
 
@@ -125,8 +124,7 @@ namespace IronPython.Modules {
             + "backwards compatibility; for details, see\n"
             + "http://mail.python.org/pipermail/python-dev/2006-June/066831.html."
             )]
-        [PythonName("constructor")]
-        public static void Constructor(object callable) {
+        public static void constructor(object callable) {
             EnsureCallable(callable, "constructors must be callable");
         }
 
@@ -141,8 +139,7 @@ namespace IronPython.Modules {
 
         [Documentation("pickle_complex(complex_number) -> (<type 'complex'>, (real, imag))\n\n"
             + "Reduction function for pickling complex numbers.")]
-        [PythonName("pickle_complex")]
-        public static PythonTuple ReduceComplex(CodeContext context, object complex) {
+        public static PythonTuple pickle_complex(CodeContext context, object complex) {
             return PythonTuple.MakeTuple(
                 DynamicHelpers.GetPythonTypeFromType(typeof(Complex64)),
                 PythonTuple.MakeTuple(
@@ -152,14 +149,12 @@ namespace IronPython.Modules {
             );
         }
 
-        [PythonName("clear_extension_cache")]
-        public static void ClearExtensionCache() {
+        public static void clear_extension_cache() {
             extensionCache.Clear();
         }
 
         [Documentation("Register an extension code.")]
-        [PythonName("add_extension")]
-        public static void AddExtension(object moduleName, object objectName, object value) {
+        public static void add_extension(object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
@@ -184,8 +179,7 @@ namespace IronPython.Modules {
         }
 
         [Documentation("Unregister an extension code. (only for testing)")]
-        [PythonName("remove_extension")]
-        public static void RemoveExtension(object moduleName, object objectName, object value) {
+        public static void remove_extension(object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
@@ -208,8 +202,7 @@ namespace IronPython.Modules {
             + "Helper function for unpickling. Creates a new object of a given class.\n"
             + "See PEP 307 section \"The __newobj__ unpickling function\" for details."
             )]
-        [PythonName("__newobj__")]
-        public static object NewObject(object cls, params object[] args) {
+        public static object __newobj__(object cls, params object[] args) {
             object[] newArgs = new object[1 + args.Length];
             newArgs[0] = cls;
             for (int i = 0; i < args.Length; i++) newArgs[i + 1] = args[i];
@@ -221,8 +214,7 @@ namespace IronPython.Modules {
             + "class. See PEP 307 section \"Case 2: pickling new-style class instances using\n"
             + "protocols 0 or 1\" for details."
             )]
-        [PythonName("_reconstructor")]
-        public static object Reconstructor(object objType, object baseType, object baseState) {
+        public static object _reconstructor(object objType, object baseType, object baseState) {
             object obj = PythonOps.Invoke(baseType, Symbols.NewInst, objType, baseState);
             PythonOps.Invoke(baseType, Symbols.Init, obj, baseState);
             return obj;

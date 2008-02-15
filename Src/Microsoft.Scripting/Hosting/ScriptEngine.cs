@@ -38,8 +38,6 @@ namespace Microsoft.Scripting.Hosting {
 
         int ExecuteProgram(ScriptSource scriptSource);
 
-        void DumpDebugInfo();
-
         string FormatException(Exception exception);
 
         object Execute(IScriptScope scope, ScriptSource scriptSource);
@@ -137,10 +135,6 @@ namespace Microsoft.Scripting.Hosting {
 
         public int ExecuteProgram(ScriptSource scriptSource) {
             return _engine.ExecuteProgram(scriptSource);
-        }
-
-        public void DumpDebugInfo() {
-            throw new NotSupportedException();
         }
 
         public string FormatException(Exception exception) {
@@ -378,8 +372,9 @@ namespace Microsoft.Scripting.Hosting {
         public int ExecuteProgram(ScriptSource/*!*/ scriptSource) {
             Contract.RequiresNotNull(scriptSource, "scriptSource");
 
-            // TODO: not correct, should go to language context
-            object obj = _language.CompileSourceCode(scriptSource, null, null).Run(new Scope(_language));
+            // TODO: not correct, should go to language context for the exit code
+            ScriptCode compiledCode = _language.CompileSourceCode(scriptSource, null, null);
+            object obj = compiledCode.Run(compiledCode.MakeOptimizedScope());
 
             int res;
             if (!Operations.TryConvertTo<int>(obj, out res)) {
@@ -467,7 +462,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Returns a new ObjectOperations object.  See the Operations property for why you might want to call this.
         /// </summary>
         public ObjectOperations/*!*/ CreateOperations() {
-            return new ObjectOperations(GetCodeContext(ScriptDomainManager.CurrentManager.Host.DefaultScope));
+            return new ObjectOperations(GetCodeContext(LanguageContext.DomainManager.Host.DefaultScope));
         }
 
         /// <summary>
@@ -1119,15 +1114,6 @@ namespace Microsoft.Scripting.Hosting {
         #endregion
 
         #region Obsolete
-
-        public void DumpDebugInfo() {
-            if (ScriptDomainManager.Options.EngineDebug) {
-                PerfTrack.DumpStats();
-                try {
-                    ScriptDomainManager.CurrentManager.Snippets.Dump();
-                } catch (NotSupportedException) { } // usually not important info...
-            }
-        }
 
         Type/*!*/ IRemotable.GetType() {
             return typeof(ScriptEngine);

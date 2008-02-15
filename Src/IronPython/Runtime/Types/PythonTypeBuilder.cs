@@ -27,7 +27,7 @@ namespace IronPython.Runtime.Types {
     internal class PythonTypeBuilder {
         private PythonType _building;
         private List<TypeInitializer> _inits;
-        private static List<EventHandler<TypeCreatedEventArgs>> _notifications = new List<EventHandler<TypeCreatedEventArgs>>();
+        private static readonly List<EventHandler<TypeCreatedEventArgs>> _notifications = new List<EventHandler<TypeCreatedEventArgs>>();
 
         /// <summary>
         /// Creates a new PythonTypeBuilder for a PythonType with the specified name

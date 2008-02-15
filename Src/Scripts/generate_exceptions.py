@@ -366,7 +366,7 @@ CodeGenerator("Python New-Style Exceptions", newstyle_gen).doit()
 def gen_one_exception_module_entry(cw, exception, parent):
     exception.BeginSilverlight(cw)
 
-    cw.write("public static object %s = %s;" % (exception.name, exception.InternalPythonType))
+    cw.write("public static PythonType %s = %s;" % (exception.name, exception.InternalPythonType))
 
     exception.EndSilverlight(cw)
 

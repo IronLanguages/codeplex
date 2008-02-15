@@ -62,13 +62,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             Expression argument = _builder.ToExpression(context, parameters);
             if (IsByRef) {
                 // paramVariants._elementN.SetAsByrefT(ref argument)
-                expr = Ast.Statement(
-                    Ast.Call(
-                        Ast.ReadField(
-                            Ast.ReadDefined(paramVariants),
-                            variantArrayField),
-                        Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
-                        argument));
+                expr = Ast.Call(
+                    Ast.ReadField(
+                        Ast.ReadDefined(paramVariants),
+                        variantArrayField),
+                    Variant.GetByrefSetter(_targetComType & ~VarEnum.VT_BYREF),
+                    argument
+                );
                 exprs.Add(expr);
                 return exprs;
             }
@@ -77,13 +77,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 (_targetComType == VarEnum.VT_UNKNOWN) ||
                 (_targetComType == VarEnum.VT_DISPATCH)) {
                 // paramVariants._elementN.AsT = (cast)argN
-                expr = Ast.Statement(
-                    Ast.AssignProperty(
-                        Ast.ReadField(
-                            Ast.ReadDefined(paramVariants),
-                            variantArrayField),
-                        Variant.GetAccessor(_targetComType),
-                        argument));
+                expr = Ast.AssignProperty(
+                    Ast.ReadField(
+                        Ast.ReadDefined(paramVariants),
+                        variantArrayField),
+                    Variant.GetAccessor(_targetComType),
+                    argument
+                );
                 exprs.Add(expr);
                 return exprs;
             }
@@ -95,12 +95,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 case VarEnum.VT_NULL:
                     // paramVariants._elementN.SetAsNULL();
 
-                    expr = Ast.Statement(
-                        Ast.Call(
-                            Ast.ReadField(
-                                Ast.ReadDefined(paramVariants),
-                                variantArrayField),
-                            typeof(Variant).GetMethod("SetAsNULL")));
+                    expr = Ast.Call(
+                        Ast.ReadField(
+                            Ast.ReadDefined(paramVariants),
+                            variantArrayField),
+                        typeof(Variant).GetMethod("SetAsNULL")
+                    );
                     exprs.Add(expr);
                     return exprs;
 
@@ -133,12 +133,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 case VarEnum.VT_UNKNOWN:
                 case VarEnum.VT_DISPATCH:
                     // paramVariants._elementN.Clear()
-                    expr = Ast.Statement(
-                        Ast.Call(
-                            Ast.ReadField(
-                                Ast.ReadDefined(paramVariants),
-                                variantArrayField),
-                            typeof(Variant).GetMethod("Clear")));
+                    expr = Ast.Call(
+                        Ast.ReadField(
+                            Ast.ReadDefined(paramVariants),
+                            variantArrayField),
+                        typeof(Variant).GetMethod("Clear")
+                    );
                     exprs.Add(expr);
                     return exprs;
 

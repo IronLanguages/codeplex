@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Hosting {
             // prepare remote stub for the host:
             setup.RemoteHost = new RemoteScriptHost();
 
-            bool new_created = RemoteDelegate.Invoke(domain, setup, out environment);
+            bool new_created = RemoteDelegate.Invoke(domain, setup, out environment);            
 
             if (new_created) {
                 // create host local to the caller (i.e. remote to the environment):
@@ -112,6 +112,12 @@ namespace Microsoft.Scripting.Hosting {
         public ScriptIO/*!*/ IO {
             get {
                 return _manager.Environment.IO;
+            }
+        }
+
+        public PlatformAdaptationLayer PAL {
+            get {
+                return _manager.PAL;
             }
         }
 

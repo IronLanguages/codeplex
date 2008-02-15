@@ -133,7 +133,7 @@ namespace IronPython.Runtime.Types {
 
         #endregion
 
-        internal static void PopulateModuleDictionary(IAttributesCollection/*!*/ dict, Type/*!*/ type) {
+        internal static void PopulateModuleDictionary(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict, Type/*!*/ type) {
             Assert.NotNull(dict, type);
 
             // we could take the easy way out and build a PythonType for the module
@@ -151,8 +151,15 @@ namespace IronPython.Runtime.Types {
             // place a new one instead of just adding the pre-existing overloads back 
             // in.
             Dictionary<SymbolId, object> cleared = new Dictionary<SymbolId,object>();
+            MethodInfo reloadMethod = null;
             foreach (MethodInfo mi in type.GetMethods()) {
                 if (!mi.IsStatic) continue;
+                if (mi.Name == Importer.ModuleReloadMethod) {
+                    // there can be only one reload method
+                    Debug.Assert(reloadMethod == null); 
+                    reloadMethod = mi;
+                    continue; // hidden Python method for reloading modules.
+                }
 
                 string strName = mi.Name;
                 NameType nt = NameConverter.GetNameFromMethod(TypeCache.Object, mi, NameType.Method, ref strName);
@@ -192,6 +199,10 @@ namespace IronPython.Runtime.Types {
                 if (nt == NameType.None) continue;
 
                 dict[SymbolTable.StringToId(strName)] = DynamicHelpers.GetPythonTypeFromType(t);
+            }
+
+            if (reloadMethod != null) {
+                reloadMethod.Invoke(null, new object[] { context, dict });
             }
         }
     }

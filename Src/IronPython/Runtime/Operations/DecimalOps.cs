@@ -31,9 +31,8 @@ namespace IronPython.Runtime.Operations {
     public static class DecimalOps {
 
         [PythonName("__cmp__")]
-        [return: MaybeNotImplemented]
-        public static object Compare(CodeContext context, decimal x, object other) {
-            return DoubleOps.Compare(context, (double)x, other);
+        public static int Compare(CodeContext context, decimal x, decimal other) {
+            return x.CompareTo(other);
         }
 
         [SpecialName]

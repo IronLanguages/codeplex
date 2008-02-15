@@ -32,31 +32,27 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Modules {
     [Documentation("High performance data structures\n")]
     public class PythonCollections {
-        public static object deque = DynamicHelpers.GetPythonTypeFromType(typeof(PythonDequeCollection));
-
-        [PythonType("deque")]
-        public class PythonDequeCollection : IEnumerable, IComparable, ICodeFormattable, IValueEquality, ICollection {
+        [PythonSystemType]
+        public class deque : IEnumerable, IComparable, ICodeFormattable, IValueEquality, ICollection {
             private object[] _data;
             private object _lockObj = new object();
             private int _head, _tail;
             private int _itemCnt, _version;
 
-            public PythonDequeCollection() {
-                Clear();
+            public deque() {
+                clear();
             }
 
-            [PythonName("__init__")]
-            public void Initialize() {
+            public void __init__() {
             }
 
-            [PythonName("__init__")]
-            public void Initialize(object iterable) {
-                Extend(iterable);
+            public void __init__(object iterable) {
+                extend(iterable);
             }
 
             #region core deque APIs
-            [PythonName("append")]
-            public void Append(object x) {
+
+            public void append(object x) {
                 lock (_lockObj) {
                     _version++;
 
@@ -72,8 +68,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("appendleft")]
-            public void AppendLeft(object x) {
+            public void appendleft(object x) {
                 lock (_lockObj) {
                     _version++;
 
@@ -91,8 +86,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("clear")]
-            public void Clear() {
+            public void clear() {
                 lock (_lockObj) {
                     _version++;
 
@@ -102,24 +96,21 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("extend")]
-            public void Extend(object iterable) {
+            public void extend(object iterable) {
                 IEnumerator e = PythonOps.GetEnumerator(iterable);
                 while (e.MoveNext()) {
-                    Append(e.Current);
+                    append(e.Current);
                 }
             }
 
-            [PythonName("extendleft")]
-            public void ExtendLeft(object iterable) {
+            public void extendleft(object iterable) {
                 IEnumerator e = PythonOps.GetEnumerator(iterable);
                 while (e.MoveNext()) {
-                    AppendLeft(e.Current);
+                    appendleft(e.Current);
                 }
             }
 
-            [PythonName("pop")]
-            public object Pop() {
+            public object pop() {
                 lock (_lockObj) {
                     if (_itemCnt == 0) throw PythonOps.IndexError("pop from an empty deque");
 
@@ -137,8 +128,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("popleft")]
-            public object PopLeft() {
+            public object popleft() {
                 lock (_lockObj) {
                     if (_itemCnt == 0) throw PythonOps.IndexError("pop from an empty deque");
 
@@ -156,8 +146,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("remove")]
-            public void Remove(object value) {
+            public void remove(object value) {
                 lock (_lockObj) {
                     int found = -1;
                     WalkDeque(delegate(int index) {
@@ -169,9 +158,9 @@ namespace IronPython.Modules {
                     });
 
                     if (found == _head) {
-                        PopLeft();
+                        popleft();
                     } else if (found == _tail - 1) {
-                        Pop();
+                        pop();
                     } else if (found == -1) {
                         throw PythonOps.TypeError("deque.remove(value): value not in deque");
                     } else {
@@ -216,13 +205,11 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("rotate")]
-            public void Rotate() {
-                Rotate(1);
+            public void rotate() {
+                rotate(1);
             }
 
-            [PythonName("rotate")]
-            public void Rotate(object n) {
+            public void rotate(object n) {
                 lock (_lockObj) {
                     // rotation is easy if we have no items!
                     if (_itemCnt == 0) return;
@@ -276,28 +263,27 @@ namespace IronPython.Modules {
             }
             #endregion
 
-            [PythonName("__copy__")]
-            public object Copy() {
-                if (GetType() == typeof(PythonDequeCollection)) {
-                    PythonDequeCollection res = new PythonDequeCollection();
-                    res.Extend(this.GetEnumerator());
+            public object __copy__() {
+                if (GetType() == typeof(deque)) {
+                    deque res = new deque();
+                    res.extend(((IEnumerable)this).GetEnumerator());
                     return res;
                 } else {
-                    return PythonCalls.Call(DynamicHelpers.GetPythonType(this), GetEnumerator());
+                    return PythonCalls.Call(DynamicHelpers.GetPythonType(this), ((IEnumerable)this).GetEnumerator());
                 }
             }
 
-            [SpecialName, PythonName("__delitem__")]
-            public void RemoveAt(object index) {
+            [SpecialName]
+            public void __delitem__(object index) {
                 lock (_lockObj) {
                     int realIndex = IndexToSlot(index);
 
                     _version++;
                     if (realIndex == _head) {
-                        PopLeft();
+                        popleft();
                     } else if (realIndex == (_tail - 1) ||
                         (realIndex == (_data.Length - 1) && _tail == _data.Length)) {
-                        Pop();
+                        pop();
                     } else {
                         // we're removing an index from the middle, what a pain...
                         // we'll just recreate our data by walking the data once.
@@ -320,8 +306,8 @@ namespace IronPython.Modules {
                 }
             }
 
-            [SpecialName, PythonName("__contains__")]
-            public object Contains(object o) {
+            [SpecialName]
+            public object __contains__(object o) {
                 lock (_lockObj) {
                     object res = RuntimeHelpers.False;
                     WalkDeque(delegate(int index) {
@@ -336,8 +322,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PythonName("__reduce__")]
-            public PythonTuple Reduce() {
+            public PythonTuple __reduce__() {
                 lock (_lockObj) {
                     object[] items = new object[_itemCnt];
                     int curItem = 0;
@@ -354,8 +339,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [SpecialName, PythonName("__len__")]
-            public int GetLength() {
+            public int __len__() {
                 return _itemCnt;
             }
 
@@ -364,18 +348,19 @@ namespace IronPython.Modules {
             public override string ToString() {
                 return PythonOps.StringRepr(this);
             }
+
             #endregion
 
             #region IComparable Members
 
-            public int CompareTo(object obj) {
-                PythonDequeCollection otherDeque = obj as PythonDequeCollection;
+            int IComparable.CompareTo(object obj) {
+                deque otherDeque = obj as deque;
                 if (otherDeque == null) throw new ArgumentException("expected deque");
 
                 return CompareToWorker(otherDeque);
             }
 
-            private int CompareToWorker(PythonDequeCollection otherDeque) {
+            private int CompareToWorker(deque otherDeque) {
                 if (otherDeque._itemCnt == 0 && _itemCnt == 0) {
                     // comparing two empty deques
                     return 0;
@@ -423,17 +408,17 @@ namespace IronPython.Modules {
             #endregion
 
             #region IEnumerable Members
-            [PythonName("__iter__")]
-            public IEnumerator GetEnumerator() {
-                return new PythonDequeEnumerator(this);
+            
+            IEnumerator IEnumerable.GetEnumerator() {
+                return new deque_iterator(this);
             }
 
-            [PythonType("deque_iterator")]
-            private class PythonDequeEnumerator : IEnumerator {
-                PythonDequeCollection deque;
+            [PythonSystemType]
+            private class deque_iterator : IEnumerator {
+                deque deque;
                 int curIndex, moveCnt, version;
 
-                public PythonDequeEnumerator(PythonDequeCollection d) {
+                public deque_iterator(deque d) {
                     lock (d._lockObj) {
                         deque = d;
                         curIndex = d._head - 1;
@@ -443,13 +428,13 @@ namespace IronPython.Modules {
 
                 #region IEnumerator Members
 
-                public object Current {
+                object IEnumerator.Current {
                     get {
                         return this.deque._data[curIndex];
                     }
                 }
 
-                public bool MoveNext() {
+                bool IEnumerator.MoveNext() {
                     lock (deque._lockObj) {
                         if (version != deque._version) throw PythonOps.RuntimeError("deque mutated during iteration");
 
@@ -465,7 +450,7 @@ namespace IronPython.Modules {
                     }
                 }
 
-                public void Reset() {
+                void IEnumerator.Reset() {
                     moveCnt = 0;
                     curIndex = deque._head;
                 }
@@ -476,6 +461,7 @@ namespace IronPython.Modules {
             #endregion
 
             #region private members
+
             private void GrowArray() {
                 object[] newData = new object[_data.Length * 2];
 
@@ -497,7 +483,6 @@ namespace IronPython.Modules {
                 _tail = _data.Length;
                 _data = newData;
             }
-
 
             private int IndexToSlot(object index) {
                 if (_itemCnt == 0) throw PythonOps.IndexError("deque index out of range");
@@ -557,8 +542,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            [SpecialName, PythonName("__repr__")]
-            public string ToCodeString(CodeContext context) {
+            string ICodeFormattable.ToCodeString(CodeContext context) {
                 StringBuilder sb = new StringBuilder();
                 sb.Append("deque([");
                 string comma = "";
@@ -581,21 +565,21 @@ namespace IronPython.Modules {
 
             #region IValueEquality Members
 
-            public int GetValueHashCode() {
+            int IValueEquality.GetValueHashCode() {
                 throw PythonOps.TypeError("deque objects are unhashable");
             }
 
 
-            public bool ValueEquals(object other) {
-                if (!(other is PythonDequeCollection)) return false;
+            bool IValueEquality.ValueEquals(object other) {
+                if (!(other is deque)) return false;
 
-                return CompareTo(other) == 0;
+                return ((IComparable)this).CompareTo(other) == 0;
             }
 
-            public bool ValueNotEquals(object other) {
-                if (!(other is PythonDequeCollection)) return true;
+            bool IValueEquality.ValueNotEquals(object other) {
+                if (!(other is deque)) return true;
 
-                return CompareTo(other) != 0;
+                return ((IComparable)this).CompareTo(other) != 0;
             }
 
             #endregion
@@ -604,38 +588,38 @@ namespace IronPython.Modules {
 
             [SpecialName]
             [return: MaybeNotImplemented]
-            public object GreaterThan(CodeContext context, object other) {
-                PythonDequeCollection otherDeque = other as PythonDequeCollection;
+            public static object operator >(deque self, object other) {
+                deque otherDeque = other as deque;
                 if (otherDeque == null) return PythonOps.NotImplemented;
 
-                return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) > 0);
+                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) > 0);
             }
 
             [SpecialName]
             [return: MaybeNotImplemented]
-            public object LessThan(CodeContext context, object other) {
-                PythonDequeCollection otherDeque = other as PythonDequeCollection;
+            public static object operator <(deque self, object other) {
+                deque otherDeque = other as deque;
                 if (otherDeque == null) return PythonOps.NotImplemented;
 
-                return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) < 0);
+                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) < 0);
             }
 
             [SpecialName]
             [return: MaybeNotImplemented]
-            public object GreaterThanOrEqual(CodeContext context, object other) {
-                PythonDequeCollection otherDeque = other as PythonDequeCollection;
+            public static object operator >=(deque self, object other) {
+                deque otherDeque = other as deque;
                 if (otherDeque == null) return PythonOps.NotImplemented;
 
-                return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) >= 0);
+                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) >= 0);
             }
 
             [SpecialName]
             [return: MaybeNotImplemented]
-            public object LessThanOrEqual(CodeContext context, object other) {
-                PythonDequeCollection otherDeque = other as PythonDequeCollection;
+            public static object operator <=(deque self, object other) {
+                deque otherDeque = other as deque;
                 if (otherDeque == null) return PythonOps.NotImplemented;
 
-                return RuntimeHelpers.BooleanToObject(CompareToWorker(otherDeque) <= 0);
+                return RuntimeHelpers.BooleanToObject(self.CompareToWorker(otherDeque) <= 0);
             }
 
             #endregion

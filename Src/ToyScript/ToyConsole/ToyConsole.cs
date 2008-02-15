@@ -26,10 +26,9 @@ namespace ToyScript {
         protected override void Initialize() {
             base.Initialize();
 
-            ScriptDomainManager.CurrentManager.LoadAssembly(typeof(string).Assembly);
+            Options.ScriptEngine = Environment.GetEngine(typeof(ToyLanguageContext));
 
-            this.Options.ScriptEngine =
-                ScriptEnvironment.GetEnvironment().GetEngine(typeof(ToyLanguageContext));
+            Environment.LoadAssembly(typeof(string).Assembly);
         }
 
         [STAThread]

@@ -234,7 +234,7 @@ def gen_call_meth(nparams, cw):
 def gen_python_methods(cw):
     for nparams in range(MAX_ARGS+1):
         types = ', '.join(['object'] * (nparams + 2))
-        cw.write("private static FastDynamicSite<%s> _callSite%d = RuntimeHelpers.CreateSimpleCallSite<%s>(DefaultContext.Default);" % (types, nparams, types ))
+        cw.write("private static readonly FastDynamicSite<%s> _callSite%d = RuntimeHelpers.CreateSimpleCallSite<%s>(DefaultContext.Default);" % (types, nparams, types ))
     cw.write("")
     for nparams in range(MAX_ARGS+1):
         gen_call_meth(nparams, cw)

@@ -276,7 +276,7 @@ if (d.M2() !=  100):
     write_to_file(tempFileName1, tempFile1)
     write_to_file(tempFileName2, tempFile2)
     
-    AreEqual(launch_ironpython_changing_extensions(tempFileName2, ["-X:SaveAssemblies"], ["-X:GenerateAsSnippets", "-X:AssembliesDir"]), 0)
+    AreEqual(launch_ironpython_changing_extensions(tempFileName2, ["-X:SaveAssemblies"], ["-X:TupleBasedOptimizedScopes", "-X:AssembliesDir"]), 0)
     RunPythonExe(tempExeName2)
 
     FileRemoval(tempFileName1, tempFileName2, tempExeName1, tempExeName2, tempPdbName1, tempPdbName2)

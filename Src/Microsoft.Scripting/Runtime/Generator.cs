@@ -39,10 +39,21 @@ namespace Microsoft.Scripting.Runtime {
             get { return _context; }
         }
 
-        public abstract bool MoveNext();
+        /// <summary>
+        /// Protected so languages can expose their own set of public API surface
+        /// </summary>
+        protected abstract bool MoveNext();
 
         public void Reset() {
             throw new NotImplementedException();
+        }
+        
+        /// <summary>
+        /// Explicitly implemented so languages can expose their own set of public API surface
+        /// </summary>
+        /// <returns></returns>
+        bool IEnumerator.MoveNext() {
+            return MoveNext();
         }
 
         #region IDisposable Members

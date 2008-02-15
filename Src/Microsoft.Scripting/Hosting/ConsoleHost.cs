@@ -23,12 +23,14 @@ using System.Threading;
 using System.IO;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Hosting {
 
     public abstract class ConsoleHost {
         private int _exitCode;
-        private ConsoleHostOptions _options = new ConsoleHostOptions();
+        private ConsoleHostOptions _options;
+        private IScriptEnvironment _env;
 
         public ConsoleHostOptions Options { get { return _options; } }
 
@@ -61,9 +63,13 @@ namespace Microsoft.Scripting.Hosting {
         protected virtual void Initialize() {
             // A console application needs just the simple setup.
             // The full setup is potentially expensive as it can involve loading System.Configuration.dll
-            ScriptEnvironmentSetup setup = new ScriptEnvironmentSetup(true);
-            ScriptDomainManager manager;
-            ScriptDomainManager.TryCreateLocal(setup, out manager);
+            ScriptEnvironmentSetup setup = CreateScriptEnvironmentSetup();
+            _env = ScriptEnvironment.Create(setup);
+            _options = new ConsoleHostOptions();
+        }
+
+        protected virtual ScriptEnvironmentSetup CreateScriptEnvironmentSetup() {
+            return new ScriptEnvironmentSetup(true);
         }
 
         /// <summary>
@@ -81,7 +87,7 @@ namespace Microsoft.Scripting.Hosting {
             }
 
             try {
-                new ConsoleHostOptionsParser(_options).Parse(args);
+                new ConsoleHostOptionsParser(_options, _env).Parse(args);
             } catch (Exception e) {
                 Console.Error.WriteLine("Invalid argument:");
                 PrintException(Console.Error, e);
@@ -197,11 +203,6 @@ namespace Microsoft.Scripting.Hosting {
 
             SetEnvironment();
 
-            if (_options.RunAction == ConsoleHostOptions.Action.ExecuteFile) {
-                _exitCode = ExecuteFile(_options.Files[_options.Files.Count - 1], _options.IgnoredArgs.ToArray());
-                return;
-            }
-
             Debug.Assert(_options.ScriptEngine != null);
 
             OptionsParser opt_parser = _options.ScriptEngine.GetService<OptionsParser>();
@@ -250,7 +251,7 @@ namespace Microsoft.Scripting.Hosting {
 
             int result = 0;
             foreach (string filePath in _options.Files) {
-                SourceUnit sourceUnit = ScriptDomainManager.CurrentManager.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
+                SourceUnit sourceUnit = engine.Runtime.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
                 if (sourceUnit == null) {
                     throw new FileNotFoundException(string.Format("Source file '{0}' not found.", filePath));
                 }
@@ -270,54 +271,27 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        protected virtual int ExecuteFile(string file, string[] args) {
-            Contract.RequiresNotNull(file, "file");
-            Contract.RequiresNotNull(args, "args");
-
-            Assembly assembly = ScriptDomainManager.CurrentManager.PAL.LoadAssembly(file);
-            MethodInfo method = null;
-
-            foreach (Type type in assembly.GetExportedTypes()) {
-                method = type.GetMethod("Main", BindingFlags.Static | BindingFlags.Public | BindingFlags.IgnoreCase);
-                if (method != null) break;
-            }
-
-            if (method == null) {
-                throw new MissingMethodException(String.Format("Missing entry point (file '{0}').", file));
-            }
-
-            object result = null;
-            ParameterInfo[] ps = method.GetParameters();
-            if (ps.Length == 1 && ps[0].ParameterType.IsAssignableFrom(typeof(string[]))) {
-                result = method.Invoke(null, new object[] { args });
-            } else {
-                result = method.Invoke(null, ArrayUtils.EmptyObjects);
-            }
-
-            return (result is int) ? (int)result : Environment.ExitCode;
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1800:DoNotCastUnnecessarily")]
-        protected virtual int RunCommandLine(OptionsParser optionsParser) {
+        protected virtual int RunCommandLine(OptionsParser/*!*/ optionsParser) {
             Contract.RequiresNotNull(optionsParser, "optionsParser");
             
-            CommandLine command_line;
-            ConsoleOptions console_options;
-            EngineOptions engine_options;
+            CommandLine commandLine;
+            ConsoleOptions consoleOptions;
+            EngineOptions engineOptions;
 
-            console_options = optionsParser.ConsoleOptions;
-            engine_options = optionsParser.EngineOptions;
+            consoleOptions = optionsParser.ConsoleOptions;
+            engineOptions = optionsParser.EngineOptions;
 
-            command_line = _options.ScriptEngine.GetService<CommandLine>();
+            commandLine = _options.ScriptEngine.GetService<CommandLine>();
 
             IScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
 
-            if (console_options.PrintVersionAndExit) {
+            if (consoleOptions.PrintVersionAndExit) {
                 Console.WriteLine("{0} {1} on .NET {2}", engine.LanguageDisplayName, engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
                 return 0;
             }
 
-            if (console_options.PrintUsageAndExit) {
+            if (consoleOptions.PrintUsageAndExit) {
                 if (optionsParser != null) {
                     StringBuilder sb = new StringBuilder();
                     PrintLanguageHelp(_options.ScriptEngine, sb);
@@ -328,37 +302,29 @@ namespace Microsoft.Scripting.Hosting {
 
             engine.SetScriptSourceSearchPaths(_options.SourceUnitSearchPaths);
 
-            IConsole console = _options.ScriptEngine.GetService<IConsole>(command_line, console_options);
+            IConsole console = _options.ScriptEngine.GetService<IConsole>(commandLine, consoleOptions);
 
-            int result;
-            if (console_options.HandleExceptions) {
-                try {
-                    result = command_line.Run(engine, console, console_options);
-                } catch (Exception e) {
-                    UnhandledException(engine, e);
-                    result = 1;
-                }
-
-                ScriptEngine se = engine as ScriptEngine;
-                if (se != null) {
+            int exitCode = 0;
+            try {
+                if (consoleOptions.HandleExceptions) {
                     try {
-                        se.DumpDebugInfo();
-                    } catch {
-                        result = 1;
+                        exitCode = commandLine.Run(engine, console, consoleOptions);
+                    } catch (Exception e) {
+                        UnhandledException(engine, e);
+                        exitCode = 1;
                     }
+                } else {
+                    exitCode = commandLine.Run(engine, console, consoleOptions);
                 }
-
-                return result;
-            } else {
+            } finally {
                 try {
-                    return command_line.Run(engine, console, console_options);
-                } finally {
-                    ScriptEngine se = engine as ScriptEngine;
-                    if (se != null) {
-                        se.DumpDebugInfo();
-                    }
+                    Snippets.Shared.Dump();
+                } catch (Exception) {
+                    exitCode = 1;
                 }
             }
+
+            return exitCode;
         }
 
         protected virtual void UnhandledException(IScriptEngine engine, Exception e) {
@@ -373,6 +339,15 @@ namespace Microsoft.Scripting.Hosting {
             while (e != null) {
                 output.WriteLine(e);
                 e = e.InnerException;
+            }
+        }
+
+        protected IScriptEnvironment Environment {
+            get {
+                return _env;
+            }
+            set {
+                _env = value;
             }
         }
     }

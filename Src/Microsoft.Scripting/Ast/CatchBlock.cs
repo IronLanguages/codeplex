@@ -14,10 +14,7 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
     // TODO: Make internal?
@@ -28,8 +25,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly Type /*!*/ _test;
         private readonly Variable _var;
         private readonly Expression /*!*/ _body;
-
-        private bool _yield;        // The catch block contains a yield
 
         internal CatchBlock(SourceSpan span, SourceLocation header, Type /*!*/ test, Variable target, Expression /*!*/ body) {
             _test = test;
@@ -68,11 +63,6 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Body {
             get { return _body; }
-        }
-
-        internal bool Yield {
-            get { return _yield; }
-            set { _yield = value; }
         }
     }
 

@@ -115,6 +115,13 @@ def AssertError(*args, **kwargs):
         print "AssertError(" + str(args) + ", " + str(kwargs) + ") failed!"
         raise e
 
+def AssertErrorWithMessage(*args, **kwargs):
+    try:
+        if assert_helper(kwargs): assert_util.AssertErrorWithMessage(*args, **kwargs)
+    except Exception, e:
+        print "AssertErrorWithMessage(" + str(args) + ", " + str(kwargs) + ") failed!"
+        raise e
+
 def AlmostEqual(*args, **kwargs):
     if assert_helper(kwargs): assert_util.AlmostEqual(*args, **kwargs)
 
@@ -306,11 +313,13 @@ if sys.platform=="win32":
             pass
             
 #------------------------------------------------------------------------------
+RERUN_UNDER_PREFERCOMDISPATCH = ["cominterop\\apps\\msagent.py"]
+
 def run_com_test(name, file):
     run_test(name)
     
     #Run this test with PreferComDispatch as well
-    if not preferComDispatch and sys.platform!="win32":
+    if not preferComDispatch and sys.platform!="win32" and file.lower() in RERUN_UNDER_PREFERCOMDISPATCH:
         print
         print "#" * 80
         print "Re-running %s under '-X:PreferComDispatch' mode." % (file)

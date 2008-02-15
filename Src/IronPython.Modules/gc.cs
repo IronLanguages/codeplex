@@ -28,7 +28,7 @@ using Microsoft.Scripting.Runtime;
 [assembly: PythonModule("gc", typeof(IronPython.Modules.PythonGC))]
 namespace IronPython.Modules {
     public static class PythonGC {
-        public static object gc = DynamicHelpers.GetPythonTypeFromType(typeof(PythonGC));
+        public static PythonType gc = DynamicHelpers.GetPythonTypeFromType(typeof(PythonGC));
         public const int DEBUG_STATS = 1;
         public const int DEBUG_COLLECTABLE = 2;
         public const int DEBUG_UNCOLLECTABLE = 4;
@@ -39,23 +39,19 @@ namespace IronPython.Modules {
 
         static PythonTuple thresholds = PythonTuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024);
 
-        [PythonName("enable")]
-        public static void Enable() {
+        public static void enable() {
         }
 
-        [PythonName("disable")]
-        public static void Disable() {
+        public static void disable() {
             throw PythonOps.NotImplementedError("gc.disable isn't implemented");
         }
 
-        [PythonName("isenabled")]
-        public static object IsEnabled() {
+        public static object isenabled() {
             return RuntimeHelpers.True;
         }
 
 #if !SILVERLIGHT // GC.Collect
-        [PythonName("collect")]
-        public static int Collect(int generation) {
+        public static int collect(int generation) {
             if (generation > GC.MaxGeneration || generation < 0) throw PythonOps.ValueError("invalid generation {0}", generation);
 
             long start = GC.GetTotalMemory(false);
@@ -65,8 +61,7 @@ namespace IronPython.Modules {
             return (int)Math.Max(start - GC.GetTotalMemory(false), 0);
         }
 
-        [PythonName("collect")]
-        public static int Collect() {
+        public static int collect() {
             long start = GC.GetTotalMemory(false);
             GC.Collect(GC.MaxGeneration);
             GC.WaitForPendingFinalizers();
@@ -74,44 +69,36 @@ namespace IronPython.Modules {
         }
 #endif
 
-        [PythonName("set_debug")]
-        public static void SetDebug(object o) {
+        public static void set_debug(object o) {
             throw PythonOps.NotImplementedError("gc.set_debug isn't implemented");
         }
 
-        [PythonName("get_debug")]
-        public static object GetDebug() {
+        public static object get_debug() {
             return null;
         }
 
-        [PythonName("get_objects")]
-        public static object[] GetObjects() {
+        public static object[] get_objects() {
             throw PythonOps.NotImplementedError("gc.get_objects isn't implemented");
         }
 
-        [PythonName("set_threshold")]
-        public static void SetThreshold(params object[] args) {
+        public static void set_threshold(params object[] args) {
             thresholds = PythonTuple.MakeTuple(args);
         }
 
-        [PythonName("get_threshold")]
-        public static PythonTuple GetThreshold() {
+        public static PythonTuple get_threshold() {
             return thresholds;
         }
 
-        [PythonName("get_referrers")]
         public static object[] get_referrers(params object[] objs) {
             throw PythonOps.NotImplementedError("gc.get_referrers isn't implemented");
         }
 
-        [PythonName("get_referents")]
-        public static object[] GetReferents(params object[] objs) {
+        public static object[] get_referents(params object[] objs) {
             throw PythonOps.NotImplementedError("gc.get_referents isn't implemented");
         }
 
 
-        public static List Garbage {
-            [PythonName("garbage")]
+        public static List garbage {
             get {
                 return new List();
             }

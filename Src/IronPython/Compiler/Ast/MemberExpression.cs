@@ -68,20 +68,16 @@ namespace IronPython.Compiler.Ast {
                 MSAst.BoundExpression temp = ag.MakeTempExpression("inplace");
                 return Ast.Block(
                     new SourceSpan(Span.Start, span.End),
-                    Ast.Statement(
-                        Ast.Assign(temp.Variable, ag.Transform(_target))
-                    ),
-                    Ast.Statement(
-                        Ast.Action.SetMember(
-                            _name,
+                    Ast.Assign(temp.Variable, ag.Transform(_target)),
+                    Ast.Action.SetMember(
+                        _name,
+                        typeof(object),
+                        temp,
+                        Ast.Action.Operator(
+                            op,
                             typeof(object),
-                            temp,
-                            Ast.Action.Operator(
-                                op,
-                                typeof(object),
-                                Ast.Action.GetMember(_name, typeof(object), temp),
-                                right
-                            )
+                            Ast.Action.GetMember(_name, typeof(object), temp),
+                            right
                         )
                     )
                 );

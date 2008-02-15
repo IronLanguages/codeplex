@@ -35,17 +35,16 @@ namespace IronPython.Modules {
 
         public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "_locale", "");
 
-        public static object CHAR_MAX = 127;
-        public static object LC_ALL = (int)LocaleCategories.All;
-        public static object LC_COLLATE = (int)LocaleCategories.Collate;
-        public static object LC_CTYPE = (int)LocaleCategories.CType;
-        public static object LC_MONETARY = (int)LocaleCategories.Monetary;
-        public static object LC_NUMERIC = (int)LocaleCategories.Numeric;
-        public static object LC_TIME = (int)LocaleCategories.Time;
+        public const int CHAR_MAX = 127;
+        public const int LC_ALL = (int)LocaleCategories.All;
+        public const int LC_COLLATE = (int)LocaleCategories.Collate;
+        public const int LC_CTYPE = (int)LocaleCategories.CType;
+        public const int LC_MONETARY = (int)LocaleCategories.Monetary;
+        public const int LC_NUMERIC = (int)LocaleCategories.Numeric;
+        public const int LC_TIME = (int)LocaleCategories.Time;
 
         [Documentation("gets the default locale tuple")]
-        [PythonName("_getdefaultlocale")]
-        public static object GetDefaultLocale() {            
+        public static object _getdefaultlocale() {            
             return PythonTuple.MakeTuple(new object[] { CultureInfo.CurrentCulture.Name, "" });
         }
 
@@ -53,8 +52,7 @@ namespace IronPython.Modules {
 
 The conventions table is a dictionary that contains information on how to use 
 the locale for numeric and monetary formatting")]
-        [PythonName("localeconv")]
-        public static object LocaleConventions() {
+        public static object localeconv() {
             return currentLocale.GetConventionsTable();
         }
 
@@ -69,8 +67,7 @@ LC_TIME:      sets the locale for time functions [unused]
 
 If locale is None then the current setting is returned.
 ")]
-        [PythonName("setlocale")]
-        public static object SetLocale(object category, [DefaultParameterValue(null)]string locale) {
+        public static object setlocale(object category, [DefaultParameterValue(null)]string locale) {
             if (locale == null) {
                 return currentLocale.GetLocale(category);
             }
@@ -80,16 +77,14 @@ If locale is None then the current setting is returned.
         }
 
         [Documentation("compares two strings using the current locale")]
-        [PythonName("strcoll")]
-        public static int StringCollate(string string1, string string2) {
+        public static int strcoll(string string1, string string2) {
             return currentLocale.Collate.CompareInfo.Compare(string1, string2, CompareOptions.None);
         }
 
         [Documentation(@"returns a transformed string that can be compared using the built-in cmp.
         
 Currently returns the string unmodified")]
-        [PythonName("strxfrm")]
-        public static object StringTransform(string @string) {
+        public static object strxfrm(string @string) {
             return @string;
         }
 

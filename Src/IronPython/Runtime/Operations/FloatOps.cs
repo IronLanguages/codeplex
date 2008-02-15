@@ -74,6 +74,14 @@ namespace IronPython.Runtime.Operations {
 
         #region Binary operators
 
+        [SpecialName, PythonName("__divmod__")]
+        [return: MaybeNotImplemented]
+        public static object DivMod(double x, double y) {
+            object div = FloorDivide(x, y);
+            if (div == PythonOps.NotImplemented) return div;
+            return PythonTuple.MakeTuple(div, Mod(x, y));
+        }
+
         [SpecialName]
         public static double Mod(double x, double y) {
             if (y == 0) throw PythonOps.ZeroDivisionError();
@@ -102,7 +110,7 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        [SpecialName, PythonName("__coerce__")]
+        [PythonName("__coerce__")]
         public static PythonTuple Coerce(CodeContext context, double x, object o) {
             // called via builtin.coerce()
             double d = (double)Make(context, TypeCache.Double, o);
@@ -114,12 +122,6 @@ namespace IronPython.Runtime.Operations {
             return PythonTuple.MakeTuple(x, d);
         }
         
-        internal static object DivMod(double x, double y) {
-            object div = FloorDivide(x, y);
-            if (div == PythonOps.NotImplemented) return div;
-            return PythonTuple.MakeTuple(div, Mod(x, y));
-        }
-
         #region Unary operators
         [SpecialName, PythonName("__int__")]
         public static object ToInteger(double d) {
@@ -281,41 +283,7 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static bool NotEquals(Double x, int y) {
             return x != y;
-        }
-
-        [PythonName("__cmp__")]
-        [return: MaybeNotImplemented]
-        public static object Compare(CodeContext context, double self, object other) {
-            if (other == null) return 1;
-
-            BigInteger bi = other as BigInteger;
-            if (!Object.ReferenceEquals(bi, null)) {
-                return Compare(self, bi);
-            }
-
-            // everything else can be held by a double.
-            double val;
-            if (Converter.TryConvertToDouble(other, out val)) {
-                if (val == self) return 0;
-                if (self < val) return -1;
-                return 1;
-            } else {
-                object res;
-                if (DynamicHelpers.GetPythonType(other).TryInvokeBinaryOperator(context, Operators.Coerce, other, self, out res)) {
-                    if (res != PythonOps.NotImplemented && !(res is OldInstance)) {
-                        return PythonOps.Compare(context, ((PythonTuple)res)[1], ((PythonTuple)res)[0]);
-                    }
-                }
-
-                Complex64 c64;
-                if (Converter.TryConvertToComplex64(other, out c64)) {
-                    return ComplexOps.TrueCompare(context, c64, new Complex64(self)) * -1;
-                }
-
-                return PythonOps.NotImplemented;
-            }
-        }
-
+        }       
     }
 
     public partial class SingleOps {

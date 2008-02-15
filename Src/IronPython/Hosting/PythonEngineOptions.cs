@@ -39,10 +39,28 @@ namespace IronPython {
         private Severity _indentationInconsistencySeverity;
         private PythonDivisionOptions _division;
         private bool _preferComDispatchOverTypeInfo;
+        private bool _stripDocStrings;
+        private bool _optimize;
 
         public string[] Arguments {
             get { return _arguments; }
             set { _arguments = value; }
+        }
+
+        /// <summary>
+        ///  Should we strip out all doc strings (the -O command line option).
+        /// </summary>
+        public bool Optimize {
+            get { return _optimize; }
+            set { _optimize = value; }
+        }
+        
+        /// <summary>
+        ///  Should we strip out all doc strings (the -OO command line option).
+        /// </summary>
+        public bool StripDocStrings {
+            get { return _stripDocStrings; }
+            set { _stripDocStrings = value; }
         }
 
         /// <summary>

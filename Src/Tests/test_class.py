@@ -1369,7 +1369,8 @@ def test_slots():
         def __init__(self):
             global initCalled
             initCalled = True
-            
+    
+    initCalled = False
     a = Foo()
     AreEqual(initCalled, True)
     
@@ -1971,8 +1972,6 @@ def test_cmp_notimplemented():
     #AreEqual(ran, ['foo.eq', 'foo.lt', 'foo.gt', 'foo.cmp'])
 
 
-#CodePlex Work Item #11487
-@skip("cli silverlight")
 def test_override_repr():
     class KOld:
         def __repr__(self):
@@ -2118,7 +2117,6 @@ def test_descriptors_custom_attrs():
     
     AreEqual(f().x, 42)
 
-@runonly("win32")
 def test_cp5801():
     class Foo(object):
         __slots__ = ['bar']
@@ -2322,5 +2320,39 @@ def test_cp11760():
                     #'__call__', '__cmp__', 
                     ]:
             Assert(x in dir_str, x + " is not in dir(K().__str__)")
+
+
+def test_delattr():
+    global called
+    class X(object):
+        def __delattr__(self, name):
+            global called
+            called = True
+    
+    del X().abc      
+    
+    Assert(called)
+  
+def test_cp10709():
+    class KNew(object):
+        p1 = property(lambda self: 3.14)
+        m1 = lambda self: 3.15
+        f1 = lambda: 3.16
+        def m2(self, a):
+            x = lambda: 3.17
+            return x()
+            
+    class KOld:
+        p1 = property(lambda self: 3.14)
+        m1 = lambda self: 3.15
+        f1 = lambda: 3.16
+        def m2(self, a):
+            x = lambda: 3.17
+            return x()
+            
+    for temp in dir(KNew) + dir(KNew()) + dir(KOld) + dir(KOld()):
+        Assert("lambda" not in temp)
+        
+
 
 run_test(__name__)

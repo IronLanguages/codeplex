@@ -747,36 +747,36 @@ namespace IronPython.Runtime {
 
     #region File Manager
 
-    internal static class PythonFileManager {
-        static HybridMapping<PythonFile> mapping = new HybridMapping<PythonFile>();
+    internal class PythonFileManager {
+        private HybridMapping<PythonFile> mapping = new HybridMapping<PythonFile>();
 
-        public static int AddToWeakMapping(PythonFile pf) {
+        public int AddToWeakMapping(PythonFile pf) {
             return mapping.WeakAdd(pf);
         }
 
-        public static int AddToStrongMapping(PythonFile pf) {
+        public int AddToStrongMapping(PythonFile pf) {
             return mapping.StrongAdd(pf);
         }
 
-        public static void Remove(PythonFile pf) {
+        public void Remove(PythonFile pf) {
             mapping.RemoveOnObject(pf);
         }
 
-        public static PythonFile GetFileFromId(int id) {
+        public PythonFile GetFileFromId(int id) {
             PythonFile pf = mapping.GetObjectFromId(id);
 
             if (pf != null) return pf;
             throw PythonOps.OSError("Bad file descriptor");
         }
 
-        public static int GetIdFromFile(PythonFile pf) {
+        public int GetIdFromFile(PythonFile pf) {
             return mapping.GetIdFromObject(pf);
         }
     }
 
     #endregion
 
-    [PythonType("file")]
+    [PythonSystemType("file")]
     public class PythonFile : IDisposable, ICodeFormattable, IEnumerable<string>, IEnumerable, IWeakReferenceable {
         private ConsoleStreamType _consoleStreamType;
         private SharedIO _io;   // null for non-console
@@ -790,6 +790,7 @@ namespace IronPython.Runtime {
         private bool _isOpen;
         private Nullable<long> _reseekPosition; // always null for console
         private WeakRefTracker _weakref;
+        private readonly PythonContext/*!*/ _context;
 
         public bool softspace;
 
@@ -799,27 +800,32 @@ namespace IronPython.Runtime {
             }
         }
 
-        public PythonFile() {
+        internal PythonFile(PythonContext/*!*/ context) {
+            _context = context;
+        }
+
+        public PythonFile(CodeContext/*!*/ context)
+            : this(PythonContext.GetContext(context)) {
         }
         
         internal static PythonFile/*!*/ Create(CodeContext/*!*/ context, Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode) {
-            return Create(stream, PythonContext.GetContext(context).DefaultEncoding, name, mode);
+            return Create(context, stream, PythonContext.GetContext(context).DefaultEncoding, name, mode);
         }
 
-        internal static PythonFile/*!*/ Create(Stream/*!*/ stream, Encoding/*!*/ encoding, string/*!*/ name, string/*!*/ mode) {
-            PythonFile res = new PythonFile();
-            res.Initialize(stream, encoding, name, mode);
+        internal static PythonFile/*!*/ Create(CodeContext/*!*/ context, Stream/*!*/ stream, Encoding/*!*/ encoding, string/*!*/ name, string/*!*/ mode) {
+            PythonFile res = new PythonFile(PythonContext.GetContext(context));
+            res.__init__(stream, encoding, name, mode);
             return res;
         }
 
-        internal static PythonFile/*!*/ CreateConsole(SharedIO/*!*/ io, ConsoleStreamType type, string/*!*/ name) {
-            PythonFile res = new PythonFile();
+        internal static PythonFile/*!*/ CreateConsole(PythonContext/*!*/ context, SharedIO/*!*/ io, ConsoleStreamType type, string/*!*/ name) {
+            PythonFile res = new PythonFile(context);
             res.InitializeConsole(io, type, name);
             return res;
         }
 
         internal static PythonFile/*!*/ Create(CodeContext/*!*/ context, Stream/*!*/ stream, string/*!*/ name, string/*!*/ mode, bool weakMapping) {
-            PythonFile res = new PythonFile();
+            PythonFile res = new PythonFile(PythonContext.GetContext(context));
             res.InternalInitialize(stream, PythonContext.GetContext(context).DefaultEncoding, name, mode, weakMapping);
             return res;
         }
@@ -838,8 +844,7 @@ namespace IronPython.Runtime {
         // 
         // Seems C-Python allows "b|t" at the beginning too.
         // 
-        [PythonName("__init__")]
-        public void Initialize(CodeContext/*!*/ context, string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
+        public void __init__(CodeContext/*!*/ context, string name, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(-1)]int bufsize) {
             FileShare fshare = FileShare.ReadWrite;
             FileMode fmode;
             FileAccess faccess;
@@ -892,22 +897,21 @@ namespace IronPython.Runtime {
                 if (Environment.OSVersion.Platform == PlatformID.Win32NT && name == "nul") {
                     stream = Stream.Null;
                 } else if (bufsize <= 0) {
-                    stream = ScriptDomainManager.CurrentManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare);
+                    stream = PythonContext.GetContext(context).DomainManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare);
                 } else {
-                    stream = ScriptDomainManager.CurrentManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare, bufsize);
+                    stream = PythonContext.GetContext(context).DomainManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare, bufsize);
                 }
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
 
-                Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, name, inMode);
+                __init__(stream, PythonContext.GetContext(context).DefaultEncoding, name, inMode);
                 this._isOpen = true;
             } catch (UnauthorizedAccessException e) {
                 throw new IOException(e.Message, e);
             }
         }
 
-        [PythonName("__init__")]
-        public void Initialize(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream) {
+        public void __init__(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream) {
             Contract.RequiresNotNull(stream, "stream");
 
             string mode;
@@ -915,21 +919,18 @@ namespace IronPython.Runtime {
             else if (stream.CanWrite) mode = "w";
             else mode = "r";
 
-            Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
+            __init__(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
         }
 
-        [PythonName("__init__")]
-        public void Initialize(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream, string mode) {
-            Initialize(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
+        public void __init__(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream, string mode) {
+            __init__(stream, PythonContext.GetContext(context).DefaultEncoding, mode);
         }
 
-        [PythonName("__init__")]
-        public void Initialize([NotNull]Stream/*!*/ stream, Encoding encoding, string mode) {
+        public void __init__([NotNull]Stream/*!*/ stream, Encoding encoding, string mode) {
             InternalInitialize(stream, encoding, mode, true);
         }
 
-        [PythonName("__init__")]
-        public void Initialize([NotNull]Stream/*!*/ stream, [NotNull]Encoding/*!*/ encoding, string name, string mode) {
+        public void __init__([NotNull]Stream/*!*/ stream, [NotNull]Encoding/*!*/ encoding, string name, string mode) {
             Contract.RequiresNotNull(stream, "stream");
             Contract.RequiresNotNull(encoding, "encoding");
 
@@ -954,9 +955,11 @@ namespace IronPython.Runtime {
             throw Assert.Unreachable;
         }
 
-        private PythonTextReader/*!*/ CreateConsoleReader(SharedIO/*!*/ io) {
+        private PythonTextReader/*!*/ CreateConsoleReader() {
+            Debug.Assert(_io != null);
+
             Encoding encoding;
-            return CreateTextReader(io.GetReader(out encoding), encoding, 0);
+            return CreateTextReader(_io.GetReader(out encoding), encoding, 0);
         }
 
         private PythonTextWriter/*!*/ CreateTextWriter(TextWriter/*!*/ writer) {
@@ -1013,11 +1016,14 @@ namespace IronPython.Runtime {
 #endif
 
             if (weakMapping) {
-                PythonFileManager.AddToWeakMapping(this);
+                _context.FileManager.AddToWeakMapping(this);
             }
         }
 
         internal void InitializeConsole(SharedIO/*!*/ io, ConsoleStreamType type, string/*!*/ name) {
+            Debug.Assert(io != null);
+            Debug.Assert(name != null);
+
             _consoleStreamType = type;
             _io = io;
             _stream = null;
@@ -1027,12 +1033,12 @@ namespace IronPython.Runtime {
             _name = name;
 
             if (type == ConsoleStreamType.Input) {
-                _reader = CreateConsoleReader(io);
+                _reader = CreateConsoleReader();
             } else {
-                _writer = CreateTextWriter(io.GetWriter(type));
+                _writer = CreateTextWriter(_io.GetWriter(type));
             }
 
-            PythonFileManager.AddToWeakMapping(this);
+            _context.FileManager.AddToWeakMapping(this);
         }
 
         internal void InternalInitialize(Stream stream, Encoding encoding, string name, string mode, bool weakMapping) {
@@ -1089,26 +1095,24 @@ namespace IronPython.Runtime {
             if (!_isOpen) return;
 
             if (disposing) {
-                Flush();
+                flush();
                 if (!IsConsole) {
                     _stream.Close();
                 }
             }
 
-            _isOpen = false;
-            PythonFileManager.Remove(this);
+            _isOpen = false;            
+            _context.FileManager.Remove(this);
         }
 
-        [PythonName("close")]
-        public virtual object Close() {
+        public virtual object close() {
             Dispose(true);
             GC.SuppressFinalize(this);
             return null;
         }
 
         [Documentation("True if the file is closed, False if the file is still open")]
-        public bool IsClosed {
-            [PythonName("closed")]
+        public bool closed {
             get {
                 return !_isOpen;
             }
@@ -1119,8 +1123,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.ValueError("I/O operation on closed file");
         }
 
-        [PythonName("flush")]
-        public void Flush() {
+        public void flush() {
             ThrowIfClosed();
             if (_writer != null) {
                 _writer.Flush();
@@ -1130,27 +1133,23 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("fileno")]
-        public int GetFileNumber() {
+        public int fileno() {
             ThrowIfClosed();
-            return PythonFileManager.GetIdFromFile(this);
+            return _context.FileManager.GetIdFromFile(this);
         }
 
         [Documentation("gets the name of the file")]
-        public string FileName {
-            [PythonName("name")]
+        public string name {
             get {
                 return _name;
             }
         }
 
-        [PythonName("read")]
-        public string Read() {
-            return Read(-1);
+        public string read() {
+            return read(-1);
         }
 
-        [PythonName("read")]
-        public string Read(int size) {
+        public string read(int size) {
             PythonStreamReader reader = GetReader();
             if (size < 0) {
                 return reader.ReadToEnd();
@@ -1159,33 +1158,29 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("readline")]
-        public string ReadLine() {
+        public string readline() {
             return GetReader().ReadLine();
         }
 
-        [PythonName("readline")]
-        public string ReadLine(int size) {
+        public string readline(int size) {
             return GetReader().ReadLine(size);
         }
 
-        [PythonName("readlines")]
-        public List ReadLines() {
+        public List readlines() {
             List ret = new List();
             string line;
             for (; ; ) {
-                line = ReadLine();
+                line = readline();
                 if (line == "") break;
                 ret.AddNoLock(line);
             }
             return ret;
         }
 
-        [PythonName("readlines")]
-        public List ReadLines(int sizehint) {
+        public List readlines(int sizehint) {
             List ret = new List();
             for (; ; ) {
-                string line = ReadLine();
+                string line = readline();
                 if (line == "") break;
                 ret.AddNoLock(line);
                 if (line.Length >= sizehint) break;
@@ -1194,13 +1189,11 @@ namespace IronPython.Runtime {
             return ret;
         }
 
-        [PythonName("seek")]
-        public void Seek(long offset) {
-            Seek(offset, 0);
+        public void seek(long offset) {
+            seek(offset, 0);
         }
 
-        [PythonName("seek")]
-        public void Seek(long offset, int whence) {
+        public void seek(long offset, int whence) {
             if (_mode == "a") return;    // nop when seeking on stream's opened for append.
 
             ThrowIfClosed();
@@ -1210,7 +1203,7 @@ namespace IronPython.Runtime {
             }
 
             // flush before saving our position to ensure it's accurate.
-            Flush();
+            flush();
             SavePositionPreSeek();
 
             SeekOrigin origin;
@@ -1233,8 +1226,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("tell")]
-        public object Tell() {
+        public object tell() {
             if (IsConsole) {
                 throw PythonOps.IOError("Bad file descriptor");
             }
@@ -1244,36 +1236,32 @@ namespace IronPython.Runtime {
             return Microsoft.Scripting.Math.BigInteger.Create(l);
         }
 
-        [PythonName("write")]
-        public void Write(string s) {
+        public void write(string s) {
             PythonStreamWriter writer = GetWriter();
             int bytesWritten = _writer.Write(s);
             if (IsConsole) {
-                Flush();
+                flush();
             } else if (_reader != null && _stream.CanSeek) {
                 _reader.Position += bytesWritten;
             }
         }
 
-        [PythonName("writelines")]
-        public void WriteLines(object o) {
+        public void writelines(object o) {
             System.Collections.IEnumerator e = PythonOps.GetEnumerator(o);
             while (e.MoveNext()) {
                 string line = e.Current as string;
                 if (line == null) {
                     throw PythonOps.TypeError("writelines() argument must be a sequence of strings");
                 }
-                Write(line);
+                write(line);
             }
         }
 
-        [PythonName("xreadlines")]
-        public PythonFile ReturnSelf() {
+        public PythonFile xreadlines() {
             return this;
         }
 
-        public Object Newlines {
-            [PythonName("newlines")]
+        public Object newlines {
             get {
                 if (_reader == null || !(_reader is PythonUniversalReader))
                     return null;
@@ -1317,10 +1305,8 @@ namespace IronPython.Runtime {
 
             if (IsConsole) {
                 // update reader if redirected:
-                SharedIO io = ScriptDomainManager.CurrentManager.SharedIO;
-
-                if (!ReferenceEquals(io.InputReader, _reader.TextReader)) {
-                    _reader = CreateConsoleReader(io);
+                if (!ReferenceEquals(_io.InputReader, _reader.TextReader)) {
+                    _reader = CreateConsoleReader();
                 }
             }
 
@@ -1337,7 +1323,7 @@ namespace IronPython.Runtime {
 
             if (IsConsole) {
                 // update writer if redirected:
-                TextWriter currentWriter = ScriptDomainManager.CurrentManager.SharedIO.GetWriter(_consoleStreamType);
+                TextWriter currentWriter = _io.GetWriter(_consoleStreamType);
 
                 if (!ReferenceEquals(currentWriter, _writer.TextWriter)) {
                     _writer.Flush();
@@ -1353,35 +1339,30 @@ namespace IronPython.Runtime {
             return _writer;
         }
 
-        [PythonName("next")]
-        public object Next() {
-            string line = ReadLine();
+        public object next() {
+            string line = readline();
             if (line == "") {
                 throw PythonOps.StopIteration();
             }
             return line;
         }
 
-        [PythonName("__iter__")]
-        public object GetIterator() {
+        public object __iter__() {
             ThrowIfClosed();
             return this;
         }
 
-        [PythonName("isatty")]
-        public bool IsTty() {
+        public bool isatty() {
             return IsConsole;
         }
 
-        [PythonName("__enter__")]
-        public object Enter() {
+        public object __enter__() {
             ThrowIfClosed();
             return this;
         }
 
-        [PythonName("__exit__")]
-        public void Exit(params object[] excinfo) {
-            Close();
+        public void __exit__(params object[] excinfo) {
+            close();
         }
 
         public override string ToString() {
@@ -1395,7 +1376,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        string ICodeFormattable.ToCodeString(CodeContext context) {
             return ToString();
         }
 
@@ -1405,7 +1386,7 @@ namespace IronPython.Runtime {
 
         IEnumerator<string> IEnumerable<string>.GetEnumerator() {
             for (; ; ) {
-                string line = ReadLine();
+                string line = readline();
                 if (line == "") yield break;
                 yield return line;
             }
@@ -1417,7 +1398,7 @@ namespace IronPython.Runtime {
 
         IEnumerator IEnumerable.GetEnumerator() {
             for (; ; ) {
-                string line = ReadLine();
+                string line = readline();
                 if (line == "") yield break;
                 yield return line;
             }
@@ -1427,17 +1408,17 @@ namespace IronPython.Runtime {
 
         #region IWeakReferenceable Members
 
-        public WeakRefTracker GetWeakRef() {
+        WeakRefTracker IWeakReferenceable.GetWeakRef() {
             return _weakref;
         }
 
-        public bool SetWeakRef(WeakRefTracker value) {
+        bool IWeakReferenceable.SetWeakRef(WeakRefTracker value) {
             _weakref = value;
             return true;
         }
 
-        public void SetFinalizer(WeakRefTracker value) {
-            SetWeakRef(value);
+        void IWeakReferenceable.SetFinalizer(WeakRefTracker value) {
+            ((IWeakReferenceable)this).SetWeakRef(value);
         }
 
         #endregion

@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// dictionary of templated type error rules.
         /// </summary>
-        private static Dictionary<TypeErrorKey, object> _typeErrorTemplates = new Dictionary<TypeErrorKey, object>();
+        private static readonly Dictionary<TypeErrorKey, object> _typeErrorTemplates = new Dictionary<TypeErrorKey, object>();
 
         public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, StandardRule<T> rule) {
             int simpleArgCount = (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) ? 2 : 3;
@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         public static void MakeTest(StandardRule rule, params PythonType[] types) {
-            rule.Test =MakeTestForTypes(rule, types, 0);
+            rule.Test = MakeTestForTypes(rule, types, 0);
         }
 
         public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, int index) {
@@ -347,6 +347,24 @@ namespace IronPython.Runtime.Calls {
                 );
 
             return rule;
+        }
+
+        /// <summary>
+        /// Adds a try/finally which enforces recursion limits around the target method.
+        /// </summary>
+        public static Expression AddRecursionCheck(Expression expr) {
+            if (PythonFunction.EnforceRecursion) {
+                expr = Ast.Block(
+                    Ast.Call(typeof(PythonOps).GetMethod("FunctionPushFrame")),
+                    Ast.TryFinally(
+                        expr,
+                        Ast.Block(
+                            Ast.Call(typeof(PythonOps).GetMethod("FunctionPopFrame"))
+                        )
+                    )
+                );
+            }
+            return expr;
         }
     }
 }

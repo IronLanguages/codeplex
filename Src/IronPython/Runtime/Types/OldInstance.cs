@@ -195,7 +195,7 @@ namespace IronPython.Runtime.Types {
             Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
 
             Expression call = Ast.Call(
-                typeof(ItemEnumerator).GetMethod("Create"),
+                typeof(PythonOps).GetMethod("CreateItemEnumerable"),
                 rule.Parameters[0]
             );
 
@@ -203,7 +203,7 @@ namespace IronPython.Runtime.Types {
 
             Expression body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
             call = Ast.Call(
-                typeof(PythonEnumerator).GetMethod("Create"),
+                typeof(PythonOps).GetMethod("CreatePythonEnumerable"),
                 rule.Parameters[0]
             );
 
@@ -241,13 +241,13 @@ namespace IronPython.Runtime.Types {
             Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
 
             Expression call = Ast.Call(
-                typeof(ItemEnumerable).GetMethod("Create"),
+                typeof(PythonOps).GetMethod("CreateItemEnumerable"),
                 rule.Parameters[0]
             );
 
             Expression body2 = MakeIterRule<T>(context, rule, Symbols.GetItem, tmp, failed, call);
             call = Ast.Call(
-                typeof(PythonEnumerable).GetMethod("Create"),
+                typeof(PythonOps).GetMethod("CreatePythonEnumerable"),
                 rule.Parameters[0]
             );
 
@@ -603,6 +603,7 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         [SpecialName, PythonName("__divmod__")]
+        [return: MaybeNotImplemented]
         public object DivMod(CodeContext context, object divmod) {
             object value;
 
@@ -613,19 +614,20 @@ namespace IronPython.Runtime.Types {
 
             return PythonOps.NotImplemented;
         }
+
         [SpecialName, PythonName("__rdivmod__")]
-        public object ReverseDivMod(CodeContext context, object divmod) {
+        [return: MaybeNotImplemented]
+        public static object ReverseDivMod(CodeContext context, object divmod, [NotNull]OldInstance self) {
             object value;
 
-            if (TryGetBoundCustomMember(context, Symbols.ReverseDivMod, out value)) {
+            if (self.TryGetBoundCustomMember(context, Symbols.ReverseDivMod, out value)) {
                 return PythonCalls.Call(value, divmod);
             }
 
             return PythonOps.NotImplemented;
         }
 
-
-        [SpecialName, PythonName("__coerce__")]
+        [PythonName("__coerce__")]
         public object Coerce(CodeContext context, object other) {
             object value;
 
@@ -1221,26 +1223,6 @@ namespace IronPython.Runtime.Types {
                 return res;
             }
 
-            // TODO: Remove coercion from this code path, add it to the 
-            try {
-                object coerce;
-                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
-                    coerce != PythonOps.NotImplemented &&
-                    !(coerce is OldInstance)) {
-                    return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
-                }
-            } catch (MissingMemberException) {
-            }
-
-            try {
-                object coerce;
-                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, other, this, out coerce) &&
-                    coerce != PythonOps.NotImplemented &&
-                    !(coerce is OldInstance)) {
-                    return PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]);
-                }
-            } catch (MissingMemberException) {
-            }
 
             return PythonOps.NotImplemented;
         }
@@ -1250,9 +1232,12 @@ namespace IronPython.Runtime.Types {
             if (res != PythonOps.NotImplemented) {
                 return res;
             }
-            res = InvokeOne(other, this, si);
-            if (res != PythonOps.NotImplemented) {
-                return res;
+            OldInstance oi = other as OldInstance;
+            if (oi != null) {
+                res = InvokeOne(other, this, si);
+                if (res != PythonOps.NotImplemented) {
+                    return res;
+                }
             }
             return PythonOps.NotImplemented;
         }
@@ -1289,26 +1274,6 @@ namespace IronPython.Runtime.Types {
             object res = InvokeBoth(other, Symbols.OperatorNotEquals);
             if (res != PythonOps.NotImplemented) {
                 return res;
-            }
-
-            try {
-                object coerce;
-                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, this, other, out coerce) &&
-                    coerce != PythonOps.NotImplemented &&
-                    !(coerce is OldInstance)) {
-                    return PythonOps.Not(PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]));
-                }
-            } catch (MissingMemberException) {
-            }
-
-            try {
-                object coerce;
-                if (PythonOps.TryInvokeOperator(DefaultContext.Default, Operators.Coerce, other, this, out coerce) &&
-                    coerce != PythonOps.NotImplemented &&
-                    !(coerce is OldInstance)) {
-                    return PythonOps.Not(PythonOps.Equal(((PythonTuple)coerce)[0], ((PythonTuple)coerce)[1]));
-                }
-            } catch (MissingMemberException) {
             }
 
             return PythonOps.NotImplemented;

@@ -119,7 +119,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         /// <exception cref="InvalidImplementationException">The type failed to instantiate.</exception>
-        internal static T CreateInstance<T>(Type actualType, params object[] args) {
+        internal static T/*!*/ CreateInstance<T>(Type actualType, params object[] args) {
             Type type = typeof(T);
 
             Debug.Assert(type.IsAssignableFrom(actualType));
@@ -131,6 +131,25 @@ namespace Microsoft.Scripting.Utils {
             } catch (Exception e) {
                 throw new InvalidImplementationException(System.String.Format(Resources.InvalidCtorImplementation, actualType), e);
             }
+        }
+
+#if !SILVERLIGHT
+        // This overload is only available in CLR V2 SP1
+        private static readonly Type[] _DynamicMethodConstructorSignature = new Type[] { typeof(string), typeof(Type), typeof(Type[]) };
+        private static readonly ConstructorInfo _DynamicMethodConstructor = typeof(DynamicMethod).GetConstructor(_DynamicMethodConstructorSignature);
+#endif
+        // Module is used only for CLR before V2 SP1
+        internal static DynamicMethod CreateDynamicMethod(string/*!*/ name, Type/*!*/ returnType, Type/*!*/[]/*!*/ parameterTypes, Module/*!*/ module) {
+#if SILVERLIGHT // Module-hosted DynamicMethod is not available in SILVERLIGHT
+            return new DynamicMethod(name, returnType, parameterTypes);
+#else
+            if (_DynamicMethodConstructor != null) {
+                object[] parameters = new object[] { name, returnType, parameterTypes };
+                return (DynamicMethod)_DynamicMethodConstructor.Invoke(parameters);
+            } else {
+                return new DynamicMethod(name, returnType, parameterTypes, module);
+            }
+#endif
         }
 
         public static object InvokeDelegate(Delegate d, params object[] args) {

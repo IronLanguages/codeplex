@@ -98,6 +98,16 @@ class Operator(Symbol):
         cw.writeline("///<summary>Operator for performing %s</summary>" % self.name)
         cw.writeline("%s," % (self.title_name()))        
         
+    def genOperatorReversal_Forward(self, cw):
+        if self.isCompare(): return
+        
+        cw.writeline("case Operators.%s: return Operators.Reverse%s;" % (self.title_name(), self.title_name()))
+        
+    def genOperatorReversal_Reverse(self, cw):    
+        if self.isCompare(): return
+
+        cw.writeline("case Operators.Reverse%s: return Operators.%s;" % (self.title_name(), self.title_name()))
+        
     def genOperatorTable_Reverse(self, cw):
         if self.isCompare(): return
         
@@ -397,7 +407,7 @@ def tokens_generator(cw):
 CodeGenerator("Tokens", tokens_generator).doit()
 
 IBINOP = """
-private static FastDynamicSite<object, object, object> %(name)sSharedSite =
+private static readonly FastDynamicSite<object, object, object> %(name)sSharedSite =
     FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
 
 public static object %(name)s(object x, object y) {
@@ -407,7 +417,7 @@ public static object %(name)s(object x, object y) {
 BINOP = IBINOP
 
 CMPOP2 = """
-private static FastDynamicSite<object, object, bool> %(name)sBooleanSharedSite =
+private static readonly FastDynamicSite<object, object, bool> %(name)sBooleanSharedSite =
     FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.%(name)s));
 
 public static bool %(name)sRetBool(object x, object y) {
@@ -507,3 +517,12 @@ def oldinstance_operators(cw):
         op.genOldStyleOp(cw)
 
 CodeGenerator("OldInstance Operators", oldinstance_operators).doit()
+
+def operator_reversal(cw):
+    for op in ops:
+        if not isinstance(op, Operator): continue
+
+        op.genOperatorReversal_Forward(cw)
+        op.genOperatorReversal_Reverse(cw)
+        
+CodeGenerator("Operator Reversal", operator_reversal).doit()
