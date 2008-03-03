@@ -89,7 +89,7 @@ namespace IronPython.Runtime.Types {
                     val = kvp.Value;
                 }
 
-                res.Add(PythonTuple.MakeTuple(kvp.Key, val));
+                res.append(PythonTuple.MakeTuple(kvp.Key, val));
             }
 
             return res;
@@ -234,6 +234,12 @@ namespace IronPython.Runtime.Types {
 
             value = null;
             return false;
+        }
+        
+        internal PythonType Type {
+            get {
+                return _dt;
+            }
         }
         
         #endregion

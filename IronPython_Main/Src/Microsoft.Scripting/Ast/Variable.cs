@@ -19,25 +19,16 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
+
     /// <summary>
-    /// Definition represents actual memory/dictionary location in the generated code.
+    /// Variable represents actual memory/dictionary location in the generated code.
     /// </summary>
     public sealed class Variable {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
-        public enum VariableKind {
-            Local,
-            Parameter,
-            Temporary,              // Temporary variable (name not important/published)
-
-            Global                  // Globals may need to go away and be handled on Python side only.
-        };
-
         private readonly SymbolId _name;
         private readonly VariableKind _kind;
         private readonly Type _type;
 
         private readonly bool _parameterArray;      // should be part of parameter array
-
 
         // TODO: REMOVE !!!
         private CodeBlock _block;
@@ -126,7 +117,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void Allocate(Compiler cg, CodeBlockInfo cbi) {
+        internal void Allocate(LambdaCompiler cg, CodeBlockInfo cbi) {
             Debug.Assert(cg.Allocator.Block == Block);
 
             switch (_kind) {
@@ -181,7 +172,7 @@ namespace Microsoft.Scripting.Ast {
         /// Will allocate the storage in the environment and return slot to access
         /// the variable in the current scope (so that it can be initialized)
         /// </summary>
-        private Slot AllocInEnv(Compiler cg, CodeBlockInfo cbi) {
+        private Slot AllocInEnv(LambdaCompiler cg, CodeBlockInfo cbi) {
             Debug.Assert(_storage == null);
             Debug.Assert(_block == cbi.CodeBlock);
 
@@ -198,7 +189,7 @@ namespace Microsoft.Scripting.Ast {
             return slot;
         }
 
-        internal Slot CreateSlot(Compiler cg, CodeBlockInfo cbi) {
+        internal Slot CreateSlot(LambdaCompiler cg, CodeBlockInfo cbi) {
             switch (_kind) {
                 case VariableKind.Local:
                     if (_storage == null) {
@@ -248,12 +239,12 @@ namespace Microsoft.Scripting.Ast {
             return null;
         }
 
-        private Slot GetArgumentSlot(Compiler cg) {
+        private Slot GetArgumentSlot(LambdaCompiler cg) {
             Slot arg;
             if (_block != null && _block.ParameterArray) {
                 // If not part of parameter array, get the normal parameter slot
                 if (!_parameterArray) {
-                    arg = cg.GetArgumentSlot(_parameter);
+                    arg = cg.GetLambdaArgumentSlot(_parameter);
                 } else {
                     Debug.Assert(cg.ParamsSlot != null);
                     Debug.Assert(cg.ParamsSlot.Type == typeof(object[]));
@@ -263,12 +254,12 @@ namespace Microsoft.Scripting.Ast {
                     }
                 }
             } else {
-                arg = cg.GetArgumentSlot(_parameter);
+                arg = cg.GetLambdaArgumentSlot(_parameter);
             }
             return arg;
         }
 
-        private Slot CreateSlotForVariable(Compiler cg) {
+        private Slot CreateSlotForVariable(LambdaCompiler cg) {
             Debug.Assert(_storage != null);
             Slot access = null;
             if (_storage.RequireAccessSlot) {

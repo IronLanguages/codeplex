@@ -36,7 +36,6 @@ namespace IronPython.Runtime {
     /// 
     /// Currently these are published on IDictionary&lt;object, object&gt;
     /// </summary>
-    [PythonType("dict")]
     public static class DictionaryOps {
         #region Dictionary Public API Surface
 
@@ -111,8 +110,8 @@ namespace IronPython.Runtime {
             }
         }
 
-        public static IEnumerator __iter__(IDictionary<object, object> self) {
-            return new DictionaryKeyEnumerator(self);
+        public static IEnumerator __iter__(PythonDictionary self) {
+            return new DictionaryKeyEnumerator(self._storage);
         }
 
         [return: MaybeNotImplemented]
@@ -147,13 +146,7 @@ namespace IronPython.Runtime {
             return res;
         }
 
-        [SpecialName]
-        public static string __repr__(IDictionary<object, object> self) {
-            return __str__(self);
-        }
-
-        [SpecialName]
-        public static string __str__(IDictionary<object, object> self) {
+        public static string/*!*/ __repr__(IDictionary<object, object> self) {            
             StringBuilder buf = new StringBuilder();
             buf.Append("{");
             bool first = true;
@@ -184,8 +177,8 @@ namespace IronPython.Runtime {
             self.Clear();
         }
 
-        public static object copy(IDictionary<object, object> self) {
-            return new PythonDictionary(new Dictionary<object, object>(self));
+        public static object copy(CodeContext/*!*/ context, IDictionary<object, object> self) {
+            return new PythonDictionary(context, new Dictionary<object, object>(self));
         }
 
         public static object get(IDictionary<object, object> self, object key) {
@@ -203,7 +196,7 @@ namespace IronPython.Runtime {
         }
 
         public static List items(IDictionary<object, object> self) {
-            List ret = List.MakeEmptyList(self.Count);
+            List ret = PythonOps.MakeEmptyList(self.Count);
             foreach (KeyValuePair<object, object> kv in self) {
                 ret.AddNoLock(PythonTuple.MakeTuple(kv.Key, kv.Value));
             }
@@ -211,26 +204,19 @@ namespace IronPython.Runtime {
         }
 
         public static IEnumerator iteritems(IDictionary<object, object> self) {
-            return items(self).GetEnumerator();
+            return ((IEnumerable)items(self)).GetEnumerator();
         }
 
         public static IEnumerator iterkeys(IDictionary<object, object> self) {
-            return keys(self).GetEnumerator();
+            return ((IEnumerable)keys(self)).GetEnumerator();
         }
 
         public static IEnumerator itervalues(IDictionary<object, object> self) {
-            return values(self).GetEnumerator();
+            return ((IEnumerable)values(self)).GetEnumerator();
         }
 
         public static List keys(IDictionary<object, object> self) {
-            List l = List.Make(self.Keys);
-            for (int i = 0; i < l.Count; i++) {
-                if (BaseSymbolDictionary.IsNullObject(l[i])) {
-                    l[i] = BaseSymbolDictionary.ObjToNull(l[i]);
-                    break;
-                }
-            }
-            return l;
+            return PythonOps.MakeListFromSequence(self.Keys);
         }
 
         public static object pop(IDictionary<object, object> self, object key) {
@@ -278,25 +264,26 @@ namespace IronPython.Runtime {
         }
 
         public static List values(IDictionary<object, object> self) {
-            return List.Make(self.Values);
+            return PythonOps.MakeListFromSequence(self.Values);
         }
 
-        public static void update(IDictionary<object, object> self) {
-        }
-
-        public static void update(IDictionary<object, object> self, object b) {
+        public static void update(CodeContext/*!*/ context, IDictionary<object, object> self, object b) {
             object keysFunc;
-            IDictionary dict = b as IDictionary;
-            if (dict != null) {
+            DictProxy dictProxy;
+            IDictionary dict;
+
+            if ((dictProxy = b as DictProxy) != null) {
+                update(context, self, dictProxy.Type.GetMemberDictionary(context));
+            } else if ((dict = b as IDictionary) != null) {
                 IDictionaryEnumerator e = dict.GetEnumerator();
                 while (e.MoveNext()) {
-                    self[BaseSymbolDictionary.NullToObj(e.Key)] = e.Value;
+                    self[e.Key] = e.Value;
                 }
             } else if (PythonOps.TryGetBoundAttr(b, Symbols.Keys, out keysFunc)) {
                 // user defined dictionary
                 IEnumerator i = PythonOps.GetEnumerator(PythonCalls.Call(keysFunc));
                 while (i.MoveNext()) {
-                    self[BaseSymbolDictionary.NullToObj(i.Current)] = PythonOps.GetIndex(b, i.Current);
+                    self[i.Current] = PythonOps.GetIndex(b, i.Current);
                 }
             } else {
                 // list of lists (key/value pairs), list of tuples,
@@ -381,8 +368,8 @@ namespace IronPython.Runtime {
         internal static int CompareToWorker(IDictionary<object, object> left, List ritems) {
             List litems = DictionaryOps.items(left);
 
-            litems.Sort();
-            ritems.Sort();
+            litems.sort();
+            ritems.sort();
 
             return litems.CompareToWorker(ritems);
         }

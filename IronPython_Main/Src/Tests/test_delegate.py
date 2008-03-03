@@ -694,6 +694,52 @@ def test_event_as_attribute_disallowed_ops():
     for x in [f1, f2, f3]:
         AssertError(AttributeError, x)
 
+@skip("silverlight") # no weakref module
+def test_event_lifetime():
+    """ensures that circular references between an event on an instance
+       and the handling delegate don't call leaks and don't release too soon"""
+    def keep_alive(o): pass
+    
+    def test_runner():
+        import _weakref
+        a = IronPythonTest.Events()
+        
+        # wire up an event w/ a circular reference
+        # back to the object, ensure the event
+        # is delivered
+        def foo(): 
+            global called
+            called += 1
+        foo.abc = a
+        
+        a.InstanceTest += foo
+        global called
+        called = 0
+        a.CallInstance()
+    
+        AreEqual(called, 1)
+        
+        # ensure as long as the objects are still alive the event
+        # handler remains alive
+        import gc
+        for i in xrange(10):
+            gc.collect()
+            
+        a.CallInstance()
+        AreEqual(called, 2)
+        
+        keep_alive(foo)
+        keep_alive(a)        
+        return _weakref.ref(foo)
+    
+    func_ref = test_runner()
+
+    # now all references are dead, the function should be collectible
+    import gc
+    gc.collect()
+    AreEqual(func_ref(), None)
+    
+        
 
 def test_reflected_event_ops():
     '''

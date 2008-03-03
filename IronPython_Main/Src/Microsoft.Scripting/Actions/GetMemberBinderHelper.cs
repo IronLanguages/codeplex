@@ -94,7 +94,9 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private Expression MakeBodyHelper(Type type, MemberGroup members) {
-            MakeOperatorGetMemberBody(type, "GetCustomMember");
+            if (!_isStatic) {
+                MakeOperatorGetMemberBody(type, "GetCustomMember");
+            }
 
             Expression error;
             TrackerTypes memberType = GetMemberType(members, out error);
@@ -112,13 +114,15 @@ namespace Microsoft.Scripting.Actions {
                     break;
                 case TrackerTypes.Event:
                 case TrackerTypes.Field:                
-                case TrackerTypes.Property: 
+                case TrackerTypes.Property:
+                case TrackerTypes.Constructor:
                     MakeGenericBody(type, members); 
                     break;
-                case TrackerTypes.Constructor:
                 case TrackerTypes.All:     
                     // no members were found
-                    MakeOperatorGetMemberBody(type, "GetBoundMember");
+                    if (!_isStatic) {
+                        MakeOperatorGetMemberBody(type, "GetBoundMember");
+                    }
 
                     MakeMissingMemberRuleForGet(type);
                     break;
@@ -251,6 +255,7 @@ namespace Microsoft.Scripting.Actions {
                 MakeMissingMemberError(type);
             } else {
                 AddToBody(Rule.MakeReturn(Binder, Ast.ReadField(null, typeof(OperationFailed).GetField("Value"))));
+                Rule.IsError = true;
             }
         }
         #endregion

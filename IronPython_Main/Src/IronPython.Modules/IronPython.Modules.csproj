@@ -63,6 +63,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
+    <Reference Include="System.Core, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SilverlightSdkPath)\System.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
@@ -101,6 +105,7 @@
     <Compile Include="thread.cs" />
     <Compile Include="time.cs" />
     <Compile Include="xxsubtype.cs" />
+    <Compile Include="_functools.cs" />
     <Compile Include="_random.cs" />
     <Compile Include="_sre.cs" />
     <Compile Include="_weakref.cs" />

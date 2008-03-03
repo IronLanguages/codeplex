@@ -18,7 +18,6 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Generation;
 using System.Globalization;
@@ -159,7 +158,7 @@ namespace Microsoft.Scripting.Runtime {
                 case "-X:GenerateAsSnippets":
                 case "-X:TupleBasedOptimizedScopes": GlobalOptions.TupleBasedOptimizedScopes = true; break;
 
-                case "-X:ILDebug": GlobalOptions.ILDebug = true; break;
+                case "-X:ILDebug": Snippets.Shared.ILDebug = true; break;
 
                 case "-X:PassExceptions": ConsoleOptions.HandleExceptions = false; break;
                 // TODO: #if !IRONPYTHON_WINDOW

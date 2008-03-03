@@ -14,7 +14,11 @@
  * ***************************************************************************/
 
 using System;
+
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
+
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
@@ -26,6 +30,15 @@ namespace IronPython.Compiler.Ast {
         public TupleExpression(bool expandable, params Expression[] items)
             : base(items) {
             _expandable = expandable;
+        }
+
+        internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
+            if (Items.Length == 0) {
+                ag.AddError("can't assign to ()", Span);
+                return null;
+            }
+
+            return base.TransformSet(ag, span, right, op);
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {

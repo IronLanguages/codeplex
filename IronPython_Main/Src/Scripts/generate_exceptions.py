@@ -40,7 +40,8 @@ excs = collect_excs()
 
 pythonExcs = ['ImportError', 'RuntimeError', 'UnicodeTranslateError', 'PendingDeprecationWarning', 'EnvironmentError',
               'LookupError', 'OSError', 'DeprecationWarning', 'UnicodeError', 'FloatingPointError', 'ReferenceError',
-              'FutureWarning', 'AssertionError', 'RuntimeWarning', 'ImportWarning', 'UserWarning', 'SyntaxWarning', 'OverflowWarning', 'Warning']
+              'FutureWarning', 'AssertionError', 'RuntimeWarning', 'ImportWarning', 'UserWarning', 'SyntaxWarning', 
+	          'OverflowWarning', 'UnicodeWarning', 'StopIteration', 'Warning']
 
 
 class ExceptionInfo(object):
@@ -289,7 +290,10 @@ def gen_one_exception(cw, e):
     cw.write(CLASS1, name=get_clr_name(e), supername=get_clr_name(supername))
 
 def gen_one_exception_maker(e):
-    return lambda x : gen_one_exception(x, e)
+    def gen_one_exception_specialized(x):
+        return gen_one_exception(x, e)
+
+    return gen_one_exception_specialized
 
 for e in pythonExcs:
     CodeGenerator(get_clr_name(e), gen_one_exception_maker(e)).doit()
@@ -318,10 +322,10 @@ def gen_one_exception(cw, exception, parent):
         cw.writeline('public %s(PythonType type) : base(type) { }' % (exception.name, ))
         cw.writeline('')
         
-        cw.writeline('[StaticExtensionMethod("__new__")]')
         cw.enter_block('public new static object __new__(PythonType cls, params object[] args)')
         cw.writeline('return Activator.CreateInstance(cls.UnderlyingSystemType, cls);')
         cw.exit_block()
+        cw.writeline('')
 
         if exception.args:        
             argstr = ', '.join(['object ' + fix_object(x) for x in exception.args])             

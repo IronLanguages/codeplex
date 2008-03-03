@@ -16,23 +16,49 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Hosting {
-    public interface ITokenCategorizer : IRemotable {
-        void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation);
+    public abstract class TokenCategorizer 
+#if !SILVERLIGHT 
+        : MarshalByRefObject
+#endif
+    {
+
+        // static contract:
+        protected TokenCategorizer() {
+        }
+
+        public abstract void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation);
+
+        /// <summary>
+        /// The current internal state of the scanner.
+        /// </summary>
+        public abstract object CurrentState { get; }
         
+        /// <summary>
+        /// The current startLocation of the scanner.
+        /// </summary>
+        public abstract SourceLocation CurrentPosition { get; }
+
         /// <summary>
         /// Move the tokenizer past the next token and return its category.
         /// </summary>
         /// <returns>The token information associated with the token just scanned.</returns>
-        TokenInfo ReadToken();
+        public abstract TokenInfo ReadToken();
+        
+        public abstract bool IsRestartable { get; }
+        public abstract ErrorSink ErrorSink { get; set; }
 
         /// <summary>
         /// Move the tokenizer past the next token.
         /// </summary>
         /// <returns><c>False</c> if the end of stream has been reached, <c>true</c> otherwise.</returns>
-        bool SkipToken();
+        public virtual bool SkipToken() {
+            return ReadToken().Category != TokenCategory.EndOfStream;
+        }
 
+        // TODO: shouldn't be virutal (JS tokenizer needs to be fixed)
         /// <summary>
         /// Get all tokens over a block of the stream.
         /// </summary>
@@ -44,60 +70,6 @@ namespace Microsoft.Scripting.Hosting {
         /// </remarks>
         /// <param name="countOfChars">The mininum number of characters to process while getting tokens.</param>
         /// <returns>A enumeration of tokens.</returns>
-        IEnumerable<TokenInfo> ReadTokens(int countOfChars);
-
-        /// <summary>
-        /// Scan from startLocation to at least startLocation + length.
-        /// </summary>
-        /// <param name="countOfChars">The mininum number of characters to process while getting tokens.</param>
-        /// <remarks>
-        /// This method is used to determine state at arbitrary startLocation.
-        /// </remarks>
-        /// <returns><c>False</c> if the end of stream has been reached, <c>true</c> otherwise.</returns>
-        bool SkipTokens(int countOfChars);
-
-        /// <summary>
-        /// The current startLocation of the scanner.
-        /// </summary>
-        SourceLocation CurrentPosition { get; }
-
-        /// <summary>
-        /// The current internal state of the scanner.
-        /// </summary>
-        object CurrentState { get; }
-
-        ErrorSink ErrorSink { get; set; }
-    }
-
-    public abstract class TokenCategorizer : ITokenCategorizer, ILocalObject {
-
-        // static contract:
-        protected TokenCategorizer() {
-        }
-
-        #region ILocalObject Members
-
-#if !SILVERLIGHT
-        RemoteWrapper ILocalObject.Wrap() {
-            return new RemoteTokenCategorizer(this);
-        }
-#endif
-
-        #endregion
-
-        public abstract void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation);
-
-        public abstract object CurrentState { get; }
-        public abstract SourceLocation CurrentPosition { get; }
-        public abstract TokenInfo ReadToken();
-        public abstract bool IsRestartable { get; }
-        public abstract ErrorSink ErrorSink { get; set; }
-        
-        public virtual bool SkipToken() {
-            return ReadToken().Category != TokenCategory.EndOfStream;
-        }
-
-        // TODO: shouldn't be virutal (JS tokenizer needs to be fixed)
         public virtual IEnumerable<TokenInfo> ReadTokens(int countOfChars) {
             List<TokenInfo> tokens = new List<TokenInfo>();
 
@@ -112,6 +84,14 @@ namespace Microsoft.Scripting.Hosting {
             return tokens;
         }
 
+        /// <summary>
+        /// Scan from startLocation to at least startLocation + length.
+        /// </summary>
+        /// <param name="countOfChars">The mininum number of characters to process while getting tokens.</param>
+        /// <remarks>
+        /// This method is used to determine state at arbitrary startLocation.
+        /// </remarks>
+        /// <returns><c>False</c> if the end of stream has been reached, <c>true</c> otherwise.</returns>
         public bool SkipTokens(int countOfChars) {
             bool eos = false;
             int start_index = CurrentPosition.Index;

@@ -188,6 +188,19 @@ compile_tests = [
     ("if 1:\n\tdel f()", "can't delete function call", 2),
     ("def a(x):\n    def b():\n        print x\n    del x", "can not delete variable 'x' referenced in nested scope", 2),
     ("if 1:\nfoo()\n", "expected an indented block", 2),
+    ("'abc'.1", "invalid syntax", 1),
+    ("'abc' 1L", "invalid syntax", 1),
+    ("'abc' 1.0", "invalid syntax", 1),
+    ("'abc' 0j", "invalid syntax", 1),
+    ("x = 'abc'\nx.1", "invalid syntax", 2),
+    ("x = 'abc'\nx 1L", "invalid syntax", 2),
+    ("x = 'abc'\nx 1.0", "invalid syntax", 2),
+    ("x = 'abc'\nx 0j", "invalid syntax", 2),
+    ('def f():\n    del (yield 5)\n', "can't delete yield expression", 2),
+    ('a,b,c += 1,2,3', "illegal expression for augmented assignment", 1),
+    ('def f():\n    a = yield 3 = yield 4', "can't assign to yield expression", 2),
+    ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
+    ('(2,3) = (3,4)', "can't assign to literal", 1),
 ]
 
 if is_cli:
@@ -327,6 +340,10 @@ class C:
 AreEqual(C._C__x, 10)
 AreEqual(C.___.__y, 20)
 AreEqual(C.D._D__z, 30)
+
+
+#Hit negative case of 'sublist' in http://www.python.org/doc/2.5.1/ref/grammar.txt.
+AssertError(SyntaxError, compile, "def f((1)): pass", "", "exec")
 
 #
 # Make sure that augmented assignment also binds in the given scope

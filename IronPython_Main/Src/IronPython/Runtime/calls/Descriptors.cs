@@ -76,14 +76,33 @@ namespace IronPython.Runtime.Calls {
         #endregion
     }
 
+    [PythonSystemType]
     public class PythonProperty : PythonTypeSlot {
         private object _fget, _fset, _fdel, _doc;
 
-        public PythonProperty([DefaultParameterValueAttribute(null)]object fget,
+        public PythonProperty() {
+        }
+
+        public PythonProperty(params object[] args) {
+        }
+
+        public PythonProperty(
+            [ParamDictionary]IAttributesCollection dict, params object[] args) {
+        }
+
+        public void __init__([DefaultParameterValueAttribute(null)]object fget,
                         [DefaultParameterValueAttribute(null)]object fset,
                         [DefaultParameterValueAttribute(null)]object fdel,
                         [DefaultParameterValueAttribute(null)]object doc) {
-            _fget = fget; _fset = fset; _fdel = fdel; _doc = doc;
+            _fget = fget; _fset = fset; _fdel = fdel;
+
+                        
+            if (doc == null) {
+                PythonOps.TryGetBoundAttr(_fget, Symbols.Doc, out doc);
+            }
+            
+            _doc = doc;
+            
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {

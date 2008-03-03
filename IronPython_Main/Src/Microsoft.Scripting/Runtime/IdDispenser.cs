@@ -18,28 +18,31 @@ using System.Collections.Generic;
 using SRC = System.Runtime.CompilerServices;
 using Microsoft.Contracts;
 
-namespace Microsoft.Scripting.Runtime {
-
+namespace Microsoft.Scripting.Runtime {    
     public static class IdDispenser {
         // The one and only comparer instance.
-        private static readonly IEqualityComparer<object> comparer = new WrapperComparer();
-        private static Dictionary<object, object> hashtable = new Dictionary<object, object>(comparer);
-        private static readonly Object synchObject = new Object();  // The one and only global lock instance.
+        private static readonly IEqualityComparer<object> _comparer = new WrapperComparer();
+        [MultiRuntimeAware]
+        private static Dictionary<object, object> _hashtable = new Dictionary<object, object>(_comparer);
+        private static readonly Object _synchObject = new Object();  // The one and only global lock instance.
         // We do not need to worry about duplicates that to using long for unique Id.
         // It takes more than 100 years to overflow long on year 2005 hardware.
-        private static long currentId = 42; // Last unique Id we have given out.
+        [MultiRuntimeAware]
+        private static long _currentId = 42; // Last unique Id we have given out.
 
 #if !SILVERLIGHT // GC.CollectionCount
         // cleanupId and cleanupGC are used for efficient scheduling of hashtable cleanups
-        private static long cleanupId; // currentId at the time of last cleanup
-        private static int cleanupGC; // GC.CollectionCount(0) at the time of last cleanup
+        [MultiRuntimeAware]
+        private static long _cleanupId; // currentId at the time of last cleanup
+        [MultiRuntimeAware]
+        private static int _cleanupGC; // GC.CollectionCount(0) at the time of last cleanup
 #endif
         /// <summary>
         /// Given an ID returns the object associated with that ID.
         /// </summary>
         public static object GetObject(long id) {
-            lock (synchObject) {
-                foreach (Wrapper w in hashtable.Keys) {
+            lock (_synchObject) {
+                foreach (Wrapper w in _hashtable.Keys) {
                     if (w.Target != null) {
                         if (w.Id == id) return w.Target;
                     }
@@ -55,36 +58,36 @@ namespace Microsoft.Scripting.Runtime {
             if (o == null)
                 return 0;
 
-            lock (synchObject) {
+            lock (_synchObject) {
                 // If the object exists then return it's existing ID.
                 object res;
-                if (hashtable.TryGetValue(o, out res)) {
+                if (_hashtable.TryGetValue(o, out res)) {
                     return ((Wrapper)res).Id;
                 }
 
-                long uniqueId = checked(++currentId);
+                long uniqueId = checked(++_currentId);
 
 #if !SILVERLIGHT // GC.CollectionCount
-                long change = uniqueId - cleanupId;
+                long change = uniqueId - _cleanupId;
 
                 // Cleanup the table if it is a while since we have done it last time.
                 // Take the size of the table into account.
-                if (change > 1234 + hashtable.Count / 2) {
+                if (change > 1234 + _hashtable.Count / 2) {
                     // It makes sense to do the cleanup only if a GC has happened in the meantime.
                     // WeakReferences can become zero only during the GC.
                     int currentGC = GC.CollectionCount(0);
-                    if (currentGC != cleanupGC) {
+                    if (currentGC != _cleanupGC) {
                         Cleanup();
 
-                        cleanupId = uniqueId;
-                        cleanupGC = currentGC;
+                        _cleanupId = uniqueId;
+                        _cleanupGC = currentGC;
                     } else {
-                        cleanupId += 1234;
+                        _cleanupId += 1234;
                     }
                 }
 #endif
                 Wrapper w = new Wrapper(o, uniqueId);
-                hashtable[w] = w;
+                _hashtable[w] = w;
 
                 return uniqueId;
             }
@@ -97,7 +100,7 @@ namespace Microsoft.Scripting.Runtime {
             int liveCount = 0;
             int emptyCount = 0;
 
-            foreach (Wrapper w in hashtable.Keys) {
+            foreach (Wrapper w in _hashtable.Keys) {
                 if (w.Target != null)
                     liveCount++;
                 else
@@ -106,14 +109,14 @@ namespace Microsoft.Scripting.Runtime {
 
             // Rehash the table if there is a significant number of empty slots
             if (emptyCount > liveCount / 4) {
-                Dictionary<object, object> newtable = new Dictionary<object, object>(liveCount + liveCount / 4, comparer);
+                Dictionary<object, object> newtable = new Dictionary<object, object>(liveCount + liveCount / 4, _comparer);
 
-                foreach (Wrapper w in hashtable.Keys) {
+                foreach (Wrapper w in _hashtable.Keys) {
                     if (w.Target != null)
                         newtable[w] = w;
                 }
 
-                hashtable = newtable;
+                _hashtable = newtable;
             }
         }
 

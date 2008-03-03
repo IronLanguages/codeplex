@@ -12,8 +12,6 @@
 #
 #
 #####################################################################################
-
-from exceptions import SystemExit
 from lib.assert_util import testpath
 
 if testpath.basePyDir.lower()=='src':
@@ -21,12 +19,5 @@ if testpath.basePyDir.lower()=='src':
     print "Skipping DLR COM Lib tests..."
     sys.exit(0)
 
-for test_module in ["dlrcomserver", "paramsinretval", "OutParams", "pytraits"]:
-    print "--------------------------------------------------------------------"
-    print "Importing", test_module, "..."
-    try:
-        __import__(test_module)
-    except SystemExit, e:
-        if e.code!=0: 
-            raise Exception("Importing '%s' caused an unexpected exit code: %s" % (test_module, str(e.code)))
-    print ""
+from lib.cominterop_util import run_pkg_helper
+run_pkg_helper(__file__)

@@ -50,11 +50,10 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public object Call(CodeContext context, object sequence) {
-            return ArrayOps.CreateArray(context, _type, sequence);
+            return ArrayOps.__new__(context, _type, sequence);
         }
     }
 
-    [PythonType("array")]
     public static class ArrayOps {
         #region Python APIs
 
@@ -62,15 +61,14 @@ namespace IronPython.Runtime.Operations {
         public static readonly PythonTypeSlot Call = new ArrayCallSlot();
 
 
-        [PythonName("__contains__")]
-        public static bool Contains(object[] data, int size, object item) {
+        public static bool __contains__(object[] data, int size, object item) {
             for (int i = 0; i < size; i++) {
                 if (PythonOps.EqualRetBool(data[i], item)) return true;
             }
             return false;
         }
 
-        [PythonName("__add__")]
+        [SpecialName]
         public static Array Add(Array data1, Array data2) {
             if (data1 == null) throw PythonOps.TypeError("expected array for 1st argument, got None");
             if (data2 == null) throw PythonOps.TypeError("expected array for 2nd argument, got None");
@@ -87,8 +85,8 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object CreateArray(CodeContext context, PythonType pythonType, ICollection items) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType pythonType, ICollection items) {
             Type type = pythonType.UnderlyingSystemType.GetElementType();
 
             Array res = Array.CreateInstance(type, items.Count);
@@ -101,8 +99,8 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
         
-        [StaticExtensionMethod("__new__")]
-        public static object CreateArray(CodeContext context, PythonType pythonType, object items) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType pythonType, object items) {
             Type type = pythonType.UnderlyingSystemType.GetElementType();
 
             object lenFunc;
@@ -125,7 +123,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Multiply two object[] arrays - slow version, we need to get the type, etc...
         /// </summary>
-        [PythonName("__mul__")]
+        [SpecialName]
         public static Array Multiply(Array data, int count) {
             if (data.Rank > 1) throw new NotImplementedException("can't multiply multidimensional arrays");
 
@@ -149,21 +147,21 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static object GetItem(Array data, int index) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             return data.GetValue(PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static object GetItem(Array data, Slice slice) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             return GetSlice(data, data.Length, slice);
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static object GetItem(Array data, params object[] indices) {
             if (indices == null || indices.Length < 1) throw PythonOps.TypeError("__getitem__ requires at least 1 parameter");
 
@@ -184,14 +182,14 @@ namespace IronPython.Runtime.Operations {
             return data.GetValue(iindices);
         }
 
-        [SpecialName, PythonName("__setitem__")]
+        [SpecialName]
         public static void SetItem(Array data, int index, object value) {
             if (data == null) throw PythonOps.TypeError("expected Array, got None");
 
             data.SetValue(Converter.Convert(value, data.GetType().GetElementType()), PythonOps.FixIndex(index, data.Length) + data.GetLowerBound(0));
         }
 
-        [SpecialName, PythonName("__setitem__")]
+        [SpecialName]
         public static void SetItem(Array a, params object[] indexAndValue) {
             if (indexAndValue == null || indexAndValue.Length < 2) throw PythonOps.TypeError("__setitem__ requires at least 2 parameters");
 
@@ -216,7 +214,7 @@ namespace IronPython.Runtime.Operations {
             a.SetValue(indexAndValue[indexAndValue.Length - 1], indices);
         }
 
-        [SpecialName, PythonName("__setitem__")]
+        [SpecialName]
         public static void SetItem(Array a, Slice index, object value) {
             if (a.Rank != 1) throw PythonOps.NotImplementedError("slice on multi-dimensional array");
 
@@ -230,8 +228,7 @@ namespace IronPython.Runtime.Operations {
                 value);
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string CodeRepresentation(Array a) {
+        public static string __repr__(Array a) {
             if (a == null) throw PythonOps.TypeError("expected array, got None");
 
             StringBuilder ret = new StringBuilder();

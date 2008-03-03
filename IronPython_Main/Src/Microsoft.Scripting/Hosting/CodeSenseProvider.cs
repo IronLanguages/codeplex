@@ -20,42 +20,25 @@ using System.Reflection;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
+    public abstract class CodeSenseProvider 
+#if !SILVERLIGHT 
+        : MarshalByRefObject
+#endif
+    {
+        private readonly ScriptEngine _engine;
+        private readonly ScriptScope _module;
 
-    public interface ICodeSenseProvider : IRemotable {
-        string GetFunctionSignature(string name);
-        string[] GetMemberNames(string name);
-        string GetFunctionDoc(string name);
-    }
+        protected ScriptEngine Engine { get { return _engine; } }
+        protected ScriptScope Module { get { return _module; } }
 
-    public abstract class CodeSenseProvider : ICodeSenseProvider, ILocalObject {
-        private readonly IScriptEngine _engine;
-        private readonly IScriptScope _module;
-
-        protected IScriptEngine Engine { get { return _engine; } }
-        protected IScriptScope Module { get { return _module; } }
-
-        protected CodeSenseProvider(IScriptEngine engine, IScriptScope module) {
+        protected CodeSenseProvider(ScriptEngine engine, ScriptScope module) {
             Contract.RequiresNotNull(engine, "engine");
             _engine = engine;
             _module = module;
         }
 
-        #region ILocalObject Members
-
-#if !SILVERLIGHT
-        RemoteWrapper ILocalObject.Wrap() {
-            return new RemoteCodeSenseProvider(this);
-        }
-#endif
-
-        #endregion
-
-        #region ICodeSenseProvider Members
-
         public abstract string GetFunctionSignature(string name);
         public abstract string[] GetMemberNames(string name);
         public abstract string GetFunctionDoc(string name);
-
-        #endregion
     }
 }

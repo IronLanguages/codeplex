@@ -71,14 +71,17 @@ namespace Microsoft.Scripting.Actions {
             return dlg;
         }
 
+        /// <summary>
+        /// Clones the delegate target to create new delegate around it.
+        /// The delegates created by the compiler are closed over the instance of Closure class.
+        /// </summary>
         private object CloneData(object data, params object[] newData) {
             Debug.Assert(data != null);
 
-            object[] dataArr = data as object[];
-            if (dataArr != null) return CopyArray(newData, dataArr);
-
-            Tuple nt = data as Tuple;
-            if (nt != null) return CopyTuple(newData, nt);
+            Closure closure = data as Closure;
+            if (closure != null) {
+                return new Closure(closure.Context, CopyArray(newData, closure.Constants));
+            }
 
             throw new InvalidOperationException("bad data bound to delegate");
         }

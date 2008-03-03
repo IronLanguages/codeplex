@@ -592,4 +592,15 @@ def test_creation():
     
     AssertError(TypeError, file, None)
 
+
+def test_repr():
+    import nt
+    class x(file):
+        def __repr__(self): return 'abc'
+        
+    f = x('repr_does_not_exist', 'w')
+    AreEqual(repr(f), 'abc')
+    f.close()
+    nt.unlink('repr_does_not_exist')
+
 run_test(__name__)

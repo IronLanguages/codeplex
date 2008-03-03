@@ -23,6 +23,7 @@ using System.Runtime.InteropServices;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
@@ -149,6 +150,19 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     Debug.Assert(false, "Unexpected VarEnum");
                     return exprs;
             }
+        }
+
+        internal object Build(CodeContext context, object[] args) {
+            object result = _builder.Build(context, args);
+            if (_targetComType == VarEnum.VT_DISPATCH) {
+                // Ensure that the object supports IDispatch to match how WriteArgumentVariant would work
+                // (it would call the Variant.AsDispatch setter). Otherwise, Type.InvokeMember might decide
+                // to marshal it as IUknown which would result in a difference in behavior.
+                IntPtr dispatch = Marshal.GetIDispatchForObject(result);
+                Marshal.Release(dispatch);
+            }
+
+            return result;
         }
     }
 }

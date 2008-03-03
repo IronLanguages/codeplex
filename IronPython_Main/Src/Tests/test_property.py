@@ -97,8 +97,8 @@ def test_reflected_extension_property_ops():
     '''
     Test to hit IronPython.RunTime.Operations.ReflectedExtensionPropertyOps
     '''
-    t_list = [  (complex.__dict__['real'], 'complex', 'float', 'Real'),
-                (complex.__dict__['imag'], 'complex', 'float', 'Imaginary'),
+    t_list = [  (complex.__dict__['real'], 'complex', 'float', 'real'),
+                (complex.__dict__['imag'], 'complex', 'float', 'imag'),
                 (object.__dict__['__class__'], 'object', 'type', '__class__'),
                 ]
     
@@ -161,5 +161,24 @@ def test_member_lookup_newclass():
     AreEqual(c.__dict__['xprop'], 43)
     AreEqual(c.__dict__['xmember'], 41)
 
+
+def test_inheritance():
+    class MyProperty(property):
+        def __init__(self, *args):
+            property.__init__(self, *args)
+            
+    x = MyProperty(1,2,3)
+    
+    AreEqual(x.fget, 1)
+    AreEqual(x.fset, 2)
+    AreEqual(x.fdel, 3)
+
+def test_property_doc():
+    def getter(self):
+        """getter doc"""
+    
+    AreEqual(property(getter).__doc__, "getter doc")
+    AreEqual(property(None).__doc__, None)
+    AreEqual(property(None, getter, getter).__doc__, None)
 
 run_test(__name__)

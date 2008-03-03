@@ -23,15 +23,16 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     [PythonType(typeof(PythonType))]
+    [PythonSystemType]
     public class ExtensibleType : PythonType, ICustomMembers {
         
-        [StaticExtensionMethod("__new__")]
-        public static object Make(PythonType cls, object o) {
+        [StaticExtensionMethod]
+        public static object __new__(PythonType cls, object o) {
             return DynamicHelpers.GetPythonType(o);
         }
         
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType dt, string name, PythonTuple bases, IAttributesCollection dict) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType dt, string name, PythonTuple bases, IAttributesCollection dict) {
             return new ExtensibleType(context, name, bases, dict);
         }
 

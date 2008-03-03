@@ -23,327 +23,143 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Types;
+using System.Threading;
 
 namespace IronPython.Hosting {
+    internal class StringDictionaryStorage : DictionaryStorage {
+        private readonly IDictionary<string, object>/*!*/ _dict; // the underlying dictionary
+        private Dictionary<object, object> _objDict;
 
-    /// <summary>
-    /// Users of the Hosting APIs deal with IDictionary&lt;string, object&gt;. However, the engine talks
-    /// in terms of IAttributesDictionary.
-    /// </summary>
-    [PythonType(typeof(PythonDictionary))]
-    public class StringDictionaryAdapterDict : BaseSymbolDictionary,
-        IDictionary, IDictionary<object, object>, IAttributesCollection {
-
-        IDictionary<string, object> dict; // the underlying dictionary
-
-        public StringDictionaryAdapterDict(IDictionary<string, object> d) {
-            Contract.RequiresNotNull(d, "d");
-
-            dict = d;
+        public StringDictionaryStorage(IDictionary<string, object>/*!*/ dict) {
+            _dict = dict;
         }
 
-        public IDictionary<string, object> UnderlyingDictionary { get { return dict; } }
-
-        static SymbolId GetSymbolIdKey(object key) {
-            Contract.RequiresNotNull(key, "key");
-
-            if (!(key is string))
-                throw new NotSupportedException("Cannot add or delete non-string attribute");
-
-            return SymbolTable.StringToId((string)key);
+        public StringDictionaryStorage(IDictionary<string, object> dict, Dictionary<object, object> objDict) {
+            _dict = dict;
+            _objDict = objDict;
         }
 
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(CodeContext context, PythonType cls, object seq) {
-            return PythonDictionary.FromKeys(context, cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {
-            return PythonDictionary.FromKeys(context, cls, seq, value);
-        }
-
-        #region SymbolIdDictBase abstract methods
-
-        public override IDictionary<object, object> AsObjectKeyedDictionary() {
-            return this;
-        }
-
-        [PythonName("clear")]
-        public void Clear() {
-            dict.Clear();
-        }
-
-        [PythonName("__iter__")]
-        public IEnumerator GetEnumerator() {
-            return dict.GetEnumerator();
-        }
-        #endregion
-
-        #region IAttributesDictionary Members
-
-        public void Add(SymbolId name, object value) {
-            dict[SymbolTable.IdToString(name)] = value;
-        }
-
-        public bool TryGetValue(SymbolId name, out object value) {
-            return dict.TryGetValue(SymbolTable.IdToString(name), out value);
-        }
-
-        public bool Remove(SymbolId name) {
-            return dict.Remove(SymbolTable.IdToString(name));
-        }
-
-        public bool ContainsKey(SymbolId name) {
-            return dict.ContainsKey(SymbolTable.IdToString(name));
-        }
-
-        public virtual object this[SymbolId name] {
-            get {
-                return dict[SymbolTable.IdToString(name)];
-            }
-            set {
-                dict[SymbolTable.IdToString(name)] = value;
-            }
-        }
-
-        public IDictionary<SymbolId, object> SymbolAttributes {
-            get {
-                Dictionary<SymbolId, object> symbolIdDict = new Dictionary<SymbolId, object>();
-                lock (this) {
-                    foreach (KeyValuePair<string, object> kvp in dict) {
-                        symbolIdDict[SymbolTable.StringToId(kvp.Key)] = kvp.Value;
-                    }
+        public override void Add(object key, object value) {
+            lock (this) {
+                string strKey = key as string;
+                if (strKey != null) {
+                    _dict[strKey] = value;
+                } else {
+                    EnsureObjectDictionary();
+                    _objDict[BaseSymbolDictionary.NullToObj(key)] = value;
                 }
-                return symbolIdDict;
             }
         }
 
-        public void AddObjectKey(object name, object value) {
-            Add(GetSymbolIdKey(name), value);
-        }
-
-        public bool TryGetObjectValue(object name, out object value) {
-            if (name is string)
-                return TryGetValue(GetSymbolIdKey(name), out value);
-
-            value = null;
-            return false;
-        }
-
-        public bool RemoveObjectKey(object name) {
-            if (name is string)
-                return Remove(GetSymbolIdKey(name));
-            return false;
-        }
-
-        public bool ContainsObjectKey(object name) {
-            if (name is string)
-                return ContainsKey(GetSymbolIdKey(name));
-            return false;
-        }
-
-        public int Count {
-            get { return dict.Count; }
-        }
-
-        public ICollection<object> Keys {
-            get {
-                List<object> result = new List<object>();
-                lock (this) {
-                    foreach (KeyValuePair<string, object> kvp in dict) {
-                        result.Add(kvp.Key);
-                    }
-                }
-                return result;
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable<KeyValuePair<object,object>> Members
-
-        class DictionaryEnumerator : CheckedDictionaryEnumerator {
-            IEnumerator<KeyValuePair<string, object>> enumerator;
-
-            internal protected DictionaryEnumerator(IEnumerator<KeyValuePair<string, object>> e) {
-                enumerator = e;
-            }
-
-            protected override object GetKey() {
-                return enumerator.Current.Key;
-            }
-
-            protected override object GetValue() {
-                return enumerator.Current.Value;
-            }
-
-            protected override bool DoMoveNext() {
-                return enumerator.MoveNext();
-            }
-
-            protected override void DoReset() {
-                enumerator.Reset();
-            }
-        }
-
-        IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator() {
-            return new DictionaryEnumerator(dict.GetEnumerator());
-        }
-
-        #endregion
-
-        #region IEnumerable Members
-
-        IEnumerator IEnumerable.GetEnumerator() {
-            return GetEnumerator();
-        }
-
-        #endregion
-
-        #region IDictionary Members
-
-        void IDictionary.Add(object key, object value) {
-            AsObjectKeyedDictionary().Add(key, value);
-        }
-
-        public bool Contains(object key) {
-            return ContainsObjectKey(key);
-        }
-
-        IDictionaryEnumerator IDictionary.GetEnumerator() {
-            return new DictionaryEnumerator(dict.GetEnumerator());
-        }
-
-        public bool IsFixedSize {
-            get { return false; }
-        }
-
-        ICollection IDictionary.Keys {
-            get {
-                // data.Keys is typed as ICollection<string>. Hence, we cannot return as a ICollection.
-                // Instead, we need to copy the data to a List.
-                List res = new List();
-
-                lock (this) {
-                    foreach (string x in dict.Keys) {
-                        res.AddNoLock(x);
-                    }
+        public override bool Contains(object key) {
+            lock (this) {
+                string strKey = key as string;
+                if (strKey != null) {
+                    return _dict.ContainsKey(strKey);
                 }
 
-                return res;
-            }
-        }
-
-        void IDictionary.Remove(object key) {
-            RemoveObjectKey(key);
-        }
-
-        ICollection IDictionary.Values {
-            get {
-                // data.Keys is typed as ICollection<object>. Hence, we cannot return as a ICollection.
-                // Instead, we need to copy the data to a List.
-                List res = new List();
-
-                lock (this) {
-                    foreach (KeyValuePair<string, object> x in dict) {
-                        res.AddNoLock(x.Value);
-                    }
+                if (_objDict != null) {
+                    return _objDict.ContainsKey(BaseSymbolDictionary.NullToObj(key));
                 }
 
-                return res;
-            }
-        }
-
-        object IDictionary.this[object key] {
-            get { return AsObjectKeyedDictionary()[key]; }
-            set { AsObjectKeyedDictionary()[key] = value; }
-        }
-
-        #endregion
-
-        #region IDictionary<object,object> Members
-
-        public void Add(object key, object value) {
-            AddObjectKey(key, value);
-        }
-
-        public bool ContainsKey(object key) {
-            return ContainsObjectKey(key);
-        }
-
-        public bool Remove(object key) {
-            return RemoveObjectKey(key);
-        }
-
-        public bool TryGetValue(object key, out object value) {
-            return TryGetObjectValue(key, out value);
-        }
-
-        public ICollection<object> Values {
-            get { return dict.Values; }
-        }
-
-        public object this[object key] {
-            get {
-                return this[GetSymbolIdKey(key)];
-            }
-            set {
-                this[GetSymbolIdKey(key)] = value;
-            }
-        }
-
-        #endregion
-
-        #region ICollection<KeyValuePair<object,object>> Members
-
-        public void Add(KeyValuePair<object, object> item) {
-            AddObjectKey(item.Key, item.Value);
-        }
-
-        void ICollection<KeyValuePair<object, object>>.Clear() {
-            Clear();
-        }
-
-        public bool Contains(KeyValuePair<object, object> item) {
-            object value;
-            if (TryGetObjectValue(item.Key, out value) && value == item.Value)
-                return true;
-            return false;
-        }
-
-        public void CopyTo(Array/*!*/ array, int index) {
-            throw new NotImplementedException("The method or operation is not implemented.");
-        }
-
-        public bool IsSynchronized {
-            get {
                 return false;
             }
         }
 
-        public object/*!*/ SyncRoot {
+        public override bool Remove(object key) {
+            lock (this) {
+                string strKey = key as string;
+                if (strKey != null) {
+                    return _dict.Remove(strKey);
+                }
+
+                if (_objDict != null) {
+                    return _objDict.Remove(BaseSymbolDictionary.NullToObj(key));
+                }
+
+                return false;
+            }
+        }
+
+        public override bool TryGetValue(object key, out object value) {
+            lock (this) {
+                string strKey = key as string;
+                if (strKey != null) {
+                    return _dict.TryGetValue(strKey, out value);
+                }
+
+                if (_objDict != null) {
+                    return _objDict.TryGetValue(BaseSymbolDictionary.NullToObj(key), out value);
+                }
+
+                value = null;
+                return false;
+            }
+        }
+
+        public override int Count {
             get {
-                return this;
+                lock (this) {
+                    int count = _dict.Count;
+                    if (_objDict != null) {
+                        count += _objDict.Count;
+                    }
+                    return count;
+                }
             }
         }
 
-        public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex) {
-            throw new NotImplementedException("The method or operation is not implemented.");
-        }
-
-        public bool IsReadOnly {
-            get { return false; }
-        }
-
-        public bool Remove(KeyValuePair<object, object> item) {
-            object value;
-            if (TryGetObjectValue(item.Key, out value) && value == item.Value) {
-                return RemoveObjectKey(item.Key);
+        public override void Clear() {
+            lock (this) {
+                _dict.Clear();
+                if (_objDict != null) {
+                    _objDict.Clear();
+                }
             }
-            return false;
         }
 
-        #endregion
-    }   
+        public override List<KeyValuePair<object, object>> GetItems() {
+            List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>();
+            lock (this) {
+                foreach (KeyValuePair<string, object> kvp in _dict) {
+                    res.Add(new KeyValuePair<object, object>(kvp.Key, kvp.Value));
+                }
+
+                if (_objDict != null) {
+                    foreach (KeyValuePair<object, object> kvp in _objDict) {
+                        res.Add(kvp);
+                    }
+                }
+            }
+            return res;
+        }
+        
+        public override DictionaryStorage Clone() {
+            lock (this) {
+                IDictionary<string, object> dict;
+#if !SILVERLIGHT
+                ICloneable cloneable = _dict as ICloneable;
+                if (_dict != null) {
+                    dict = (IDictionary<string, object>)cloneable.Clone();
+                } else 
+#endif
+                {
+                    dict = new Dictionary<string, object>(_dict);
+                }
+
+                Dictionary<object, object> objDict = null;
+                if (_objDict != null) {
+                    objDict = new Dictionary<object, object>(_objDict);
+                }
+
+                return new StringDictionaryStorage(dict, objDict);
+            }
+        }
+
+        private void EnsureObjectDictionary() {
+            if (_objDict == null) {
+                Interlocked.CompareExchange<Dictionary<object, object>>(ref _objDict, new Dictionary<object, object>(), null);
+            }            
+        }
+    }
 }

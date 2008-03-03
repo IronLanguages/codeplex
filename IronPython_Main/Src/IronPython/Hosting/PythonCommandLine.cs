@@ -36,7 +36,7 @@ namespace IronPython.Hosting {
     /// </summary>
     public class PythonCommandLine : CommandLine {
         private PythonContext/*!*/ _context;
-
+        
         private new PythonConsoleOptions Options { get { return (PythonConsoleOptions)base.Options; } }
         
         public PythonCommandLine(PythonContext/*!*/ context) {
@@ -71,7 +71,7 @@ namespace IronPython.Hosting {
             return exitCode;
         }
 
-        protected override void Shutdown(IScriptEngine engine) {
+        protected override void Shutdown(ScriptEngine engine) {
             Contract.RequiresNotNull(engine, "engine");
 
             try {
@@ -85,8 +85,14 @@ namespace IronPython.Hosting {
 
         protected override int Run() {
             if (Options.ModuleToRun != null) {
-                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString("import " + Options.ModuleToRun, SourceCodeKind.Statements));
-                return 0;
+                CodeContext ctx = new CodeContext(new Scope(_context), _context);
+                object ret = Importer.ImportModule(ctx, ctx.Scope.ModuleScope.Dict, Options.ModuleToRun, false, -1);
+                if (ret == null) {
+                    Console.WriteLine(String.Format("ImportError: No module named {0}", Options.ModuleToRun), Style.Error);
+                    return 1;
+                } else {
+                    return 0;
+                }
             }
 
             return base.Run();
@@ -95,6 +101,7 @@ namespace IronPython.Hosting {
         #region Initialization
 
         protected override void Initialize() {
+
             // TODO: must precede path initialization! (??? - test test_importpkg.py)
             
             if (Options.Command == null && Options.FileName != null) {
@@ -148,9 +155,9 @@ namespace IronPython.Hosting {
             }
         }
 
-        private IScriptScope/*!*/ CreateMainModule() {
+        private ScriptScope/*!*/ CreateMainModule() {
             ModuleOptions trueDiv = (PythonContext.GetPythonOptions(null).DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            PythonModule module = DefaultContext.DefaultPythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule);
+            PythonModule module = DefaultContext.DefaultPythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule | ModuleOptions.ModuleBuiltins);
             module.Scope.SetName(Symbols.Doc, null);
             return Engine.CreateScope(module.Scope.Dict);
         }
@@ -199,18 +206,15 @@ namespace IronPython.Hosting {
         }
 
         private void ImportSite() {
-#if !SILVERLIGHT // paths
             if (Options.SkipImportSite)
                 return;
 
             try {
-                // TODO: do better
-                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString("import site", SourceCodeKind.SingleStatement));
+                CodeContext ctx = new CodeContext(new Scope(_context), _context);
+                Importer.ImportModule(ctx, ctx.Scope.ModuleScope.Dict, "site", false, -1);
             } catch (Exception e) {
                 Console.Write(Engine.FormatException(e), Style.Error);
             }
-#endif
-
         }
 
         #endregion
@@ -243,13 +247,13 @@ namespace IronPython.Hosting {
             if (startup != null && startup.Length > 0) {
                 if (Options.HandleExceptions) {
                     try {
-                        Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
+                        ExecuteCommand(Module, _context.CreateFileUnit(startup));
                     } catch (Exception e) {
                         if (e is SystemExitException) throw;
                         Console.Write(Engine.FormatException(e), Style.Error);
                     }
                 } else {
-                    Engine.Execute(Module, Engine.CreateScriptSourceFromFile(startup));
+                    ExecuteCommand(Module, _context.CreateFileUnit(startup));
                 }
             }
 #endif
@@ -269,6 +273,28 @@ namespace IronPython.Hosting {
             }
         }
 
+         // TODO: this is very hacky; the problem is that command line is currently a hybrid between a host and language API
+        protected override void ExecuteCommand(string/*!*/ command) {
+            ExecuteCommand(Module, _context.CreateSnippet(command, SourceCodeKind.InteractiveCode));
+        }
+
+        private void ExecuteCommand(ScriptScope/*!*/ scope, SourceUnit/*!*/ commandUnit) {
+            Engine.CreateScriptSourceFromString(commandUnit.GetCode(), commandUnit.Kind).Compile(
+                Engine.GetCompilerOptions(scope), new Listener(commandUnit)).Execute(scope);
+        }
+
+        private class Listener : ErrorListener {
+            private SourceUnit _commandUnit;
+
+            public Listener(SourceUnit/*!*/ commandUnit) {
+                _commandUnit = commandUnit;
+            }
+
+            public override void ErrorReported(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity) {
+                ThrowingErrorSink.Default.Add(_commandUnit, message, span, errorCode, severity);
+            }
+        }
+        
         protected override string ReadLine(int autoIndentSize) {
             string res = base.ReadLine(autoIndentSize);
 
@@ -301,11 +327,12 @@ namespace IronPython.Hosting {
         private int RunCommandWorker(string command) {
             int result = 1;
             try {
-                IScriptScope module = CreateMainModule();
-                if (Options.Introspection)
+                ScriptScope module = CreateMainModule();
+                if (Options.Introspection) {
                     Module = module;
+                }
 
-                Engine.Execute(module, Engine.CreateScriptSourceFromString(command, SourceCodeKind.File));
+                ExecuteCommand(module, _context.CreateSnippet(command, SourceCodeKind.File));
                 result = 0;
             } catch (SystemExitException pythonSystemExit) {
                 result = GetEffectiveExitCode(pythonSystemExit);
@@ -347,7 +374,7 @@ namespace IronPython.Hosting {
         private int RunFileWorker(string fileName) {
             try {
                 ScriptCode compiledCode;
-                PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized, Options.SkipFirstSourceLine, out compiledCode);
+                PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized | ModuleOptions.ModuleBuiltins, Options.SkipFirstSourceLine, out compiledCode);
 
                 if (Options.Introspection) {
                     Module = Engine.CreateScope(module.Scope.Dict);

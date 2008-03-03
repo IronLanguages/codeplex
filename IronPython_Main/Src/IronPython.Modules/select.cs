@@ -84,9 +84,9 @@ namespace IronPython.Modules {
             }
 
             // Convert back to what the user originally passed in
-            for (int i = 0; i < readerList.Count; i++) readerList[i] = readerOriginals[(Socket)readerList[i]];
-            for (int i = 0; i < writerList.Count; i++) writerList[i] = writerOriginals[(Socket)writerList[i]];
-            for (int i = 0; i < errorList.Count; i++) errorList[i] = errorOriginals[(Socket)errorList[i]];
+            for (int i = 0; i < readerList.__len__(); i++) readerList[i] = readerOriginals[(Socket)readerList[i]];
+            for (int i = 0; i < writerList.__len__(); i++) writerList[i] = writerOriginals[(Socket)writerList[i]];
+            for (int i = 0; i < errorList.__len__(); i++) errorList[i] = errorOriginals[(Socket)errorList[i]];
 
             return PythonTuple.MakeTuple(readerList, writerList, errorList);
         }
@@ -117,7 +117,7 @@ namespace IronPython.Modules {
             while (cursor.MoveNext()) {
                 object original = cursor.Current;
                 Socket socket = ObjectToSocket(context, original);
-                socketList.Add(socket);
+                socketList.append(socket);
                 socketToOriginal[socket] = original;
             }
         }

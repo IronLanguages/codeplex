@@ -280,7 +280,13 @@ namespace IronPython.Modules {
                         case 'l': return BigInteger.Create((int)val);
                         case 'i': return val;
                         case 'L': return BigInteger.Create((uint)val);
-                        case 'I': return (int)(uint)val;
+                        case 'I':
+                            uint tmp = (uint)val;
+                            if (tmp <= Int32.MaxValue) {
+                                return (int)(uint)val;
+                            }
+
+                            return (BigInteger)tmp;
                         case 'f': return (double)(float)val;
                         case 'd': return val;
                         default:
@@ -677,7 +683,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public string ToCodeString(CodeContext context) {
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 string res = "array('" + typecode.ToString() + "'";
                 if (_data.Length == 0) {
                     return res + ")";

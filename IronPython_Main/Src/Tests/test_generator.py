@@ -47,6 +47,7 @@ Assert(l == [3,6,9,12,15,18])
 AreEqual(sum(i+i for i in range(100) if i < 50), 2450)
 AreEqual(list((i,j) for i in xrange(2) for j in xrange(3)), [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)])
 AreEqual(list((i,j) for i in xrange(2) for j in xrange(i+1)), [(0, 0), (1, 0), (1, 1)])
+AreEqual([x for x, in [(1,)]], [1])
 
 i = 10
 AreEqual(sum(i+i for i in range(1000) if i < 50), 2450)

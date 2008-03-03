@@ -21,7 +21,6 @@ using System.Globalization;
 using System.Collections.Generic;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 

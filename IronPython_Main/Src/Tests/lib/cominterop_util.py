@@ -122,6 +122,13 @@ def AssertErrorWithMessage(*args, **kwargs):
         print "AssertErrorWithMessage(" + str(args) + ", " + str(kwargs) + ") failed!"
         raise e
 
+def AssertErrorWithPartialMessage(*args, **kwargs):
+    try:
+        if assert_helper(kwargs): assert_util.AssertErrorWithPartialMessage(*args, **kwargs)
+    except Exception, e:
+        print "AssertErrorWithPartialMessage(" + str(args) + ", " + str(kwargs) + ") failed!"
+        raise e
+
 def AlmostEqual(*args, **kwargs):
     if assert_helper(kwargs): assert_util.AlmostEqual(*args, **kwargs)
 
@@ -312,6 +319,36 @@ if sys.platform=="win32":
         class Boolean(int):
             pass
             
+#------------------------------------------------------------------------------
+def run_pkg_helper(filename, exclude_list = []):
+    from exceptions import SystemExit
+
+    #Determine the package structure
+    import nt
+    cwd = nt.getcwd()
+    
+    common_end = 0
+    for i in xrange(len(cwd)):
+        if cwd[i]!=filename[i]: break
+        common_end+=1
+    
+    common_end+=1
+    temp_package = filename[common_end:filename.rfind("\\")+1]
+    temp_package.replace("\\", ".")
+    
+    #get the module names in the package
+    mod_names = [temp_package + x for x in get_mod_names(filename) if x not in exclude_list]
+    
+    for test_module in mod_names:
+        print "--------------------------------------------------------------------"
+        print "Importing", test_module, "..."
+        try:
+            __import__(test_module)
+        except SystemExit, e:
+            if e.code!=0: 
+                raise Exception("Importing '%s' caused an unexpected exit code: %s" % (test_module, str(e.code)))
+        print ""
+
 #------------------------------------------------------------------------------
 RERUN_UNDER_PREFERCOMDISPATCH = ["cominterop\\apps\\msagent.py"]
 

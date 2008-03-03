@@ -37,7 +37,7 @@ namespace IronPython.Runtime.Types {
             TopNamespaceTracker reflectedAssembly = GetReflectedAssembly(context, self);
 
             if (name == "__dict__") {
-                return new WrapperDictionary(reflectedAssembly);
+                return new PythonDictionary(new WrapperDictionaryStorage(reflectedAssembly));
             }
             MemberTracker mem = reflectedAssembly.TryGetPackageAny(name);
             if (mem != null) {
@@ -65,8 +65,7 @@ namespace IronPython.Runtime.Types {
             return ret;
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static object Repr(Assembly self) {
+        public static object __repr__(Assembly self) {
             Assembly asmSelf = self as Assembly;
 
             return "<Assembly " + asmSelf.FullName + ">";

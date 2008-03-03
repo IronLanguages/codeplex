@@ -17,17 +17,6 @@ import sys
 import common
 
 def exactly_same(s1, s2):
-
-    #CodePlex Work Item #10782
-    #CPython 2.5 wraps exception types with "<type 'someexception'> whereas IP 
-    #does not.
-    if s1!=s2 and s1.startswith("<type '") and not s2.startswith("<type '"):
-        if s2.find(" ") >= 0:
-            s2 = s2.replace(" ", "'> ", 1)    
-        else:
-            s2 = s2 + "'>"
-        s2 = "<type '" + s2
-        
     return s1 == s2
     
 def ignore(s1, s2): 

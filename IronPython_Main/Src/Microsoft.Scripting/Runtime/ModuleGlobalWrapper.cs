@@ -21,7 +21,6 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
 

@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Generation {
         /// method-local state for the slot factory.
         /// </summary>
         /// <param name="cg"></param>
-        public virtual void PrepareForEmit(Compiler cg) {
+        public virtual void PrepareForEmit(LambdaCompiler cg) {
         }
     }
 }

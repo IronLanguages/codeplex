@@ -18,8 +18,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.IO;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
+
+// TODO: remove HAPI references:
+using Hosting_ScriptEngine = Microsoft.Scripting.Hosting.ScriptEngine;
 
 namespace Microsoft.Scripting.Shell {
 
@@ -55,7 +57,7 @@ namespace Microsoft.Scripting.Shell {
         private ConsoleColor _errorColor = ConsoleColor.Gray;
         private ConsoleColor _warningColor = ConsoleColor.Gray;
 
-        public BasicConsole(IScriptEngine engine, bool colorful) {
+        public BasicConsole(Hosting_ScriptEngine engine, bool colorful) {
             Contract.RequiresNotNull(engine, "engine");
 
             SetupColors(colorful);

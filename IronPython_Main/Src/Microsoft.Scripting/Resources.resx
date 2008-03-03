@@ -162,6 +162,9 @@
   <data name="InvalidCtorImplementation" xml:space="preserve">
     <value>Type '{0}' doesn't provide a suitable public constructor or its implementation is faulty.</value>
   </data>
+  <data name="InvalidOperation_ContainsGenericParameters" xml:space="preserve">
+    <value>Cannot access member {1} declared on type {0} because the type contains generic parameters.</value>
+  </data>
   <data name="InvalidOperation_DefineParameterBakedMethod" xml:space="preserve">
     <value>Attempt to define parameter on non-methodbuilder and non-dynamic method</value>
   </data>

@@ -29,7 +29,8 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting.Math;
 
 namespace IronPython.Runtime {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix"), PythonType("tuple")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
+    [PythonSystemType("tuple")]
     public class PythonTuple : ISequence, ICollection, IEnumerable, IEnumerable<object>, IValueEquality, IList<object>, ICodeFormattable, IParameterSequence {
         internal static readonly PythonTuple EMPTY = new PythonTuple();
 
@@ -39,8 +40,7 @@ namespace IronPython.Runtime {
         // They also explicitly implement __new__ so they can perform the
         // appropriate caching.  
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonTuple PythonNew(CodeContext context, PythonType cls) {
+        public static PythonTuple __new__(CodeContext context, PythonType cls) {
             if (cls == TypeCache.PythonTuple) {
                 return EMPTY;
             } else {
@@ -50,8 +50,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static PythonTuple PythonNew(CodeContext context, PythonType cls, object sequence) {
+        public static PythonTuple __new__(CodeContext context, PythonType cls, object sequence) {
             if (sequence == null) throw PythonOps.TypeError("iteration over a non-sequence");
 
             if (cls == TypeCache.PythonTuple) {
@@ -65,18 +64,17 @@ namespace IronPython.Runtime {
         }
         #endregion
 
-        public static PythonTuple Make(object o) {
+        internal static PythonTuple Make(object o) {
             if (o is PythonTuple) return (PythonTuple)o;
             return new PythonTuple(MakeItems(o));
         }
 
-        public static PythonTuple MakeTuple(params object[] items) {
+        internal static PythonTuple MakeTuple(params object[] items) {
             if (items.Length == 0) return EMPTY;
             return new PythonTuple(items);
         }
 
-        // TODO: Make internal
-        public static PythonTuple MakeExpandableTuple(params object[] items) {
+        internal static PythonTuple MakeExpandableTuple(params object[] items) {
             if (items.Length == 0) return EMPTY;
             return new PythonTuple(true, items);
         }
@@ -151,17 +149,13 @@ namespace IronPython.Runtime {
         }
 
         #region ISequence Members
-        [PythonName("__len__")]
+
         public virtual int __len__() {
             return _data.Length;
         }
 
-        public bool ContainsValueWrapper(object item) {
-            return __contains__(item);
-        }
-
         public virtual bool __contains__(object value) {
-            return ArrayOps.Contains(_data, _data.Length, value);
+            return ArrayOps.__contains__(_data, _data.Length, value);
         }
 
         public virtual object this[int index] {
@@ -182,7 +176,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        [PythonName("__getslice__")]
         public virtual object __getslice__(int start, int stop) {
             Slice.FixSliceArguments(_data.Length, ref start, ref stop);
 
@@ -228,19 +221,23 @@ namespace IronPython.Runtime {
 
         #region ICollection Members
 
-        public bool IsSynchronized {
+        bool ICollection.IsSynchronized {
             get { return false; }
         }
 
-        public int Count {
+        int ICollection.Count {
             get { return __len__(); }
         }
 
-        public void CopyTo(Array array, int index) {
+        int IParameterSequence.Count {
+            get { return __len__(); }
+        }
+
+        void ICollection.CopyTo(Array array, int index) {
             Array.Copy(_data, 0, array, index, _data.Length);
         }
 
-        public object SyncRoot {
+        object ICollection.SyncRoot {
             get {
                 return this;
             }
@@ -249,78 +246,12 @@ namespace IronPython.Runtime {
         #endregion
 
         #region IEnumerable Members
-
-        /// <summary>
-        /// public class to get optimized
-        /// </summary>
-        public class TupleEnumerator : IEnumerator, IEnumerator<object> {
-            int curIndex;
-            PythonTuple tuple;
-
-            public TupleEnumerator(PythonTuple t) {
-                tuple = t;
-                curIndex = -1;
-            }
-
-            #region IEnumerator Members
-
-            public object Current {
-                get { 
-                    // access _data directly because this is what CPython does:
-                    // class T(tuple):
-                    //     def __getitem__(self): return None
-                    // 
-                    // for x in T((1,2)): print x
-                    // prints 1 and 2
-                    return tuple._data[curIndex]; 
-                }
-            }
-
-            public bool MoveNext() {
-                if ((curIndex + 1) >= tuple.Count) {
-                    return false;
-                }
-                curIndex++;
-                return true;
-            }
-
-            public void Reset() {
-                curIndex = -1;
-            }
-
-            #endregion
-
-            #region IDisposable Members
-
-            public void Dispose() {
-                Dispose(true);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(bool disposing) {
-
-            }
-
-            #endregion
-        }
-
-        public IEnumerator GetEnumerator() {
+        
+        IEnumerator IEnumerable.GetEnumerator() {
             return new TupleEnumerator(this);
         }
 
         #endregion
-
-        public override string ToString() {
-            StringBuilder buf = new StringBuilder();
-            buf.Append("(");
-            for (int i = 0; i < _data.Length; i++) {
-                if (i > 0) buf.Append(", ");
-                buf.Append(PythonOps.StringRepr(_data[i]));
-            }
-            if (_data.Length == 1) buf.Append(",");
-            buf.Append(")");
-            return buf.ToString();
-        }
 
         object[] IParameterSequence.Expand(object value) {
             object[] args;
@@ -341,8 +272,7 @@ namespace IronPython.Runtime {
             return args;
         }
 
-        [PythonName("__getnewargs__")]
-        public object GetNewArgs() {
+        public object __getnewargs__() {
             // Call "new Tuple()" to force result to be a Tuple (otherwise, it could possibly be a Tuple subclass)
             return PythonTuple.MakeTuple(new PythonTuple(this));
         }
@@ -358,7 +288,7 @@ namespace IronPython.Runtime {
         #region IList<object> Members
 
         int IList<object>.IndexOf(object item) {
-            for (int i = 0; i < Count; i++) {
+            for (int i = 0; i < __len__(); i++) {
                 if (PythonOps.EqualRetBool(this[i], item)) return i;
             }
             return -1;
@@ -393,13 +323,12 @@ namespace IronPython.Runtime {
             throw new InvalidOperationException("Tuple is readonly");
         }
 
-        [PythonName("__contains__")]
-        public virtual bool Contains(object item) {
+        bool ICollection<object>.Contains(object item) {
             return this.__contains__(item);
         }
 
         void ICollection<object>.CopyTo(object[] array, int arrayIndex) {
-            for (int i = 0; i < Count; i++) {
+            for (int i = 0; i < __len__(); i++) {
                 array[arrayIndex + i] = this[i];
             }
         }
@@ -458,12 +387,13 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        [PythonHidden]
         public override bool Equals(object obj) {
             PythonTuple other = obj as PythonTuple;
             if (other == null) return false;
-            if (other.Count != Count) return false;
+            if (other.__len__() != __len__()) return false;
 
-            for (int i = 0; i < Count; i++) {
+            for (int i = 0; i < __len__(); i++) {
                 if (this[i] != null) {
                     if (!this[i].Equals(other[i])) {
                         return false;
@@ -476,22 +406,44 @@ namespace IronPython.Runtime {
             return true;
         }
 
+        [PythonHidden]
         public override int GetHashCode() {
-            int ret = 6551;
-            foreach (object o in _data) {
-                ret = (ret << 5) ^ (ret >> 26) ^ (o == null ? 0 : o.GetHashCode());
+            int hash1 = 6551;
+            int hash2 = hash1;
+
+            for (int i = 0; i < _data.Length; i += 2) {
+                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ ((_data[i] == null) ? 0 : _data[i].GetHashCode());
+
+                if (i == _data.Length - 1) {
+                    break;
+                }
+                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ ((_data[i + 1] == null) ? 0 : _data[i + 1].GetHashCode());
             }
-            return ret;
+
+            return hash1 + (hash2 * 1566083941);
+        }
+
+        [PythonHidden]
+        public override string ToString() {
+            return __repr__(DefaultContext.Default);
         }
 
         #region IValueEquality Members
 
         int IValueEquality.GetValueHashCode() {
-            int ret = 6551;
-            foreach (object o in _data) {
-                ret = (ret << 5) ^ (ret >> 26) ^ PythonOps.Hash(o);
+            int hash1 = 6551;
+            int hash2 = hash1;
+
+            for (int i = 0; i < _data.Length; i += 2) {
+                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ PythonOps.Hash(_data[i]);
+
+                if (i == _data.Length - 1) {
+                    break;
+                }
+                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ PythonOps.Hash(_data[i + 1]);
             }
-            return ret;
+
+            return hash1 + (hash2 * 1566083941);
         }
 
         bool IValueEquality.ValueEquals(object other) {
@@ -515,9 +467,70 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        [SpecialName, PythonName("__repr__")]
-        public string ToCodeString(CodeContext context) {
-            return ToString();
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
+            StringBuilder buf = new StringBuilder();
+            buf.Append("(");
+            for (int i = 0; i < _data.Length; i++) {
+                if (i > 0) buf.Append(", ");
+                buf.Append(PythonOps.StringRepr(_data[i]));
+            }
+            if (_data.Length == 1) buf.Append(",");
+            buf.Append(")");
+            return buf.ToString();
+        }
+
+        #endregion
+    }
+
+    /// <summary>
+    /// public class to get optimized
+    /// </summary>
+    public class TupleEnumerator : IEnumerator, IEnumerator<object> {
+        private int _curIndex;
+        private PythonTuple _tuple;
+
+        public TupleEnumerator(PythonTuple t) {
+            _tuple = t;
+            _curIndex = -1;
+        }
+
+        #region IEnumerator Members
+
+        public object Current {
+            get {
+                // access _data directly because this is what CPython does:
+                // class T(tuple):
+                //     def __getitem__(self): return None
+                // 
+                // for x in T((1,2)): print x
+                // prints 1 and 2
+                return _tuple._data[_curIndex];
+            }
+        }
+
+        public bool MoveNext() {
+            if ((_curIndex + 1) >= _tuple.__len__()) {
+                return false;
+            }
+            _curIndex++;
+            return true;
+        }
+
+        public void Reset() {
+            _curIndex = -1;
+        }
+
+        #endregion
+
+        #region IDisposable Members
+
+        public void Dispose() {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing) {
+
         }
 
         #endregion

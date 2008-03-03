@@ -109,6 +109,6 @@ py_to_clr_positive(KeyError, System.Collections.Generic.KeyNotFoundException, ms
 #  searching upwards in its type hierarchy.
 clr_to_py_positive(System.NotFiniteNumberException, ArithmeticError, msg = "System.NotFiniteNumberException -> ArithmeticError")
 
-# StopIteration can be caught as an InvalidOperationException
-py_to_clr_positive(StopIteration, System.InvalidOperationException, msg = "StopIteration -> System.InvalidOperationException")
+# StopIteration can be caught as an Exception
+py_to_clr_positive(StopIteration, System.Exception, msg = "StopIteration -> System.Exception")
 

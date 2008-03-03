@@ -161,7 +161,7 @@ class Operator(Symbol):
         cw.writeline()
         
         cw.writeline('[return: MaybeNotImplemented]')
-        cw.writeline('[SpecialName, PythonName("__i%s__")]' % self.name)
+        cw.writeline('[SpecialName]')
         cw.enter_block("public object InPlace%s(object other)" % self.title_name())
         cw.writeline("return InvokeOne(this, other, Symbols.OperatorInPlace%s);" % self.title_name())
         cw.exit_block() # end method
@@ -217,7 +217,7 @@ binaries = [('+',  'add',      4, 'Add',         True),   ('-',  'sub',    4, 'S
             ('/',  'truediv',  5, 'TrueDivide',  False),  ('%',  'mod',    5, 'Mod',        True), 
             ('<<', 'lshift',   3, 'LeftShift',   False),   ('>>', 'rshift', 3, 'RightShift', False),
             ('&',  'and',      2, 'BitwiseAnd',  True),   ('|',  'or',     0, 'BitwiseOr',  True), 
-            ('^',  'xor',      1, 'Xor',         True)]
+            ('^',  'xor',      1, 'ExclusiveOr', True)]
 
 def add_binaries(list):
     for sym, name, prec,clrName, netOp in list:

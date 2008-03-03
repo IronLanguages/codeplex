@@ -19,7 +19,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
-using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
+using VariableKind = Microsoft.Scripting.Ast.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     public abstract class ScopeStatement : Statement {

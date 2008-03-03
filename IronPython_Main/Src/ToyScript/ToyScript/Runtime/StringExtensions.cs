@@ -13,18 +13,36 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting;
-using ToyScript.Runtime;
+using System;
+using System.Text;
 using Microsoft.Scripting.Runtime;
+using ToyScript.Runtime;
 
 [assembly:ExtensionType(typeof(string), typeof(StringExtensions))]
 
 namespace ToyScript.Runtime {
 
     public static class StringExtensions {
-        public static string SayHi(string self) {
-            return self != null ? "Hi " + self + "!!!" : null;
+        public static string Invert(string self) {
+            if (self == null) {
+                return String.Empty;
+            }
+
+            StringBuilder sb = new StringBuilder(self.Length);
+            for (int i = 0; i < self.Length; i ++) {
+                char c = self[i];
+                sb.Append(
+                    Char.IsLower(c) ? Char.ToUpper(c) :
+                    Char.IsUpper(c) ? Char.ToLower(c) :
+                    '?'
+                );
+            }
+            return sb.ToString();
+        }
+
+        [PropertyMethod]
+        public static string GetInversion(string self) {
+            return Invert(self);
         }
     }
-
 }

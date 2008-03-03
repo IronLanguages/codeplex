@@ -925,13 +925,16 @@ namespace IronPythonTest {
     }
 
     public class VirtualEvent {
+        private List<SimpleDelegate> _events = new List<SimpleDelegate>();
         public virtual event SimpleDelegate MyEvent;
         public virtual event SimpleDelegate MyCustomEvent {
             add {
                 LastCall = "Add";
+                _events.Add(value);
             }
             remove {
                 LastCall = "Remove";
+                _events.Remove(value);
             }
         }
         public string LastCall;
@@ -944,13 +947,16 @@ namespace IronPythonTest {
     }
 
     public class OverrideVirtualEvent : VirtualEvent {
+        private List<SimpleDelegate> _events = new List<SimpleDelegate>();
         public override event SimpleDelegate MyEvent;
         public override event SimpleDelegate MyCustomEvent {
             add {
                 LastCall = "OverrideAdd";
+                _events.Add(value);
             }
             remove {
                 LastCall = "OverrideRemove";
+                _events.Remove(value);
             }
         }
 

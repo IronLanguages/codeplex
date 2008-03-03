@@ -66,7 +66,7 @@ namespace IronPython.Compiler.Ast {
                 case PythonOperator.BitwiseOr:
                     return Operators.InPlaceBitwiseOr;
                 case PythonOperator.Xor:
-                    return Operators.InPlaceXor;
+                    return Operators.InPlaceExclusiveOr;
                 case PythonOperator.LeftShift:
                     return Operators.InPlaceLeftShift;
                 case PythonOperator.RightShift:

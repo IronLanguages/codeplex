@@ -103,8 +103,7 @@ namespace IronPython.Runtime.Types {
             return ret; 
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string ComObjectToString(CodeContext/*!*/ context, object self) {
+        public static string __repr__(CodeContext/*!*/ context, object self) {
             if (!ComObject.Is__ComObject(self.GetType())) {
                 Debug.Assert(self.GetType().IsCOMObject); // Strongly-typed RCWs are subtypes of System.__ComObject
                 return self.ToString();
@@ -121,8 +120,7 @@ namespace IronPython.Runtime.Types {
         /// that COM can't override __nonzero__ this prevents us from hitting one
         /// of those common paths (we need the context if we generate a typelib).
         /// </summary>
-        [SpecialName, PythonName("__nonzero__")]
-        public static bool IsNonZero(object self) {
+        public static bool __nonzero__(object self) {
             return true;
         }
     }
@@ -361,7 +359,7 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     class ComObjectWithTypeInfo : GenericComObject {
         private PythonType _comInterface; // The COM type of the COM object
-        private static Dictionary<Guid, Type> ComTypeCache = new Dictionary<Guid, Type>();
+        private static readonly Dictionary<Guid, Type> ComTypeCache = new Dictionary<Guid, Type>();
 
         private ComObjectWithTypeInfo(object rcw, Type comInterface) : base(rcw) {
 
@@ -397,7 +395,7 @@ namespace IronPython.Runtime.Types {
         }
 
         override internal IDictionary<object, object> GetAttrDict(CodeContext context) {
-            return new PythonDictionary(_comInterface.GetMemberDictionary(context, Obj));
+            return new PythonDictionary(context, _comInterface.GetMemberDictionary(context, Obj));
         }
 
         #endregion
@@ -658,6 +656,7 @@ namespace IronPython.Runtime.Types {
         private readonly ComDispatch.IDispatchObject _dispatchObject;
 
         public ComDispatch.ComTypeDesc _comTypeDesc;
+        [MultiRuntimeAware]
         private static Dictionary<Guid, ComDispatch.ComTypeDesc> _CacheComTypeDesc;
 
         internal IDispatchObject(ComDispatch.IDispatch rcw) : base(rcw) {

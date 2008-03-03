@@ -18,12 +18,13 @@ using System.Collections.Generic;
 using System.Text;
 
 using IronPython.Runtime;
+using Microsoft.Scripting;
 
 [assembly: PythonModule("errno", typeof(IronPython.Modules.PythonErrorNumber))]
 namespace IronPython.Modules {
     public static class PythonErrorNumber {
-        static PythonErrorNumber() {
-            errorcode = new PythonDictionary();
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            PythonDictionary errorcode = new PythonDictionary();
 
             errorcode["E2BIG"] = E2BIG;
             errorcode["EACCES"] = EACCES;
@@ -146,9 +147,9 @@ namespace IronPython.Modules {
             errorcode["WSANOTINITIALISED"] = WSANOTINITIALISED;
             errorcode["WSASYSNOTREADY"] = WSASYSNOTREADY;
             errorcode["WSAVERNOTSUPPORTED"] = WSAVERNOTSUPPORTED;
-        }
 
-        public static PythonDictionary errorcode;
+            dict[SymbolTable.StringToId("errorcode")] = errorcode;
+        }
 
         public const int E2BIG = 7;
         public const int EACCES = 13;

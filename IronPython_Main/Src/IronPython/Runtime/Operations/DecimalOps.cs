@@ -30,8 +30,7 @@ using Microsoft.Scripting.Math;
 namespace IronPython.Runtime.Operations {
     public static class DecimalOps {
 
-        [PythonName("__cmp__")]
-        public static int Compare(CodeContext context, decimal x, decimal other) {
+        public static int __cmp__(CodeContext context, decimal x, decimal other) {
             return x.CompareTo(other);
         }
 
@@ -60,11 +59,11 @@ namespace IronPython.Runtime.Operations {
             return x != y;
         }
 
-        internal static int Compare(BigInteger x, decimal y) {
-            return -Compare(y, x);
+        internal static int __cmp__(BigInteger x, decimal y) {
+            return -__cmp__(y, x);
         }
 
-        internal static int Compare(decimal x, BigInteger y) {
+        internal static int __cmp__(decimal x, BigInteger y) {
             if (object.ReferenceEquals(y, null)) return +1;
             BigInteger bx = BigInteger.Create(x);
             if (bx == y) {

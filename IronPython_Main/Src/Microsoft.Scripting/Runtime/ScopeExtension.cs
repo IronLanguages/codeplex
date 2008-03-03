@@ -21,7 +21,6 @@ using System.Diagnostics;
 using System.Runtime.Remoting;
 
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 

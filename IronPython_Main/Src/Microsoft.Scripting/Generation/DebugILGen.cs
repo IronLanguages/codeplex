@@ -28,12 +28,9 @@ using Microsoft.Scripting.Utils;
 namespace Microsoft.Scripting.Generation {
     public class DebugILGen : ILGen {
         private readonly TextWriter _txt;
-        private readonly ISymbolDocumentWriter _doc;
-        private int _line;
-
-        public DebugILGen(ILGenerator ilg, TextWriter txt, ISymbolDocumentWriter doc)
+        
+        public DebugILGen(ILGenerator ilg, TextWriter txt)
             : base(ilg) {
-            _doc = doc;
             _txt = txt;
         }
 
@@ -343,12 +340,8 @@ namespace Microsoft.Scripting.Generation {
         /// Marks a sequence point.
         /// </summary>
         public override void MarkSequencePoint(ISymbolDocumentWriter document, int startLine, int startColumn, int endLine, int endColumn) {
-            if (_doc == null) {
-                base.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
-            } else {
-                // Do not mark this as a sequence point. It would cause an infinite recursion.
-                WriteImpl(String.Format(".seq {0}:{1}-{2}:{3}", startLine, startColumn, endLine, endColumn), false);
-            }
+            WriteImpl(String.Format(".seq {0}:{1}-{2}:{3}", startLine, startColumn, endLine, endColumn));
+            base.MarkSequencePoint(document, startLine, startColumn, endLine, endColumn);
         }
 
         /// <summary>
@@ -363,39 +356,22 @@ namespace Microsoft.Scripting.Generation {
 
         public void WriteLine(string str) {
             Contract.Requires(str != null);
-            WriteImpl(str, false);
+            WriteImpl(str);
         }
 
         #region IL Output Support
 
         private void Write(string str) {
-            WriteImpl(str, true);
+            WriteImpl(str);
         }
 
-        private void WriteImpl(string str, bool mark) {
+        private void WriteImpl(string str) {
             if (_txt == null) {
                 return;
             }
 
             _txt.WriteLine(str);
             _txt.Flush();
-
-            // Mark sequence point if we have the document
-            if (_doc != null) {
-                int lines = CountNewLines(str);
-
-                _line++;
-
-                if (mark) {
-                    MarkSequencePoint(
-                     _doc,
-                     _line, 1,
-                     _line + lines, str.Length + 1
-                     );
-                }
-
-                _line += lines;
-            }
         }
 
         private static int CountNewLines(string str) {

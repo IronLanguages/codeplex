@@ -454,7 +454,7 @@ namespace IronPython.Runtime.Types {
             }
             if (type.IsValueType && !hasDefaultConstructor && type != typeof(void)) {
                 try {
-                    MethodInfo mi = typeof(BinderOps).GetMethod("CreateInstance", ArrayUtils.EmptyTypes).MakeGenericMethod(type);
+                    MethodInfo mi = typeof(BinderOps).GetMethod("CreateInstance", Type.EmptyTypes).MakeGenericMethod(type);
 
                     reflectedCtors = BuiltinFunction.MakeOrAdd(reflectedCtors, Builder.UnfinishedType.Name, mi, FunctionType.Function);
                 } catch (BadImageFormatException) {

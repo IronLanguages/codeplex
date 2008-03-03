@@ -21,6 +21,11 @@ import sys
 import imp
 import operator
 
+def get_builtins_dict():
+    if type(__builtins__) is type(sys):
+        return __builtins__.__dict__
+    return __builtins__
+
 def test_imp_new_module():
     x = imp.new_module('abc')
     sys.modules['abc'] = x
@@ -157,7 +162,6 @@ def test_imp_module():
 
 def test_direct_module_creation():
     import math
-    import sys
     
     for baseMod in math, sys:
         module = type(baseMod)
@@ -220,11 +224,11 @@ def test_redefine_import():
     def __import__(*args):
         global called
         called = True
-    import sys      
+
     AreEqual(called, False)
     del __import__
     called = False
-    import sys
+
     AreEqual(called, False)
    
 def test_module_dict():
@@ -515,7 +519,323 @@ called = 3.14
     finally:
         sys.path.remove(testpath.public_testdir + "\\cp7007")
         delete_files(strange_file_names)
+
+def test_relative_control():
+    """test various flavors of relative/absolute import and ensure the right
+       arguments are delivered to __import__"""
+    def myimport(*args): 
+        global importArgs
+        importArgs = list(args)
+        importArgs[1] = None    # globals, we don't care about this
+        importArgs[2] = None    # locals, we don't care about this either
         
+        # we'll pull values out of this class on success, but that's not
+        # the important part
+        class X:
+            abc = 3
+            absolute_import = 2
+            bar = 5
+        return X
+    old_import = get_builtins_dict()['__import__']
+    try:        
+        get_builtins_dict()['__import__'] = myimport
+        
+        import abc
+        AreEqual(importArgs, ['abc', None, None, None])
+        
+        from . import abc
+        AreEqual(importArgs, ['', None, None, ('abc',), 1])
+        
+        from .. import abc
+        AreEqual(importArgs, ['', None, None, ('abc',), 2])
+        
+        from ... import abc
+        AreEqual(importArgs, ['', None, None, ('abc',), 3])
+        
+        from ...d import abc
+        AreEqual(importArgs, ['d', None, None, ('abc',), 3])
+        
+        from ...d import (abc, bar)
+        AreEqual(importArgs, ['d', None, None, ('abc', 'bar'), 3])
+        
+        from d import (
+            abc, 
+            bar)
+        AreEqual(importArgs, ['d', None, None, ('abc', 'bar')])
+
+        code = """from __future__ import absolute_import\nimport abc"""
+        exec code in globals(), locals()
+        AreEqual(importArgs, ['abc', None, None, None, 0])
+    finally:
+        get_builtins_dict()['__import__'] = old_import
+
+def test_import_relative_error():
+        def f():  exec 'from . import *'
+        AssertError(SyntaxError, f)
+
+def test_import_hooks_import_precence():
+    """__import__ takes precedence over import hooks"""
+    global myimpCalled
+    myimpCalled = None
+    class myimp(object):
+        def find_module(self, fullname, path=None):
+            global myimpCalled
+            myimpCalled = fullname, path
+
+    def myimport(*args): 
+        return 'myimport'
+
+    import lib
+    import lib.misc_util
+    mi = myimp()
+    sys.meta_path.append(mi)
+    builtinimp = get_builtins_dict()['__import__']
+    try:            
+        get_builtins_dict()['__import__'] = myimport
+    
+        import abc
+        AreEqual(abc, 'myimport')
+        AreEqual(myimpCalled, None)
+                
+        # reload on a built-in hits the loader protocol
+        reload(lib)
+        AreEqual(myimpCalled, ('lib', None))
+        
+        reload(lib.misc_util)
+        AreEqual(myimpCalled[0], 'lib.misc_util')
+        AreEqual(myimpCalled[1][0][-3:], 'lib')
+    finally:
+        get_builtins_dict()['__import__'] = builtinimp
+        sys.meta_path.remove(mi)
+
+def test_import_hooks_bad_importer(): 
+    class bad_importer(object): pass
+    
+    mi = bad_importer()
+    sys.path.append(mi)
+    try:
+        def f(): import does_not_exist
+        
+        AssertError(ImportError, f)
+    finally:
+        sys.path.remove(mi)
+
+    sys.path.append(None)
+    try:
+        def f(): import does_not_exist
+        
+        AssertError(ImportError, f)
+    finally:
+        sys.path.remove(None)
+
+    class inst_importer(object): pass
+
+    mi = inst_importer()
+    def f(*args): raise Exception()
+    mi.find_module = f
+    sys.path.append(mi)
+    try:
+        def f(): import does_not_exist
+        
+        AssertError(ImportError, f)
+    finally:
+        sys.path.remove(mi)
+
+def test_import_hooks_importer(): 
+    """importer tests - verify the importer gets passed correct values, handles
+    errors coming back out correctly"""
+    global myimpCalled
+    myimpCalled = None
+    
+    class myimp(object):
+        def find_module(self, fullname, path=None):
+            global myimpCalled
+            myimpCalled = fullname, path
+            if fullname == 'does_not_exist_throw':
+                raise Exception('hello')
+    
+    mi = myimp()
+    sys.meta_path.append(mi)
+    try:    
+        try:
+            import does_not_exist
+            AssertUnreachable()
+        except ImportError: pass
+        
+        AreEqual(myimpCalled, ('does_not_exist', None))
+        
+        try:
+            from lib import blah
+            AssertUnreachable()
+        except ImportError: 
+            pass
+
+        AreEqual(type(myimpCalled[1]), list)
+        AreEqual(myimpCalled[0], 'lib.blah')
+        AreEqual(myimpCalled[1][0][-3:], 'lib')
+        
+        def f(): import does_not_exist_throw
+        
+        AssertErrorWithMessage(Exception, 'hello', f)
+    finally:
+        sys.meta_path.remove(mi)
+        
+def test_import_hooks_loader():
+    """loader tests - verify the loader gets the right values, handles errors correctly"""
+    global myimpCalled
+    myimpCalled = None
+
+    moduleType = type(sys)
+
+    class myloader(object):
+        loadcount = 0
+        def __init__(self, fullname, path):
+            self.fullname = fullname
+            self.path = path
+        def load_module(self, fullname):
+            if fullname == 'does_not_exist_throw':
+                raise Exception('hello again')
+            elif fullname == 'does_not_exist_return_none':
+                return None
+            else:
+                myloader.loadcount += 1
+                module = sys.modules.setdefault(fullname, moduleType(fullname))
+                module.__file__ = '<myloader file ' + str(myloader.loadcount) + '>'
+                module.fullname = self.fullname
+                module.path = self.path
+                module.__loader__ = self
+                if fullname[-3:] == 'pkg':
+                    # create a package
+                    module.__path__ = [fullname]
+                    
+                return module
+    
+    class myimp(object):
+        def find_module(self, fullname, path=None):
+            return myloader(fullname, path)
+            
+    mi = myimp()
+    sys.meta_path.append(mi)
+    try:    
+        def f(): import does_not_exist_throw
+        
+        AssertErrorWithMessage(Exception, 'hello again', f)        
+        
+        def f(): import does_not_exist_return_none
+        AssertError(ImportError, f)
+        
+        import does_not_exist_create
+        AreEqual(does_not_exist_create.__file__, '<myloader file 1>')
+        AreEqual(does_not_exist_create.fullname, 'does_not_exist_create')
+        AreEqual(does_not_exist_create.path, None)
+        
+        reload(does_not_exist_create)
+        AreEqual(does_not_exist_create.__file__, '<myloader file 2>')
+        AreEqual(does_not_exist_create.fullname, 'does_not_exist_create')
+        AreEqual(does_not_exist_create.path, None)
+    
+        import lib.does_not_exist_create_sub
+        AreEqual(lib.does_not_exist_create_sub.__file__, '<myloader file 3>')
+        AreEqual(lib.does_not_exist_create_sub.fullname, 'lib.does_not_exist_create_sub')
+        AreEqual(lib.does_not_exist_create_sub.path[0][-3:], 'lib')
+        
+        reload(lib.does_not_exist_create_sub)
+        AreEqual(lib.does_not_exist_create_sub.__file__, '<myloader file 4>')
+        AreEqual(lib.does_not_exist_create_sub.fullname, 'lib.does_not_exist_create_sub')
+        AreEqual(lib.does_not_exist_create_sub.path[0][-3:], 'lib')
+        
+        import does_not_exist_create_pkg.does_not_exist_create_subpkg
+        AreEqual(does_not_exist_create_pkg.__file__, '<myloader file 5>')
+        AreEqual(does_not_exist_create_pkg.fullname, 'does_not_exist_create_pkg')                
+    finally:
+        sys.meta_path.remove(mi)
+
+def test_path_hooks():
+    import toimport
+    def prepare(f):
+        sys.path_importer_cache = {}
+        sys.path_hooks = [f]
+        if 'toimport' in sys.modules: del sys.modules['toimport']
+    
+    def hook(*args):  raise Exception('hello')
+    prepare(hook)
+    def f(): import toimport
+    AssertErrorWithMessage(Exception, 'hello', f)
+
+    # ImportError shouldn't propagate out
+    def hook(*args):  raise ImportError('foo')
+    prepare(hook)
+    f()
+
+    # returning none should be ok
+    def hook(*args): pass
+    prepare(hook)
+    f()
+    
+    sys.path_hooks = []
+
+class meta_loader(object):
+    def __init__(self, value):
+        self.value = value
+    def load_module(self, fullname):
+        if type(self.value) is Exception: raise self.value
+        
+        return self.value
+
+class meta_importer(object):
+    def find_module(self, fullname, path=None):
+        AreEqual(path, None)
+        if fullname == 'does_not_exist_throw': raise Exception('hello')
+        elif fullname == 'does_not_exist_abc': return meta_loader('abc')
+        elif fullname == 'does_not_exist_loader_throw': return meta_loader(Exception('loader'))
+        elif fullname == 'does_not_exist_None': return meta_loader(None)
+        elif fullname == 'does_not_exist_X':
+            class X(object):
+                abc = 3
+            return meta_loader(X)
+
+def common_meta_import_tests():
+    def f(): import does_not_exist_throw
+    AssertErrorWithMessage(Exception, 'hello', f)
+    
+    import does_not_exist_abc
+    AreEqual(does_not_exist_abc, 'abc')
+    
+    def f(): import does_not_exist_loader_throw
+    AssertErrorWithMessage(Exception, 'loader', f)
+
+    def f(): import does_not_exist_loader_None
+    AssertErrorWithMessage(ImportError, 'No module named does_not_exist_loader_None', f)
+    
+    from does_not_exist_X import abc
+    AreEqual(abc, 3)
+
+def test_path_hooks_importer_and_loader():
+    path = list(sys.path)
+    hooks = list(sys.path_hooks)
+    try:
+        sys.path.append('<myname>')
+        def hook(name):
+            if name == "<myname>":
+                return meta_importer()
+        sys.path_hooks.append(hook)
+
+        common_meta_import_tests()
+    finally:
+        sys.path = path
+        sys.path_hooks = hooks
+
+def test_meta_path():
+    metapath = list(sys.meta_path)
+    sys.meta_path.append(meta_importer())
+    try:
+        common_meta_import_tests()
+    finally:
+        sys.meta_path = metapath
+        
+def test_import_kw_args():
+    AreEqual(__import__(name = 'sys', globals = globals(), locals = locals(), fromlist = [], level = -1), sys)
+
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:

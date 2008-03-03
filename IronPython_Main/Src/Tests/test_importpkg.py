@@ -671,7 +671,139 @@ def test___import___and_packages():
         nt.unlink(_f_pkg_y)
         nt.unlink(_f_y)
 
+@skip("silverlight")
+def test_relative_imports():
+    try:
+        mod_backup = dict(sys.modules)
+        _f_dir      = path_combine(testpath.public_testdir, 'the_dir')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_pkg_y    = path_combine(_f_dir, 'abc.py')
+        _f_pkg_x    = path_combine(_f_dir, 'x.py')
+        _f_subdir   = path_combine(_f_dir, 'subdir')
+        _f_subinit  = path_combine(_f_subdir, '__init__.py')
+        _f_subpkg_y = path_combine(_f_subdir, 'abc.py')
+        _f_subpkg_x = path_combine(_f_subdir, 'x.py')
+        _f_subpkg_z = path_combine(_f_subdir, 'z.py')
+        _f_subpkg_a = path_combine(_f_subdir, 'a.py')
+        _f_subpkg_b = path_combine(_f_subdir, 'b.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+        ensure_directory_present(_f_subdir)
 
+        write_to_file(_f_init,    '')
+        write_to_file(_f_subinit, '')
+        write_to_file(_f_pkg_y,   'import sys\nsys.foo = "pkgy"')
+        write_to_file(_f_subpkg_y,'import sys\nsys.foo = "subpkgy"')
+        write_to_file(_f_pkg_x,    'from . import abc\nreload(abc)')
+        write_to_file(_f_subpkg_x, 'from .. import abc\nreload(abc)')
+        write_to_file(_f_subpkg_z, 'from . import abc\nreload(abc)')
+        write_to_file(_f_subpkg_a, 'from __future__ import absolute_import\ntry:\n    import abc\nexcept ImportError:\n    import sys\n    sys.foo="error"')
+        write_to_file(_f_subpkg_b, 'import abc\nreload(abc)')
+                
+        import the_dir.subdir.a
+        AreEqual(sys.foo, 'error')
+                
+        import the_dir.x
+        AreEqual(sys.foo, 'pkgy')
+        
+        import the_dir.subdir.x
+        AreEqual(sys.foo, 'pkgy')
+                
+        import the_dir.subdir.z
+        AreEqual(sys.foo, 'subpkgy')
+                
+        import the_dir.subdir.b
+        AreEqual(sys.foo, 'subpkgy')
+                
+        del sys.foo
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_init)
+        nt.unlink(_f_pkg_y)
+        nt.unlink(_f_subinit)
+        nt.unlink(_f_subpkg_y)
+
+@skip("silverlight")
+def test_import_globals():
+    _f_dir      = path_combine(testpath.public_testdir, 'the_dir2')
+    _f_x        = path_combine(_f_dir, 'x')
+    _f_init     = path_combine(_f_x, '__init__.py')
+    _f_dir_init = path_combine(_f_dir, '__init__.py')
+    _f_x_y      = path_combine(_f_x, 'y.py')
+    _f_y        = path_combine(_f_dir, 'y.py')
+    _f_test     = path_combine(_f_dir, 'test.py')
+    
+    backup = dict(sys.modules)
+    try:
+        write_to_file(_f_init,    '')
+        write_to_file(_f_dir_init,'')
+        write_to_file(_f_x_y,   """
+import sys
+a = 1
+
+class mydict(object):
+    def __init__(self, items):
+        self.items = items
+    def __getitem__(self, index):
+        return self.items[index]
+
+sys.test1 = __import__("y").a
+sys.test2 = __import__("y", {'__name__' : 'the_dir2.x.y'}).a
+sys.test3 = __import__("y", mydict({'__name__' : 'the_dir2.x.y'})).a
+sys.test4 = __import__("y", {}, {'__name__' : 'the_dir2.x.y'}).a
+""")
+        write_to_file(_f_y,     'a = 2')
+        write_to_file(_f_test,  'import x.y\n')
+        
+        import the_dir2.test
+        AreEqual(sys.test1, 2)
+        AreEqual(sys.test2, 1)
+        AreEqual(sys.test2, 1)
+        AreEqual(sys.test2, 1)               
+    finally:
+        sys.modules = backup
+        import nt
+        nt.unlink(_f_init)
+        nt.unlink(_f_dir_init)
+        nt.unlink(_f_x_y)
+        nt.unlink(_f_y)
+        nt.unlink(_f_test)
+    
+@skip("silverlight")
+def test_package_back_patching():
+    """when importing a package item the package should be updated with the child"""
+    try:
+        mod_backup = dict(sys.modules)
+        _f_dir      = path_combine(testpath.public_testdir, 'the_dir')
+        _f_init     = path_combine(_f_dir, '__init__.py')
+        _f_pkg_abc  = path_combine(_f_dir, 'abc1.py')
+        _f_pkg_xyz  = path_combine(_f_dir, 'xyz1.py')
+                
+        # write the files
+        ensure_directory_present(_f_dir)
+
+        write_to_file(_f_init,    'import abc1')
+        write_to_file(_f_pkg_abc, 'import xyz1')
+        write_to_file(_f_pkg_xyz, 'import sys\nsys.foo = "xyz"')
+                
+        import the_dir
+        x, y = the_dir.abc1, the_dir.xyz1
+        from the_dir import abc1
+        from the_dir import xyz1
+        
+        AreEqual(x, abc1)
+        AreEqual(y, xyz1)
+        AreEqual(sys.foo, 'xyz')
+                
+        del sys.foo
+    finally:
+        sys.modules = mod_backup
+        nt.unlink(_f_init)
+        nt.unlink(_f_pkg_abc)
+        nt.unlink(_f_pkg_xyz)
+        
+    
 #This cannot be placed in a test_* function as it uses 'from mod import *'
 if not is_silverlight: #cp3194
     try:

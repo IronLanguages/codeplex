@@ -29,24 +29,23 @@ namespace Microsoft.Scripting.Generation {
         private readonly AssemblyGen/*!*/ _myAssembly;
         private readonly TypeBuilder/*!*/ _myType;
 
-        private Slot _contextSlot;
-        private ConstructorBuilder _initializer; // The .cctor() of the type
-        private Compiler _initGen; // The IL generator for the .cctor()
-        private Dictionary<object, Slot>/*!*/ _constants = new Dictionary<object, Slot>();
-        private Dictionary<SymbolId, Slot>/*!*/ _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
-        private List<TypeGen>/*!*/ _nestedTypeGens = new List<TypeGen>();
-        private ConstructorBuilder _defaultCtor;
+        private FieldBuilder _contextField;
+        private ConstructorBuilder _initializer;                // The .cctor() of the type
+        private LambdaCompiler _initGen;                        // The IL generator for the .cctor()
+        private readonly Dictionary<object, Slot>/*!*/ _constants = new Dictionary<object, Slot>();
+        private readonly Dictionary<SymbolId, Slot>/*!*/ _indirectSymbolIds = new Dictionary<SymbolId, Slot>();
+        private readonly List<TypeGen>/*!*/ _nestedTypeGens = new List<TypeGen>();
 
         private static readonly Type[] SymbolIdIntCtorSig = new Type[] { typeof(int) };
 
         /// <summary>
         /// Gets the Compiler associated with the Type Initializer (cctor) creating it if necessary.
         /// </summary>
-        internal Compiler/*!*/ TypeInitializer {
+        internal LambdaCompiler/*!*/ TypeInitializer {
             get {
                 if (_initializer == null) {
                     _initializer = _myType.DefineTypeInitializer();
-                    _initGen = CreateCompiler(_initializer, _initializer.GetILGenerator(), ArrayUtils.EmptyTypes);
+                    _initGen = LambdaCompiler.CreateLambdaCompiler(this, _initializer, _initializer.GetILGenerator(), Type.EmptyTypes);
                 }
                 return _initGen;
             }
@@ -60,13 +59,8 @@ namespace Microsoft.Scripting.Generation {
             get { return _myType; }
         }
 
-        public ConstructorBuilder DefaultConstructor {
-            get {
-                return _defaultCtor;
-            }
-            set {
-                _defaultCtor = value;
-            }
+        public FieldBuilder ContextField {
+            get { return _contextField; }
         }
 
         public TypeGen(AssemblyGen/*!*/ myAssembly, TypeBuilder/*!*/ myType) {
@@ -79,22 +73,6 @@ namespace Microsoft.Scripting.Generation {
         [Confined]
         public override string/*!*/ ToString() {
             return _myType.ToString();
-        }
-
-        private Compiler/*!*/ CreateCompiler(MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type/*!*/>/*!*/ paramTypes) {
-            return CreateCompiler(mi, ilg, paramTypes, null);
-        }
-
-        private Compiler/*!*/ CreateCompiler(MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type/*!*/>/*!*/ paramTypes, ConstantPool constantPool) {
-            Compiler ret = new Compiler(this, _myAssembly, mi, ilg, paramTypes, constantPool);
-            if (_contextSlot != null) ret.ContextSlot = _contextSlot;
-
-            ret.DynamicMethod = false;
-
-            // TODO: unverifiable code emitted in optimized scope's .cctor if enabled (TestAst will hit this), see bug #374698
-            // ret.CacheConstants = true;
-
-            return ret;
         }
 
         public Type/*!*/ FinishType() {
@@ -110,17 +88,12 @@ namespace Microsoft.Scripting.Generation {
 
 
         public void AddCodeContextField() {
-            FieldBuilder contextField = _myType.DefineField(CodeContext.ContextFieldName,
-                    typeof(CodeContext),
-                    FieldAttributes.Public | FieldAttributes.Static);
-            //contextField.SetCustomAttribute(new CustomAttributeBuilder(typeof(IronPython.Runtime.PythonHiddenFieldAttribute).GetConstructor(ArrayUtils.EmptyTypes), Runtime.Operations.ArrayUtils.EmptyObjects));
-            _contextSlot = new StaticFieldSlot(contextField);
+            _contextField = _myType.DefineField(CodeContext.ContextFieldName,
+                typeof(CodeContext),
+                FieldAttributes.Public | FieldAttributes.Static
+            );
         }
 
-        internal Slot AddField(Type fieldType, string name) {
-            FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public);
-            return new FieldSlot(new ThisSlot(_myType), fb);
-        }
         internal Slot AddStaticField(Type fieldType, string name) {
             FieldBuilder fb = _myType.DefineField(name, fieldType, FieldAttributes.Public | FieldAttributes.Static);
             return new StaticFieldSlot(fb);
@@ -131,7 +104,8 @@ namespace Microsoft.Scripting.Generation {
             return new StaticFieldSlot(fb);
         }
 
-        internal Compiler/*!*/ DefineExplicitInterfaceImplementation(MethodInfo/*!*/ baseMethod) {
+        // TODO: Remove
+        internal LambdaCompiler/*!*/ DefineExplicitInterfaceImplementation(MethodInfo/*!*/ baseMethod) {
             Contract.RequiresNotNull(baseMethod, "baseMethod");
 
             MethodAttributes attrs = baseMethod.Attributes & ~(MethodAttributes.Abstract | MethodAttributes.Public);
@@ -143,24 +117,20 @@ namespace Microsoft.Scripting.Generation {
                 attrs,
                 baseMethod.ReturnType,
                 baseSignature);
-            Compiler ret = CreateCompiler(mb, mb.GetILGenerator(), baseSignature);
+            LambdaCompiler ret = LambdaCompiler.CreateLambdaCompiler(this, mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
-        }
-
-        public PropertyBuilder DefineProperty(string name, PropertyAttributes attrs, Type returnType) {
-            return _myType.DefineProperty(name, attrs, returnType, ArrayUtils.EmptyTypes);
         }
 
         private const MethodAttributes MethodAttributesToEraseInOveride =
             MethodAttributes.Abstract | MethodAttributes.ReservedMask;
 
         // TODO: Remove
-        internal Compiler/*!*/ DefineMethodOverride(MethodInfo baseMethod) {
+        internal LambdaCompiler/*!*/ DefineMethodOverride(MethodInfo baseMethod) {
             MethodAttributes finalAttrs = baseMethod.Attributes & ~MethodAttributesToEraseInOveride;
             Type[] baseSignature = ReflectionUtils.GetParameterTypes(baseMethod.GetParameters());
             MethodBuilder mb = _myType.DefineMethod(baseMethod.Name, finalAttrs, baseMethod.ReturnType, baseSignature);
-            Compiler ret = CreateCompiler(mb, mb.GetILGenerator(), baseSignature);
+            LambdaCompiler ret = LambdaCompiler.CreateLambdaCompiler(this, mb, mb.GetILGenerator(), baseSignature);
             ret.MethodToOverride = baseMethod;
             return ret;
         }
@@ -185,53 +155,10 @@ namespace Microsoft.Scripting.Generation {
             return new ILGen(mb.GetILGenerator());
         }
 
-        internal Compiler/*!*/ DefineMethod(string/*!*/ name, Type/*!*/ retType, IList<Type/*!*/>/*!*/ paramTypes,
-            IList<string> paramNames, ConstantPool constantPool) {
-
-            Assert.NotNull(name, retType);
-            
-            Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
-
-            MethodBuilder mb = _myType.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
-            Compiler res = CreateCompiler(mb, mb.GetILGenerator(), parameterTypes, constantPool);
-
-            if (paramNames != null) {
-                // parameters are index from 1, with constant pool we need to skip the first arg
-                DefineParameterNames(mb, constantPool != null ? 2 : 1, paramNames);
-            }
-            return res;
-        }
-
         private static void DefineParameterNames(MethodBuilder/*!*/ mb, int startIndex, IList<string/*!*/>/*!*/ names) {
             for (int i = 0; i < names.Count; i++) {
                 mb.DefineParameter(i + startIndex, ParameterAttributes.None, names[i]);
             }
-        }
-
-        internal Compiler/*!*/ DefineConstructor(Type/*!*/[]/*!*/ paramTypes) {
-            ConstructorBuilder cb = _myType.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, paramTypes);
-            return CreateCompiler(cb, cb.GetILGenerator(), paramTypes);
-        }
-
-        internal Compiler/*!*/ DefineStaticConstructor() {
-            ConstructorBuilder cb = _myType.DefineTypeInitializer();
-            return CreateCompiler(cb, cb.GetILGenerator(), ArrayUtils.EmptyTypes);
-        }
-
-        public void SetCustomAttribute(Type type, object[] values) {
-            Contract.RequiresNotNull(type, "type");
-
-            Type[] types = new Type[values.Length];
-            for (int i = 0; i < types.Length; i++) {
-                if (values[i] != null) {
-                    types[i] = values[i].GetType();
-                } else {
-                    types[i] = typeof(object);
-                }
-            }
-            CustomAttributeBuilder cab = new CustomAttributeBuilder(type.GetConstructor(types), values);
-
-            _myType.SetCustomAttribute(cab);
         }
 
         /// <summary>
@@ -282,13 +209,13 @@ namespace Microsoft.Scripting.Generation {
             return ret;
         }
 
-        internal void EmitIndirectedSymbol(Compiler cg, SymbolId id) {
+        internal void EmitIndirectedSymbol(LambdaCompiler cg, SymbolId id) {
             Slot value;
             if (!_indirectSymbolIds.TryGetValue(id, out value)) {
                 // create field, emit fix-up...
 
                 value = AddStaticField(typeof(int), FieldAttributes.Private, "symbol_" + SymbolTable.IdToString(id));
-                Compiler init = TypeInitializer;
+                LambdaCompiler init = TypeInitializer;
                 Slot localTmp = init.GetLocalTmp(typeof(SymbolId));
                 init.EmitString((string)SymbolTable.IdToString(id));
                 init.EmitCall(typeof(SymbolTable), "StringToId");

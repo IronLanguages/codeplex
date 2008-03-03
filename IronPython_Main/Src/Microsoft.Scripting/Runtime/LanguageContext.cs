@@ -24,10 +24,13 @@ using System.Threading;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
+
+// TODO: remove HAPI references:
+using Hosting_ScriptEngine = Microsoft.Scripting.Hosting.ScriptEngine;
+using Hosting_EngineTextContentProvider = Microsoft.Scripting.Hosting.EngineTextContentProvider;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -77,11 +80,6 @@ namespace Microsoft.Scripting.Runtime {
         /// </summary>
         public ScriptDomainManager/*!*/ DomainManager {
             get { return _domainManager; }
-        }
-
-        public static LanguageContext FromEngine(IScriptEngine engine) {
-            ScriptEngine localEngine = RemoteWrapper.GetLocalArgument<ScriptEngine>(engine, "engine");
-            return localEngine.LanguageContext;
         }
 
         #region Scope
@@ -139,7 +137,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Updates code properties of the specified source unit. 
         /// The default implementation invokes code parsing. 
         /// </summary>
-        public virtual void UpdateSourceCodeProperties(CompilerContext context) {
+        public virtual void UpdateSourceCodeProperties(CompilerContext/*!*/ context) {
             Contract.RequiresNotNull(context, "context");
 
             CodeBlock block = ParseSourceCode(context);
@@ -149,33 +147,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        public ScriptCode CompileSourceCode(SourceUnit sourceUnit) {
-            return CompileSourceCode(sourceUnit, null, null);
-        }
-
-        public ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options) {
-            return CompileSourceCode(sourceUnit, options, null);
-        }
-
-        public ScriptCode CompileSourceCode(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink) {
-            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
-
-            if (options == null) options = GetCompilerOptions();
-            if (errorSink == null) errorSink = GetCompilerErrorSink();
-
-            CompilerContext context = new CompilerContext(sourceUnit, options, errorSink);
-
-            CodeBlock block = ParseSourceCode(context);
-
-            if (block == null) {
-                throw new SyntaxErrorException();
-            }
-
-            // TODO: ParseSourceCode can update CompilerContext.Options
-            return new ScriptCode(block, this, context);
-        }
-
-        public virtual StreamReader GetSourceReader(Stream stream, Encoding defaultEncoding) {
+        public virtual StreamReader/*!*/ GetSourceReader(Stream/*!*/ stream, Encoding defaultEncoding) {
             return new StreamReader(stream, defaultEncoding);
         }
 
@@ -190,6 +162,13 @@ namespace Microsoft.Scripting.Runtime {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")] // TODO: fix
         public virtual CompilerOptions GetCompilerOptions() {
             return new CompilerOptions();
+        }
+
+        /// <summary>
+        /// Creates compiler options initialized by the options associated with the module.
+        /// </summary>
+        public virtual CompilerOptions/*!*/ GetCompilerOptions(Scope/*!*/ scope) {
+            return GetCompilerOptions();
         }
 
         /// <summary>
@@ -407,9 +386,9 @@ namespace Microsoft.Scripting.Runtime {
             if (typeof(ServiceType) == typeof(IConsole)) {
                 ConsoleOptions options = GetArg<ConsoleOptions>(args, 2, false);
                 if (options.TabCompletion) {
-                    return (ServiceType)(object)CreateSuperConsole(GetArg<CommandLine>(args, 1, false), GetArg<ScriptEngine>(args, 0, false), options.ColorfulConsole);
+                    return (ServiceType)(object)CreateSuperConsole(GetArg<CommandLine>(args, 1, false), GetArg<Hosting_ScriptEngine>(args, 0, false), options.ColorfulConsole);
                 } else {
-                    return (ServiceType)(object)new BasicConsole(GetArg<ScriptEngine>(args, 0, false), options.ColorfulConsole);
+                    return (ServiceType)(object)new BasicConsole(GetArg<Hosting_ScriptEngine>(args, 0, false), options.ColorfulConsole);
                 }
             } else if (typeof(ServiceType) == typeof(CommandLine)) {
                 return (ServiceType)(object)new CommandLine();
@@ -448,22 +427,10 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public virtual CompilerOptions GetDefaultCompilerOptions() {
-            return new CompilerOptions();
-        }
-
-        /// <summary>
-        /// Creates compiler options initialized by the options associated with the module.
-        /// </summary>
-        public virtual CompilerOptions/*!*/ GetModuleCompilerOptions(Scope/*!*/ scope) {
-            return GetDefaultCompilerOptions();
-        }
-
         #region Source Units
 
         public SourceUnit CreateSnippet(string/*!*/ code) {
-            return CreateSnippet(code, null, SourceCodeKind.Default);
+            return CreateSnippet(code, null, SourceCodeKind.Statements);
         }
 
         public SourceUnit CreateSnippet(string/*!*/ code, SourceCodeKind kind) {
@@ -471,7 +438,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public SourceUnit CreateSnippet(string/*!*/ code, string id) {
-            return CreateSnippet(code, id, SourceCodeKind.Default);
+            return CreateSnippet(code, id, SourceCodeKind.Statements);
         }
 
         public SourceUnit CreateSnippet(string/*!*/ code, string id, SourceCodeKind kind) {
@@ -481,23 +448,23 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public SourceUnit CreateFileUnit(string/*!*/ path) {
-            return CreateFileUnit(path, (Encoding)null);
+            return CreateFileUnit(path, StringUtils.DefaultEncoding);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding encoding) {
-            Contract.RequiresNotNull(path, "path");
-
+        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding/*!*/ encoding) {
             return CreateFileUnit(path, encoding, SourceCodeKind.File);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding encoding, SourceCodeKind kind) {
+        public SourceUnit CreateFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
             Contract.RequiresNotNull(path, "path");
+            Contract.RequiresNotNull(encoding, "encoding");
             
-            TextContentProvider provider = new EngineTextContentProvider(this, new FileStreamContentProvider(DomainManager.PAL, path), encoding ?? StringUtils.DefaultEncoding);
+            // TODO: remove hosting reference!!!
+            TextContentProvider provider = new Hosting_EngineTextContentProvider(this, new FileStreamContentProvider(DomainManager.PAL, path), encoding);
             return CreateSourceUnit(provider, path, kind);
         }
 
-        public SourceUnit CreateFileUnit(string/*!*/ path, string content) {
+        public SourceUnit CreateFileUnit(string/*!*/ path, string/*!*/ content) {
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(content, "content");
 
@@ -508,15 +475,18 @@ namespace Microsoft.Scripting.Runtime {
         public SourceUnit/*!*/ CreateSourceUnit(TextContentProvider/*!*/ contentProvider, string path, SourceCodeKind kind) {
             Contract.RequiresNotNull(contentProvider, "contentProvider");
             Contract.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
-
+            Contract.Requires(EnumBounds.IsValid(kind), "kind");
+            
             return new SourceUnit(this, contentProvider, path, kind);
         }
 
+        // TODO: remove this?
         public SourceUnit TryGetSourceFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(encoding, "encoding");
-
-            return _domainManager.Host.TryGetSourceFileUnit(_domainManager.GetEngine(this), path, encoding, kind);
+            Contract.Requires(EnumBounds.IsValid(kind), "kind");
+            
+            return _domainManager.Host.TryGetSourceFileUnit(this, path, encoding, kind);
         }
 
         #endregion
@@ -526,7 +496,7 @@ namespace Microsoft.Scripting.Runtime {
         // The advanced console functions are in a special non-inlined function so that 
         // dependencies are pulled in only if necessary.
         [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole CreateSuperConsole(CommandLine commandLine, IScriptEngine engine, bool isColorful) {
+        private static IConsole CreateSuperConsole(CommandLine commandLine, Hosting_ScriptEngine engine, bool isColorful) {
             Debug.Assert(engine != null);
             return new SuperConsole(commandLine, engine, isColorful);
         }
@@ -546,13 +516,38 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
-        public virtual ErrorSink GetCompilerErrorSink() {
-            return new ErrorSink();
+        public virtual ErrorSink/*!*/ GetCompilerErrorSink() {
+            return ErrorSink.Null;
         }
 
         public virtual void GetExceptionMessage(Exception exception, out string message, out string errorTypeName) {
             message = exception.Message;
             errorTypeName = exception.GetType().Name;
+        }
+
+        private static DynamicSite<object, object>/*!*/ ExitCodeConvertSite {
+            get {
+                if (_ExitCodeConvertSite == null) {
+                    Interlocked.CompareExchange(ref _ExitCodeConvertSite, DynamicSite<object, object>.Create(
+                        ConvertToAction.Make(typeof(int), ConversionResultKind.ExplicitTry)
+                    ), null);
+                }
+
+                return _ExitCodeConvertSite;
+            }
+        }
+
+        private static DynamicSite<object, object> _ExitCodeConvertSite;
+
+        internal protected virtual int ExecuteProgram(SourceUnit/*!*/ program) {
+            Contract.RequiresNotNull(program, "program");
+
+            ScriptCode compiledCode = program.Compile();
+            object returnValue = compiledCode.Run(compiledCode.MakeOptimizedScope());
+
+            CodeContext context = new CodeContext(new Scope(this), this);
+            object exitCode = ExitCodeConvertSite.Invoke(context, returnValue);
+            return (exitCode != null) ? (int)exitCode : 0;
         }
     }
 }

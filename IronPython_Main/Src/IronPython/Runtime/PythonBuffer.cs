@@ -24,7 +24,7 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonSystemType("buffer")]
-    public class PythonBuffer : ICodeFormattable {
+    public sealed class PythonBuffer : ICodeFormattable {
         private object _object;
         private int _offset;
         private int _size;
@@ -185,7 +185,7 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<read-only buffer for 0x{0:X16}, size {1}, offset {2} at 0x{3:X16}>",
                 PythonOps.Id(_object), _size, _offset, PythonOps.Id(this));
         }

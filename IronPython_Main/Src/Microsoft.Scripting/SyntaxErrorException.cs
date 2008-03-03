@@ -15,18 +15,21 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Security.Permissions;
 using System.Text;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using System.Security.Permissions;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting {
     [Serializable]
     public class SyntaxErrorException : Exception {
         private SourceSpan _span;
+
+        // TODO: either HAPI needs a different exception or this needs to be a string
         private SourceUnit _sourceUnit;
+
         private Severity _severity;
         private int _mappedLine;
         private int _errorCode;

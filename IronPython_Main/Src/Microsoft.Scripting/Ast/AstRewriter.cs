@@ -599,9 +599,16 @@ namespace Microsoft.Scripting.Ast {
             NewArrayExpression node = (NewArrayExpression)expr;
             Expression[] clone, comma;
 
-            // Array elements are never emitted on an empty stack because
-            // the array reference and the index are on the stack.
-            if (RewriteExpressions(ar, node.Expressions, Stack.NonEmpty, out clone, out comma)) {
+            if (node.NodeType == AstNodeType.NewArrayExpression) {
+                // In a case of array construction with element initialization
+                // the element expressions are never emitted on an empty stack because
+                // the array reference and the index are on the stack.
+                stack = Stack.NonEmpty;
+            } else {
+                // In a case of NewArrayBounds we make no modifications to the stack 
+                // before emitting bounds expressions.
+            }
+            if (RewriteExpressions(ar, node.Expressions, stack, out clone, out comma)) {
                 comma[comma.Length - 1] = Ast.NewArray(node.Type, clone);
                 return Ast.Comma(comma);
             } else {

@@ -34,11 +34,11 @@ namespace Microsoft.Scripting.Generation {
     abstract class Slot {
         private bool _local;
         private Type _knownType;
-        public abstract void EmitGet(Compiler cg);
-        public abstract void EmitGetAddr(Compiler cg);
+        public abstract void EmitGet(LambdaCompiler cg);
+        public abstract void EmitGetAddr(LambdaCompiler cg);
 
         // Must override at least one of these two methods or get infinite loop
-        public virtual void EmitSet(Compiler cg, Slot val) {
+        public virtual void EmitSet(LambdaCompiler cg, Slot val) {
             Contract.RequiresNotNull(val, "val");
             Contract.RequiresNotNull(cg, "cg");
 
@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // This override assumes that the IL stack already holds the value to be assigned from.
-        public virtual void EmitSet(Compiler cg) {
+        public virtual void EmitSet(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             // localTmpVal = <top of IL stack>
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Generation {
         // Any access to the Slot first checks if it is holding Uninitialized.instance,
         // which means that it should virtually not exist
 
-        public virtual void EmitSetUninitialized(Compiler cg) {
+        public virtual void EmitSetUninitialized(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             // Emit the following:
@@ -81,7 +81,7 @@ namespace Microsoft.Scripting.Generation {
             EmitSet(cg);
         }
 
-        public virtual void EmitDelete(Compiler cg, SymbolId name, bool check) {
+        public virtual void EmitDelete(LambdaCompiler cg, SymbolId name, bool check) {
             Contract.RequiresNotNull(cg, "cg");
 
             // First check that the Name exists. Otherwise, deleting it
@@ -95,7 +95,7 @@ namespace Microsoft.Scripting.Generation {
             EmitSetUninitialized(cg);
         }
 
-        public virtual void EmitCheck(Compiler cg, SymbolId name) {
+        public virtual void EmitCheck(LambdaCompiler cg, SymbolId name) {
             Contract.RequiresNotNull(cg, "cg");
 
             Label endCheck = cg.DefineLabel();

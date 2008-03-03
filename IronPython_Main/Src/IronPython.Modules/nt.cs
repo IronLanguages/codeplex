@@ -45,8 +45,10 @@ namespace IronPython.Modules {
         }
 
 
-        public static void chdir(string path) {
-            if (String.IsNullOrEmpty(path)) throw PythonExceptions.CreateThrowable(PythonExceptions.OSError, "Invalid argument");
+        public static void chdir([NotNull]string path) {
+            if (String.IsNullOrEmpty(path)) {
+                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.EINVAL, "Path cannot be an empty string");
+            }
 
             try {
                 Directory.SetCurrentDirectory(path);
@@ -65,10 +67,14 @@ namespace IronPython.Modules {
             PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
             pf.close();
         }
+        
+        /// <summary>
+        /// single instance of environment dictionary is shared between multiple runtimes because the environment
+        /// is shared by multiple runtimes.
+        /// </summary>
+        public static readonly object environ = new PythonDictionary(new EnvironmentDictionaryStorage());
 
-        public static object environ = new EnvironmentDictionary();
-
-        public static object error = Builtin.OSError;
+        public static readonly PythonType error = Builtin.OSError;
 
         public static void _exit(CodeContext/*!*/ context, int code) {
             PythonContext.GetContext(context).DomainManager.PAL.TerminateScriptExecution(code);
@@ -87,9 +93,9 @@ namespace IronPython.Modules {
             return pf;
         }
 
-        public static object fstat(CodeContext/*!*/context, int fd) {
+        public static object fstat(CodeContext/*!*/ context, int fd) {
             PythonFile pf = PythonContext.GetContext(context).FileManager.GetFileFromId(fd);
-            return stat(pf.name);
+            return lstat(pf.name);
         }
 
         public static string getcwd() {
@@ -105,7 +111,7 @@ namespace IronPython.Modules {
         }
 
         public static List listdir(string path) {
-            List ret = List.Make();
+            List ret = PythonOps.MakeList();
             try {
                 string[] files = Directory.GetFiles(path);
                 addBase(files, ret);
@@ -125,7 +131,8 @@ namespace IronPython.Modules {
         }
 
         public static void mkdir(string path) {
-            if (Directory.Exists(path)) throw PythonOps.OSError("directory already exists");
+            if (Directory.Exists(path))
+                throw DirectoryExists();
 
             try {
                 Directory.CreateDirectory(path);
@@ -135,7 +142,7 @@ namespace IronPython.Modules {
         }
 
         public static void mkdir(string path, int mode) {
-            if (Directory.Exists(path)) throw PythonOps.OSError("directory already exists");
+            if (Directory.Exists(path)) throw DirectoryExists();
             // we ignore mode
 
             try {
@@ -145,7 +152,7 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object open(CodeContext context, string filename, int flag) {
+        public static object open(CodeContext/*!*/ context, string filename, int flag) {
             return open(context, filename, flag, 0777);
         }
 
@@ -278,11 +285,7 @@ namespace IronPython.Modules {
         }
 
         public static void remove(string path) {
-            try {
-                unlink(path);
-            } catch (Exception e) {
-                throw ToPythonException(e);
-            }
+            UnlinkWorker(path);
         }
 
         public static void rename(string src, string dst) {
@@ -372,7 +375,7 @@ namespace IronPython.Modules {
             currentEnvironment.Clear();
 
             string strKey, strValue;
-            foreach (object key in env.Keys) {
+            foreach (object key in env.keys()) {
                 if (!Converter.TryConvertToString(key, out strKey)) {
                     throw PythonOps.TypeError("env dict contains a non-string key");
                 }
@@ -566,7 +569,7 @@ namespace IronPython.Modules {
             }
 
             int ISequence.__len__() {
-                return MakeTuple().Count;
+                return MakeTuple().__len__();
             }
 
             bool ISequence.__contains__(object item) {
@@ -626,10 +629,10 @@ namespace IronPython.Modules {
                     sr.size = fi.Length;
                     sr.mode = 0x8000; //@TODO - Set other valid mode types (S_IFCHR, S_IFBLK, S_IFIFO, S_IFLNK, S_IFSOCK) (to the degree that they apply)
                 } else {
-                    throw new IOException("file does not exist");
+                    throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
                 }
             } catch (ArgumentException) {
-                throw PythonOps.OSError("The path is invalid: {0}", path);
+                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.EINVAL, "The path is invalid: " + path);
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -682,6 +685,16 @@ namespace IronPython.Modules {
         }
 
         public static void unlink(string path) {
+            UnlinkWorker(path);
+        }
+
+        private static void UnlinkWorker(string path) {
+            if (path == null) throw new ArgumentNullException("path");
+
+            if (!File.Exists(path)) {
+                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.ENOENT, "The file could not be found for deletion: " + path);
+            }
+
             try {
                 File.Delete(path);
             } catch (Exception e) {
@@ -707,7 +720,7 @@ namespace IronPython.Modules {
                 if (times == null) {
                     fi.LastAccessTime = DateTime.Now;
                     fi.LastWriteTime = DateTime.Now;
-                } else if (times.Count == 2) {
+                } else if (times.__len__() == 2) {
                     DateTime atime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[0])));
                     DateTime mtime = DateTime.MinValue.Add(TimeSpan.FromSeconds(Converter.ConvertToDouble(times[1])));
 
@@ -724,7 +737,7 @@ namespace IronPython.Modules {
         public static PythonTuple waitpid(int pid, object options) {
             System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid);
             if (process == null) {
-                throw PythonOps.OSError("Cannot find process {0}", pid);
+                throw PythonExceptions.CreateThrowable(PythonExceptions.OSError, PythonErrorNumber.ECHILD, "Cannot find process " + pid);
             }
             process.WaitForExit();
             return PythonTuple.MakeTuple(pid, process.ExitCode);
@@ -821,11 +834,10 @@ namespace IronPython.Modules {
             return FileAccess.Read;
         }
 
-        [PythonType(typeof(PythonFile))]
+        [PythonSystemType]
         private class POpenFile : PythonFile {
             private Process _process;
 
-            [PythonName("__new__")]
             public static object __new__(CodeContext/*!*/ context, string command, Process process, Stream stream, string mode) {
                 return new POpenFile(context, command, process, stream, mode);
             }
@@ -836,7 +848,6 @@ namespace IronPython.Modules {
                 this._process = process;
             }
 
-            [PythonName("close")]
             public override object close() {
                 base.close();
 
@@ -896,6 +907,10 @@ namespace IronPython.Modules {
             }
 
             throw PythonOps.WindowsError("The system can not find command '{0}'", command);
+        }
+
+        private static Exception DirectoryExists() {
+            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, PythonErrorNumber.EEXIST, "directory already exists");
         }
 
         #endregion

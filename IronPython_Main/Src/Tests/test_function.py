@@ -753,6 +753,18 @@ def test_func_flags():
     AreEqual(foo8.func_code.co_flags & 12, 0)
     AreEqual(foo9.func_code.co_flags & 12, 0)
     
+    AreEqual(foo0.func_code.co_argcount, 0)
+    AreEqual(foo1.func_code.co_argcount, 0)
+    AreEqual(foo2.func_code.co_argcount, 0)
+    AreEqual(foo3.func_code.co_argcount, 0)
+    AreEqual(foo4.func_code.co_argcount, 1)
+    AreEqual(foo5.func_code.co_argcount, 1)
+    AreEqual(foo6.func_code.co_argcount, 1)
+    AreEqual(foo7.func_code.co_argcount, 1)
+    AreEqual(foo8.func_code.co_argcount, 6)
+    AreEqual(foo9.func_code.co_argcount, 2)
+
+    
 def test_big_calls():
     # check various function call sizes and boundaries
     for size in [3,4,5, 7,8,9, 15,16,17, 23, 24, 25, 31,32,33, 47,48,49, 63,64,65, 127, 128, 129, 254, 255, 256, 257, 258, 511,512,513, 1023,1024,1025, 2047, 2048, 2049]:

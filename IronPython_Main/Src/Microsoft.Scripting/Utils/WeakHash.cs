@@ -265,7 +265,12 @@ namespace Microsoft.Scripting.Utils {
 
         [Confined]
         public override bool Equals(object obj) {
-            return Target.Equals(obj);
+            object target = weakReference.Target;
+            if (target == null) {
+                return false;
+            }
+
+            return ((T)target).Equals(obj);
         }
     }
 

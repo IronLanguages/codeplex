@@ -86,5 +86,11 @@ namespace IronPython.Compiler.Ast {
             }
             walker.PostWalk(this);
         }
+
+        public override string NodeName {
+            get {
+                return "yield expression";
+            }
+        }
     }
 }

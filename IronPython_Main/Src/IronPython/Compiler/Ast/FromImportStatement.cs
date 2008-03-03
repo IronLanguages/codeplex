@@ -22,10 +22,11 @@ namespace IronPython.Compiler.Ast {
 
     public class FromImportStatement : Statement {
         private static readonly SymbolId[] _star = new SymbolId[1];
-        private readonly DottedName _root;
+        private readonly ModuleName _root;
         private readonly SymbolId[] _names;
         private readonly SymbolId[] _asNames;
         private readonly bool _fromFuture;
+        private readonly bool _forceAbsolute;
 
         private PythonVariable[] _variables;
 
@@ -54,14 +55,15 @@ namespace IronPython.Compiler.Ast {
             set { _variables = value; }
         }
 
-        public FromImportStatement(DottedName root, SymbolId[] names, SymbolId[] asNames, bool fromFuture) {
+        public FromImportStatement(ModuleName root, SymbolId[] names, SymbolId[] asNames, bool fromFuture, bool forceAbsolute) {
             _root = root;
             _names = names;
             _asNames = asNames;
             _fromFuture = fromFuture;
+            _forceAbsolute = forceAbsolute;
         }
 
-        internal override MSAst.Expression Transform(AstGenerator ag) {
+        internal override MSAst.Expression Transform(AstGenerator ag) {            
             if (_names == _star) {
                 // from a[.b] import *
                 return Ast.Statement(
@@ -69,7 +71,8 @@ namespace IronPython.Compiler.Ast {
                     Ast.Call(
                         AstGenerator.GetHelperMethod("ImportStar"),
                         Ast.CodeContext(),
-                        Ast.Constant(_root.MakeString())
+                        Ast.Constant(_root.MakeString()),
+                        Ast.Constant(GetLevel())
                     )
                 );
             } else {
@@ -94,7 +97,8 @@ namespace IronPython.Compiler.Ast {
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
                                 Ast.CodeContext(),
                                 Ast.Constant(_root.MakeString()),
-                                Ast.NewArray(typeof(string[]), names)
+                                Ast.NewArray(typeof(string[]), names),
+                                Ast.Constant(GetLevel())
                             )
                         )
                     )
@@ -120,6 +124,19 @@ namespace IronPython.Compiler.Ast {
 
                 return Ast.Block(Span, statements.ToArray());
             }
+        }
+
+        private object GetLevel() {
+            RelativeModuleName rmn = _root as RelativeModuleName;
+            if (rmn != null) {
+                return rmn.DotCount;
+            }
+
+            if (_forceAbsolute) {
+                return 0;
+            }
+
+            return -1;
         }
 
         public override void Walk(PythonWalker walker) {

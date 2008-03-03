@@ -66,7 +66,8 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private Dictionary<TryStatement, TryStatementInfo> _infos;
+        private Dictionary<TryStatement, TryStatementInfo> _tryInfos;
+        private Dictionary<YieldStatement, YieldTarget> _yieldTargets;
         private readonly Stack<ExceptionBlock> _tryBlocks = new Stack<ExceptionBlock>();
         private readonly List<YieldTarget> _topTargets = new List<YieldTarget>();
         private int _temps;
@@ -79,7 +80,7 @@ namespace Microsoft.Scripting.Ast {
             ylb.WalkNode(gcb.Body);
 
             // Populate results into the CodeBlockInfo
-            cbi.PopulateGeneratorInfo(ylb._infos, ylb._topTargets, ylb._temps);
+            cbi.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
         }
 
         #region AstWalker method overloads
@@ -111,10 +112,10 @@ namespace Microsoft.Scripting.Ast {
             _tryBlocks.Pop();
 
             // Remember the TryStatementInfo for code generation.
-            if (_infos == null) {
-                _infos = new Dictionary<TryStatement, TryStatementInfo>();
+            if (_tryInfos == null) {
+                _tryInfos = new Dictionary<TryStatement, TryStatementInfo>();
             }
-            _infos[node] = tsi;
+            _tryInfos[node] = tsi;
 
             return false;
         }
@@ -127,7 +128,12 @@ namespace Microsoft.Scripting.Ast {
             // Assign the yield statement index for codegen
             int index = _topTargets.Count;
             TargetLabel label = new TargetLabel();
-            node.Target = new YieldTarget(index, label);
+
+            // Remember the YieldTarget for code generation.
+            if (_yieldTargets == null) {
+                _yieldTargets = new Dictionary<YieldStatement, YieldTarget>();
+            }
+            _yieldTargets[node] = new YieldTarget(index, label);
 
             foreach (ExceptionBlock eb in _tryBlocks) {
                 // The exception statement must determine

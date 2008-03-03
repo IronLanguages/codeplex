@@ -90,6 +90,14 @@ def test_tuple_hash():
     AreEqual(test[1].hashcalls, 1)
     AreEqual(test[2].hashcalls, 1)
     
+    hashes = set()
+    for i in range(1000):
+        for j in range(1000):
+            hashes.add(hash((i, j)))
+
+    AreEqual(len(hashes), 1000000)
+
+    
 @skip('win32')
 def test_tuple_cli_interactions():
 	# verify you can call ToString on a tuple after importing clr

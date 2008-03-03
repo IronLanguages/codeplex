@@ -30,7 +30,7 @@ namespace IronPython.Runtime {
      * 
      */
 
-    [PythonType("enumerate")]
+    [PythonSystemType("enumerate")]
     [Documentation("enumerate(iterable) -> iterator for index, value of iterable")]
     public class Enumerate : IEnumerator, IEnumerator<object> {
         private readonly IEnumerator _iter;

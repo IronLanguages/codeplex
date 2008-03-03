@@ -21,7 +21,7 @@ using IronPython.Runtime;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using MSAst = Microsoft.Scripting.Ast;
-using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
+using VariableKind = Microsoft.Scripting.Ast.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -30,9 +30,8 @@ namespace IronPython.Compiler.Ast {
     public class PythonAst : ScopeStatement {
         private readonly Statement _body;
         private readonly bool _isModule;
-        private readonly bool _trueDivision;
         private readonly bool _printExpressions;
-        private readonly bool _withStatement;
+        private readonly PythonLanguageFeatures _languageFeatures;
         private PythonVariable _docVariable;
 
         /// <summary>
@@ -42,21 +41,20 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         private Dictionary<SymbolId, PythonVariable> _globals;
 
-        public PythonAst(Statement body, bool isModule, bool trueDivision, bool withStatement, bool printExpressions) {
+        public PythonAst(Statement body, bool isModule, PythonLanguageFeatures languageFeatures, bool printExpressions) {
             Contract.RequiresNotNull(body, "body");
 
             _body = body;
             _isModule = isModule;
-            _trueDivision = trueDivision;
             _printExpressions = printExpressions;
-            _withStatement = withStatement;
+            _languageFeatures = languageFeatures;
         }
 
         /// <summary>
         /// True division is enabled in this AST.
         /// </summary>
         public bool TrueDivision {
-            get { return _trueDivision; }
+            get { return (_languageFeatures & PythonLanguageFeatures.TrueDivision) != 0; }
         }
 
         /// <summary>
@@ -64,7 +62,16 @@ namespace IronPython.Compiler.Ast {
         /// </summary>
         public bool AllowWithStatement {
             get {
-                return _withStatement;
+                return (_languageFeatures & PythonLanguageFeatures.AllowWithStatement) != 0;
+            }
+        }
+
+        /// <summary>
+        /// True if absolute imports are enabled
+        /// </summary>
+        public bool AbsoluteImports {
+            get {
+                return (_languageFeatures & PythonLanguageFeatures.AbsoluteImports) != 0;
             }
         }
 
@@ -139,7 +146,7 @@ namespace IronPython.Compiler.Ast {
         internal MSAst.CodeBlock TransformToAst(CompilerContext context) {
             // Create the ast generator
             // Use the PrintExpression value for the body (global level code)
-            string name = context.SourceUnit.HasPath ? context.SourceUnit.Id : "<undefined>";
+            string name = context.SourceUnit.HasPath ? context.SourceUnit.Path : "<undefined>";
             AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);
             ag.Block.Global = true;
 

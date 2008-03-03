@@ -29,15 +29,15 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    // TODO: Make private
-    internal partial class PythonExtensionTypeAttribute : ExtensionTypeAttribute {
+    partial class PythonExtensionTypeAttribute : ExtensionTypeAttribute {
         private PythonType _type;
         private bool _extension;
         private bool _enableDerivation;
         private Type _derivationType;
+        [MultiRuntimeAware]
         internal static Dictionary<SymbolId, OperatorMapping> _pythonOperatorTable;
+        [MultiRuntimeAware]
         private static Dictionary<OperatorMapping, SymbolId> _reverseOperatorTable;
-
 
         static PythonExtensionTypeAttribute() {
             InitializeOperatorTable();
@@ -45,18 +45,6 @@ namespace IronPython.Runtime.Types {
 
         public PythonExtensionTypeAttribute(Type extends, Type extensionType)
             : base(extends, extensionType) {
-
-            Initialize();
-            PythonBinder.RegisterType(extends, extensionType);
-        }
-
-        private void Initialize() {
-            string name;
-            if (!PythonTypeCustomizer.SystemTypes.TryGetValue(Extends, out name)) {
-                NameConverter.TryGetName(Extends, out name);
-
-                PythonTypeCustomizer.SystemTypes[Extends] = name;
-            }
 
             _type = DynamicHelpers.GetPythonTypeFromType(base.Extends);
             _type.IsPythonType = true;
@@ -113,10 +101,6 @@ namespace IronPython.Runtime.Types {
         }
 
         private IEnumerable<TransformedName> TypeEnumerator(MemberInfo mi) {
-            object[] attr = mi.GetCustomAttributes(typeof(PythonTypeAttribute), false);
-            if (attr.Length > 0) {
-                yield return new TransformedName(((PythonTypeAttribute)attr[0]).Name, ContextId.Empty);
-            }
             yield return new TransformedName(mi.Name, ContextId.Empty);
         }
 
@@ -317,7 +301,7 @@ namespace IronPython.Runtime.Types {
 
         internal PythonTypeSlot CreateClassMethod(MemberInfo mi, PythonTypeSlot existing) {
             MethodInfo method = mi as MethodInfo;
-            if (existing != null) {
+            if (existing != null && existing is ClassMethodDescriptor) {
                 ClassMethodDescriptor cm = existing as ClassMethodDescriptor;
 
                 Debug.Assert(cm != null,
@@ -326,10 +310,7 @@ namespace IronPython.Runtime.Types {
                 cm._func.AddMethod(method);
                 return existing;
             } else {
-                object [] attrs = mi.GetCustomAttributes(typeof(PythonClassMethodAttribute), false);
-                Debug.Assert(attrs.Length == 1);
-
-                BuiltinFunction classFunc = BuiltinFunction.MakeMethod(((PythonClassMethodAttribute)attrs[0]).Name,
+                BuiltinFunction classFunc = BuiltinFunction.MakeMethod(mi.Name,
                     method, 
                     FunctionType.Function | FunctionType.AlwaysVisible);
                 return new ClassMethodDescriptor(classFunc);

@@ -23,7 +23,7 @@ using System.Reflection.Emit;
 namespace Microsoft.Scripting.Utils {
     public partial class ReflectedCaller {
         internal ReflectedCaller() { }
-        private static Dictionary<MethodInfo, ReflectedCaller> _cache = new Dictionary<MethodInfo,ReflectedCaller>();
+        private static readonly Dictionary<MethodInfo, ReflectedCaller> _cache = new Dictionary<MethodInfo,ReflectedCaller>();
 
         /// <summary>
         /// Creates a new ReflectedCaller which can be used to quickly invoke the provided MethodInfo.

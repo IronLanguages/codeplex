@@ -552,14 +552,10 @@ def test_sanity():
     AreEqual(operator.__concat__([-1], [1]), [-1,1])
     
     #__contains__
-    #CodePlex Work Item 5083
     Assert(operator.__contains__("abc", "c"))
     Assert(not operator.__contains__("abc", "d"))
-    #CodePlex Work Item 5083
     Assert(operator.__contains__("abc", ""))
-    #CodePlex Work Item 5083
     Assert(not operator.__contains__("", "c"))
-    #CodePlex Work Item 5083
     Assert(operator.__contains__([1,2,3], 1))
     Assert(not operator.__contains__([1,2,3], 4))
     
@@ -623,10 +619,6 @@ def test_sanity():
     t_list = [1,2,3]
     operator.__setslice__(t_list, 0, 0, [9])
     AreEqual(t_list, [9,1, 2,3])
-
-@disabled("CodePlex Work Item 5083")
-def test_contains():
-    AreEqual(operator.__contains__("abc", "c"), True)
 
 def test_py25_operator():
     ops = ['iadd', 'isub', 'idiv', 'ilshift', 'imod', 'imul', 'ior', 'ipow', 'irshift', 'isub', 'itruediv', 'ifloordiv', 'ixor']

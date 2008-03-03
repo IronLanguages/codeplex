@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Runtime {
     /// key.
     /// </summary>
     public abstract class BaseSymbolDictionary : IValueEquality {
-        private static object _nullObject = new object();
+        private static readonly object _nullObject = new object();
         private const int ObjectKeysId = -2;
         internal static readonly SymbolId ObjectKeys = new SymbolId(ObjectKeysId);
 
@@ -47,12 +47,6 @@ namespace Microsoft.Scripting.Runtime {
         protected BaseSymbolDictionary() {
         }
 
-        #region Abstract Members
-
-        abstract public IDictionary<object, object> AsObjectKeyedDictionary();
-
-        #endregion                
-        
         #region IValueEquality Members
 
         public int GetValueHashCode() {

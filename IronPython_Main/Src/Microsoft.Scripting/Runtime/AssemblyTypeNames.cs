@@ -73,7 +73,7 @@ namespace Microsoft.Scripting.Runtime {
             try {
                 return asm.GetTypes();
             } catch (Exception) {
-                return ArrayUtils.EmptyTypes;
+                return Type.EmptyTypes;
             }
 #else
             try {

@@ -85,37 +85,37 @@ namespace IronPython.Modules {
         }
 
         public static object decode(CodeContext/*!*/ context, object obj) {
-            PythonTuple t = lookup(PythonContext.GetContext(context).GetDefaultEncodingName());
+            PythonTuple t = lookup(context, PythonContext.GetContext(context).GetDefaultEncodingName());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         public static object decode(CodeContext/*!*/ context, object obj, string encoding) {
-            PythonTuple t = lookup(encoding);
+            PythonTuple t = lookup(context, encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, null), 0);
         }
 
         public static object decode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
-            PythonTuple t = lookup(encoding);
+            PythonTuple t = lookup(context, encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[DecoderIndex], obj, errors), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj) {
-            PythonTuple t = lookup(PythonContext.GetContext(context).GetDefaultEncodingName());
+            PythonTuple t = lookup(context, PythonContext.GetContext(context).GetDefaultEncodingName());
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj, string encoding) {
-            PythonTuple t = lookup(encoding);
+            PythonTuple t = lookup(context, encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, null), 0);
         }
 
         public static object encode(CodeContext/*!*/ context, object obj, string encoding, string errors) {
-            PythonTuple t = lookup(encoding);
+            PythonTuple t = lookup(context, encoding);
 
             return PythonOps.GetIndex(PythonCalls.Call(t[EncoderIndex], obj, errors), 0);
         }
@@ -207,13 +207,13 @@ namespace IronPython.Modules {
 
         #endregion
 
-        public static PythonTuple lookup(string encoding) {
-            return PythonOps.LookupEncoding(encoding);
+        public static PythonTuple lookup(CodeContext/*!*/ context, string encoding) {
+            return PythonOps.LookupEncoding(context, encoding);
         }
 
 #if !SILVERLIGHT
-        public static object lookup_error(string name) {
-            return PythonOps.LookupEncodingError(name);
+        public static object lookup_error(CodeContext/*!*/ context, string name) {
+            return PythonOps.LookupEncodingError(context, name);
         }
 #endif
 
@@ -231,14 +231,14 @@ namespace IronPython.Modules {
 
         public static PythonTuple raw_unicode_escape_decode(CodeContext/*!*/ context, object input, [DefaultParameterValue("strict")]string errors) {
             return PythonTuple.MakeTuple(
-                StringOps.Decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
+                StringOps.decode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)
             );
         }
 
         public static PythonTuple raw_unicode_escape_encode(CodeContext/*!*/ context, object input, [DefaultParameterValue("strict")]string errors) {
             return PythonTuple.MakeTuple(
-                StringOps.Encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
+                StringOps.encode(context, Converter.ConvertToString(input), "raw-unicode-escape", errors),
                 Builtin.len(input)
             );
         }
@@ -247,13 +247,13 @@ namespace IronPython.Modules {
             throw PythonOps.NotImplementedError("readbuffer_encode");
         }
 
-        public static void register(object search_function) {
-            PythonOps.RegisterEncoding(search_function);
+        public static void register(CodeContext/*!*/ context, object search_function) {
+            PythonOps.RegisterEncoding(context, search_function);
         }
 
 #if !SILVERLIGHT
-        public static void register_error(string name, object handler) {
-            PythonOps.RegisterEncodingError(name, handler);
+        public static void register_error(CodeContext/*!*/ context, string name, object handler) {
+            PythonOps.RegisterEncodingError(context, name, handler);
         }
 #endif
 

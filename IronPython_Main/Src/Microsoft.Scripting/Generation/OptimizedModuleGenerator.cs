@@ -25,7 +25,6 @@ using System.Security.Permissions;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
@@ -69,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
         /// Creates the methods and optimized Scope's which get associated with each ScriptCode.
         /// </summary>
         public Scope GenerateScope() {
-            Compiler compiler = GenerateScriptMethod();
+            LambdaCompiler compiler = GenerateScriptMethod();
             Scope scope = GenerateScriptScope();
 
             CallTargetWithContext0 target;
@@ -101,9 +100,9 @@ namespace Microsoft.Scripting.Generation {
             return scope;
         }
 
-        private Compiler/*!*/ GenerateScriptMethod() {
+        private LambdaCompiler/*!*/ GenerateScriptMethod() {
             _allocator = CreateStorageAllocator(_scriptCode);
-            Compiler compiler = CreateCodeGen(_scriptCode);
+            LambdaCompiler compiler = CreateCodeGen(_scriptCode);
             compiler.Allocator = _allocator;
 
             // every module can hand it's environment to anything embedded in it.
@@ -134,7 +133,7 @@ namespace Microsoft.Scripting.Generation {
         protected string/*!*/ MakeDebugName() {
 #if DEBUG
             if (_scriptCode.SourceUnit != null && _scriptCode.SourceUnit.HasPath) {
-                return "OptScope_" + ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(_scriptCode.SourceUnit.Id)));
+                return "OptScope_" + ReflectionUtils.ToValidTypeName(Path.GetFileNameWithoutExtension(IOUtils.ToValidPath(_scriptCode.SourceUnit.Path)));
             }
 #endif
             return "S";
@@ -142,7 +141,7 @@ namespace Microsoft.Scripting.Generation {
 
         #region Protected Members
 
-        internal abstract Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode);
+        internal abstract LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode);
         internal abstract IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator);
         internal abstract SlotFactory/*!*/ CreateSlotFactory(ScriptCode/*!*/ scriptCode);
 
@@ -173,12 +172,12 @@ namespace Microsoft.Scripting.Generation {
             return res;
         }
 
-        internal override Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
+        internal override LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
             string methodName = MakeDebugName();
-            Compiler compiler = Snippets.Shared.DefineMethod(methodName, typeof(object),
-                new Type[] { typeof(CodeContext) }, null, new ConstantPool(), scriptCode.SourceUnit);
+            LambdaCompiler compiler = LambdaCompiler.CreateDynamicLambdaCompiler(methodName, typeof(object),
+                new Type[] { typeof(CodeContext) }, scriptCode.SourceUnit);
 
-            compiler.ContextSlot = compiler.GetArgumentSlot(0);
+            compiler.ContextSlot = compiler.GetLambdaArgumentSlot(0);
             return compiler;
         }
 
@@ -216,14 +215,15 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal override Compiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
-            Compiler compiler = _typeGen.DefineMethod("Initialize", typeof(object), new Type[] { typeof(CodeContext) }, null, null);
-            compiler.SetDebugSymbols(scriptCode.SourceUnit);
-            return compiler;
+        internal override LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
+            Type[] parameterTypes = new Type[] { typeof(CodeContext) };
+            MethodBuilder mb = _typeGen.TypeBuilder.DefineMethod("Initialize", CompilerHelpers.PublicStatic, typeof(object), parameterTypes);
+            LambdaCompiler lc = LambdaCompiler.CreateLambdaCompiler(_typeGen, mb, mb.GetILGenerator(), parameterTypes);
+            lc.SetDebugSymbols(scriptCode.SourceUnit);
+            return lc;
         }
 
         #endregion
-
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "sourceUnit")]
         private TypeGen/*!*/ GenerateModuleGlobalsType(SourceUnit/*!*/ sourceUnit) {
@@ -245,14 +245,14 @@ namespace Microsoft.Scripting.Generation {
 
         private void MakeInitialization(Dictionary<SymbolId, Slot>/*!*/ fields) {
             _typeGen.TypeBuilder.AddInterfaceImplementation(typeof(IModuleDictionaryInitialization));
-            Compiler cg = _typeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
+            LambdaCompiler cg = _typeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
 
             Label ok = cg.DefineLabel();
             cg.ContextSlot.EmitGet(cg);
             cg.Emit(OpCodes.Ldnull);
             cg.Emit(OpCodes.Ceq);
             cg.Emit(OpCodes.Brtrue_S, ok);
-            cg.EmitNew(typeof(InvalidOperationException), ArrayUtils.EmptyTypes);
+            cg.EmitNew(typeof(InvalidOperationException), Type.EmptyTypes);
             cg.Emit(OpCodes.Throw);
             cg.MarkLabel(ok);
 
@@ -272,7 +272,7 @@ namespace Microsoft.Scripting.Generation {
                 cg.EmitCall(typeof(RuntimeHelpers), "InitializeModuleField");
             }
 
-            cg.EmitReturn();
+            cg.Emit(OpCodes.Ret);
             cg.Finish();
         }
 
@@ -293,7 +293,7 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeGetMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
-            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
@@ -316,11 +316,11 @@ namespace Microsoft.Scripting.Generation {
                 cg.EmitUninitialized();
                 cg.Emit(OpCodes.Ceq);
                 cg.Emit(OpCodes.Not);
-                cg.EmitReturn();
+                cg.Emit(OpCodes.Ret);
                 cg.MarkLabel(next);
             }
             cg.EmitInt(0);
-            cg.EmitReturn();
+            cg.Emit(OpCodes.Ret);
             cg.Finish();
         }
 
@@ -340,8 +340,8 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeSetMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
-            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
-            Slot valueSlot = cg.GetArgumentSlot(1);
+            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+            Slot valueSlot = cg.GetLambdaArgumentSlot(1);
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
@@ -355,17 +355,17 @@ namespace Microsoft.Scripting.Generation {
 
                 slot.EmitSet(cg, valueSlot);
                 cg.EmitInt(1);
-                cg.EmitReturn();
+                cg.Emit(OpCodes.Ret);
                 cg.MarkLabel(next);
             }
             cg.EmitInt(0);
-            cg.EmitReturn();
+            cg.Emit(OpCodes.Ret);
             cg.Finish();
         }
 
-        private Compiler/*!*/ MakeRawKeysMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
+        private LambdaCompiler/*!*/ MakeRawKeysMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
             Slot rawKeysCache = _typeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
-            Compiler init = _typeGen.TypeInitializer;
+            LambdaCompiler init = _typeGen.TypeInitializer;
 
             init.EmitInt(fields.Count);
             init.Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -382,9 +382,9 @@ namespace Microsoft.Scripting.Generation {
 
             rawKeysCache.EmitSet(init);
 
-            Compiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
+            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
             rawKeysCache.EmitGet(cg);
-            cg.EmitReturn();
+            cg.Emit(OpCodes.Ret);
             cg.Finish();
 
             return cg;

@@ -39,9 +39,13 @@ def test_nonHRESULT_retvals():
         pass    
     
 #Test making calls to COM methods which return error values of HRESULT.
-@skip_comdispatch("Merlin 378174")
-def test_HRESULT_Error():    
-    AssertError(NullReferenceException, com_obj.mNullRefException)    
+def test_HRESULT_Error():
+    AssertErrorWithPartialMessage(NullReferenceException, "Custom error message for E_POINTER", com_obj.mNullRefException, runonly=preferComDispatch)
+    # The CLR COM interop support does not use the custom error message provided by the user.
+    AssertErrorWithPartialMessage(NullReferenceException, "Object reference not set to an instance of an object.", com_obj.mNullRefException, skip=preferComDispatch, bugid="NEEDED")
+
+    #Merlin 387233
+    #AssertErrorWithPartialMessage(COMException, "Migration source incorrect. (Exception from HRESULT: 0x8028005E)", com_obj.mGenericCOMException)
     AssertError(COMException, com_obj.mGenericCOMException)
     
 #------------------------------------------------------------------------------

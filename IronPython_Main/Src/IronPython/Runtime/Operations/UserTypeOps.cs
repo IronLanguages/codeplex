@@ -1290,7 +1290,7 @@ namespace IronPython.Runtime.Operations {
         private static object RichEqualsHelper(object self, object other) {
             object res;
 
-            if (DynamicHelpers.GetPythonType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.Equals, self, other, out res))
+            if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, self, other, Symbols.OperatorEquals, out res))
                 return res;
 
             return PythonOps.NotImplemented;
@@ -1298,7 +1298,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool ValueNotEqualsHelper(object self, object other) {
             object res;
-            if (DynamicHelpers.GetPythonType(self).TryInvokeBinaryOperator(DefaultContext.Default, Operators.NotEquals, self, other, out res) && 
+            if (PythonTypeOps.TryInvokeBinaryOperator(DefaultContext.Default, self, other, Symbols.OperatorNotEquals, out res) && 
                 res != PythonOps.NotImplemented &&
                 res != null &&
                 res.GetType() == typeof(bool))

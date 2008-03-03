@@ -31,12 +31,12 @@ namespace IronPython.Runtime.Types {
             Debug.Assert(dt.IsInstanceOfType(self));
 
             // Get the attributes from the instance
-            PythonDictionary res = new PythonDictionary(selfDict);
+            PythonDictionary res = new PythonDictionary(context, selfDict);
 
             // Add the attributes from the type
             IAttributesCollection iac = dt.GetMemberDictionary(context);
             foreach (KeyValuePair<object, object> pair in iac.AsObjectKeyedDictionary()) {
-                res.Add(pair);
+                ((ICollection<KeyValuePair<object, object>>)res).Add(pair);
             } 
 
             return res;
@@ -108,7 +108,7 @@ namespace IronPython.Runtime.Types {
             PythonTuple typesTuple = index as PythonTuple;
             Type[] types;
             if (typesTuple != null) {
-                types = new Type[typesTuple.Count];
+                types = new Type[typesTuple.__len__()];
                 int i = 0;
                 foreach (object t in typesTuple) {
                     types[i++] = Converter.ConvertToType(t);

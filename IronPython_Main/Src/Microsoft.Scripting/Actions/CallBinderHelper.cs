@@ -413,7 +413,11 @@ namespace Microsoft.Scripting.Actions {
             string[] names = new string[dict.Count];
             int index = 0;
             while (dictEnum.MoveNext()) {
-                names[index++] = (string)dictEnum.Entry.Key;
+                string name = dictEnum.Entry.Key as string;
+                if(name == null) {
+                    throw RuntimeHelpers.SimpleTypeError(String.Format("expected string for dictionary argument got {0}", dictEnum.Entry.Key));
+                }                
+                names[index++] = name;
             }
 
             _test = Ast.AndAlso(

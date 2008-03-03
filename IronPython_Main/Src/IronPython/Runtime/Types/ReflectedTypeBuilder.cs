@@ -57,10 +57,10 @@ namespace IronPython.Runtime.Types {
         private Type _type;
         private ExtensionNameTransformer _transform;
         private Dictionary<OperatorMapping, OperatorInfo> _operImpl;
-        private static List<TypeBuilderDelegate> _altBuilders;
 
         /// <summary>Table from the .NET operator names to OperatorMapping which includes operator and arity info</summary>
-        internal static Dictionary<string, OperatorMapping> _operatorTable = InitializeOperatorTable();
+        internal static readonly Dictionary<string, OperatorMapping> _operatorTable = InitializeOperatorTable();
+        private static readonly Dictionary<Type, PropertyInfo[]> _PropertyInfos = new Dictionary<Type, PropertyInfo[]>();
 
         public ReflectedTypeBuilder() {
         }
@@ -76,15 +76,8 @@ namespace IronPython.Runtime.Types {
             PerfTrack.NoteEvent(PerfTrack.Categories.ReflectedTypes, t);
 
 #if !SILVERLIGHT // COM
-            if (_altBuilders != null) {
-                lock (_altBuilders) {
-                    foreach (TypeBuilderDelegate tb in _altBuilders) {
-                        PythonType res = tb(t);
-                        if (res != null) {
-                            return res;
-                        }
-                    }
-                }
+            if (ComObject.Is__ComObject(t)) {
+                return ComTypeBuilder.ComType;
             }
 #endif
 
@@ -92,27 +85,15 @@ namespace IronPython.Runtime.Types {
             return rtb.DoBuild(t);
         }
 
-        public static void RegisterAlternateBuilder(TypeBuilderDelegate builder) {
-            if (_altBuilders == null) {
-                Interlocked.CompareExchange<List<TypeBuilderDelegate>>(ref _altBuilders, new List<TypeBuilderDelegate>(), null);
-            }
-
-            lock (_altBuilders) {
-                _altBuilders.Add(builder);
-            }
-        }
-
         protected PythonType DoBuild(Type t) {
             object[] attrs = t.GetCustomAttributes(typeof(ScriptTypeAttribute), false);
 
             if (attrs != null && attrs.Length > 0) {
                 Type impersonate = null;
-                string name = t.Name;
                 ScriptTypeAttribute pta = attrs[0] as ScriptTypeAttribute;
-                name = pta.Name;
                 impersonate = pta.ImpersonateType;
 
-                return DoBuild(pta.Name, t, null, pta.ImpersonateType, ((ScriptTypeAttribute)attrs[0]).Context);
+                return DoBuild(pta.Name, t, null, pta.ImpersonateType, pta.Context);
             } else { 
                 Builder = new PythonTypeBuilder(PythonTypeOps.GetName(t), t);
             }
@@ -127,9 +108,7 @@ namespace IronPython.Runtime.Types {
             ContextId ctx = ContextId.Empty;
             if (attrs != null && attrs.Length > 0) {
                 ScriptTypeAttribute pta = attrs[0] as ScriptTypeAttribute;
-                name = pta.Name;
                 impersonate = pta.ImpersonateType;
-                ctx = pta.Context;
             }
 
             return DoBuild(name, t, extensionType, impersonate, ctx);
@@ -630,12 +609,9 @@ namespace IronPython.Runtime.Types {
 
         private void EnsureTransformDelegate() {
             if (_transform == null) {
-                object[] attrs = _type.GetCustomAttributes(typeof(ScriptTypeAttribute), false);
-                if (attrs != null && attrs.Length > 0) {
-                    _transform = ((ScriptTypeAttribute)attrs[0]).GetTransformer(Builder.UnfinishedType);
-                }
-
-                if (_transform == null) {
+                if (_type.IsDefined(typeof(PythonSystemTypeAttribute), false)) {
+                    _transform = new PythonExtensionTypeAttribute(Builder.UnfinishedType).PythonNameTransformer;
+                } else {
                     _transform = DefaultNameTransform;
                 }
             }
@@ -793,7 +769,6 @@ namespace IronPython.Runtime.Types {
 
         // We cache the PropertyInfos since SearchTypeForProperty is called for every method. If it called Type.GetProperties every time,
         // it creates a new array of PropertyInfos everytime, which is expensive.
-        static Dictionary<Type, PropertyInfo[]> _PropertyInfos = new Dictionary<Type, PropertyInfo[]>();
 
         static PropertyInfo[] GetTypeProperties(Type type) {
             if (_PropertyInfos.ContainsKey(type)) {
@@ -822,7 +797,7 @@ namespace IronPython.Runtime.Types {
             ot["op_Multiply"] = new OperatorMapping(Operators.Multiply, false, true, false, true);
             ot["op_Division"] = new OperatorMapping(Operators.Divide, false, true, false, true);
             ot["op_Modulus"] = new OperatorMapping(Operators.Mod, false, true, false, true);
-            ot["op_ExclusiveOr"] = new OperatorMapping(Operators.Xor, false, true, false, true);
+            ot["op_ExclusiveOr"] = new OperatorMapping(Operators.ExclusiveOr, false, true, false, true);
             ot["op_BitwiseAnd"] = new OperatorMapping(Operators.BitwiseAnd, false, true, false, true);
             ot["op_BitwiseOr"] = new OperatorMapping(Operators.BitwiseOr, false, true, false, true);
             ot["op_LeftShift"] = new OperatorMapping(Operators.LeftShift, false, true, false, true);
@@ -842,7 +817,7 @@ namespace IronPython.Runtime.Types {
             ot["op_LeftShiftAssignment"] = new OperatorMapping(Operators.InPlaceLeftShift, false, true, false);
             ot["op_RightShiftAssignment"] = new OperatorMapping(Operators.InPlaceRightShift, false, true, false);
             ot["op_BitwiseAndAssignment"] = new OperatorMapping(Operators.InPlaceBitwiseAnd, false, true, false);
-            ot["op_ExclusiveOrAssignment"] = new OperatorMapping(Operators.InPlaceXor, false, true, false);
+            ot["op_ExclusiveOrAssignment"] = new OperatorMapping(Operators.InPlaceExclusiveOr, false, true, false);
             ot["op_BitwiseOrAssignment"] = new OperatorMapping(Operators.InPlaceBitwiseOr, false, true, false);
 
             ot["op_UnaryNegation"] = new OperatorMapping(Operators.Negate, true, false, false);
@@ -899,19 +874,22 @@ namespace IronPython.Runtime.Types {
             //They are not part of the CLS defined operators today
             ot["TrueDivide"] = new OperatorMapping(Operators.TrueDivide, false, true, false, true);
             ot["FloorDivide"] = new OperatorMapping(Operators.FloorDivide, false, true, false, true);
+            ot["InPlaceFloorDivide"] = new OperatorMapping(Operators.InPlaceFloorDivide, false, true, false);
+            ot["InPlacePower"] = new OperatorMapping(Operators.InPlacePower, false, true, false);
 
             ot["DivMod"] = new OperatorMapping(Operators.DivMod, false, true, false, true);
 
             ot["Abs"] = new OperatorMapping(Operators.AbsoluteValue, true, false, false);
 
             ot["Power"] = new OperatorMapping(Operators.Power, false, true, true, true);
-            ot["ToString"] = new OperatorMapping(Operators.ConvertToString, true, false, false);
             ot["GetItem"] = new OperatorMapping(Operators.GetItem, false, true, false);
             ot["SetItem"] = new OperatorMapping(Operators.SetItem, false, false, true);
+            ot["DeleteItem"] = new OperatorMapping(Operators.DeleteItem, false, true, false);
 
             // TODO: remove these ugly versions and detect them w/ GetIndexParameters
             ot["get_Item"] = ot["GetItem"];
             ot["set_Item"] = ot["SetItem"];
+            ot["delete_Item"] = ot["DeleteItem"];
 
             ot["Call"] = new OperatorMapping(Operators.Call, false, true, false);
             ot["Contains"] = new OperatorMapping(Operators.Contains, false, true, false);

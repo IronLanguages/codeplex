@@ -33,13 +33,14 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Runtime.Operations {
 
     public static class BoolOps {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls"), StaticExtensionMethod("__new__")]
-        public static object Make(object cls) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls")]
+        [StaticExtensionMethod]
+        public static object __new__(object cls) {
             return RuntimeHelpers.False;
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static bool Make(object cls, object o) {
+        [StaticExtensionMethod]
+        public static bool __new__(object cls, object o) {
             return PythonOps.IsTrue(o);
         }
 
@@ -88,8 +89,7 @@ namespace IronPython.Runtime.Operations {
             return Int32Ops.ExclusiveOr(x ? 1 : 0, y);
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string CodeRepresentation(bool self) {
+        public static string __repr__(bool self) {
             return self ? "True" : "False";
         }
 
@@ -120,57 +120,52 @@ namespace IronPython.Runtime.Operations {
         }
 
         // Conversion operators
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static SByte ConvertToSByte(Boolean x) {
             return (SByte)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Byte ConvertToByte(Boolean x) {
             return (Byte)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Int16 ConvertToInt16(Boolean x) {
             return (Int16)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static UInt16 ConvertToUInt16(Boolean x) {
             return (UInt16)(x ? 1 : 0);
         }
 
-        [SpecialName, PythonName("__int__")]
-        public static Int32 ConvertToInt(Boolean x) {
-            return (Int32)(x ? 1 : 0);
-        }
-
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Int32 ConvertToInt32(Boolean x) {
             return (Int32)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static UInt32 ConvertToUInt32(Boolean x) {
             return (UInt32)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Int64 ConvertToInt64(Boolean x) {
             return (Int64)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static UInt64 ConvertToUInt64(Boolean x) {
             return (UInt64)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Single ConvertToSingle(Boolean x) {
             return (Single)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Double ConvertToDouble(Boolean x) {
             return (Double)(x ? 1 : 0);
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static Complex64 ConvertToComplex64(Boolean x) {
             return x ? new Complex64(1) : new Complex64();
         }
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static decimal ConvertToDecimal(Boolean x) {
             return x ? (decimal)1 : (decimal)0;
         }

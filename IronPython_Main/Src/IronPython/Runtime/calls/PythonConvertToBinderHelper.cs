@@ -189,9 +189,17 @@ namespace IronPython.Runtime.Calls {
             } else if (fromType.IsPrimitive) {
                 MakePrimitiveRule(rule);
             } else if (fromType == typeof(Complex64)) {
-                MakeComplexRule(rule);                
+                MakeComplexRule(rule, rule.Parameters[0]);                
             } else if (fromType == typeof(BigInteger)) {
-                MakeBigIntegerRule(rule);
+                MakeBigIntegerRule(rule, rule.Parameters[0]);
+            } else if (typeof(Extensible<BigInteger>).IsAssignableFrom(fromType)) {
+                MakeBigIntegerRule(rule,
+                    Ast.ReadProperty(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
+                );
+            } else if (typeof(Extensible<Complex64>).IsAssignableFrom(fromType)) {
+                MakeComplexRule(rule,
+                    Ast.ReadProperty(Ast.ConvertHelper(rule.Parameters[0], fromType), fromType.GetProperty("Value"))
+                );
             } else {
                 // check for ICollection<T>
                 foreach (Type t in fromType.GetInterfaces()) {
@@ -218,26 +226,26 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private void MakeBigIntegerRule(StandardRule<T> rule) {
+        private void MakeBigIntegerRule(StandardRule<T> rule, Expression bigInt) {
             rule.Target = 
                 rule.MakeReturn(
                     Binder,
                     Ast.Call(
                         typeof(BigInteger).GetMethod("op_Inequality", new Type[] { typeof(BigInteger), typeof(BigInteger) }),
                         Ast.ReadField(null, typeof(BigInteger).GetField("Zero")),
-                        Ast.ConvertHelper(rule.Parameters[0], typeof(BigInteger))
+                        Ast.ConvertHelper(bigInt, typeof(BigInteger))
                     )
                 );
         }
-
-        private void MakeComplexRule(StandardRule<T> rule) {            
+        
+        private void MakeComplexRule(StandardRule<T> rule, Expression complex) {            
             rule.Target = 
                 rule.MakeReturn(
                     Binder,
                     Ast.Call(
                         typeof(Complex64).GetMethod("op_Inequality", new Type[] { typeof(Complex64), typeof(Complex64) }),
                         Ast.Constant(new Complex64()),
-                        Ast.ConvertHelper(rule.Parameters[0], typeof(Complex64))
+                        Ast.ConvertHelper(complex, typeof(Complex64))
                     )
                 );
         }
@@ -261,7 +269,7 @@ namespace IronPython.Runtime.Calls {
             object zeroVal = Activator.CreateInstance(enumStorageType);
             rule.Target = rule.MakeReturn(
                 Binder,
-                Ast.Equal(
+                Ast.NotEqual(
                     Ast.Convert(
                         rule.Parameters[0],
                         enumStorageType

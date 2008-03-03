@@ -196,6 +196,15 @@ namespace Microsoft.Scripting {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot access member {1} declared on type {0} because the type contains generic parameters..
+        /// </summary>
+        internal static string InvalidOperation_ContainsGenericParameters {
+            get {
+                return ResourceManager.GetString("InvalidOperation_ContainsGenericParameters", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Attempt to define parameter on non-methodbuilder and non-dynamic method.
         /// </summary>
         internal static string InvalidOperation_DefineParameterBakedMethod {

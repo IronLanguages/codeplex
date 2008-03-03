@@ -25,6 +25,7 @@ using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using System.CodeDom.Compiler;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -46,7 +47,7 @@ namespace Microsoft.Scripting.Runtime {
         public static readonly object False = false;
 
         /// <summary> Table of dynamicly generated delegates which are shared based upon method signature. </summary>
-        private static Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
+        private static readonly Publisher<DelegateSignatureInfo, DelegateInfo> _dynamicDelegateCache = new Publisher<DelegateSignatureInfo, DelegateInfo>();
         private static Dictionary<Type, List<Type>> _extensionTypes = new Dictionary<Type, List<Type>>();
 
         private static object[] MakeCache() {
@@ -199,8 +200,7 @@ namespace Microsoft.Scripting.Runtime {
         /// Called from generated code, helper to remove a name
         /// </summary>
         public static object RemoveName(CodeContext context, SymbolId name) {
-            context.LanguageContext.RemoveName(context, name);
-            return null;
+            return context.LanguageContext.RemoveName(context, name);
         }
         /// <summary>
         /// Called from generated code, helper to do a global name lookup
@@ -276,6 +276,11 @@ namespace Microsoft.Scripting.Runtime {
         [GeneratedCode("DLR", "2.0")]
         public static DynamicSite<T0, T1, T2, T3, T4, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, R>() {
             return new DynamicSite<T0, T1, T2, T3, T4, R>(CallAction.Make(4));
+        }
+
+        [GeneratedCode("DLR", "2.0")]
+        public static DynamicSite<T0, T1, T2, T3, T4, T5, R> CreateSimpleCallSite<T0, T1, T2, T3, T4, T5, R>() {
+            return new DynamicSite<T0, T1, T2, T3, T4, T5, R>(CallAction.Make(5));
         }
 
         [GeneratedCode("DLR", "2.0")]
@@ -628,7 +633,7 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
 
-            return ArrayUtils.EmptyTypes;
+            return Type.EmptyTypes;
         }
 
         /// <summary>
@@ -651,6 +656,10 @@ namespace Microsoft.Scripting.Runtime {
                 }
             }
             return res;
+        }
+
+        public static Delegate CreateDynamicClosure(MethodInfo mi, RuntimeTypeHandle @delegate, CodeContext context, object[] constants) {
+            return ReflectionUtils.CreateDelegate(mi, Type.GetTypeFromHandle(@delegate), new Closure(context, constants));
         }
     }
 }

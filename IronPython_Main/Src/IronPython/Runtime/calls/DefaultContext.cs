@@ -30,8 +30,9 @@ using System.Threading;
 
 namespace IronPython.Runtime.Calls {
     public static class DefaultContext {
-
+        [MultiRuntimeAware]
         public static CodeContext _default;
+        [MultiRuntimeAware]
         public static CodeContext _defaultCLS;
         
         public static ContextId Id {
@@ -67,13 +68,13 @@ namespace IronPython.Runtime.Calls {
         }
 
         private static CodeContext/*!*/ CreateDefaultContext(PythonContext/*!*/ context) {
-            PythonModule globalMod = context.CreateModule("__builtin__");
+            PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.NoBuiltins);
             return new CodeContext(globalMod.Scope, context, globalMod);
         }
 
 
         private static CodeContext/*!*/ CreateDefaultCLSContext(PythonContext/*!*/ context) {
-            PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.ShowClsMethods);
+            PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.ShowClsMethods | ModuleOptions.NoBuiltins);
             return new CodeContext(globalMod.Scope, context, globalMod);
         }
     }

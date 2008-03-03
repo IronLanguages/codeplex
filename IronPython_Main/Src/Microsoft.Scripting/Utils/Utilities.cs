@@ -33,19 +33,5 @@ namespace Microsoft.Scripting.Utils {
             return valid;
         }
 #endif
-
-#pragma warning disable 414 // Private field assigned but its value never used
-
-        /// <summary>
-        /// Volatile field. Written to when we need to do a memory barrier on Silverlight.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")]
-        private static volatile int _memoryBarrier;
-
-        public static void MemoryBarrier() {
-            _memoryBarrier = 1;
-        }
-
-#pragma warning restore 414
     }
 }

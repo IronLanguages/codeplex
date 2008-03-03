@@ -58,11 +58,8 @@ namespace IronPython.Compiler {
                 fi.DeclaringType == typeof(double) ||
                 fi.IsDefined(typeof(PythonHiddenAttribute), false)) nt = NameType.Field;
 
-            object [] attrs = fi.GetCustomAttributes(typeof(ScriptNameAttribute), false);
             string namePrefix = "";
-            if (attrs.Length > 0) {
-                name = ((ScriptNameAttribute)attrs[0]).Name;
-            } else if (fi.IsPrivate || (fi.IsAssembly && !fi.IsFamilyOrAssembly)) {
+            if (fi.IsPrivate || (fi.IsAssembly && !fi.IsFamilyOrAssembly)) {
                 if (!ScriptDomainManager.Options.PrivateBinding) {
                     return NameType.None;
                 } else {
@@ -87,6 +84,11 @@ namespace IronPython.Compiler {
 
         public static NameType TryGetName(PythonType dt, PropertyInfo pi, MethodInfo prop, out string name) {
             Debug.Assert(IsValidSubtype(dt, pi));
+
+            if (pi.IsDefined(typeof(PythonHiddenAttribute), false)) {
+                name = null;
+                return NameType.None;
+            }
 
             name = pi.Name;
 
@@ -115,17 +117,7 @@ namespace IronPython.Compiler {
             }
 
             NameType res = NameType.Type;
-            object[] attribute = t.GetCustomAttributes(typeof(PythonTypeAttribute), false);
-
-            if (attribute.Length > 0) {
-                PythonTypeAttribute attr = attribute[0] as PythonTypeAttribute;
-                if (attr.Name != null && attr.Name.Length > 0) {
-                    res = NameType.PythonType;
-                    name = attr.Name;
-                }
-            }
-
-            attribute = t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
+            object[] attribute = t.GetCustomAttributes(typeof(PythonSystemTypeAttribute), false);
             if (attribute.Length > 0) {
                 PythonSystemTypeAttribute attr = attribute[0] as PythonSystemTypeAttribute;
                 if (attr.Name != null) {
@@ -165,6 +157,11 @@ namespace IronPython.Compiler {
         internal static NameType GetNameFromMethod(PythonType dt, MethodInfo mi, NameType res, ref string name) {
             string namePrefix = null;
 
+            if (mi.IsDefined(typeof(PythonHiddenAttribute), false)) {
+                name = null;
+                return NameType.None;
+            }
+
             if (mi.IsPrivate || (mi.IsAssembly && !mi.IsFamilyOrAssembly)) {
                 // allow explicitly implemented interface
                 if (!(mi.IsPrivate && mi.IsFinal && mi.IsHideBySig && mi.IsVirtual)) {
@@ -187,17 +184,14 @@ namespace IronPython.Compiler {
                 }
             }
 
-            object[] attribute = mi.GetCustomAttributes(typeof(ScriptNameAttribute), false);
+            if (mi.IsDefined(typeof(PythonClassMethodAttribute), false)) {
+                res |= NameType.ClassMember;
+            }
 
             if (namePrefix != null) name = namePrefix + name;
-            if (attribute.Length > 0) {
-                ScriptNameAttribute attr = attribute[0] as ScriptNameAttribute;
-                if (attr.Name != null && attr.Name.Length > 0) {
-                    if (attr is PythonClassMethodAttribute) res |= NameType.ClassMember;                    
-                    res |= NameType.Python;
-                    name = attr.Name;
-                }
-            } else if (!mi.DeclaringType.IsAssignableFrom(dt.UnderlyingSystemType)) {
+
+            if (mi.DeclaringType.IsDefined(typeof(PythonSystemTypeAttribute), false) ||
+                !mi.DeclaringType.IsAssignableFrom(dt.UnderlyingSystemType)) {
                 // extension types are all python names
                 res |= NameType.Python;
             }

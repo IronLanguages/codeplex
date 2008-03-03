@@ -155,8 +155,7 @@ def gen_unaryops(cw, ty):
         cw.write(unsigned_negate_or_invert, method_name="OnesComplement")
     
     if (ty.type is not complex) and (ty.type is not bigint):
-        cw.writeline('[SpecialName, PythonName("__nonzero__")]')
-        cw.enter_block('public static bool NonZero(%s x)' % (ty.name))
+        cw.enter_block('public static bool __nonzero__(%s x)' % (ty.name))
         cw.writeline('return (x != 0);')
         cw.exit_block()
     
@@ -256,8 +255,7 @@ def write_binop1_general(func, cw, body, name, ty, **kws):
         
 def write_compare(cw, body, name, ty, **kws):
     def writer(cw, body, name, ty, **kws):
-        cw.write('[PythonName("__cmp__")]')
-        write_binop_raw(cw, body, name, ty, **kws)
+        write_binop_raw(cw, body, '__cmp__', ty, **kws)
         
     write_binop1_general(writer, cw, body, name, ty, **kws)
 
@@ -315,13 +313,13 @@ def gen_binaryops(cw, ty):
     
             
 implicit_conv = """\
-[ImplicitConversionMethod]
+[SpecialName, ImplicitConversionMethod]
 public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
     return (%(otype)s)x;
 }"""
 
 explicit_conv = """\
-[ExplicitConversionMethod]
+[SpecialName, ExplicitConversionMethod]
 public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
     if (%(otype)s.MinValue <= x && x <= %(otype)s.MaxValue) {
         return (%(otype)s)x;
@@ -330,7 +328,7 @@ public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
 }"""
 
 explicit_conv_to_unsigned_from_signed = """\
-[ExplicitConversionMethod]
+[SpecialName, ExplicitConversionMethod]
 public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
     if (x >= 0) {
         return (%(otype)s)x;
@@ -339,7 +337,7 @@ public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
 }"""
 
 explicit_conv_tosigned_from_unsigned = """\
-[ExplicitConversionMethod]
+[SpecialName, ExplicitConversionMethod]
 public static %(otype)s ConvertTo%(otype)s(%(type)s x) {
     if (x <= (%(type)s)%(otype)s.MaxValue) {
         return (%(otype)s)x;
@@ -368,13 +366,13 @@ def gen_conversions(cw, ty):
             
             
 type_header = """\
-[StaticExtensionMethod("__new__")]
-public static object Make(PythonType cls) {
-    return Make(cls, default(%(type)s));
+[StaticExtensionMethod]
+public static object __new__(PythonType cls) {
+    return __new__(cls, default(%(type)s));
 }
 
-[StaticExtensionMethod("__new__")]
-public static object Make(PythonType cls, object value) {
+[StaticExtensionMethod]
+public static object __new__(PythonType cls, object value) {
     if (cls != DynamicHelpers.GetPythonTypeFromType(typeof(%(type)s))) {
         throw PythonOps.TypeError("%(type)s.__new__: first argument must be %(type)s type.");
     }

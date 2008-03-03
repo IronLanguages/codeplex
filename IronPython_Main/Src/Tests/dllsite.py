@@ -17,8 +17,16 @@
 ## Test autoimport of assemblies found in DLLs directory
 ##
 
+from sys import exit, argv, path
+from nt import getcwd
 from lib.assert_util import *
-from sys import exit, argv
+
+#site.py used for internal testing does not preload DLLs
+if is_snap:
+    path.insert(0, nt.getcwd() + "\\..\\Lib")
+
+import site
+
 
 
 if argv.count("OKtoRun")==0 or is_cli==False:

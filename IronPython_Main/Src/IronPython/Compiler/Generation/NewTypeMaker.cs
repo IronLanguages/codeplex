@@ -54,7 +54,8 @@ namespace IronPython.Compiler.Generation {
         public const string BaseMethodPrefix = "#base#";
         public const string FieldGetterPrefix = "#field_get#", FieldSetterPrefix = "#field_set#";
 
-        private static Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
+        private static readonly Publisher<NewTypeInfo, Type> _newTypes = new Publisher<NewTypeInfo, Type>();
+        [MultiRuntimeAware]
         private static int _typeCount;
 
         protected Type _baseType;
@@ -73,6 +74,8 @@ namespace IronPython.Compiler.Generation {
 
         private Dictionary<string, VTableEntry> _vtable = new Dictionary<string, VTableEntry>();
 
+        internal static readonly Dictionary<Type, Dictionary<string, List<MethodInfo>>> _overriddenMethods = new Dictionary<Type, Dictionary<string, List<MethodInfo>>>();
+
         public static Type GetNewType(string typeName, PythonTuple bases, IAttributesCollection dict) {
             if (bases == null) bases = PythonTuple.MakeTuple();
             // we're really only interested in the "correct" base type pulled out of bases
@@ -81,9 +84,10 @@ namespace IronPython.Compiler.Generation {
 
             NewTypeInfo typeInfo = GetTypeInfo(typeName, bases, GetSlots(dict));
 
-            if (typeInfo.BaseType.IsSealed || typeInfo.BaseType.IsValueType)
-                throw PythonOps.TypeError("cannot derive from sealed or value types");
-
+            if (typeInfo.BaseType.IsValueType)
+                throw PythonOps.TypeError("cannot derive from {0} because it is a value type", typeInfo.BaseType.FullName);
+            if (typeInfo.BaseType.IsSealed)
+                throw PythonOps.TypeError("cannot derive from {0} because it is sealed", typeInfo.BaseType.FullName);
 
             Type ret = _newTypes.GetOrCreateValue(typeInfo,
                 delegate() {
@@ -218,7 +222,7 @@ namespace IronPython.Compiler.Generation {
 
             foreach (PythonType curBasePythonType in GetPythonTypes(typeName, bases)) {
                 // discover the initial base/interfaces
-                IList<Type> baseInterfaces = ArrayUtils.EmptyTypes;
+                IList<Type> baseInterfaces = Type.EmptyTypes;
                 Type curTypeToExtend = curBasePythonType.ExtensionType;
 
                 if (curBasePythonType.ExtensionType.IsInterface) {
@@ -504,6 +508,20 @@ namespace IronPython.Compiler.Generation {
                             BuiltinMethodDescriptor bmd = dts as BuiltinMethodDescriptor;
                             if (bmd != null) {
                                 bmd.Template.AddMethod(mi);
+
+                                lock (_overriddenMethods) {
+                                    Dictionary<string, List<MethodInfo>> overrideInfo;
+                                    if (!_overriddenMethods.TryGetValue(bmd.DeclaringType, out overrideInfo)) {
+                                        _overriddenMethods[bmd.DeclaringType] = overrideInfo = new Dictionary<string, List<MethodInfo>>();
+                                    }
+
+                                    List<MethodInfo> methods;
+                                    if (!overrideInfo.TryGetValue(newName, out methods)) {
+                                        overrideInfo[newName] = methods = new List<MethodInfo>();
+                                    }
+
+                                    methods.Add(mi);
+                                }
                             }
                         }
                     }
@@ -543,10 +561,10 @@ namespace IronPython.Compiler.Generation {
                 if (origIndex >= 0) {
                     if (pis[origIndex].IsDefined(typeof(ParamArrayAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamArrayAttribute).GetConstructor(ArrayUtils.EmptyTypes), ArrayUtils.EmptyObjects));
+                            typeof(ParamArrayAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects));
                     } else if (pis[origIndex].IsDefined(typeof(ParamDictionaryAttribute), false)) {
                         pb.SetCustomAttribute(new CustomAttributeBuilder(
-                            typeof(ParamDictionaryAttribute).GetConstructor(ArrayUtils.EmptyTypes), ArrayUtils.EmptyObjects));
+                            typeof(ParamDictionaryAttribute).GetConstructor(Type.EmptyTypes), ArrayUtils.EmptyObjects));
                     }
                 }
             }
@@ -911,12 +929,12 @@ namespace IronPython.Compiler.Generation {
                 _slotsField = _tg.DefineField(".SlotValues", tbp[0], FieldAttributes.Public);
                 _tupleType = tbp[0];
 
-                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0], ArrayUtils.EmptyTypes);
+                PropertyBuilder pb = _tg.DefineProperty("$SlotValues", PropertyAttributes.None, tbp[0], Type.EmptyTypes);
                 MethodBuilder mb = _tg.DefineMethod(
                     "get_$SlotValues",
                     MethodAttributes.Public,
                     tbp[0],
-                    ArrayUtils.EmptyTypes
+                    Type.EmptyTypes
                 );
                 ILGen il = CreateILGen(mb.GetILGenerator());
                 il.EmitLoadArg(0);
@@ -939,7 +957,7 @@ namespace IronPython.Compiler.Generation {
 
                 MethodBuilder method;
                 method = _tg.DefineMethod(FieldGetterPrefix + fi.Name, MethodAttributes.Public | MethodAttributes.HideBySig,
-                                          fi.FieldType, ArrayUtils.EmptyTypes);
+                                          fi.FieldType, Type.EmptyTypes);
                 ILGen il = CreateILGen(method.GetILGenerator());
                 il.EmitLoadArg(0);
                 il.EmitFieldGet(fi);

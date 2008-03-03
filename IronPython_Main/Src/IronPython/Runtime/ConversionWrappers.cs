@@ -20,6 +20,7 @@ using System.Text;
 
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
+using System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime {
 
@@ -27,7 +28,6 @@ namespace IronPython.Runtime {
         private IList<object> _value;
 
         public ListGenericWrapper(IList<object> value) { this._value = value; }
-
 
         #region IList<T> Members
 
@@ -181,7 +181,9 @@ namespace IronPython.Runtime {
         }
 
         public void CopyTo(KeyValuePair<K, V>[] array, int arrayIndex) {
-            throw new NotImplementedException("The method or operation is not implemented.");
+            foreach (KeyValuePair<K, V> kvp in this) {
+                array[arrayIndex++] = kvp;
+            }
         }
 
         public int Count {
@@ -233,15 +235,15 @@ namespace IronPython.Runtime {
         #region IList<T> Members
 
         public int IndexOf(T item) {
-            return list.IndexOf(item);
+            return ((IList)list).IndexOf(item);
         }
 
         public void Insert(int index, T item) {
-            list.Insert(index, item);
+            list.insert(index, item);
         }
 
         public void RemoveAt(int index) {
-            list.RemoveAt(index);
+            ((IList)list).RemoveAt(index);
         }
 
         public T this[int index] {
@@ -259,32 +261,32 @@ namespace IronPython.Runtime {
         #region ICollection<T> Members
 
         public void Add(T item) {
-            list.Add(item);
+            list.append(item);
         }
 
         public void Clear() {
-            list.Clear();
+            ((IList)list).Clear();
         }
 
         public bool Contains(T item) {
-            return list.Contains(item);
+            return list.__contains__(item);
         }
 
         public void CopyTo(T[] array, int arrayIndex) {
-            list.CopyTo(array, arrayIndex);
+            ((IList)list).CopyTo(array, arrayIndex);
         }
 
         public int Count {
-            get { return list.Count; }
+            get { return list.__len__(); }
         }
 
         public bool IsReadOnly {
-            get { return list.IsReadOnly; }
+            get { return ((IList)list).IsReadOnly; }
         }
 
         public bool Remove(T item) {
-            if (list.Contains(item)) {
-                list.Remove(item);
+            if (list.__contains__(item)) {
+                list.remove(item);
                 return true;
             }
             return false;
@@ -306,7 +308,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
-            return list.GetEnumerator();
+            return ((IEnumerable)list).GetEnumerator();
         }
 
         #endregion
@@ -323,17 +325,17 @@ namespace IronPython.Runtime {
         #region IDictionary<TKey,TValue> Members
 
         public void Add(TKey key, TValue value) {
-            dict.Add(key, value);
+            dict[key] = value;
         }
 
         public bool ContainsKey(TKey key) {
-            return dict.ContainsKey(key);
+            return dict.__contains__(key);
         }
 
         public ICollection<TKey> Keys {
             get {
                 List<TKey> res = new List<TKey>();
-                foreach (object o in dict.KeysAsList()) {
+                foreach (object o in dict.keys()) {
                     res.Add((TKey)o);
                 }
                 return res;
@@ -341,12 +343,12 @@ namespace IronPython.Runtime {
         }
 
         public bool Remove(TKey key) {
-            return dict.Remove(key);
+            return ((IDictionary<object, object>)this).Remove(key);
         }
 
         public bool TryGetValue(TKey key, out TValue value) {
             object retVal;
-            if (dict.TryGetValue(key, out retVal)) {
+            if (((IDictionary<object, object>)dict).TryGetValue(key, out retVal)) {
                 // will throw InvalidCastException (TypeError) if this fails.
                 value = (TValue)retVal;
                 return true;
@@ -358,7 +360,7 @@ namespace IronPython.Runtime {
         public ICollection<TValue> Values {
             get {
                 List<TValue> res = new List<TValue>();
-                foreach (object o in dict.ValuesAsList()) {
+                foreach (object o in dict.values()) {
                     res.Add((TValue)o);
                 }
                 return res;
@@ -379,7 +381,7 @@ namespace IronPython.Runtime {
         #region ICollection<KeyValuePair<TKey,TValue>> Members
 
         public void Add(KeyValuePair<TKey, TValue> item) {
-            dict.Add(new KeyValuePair<object, object>(item.Key, item.Value));
+            ((ICollection<KeyValuePair<object, object>>)dict).Add(new KeyValuePair<object, object>(item.Key, item.Value));
         }
 
         public void Clear() {
@@ -387,7 +389,7 @@ namespace IronPython.Runtime {
         }
 
         public bool Contains(KeyValuePair<TKey, TValue> item) {
-            return dict.Contains(new KeyValuePair<object, object>(item.Key, item.Value));
+            return dict.__contains__(new KeyValuePair<object, object>(item.Key, item.Value));
         }
 
         public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex) {
@@ -397,7 +399,7 @@ namespace IronPython.Runtime {
         }
 
         public int Count {
-            get { return dict.Count; }
+            get { return dict.__len__(); }
         }
 
         public bool IsReadOnly {
@@ -405,7 +407,7 @@ namespace IronPython.Runtime {
         }
 
         public bool Remove(KeyValuePair<TKey, TValue> item) {
-            return dict.Remove(new KeyValuePair<object, object>(item.Key, item.Value));
+            return ((IDictionary<object, object>)dict).Remove(new KeyValuePair<object, object>(item.Key, item.Value));
         }
 
         #endregion
@@ -423,7 +425,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return dict.KeysAsList().GetEnumerator();
+            return ((IEnumerable)dict.keys()).GetEnumerator();
         }
 
         #endregion
@@ -468,7 +470,7 @@ namespace IronPython.Runtime {
         #endregion
     }
 
-    [PythonType("enumerable_wrapper")]
+    [PythonSystemType("enumerable_wrapper")]
     public class IEnumerableOfTWrapper<T> : IEnumerable<T>, IEnumerable {
         IEnumerable enumerable;
 
@@ -486,7 +488,6 @@ namespace IronPython.Runtime {
 
         #region IEnumerable Members
 
-        [PythonName("__iter__")]
         IEnumerator IEnumerable.GetEnumerator() {
             return GetEnumerator();
         }

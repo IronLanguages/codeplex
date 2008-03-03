@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void PrepareForEmit(Compiler cg) {
+        public override void PrepareForEmit(LambdaCompiler cg) {
             _storage.PrepareForEmit(cg);
         }
 

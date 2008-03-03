@@ -73,8 +73,7 @@ def test_sanity_re():
     AreEqual(re.split("(abc){1}", ""), [''])
     AreEqual(re.split("(abc){1}", "abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(re.split("(abc){1}", "abc", 0), ['', 'abc', ''])
-    #CodePlex Work Item 6265
-    #AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
+    AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
     
     #findall
     AreEqual(re.findall("(abc){1}", ""), [])
@@ -89,6 +88,9 @@ def test_sanity_re():
     AreEqual([x.group() for x in re.finditer("(abc){1}", "abcxyz", re.L)], ['abc'])
     AreEqual([x.group() for x in re.finditer("(abc){1}", "abcxyz", flags=re.L)], ['abc'])
     AreEqual([x.group() for x in re.finditer("(abc){1}", "xyzabcabc")], ['abc', 'abc'])
+    rex = re.compile("foo")
+    for m in rex.finditer("this is a foo and a foo bar"):
+        AreEqual((m.pos, m.endpos), (0, 27))
     
     #sub
     AreEqual(re.sub("(abc){1}", "9", "abcd"), "9d")
@@ -150,8 +152,7 @@ def test_sanity_re_pattern():
     AreEqual(pattern.split(""), [''])
     AreEqual(pattern.split("abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(pattern.split("abc", 0), ['', 'abc', ''])
-    #CodePlex Work Item 6265
-    #AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
+    AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
     
     #findall
     AreEqual(pattern.findall(""), [])
@@ -241,8 +242,7 @@ def test_sanity_re_match():
     AreEqual(match_obj.pos, 0)
     
     #endpos
-    #CodePlex Work Item 6272
-    #AreEqual(match_obj.endpos, 36)
+    AreEqual(match_obj.endpos, 36)
     
     #lastindex
     AreEqual(match_obj.lastindex, 1)
@@ -359,8 +359,7 @@ def test_regs():
     pass         
              
 def test_endpos():
-    #CodePlex Work Item 6272
-    #AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").endpos, 8)
+    AreEqual(re.match('(baz)(bar)(m)', "bazbarmx").endpos, 8)
     pass
     
 def test_re():

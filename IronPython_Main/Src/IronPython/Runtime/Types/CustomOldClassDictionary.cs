@@ -15,24 +15,17 @@
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+using System.Threading;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace IronPython.Runtime.Types {
-    /// <summary>
-    /// Custom dictionary use for old class instances so commonly used
-    /// items can be accessed quickly w/o requiring dictionary access.
-    /// 
-    /// Keys are only added to the dictionary, once added they are never
-    /// removed.
-    /// 
-    /// TODO Merge this with TupleDictionary
-    /// </summary>
-    [PythonType(typeof(PythonDictionary))]
-    public class CustomOldClassDictionary : CustomSymbolDictionary {
+    public class CustomOldClassDictionaryStorage : CommonDictionaryStorage {
         private int _keyVersion;
         private SymbolId[] _extraKeys;
-        private object[] _values;
+        private object[] _values;        
 
-        public CustomOldClassDictionary(SymbolId[] extraKeys, int keyVersion) {
+        public CustomOldClassDictionaryStorage(SymbolId[] extraKeys, int keyVersion) {
             _extraKeys = extraKeys;
             _keyVersion = keyVersion;
             _values = new object[extraKeys.Length];
@@ -41,14 +34,95 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        public override void Add(object key, object value) {
+            Debug.Assert(!(key is SymbolId));
+
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                _values[ikey] = value;
+                return;
+            }
+
+            base.Add(key, value);
+        }
+
+        public override bool Contains(object key) {
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                return _values[ikey] != Uninitialized.Instance;
+            }
+
+            return base.Contains(key);
+        }
+
+        public override bool Remove(object key) {
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                if (Interlocked.Exchange<object>(ref _values[ikey], Uninitialized.Instance) != Uninitialized.Instance) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            return base.Remove(key);
+        }
+
+        public override bool TryGetValue(object key, out object value) {
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                value = _values[ikey];
+                if (value != Uninitialized.Instance) {
+                    return true;
+                }
+
+                value = null;
+                return false;
+            }
+
+            return base.TryGetValue(key, out value);
+        }
+
+        public override int Count {
+            get { 
+                int count = base.Count;
+                foreach (object o in _values) {
+                    if (o != Uninitialized.Instance) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+        }
+
+        public override void Clear() {
+            throw new System.NotImplementedException();
+        }
+
+        public override List<KeyValuePair<object, object>> GetItems() {
+            List<KeyValuePair<object, object>> res = base.GetItems();
+
+            for (int i = 0; i < _extraKeys.Length; i++) {
+                if (_extraKeys[i] != SymbolId.Empty && _values[i] != Uninitialized.Instance) {
+                    res.Add(new KeyValuePair<object, object>(SymbolTable.IdToString(_extraKeys[i]), _values[i]));
+                }
+            }
+            return res;
+        }
+
         public int KeyVersion {
             get {
                 return _keyVersion;
             }
         }
 
-        public override SymbolId[] GetExtraKeys() {
-            return _extraKeys;
+        public int FindKey(object key) {
+            string strKey = key as string;
+            if (strKey != null) {
+                return FindKey(SymbolTable.StringToId(strKey));
+            }
+
+            return -1;
         }
 
         public int FindKey(SymbolId key) {
@@ -60,10 +134,6 @@ namespace IronPython.Runtime.Types {
             return -1;
         }
 
-        public object GetExtraValue(int index) {
-            return _values[index];
-        }
-
         public object GetValueHelper(int index, object oldInstance) {
             object ret = _values[index];
             if (ret != Uninitialized.Instance) return ret;
@@ -73,45 +143,6 @@ namespace IronPython.Runtime.Types {
 
         public void SetExtraValue(int index, object value) {
             _values[index] = value;
-        }
-
-        protected override bool TrySetExtraValue(SymbolId keyId, object value) {
-            int key = keyId.Id;
-            for (int i = 0; i < _extraKeys.Length; i++) {
-                // see if we already have a key (once keys are assigned
-                // they never change) that matches this ID.
-                if (_extraKeys[i].Id == key) {
-                    _values[i] = value;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        protected override bool TryGetExtraValue(SymbolId keyId, out object value) {
-            int key = keyId.Id;
-            for (int i = 0; i < _extraKeys.Length; i++) {
-                if (_extraKeys[i].Id == key) {
-                    value = _values[i];
-                    return true;
-                }
-            }
-            value = null;
-            return false;
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, PythonType cls, object seq) {
-            return PythonDictionary.FromKeys(context, cls, seq, null);
-        }
-
-        [PythonClassMethod("fromkeys")]
-        public static object FromKeys(CodeContext context, PythonType cls, object seq, object value) {
-            return PythonDictionary.FromKeys(context, cls, seq, value);
-        }
-
-        public override string ToString() {
-            return DictionaryOps.__str__(this);
         }
     }
 }

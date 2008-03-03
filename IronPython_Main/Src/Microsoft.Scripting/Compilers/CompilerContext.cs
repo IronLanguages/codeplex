@@ -13,7 +13,6 @@
  *
  * ***************************************************************************/
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting {
@@ -27,81 +26,57 @@ namespace Microsoft.Scripting {
         /// <summary>
         /// Source unit currently being compiled in the CompilerContext
         /// </summary>
-        private readonly SourceUnit _sourceUnit;
+        private readonly SourceUnit/*!*/ _sourceUnit;
 
         /// <summary>
         /// Current error sink.
         /// </summary>
-        private readonly ErrorSink _errors;
+        private readonly ErrorSink/*!*/ _errors;
 
         /// <summary>
         /// Sink for parser callbacks (e.g. brace matching, etc.).
         /// </summary>
-        private readonly ParserSink _parserSink;
+        private readonly ParserSink/*!*/ _parserSink;
 
         /// <summary>
         /// Compiler specific options.
         /// </summary>
-        private readonly CompilerOptions _options;
+        private readonly CompilerOptions/*!*/ _options;
 
-        public int DefaultErrorCode { get { return -1; } }
-        public Severity DefaultSeverity { get { return Severity.Error; } }
-
-        public SourceUnit SourceUnit {
-            get {
+        public SourceUnit/*!*/ SourceUnit {
+            get { 
                 return _sourceUnit;
             }
         }
 
-        public ParserSink ParserSink {
+        public ParserSink/*!*/ ParserSink {
             get {
                 return _parserSink;
             }
         }
 
-        public ErrorSink Errors {
+        public ErrorSink/*!*/ Errors {
             get { return _errors; }
         }
 
-        public CompilerOptions Options {
+        public CompilerOptions/*!*/ Options {
             get { return _options; }
         }
 
-        public CompilerContext(SourceUnit sourceUnit)
-            : this(sourceUnit, null, null, null) {
+        public CompilerContext(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink)
+            : this(sourceUnit, options, errorSink, ParserSink.Null) {
         }
 
-        public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink)
-            : this(sourceUnit, options, errorSink, null) {
-        }
-
-        public CompilerContext(SourceUnit sourceUnit, CompilerOptions options, ErrorSink errorSink, ParserSink parserSink) {
+        public CompilerContext(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, ParserSink/*!*/ parserSink) {
             Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            Contract.RequiresNotNull(errorSink, "errorSink");
+            Contract.RequiresNotNull(parserSink, "parserSink");
+            Contract.RequiresNotNull(options, "options");
 
             _sourceUnit = sourceUnit;
-            _options = options ?? sourceUnit.LanguageContext.GetDefaultCompilerOptions();
-            _errors = errorSink ?? sourceUnit.LanguageContext.GetCompilerErrorSink();
-            _parserSink = parserSink ?? ParserSink.Null;
+            _options = options;
+            _errors = errorSink;
+            _parserSink = parserSink;
         }
-
-        public CompilerContext CopyWithNewSourceUnit(SourceUnit sourceUnit) {
-            return new CompilerContext(sourceUnit, (CompilerOptions)_options.Clone(), _errors);
-        }
-
-        #region Error Reporting
-
-        public void AddError(string message, SourceLocation start, SourceLocation end) {
-            AddError(message, start, end, DefaultSeverity, DefaultErrorCode);
-        }
-
-        public void AddError(string message, SourceLocation start, SourceLocation end, Severity severity) {
-            AddError(message, start, end, severity, DefaultErrorCode);
-        }
-
-        public void AddError(string message, SourceLocation start, SourceLocation end, Severity severity, int errorCode) {
-            _errors.Add(SourceUnit, message, new SourceSpan(start, end), errorCode, severity);
-        }
-
-        #endregion
     }
 }

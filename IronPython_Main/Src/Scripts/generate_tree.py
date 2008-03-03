@@ -63,7 +63,7 @@ expressions = [
     Expression("NegateChecked",                 "",                                     False),
     Expression("New",                           "NewExpression",                        True),
     Expression("NewArrayInit",                  "",                                     False),
-    Expression("NewArrayBounds",                "",                                     False),
+    Expression("NewArrayBounds",                "NewArrayExpression",                   True),
     Expression("Not",                           "UnaryExpression",                      True),
     Expression("NotEqual",                      "BinaryExpression",                     True),
     Expression("Or",                            "BinaryExpression",                     True),

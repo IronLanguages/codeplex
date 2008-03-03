@@ -62,6 +62,7 @@ namespace IronPython.Runtime.Calls {
         private static int DepthSlow;
         internal static int _MaximumDepth = 1001;          // maximum recursion depth allowed before we throw 
         internal static bool EnforceRecursion = false;    // true to enforce maximum depth, false otherwise
+        [MultiRuntimeAware]
         private static int _CurrentId = 1;
 
         /// <summary>
@@ -112,7 +113,7 @@ namespace IronPython.Runtime.Calls {
 
         public object func_globals {
             get {
-                return new GlobalsDictionary(_context.Scope);
+                return new PythonDictionary(new GlobalScopeDictionaryStorage(_context.Scope));
             }
         }
 
@@ -422,9 +423,9 @@ namespace IronPython.Runtime.Calls {
         IList<object> IMembersList.GetMemberNames(CodeContext context) {
             List list;
             if (_dict == null) {
-                list = List.Make();
+                list = PythonOps.MakeList();
             } else {
-                list = List.Make(_dict);
+                list = PythonOps.MakeListFromSequence(_dict);
             }
             list.AddNoLock(SymbolTable.IdToString(Symbols.Module));
 
@@ -788,7 +789,7 @@ namespace IronPython.Runtime.Calls {
                             EnsureParams();
 
                             exprArgs[_func.ExpandListPosition] = Ast.Call(
-                                typeof(PythonTuple).GetMethod("Make"),
+                                typeof(PythonOps).GetMethod("MakeTupleFromSequence"),
                                 Ast.ConvertHelper(Ast.ReadDefined(_params), typeof(object))
                             );
 
@@ -1124,7 +1125,7 @@ namespace IronPython.Runtime.Calls {
                 _init.Add(
                     Ast.Assign(_paramsLen,
                         Ast.Add(
-                            Ast.ReadProperty(Ast.ReadDefined(_params), typeof(List).GetProperty("Count")),
+                            Ast.Call(Ast.ReadDefined(_params), typeof(List).GetMethod("__len__")),
                             Ast.Constant(Action.Signature.GetProvidedPositionalArgumentCount())
                         )
                     )
@@ -1273,23 +1274,22 @@ namespace IronPython.Runtime.Calls {
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<function {0} at {1}>", func_name, PythonOps.HexId(this));
         }
 
         #endregion
     }
 
-    [PythonType("cell")]
-    public class ClosureCell : ICodeFormattable, IValueEquality {
+    [PythonSystemType("cell")]
+    public sealed class ClosureCell : ICodeFormattable, IValueEquality {
         private object _value;
 
         internal ClosureCell(object value) {
             _value = value;
         }
 
-        public object Contents {
-            [PythonName("cell_contents")]
+        public object cell_contents {
             get {
                 return _value;
             }
@@ -1297,7 +1297,7 @@ namespace IronPython.Runtime.Calls {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<cell at {0}: {1} object at {2}>",
                 IdDispenser.GetId(this),
                 PythonTypeOps.GetName(_value),
@@ -1308,23 +1308,21 @@ namespace IronPython.Runtime.Calls {
 
         #region IValueEquality Members
 
-        [SpecialNameAttribute]
-        public int GetValueHashCode() {
+        int IValueEquality.GetValueHashCode() {
             throw PythonOps.TypeError("unhashable type: cell");
         }
 
-        public bool ValueEquals(object other) {
-            return CompareTo(other) == 0;
+        bool IValueEquality.ValueEquals(object other) {
+            return __cmp__(other) == 0;
         }
 
-        public bool ValueNotEquals(object other) {
-            return CompareTo(other) != 0;
+        bool IValueEquality.ValueNotEquals(object other) {
+            return __cmp__(other) != 0;
         }
 
         #endregion
 
-        [SpecialNameAttribute]
-        public int CompareTo(object other) {
+        public int __cmp__(object other) {
             ClosureCell cc = other as ClosureCell;
             if (cc == null) throw PythonOps.TypeError("cell.__cmp__(x,y) expected cell, got {0}", PythonTypeOps.GetName(other));
 

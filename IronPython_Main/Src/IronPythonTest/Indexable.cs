@@ -509,7 +509,7 @@ namespace IronPythonTest {
             if (dict.TryGetValue("spam", out val) == false) flag += 10000;
 
             keys = string.Empty;
-            foreach (string s in dict.Keys) {
+            foreach (string s in SortedArray(dict.Keys, null)) {
                 keys += s;
             }
             values = 0;
@@ -520,10 +520,25 @@ namespace IronPythonTest {
             return flag;
         }
 
+        private T[] SortedArray<T>(ICollection<T> value, Comparison<T> comparer) {
+            T[] array = new T[value.Count];
+            value.CopyTo(array, 0);
+            if (comparer != null) {
+                Array.Sort(array, comparer);
+            } else {
+                Array.Sort(array);
+            }
+            return array;
+        }
+
+        private static int KeyValueComparer(KeyValuePair<string, int> x, KeyValuePair<string, int> y) {
+            return String.Compare(x.Key, y.Key);
+        }
+
         public void Loop(out string keys, out int values) {
             keys = string.Empty;
             values = 0;
-            foreach (KeyValuePair<string, int> pair in dict) {
+            foreach (KeyValuePair<string, int> pair in SortedArray(dict, KeyValueComparer)) {
                 keys += pair.Key;
                 values += pair.Value;
             }

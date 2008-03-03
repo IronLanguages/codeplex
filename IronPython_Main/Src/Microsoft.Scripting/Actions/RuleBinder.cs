@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Actions {
     /// Rule binder resolves variables in the rule and nested lambdas.
     /// </summary>
     class RuleBinder : VariableBinder {
-        private readonly CodeBlockInfo _top = new CodeBlockInfo(null);
+        private readonly CodeBlockInfo _top = new CodeBlockInfo(null, null);
         private readonly Type _result;
 
         /// <summary>

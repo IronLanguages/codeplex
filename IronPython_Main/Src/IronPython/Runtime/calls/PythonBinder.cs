@@ -33,10 +33,13 @@ using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using IronPython.Compiler.Generation;
 
     public class PythonBinder : ActionBinder {
         private PythonContext/*!*/ _context;
+        [MultiRuntimeAware]
         private static Dictionary<string, string[]> _memberMapping;
+        [MultiRuntimeAware]
         private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
 
         public PythonBinder(PythonContext/*!*/ pythonContext, CodeContext context)
@@ -184,6 +187,10 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
+        public override ErrorInfo MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker info, Expression assignedValue) {
+            return MakeMissingMemberError(accessingType, info.Name);
+        }
+        
         public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression/*!*/>/*!*/ parameters) {
             Contract.RequiresNotNull(tracker, "tracker");
             Contract.RequiresNotNull(parameters, "parameters");
@@ -204,10 +211,10 @@ namespace IronPython.Runtime.Calls {
             return PythonTypeOps.GetName(t);
         }
 
-        private MemberGroup GetInstanceOpsMethod(params string[] names) {
+        private MemberGroup GetInstanceOpsMethod(Type extends, params string[] names) {
             MethodTracker[] trackers = new MethodTracker[names.Length];
             for (int i = 0; i < names.Length; i++) {
-                trackers[i] = (MethodTracker)MemberTracker.FromMemberInfo(typeof(InstanceOps).GetMethod(names[i]), true);
+                trackers[i] = (MethodTracker)MemberTracker.FromMemberInfo(typeof(InstanceOps).GetMethod(names[i]), extends);
             }
 
             return new MemberGroup(trackers);
@@ -217,27 +224,30 @@ namespace IronPython.Runtime.Calls {
             // Python type customization:
             switch (name) {
                 case "__str__":
-                    MethodInfo tostr = type.GetMethod("ToString", ArrayUtils.EmptyTypes);
+                    MethodInfo tostr = type.GetMethod("ToString", Type.EmptyTypes);
                     if (tostr != null && tostr.DeclaringType != typeof(object)) {
-                        return GetInstanceOpsMethod("ToStringMethod");
+                        return GetInstanceOpsMethod(type, "ToStringMethod");
                     }
                     break;
                 case "__repr__":
-                    if (typeof(ICodeFormattable).IsAssignableFrom(type) && !type.IsInterface) {
-                        return GetInstanceOpsMethod("ReprHelper");
+                    if (!typeof(ICodeFormattable).IsAssignableFrom(type) || type.IsInterface) {
+                        // __repr__ for normal .NET types is special, if we have a real __repr__ we'll call it below
+                        return GetInstanceOpsMethod(type, "FancyRepr");
                     }
-                    return GetInstanceOpsMethod("FancyRepr");
+                    break;
                 case "__init__":
                     // non-default init would have been handled by the Python binder.
-                    return GetInstanceOpsMethod("DefaultInit", "DefaultInitKW");
+                    return GetInstanceOpsMethod(type, "DefaultInit", "DefaultInitKW");
+                case "__new__":
+                    return new MemberGroup(type.GetConstructors());
                 case "next":
                     if (typeof(IEnumerator).IsAssignableFrom(type)) {
-                        return GetInstanceOpsMethod("NextMethod");
+                        return GetInstanceOpsMethod(type, "NextMethod");
                     }
                     break;
                 case "__get__":
                     if (typeof(PythonTypeSlot).IsAssignableFrom(type)) {
-                        return GetInstanceOpsMethod("GetMethod");
+                        return GetInstanceOpsMethod(type, "GetMethod");
                     }
                     break;
             }
@@ -246,7 +256,30 @@ namespace IronPython.Runtime.Calls {
             // normal binding
             MemberGroup res = base.GetMember(action, type, name);
             if (res.Count > 0) {
+                lock (NewTypeMaker._overriddenMethods) {
+                    Dictionary<string, List<MethodInfo>> methods;
+                    if (NewTypeMaker._overriddenMethods.TryGetValue(type, out methods)) {
+                        List<MethodInfo> methodList;
+                        if (methods.TryGetValue(name, out methodList)) {
+                            List<MemberTracker> members = new List<MemberTracker>(res.Count + methodList.Count);
+                            members.AddRange(res);
+                            foreach (MethodInfo mi in methodList) {
+                                members.Add(MemberTracker.FromMemberInfo(mi));
+                            }
+                            res = new MemberGroup(members.ToArray());
+                        }
+                    }
+                }
                 return res;
+            }
+
+            if (type.IsInterface) {
+                foreach (Type t in type.GetInterfaces()) {
+                    res = GetMember(action, t, name);
+                    if (res.Count > 0) {
+                        return res;
+                    }
+                }
             }
             
             // try mapping __*__ methods to .NET method names
@@ -331,8 +364,8 @@ namespace IronPython.Runtime.Calls {
             return true;
         }
 
-        public override Expression MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(
+        public override ErrorInfo MakeMissingMemberError(Type type, string name) {
+            return ErrorInfo.FromException(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Constant(String.Format("'{0}' object has no attribute '{1}'", PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(type)), name))
@@ -421,6 +454,7 @@ namespace IronPython.Runtime.Calls {
             AddMapping(res, "Reduce", "__reduce__", "__reduce_ex__");
             AddMapping(res, "CodeRepresentation", "__repr__");
 
+            AddMapping(res, "Add", "append");
             AddMapping(res, "Contains", "__contains__");
             AddMapping(res, "CompareTo", "__cmp__");
             AddMapping(res, "DelIndex", "__delitem__");
@@ -430,6 +464,7 @@ namespace IronPython.Runtime.Calls {
             AddMapping(res, "Clone", "copy");
             AddMapping(res, "GetIndex", "get");
             AddMapping(res, "HasKey", "has_key");
+            AddMapping(res, "Insert", "insert");
             AddMapping(res, "Items", "items");
             AddMapping(res, "IterItems", "iteritems");
             AddMapping(res, "IterKeys", "iterkeys");
@@ -437,7 +472,10 @@ namespace IronPython.Runtime.Calls {
             AddMapping(res, "Keys", "keys");
             AddMapping(res, "Pop", "pop");
             AddMapping(res, "PopItem", "popitem");
+            AddMapping(res, "Remove", "remove");
+            AddMapping(res, "RemoveAt", "pop");
             AddMapping(res, "SetDefault", "setdefault");
+            AddMapping(res, "ToFloat", "__float__");
             AddMapping(res, "Values", "values");
             AddMapping(res, "Update", "update");
 
@@ -474,7 +512,7 @@ namespace IronPython.Runtime.Calls {
             _extTypes[extended] = extension;
         }
 
-        protected override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
+        public override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
             switch (memberTracker.MemberType) {
                 case TrackerTypes.TypeGroup:
                     return Ast.RuntimeConstant(memberTracker);
@@ -491,15 +529,25 @@ namespace IronPython.Runtime.Calls {
                         Ast.Null(),
                         Ast.Constant(type)
                     );
+                case TrackerTypes.Field:
+                    return ReturnFieldTracker((FieldTracker)memberTracker);
                 case TrackerTypes.MethodGroup:
                     return ReturnMethodGroup((MethodGroup)memberTracker);
+                case TrackerTypes.Constructor:
+                    ConstructorFunction cf = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, type.GetConstructors());
+                    return Ast.RuntimeConstant(cf);
+
             }
 
             return base.ReturnMemberTracker(type, memberTracker);
         }
 
+        private Expression ReturnFieldTracker(FieldTracker fieldTracker) {
+            return Ast.RuntimeConstant(PythonTypeOps.GetReflectedField(fieldTracker.Field));
+        }
+
         private Expression ReturnMethodGroup(MethodGroup methodGroup) {
-            return Ast.RuntimeConstant(GetBuiltinFunction(methodGroup));
+            return Ast.RuntimeConstant(PythonTypeOps.GetMethodIfMethod(GetBuiltinFunction(methodGroup)));
         }
 
         private Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker) {
@@ -530,19 +578,14 @@ namespace IronPython.Runtime.Calls {
             throw new NotImplementedException();
         }
 
-        private PythonTypeSlot GetBuiltinFunction(MethodGroup mg) {
-            return PythonTypeOps.GetBuiltinFunction(mg.DeclaringType,
+        private BuiltinFunction GetBuiltinFunction(MethodGroup mg) {
+            return PythonTypeOps.GetBuiltinFunction(
+                mg.DeclaringType,
                 mg.Methods[0].Name,
                 (mg.ContainsInstance ? FunctionType.Method : FunctionType.None) |
                 (mg.ContainsStatic ? FunctionType.Function : FunctionType.None),
-                mg.GetMethodBases());
-        }
-
-        private PythonTypeSlot GetBuiltinFunction(MethodTracker mt) {
-            return PythonTypeOps.GetBuiltinFunction(mt.DeclaringType,
-                mt.Name,
-                mt.IsStatic ? FunctionType.Function : FunctionType.Method,
-                mt.Method);
+                mg.GetMethodBases()
+            );            
         }
 
         private Expression ReturnPropertyTracker(PropertyTracker propertyTracker) {
@@ -553,24 +596,41 @@ namespace IronPython.Runtime.Calls {
             ReflectedPropertyTracker rpt = propertyTracker as ReflectedPropertyTracker;
             if (rpt != null) {
                 return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property,
-                    rpt.GetGetMethod(_context.DomainManager.GlobalOptions.PrivateBinding),
-                    rpt.GetSetMethod(_context.DomainManager.GlobalOptions.PrivateBinding),
+                    IncludePropertyMethod(rpt.GetGetMethod(true)),
+                    IncludePropertyMethod(rpt.GetSetMethod(true)),
                     NameType.Property));
             }
 
             return Ast.RuntimeConstant(new ReflectedExtensionProperty(
                 new ExtensionPropertyInfo(
-                    rpt.DeclaringType,
-                    rpt.GetGetMethod(_context.DomainManager.GlobalOptions.PrivateBinding) ?? 
-                        rpt.GetSetMethod(_context.DomainManager.GlobalOptions.PrivateBinding)
+                    propertyTracker.DeclaringType,
+                    IncludePropertyMethod(propertyTracker.GetGetMethod(true)) ??
+                        IncludePropertyMethod(propertyTracker.GetSetMethod(true))
                 ),
                 NameType.Property)
             );
         }
 
+        private MethodInfo IncludePropertyMethod(MethodInfo method) {
+            if (_context.DomainManager.GlobalOptions.PrivateBinding) return method;
+
+            if (method != null) {
+                if (method.IsPrivate || (method.IsAssembly && !method.IsFamilyOrAssembly)) {
+                    return null;
+                }
+            }
+
+            // method is public, protected, or null
+            return method;
+        }
+
         private static Expression ReturnTypeTracker(TypeTracker memberTracker) {
             // all non-group types get exposed as PythonType's
             return Ast.RuntimeConstant(DynamicHelpers.GetPythonTypeFromType(memberTracker.Type));
+        }
+
+        protected override bool AllowKeywordArgumentSetting(MethodBase method) {
+            return CompilerHelpers.IsConstructor(method) && !method.DeclaringType.IsDefined(typeof(PythonSystemTypeAttribute), true);
         }
     }
 }

@@ -32,10 +32,15 @@ def test_mkdir():
     nt.rmdir('dir_create_test')
     AreEqual(nt.listdir(nt.getcwd()).count('dir_create_test'), 0)
 
-@disabled("CodePlex Work Item 1216")    
+@disabled("CodePlex Work Item 1216")
 def test_mkdir_negative():    
     nt.mkdir("dir_create_test")
-    AssertError(WindowsError, nt.mkdir, "dir_create_test")
+    try:
+        nt.mkdir("dir_create_test")
+        AssertUnreachable("Cannot create the same directory twice")
+    except WindowsError, e:
+        AreEqual(e.errno, 17)
+        
     #if it fails once...it should fail again
     AssertError(WindowsError, nt.mkdir, "dir_create_test")
     nt.rmdir('dir_create_test')
@@ -478,8 +483,8 @@ def test_remove():
     nt.remove(path1+'\\create_test_file.txt')
     AreEqual(nt.listdir(nt.getcwd()).count('create_test_file.txt'), 0)
     
-    # BUG 8780, IP does not throw 
-    #AssertError(OSError, nt.remove, path1+'\\create_test_file2.txt')
+    AssertError(OSError, nt.remove, path1+'\\create_test_file2.txt')
+    AssertError(OSError, nt.unlink, path1+'\\create_test_file2.txt')
     
     # the path is a type other than string
     AssertError(TypeError, nt.remove, 1)

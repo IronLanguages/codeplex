@@ -826,7 +826,6 @@ def test_main_dict():
         AreEqual(t_list, g_list)
     
 
-@disabled("CodePlex 3117")
 def test_update():
     test_cases = (
         #N changes with an empty dict

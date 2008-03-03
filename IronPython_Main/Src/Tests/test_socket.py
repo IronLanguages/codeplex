@@ -314,12 +314,11 @@ def test_getnameinfo():
     Tests socket.getnameinfo()
     '''
     #sanity
-    #CodePlex Work Item 5447
-    #socket.getnameinfo(("127.0.0.1", 80), 8)
-    #socket.getnameinfo(("127.0.0.1", 80), 9)
+    socket.getnameinfo(("127.0.0.1", 80), 8)
+    socket.getnameinfo(("127.0.0.1", 80), 9)
         
-    #host, service = socket.getnameinfo( ("127.0.0.1", 80), 8)
-    #AreEqual(service, '80')
+    host, service = socket.getnameinfo( ("127.0.0.1", 80), 8)
+    AreEqual(service, '80')
         
     if is_cli:
         AssertError(NotImplementedError, socket.getnameinfo, ("127.0.0.1", 80), 0)
@@ -421,6 +420,30 @@ def test_cp10825():
     finally:
         temp_url.close()
 
+@skip("cli")
+def test_cp12452():
+    '''
+    Need to fully test socket._fileobj when this bug gets fixed.
+    '''
+    expected_dir = [
+                    '__module__', 
+                    #-- Implementation dependent
+                    #'__slots__',
+                    #-- "_xyz" members probably do not need to be reimplemented in IP...
+                    #'_close', '_get_wbuf_len', '_getclosed', '_rbuf', 
+                    #'_rbufsize', '_sock', '_wbuf', '_wbufsize',
+                    '__class__', '__del__', '__delattr__', '__doc__', 
+                    '__getattribute__', '__hash__', '__init__', '__iter__', 
+                    '__new__', '__reduce__', '__reduce_ex__', 
+                    '__repr__', '__setattr__', '__str__', 
+                     'bufsize', 
+                    'close', 'closed', 'default_bufsize', 'fileno', 'flush', 
+                    'mode', 'name', 'next', 'read', 'readline', 'readlines', 
+                    'softspace', 'write', 'writelines']
+    fileobject_dir = dir(socket._fileobject)
+    
+    missing = [ x for x in expected_dir if x not in fileobject_dir ]
+    AreEqual([], missing)
 
 
 run_test(__name__)

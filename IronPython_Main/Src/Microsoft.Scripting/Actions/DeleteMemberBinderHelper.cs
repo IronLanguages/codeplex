@@ -23,7 +23,8 @@ using Microsoft.Scripting.Runtime;
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
-    class DeleteMemberBinderHelper<T> : MemberBinderHelper<T, DeleteMemberAction> {
+    public class DeleteMemberBinderHelper<T> : MemberBinderHelper<T, DeleteMemberAction> {
+        private bool _isStatic;
 
         public DeleteMemberBinderHelper(CodeContext context, DeleteMemberAction action, object[] args)
             : base(context, action, args) {
@@ -38,13 +39,21 @@ namespace Microsoft.Scripting.Actions {
 
         private Expression MakeDeleteMemberTarget() {
             Type type = CompilerHelpers.GetType(Target);
+
+            if (typeof(TypeTracker).IsAssignableFrom(type)) {
+                type = ((TypeTracker)Target).Type;
+                _isStatic = true;
+                Rule.AddTest(Ast.Equal(Rule.Parameters[0], Ast.RuntimeConstant(Arguments[0])));
+            } 
+
+
             // This goes away when ICustomMembers goes away.
-            if (typeof(ICustomMembers).IsAssignableFrom(type)) {
+            if (!_isStatic && typeof(ICustomMembers).IsAssignableFrom(type)) {
                 MakeCustomMembersBody(type);
                 return Body;
             }
 
-            if (!MakeOperatorGetMemberBody(type, "DeleteMember")) {
+            if (_isStatic || !MakeOperatorGetMemberBody(type, "DeleteMember")) {
                 MemberGroup group = Binder.GetMember(Action, type, StringName);
                 if (group.Count != 0) {
                     if (group[0].MemberType == TrackerTypes.Property) {

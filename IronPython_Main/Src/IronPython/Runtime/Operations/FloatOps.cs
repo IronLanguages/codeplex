@@ -33,15 +33,15 @@ using IronPython.Runtime.Operations;
 namespace IronPython.Runtime.Operations {
 
     public static partial class DoubleOps {
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Double) return 0.0;
 
             return cls.CreateInstance(context);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls, object x) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, object x) {
             if (cls == TypeCache.Double) {
                 if (x is string) {
                     return ParseFloat((string)x);
@@ -74,7 +74,7 @@ namespace IronPython.Runtime.Operations {
 
         #region Binary operators
 
-        [SpecialName, PythonName("__divmod__")]
+        [SpecialName]
         [return: MaybeNotImplemented]
         public static object DivMod(double x, double y) {
             object div = FloorDivide(x, y);
@@ -110,10 +110,9 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        [PythonName("__coerce__")]
-        public static PythonTuple Coerce(CodeContext context, double x, object o) {
+        public static PythonTuple __coerce__(CodeContext context, double x, object o) {
             // called via builtin.coerce()
-            double d = (double)Make(context, TypeCache.Double, o);
+            double d = (double)__new__(context, TypeCache.Double, o);
 
             if (Double.IsInfinity(d)) {
                 throw PythonOps.OverflowError("number too big");
@@ -123,8 +122,8 @@ namespace IronPython.Runtime.Operations {
         }
         
         #region Unary operators
-        [SpecialName, PythonName("__int__")]
-        public static object ToInteger(double d) {
+
+        public static object __int__(double d) {
             if (Int32.MinValue <= d && d <= Int32.MaxValue) {
                 return (int)d;
             } else if (Int64.MinValue <= d && d <= Int64.MaxValue) {
@@ -134,40 +133,37 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext context, double self) {
-            return PythonTuple.MakeTuple(DoubleOps.Make(context, TypeCache.Double, self));
+        public static object __getnewargs__(CodeContext context, double self) {
+            return PythonTuple.MakeTuple(DoubleOps.__new__(context, TypeCache.Double, self));
         }
+
         #endregion
 
         #region ToString
 
-       [SpecialName, PythonName("__str__")]
-        public static string ToString(double x) {
+        public static string __str__(double x) {
             StringFormatter sf = new StringFormatter("%.12g", x);
             sf._TrailingZeroAfterWholeFloat = true;
             return sf.Format();
         }
 
-        [SpecialName, PythonName("__str__")]
-        public static string ToString(double x, IFormatProvider provider) {
+        public static string __str__(double x, IFormatProvider provider) {
             return x.ToString(provider);
         }
-        [SpecialName, PythonName("__str__")]
-        public static string ToString(double x, string format) {
+
+        public static string __str__(double x, string format) {
             return x.ToString(format);
         }
-        [SpecialName, PythonName("__str__")]
-        public static string ToString(double x, string format, IFormatProvider provider) {
+
+        public static string __str__(double x, string format, IFormatProvider provider) {
             return x.ToString(format, provider);
         }
 
-        [SpecialName, PythonName("__hash__")]
-        public static int GetHashCode(double x) {
+        public static int __hash__(double x) {
             return (int)x;
         }
 
-        public static string ToString(float x) {
+        public static string __str__(float x) {
             // Python does not natively support System.Single. However, we try to provide
             // formatting consistent with System.Double.
             StringFormatter sf = new StringFormatter("%.6g", x);
@@ -176,6 +172,35 @@ namespace IronPython.Runtime.Operations {
         }
 
         #endregion
+
+        [SpecialName]
+        public static bool LessThan(double x, double y) {
+            return Compare(x, y) < 0;
+        }
+        [SpecialName]
+        public static bool LessThanOrEqual(double x, double y) {
+            return Compare(x, y) <= 0;
+        }
+        [SpecialName]
+        public static bool GreaterThan(double x, double y) {
+            return Compare(x, y) > 0;
+        }
+        [SpecialName]
+        public static bool GreaterThanOrEqual(double x, double y) {
+            return Compare(x, y) >= 0;
+        }
+        [SpecialName]
+        public static bool Equals(double x, double y) {
+            return Compare(x, y) == 0;
+        }
+        [SpecialName]
+        public static bool NotEquals(double x, double y) {
+            return Compare(x, y) != 0;
+        }
+
+        internal static int Compare(double x, double y) {
+            return x.CompareTo(y);
+        }
 
         [SpecialName]
         public static bool LessThan(double x, BigInteger y) {

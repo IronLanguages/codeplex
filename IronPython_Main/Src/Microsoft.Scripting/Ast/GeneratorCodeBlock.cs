@@ -46,8 +46,8 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Type _next;
 
-        internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next, ReadOnlyCollection<Variable> parameters, List<Variable> variables)
-            : base(span, name, typeof(object), parameters, variables, false, true) {
+        internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next, Expression body, ReadOnlyCollection<Variable> parameters, List<Variable> variables)
+            : base(span, name, typeof(object), body, parameters, variables, false, true, false, false) {
             _generator = generator;
             _next = next;
         }
@@ -62,15 +62,18 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static CodeBlock Generator(SourceSpan span, string name, Type generator, Type next, Variable[] parameters, Variable[] variables) {
+        public static CodeBlock Generator(SourceSpan span, string name, Type generator, Type next, Expression body, Variable[] parameters, Variable[] variables) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(generator, "generator");
             Contract.RequiresNotNull(next, "next");
+            Contract.RequiresNotNull(body, "body");
             Contract.Requires(TypeUtils.CanAssign(typeof(Generator), generator), "generator", "The generator type must inherit from Generator");
             Contract.RequiresNotNullItems(parameters, "parameters");
             Contract.RequiresNotNullItems(variables, "variables");
 
-            CodeBlock block = new GeneratorCodeBlock(span, name, generator, next, CollectionUtils.ToReadOnlyCollection(parameters), new List<Variable>(variables));
+            CodeBlock block = new GeneratorCodeBlock(span, name, generator, next, body,
+                                                     CollectionUtils.ToReadOnlyCollection(parameters),
+                                                     new List<Variable>(variables));
 
             // TODO: Remove when variable no longer has block.
             SetBlock(parameters, block);

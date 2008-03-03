@@ -35,8 +35,8 @@ namespace IronPython.Runtime.Operations {
         private static readonly BigInteger DecimalMax = BigInteger.Create(Decimal.MaxValue);
         private static readonly BigInteger DecimalMin = BigInteger.Create(Decimal.MinValue);        
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls, string s, int radix) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, string s, int radix) {
             if (radix == 16) {
                 s = Int32Ops.TrimRadix(s);
             }
@@ -57,8 +57,8 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls, object x) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, object x) {
             if (cls == TypeCache.BigInteger) {
                 if (x is string) return ParseBigIntegerSign((string)x, 10);
                 BigInteger intVal;
@@ -85,8 +85,8 @@ namespace IronPython.Runtime.Operations {
                 StringOps.Quote(PythonOps.GetPythonTypeName(x)));
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls) {
             if (cls == TypeCache.BigInteger) {
                 return BigInteger.Zero;
             } else {
@@ -342,7 +342,7 @@ namespace IronPython.Runtime.Operations {
         }
         #endregion
 
-        [SpecialName, PythonName("__divmod__")]
+        [SpecialName]
         public static PythonTuple DivMod(BigInteger x, BigInteger y) {
             BigInteger div, mod;
             div = DivMod(x, y, out mod);
@@ -351,29 +351,24 @@ namespace IronPython.Runtime.Operations {
 
         #region Unary operators
 
-        [SpecialName, PythonName("__abs__")]
-        public static object Abs(BigInteger x) {
+        public static object __abs__(BigInteger x) {
             return x.Abs();
         }
 
-        [SpecialName, PythonName("__nonzero__")]
-        public static bool ConvertToBoolean(BigInteger x) {
+        public static bool __nonzero__(BigInteger x) {
             return !x.IsZero();
         }
 
-        [SpecialName, PythonName("__neg__")]
+        [SpecialName]
         public static object Negate(BigInteger x) {
             return -x;
         }
 
-        [SpecialName, PythonName("__pos__")]
-        public static object Positive(BigInteger x) {
+        public static object __pos__(BigInteger x) {
             return x;
         }
 
-
-        [SpecialName, PythonName("__int__")]
-        public static object ToInt(BigInteger x) {
+        public static object __int__(BigInteger x) {
             // The python spec says __int__  should return a long if needed, rather than overflow.
             int i32;
             if (x.AsInt32(out i32)) {
@@ -383,13 +378,11 @@ namespace IronPython.Runtime.Operations {
             return x;
         }
 
-        [SpecialName, PythonName("__float__")]
-        public static object ToFloat(BigInteger self) {
+        public static object __float__(BigInteger self) {
             return self.ToFloat64();
         }
 
-        [SpecialName, PythonName("__oct__")]
-        public static string Oct(BigInteger x) {
+        public static string __oct__(BigInteger x) {
             if (x == BigInteger.Zero) {
                 return "0L";
             } else if (x > 0) {
@@ -399,8 +392,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [SpecialName, PythonName("__hex__")]
-        public static string Hex(BigInteger x) {
+        public static string __hex__(BigInteger x) {
             // CPython 2.5 prints letters in lowercase, with a capital L. 
             if (x < 0) {
                 return "-0x" + (-x).ToString(16).ToLower() + "L";
@@ -409,18 +401,16 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext context, BigInteger self) {
+        public static object __getnewargs__(CodeContext context, BigInteger self) {
             if (!Object.ReferenceEquals(self, null)) {
-                return PythonTuple.MakeTuple(BigIntegerOps.Make(context, TypeCache.BigInteger, self));
+                return PythonTuple.MakeTuple(BigIntegerOps.__new__(context, TypeCache.BigInteger, self));
             }
             throw PythonOps.TypeErrorForBadInstance("__getnewargs__ requires a 'long' object but received a '{0}'", self);
         }
+
         #endregion
 
-
         // These functions make the code generation of other types more regular
-
         internal static BigInteger OnesComplement(BigInteger x) {
             return ~x;
         }
@@ -441,7 +431,7 @@ namespace IronPython.Runtime.Operations {
             return x ^ y;
         }
 
-        [ExplicitConversionMethod]
+        [SpecialName, ExplicitConversionMethod]
         public static int ConvertToInt32(BigInteger self) {
             int res;
             if (self.AsInt32(out res)) return res;
@@ -449,18 +439,16 @@ namespace IronPython.Runtime.Operations {
             throw Converter.CannotConvertOverflow("int", self);
         }
 
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static BigInteger ConvertToBigInteger(bool self) {
             return self ? BigInteger.One : BigInteger.Zero;
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(BigInteger x, BigInteger y) {
+        public static int __cmp__(BigInteger x, BigInteger y) {
             return x.CompareTo(y);
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, int y) {
+        public static int __cmp__(CodeContext context, BigInteger x, int y) {
             int ix;
             if (x.AsInt32(out ix)) {                
                 return ix == y ? 0 : ix > y ? 1 : -1;
@@ -469,8 +457,7 @@ namespace IronPython.Runtime.Operations {
             return BigInteger.Compare(x, y);
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, uint y) {
+        public static int __cmp__(CodeContext context, BigInteger x, uint y) {
             uint ix;
             if (x.AsUInt32(out ix)) {
                 return ix == y ? 0 : ix > y ? 1 : -1;
@@ -479,32 +466,26 @@ namespace IronPython.Runtime.Operations {
             return BigInteger.Compare(x, y);
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, double y) {
+        public static int __cmp__(CodeContext context, BigInteger x, double y) {
             return -((int)DoubleOps.Compare(y, x));
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, Extensible<double> y) {
+        public static int __cmp__(CodeContext context, BigInteger x, Extensible<double> y) {
             return -((int)DoubleOps.Compare(y.Value, x));
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, decimal y) {            
-            return DecimalOps.Compare(x, y);
+        public static int __cmp__(CodeContext context, BigInteger x, decimal y) {            
+            return DecimalOps.__cmp__(x, y);
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static int Compare(CodeContext context, BigInteger x, bool y) {
-            return Compare(x, y ? 1 : 0);
+        public static int __cmp__(CodeContext context, BigInteger x, bool y) {
+            return __cmp__(x, y ? 1 : 0);
         }
 
-        [PythonName("__long__")]
         public static BigInteger __long__(BigInteger self) {
             return self;
         }
 
-        [PythonName("__index__")]
         public static BigInteger __index__(BigInteger self) {
             return self;
         }

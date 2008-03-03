@@ -185,5 +185,25 @@ namespace IronPython.Runtime.Operations {
 
             throw PythonOps.ValueError("one's complement cannot be applied to {0}", self.GetType());
         }
+
+        public static bool __nonzero__(object self) {
+            if (self is Enum) {
+                Type selfType = self.GetType();
+                Type underType = Enum.GetUnderlyingType(selfType);
+
+                switch(Type.GetTypeCode(underType)) {
+                    case TypeCode.Int16: return (short)self != 0;
+                    case TypeCode.Int32: return (int)self != 0;
+                    case TypeCode.Int64: return (long)self != 0;
+                    case TypeCode.UInt16: return (ushort)self != 0;
+                    case TypeCode.UInt32: return (uint)self != 0;
+                    case TypeCode.UInt64: return ~(ulong)self != 0;
+                    case TypeCode.Byte: return (byte)self != 0;
+                    case TypeCode.SByte: return (sbyte)self != 0;
+                }
+            }
+
+            throw PythonOps.ValueError("__nonzero__ cannot be applied to {0}", self.GetType());
+        }
     }
 }

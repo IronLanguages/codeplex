@@ -170,6 +170,25 @@ def find_peverify():
 """
     return None  
 
+def get_mod_names(filename):
+    '''
+    Returns a list of all Python modules and subpackages in the same location 
+    as filename w/o their ".py" extension.
+    '''
+    directory = filename
+    
+    if file_exists(filename):
+        directory = get_directory_name(filename)
+    else:
+        raise Exception("%s does not exist!" % (str(filename)))
+    
+    #Only look at files with the .py extension and directories.    
+    ret_val = [x.rsplit(".py")[0] for x in nt.listdir(directory) if (x.endswith(".py") or "." not in x) \
+               and x.lower()!="__init__.py"]
+    
+    return ret_val
+    
+        
 
 def delete_all_f(module_name):
     module = sys.modules[module_name]

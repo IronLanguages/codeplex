@@ -18,6 +18,22 @@ import sys
 
 AreEqual(sys.exc_info(), (None, None, None))
 
+@skip("win32")
+def test_exception_line_no_with_finally():
+    def f():
+        try:
+            raise Exception()   # this line should correspond w/ the number below
+        finally:
+            pass 
+    
+    try:
+        f()
+    except Exception, e:
+        tb = sys.exc_info()[2]
+        while tb:
+            AreEqual(tb.tb_lineno, 25) # adding lines will require an update here
+            tb = tb.tb_next
+            
 if is_cli or is_silverlight:
     def test_system_exception():
         import System
@@ -726,10 +742,34 @@ def test_sanity():
     
     if not is_silverlight:
         #special cases
-        exceptions.UnicodeEncodeError("1", u"2", 3, 4, "e")
+        encode_except = exceptions.UnicodeEncodeError("1", u"2", 3, 4, "5")
+        AreEqual(encode_except.encoding, "1")
+        AreEqual(encode_except.object, u"2")
+        AreEqual(encode_except.start, 3)
+        AreEqual(encode_except.end, 4)
+        AreEqual(encode_except.reason, "5")
+        AreEqual(encode_except.message, "")
+        
         #CodePlex Work Item 356
         #AssertError(TypeError, exceptions.UnicodeDecodeError, "1", u"2", 3, 4, "e")
         exceptions.UnicodeDecodeError("1", "2", 3, 4, "e")
+        
+        decode_except = exceptions.UnicodeDecodeError("1", "2", 3, 4, "5")
+        AreEqual(decode_except.encoding, "1")
+        AreEqual(decode_except.object, "2")
+        AreEqual(decode_except.start, 3)
+        AreEqual(decode_except.end, 4)
+        AreEqual(decode_except.reason, "5")
+        AreEqual(decode_except.message, "")
+        
+        translate_except = exceptions.UnicodeTranslateError(u"1", 2, 3, "4")
+        if not is_cli: #CodePlex 15345
+            AreEqual(translate_except.object, u"1")
+            AreEqual(translate_except.start, 2)
+            AreEqual(translate_except.end, 3)
+            AreEqual(translate_except.reason, "4")
+        AreEqual(translate_except.message, "")
+        AreEqual(translate_except.encoding, None)
 
 def test_nested_exceptions():
     try:
@@ -804,5 +844,7 @@ def test_enverror_init():
 
     # OSError doesn't override __init__, message should be EnvError
     AssertErrorWithPartialMessage(TypeError, "EnvironmentError", OSError, '1', '2', '3', '4')
-    
+
+
+
 run_test(__name__)

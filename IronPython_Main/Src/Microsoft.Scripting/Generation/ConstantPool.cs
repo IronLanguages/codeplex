@@ -24,10 +24,11 @@ namespace Microsoft.Scripting.Generation {
         private List<object> _data;
         private List<Type> _types;
         private Slot _dataSlot;
-        private Compiler _cg;
+        private LambdaCompiler _cg;
 
-        private static List<object> _staticData = new List<object>();
-        private static object _nullVal = new object();
+        private static readonly List<object> _staticData = new List<object>();
+        private static readonly object _nullVal = new object();
+        [Microsoft.Scripting.Runtime.MultiRuntimeAware]
         private static int _lastCheck, _empties;
 
         public ConstantPool() {
@@ -52,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
             get { return _data.Count; }
         }
 
-        public void SetCodeGen(Compiler cg, Slot dataSlot) {
+        public void SetCodeGen(LambdaCompiler cg, Slot dataSlot) {
             this._cg = cg;
             this._dataSlot = dataSlot;
         }

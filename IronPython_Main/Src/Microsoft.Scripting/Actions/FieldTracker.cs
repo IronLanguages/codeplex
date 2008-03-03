@@ -25,6 +25,7 @@ using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Diagnostics;
 
     public class FieldTracker : MemberTracker {
         private readonly FieldInfo _field;
@@ -99,6 +100,10 @@ namespace Microsoft.Scripting.Actions {
                 return binder.ReturnMemberTracker(type, this);
             }
 
+            if (Field.DeclaringType.ContainsGenericParameters) {
+                return null;
+            }
+
             if (IsPublic && DeclaringType.IsPublic) {
                 return Ast.ReadField(null, Field);
             }
@@ -108,6 +113,14 @@ namespace Microsoft.Scripting.Actions {
                 typeof(FieldInfo).GetMethod("GetValue"),
                 Ast.Null()
             );
+        }
+
+        public override ErrorInfo GetError(ActionBinder binder) {
+            // FieldTracker only has one error - accessing a static field from 
+            // a generic type.
+            Debug.Assert(Field.DeclaringType.ContainsGenericParameters);
+
+            return binder.MakeContainsGenericParametersError(this);
         }
 
         #endregion

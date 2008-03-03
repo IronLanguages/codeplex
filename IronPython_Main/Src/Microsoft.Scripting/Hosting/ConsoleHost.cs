@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Hosting {
     public abstract class ConsoleHost {
         private int _exitCode;
         private ConsoleHostOptions _options;
-        private IScriptEnvironment _env;
+        private ScriptRuntime _env;
 
         public ConsoleHostOptions Options { get { return _options; } }
 
@@ -63,13 +63,13 @@ namespace Microsoft.Scripting.Hosting {
         protected virtual void Initialize() {
             // A console application needs just the simple setup.
             // The full setup is potentially expensive as it can involve loading System.Configuration.dll
-            ScriptEnvironmentSetup setup = CreateScriptEnvironmentSetup();
-            _env = ScriptEnvironment.Create(setup);
+            ScriptRuntimeSetup setup = CreateScriptEnvironmentSetup();
+            _env = ScriptRuntime.Create(setup);
             _options = new ConsoleHostOptions();
         }
 
-        protected virtual ScriptEnvironmentSetup CreateScriptEnvironmentSetup() {
-            return new ScriptEnvironmentSetup(true);
+        protected virtual ScriptRuntimeSetup CreateScriptEnvironmentSetup() {
+            return new ScriptRuntimeSetup(true);
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Microsoft.Scripting.Hosting {
             return sb.ToString();
         }
 
-        public void PrintLanguageHelp(IScriptEngine provider, StringBuilder output) {
+        public void PrintLanguageHelp(ScriptEngine provider, StringBuilder output) {
             Contract.RequiresNotNull(provider, "provider");
             Contract.RequiresNotNull(output, "output");
 
@@ -245,26 +245,26 @@ namespace Microsoft.Scripting.Hosting {
 
             EngineOptions engine_options = (optionsParser != null) ? optionsParser.EngineOptions : null;
 
-            IScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
+            ScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
 
             engine.SetScriptSourceSearchPaths(_options.SourceUnitSearchPaths);
 
             int result = 0;
             foreach (string filePath in _options.Files) {
-                SourceUnit sourceUnit = engine.Runtime.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
-                if (sourceUnit == null) {
+                ScriptSource scriptSource = engine.Runtime.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
+                if (scriptSource == null) {
                     throw new FileNotFoundException(string.Format("Source file '{0}' not found.", filePath));
                 }
-                result = RunFile(engine, sourceUnit);
+                result = RunFile(engine, scriptSource);
             }
 
             return result;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        protected virtual int RunFile(IScriptEngine engine, SourceUnit sourceUnit) {
+        protected virtual int RunFile(ScriptEngine engine, ScriptSource scriptSource) {
             try {
-                return engine.ExecuteProgram(sourceUnit);
+                return scriptSource.ExecuteProgram();
             } catch (Exception e) {
                 UnhandledException(engine, e);
                 return 1;
@@ -284,7 +284,7 @@ namespace Microsoft.Scripting.Hosting {
 
             commandLine = _options.ScriptEngine.GetService<CommandLine>();
 
-            IScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
+            ScriptEngine engine = _options.ScriptEngine; //.GetEngine(engine_options);
 
             if (consoleOptions.PrintVersionAndExit) {
                 Console.WriteLine("{0} {1} on .NET {2}", engine.LanguageDisplayName, engine.LanguageVersion, typeof(String).Assembly.GetName().Version);
@@ -327,7 +327,7 @@ namespace Microsoft.Scripting.Hosting {
             return exitCode;
         }
 
-        protected virtual void UnhandledException(IScriptEngine engine, Exception e) {
+        protected virtual void UnhandledException(ScriptEngine engine, Exception e) {
             Console.Error.Write(Resources.UnhandledException);
             Console.Error.WriteLine(':');
             Console.Error.WriteLine(engine.FormatException(e));
@@ -342,7 +342,7 @@ namespace Microsoft.Scripting.Hosting {
             }
         }
 
-        protected IScriptEnvironment Environment {
+        protected ScriptRuntime Environment {
             get {
                 return _env;
             }

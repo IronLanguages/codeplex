@@ -86,7 +86,7 @@ namespace IronPython.Compiler.Ast {
             // Python semantics: The variables bound local in the class
             // scope are accessed by name - the dictionary behavior of classes
             if (TryGetVariable(name, out variable)) {
-                return variable.Kind == MSAst.Variable.VariableKind.Local ? null : variable;
+                return variable.Kind == MSAst.VariableKind.Local ? null : variable;
             }
 
             // Try to bind in outer scopes

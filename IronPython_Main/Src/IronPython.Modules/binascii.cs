@@ -65,7 +65,7 @@ namespace IronPython.Modules {
                 if (val >= 'a' && val <= 'z') return val - 'a' + 26;
                 if (val >= '0' && val <= '9') return val - '0' + 52;
                 if (val == '+') return 62;
-                if (val == '-') return 63;
+                if (val == '/') return 63; 
 
                 return -1;
             });

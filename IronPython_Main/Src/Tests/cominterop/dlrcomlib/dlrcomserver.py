@@ -61,7 +61,10 @@ def test_errorInfo():
     try:
         com_obj.TestErrorInfo()
     except COMException, e:
-        AreEqual("Test error message" in str(e), True)
+        # This is commented out to revisit it to see if we want to add coverage for str, or if we are
+        # happy to have coverage just for e.Message
+        # AreEqual("Test error message" in str(e), True)
+        AreEqual("Test error message", e.Message)
 
 def test_documentation():
     import IronPython

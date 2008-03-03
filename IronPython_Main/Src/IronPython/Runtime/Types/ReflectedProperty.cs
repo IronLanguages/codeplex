@@ -121,7 +121,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<property# {0} on {1}>",
                 Name,
                 PythonTypeOps.GetName(DynamicHelpers.GetPythonTypeFromType(DeclaringType)));

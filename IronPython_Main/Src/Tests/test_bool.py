@@ -21,7 +21,6 @@ def test_types():
         if not x: 
             Fail("should be true: %r", x)
 
-@disabled("CodePlex Work Item 12647")
 def test_bool_dir():
     bool_dir = ['__abs__', '__add__', '__and__', '__class__', '__cmp__', 
                 '__coerce__', '__delattr__', '__div__', '__divmod__', '__doc__', 

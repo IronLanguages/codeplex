@@ -42,14 +42,14 @@ namespace Microsoft.Scripting.Hosting {
         private bool _displayLogo = true;
         private bool _isMTA;
         private readonly List<string/*!*/> _environmentVars = new List<string/*!*/>(); 
-        private IScriptEngine _scriptEngine;
+        private ScriptEngine _scriptEngine;
 
         public List<string/*!*/> IgnoredArgs { get { return _ignoredArgs; } }
         public List<string/*!*/> Files { get { return _files; } }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")] // TODO: fix
         public string[] SourceUnitSearchPaths { get { return _sourceUnitSearchPaths; } set { _sourceUnitSearchPaths = value; } }
         public Action RunAction { get { return _action; } set { _action = value; } }
-        public IScriptEngine ScriptEngine { get { return _scriptEngine; } set { _scriptEngine = value; } }
+        public ScriptEngine ScriptEngine { get { return _scriptEngine; } set { _scriptEngine = value; } }
         public bool DisplayLogo { get { return _displayLogo; } set { _displayLogo = value; } }
         public bool IsMTA { get { return _isMTA; } set { _isMTA = value; } }
         public List<string/*!*/> EnvironmentVars { get { return _environmentVars; } }
@@ -80,9 +80,9 @@ namespace Microsoft.Scripting.Hosting {
     public class ConsoleHostOptionsParser {
         public ConsoleHostOptions Options { get { return _options; } set { _options = value; } }
         private ConsoleHostOptions/*!*/ _options;
-        private IScriptEnvironment/*!*/ _env;
+        private ScriptRuntime/*!*/ _env;
 
-        public ConsoleHostOptionsParser(ConsoleHostOptions/*!*/ options, IScriptEnvironment/*!*/ environment) {
+        public ConsoleHostOptionsParser(ConsoleHostOptions/*!*/ options, ScriptRuntime/*!*/ environment) {
             Contract.RequiresNotNull(options, "options");
             Contract.RequiresNotNull(environment, "environment");
 
@@ -231,7 +231,7 @@ namespace Microsoft.Scripting.Hosting {
             throw new InvalidOptionException(String.Format("Option '{0}' is not available on Silverlight.", optionName));
         }
 
-        private IScriptEngine GetScriptEngine(string languageId) {
+        private ScriptEngine GetScriptEngine(string languageId) {
             Debug.Assert(languageId != null);
 
             try {

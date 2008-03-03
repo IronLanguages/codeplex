@@ -41,6 +41,17 @@ namespace IronPython.Runtime.Types {
             _building.Builder = this;
         }
 
+        /// Creates a new PythonTypeBuilder for a PythonType with the specified name
+        /// </summary>
+        public PythonTypeBuilder(PythonContext/*!*/ context, string name, Type underlyingSystemType) {
+            Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(underlyingSystemType, "underlyingSystemType");
+
+            _building = new PythonType(context, underlyingSystemType);
+            _building.Name = name;
+            _building.Builder = this;
+        }
+
         public PythonTypeBuilder(string name, Type underlyingSystemType, Type extensionType)
             : this(name, underlyingSystemType) {
             _building.ExtensionType = extensionType;

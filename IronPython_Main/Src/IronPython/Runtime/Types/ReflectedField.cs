@@ -28,7 +28,7 @@ using System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime.Types {
     [PythonSystemType("field#")]
-    public class ReflectedField : PythonTypeSlot, ICodeFormattable {
+    public sealed class ReflectedField : PythonTypeSlot, ICodeFormattable {
         private readonly NameType _nameType;
         internal readonly FieldInfo/*!*/ info;
 
@@ -160,7 +160,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<field# {0} on {1}>", info.Name, info.DeclaringType.Name);
         }
 

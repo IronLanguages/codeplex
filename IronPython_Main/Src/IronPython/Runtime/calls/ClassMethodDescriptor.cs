@@ -68,7 +68,7 @@ namespace IronPython.Runtime.Calls {
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             BuiltinFunction bf = _func as BuiltinFunction;
             if (bf != null) {
                 return String.Format("<method {0} of {1} objects>",

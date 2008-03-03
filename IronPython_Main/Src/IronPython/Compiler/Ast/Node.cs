@@ -52,5 +52,11 @@ namespace IronPython.Compiler.Ast {
         }
 
         public abstract void Walk(PythonWalker walker);
+
+        public virtual string NodeName {
+            get {
+                return GetType().Name;
+            }
+        }
     }
 }

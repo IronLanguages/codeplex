@@ -52,6 +52,10 @@ def TestCommandLine(args, expected_output, expected_exitcode = 0):
     realargs.extend(args)
     exitcode = nt.spawnv(0, batfile, realargs)
     cmdline = "ipy " + ' '.join(args)
+    
+    print ''
+    print cmdline
+    
     Assert(exitcode == expected_exitcode, "'" + cmdline + "' generated unexpected exit code " + str(exitcode))
     if (expected_output != None):
         f = file(tmpfile)
@@ -208,7 +212,6 @@ TestCommandLine((), None, 42)
 Environment.SetEnvironmentVariable("IRONPYTHONSTARTUP", "")
 nt.unlink(tmpscript)
 nt.unlink(tmpscript2)
-nt.unlink(tmpscript3)
 
 # Test -W (set warning filters) option.
 def test_W():
@@ -239,14 +242,18 @@ TestCommandLine(("-X:MaxRecursion", "2", "-c", "2+2"), "")
 TestCommandLine(("-X:MaxRecursion", "3.14159265", "-c", "2+2"), "The argument for the -X:MaxRecursion option must be an integer.\n", -1)
 TestCommandLine(("-X:MaxRecursion",), "Argument expected for the -X:MaxRecursion option.\n", -1)
 
-# This feature is disabled for now. The option is recognized though ignored. See work item #378344.
 # Test -X:ILDebug
-for fName in nt.listdir(tmpdir):
-    if re.match('.*\.il$', fName):
-        nt.unlink(tmpdir + '\\' + fName)
+ildir = IO.Path.Combine(IO.Path.GetTempPath(), "__DLRIL")
+print "IL directory is " + ildir
+
+if IO.Directory.Exists(ildir):
+    IO.Directory.Delete(ildir, True)
 
 TestCommandLine(("-X:ILDebug", "-c", "def f(): pass"), None)
-#Assert(len([fName for fName in nt.listdir(tmpdir) if re.match('gen_f.*\.il', fName)]) > 0)
+
+Assert(IO.Directory.Exists(ildir))
+Assert(len([fName for fName in nt.listdir(ildir) if re.match('.*\.il', fName)]) > 0)
+IO.Directory.Delete(ildir, True)
 
 # Test -x (ignore first line)
 tmpxoptscript = tmpdir + '\\xopt.py'
@@ -257,7 +264,10 @@ TestCommandLine(('-x', tmpxoptscript), "4\n")
 nt.unlink(tmpxoptscript)
 
 # Test invocation of a nonexistent file
-nt.unlink("nonexistent.py")
+try:
+    nt.unlink("nonexistent.py")
+except OSError:
+    pass
 TestCommandLine(("nonexistent.py",), "File nonexistent.py does not exist.\n", 1)
 
 # Test -Q

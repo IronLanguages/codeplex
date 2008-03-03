@@ -93,3 +93,9 @@ AssertErrorWithMessages(TypeError, "iter() takes at least 1 argument (0 given)",
                                    "iter expected at least 1 arguments, got 0", iter)
 
 
+def test_itertools_same_value():
+    from itertools import izip
+    x = iter(range(4))
+    AreEqual([(i,j) for i,j in izip(x,x)], [(0, 1), (2, 3)])
+
+run_test(__name__)

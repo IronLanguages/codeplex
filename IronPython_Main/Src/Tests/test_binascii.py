@@ -32,8 +32,7 @@ def test_positive():
     AreEqual(binascii.a2b_base64(''), '')
     AreEqual(binascii.a2b_base64('AAA='), '\x00\x00')
     AreEqual(binascii.a2b_base64('%%^^&&A%%&&**A**#%&A='), '\x00\x00')
-    #Related to CodePlex Work Item 11334 (non-ASCII)
-    #AreEqual(binascii.a2b_base64('w/A='), '\xc3\xf0')
+    AreEqual(binascii.a2b_base64('w/A='), '\xc3\xf0')
 
 def test_zeros():
     """verify zeros don't show up as being only a single character"""

@@ -27,14 +27,14 @@ namespace IronPython.Compiler.Ast {
         private bool _visible = true;       // variable visible to the nested scopes - the default
         private bool _deleted;              // del x
 
-        private MSAst.Variable.VariableKind _kind;
+        private MSAst.VariableKind _kind;
         private MSAst.Variable _variable;
 
-        public PythonVariable(SymbolId name, MSAst.Variable.VariableKind kind, ScopeStatement scope)
+        public PythonVariable(SymbolId name, MSAst.VariableKind kind, ScopeStatement scope)
             : this(name, typeof(object), kind, scope) {
         }
 
-        public PythonVariable(SymbolId name, Type type, MSAst.Variable.VariableKind kind, ScopeStatement scope) {
+        public PythonVariable(SymbolId name, Type type, MSAst.VariableKind kind, ScopeStatement scope) {
             _name = name;
             _type = type;
             _kind = kind;
@@ -53,7 +53,7 @@ namespace IronPython.Compiler.Ast {
             get { return _scope; }
         }
 
-        public MSAst.Variable.VariableKind Kind {
+        public MSAst.VariableKind Kind {
             get { return _kind; }
             set { _kind = value; }
         }
@@ -85,7 +85,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal MSAst.Variable Transform(AstGenerator ag) {
-            Debug.Assert(_kind != MSAst.Variable.VariableKind.Parameter);
+            Debug.Assert(_kind != MSAst.VariableKind.Parameter);
             return _variable = ag.Block.CreateVariable(_name, _kind, _type);
         }
     }

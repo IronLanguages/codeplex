@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Ast {
         internal TargetLabel() {
         }
 
-        internal Label EnsureLabel(Compiler cg) {
+        internal Label EnsureLabel(LambdaCompiler cg) {
             if (!_initialized) {
                 _label = cg.DefineLabel();
                 _initialized = true;
@@ -37,32 +37,26 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    internal struct YieldTarget {
+    internal sealed class YieldTarget {
         private readonly int _index;
         private readonly TargetLabel _target;
 
-        public YieldTarget(int index, TargetLabel label) {
+        internal YieldTarget(int index, TargetLabel label) {
+            Debug.Assert(label != null);
             _index = index;
             _target = label;
         }
 
-        public int Index {
+        internal int Index {
             get { return _index; }
         }
 
-        public TargetLabel Target {
-            get { return _target; }
-        }
-
-        public Label EnsureLabel(Compiler cg) {
-            Debug.Assert(_target != null);
+        internal Label EnsureLabel(LambdaCompiler cg) {
             return _target.EnsureLabel(cg);
         }
 
         internal void Clear() {
-            if (_target != null) {
-                _target.Clear();
-            }
+            _target.Clear();
         }
     }
 }

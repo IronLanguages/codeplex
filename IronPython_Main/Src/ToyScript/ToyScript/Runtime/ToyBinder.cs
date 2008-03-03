@@ -86,6 +86,13 @@ namespace ToyScript.Runtime {
             return Ast.ConvertHelper(expr, toType);
         }
 
+        protected override IList<Type> GetExtensionTypes(Type t) {
+            if (t == typeof(string)) {
+                return new Type[] { typeof(StringExtensions) };
+            }
+            return Type.EmptyTypes;
+        }
+
         #endregion
     }
 }

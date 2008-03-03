@@ -47,7 +47,7 @@ namespace IronPython.Runtime {
             throw PythonOps.NotImplementedError("IronPython does not support sys.getcheckinterval");
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value"), PythonName("setcheckinterval")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "value")]
         public static void setcheckinterval(int value) {
             throw PythonOps.NotImplementedError("IronPython does not support sys.setcheckinterval");
         }
@@ -73,7 +73,7 @@ namespace IronPython.Runtime {
                 throw new PythonExceptions.SystemExit().InitAndGetClrException();
             } else {
                 PythonTuple pt = code as PythonTuple;
-                if (pt != null && pt.Count == 1) {
+                if (pt != null && pt.__len__() == 1) {
                     code = pt[0];
                 }
 
@@ -154,7 +154,7 @@ namespace IronPython.Runtime {
 
         // version and version_info are set by PythonContext
 
-        public static string winver = "2.5";
+        public const string winver = "2.5";
 
         public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
             dict[SymbolTable.StringToId("stdin")] = dict[SymbolTable.StringToId("__stdin__")];
@@ -163,10 +163,14 @@ namespace IronPython.Runtime {
 
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value
-            dict[SymbolTable.StringToId("warnoptions")] = List.Make();
+            dict[SymbolTable.StringToId("warnoptions")] = PythonOps.MakeList();
 
             PublishBuiltinModuleNames(context, dict);
             context.SetHostVariables(dict);
+
+            dict[SymbolTable.StringToId("meta_path")] = PythonOps.MakeList();
+            dict[SymbolTable.StringToId("path_hooks")] = PythonOps.MakeList();
+            dict[SymbolTable.StringToId("path_importer_cache")] = new PythonDictionary();
         }
 
         private static void PublishBuiltinModuleNames(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {

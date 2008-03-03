@@ -15,6 +15,7 @@
 
 using System;
 using IronPython.Runtime;
+using IronPython.Runtime.Operations;
 
 using Microsoft.Scripting.Math;
 
@@ -36,7 +37,17 @@ namespace IronPython.Modules {
             #region Public API surface
 
             public object getrandbits(int bits) {
-                int count = (bits + 7) / 8;
+                if (bits <= 0) {
+                    throw PythonOps.ValueError("number of bits must be greater than zero");
+                }
+
+                int count;
+                try {
+                    count = checked((bits + 7) / 8);
+                } catch (OverflowException) {
+                    throw PythonOps.MemoryError("not enough memory to get all bits");
+                }
+
                 byte[] bytes = new byte[count];
                 _rnd.NextBytes(bytes);
 

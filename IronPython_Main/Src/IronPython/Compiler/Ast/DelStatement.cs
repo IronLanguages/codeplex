@@ -17,6 +17,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using IronPython.Runtime.Operations;
 
     public class DelStatement : Statement {
         private readonly Expression[] _expressions;
@@ -34,6 +35,9 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression[] statements = new MSAst.Expression[_expressions.Length];
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _expressions[i].TransformDelete(ag);
+                if (statements[i] == null) {     
+                    throw PythonOps.SyntaxError(string.Format("can't delete {0}", _expressions[i].NodeName), ag.Context.SourceUnit, _expressions[i].Span, 1);
+                }
             }
             return Ast.Block(
                 Span,

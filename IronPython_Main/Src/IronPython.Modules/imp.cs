@@ -45,14 +45,21 @@ namespace IronPython.Modules {
         internal const int PythonFrozen = 7;
         internal const int PythonCodeResource = 8;
         internal const int SearchError = 0;
-        private static long lock_count;
+        private static readonly object _lockCountKey = new object();
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            // set the lock count to zero on the 1st load, don't reset the lock count on reloads
+            if (!context.HasModuleState(_lockCountKey)) {
+                context.SetModuleState(_lockCountKey, 0L);
+            }
+        }
 
         public static string get_magic() {
             return "";
         }
 
         public static List get_suffixes() {
-            return List.MakeList(PythonTuple.MakeTuple(".py", "U", PythonSource));
+            return PythonOps.MakeList(PythonOps.MakeTuple(".py", "U", PythonSource));
         }
 
         public static PythonTuple find_module(CodeContext/*!*/ context, string/*!*/ name) {
@@ -74,8 +81,8 @@ namespace IronPython.Modules {
             if (description == null) {
                 throw PythonOps.TypeError("load_module() argument 4 must be 3-item sequence, not None");
             }
-            if (description.Count != 3) {
-                throw PythonOps.TypeError("load_module() argument 4 must be sequence of length 3, not {0}", description.Count);
+            if (description.__len__() != 3) {
+                throw PythonOps.TypeError("load_module() argument 4 must be sequence of length 3, not {0}", description.__len__());
             }
 
             PythonContext pythonContext = PythonContext.GetContext(context);
@@ -109,20 +116,24 @@ namespace IronPython.Modules {
             return PythonContext.GetContext(context).CreateModule(name).Scope;
         }
 
-        public static bool lock_held() {
-            return lock_count != 0;
+        public static bool lock_held(CodeContext/*!*/ context) {
+            return GetLockCount(context) != 0;
         }
 
-        public static void acquire_lock() {
-            Interlocked.Increment(ref lock_count);
+        public static void acquire_lock(CodeContext/*!*/ context) {
+            lock (_lockCountKey) {
+                SetLockCount(context, GetLockCount(context) + 1);
+            }
         }
 
-        public static void release_lock() {
-            long prevCount;
-            do {
-                prevCount = lock_count;
-                if (prevCount == 0) throw PythonOps.RuntimeError("not holding the import lock");
-            } while (Interlocked.CompareExchange(ref lock_count, prevCount - 1, prevCount) != prevCount);
+        public static void release_lock(CodeContext/*!*/ context) {
+            lock (_lockCountKey) {
+                long lockCount = GetLockCount(context);
+                if (lockCount == 0) {
+                    throw PythonOps.RuntimeError("not holding the import lock");
+                }
+                SetLockCount(context, lockCount - 1);
+            }            
         }
 
         public const int PY_SOURCE = PythonSource;
@@ -284,5 +295,13 @@ namespace IronPython.Modules {
         }
 
         #endregion
+
+        private static long GetLockCount(CodeContext/*!*/ context) {
+            return (long)PythonContext.GetContext(context).GetModuleState(_lockCountKey);
+        }
+
+        private static void SetLockCount(CodeContext/*!*/ context, long lockCount) {
+            PythonContext.GetContext(context).SetModuleState(_lockCountKey, lockCount);
+        }
     }
 }

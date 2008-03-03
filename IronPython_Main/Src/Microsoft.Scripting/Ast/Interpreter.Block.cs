@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Reflection;
 
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
@@ -28,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
     /// Interpreter partial class. This part contains interpretation code for code blocks.
     /// </summary>
     internal static partial class Interpreter {
-        private static WeakHash<CodeBlock, InterpreterData> _Hashtable = new WeakHash<CodeBlock, InterpreterData>();
+        private static readonly WeakHash<CodeBlock, InterpreterData> _Hashtable = new WeakHash<CodeBlock, InterpreterData>();
 
         private static InterpreterData GetBlockInterpreterData(CodeBlock block) {
             InterpreterData data;
@@ -47,7 +46,7 @@ namespace Microsoft.Scripting.Ast {
             // Make sure that locals owned by this block mask any identically-named variables in outer scopes
             if (!block.IsGlobal) {
                 foreach (Variable v in block.Variables) {
-                    if (v.Kind == Variable.VariableKind.Local && v.Unassigned && v.Block == block) {
+                    if (v.Kind == VariableKind.Local && v.Unassigned && v.Block == block) {
                         Interpreter.EvaluateAssignVariable(context, v, Uninitialized.Instance);
                     }
                 }
@@ -104,7 +103,7 @@ namespace Microsoft.Scripting.Ast {
                 lock (id) {
                     // Check _delegate again -- maybe it appeared between our first check and taking the lock
                     if (id.Delegate == null && ShouldCompile(id)) {
-                        id.Delegate = GetCompiledDelegate(block, id.Source, null, id.ForceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(parent, block, id.Source, null, id.ForceWrapperMethod);
                     }
                 }
                 if (id.Delegate != null) {
@@ -129,7 +128,7 @@ namespace Microsoft.Scripting.Ast {
             if (parent.LanguageContext.Options.ProfileDrivenCompilation) {
                 lock (id) {
                     if (id.Delegate == null && ShouldCompile(id)) {
-                        id.Delegate = GetCompiledDelegate(block, id.Source, null, id.ForceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(parent, block, id.Source, null, id.ForceWrapperMethod);
                     }
                 }
                 if (id.Delegate != null) {
@@ -179,7 +178,7 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 lock (id) {
                     if (id.Delegate == null) {
-                        id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
+                        id.Delegate = GetCompiledDelegate(context, block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
                     }
                     return id.Delegate;
                 }
@@ -210,53 +209,46 @@ namespace Microsoft.Scripting.Ast {
             throw new InvalidOperationException(String.Format("failed to make delegate for type {0}", delegateType.FullName));
         }
 
-        private static Delegate GetCompiledDelegate(CodeBlock block, SourceUnit source, Type delegateType, bool forceWrapperMethod) {
+        private static Delegate GetCompiledDelegate(CodeContext context, CodeBlock block, SourceUnit source, Type delegateType, bool forceWrapperMethod) {
             bool hasThis = block.HasThis();
-            bool createWrapperMethod = block.ParameterArray ? false : forceWrapperMethod || Compiler.NeedsWrapperMethod(block, true, hasThis, false);
+            bool createWrapperMethod = block.ParameterArray ? false : forceWrapperMethod || LambdaCompiler.NeedsWrapperMethod(block, true, hasThis, false);
 
-            Compiler cg = CreateInterprettedMethod(block, source, delegateType, hasThis);
+            LambdaCompiler cg = CreateInterprettedMethod(block, source, delegateType, hasThis);
             cg.GenerateCodeBlock(block);
-
             cg.Finish();
 
             if (delegateType == null) {
                 if (createWrapperMethod) {
-                    Compiler wrapper = Compiler.MakeWrapperMethodN(null, cg, block, hasThis);
-                    wrapper.Finish();
-                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
-                    return wrapper.CreateDelegate(delegateType);
+                    cg = cg.MakeWrapperMethodN(hasThis);
+                    cg.Finish();
+                    delegateType = hasThis ? typeof(CallTargetWithThisN) : typeof(CallTargetN);
                 } else if (block.ParameterArray) {
-                    delegateType = hasThis ? typeof(CallTargetWithContextAndThisN) : typeof(CallTargetWithContextN);
-                    return cg.CreateDelegate(delegateType);
+                    delegateType = hasThis ? typeof(CallTargetWithThisN) : typeof(CallTargetN);
                 } else {
-                    delegateType = CallTargets.GetTargetType(block.Parameters.Count - (hasThis ? 1 : 0), true, hasThis);
-                    return cg.CreateDelegate(delegateType);
+                    delegateType = CallTargets.GetTargetType(block.Parameters.Count - (hasThis ? 1 : 0), hasThis);
                 }
-            } else {
-                return cg.CreateDelegate(delegateType);
             }
+
+            return cg.CreateDelegateWithContext(delegateType, context);
         }
 
-        private static Compiler CreateInterprettedMethod(CodeBlock block, SourceUnit context, Type delegateType, bool hasThis) {
+        private static LambdaCompiler CreateInterprettedMethod(CodeBlock block, SourceUnit context, Type delegateType, bool hasThis) {
             List<Type> paramTypes;
             List<SymbolId> paramNames;
-            Compiler impl;
+            LambdaCompiler impl;
             string implName;
 
-
-            int lastParamIndex;
-
             if (delegateType == null) {
-                lastParamIndex = Compiler.ComputeSignature(block, true, hasThis, out paramTypes, out paramNames, out implName);
+                LambdaCompiler.ComputeSignature(block, hasThis, out paramTypes, out paramNames, out implName);
             } else {
                 Debug.Assert(!block.ParameterArray);
-                lastParamIndex = Compiler.ComputeDelegateSignature(block, delegateType, out paramTypes, out paramNames, out implName);
+                LambdaCompiler.ComputeDelegateSignature(block, delegateType, out paramTypes, out paramNames, out implName);
             }
 
-            impl = Snippets.Shared.DefineMethod(implName, typeof(object), paramTypes.ToArray(), new ConstantPool());
+            impl = LambdaCompiler.CreateDynamicLambdaCompiler(implName, typeof(object), paramTypes, null);
 
             impl.InterpretedMode = true;
-            impl.ContextSlot = impl.ArgumentSlots[0];
+            impl.CreateClosureContextSlot();
             impl.SetDebugSymbols(context);
             impl.EnvironmentSlot = new EnvironmentSlot(
                 new PropertySlot(
@@ -266,7 +258,8 @@ namespace Microsoft.Scripting.Ast {
                 );
 
             if (block.ParameterArray) {
-                impl.ParamsSlot = impl.GetArgumentSlot(lastParamIndex);
+                // The last argument is the parameter array
+                impl.ParamsSlot = impl.GetLambdaArgumentSlot(paramTypes.Count - 1);
             }
 
             impl.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, impl);
@@ -280,7 +273,7 @@ namespace Microsoft.Scripting.Ast {
             lock (id) {
                 if (id.Delegate == null) {
                     FlowChecker.Check(block);
-                    id.Delegate = GetCompiledDelegate(block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
+                    id.Delegate = GetCompiledDelegate(context, block, context.ModuleContext.CompilerContext.SourceUnit, delegateType, forceWrapperMethod);
                 }
                 return id.Delegate;
             }

@@ -50,6 +50,7 @@ namespace IronPython.Runtime.Types {
         private FunctionType _funcType;
         private Dictionary<TypeList, BuiltinFunction> _boundGenerics;
         private int _id;        
+        [MultiRuntimeAware]
         private static int _curId;
 
         #region Static factories
@@ -316,7 +317,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<built-in function {0}>", Name);
         }
 

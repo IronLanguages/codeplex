@@ -343,7 +343,9 @@ namespace IronPython.Runtime {
 
         private static readonly object _CachedDocLockObject = new object();
         private static readonly List<Assembly> _AssembliesWithoutXmlDoc = new List<Assembly>();
+        [MultiRuntimeAware]
         private static XPathDocument _CachedDoc;
+        [MultiRuntimeAware]
         private static string _CachedDocName;
 
         private static string GetXmlName(Type type) {

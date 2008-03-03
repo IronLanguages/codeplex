@@ -58,7 +58,8 @@ def remove_worksheet_event(ws):
 
 #-----------------------------------------------------------------------------
 #--TESTS
-def _test_excel():
+@disabled("Merlin 372472")
+def test_excel():
     ex = None
     
     try: 
@@ -121,13 +122,6 @@ def excel_events_helper(ex):
     ex.ActiveCell.Offset[1, 0].Activate()
     AreEqual(selection_counter, 4)
 
-    if "-X:Interpret" in System.Environment.CommandLine:
-        print "Rowan Work Item 312901"
-        ws = None
-        System.GC.Collect()
-        System.GC.WaitForPendingFinalizers()
-        return
-            
     add_worksheet_event(ws)
     ex.ActiveCell.Offset[1, 0].Activate()
     AreEqual(selection_counter, 5)
@@ -161,10 +155,22 @@ def test_excelevents():
         if ex: ex.Quit()
         else: print "ex is %s" % ex
 
-def test_new(): # regression test for 148579
+def test_cp148579():
     AssertErrorWithMessage(TypeError, 
-        "Cannot create instances of Range", 
-        lambda: Excel.Range(1,2))
+                           "Cannot create instances of Range", 
+                           Excel.Range, 1,2)
+
+def test_cp14539():
+    try: 
+        ex = CreateApplication() 
+        for i in xrange(3):
+            AreEqual(ex.Visible, False)
+            ex.Visible = True
+            AreEqual(ex.Visible, True)
+            ex.Visible = False
+        
+    finally:
+        ex.Quit()
     
 #------------------------------------------------------------------------------
 run_com_test(__name__, __file__)

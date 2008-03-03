@@ -147,7 +147,7 @@ def _test_set_by_instance(current_type):
     for f in [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20, f21, f22, f23]:
         AssertErrorWithMatch(AttributeError, "attribute .* of .* object is read-only", f)
     
-def _test_set_by_type(current_type, message="Cannot set field .* on type .*"):
+def _test_set_by_type(current_type, message="attribute '.*' of '.*' object is read-only"):
     def f1(): current_type.InitOnlyByteField = 2
     def f2(): current_type.InitOnlySByteField = 3
     def f3(): current_type.InitOnlyUInt16Field = 4

@@ -24,7 +24,6 @@ using System.Diagnostics;
 using System.Runtime.Serialization;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
@@ -71,13 +70,7 @@ namespace Microsoft.Scripting.Runtime {
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")] // TODO: fix
     public sealed class ScriptDomainManager {
-
-        #region Fields and Initialization
-
-        private readonly Dictionary<Type, ScriptEngine>/*!*/ _engines = new Dictionary<Type, ScriptEngine>(); // TODO: Key Should be LC, not Type
-        private readonly PlatformAdaptationLayer/*!*/ _pal;
-        private readonly IScriptHost/*!*/ _host;
-        private readonly ScriptEnvironment/*!*/ _environment;
+        private readonly DynamicRuntimeHostingProvider/*!*/ _hostingProvider;
         private readonly InvariantContext/*!*/ _invariantContext;
         private readonly SharedIO/*!*/ _sharedIO;
 
@@ -89,86 +82,37 @@ namespace Microsoft.Scripting.Runtime {
         private readonly Dictionary<string, LanguageRegistration> _languageTypes = new Dictionary<string, LanguageRegistration>();
         private readonly List<LanguageContext> _registeredContexts = new List<LanguageContext>();
 
-        // singletons:
-        public PlatformAdaptationLayer/*!*/ PAL { get { return _pal; } }
-        public ScriptEnvironment/*!*/ Environment { get { return _environment; } }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
+        public PlatformAdaptationLayer/*!*/ PAL { 
+            get {
+                PlatformAdaptationLayer result = _hostingProvider.PlatformAdaptationLayer;
+                if (result == null) {
+                    throw new InvalidImplementationException();
+                }
+                return result;
+            } 
+        }
+
         public SharedIO/*!*/ SharedIO { get { return _sharedIO; } }
+        public DynamicRuntimeHostingProvider/*!*/ Host { get { return _hostingProvider; } }
+        public LanguageContext/*!*/ InvariantContext { get { return _invariantContext; } }
         private ScopeAttributesWrapper _scopeWrapper;
         private Scope/*!*/ _globals;
         
         private static ScriptDomainOptions _options = new ScriptDomainOptions();// TODO: remove or reduce     
 
-        /// <summary>
-        /// Initializes environment according to the setup information.
-        /// </summary>
-        private ScriptDomainManager(ScriptEnvironmentSetup/*!*/ setup) {
-            Debug.Assert(setup != null);
-            _scopeWrapper = new ScopeAttributesWrapper(this);
-            _sharedIO = new SharedIO();
+        public ScriptDomainManager(DynamicRuntimeHostingProvider/*!*/ hostingProvider) {
+            Contract.RequiresNotNull(hostingProvider, "hostingProvider");
 
+            _hostingProvider = hostingProvider;
+
+            _sharedIO = new SharedIO();
             _invariantContext = new InvariantContext(this);
 
             // create the initial default scope
+            _scopeWrapper = new ScopeAttributesWrapper(this);
             _globals = new Scope(_invariantContext, _scopeWrapper);
-
-            // create local environment for the host:
-            _environment = new ScriptEnvironment(this);
-
-            // create PAL (default always available):
-            _pal = setup.CreatePAL();
-
-            // let setup register language contexts listed on it:
-            setup.RegisterLanguages(this);
-
-            // create a local host unless a remote one has already been created:
-            _host = setup.CreateScriptHost(_environment);
-
-            // TODO: Belongs in ScriptEnvironment but can't go there yet
-            // because GetEngine is overhere for SourceUnit support
-            _environment.Globals = new ScriptScope(_environment.InvariantEngine, new Scope(_invariantContext, _scopeWrapper.Dict));
         }
-
-        public IScriptHost/*!*/ Host {
-            get { return _host; }
-        }
-
-        /// <summary>
-        /// Creates a new local <see cref="ScriptDomainManager"/> unless it already exists. 
-        /// Returns either <c>true</c> and the newly created environment initialized according to the provided setup information
-        /// or <c>false</c> and the existing one ignoring the specified setup information.
-        /// </summary>
-        internal static bool TryCreateLocal(ScriptEnvironmentSetup setup, out ScriptDomainManager manager) {
-            manager = new ScriptDomainManager(setup ?? GetSetupInformation());
-
-            return true;
-        }
-
-        private static ScriptEnvironmentSetup GetSetupInformation() {
-#if !SILVERLIGHT
-            ScriptEnvironmentSetup result;
-
-            // setup provided by app-domain creator:
-            result = ScriptEnvironmentSetup.GetAppDomainAssociated(AppDomain.CurrentDomain);
-            if (result != null) {
-                return result;
-            }
-
-            // setup provided in a configuration file:
-            // This will load System.Configuration.dll which costs ~350 KB of memory. However, this does not normally 
-            // need to be loaded in simple scenarios (like running the console hosts). Hence, the working set cost
-            // is only paid in hosted scenarios.
-            ScriptConfiguration config = System.Configuration.ConfigurationManager.GetSection(ScriptConfiguration.Section) as ScriptConfiguration;
-            if (config != null) {
-                // TODO:
-                //return config;
-            }
-#endif
-
-            // default setup:
-            return new ScriptEnvironmentSetup(true);
-        }        
-
-        #endregion
        
         #region Language Registration
 
@@ -233,7 +177,7 @@ namespace Microsoft.Scripting.Runtime {
 
                     // needn't to be locked, we can create multiple LPs:
                     LanguageContext context = ReflectionUtils.CreateInstance<LanguageContext>(_type, manager);
-                    Utilities.MemoryBarrier();
+                    Thread.MemoryBarrier();
                     _context = context;
                 }
                 return _context;
@@ -366,70 +310,6 @@ namespace Microsoft.Scripting.Runtime {
             return result;
         }
 
-        /// <exception cref="ArgumentException"></exception>
-        /// <exception cref="ArgumentNullException"></exception>
-        public ScriptEngine GetEngineByFileExtension(string/*!*/ extension) {
-            LanguageContext lc;
-            if (!TryGetLanguageContextByFileExtension(extension, out lc)) {
-                if (extension == null) {
-                    throw new ArgumentNullException("extension");
-                }
-                throw new ArgumentException(Resources.UnknownLanguageId);
-            }
-            return GetEngine(lc);
-        }
-
-        public bool TryGetEngine(string languageId, out ScriptEngine engine) {
-            LanguageContext lc;
-            if (!TryGetLanguageContext(languageId, out lc)) {
-                engine = null;
-                return false;
-            }
-
-            engine = GetEngine(lc);
-            return true;
-        }
-
-        public bool TryGetEngineByFileExtension(string extension, out ScriptEngine engine) {
-            LanguageContext lc;
-            if (!TryGetLanguageContextByFileExtension(extension, out lc)) {
-                engine = null;
-                return false;
-            }
-
-            engine = GetEngine(lc);
-            return true;
-        }
-
-        public ScriptEngine GetEngine(string/*!*/ languageId) {
-            Contract.RequiresNotNull(languageId, "languageId");
-
-            LanguageContext lc;
-            if (!TryGetLanguageContext(languageId, out lc)) {
-                throw new ArgumentException(Resources.UnknownLanguageId);
-            }
-
-            return GetEngine(lc);
-        }
-
-        public ScriptEngine GetEngine(Type languageContextType) {
-            return GetEngine(GetLanguageContext(languageContextType));
-        }
-
-        internal ScriptEngine GetEngine(LanguageContext/*!*/ language) {
-            Assert.NotNull(language);
-            ScriptEngine engine;
-            if (!_engines.TryGetValue(language.GetType(), out engine)) {
-                engine = new ScriptEngine(_environment, language);
-                _engines[language.GetType()] = engine;
-
-                if (language.GetType() != typeof(InvariantContext)) {
-                    _host.EngineCreated(engine);
-                }
-            }
-            return engine;
-        }
-
         public bool TryGetLanguageContextByFileExtension(string extension, out LanguageContext languageContext) {
             if (String.IsNullOrEmpty(extension)) {
                 languageContext = null;
@@ -532,8 +412,8 @@ namespace Microsoft.Scripting.Runtime {
         public object UseModule(string name) {
             Contract.RequiresNotNull(name, "name");
             
-            SourceUnit su = _host.ResolveSourceFileUnit(name);
-            if (su == null) {
+            SourceUnit source = Host.ResolveSourceFileUnit(name);
+            if (source == null) {
                 return null;
             }
         
@@ -541,9 +421,9 @@ namespace Microsoft.Scripting.Runtime {
             object result;
             if (Globals.TryGetName(SymbolTable.StringToId(name), out result)) {
                 return result;
-            }            
-            
-            result = ExecuteSourceUnit(su);
+            }
+
+            result = ExecuteSourceUnit(source);
             Globals.SetName(SymbolTable.StringToId(name), result);
 
             return result;
@@ -565,19 +445,19 @@ namespace Microsoft.Scripting.Runtime {
             Contract.RequiresNotNull(path, "path");
             Contract.RequiresNotNull(languageId, "languageId");
 
-            ScriptEngine engine = GetEngine(languageId);
+            LanguageContext language;
+            TryGetLanguageContext(languageId, out language);
 
-            SourceUnit su = _host.TryGetSourceFileUnit(engine, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
-            if (su == null) {
+            SourceUnit source = Host.TryGetSourceFileUnit(language, path, StringUtils.DefaultEncoding, SourceCodeKind.File);
+            if (source == null) {
                 return null;
             }
 
-            return ExecuteSourceUnit(su);
+            return ExecuteSourceUnit(source);
         }
 
-        // TODO:
-        public Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ sourceUnit) {
-            ScriptCode compiledCode = sourceUnit.LanguageContext.CompileSourceCode(sourceUnit);
+        public Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ source) {
+            ScriptCode compiledCode = source.Compile();
             Scope scope = compiledCode.MakeOptimizedScope();
             compiledCode.Run(scope);
             return scope;
@@ -610,7 +490,7 @@ namespace Microsoft.Scripting.Runtime {
 
         #endregion
 
-        #region TODO
+        #region TODO: Options
 
         // TODO: remove or reduce
         public ScriptDomainOptions GlobalOptions {

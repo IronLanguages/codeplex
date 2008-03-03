@@ -23,7 +23,7 @@ namespace Microsoft.Scripting.Actions {
     /// OperatorInfo provides a mapping from DLR operators to their associated .NET methods.
     /// </summary>
     public class OperatorInfo {
-        private static OperatorInfo[] _infos = MakeOperatorTable(); // table of Operators, names, and alt names for looking up methods.
+        private static readonly OperatorInfo[] _infos = MakeOperatorTable(); // table of Operators, names, and alt names for looking up methods.
         
         private readonly Operators _operator;
         private readonly string _name;
@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Actions {
             res.Add(new OperatorInfo(Operators.Multiply,            "op_Multiply",                  "Multiply"));       // *
             res.Add(new OperatorInfo(Operators.Divide,              "op_Division",                  "Divide"));         // /
             res.Add(new OperatorInfo(Operators.Mod,                 "op_Modulus",                   "Mod"));            // %
-            res.Add(new OperatorInfo(Operators.Xor,                 "op_ExclusiveOr",               "ExclusiveOr"));    // ^
+            res.Add(new OperatorInfo(Operators.ExclusiveOr,         "op_ExclusiveOr",               "ExclusiveOr"));    // ^
             res.Add(new OperatorInfo(Operators.BitwiseAnd,          "op_BitwiseAnd",                "BitwiseAnd"));     // &
             res.Add(new OperatorInfo(Operators.BitwiseOr,           "op_BitwiseOr",                 "BitwiseOr"));      // |
             res.Add(new OperatorInfo(Operators.And,                 "op_LogicalAnd",                "And"));            // &&
@@ -111,7 +111,7 @@ namespace Microsoft.Scripting.Actions {
             res.Add(new OperatorInfo(Operators.LessThanOrEqual,     "op_LessThanOrEqual",           "LessThanOrEqual"));        // <=
             res.Add(new OperatorInfo(Operators.InPlaceMultiply,     "op_MultiplicationAssignment",  "InPlaceMultiply"));       // *=
             res.Add(new OperatorInfo(Operators.InPlaceSubtract,     "op_SubtractionAssignment",     "InPlaceSubtract"));       // -=
-            res.Add(new OperatorInfo(Operators.InPlaceXor,          "op_ExclusiveOrAssignment",     "InPlaceXor"));            // ^=
+            res.Add(new OperatorInfo(Operators.InPlaceExclusiveOr,  "op_ExclusiveOrAssignment",     "InPlaceXor"));            // ^=
             res.Add(new OperatorInfo(Operators.InPlaceLeftShift,    "op_LeftShiftAssignment",       "InPlaceLeftShift"));      // <<=
             res.Add(new OperatorInfo(Operators.InPlaceRightShift,   "op_RightShiftAssignment",      "InPlaceRightShift"));     // >>=
             res.Add(new OperatorInfo(Operators.InPlaceRightShiftUnsigned, "op_UnsignedRightShiftAssignment", "InPlaceUnsignedRightShift"));     // >>=

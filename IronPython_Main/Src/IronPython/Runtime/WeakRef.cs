@@ -178,7 +178,7 @@ namespace IronPython.Runtime {
                     return _site.Invoke(context, o);
                 }
             } else {
-                DynamicHelpers.GetPythonType(_instance).TryInvokeUnaryOperator(context, Operators.Unassign, _instance, out o);
+                PythonTypeOps.TryInvokeUnaryOperator(context, _instance, Symbols.Unassign, out o);
             }
 
             return null;

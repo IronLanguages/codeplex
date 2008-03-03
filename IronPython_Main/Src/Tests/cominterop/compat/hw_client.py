@@ -19,7 +19,7 @@ COM servers implemented in pywin32.
 '''
 
 import sys
-from hw import hw_progid, hw_retval
+from cominterop.compat.hw import hw_progid, hw_retval
 from lib.cominterop_util import *
 
 if sys.platform=="cli":
