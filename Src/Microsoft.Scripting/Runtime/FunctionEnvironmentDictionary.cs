@@ -19,7 +19,6 @@ using System.Collections.Generic;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {

@@ -36,13 +36,17 @@ def test_getrandbits():
                 
     for x in temp_list:
         Assert(rand.getrandbits(x) < (2**x))
-    
-    #CodePlex Work Item #7972
+        
     rand = _random.Random()
-    #AssertError(ValueError, rand.getrandbits, 0)
-    #Should not be an OverflowError
-    #AssertError(ValueError, rand.getrandbits, -50)
     
+    AssertError(ValueError, rand.getrandbits, 0)
+    AssertError(ValueError, rand.getrandbits, -50)
+    
+    # might raise MemoryError, might not, but shouldn't raise anything else.
+    try:
+        rand.getrandbits(2147483647)
+    except MemoryError:
+        pass
     
 #jumpahead   
 def test_jumpahead():

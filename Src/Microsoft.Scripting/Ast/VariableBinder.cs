@@ -127,7 +127,12 @@ namespace Microsoft.Scripting.Ast {
                 return false;
             }
 
-            CodeBlockInfo cbi = new CodeBlockInfo(block);
+            Stack<CodeBlockInfo> stack = NonNullStack;
+
+            // The parent of the code block is the block currently
+            // on top of the stack, or a null if at top level.
+            CodeBlockInfo parent = stack.Count > 0 ? stack.Peek() : null;
+            CodeBlockInfo cbi = new CodeBlockInfo(block, parent);
 
             // Add the block to the list.
             // The blocks are added in prefix order so they
@@ -138,7 +143,7 @@ namespace Microsoft.Scripting.Ast {
             _infos[block] = cbi;
 
             // And push it on the stack.
-            NonNullStack.Push(cbi);
+            stack.Push(cbi);
 
             return true;
         }
@@ -185,7 +190,7 @@ namespace Microsoft.Scripting.Ast {
             }
             // Lift all locals
             foreach (Variable d in block.CodeBlock.Variables) {
-                if (d.Kind == Variable.VariableKind.Local) {
+                if (d.Kind == VariableKind.Local) {
                     d.LiftToClosure();
                 }
             }
@@ -204,8 +209,8 @@ namespace Microsoft.Scripting.Ast {
                 }
 
                 // Global variables as local
-                if (r.Variable.Kind == Variable.VariableKind.Global ||
-                    (r.Variable.Kind == Variable.VariableKind.Local && r.Variable.Block.IsGlobal)) {
+                if (r.Variable.Kind == VariableKind.Global ||
+                    (r.Variable.Kind == VariableKind.Local && r.Variable.Block.IsGlobal)) {
                     continue;
                 }
 
@@ -218,9 +223,9 @@ namespace Microsoft.Scripting.Ast {
                 do {
                     current.IsClosure = true;
 
-                    CodeBlock parentBlock = current.CodeBlock.Parent;
+                    CodeBlockInfo parent = current.Parent;
 
-                    if (parentBlock == null) {
+                    if (parent == null) {
                         throw new ArgumentException(
                             String.Format(
                                 "Cannot resolve variable '{0}' " +
@@ -234,7 +239,6 @@ namespace Microsoft.Scripting.Ast {
                         );
                     }
 
-                    CodeBlockInfo parent = GetCodeBlockInfo(parentBlock);
                     parent.HasEnvironment = true;
                     current = parent;
                 } while (current.CodeBlock != r.Variable.Block);

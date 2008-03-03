@@ -26,17 +26,19 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(expression, "expression");
 
-            CodeBlock cb = Ast.CodeBlock("<expression>", expression.Type, new Variable[0], new Variable[0]);
+            Expression body;
             if (expression.Type != typeof(void)) {
-                cb.Body = Ast.Return(
+                body = Ast.Return(
                     expression
                 );
             } else {
-                cb.Body = Ast.Block(
+                body = Ast.Block(
                     expression,
                     Ast.Return()
                 );
             }
+
+            CodeBlock cb = Ast.CodeBlock("<expression>", expression.Type, body, new Variable[0], new Variable[0]);
             return CompileBlock<T>(cb);
         }
 
@@ -44,15 +46,14 @@ namespace Microsoft.Scripting.Ast {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(expression, "expression");
 
-            CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void), new Variable[0], new Variable[0]);
-            cb.Body = Ast.Block(
+            Expression body = Ast.Block(
                 expression,
                 Ast.Return()
             );
+
+            CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void), body, new Variable[0], new Variable[0]);
             return CompileBlock<T>(cb);
         }
-
-        internal static bool DebugAssembly = true;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "block")]
         public static T CompileBlock<T>(CodeBlock block) {
@@ -60,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(block, "block");
 
             // Call compiler to create the delegate.
-            return Compiler.CompileCodeBlock<T>(block);
+            return LambdaCompiler.CompileCodeBlock<T>(block);
         }
     }
 }

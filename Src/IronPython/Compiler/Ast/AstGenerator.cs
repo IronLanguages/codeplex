@@ -51,8 +51,6 @@ namespace IronPython.Compiler.Ast {
             : this(span, name, generator, print) {
             Assert.NotNull(parent);
             _context = parent.Context;
-
-            _block.Parent = parent.Block;
         }
 
         internal AstGenerator(CompilerContext context, SourceSpan span, string name, bool generator, bool print)
@@ -106,7 +104,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         public void AddError(string message, SourceSpan span) {
-            _context.AddError(message, span.Start, span.End, Severity.Error);
+            // TODO: error code
+            _context.Errors.Add(_context.SourceUnit, message, span, -1, Severity.Error);
         }
 
         public MSAst.Variable MakeTemp(SymbolId name, Type type) {

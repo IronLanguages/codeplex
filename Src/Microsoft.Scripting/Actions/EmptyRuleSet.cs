@@ -18,8 +18,8 @@ using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     internal class EmptyRuleSet<T> : RuleSet<T> {
-        public static RuleSet<T> Instance = new EmptyRuleSet<T>(true);
-        public static RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);
+        public static readonly RuleSet<T> Instance = new EmptyRuleSet<T>(true);
+        public static readonly RuleSet<T> FixedInstance = new EmptyRuleSet<T>(false);
 
         private bool _supportAdding;
 

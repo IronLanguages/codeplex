@@ -49,7 +49,7 @@ namespace IronPython.Runtime.Types {
         private IAttributesCollection _vars;
         private Type _type;
         private bool _hasDict, _hasWeakRef, _hasSlots, _hasFinalizer;
-        private static Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
+        private static readonly Dictionary<Type, TypePrepender.PrependerState> _prependerState = new Dictionary<Type, TypePrepender.PrependerState>();
 
         private UserTypeBuilder(string name, PythonTuple bases, IAttributesCollection vars) {
             _name = name;
@@ -57,10 +57,10 @@ namespace IronPython.Runtime.Types {
             _vars = vars;
         }
 
-        public static PythonType Build(CodeContext context, string name, PythonTuple bases, IAttributesCollection vars) {
+        public static PythonType Build(CodeContext/*!*/ context, string name, PythonTuple bases, IAttributesCollection vars) {
             UserTypeBuilder utb = new UserTypeBuilder(name, bases, vars);
             Type type = NewTypeMaker.GetNewType(name, bases, vars);
-            PythonTypeBuilder builder = new PythonTypeBuilder(name, type);
+            PythonTypeBuilder builder = new PythonTypeBuilder(PythonContext.GetContext(context), name, type);
 
             utb.Builder = builder;
             utb._type = type;
@@ -516,8 +516,8 @@ namespace IronPython.Runtime.Types {
         private bool InitializeUserType(CodeContext context, PythonTuple newBases, IAttributesCollection newDict) {
             newBases = EnsureBaseType(newBases);
 
-            for (int i = 0; i < newBases.Count; i++) {
-                for (int j = 0; j < newBases.Count; j++) {
+            for (int i = 0; i < newBases.__len__(); i++) {
+                for (int j = 0; j < newBases.__len__(); j++) {
                     if (i != j && newBases[i] == newBases[j]) {
                         OldClass oc = newBases[i] as OldClass;
                         if (oc != null) {

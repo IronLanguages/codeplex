@@ -306,7 +306,7 @@ namespace IronPython.Runtime {
         private object GetData(int index) {
             PythonTuple dt = _data as PythonTuple;
             if (dt != null) {
-                if (index < dt.Count) {
+                if (index < dt.__len__()) {
                     return dt[index];
                 }
             } else {
@@ -373,7 +373,7 @@ namespace IronPython.Runtime {
         private void CheckDataUsed() {
             if (!(_data is IDictionary) && !(_data is IAttributesCollection)) {
                 if ((!(_data is PythonTuple) && _dataIndex != 1) ||
-                    (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).Count)) {
+                    (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).__len__())) {
                     throw PythonOps.TypeError("not all arguments converted during string formatting");
                 }
             }
@@ -425,7 +425,7 @@ namespace IronPython.Runtime {
                 else if (absV < 1e-2) numberDecimalDigits += 2;
                 else if (absV < 1e-1) numberDecimalDigits += 1;
 
-                string fixedPointForm = absV.ToString("F" + numberDecimalDigits).TrimEnd(zero);
+                string fixedPointForm = absV.ToString("F" + numberDecimalDigits, CultureInfo.InvariantCulture).TrimEnd(zero);
                 string fraction = fixedPointForm.Substring(fixedPointForm.IndexOf('.') + 1);
                 if (absV < 1.0) {
                     _opts.Precision = fraction.Length;

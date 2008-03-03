@@ -21,38 +21,32 @@ using System.Diagnostics;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Compiler;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
-using IronPython.Compiler;
-using Microsoft.Scripting.Actions;
-
 
 [assembly:PythonExtensionType(typeof(PythonType), typeof(PythonTypeOps), DerivationType=typeof(ExtensibleType))]
 namespace IronPython.Runtime.Operations {
     public static class PythonTypeOps {
+        [MultiRuntimeAware]
         private static object _DefaultNewInst;
         private static readonly Dictionary<FieldInfo, ReflectedField> _fieldCache = new Dictionary<FieldInfo, ReflectedField>();
+        private static readonly Dictionary<BuiltinFunction, BuiltinMethodDescriptor> _methodCache = new Dictionary<BuiltinFunction, BuiltinMethodDescriptor>();
         private static readonly Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction> _functions = new Dictionary<ReflectionCache.MethodBaseCache, BuiltinFunction>();
+        private static readonly Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction> _ctors = new Dictionary<ReflectionCache.MethodBaseCache, ConstructorFunction>();
         private static readonly Dictionary<EventTracker, ReflectedEvent> _eventCache = new Dictionary<EventTracker, ReflectedEvent>();
 
-        [PythonName("__bases__")]
-        public static readonly PythonTypeSlot BasesSlot = new PythonTypeBasesSlot();
-        [PythonName("__dict__")]
-        public static readonly PythonTypeSlot DictSlot = new PythonTypeDictSlot();
-        [PythonName("__name__")]
-        public static readonly PythonTypeSlot NameSlot = new PythonTypeNameSlot();
-        [PythonName("__mro__")]
-        public static readonly PythonTypeSlot MroSlot = new PythonTypeMroSlot();
         [OperatorSlot]
         public static readonly PythonTypeSlot Call = new PythonTypeOps.TypeCaller();
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext/*!*/ context, object cls, string name, PythonTuple bases, IAttributesCollection dict) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, object cls, string name, PythonTuple bases, IAttributesCollection dict) {
             if (name == null) {
                 throw PythonOps.TypeError("type() argument 1 must be string, not None");
             }
@@ -106,10 +100,189 @@ namespace IronPython.Runtime.Operations {
             return UserTypeBuilder.Build(context, name, bases, dict);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext/*!*/ context, object cls, object o) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, object cls, object o) {
             return DynamicHelpers.GetPythonType(o);
         }
+
+        [PropertyMethod]
+        public static string Get__name__(PythonType type) {
+            return type.Name;
+        }
+
+        [PropertyMethod]
+        public static PythonTuple Get__mro__(PythonType type) {
+            return MroToPython(type.ResolutionOrder);
+        }
+
+        [PropertyMethod]
+        public static DictProxy Get__dict__(PythonType type) {
+            return new DictProxy(type);
+        }
+
+        [PropertyMethod]
+        public static PythonTuple Get__bases__(CodeContext/*!*/ context, PythonType/*!*/ type) {
+            object[] res = new object[type.BaseTypes.Count];
+            IList<PythonType> bases = type.BaseTypes;
+            for (int i = 0; i < bases.Count; i++) {
+                PythonType baseType = bases[i];
+
+                if (Mro.IsOldStyle(baseType)) {
+                    PythonTypeSlot dts;
+                    bool success = baseType.TryLookupSlot(context, Symbols.Class, out dts);
+                    Debug.Assert(success);
+
+                    success = dts.TryGetValue(context, null, baseType, out res[i]);
+                    Debug.Assert(success);
+                } else {
+                    res[i] = baseType;
+                }
+            }
+
+            return new PythonTuple(false, res);
+        }
+
+        [PropertyMethod]
+        public static void Set__bases__(CodeContext/*!*/ context, PythonType/*!*/ type, object value) {
+            // validate we got a tuple...           
+            PythonTuple t = value as PythonTuple;
+            if (t == null) throw PythonOps.TypeError("expected tuple of types or old-classes, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(value)));
+
+            List<PythonType> ldt = new List<PythonType>();
+            PythonTypeBuilder dtb = PythonTypeBuilder.GetBuilder(type);
+
+            foreach (object o in t) {
+                // gather all the type objects...
+                PythonType adt = o as PythonType;
+                if (adt == null) {
+                    OldClass oc = o as OldClass;
+                    if (oc == null) {
+                        throw PythonOps.TypeError("expected tuple of types, got {0}", PythonOps.StringRepr(PythonTypeOps.GetName(o)));
+                    }
+
+                    adt = oc.TypeObject;
+                }
+
+                ldt.Add(adt);
+            }
+
+            // Ensure that we are not switching the CLI type
+            Type newType = Compiler.Generation.NewTypeMaker.GetNewType(type.Name, t, type.GetMemberDictionary(DefaultContext.Default));
+            if (type.UnderlyingSystemType != newType)
+                throw PythonOps.TypeErrorForIncompatibleObjectLayout("__bases__ assignment", type, newType);
+
+            // set bases & the new resolution order
+            IList<PythonType> mro = Mro.Calculate(type, ldt);
+
+            dtb.SetBases(ldt);
+
+            PropagateAttributeCustomization(context, type, dtb, mro);
+
+            dtb.SetResolutionOrder(mro);
+
+            PythonTypeSlot dummy;
+            if (!type.TryLookupSlot(context, Symbols.GetAttribute, out dummy)) {
+                dtb.SetHasGetAttribute(false);
+                foreach (PythonType dm in mro) {
+                    if (dm.HasGetAttribute) {
+                        dtb.SetHasGetAttribute(true);
+                        break;
+                    }
+                }
+            }
+
+            dtb.ReleaseBuilder();
+        }
+
+        private static void PropagateAttributeCustomization(CodeContext context, PythonType dt, PythonTypeBuilder dtb, IList<PythonType> mro) {
+            if (dt.CustomBoundGetter != null) {
+                // we already have a __getattribute__, figure out if it's inherited
+                // our declared on the type and propagate it or leave it alone
+                PythonTypeSlot dts;
+                if (dt.TryLookupSlot(context, Symbols.GetAttribute, out dts)) {
+                    PythonTypeGetAttributeSlot getAttr = dts as PythonTypeGetAttributeSlot;
+                    if (getAttr != null && getAttr.Inherited) {
+                        PropagateGetAttributeFromMro(dtb, mro, Symbols.GetAttribute);
+                    }
+                }
+            } else {
+                // propagate __getattribute__ if necessary
+                PropagateGetAttributeFromMro(dtb, mro, Symbols.GetAttribute);
+            }
+
+            if (dt.CustomSetter != null) {
+                PythonTypeSlot dts;
+                if (dt.TryLookupSlot(context, Symbols.SetAttr, out dts)) {
+                    PythonTypeGetAttributeSlot setAttr = dts as PythonTypeGetAttributeSlot;
+                    if (setAttr != null && setAttr.Inherited) {
+                        PropagateGetAttributeFromMro(dtb, mro, Symbols.SetAttr);
+                    }
+                }
+            } else {
+                PropagateGetAttributeFromMro(dtb, mro, Symbols.SetAttr);
+            }
+
+            if (dt.CustomDeleter != null) {
+                PythonTypeSlot dts;
+                if (dt.TryLookupSlot(context, Symbols.DelAttr, out dts)) {
+                    PythonTypeGetAttributeSlot delAttr = dts as PythonTypeGetAttributeSlot;
+                    if (delAttr != null && delAttr.Inherited) {
+                        PropagateGetAttributeFromMro(dtb, mro, Symbols.DelAttr);
+                    }
+                }
+            } else {
+                PropagateGetAttributeFromMro(dtb, mro, Symbols.DelAttr);
+            }
+
+        }
+
+        internal static void PropagateGetAttributeFromMro(PythonTypeBuilder dtb, IList<PythonType> mro, SymbolId attrHook) {
+            for (int i = 1; i < mro.Count; i++) {
+                if (attrHook == Symbols.GetAttribute && mro[i].CustomBoundGetter != null) {
+                    dtb.SetCustomBoundGetter(mro[i].CustomBoundGetter);
+                    PythonTypeGetAttributeSlot dts = new PythonTypeGetAttributeSlot(dtb.UnfinishedType, null, Symbols.GetAttribute);
+                    dts.Inherited = true;
+                    dtb.AddSlot(Symbols.GetAttribute, dts);
+                    dtb.SetHasGetAttribute(true);
+                    break;
+                }
+
+                if (attrHook == Symbols.SetAttr && mro[i].CustomSetter != null) {
+                    dtb.SetCustomSetter(mro[i].CustomSetter);
+                    PythonTypeGetAttributeSlot dts = new PythonTypeGetAttributeSlot(dtb.UnfinishedType, null, Symbols.SetAttr);
+                    dts.Inherited = true;
+                    dtb.AddSlot(Symbols.SetAttr, dts);
+                    break;
+                }
+
+                if (attrHook == Symbols.DelAttr && mro[i].CustomDeleter != null) {
+                    dtb.SetCustomDeleter(mro[i].CustomDeleter);
+                    PythonTypeGetAttributeSlot dts = new PythonTypeGetAttributeSlot(dtb.UnfinishedType, null, Symbols.DelAttr);
+                    dts.Inherited = true;
+                    dtb.AddSlot(Symbols.DelAttr, dts);
+                    break;
+                }
+            }
+        }
+
+        private static PythonTuple MroToPython(IList<PythonType> types) {
+            List<object> res = new List<object>(types.Count);
+            foreach (PythonType dt in types) {
+                if (dt.UnderlyingSystemType == typeof(ValueType)) continue; // hide value type
+
+                PythonTypeSlot dts;
+                object val;
+                if (dt != TypeCache.Object && dt.TryLookupSlot(DefaultContext.Default, Symbols.Class, out dts) &&
+                    dts.TryGetValue(DefaultContext.Default, null, dt, out val)) {
+                    res.Add(val);
+                } else {
+                    res.Add(dt);
+                }
+            }
+
+            return PythonTuple.Make(res);
+        }
+
 
         // TODO: This shouldn't exist, Python doesn't define __eq__ on classes
         [SpecialName]
@@ -123,30 +296,36 @@ namespace IronPython.Runtime.Operations {
             return object.ReferenceEquals(self.CanonicalPythonType, other.CanonicalPythonType);
         }
 
-        [PythonName("mro")]
-        public static object GetMethodResolutionOrder(PythonType self) {
+        public static object mro(PythonType self) {
             throw PythonOps.NotImplementedError("mro is not implemented on type, use __mro__ instead");
         }
 
-        [PythonName("__subclasses__")]
-        public static object GetSubClasses(PythonType self) {
+        public static object __subclasses__(CodeContext/*!*/ context, PythonType self) {
             List ret = new List();
             IList<WeakReference> subtypes = self.SubTypes;
+            
             if (subtypes != null) {
+                PythonContext pc = PythonContext.GetContext(context);
+
                 foreach (WeakReference wr in subtypes) {
-                    if (wr.IsAlive) ret.AddNoLock(wr.Target);
+                    if (wr.IsAlive) {
+                        PythonType pt = (PythonType)wr.Target;
+
+                        if (pt.PythonContext == null || pt.PythonContext == pc) {
+                            ret.AddNoLock(wr.Target);
+                        }
+                    }
                 }
             }
             return ret;
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string Repr(CodeContext/*!*/ context, PythonType self) {
+        public static string __repr__(CodeContext/*!*/ context, PythonType self) {
             string name = GetName(self);
 
             if (self.IsSystemType) {
                 if (IsRuntimeAssembly(self.UnderlyingSystemType.Assembly) || PythonTypeCustomizer.IsPythonType(self.UnderlyingSystemType)) {
-                    string module = GetModule(context, self);
+                    string module = Get__module__(context, self);
                     if (module != "__builtin__") {
                         return string.Format("<type '{0}.{1}'>", module, self.Name);
                     }
@@ -164,13 +343,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [SpecialName, PythonName("__str__")]
-        public static string PythonToString(CodeContext/*!*/ context, PythonType self) {
-            return Repr(context, self);
+        public static string __str__(CodeContext/*!*/ context, PythonType self) {
+            return __repr__(context, self);
         }
 
-        [PropertyMethod, PythonName("__module__")]
-        public static string GetModule(CodeContext/*!*/ context, PythonType self) {
+        [PropertyMethod]
+        public static string Get__module__(CodeContext/*!*/ context, PythonType self) {
             return GetModuleName(context, self.UnderlyingSystemType);
         }
 
@@ -422,6 +600,20 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
+        internal static PythonTypeSlot GetMethodIfMethod(BuiltinFunction func) {
+            if ((func.FunctionType & FunctionType.Method) != 0) {
+                BuiltinMethodDescriptor desc;
+                lock (_methodCache) {
+                    if (!_methodCache.TryGetValue(func, out desc)) {
+                        _methodCache[func] = desc = new BuiltinMethodDescriptor(func);
+                    }
+                    
+                    return desc;
+                }
+            }
+            return func;
+        }
+
         internal static BuiltinFunction GetBuiltinFunction(Type type, string name, MemberInfo[] mems) {
             return GetBuiltinFunction(type, name, null, mems);
         }
@@ -439,6 +631,21 @@ namespace IronPython.Runtime.Operations {
                             name,
                             bases,
                             funcType ?? GetMethodFunctionType(type, bases));
+                    }
+                }
+            }
+
+            return res;
+        }
+
+        internal static ConstructorFunction GetConstructor(Type type, BuiltinFunction realTarget, params MethodBase[] mems) {
+            ConstructorFunction res = null;
+
+            if (mems.Length != 0) {
+                ReflectionCache.MethodBaseCache cache = new ReflectionCache.MethodBaseCache("__new__", mems);
+                lock (_ctors) {
+                    if (!_ctors.TryGetValue(cache, out res)) {
+                        _ctors[cache] = res = new ConstructorFunction(realTarget, mems);
                     }
                 }
             }
@@ -487,9 +694,37 @@ namespace IronPython.Runtime.Operations {
             PythonTypeSlot pts;
             PythonType pt = DynamicHelpers.GetPythonType(o);
             object callable;
-            if (DynamicHelpers.GetPythonType(o).TryResolveSlot(context, si, out pts) &&
+            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
                 pts.TryGetBoundValue(context, o, pt, out callable)) {
                 value = PythonCalls.Call(callable);
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        internal static bool TryInvokeBinaryOperator(CodeContext context, object o, object arg1, SymbolId si, out object value) {
+            PythonTypeSlot pts;
+            PythonType pt = DynamicHelpers.GetPythonType(o);
+            object callable;
+            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
+                pts.TryGetBoundValue(context, o, pt, out callable)) {
+                value = PythonCalls.Call(callable, arg1);
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        internal static bool TryInvokeTernaryOperator(CodeContext context, object o, object arg1, object arg2, SymbolId si, out object value) {
+            PythonTypeSlot pts;
+            PythonType pt = DynamicHelpers.GetPythonType(o);
+            object callable;
+            if (DynamicHelpers.GetPythonType(o).TryResolveMixedSlot(context, si, out pts) &&
+                pts.TryGetBoundValue(context, o, pt, out callable)) {
+                value = PythonCalls.Call(callable, arg1, arg2);
                 return true;
             }
 

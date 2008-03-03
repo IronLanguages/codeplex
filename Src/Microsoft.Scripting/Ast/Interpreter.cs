@@ -502,20 +502,20 @@ namespace Microsoft.Scripting.Ast {
             BoundExpression node = (BoundExpression)expr;
             object ret;
             switch (node.Variable.Kind) {
-                case Variable.VariableKind.Temporary:
+                case VariableKind.Temporary:
                     if (!context.Scope.TemporaryStorage.TryGetValue(node.Variable, out ret)) {
                         throw context.LanguageContext.MissingName(node.Variable.Name);
                     } else {
                         return ret;
                     }
-                case Variable.VariableKind.Parameter:
+                case VariableKind.Parameter:
                     // This is sort of ugly: parameter variables can be stored either as locals or as temporaries (in case of $argn).
                     if (!context.Scope.TemporaryStorage.TryGetValue(node.Variable, out ret) || ret == Uninitialized.Instance) {
                         return RuntimeHelpers.LookupName(context, node.Variable.Name);
                     } else {
                         return ret;
                     }
-                case Variable.VariableKind.Global:
+                case VariableKind.Global:
                     return RuntimeHelpers.LookupGlobalName(context, node.Variable.Name);
                 default:
                     if (!context.LanguageContext.TryLookupName(context, node.Variable.Name, out ret)) {
@@ -596,28 +596,50 @@ namespace Microsoft.Scripting.Ast {
 
         private static object InterpretNewArrayExpression(CodeContext context, Expression expr) {
             NewArrayExpression node = (NewArrayExpression)expr;
-            if (node.Type.GetElementType().IsValueType) {
-                // value arrays cannot be cast to object arrays
-                object contents = (object)node.Constructor.Invoke(new object[] { node.Expressions.Count });
-                MethodInfo setter = node.Type.GetMethod("Set");
-                for (int i = 0; i < node.Expressions.Count; i++) {
+            ConstructorInfo constructor;
+
+            if (node.NodeType == AstNodeType.NewArrayBounds) {
+                Debug.Assert(false, "debug me");
+                int rank = node.Type.GetArrayRank();
+                Type[] types = new Type[rank];
+                object[] bounds = new object[rank];
+                for (int i = 0; i < rank; i++) {
+                    types[i] = typeof(int);
                     object value;
                     if (InterpretAndCheckFlow(context, node.Expressions[i], out value)) {
                         return value;
                     }
-                    setter.Invoke(contents, new object[] { i, value });
+                    bounds[i] = value;
                 }
-                return contents;
+                constructor = expr.Type.GetConstructor(types);
+                return constructor.Invoke(bounds);
             } else {
-                object[] contents = (object[])node.Constructor.Invoke(new object[] { node.Expressions.Count });
-                for (int i = 0; i < node.Expressions.Count; i++) {
-                    object value;
-                    if (InterpretAndCheckFlow(context, node.Expressions[i], out value)) {
-                        return value;
+                // this must be AstNodeType.NewArrayExpression
+                constructor = expr.Type.GetConstructor(new Type[] { typeof(int) });
+
+                if (node.Type.GetElementType().IsValueType) {
+                    // value arrays cannot be cast to object arrays
+                    object contents = (object)constructor.Invoke(new object[] { node.Expressions.Count });
+                    MethodInfo setter = node.Type.GetMethod("Set");
+                    for (int i = 0; i < node.Expressions.Count; i++) {
+                        object value;
+                        if (InterpretAndCheckFlow(context, node.Expressions[i], out value)) {
+                            return value;
+                        }
+                        setter.Invoke(contents, new object[] { i, value });
                     }
-                    contents[i] = value;
+                    return contents;
+                } else {
+                    object[] contents = (object[])constructor.Invoke(new object[] { node.Expressions.Count });
+                    for (int i = 0; i < node.Expressions.Count; i++) {
+                        object value;
+                        if (InterpretAndCheckFlow(context, node.Expressions[i], out value)) {
+                            return value;
+                        }
+                        contents[i] = value;
+                    }
+                    return contents;
                 }
-                return contents;
             }
         }
 
@@ -676,10 +698,10 @@ namespace Microsoft.Scripting.Ast {
             DeleteStatement node = (DeleteStatement)expr;
             context.Scope.SourceLocation = node.Start;
             switch (node.Variable.Kind) {
-                case Variable.VariableKind.Temporary:
+                case VariableKind.Temporary:
                     context.Scope.TemporaryStorage.Remove(node.Variable);
                     break;
-                case Variable.VariableKind.Global:
+                case VariableKind.Global:
                     RuntimeHelpers.RemoveGlobalName(context, node.Variable.Name);
                     break;
                 default:
@@ -1008,10 +1030,10 @@ namespace Microsoft.Scripting.Ast {
 
         private static object EvaluateAssignVariable(CodeContext context, Variable var, object value) {
             switch (var.Kind) {
-                case Variable.VariableKind.Temporary:
+                case VariableKind.Temporary:
                     context.Scope.TemporaryStorage[var] = value;
                     break;
-                case Variable.VariableKind.Global:
+                case VariableKind.Global:
                     RuntimeHelpers.SetGlobalName(context, var.Name, value);
                     break;
                 default:

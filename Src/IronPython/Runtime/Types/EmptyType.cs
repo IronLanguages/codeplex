@@ -29,13 +29,13 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(NotImplementedType), typeof(NotImplementedTypeOps))]
 namespace IronPython.Runtime.Types {
 
-    [PythonType("ellipsis")]
+    [PythonSystemType("ellipsis")]
     [Documentation(null)]
     public class Ellipsis : ICodeFormattable {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return "Ellipsis";
         }
 
@@ -46,7 +46,7 @@ namespace IronPython.Runtime.Types {
     public class NotImplementedType : ICodeFormattable {
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return "NotImplemented";
         }
 
@@ -54,14 +54,16 @@ namespace IronPython.Runtime.Types {
     }
 
     public class NoneTypeOps : EmptyTypeOps<object> {
+        public const int NoneHashCode = 0x1e1a2e40;
+
         internal static void InitInstance() {
-            InitOps(0x1e1a2e40,
+            InitOps(NoneHashCode,
                 null,
                 "None");
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string ToCodeString(None self) {
+
+        public static string __repr__(None self) {
             return "None";
         }
     }
@@ -101,8 +103,11 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public abstract class EmptyTypeOps<T> {
+        [MultiRuntimeAware]
         private static string name;
+        [MultiRuntimeAware]
         private static T instance;
+        [MultiRuntimeAware]
         private static int hash;
 
         protected static void InitOps(int hashCode,
@@ -142,24 +147,20 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        [SpecialName, PythonName("__hash__")]
-        public static int HashMethod(object self) {
+        public static int __hash__(object self) {
             return hash;
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string ReprMethod(object self) {
+        public static string __repr__(object self) {
             return Name;
         }
 
-        [SpecialName, PythonName("__str__")]
-        public static string ToString(object self) {
+        public static string __str__(object self) {
             return Name;
         }
 
-
-        [StaticExtensionMethod("__new__")]
-        public static object NewMethod(CodeContext context, object type, params object[] prms) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, object type, params object[] prms) {
             if (type == TypeInstance) {
                 throw PythonOps.TypeError("cannot create instances of '{0}'", Name);
             }

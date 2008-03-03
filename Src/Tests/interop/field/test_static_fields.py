@@ -171,25 +171,21 @@ def _test_set_by_instance(current_type):
     def f24(): o.StaticSimpleInterfaceField = ClassImplementSimpleInterface(78)
 
     funcs = [ eval("f%s" % i) for i in range(1, 25) ]
-    if clr.GetClrType(current_type).IsValueType:
-        for f in funcs:
-            AssertError(ValueError, f)  # ???
-    else: 
-        for f in funcs: f()
-        _test_verify(current_type)
-        
-        # set values which need conversion.
-        o.StaticInt32Field = 100L
-        AreEqual(current_type.StaticInt32Field, 100)
+    for f in funcs: f()
+    _test_verify(current_type)
+    
+    # set values which need conversion.
+    o.StaticInt32Field = 100L
+    AreEqual(current_type.StaticInt32Field, 100)
 
-        o.StaticInt32Field = 10.01
-        AreEqual(current_type.StaticInt32Field, 10)
+    o.StaticInt32Field = 10.01
+    AreEqual(current_type.StaticInt32Field, 10)
 
-        # set bad values 
-        def f1(): o.StaticInt32Field = "abc"
-        def f2(): o.StaticEnumField = 3
-        
-        for f in [f1, f2]: AssertError(TypeError, f)
+    # set bad values 
+    def f1(): o.StaticInt32Field = "abc"
+    def f2(): o.StaticEnumField = 3
+    
+    for f in [f1, f2]: AssertError(TypeError, f)
 
 def _test_set_by_type(current_type):
     current_type.SetStaticFields()
@@ -391,8 +387,8 @@ for i in range(len(types)):
 def test_nested():
     for s in [ Struct2, GenericStruct2[int], GenericStruct2[str] ]:
         AreEqual(s.StaticNextField.StaticNextField.StaticNextField.StaticField, 10)
-        def f(): s.StaticNextField.StaticNextField.StaticNextField.StaticField = -10
-        AssertErrorWithMatch(ValueError, "cannot assign to value types", f) 
+        s.StaticNextField.StaticNextField.StaticNextField.StaticField = -10
+        AreEqual(s.StaticNextField.StaticNextField.StaticNextField.StaticField, -10)        
 
     for c in [ Class2, GenericClass2[System.Byte], GenericClass2[object] ]:
         AreEqual(c.StaticNextField, None)
@@ -414,11 +410,8 @@ def test_generic_fields():
         AreEqual(o.StaticStructTField.Flag, 50)
 
         def f(): o.StaticStructTField = SimpleGenericStruct[int](60)
-        if gt == GenericStruct2:
-            AssertErrorWithMatch(ValueError, "cannot assign to value types", f) 
-        else: 
-            f()
-            AreEqual(current_type.StaticStructTField.Flag, 60)
+        f()
+        AreEqual(current_type.StaticStructTField.Flag, 60)
 
         current_type = gt[str]
         o = current_type()
@@ -431,11 +424,8 @@ def test_generic_fields():
         AreEqual(o.StaticStructTField.Flag, '50')
 
         def f(): o.StaticClassTField = SimpleGenericClass[str]("60")
-        if gt == GenericStruct2:
-            AssertErrorWithMatch(ValueError, "cannot assign to value types", f) 
-        else: 
-            f()
-            AreEqual(current_type.StaticClassTField.Flag, "60")
+        f()
+        AreEqual(current_type.StaticClassTField.Flag, "60")
 
 def test_access_from_derived_types():
     for current_type in [ 
@@ -460,7 +450,7 @@ def test_access_from_derived_types():
         def f1(): o.StaticByteField = 1
         def f2(): current_type.StaticByteField = 1
 
-        AssertErrorWithMatch(AttributeError, "attribute 'StaticByteField' of '.*' object is read-only", f1)
+        AssertErrorWithMatch(AttributeError, "'.*' object has no attribute 'StaticByteField'", f1)
         AssertErrorWithMatch(AttributeError, "'.*' object has no attribute 'StaticByteField'", f2)
         
         Assert('StaticByteField' not in current_type.__dict__)

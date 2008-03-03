@@ -20,7 +20,6 @@ using System.IO;
 using System.Diagnostics;
 
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Hosting;
 
 #if !SILVERLIGHT // requires CodeDom support
 

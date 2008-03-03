@@ -61,7 +61,7 @@ namespace IronPython.Modules {
 
         public static RE_Pattern compile(object pattern) {
             try {
-                return new RE_Pattern(ValidatePattern(pattern));
+                return new RE_Pattern(ValidatePattern(pattern), 0, true);
             } catch (ArgumentException e) {
                 throw PythonExceptions.CreateThrowable(error, e.Message);
             }
@@ -69,7 +69,7 @@ namespace IronPython.Modules {
 
         public static RE_Pattern compile(object pattern, object flags) {
             try {
-                return new RE_Pattern(ValidatePattern(pattern), Converter.ConvertToInt32(flags));
+                return new RE_Pattern(ValidatePattern(pattern), Converter.ConvertToInt32(flags), true);
             } catch (ArgumentException e) {
                 throw PythonExceptions.CreateThrowable(error, e.Message);
             }
@@ -191,9 +191,9 @@ namespace IronPython.Modules {
             return split(ValidatePattern(pattern), ValidateString(@string, "string"), 0);
         }
 
-        public static object split(object pattern, object @string, int maxSplit) {
+        public static object split(object pattern, object @string, int maxsplit) {
             return new RE_Pattern(ValidatePattern(pattern)).split(ValidateString(@string, "string"),
-                maxSplit);
+                maxsplit);
         }
 
         public static object sub(object pattern, object repl, object @string) {
@@ -227,15 +227,23 @@ namespace IronPython.Modules {
             private WeakRefTracker _weakRefTracker;
             internal ParsedRegex _pre;
 
-            public RE_Pattern(object pattern)
+            internal RE_Pattern(object pattern)
                 : this(pattern, 0) {
             }
 
-            public RE_Pattern(object pattern, int flags) {
+            internal RE_Pattern(object pattern, int flags) :
+                this(pattern, flags, false) {
+            }
+
+            internal RE_Pattern(object pattern, int flags, bool compiled) {
                 _pre = PreParseRegex(ValidatePattern(pattern));
                 try {
                     RegexOptions opts = FlagsToOption(flags);
+#if SILVERLIGHT
                     this._re = new Regex(_pre.Pattern, opts);
+#else
+                    this._re = new Regex(_pre.Pattern, opts | (compiled ? RegexOptions.Compiled : RegexOptions.None));
+#endif
                 } catch (ArgumentException e) {
                     throw PythonExceptions.CreateThrowable(error, e.Message);
                 }
@@ -329,10 +337,10 @@ namespace IronPython.Modules {
                 return split(@string, 0);
             }
 
-            public object split(object @string, int maxSplit) {
+            public object split(object @string, int maxsplit) {
                 List result = new List();
                 // fast path for negative maxSplit ( == "make no splits")
-                if (maxSplit < 0)
+                if (maxsplit < 0)
                     result.AddNoLock(@string);
                 else {
                     // iterate over all matches
@@ -354,7 +362,7 @@ namespace IronPython.Modules {
                             // update lastPos, nSplits
                             lastPos = m.Index + m.Length;
                             nSplits++;
-                            if (nSplits == maxSplit)
+                            if (nSplits == maxsplit)
                                 break;
                         }
                     }
@@ -495,16 +503,21 @@ namespace IronPython.Modules {
             private Match _m;
             private string _text;
             private int _lastindex = -1;
-            private int _endPos;
+            private int _pos, _endPos;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
-                if (m.Success) return new RE_Match(m, pattern, input);
+                if (m.Success) return new RE_Match(m, pattern, input, 0, input.Length);
+                return null;
+            }
+
+            internal static RE_Match make(Match m, RE_Pattern pattern, string input, int offset, int endpos) {
+                if (m.Success) return new RE_Match(m, pattern, input, offset, endpos);
                 return null;
             }
 
             internal static RE_Match makeMatch(Match m, RE_Pattern pattern, string input, int offset, int endpos) {
-                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input, endpos);
+                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input, offset, endpos);
                 return null;
             }
             #endregion
@@ -517,10 +530,11 @@ namespace IronPython.Modules {
                 _text = text;
             }
 
-            public RE_Match(Match m, RE_Pattern pattern, string text, int endpos) {
+            public RE_Match(Match m, RE_Pattern pattern, string text, int pos, int endpos) {
                 _m = m;
                 _pattern = pattern;
                 _text = text;
+                _pos = pos;
                 _endPos = endpos;
             }
 
@@ -667,7 +681,7 @@ namespace IronPython.Modules {
 
             public int pos {
                 get {
-                    return _m.Index;
+                    return _pos;
                 }
             }
 
@@ -778,7 +792,7 @@ namespace IronPython.Modules {
 
         private static IEnumerator MatchIterator(MatchCollection matches, RE_Pattern pattern, string input) {
             for (int i = 0; i < matches.Count; i++) {
-                yield return RE_Match.make(matches[i], pattern, input);
+                yield return RE_Match.make(matches[i], pattern, input, 0, input.Length);
             }
         }
 

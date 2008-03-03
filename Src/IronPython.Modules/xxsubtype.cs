@@ -28,13 +28,13 @@ namespace IronPython.Modules {
     /// Samples on how to subtype built-in types from C#
     /// </summary>
     public static class xxsubtype {
-        [PythonType("spamlist")]
-        public class SpamList : List {
-            public SpamList()
+        [PythonSystemType]
+        public class spamlist : List {
+            public spamlist()
                 : base() {
             }
 
-            public SpamList(object sequence)
+            public spamlist(object sequence)
                 : base(sequence) {
             }
 
@@ -43,30 +43,26 @@ namespace IronPython.Modules {
             /// </summary>
             public int state;
 
-            [PythonName("getstate")]
             public int getstate() {
                 return state;
             }
 
-            [PythonName("setstate")]
             public void setstate(int value) {
                 state = value;
             }
         }
 
-        [PythonType("spamdict")]
-        public class SpamDict : PythonDictionary {
+        [PythonSystemType]
+        public class spamdict : PythonDictionary {
             /// <summary>
             /// an int variable for demonstration purposes
             /// </summary>
             public int state;
 
-            [PythonName("getstate")]
             public int getstate() {
                 return state;
             }
 
-            [PythonName("setstate")]
             public void setstate(int value) {
                 state = value;
             }

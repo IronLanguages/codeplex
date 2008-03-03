@@ -46,11 +46,11 @@ namespace IronPython.Runtime.Operations {
             return _dictSplatSite.Invoke(DefaultContext.Default, func, args, dict);
         }
 
-        private static DynamicSite<object, object[], object> MakeSplatSite() {
+        internal static DynamicSite<object, object[], object> MakeSplatSite() {
             return DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
         }
 
-        private static DynamicSite<object, object[], IAttributesCollection, object> MakeDictSplatSite() {
+        internal static DynamicSite<object, object[], IAttributesCollection, object> MakeDictSplatSite() {
             return DynamicSite<object, object[], IAttributesCollection, object>.Create(
                 CallAction.Make(
                     new CallSignature(

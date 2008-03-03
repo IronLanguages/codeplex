@@ -132,6 +132,8 @@ namespace Microsoft.Scripting.Actions {
 
                 if (info.IsStatic != _isStatic) {
                     AddToBody(Binder.MakeStaticPropertyInstanceAccessError(info, true, Rule.Parameters).MakeErrorForRule(Rule, Binder));
+                } else if(info.IsStatic && info.DeclaringType != targetType) {
+                    AddToBody(Binder.MakeStaticAssignFromDerivedTypeError(targetType, info, Rule.Parameters[1]).MakeErrorForRule(Rule, Binder));             
                 } else if (setter.ContainsGenericParameters) {
                     AddToBody(Rule.MakeError(MakeGenericPropertyExpression()));
                 } else if (setter.IsPublic && !setter.DeclaringType.IsValueType) {
@@ -169,7 +171,7 @@ namespace Microsoft.Scripting.Actions {
                     );
                 }
             } else {
-                AddToBody(Binder.MakeMissingMemberError(Rule, targetType, StringName));
+                AddToBody(Binder.MakeMissingMemberError(targetType, StringName).MakeErrorForRule(Rule, Binder));
             }
         }
 
@@ -190,9 +192,11 @@ namespace Microsoft.Scripting.Actions {
                         )
                     )
                 );
-            } else if (field.IsInitOnly || field.IsLiteral || (field.IsStatic && targetType != field.DeclaringType)) {     // TODO: Field static check too python specific
+            } else if (field.IsInitOnly || field.IsLiteral) {
                 AddToBody(Binder.MakeReadOnlyMemberError(Rule, targetType, StringName));
-            } else if (field.DeclaringType.IsValueType) {
+            } else if (field.IsStatic && targetType != field.DeclaringType) {
+                AddToBody(Binder.MakeStaticAssignFromDerivedTypeError(targetType, field, Rule.Parameters[1]).MakeErrorForRule(Rule, Binder));
+            } else if (field.DeclaringType.IsValueType && !field.IsStatic) {
                 AddToBody(Rule.MakeError(Ast.New(typeof(ArgumentException).GetConstructor(new Type[] { typeof(string) }), Ast.Constant("cannot assign to value types"))));
             } else if (field.IsPublic && field.DeclaringType.IsVisible) {
                 AddToBody(

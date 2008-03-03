@@ -22,7 +22,6 @@ using System.Globalization;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Generation;
 using System.Runtime.CompilerServices;
 using System.Reflection;

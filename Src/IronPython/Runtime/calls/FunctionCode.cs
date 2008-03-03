@@ -247,7 +247,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private void ExpandArgsTuple(List<string> names, PythonTuple toExpand) {
-            for (int i = 0; i < toExpand.Count; i++) {
+            for (int i = 0; i < toExpand.__len__(); i++) {
                 if (toExpand[i] is PythonTuple) {
                     ExpandArgsTuple(names, toExpand[i] as PythonTuple);
                 } else {

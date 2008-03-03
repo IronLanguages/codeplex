@@ -23,12 +23,12 @@ namespace IronPython.Compiler.Ast {
         internal abstract MSAst.Expression Transform(AstGenerator ag, Type type);
 
         internal virtual MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
-            ag.AddError("can't assign to " + GetType().Name, Span);
+            ag.AddError("can't assign to " + NodeName, Span);
             return null;
         }
 
         internal virtual MSAst.Expression TransformDelete(AstGenerator ag) {
-            ag.AddError("can't delete " + GetType().Name, Span);
+            ag.AddError("can't delete " + NodeName, Span);
             return null;
         }
     }

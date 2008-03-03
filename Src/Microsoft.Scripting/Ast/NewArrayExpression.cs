@@ -24,22 +24,14 @@ namespace Microsoft.Scripting.Ast {
     public sealed class NewArrayExpression : Expression {
         private readonly ReadOnlyCollection<Expression> _expressions;
 
-        // TODO: Remove!!!
-        private readonly ConstructorInfo _constructor;
-
-        internal NewArrayExpression(Type type, ReadOnlyCollection<Expression> expressions)
-            : base(AstNodeType.NewArrayExpression, type) {
+        internal NewArrayExpression(AstNodeType nodeType, Type type, ReadOnlyCollection<Expression> expressions)
+            : base(nodeType, type) {
             _expressions = expressions;
-            _constructor = type.GetConstructor(new Type[] { typeof(int) });
         }
 
         public ReadOnlyCollection<Expression> Expressions {
             get { return _expressions; }
         }
-
-        internal ConstructorInfo Constructor {
-            get { return _constructor; }
-        } 
     }
 
     /// <summary>
@@ -71,9 +63,28 @@ namespace Microsoft.Scripting.Ast {
                 Contract.Requires(TypeUtils.CanAssign(element, expression.Type), "initializers");
             }
 
-            return new NewArrayExpression(type, CollectionUtils.ToReadOnlyCollection(initializers));
+            return new NewArrayExpression(AstNodeType.NewArrayExpression, type, CollectionUtils.ToReadOnlyCollection(initializers));
         }
 
+        public static NewArrayExpression NewArrayBounds(Type type, params Expression[] bounds) {
+            return NewArrayBounds(type, (IList<Expression>)bounds);
+        }
+
+        public static NewArrayExpression NewArrayBounds(Type type, IList<Expression> bounds) {
+            Contract.RequiresNotNull(type, "type");
+            Contract.Requires(type.IsArray, "type", "Not an array type");
+            Contract.Requires(bounds.Count > 0, "bounds", "Bounds count cannot be less than 1");
+            Contract.Requires(type.GetArrayRank() == bounds.Count, "bounds", "Bounds count must match the rank");
+
+            ReadOnlyCollection<Expression> boundsList = CollectionUtils.ToReadOnlyCollection(bounds);
+            for (int i = 0, n = boundsList.Count; i < n; i++) {
+                Expression e = boundsList[i];
+                Contract.RequiresNotNull(e, "bounds");
+                Contract.Requires(TypeUtils.CanAssign(typeof(int), e.Type), "bounds", "Bounds must be ints.");
+            }
+            return new NewArrayExpression(AstNodeType.NewArrayBounds, type, CollectionUtils.ToReadOnlyCollection(bounds));
+        }
+        
         public static NewArrayExpression NewArrayHelper(Type type, IList<Expression> initializers) {
             Contract.RequiresNotNullItems(initializers, "initializers");
             Contract.RequiresNotNull(type, "type");

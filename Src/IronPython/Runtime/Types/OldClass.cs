@@ -50,7 +50,7 @@ namespace IronPython.Runtime.Types {
         HasDelAttr = 0x04,
     }
 
-    [PythonType("classobj")]
+    [PythonSystemType("classobj")]
     [Serializable]
     public sealed class OldClass :
 #if !SILVERLIGHT // ICustomTypeDescriptor
@@ -68,6 +68,7 @@ namespace IronPython.Runtime.Types {
         private int _attrs;  // actually OldClassAttributes - losing type safety for thread safety
         internal object __name__;
 
+        [MultiRuntimeAware]
         private static int _namesVersion;
         private int _optimizedInstanceNamesVersion;
         private SymbolId[] _optimizedInstanceNames;
@@ -93,7 +94,7 @@ namespace IronPython.Runtime.Types {
 
             InitializeInstanceNames(instanceNames);
 
-            __dict__ = new WrapperDictionary(dict);
+            __dict__ = new PythonDictionary(new WrapperDictionaryStorage(dict));
 
             if (!__dict__.ContainsKey(Symbols.Doc)) {
                 __dict__[Symbols.Doc] = null;
@@ -333,7 +334,7 @@ namespace IronPython.Runtime.Types {
             PythonTuple t = value as PythonTuple;
             if (t == null) throw PythonOps.TypeError("__bases__ must be a tuple object");
 
-            List<OldClass> res = new List<OldClass>(t.Count);
+            List<OldClass> res = new List<OldClass>(t.__len__());
             foreach (object o in t) {
                 OldClass oc = o as OldClass;
                 if (oc == null) throw PythonOps.TypeError("__bases__ items must be classes (got {0})", PythonTypeOps.GetName(o));
@@ -414,7 +415,7 @@ namespace IronPython.Runtime.Types {
         public IList<object> GetMemberNames(CodeContext context) {
             SymbolDictionary attrs = new SymbolDictionary(__dict__);
             RecurseAttrHierarchy(this, attrs);
-            return List.Make(attrs);
+            return PythonOps.MakeListFromSequence(attrs);
         }
 
         public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
@@ -493,7 +494,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<class {0} at {1}>", FullName, PythonOps.HexId(this));
         }
 
@@ -699,7 +700,7 @@ namespace IronPython.Runtime.Types {
                 );
             } else if (action.Name == Symbols.Bases) {
                 target = Ast.Call(
-                    typeof(PythonTuple).GetMethod("Make"),
+                    typeof(PythonOps).GetMethod("MakeTupleFromSequence"),
                     Ast.ConvertHelper(
                         Ast.ReadProperty(
                             Ast.Convert(rule.Parameters[0], typeof(OldClass)),

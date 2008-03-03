@@ -255,6 +255,10 @@ namespace IronPython.Modules {
             return new PythonTuple(res);
         }
 
+        private static int Align(int length, int size) {
+            return length + (size - 1) & ~(size - 1);
+        }
+
         public static int calcsize(string fmt) {
             int len = 0;
             int count = 1;
@@ -270,6 +274,8 @@ namespace IronPython.Modules {
                         break;
                     case 'h': // short
                     case 'H': // unsigned short
+                        len = Align(len, 2);
+
                         len += 2 * count;
                         count = 1;
                         break;
@@ -277,19 +283,27 @@ namespace IronPython.Modules {
                     case 'I': // unsigned int
                     case 'l': // long
                     case 'L': // unsigned long
+                        len = Align(len, 4);
+
                         len += 4 * count;
                         count = 1;
                         break;
                     case 'q': // long long
                     case 'Q': // unsigned long long
+                        len = Align(len, 8);
+
                         len += 8 * count;
                         count = 1;
                         break;
                     case 'f': // float
+                        len = Align(len, 4);
+
                         len += 4 * count;
                         count = 1;
                         break;
                     case 'd': // double
+                        len = Align(len, 8);
+
                         len += 8 * count;
                         count = 1;
                         break;
@@ -297,6 +311,8 @@ namespace IronPython.Modules {
                         len += count + 1;
                         break;
                     case 'P': // void *
+                        len = Align(len, IntPtr.Size);
+
                         len += IntPtr.Size;
                         break;
                     case ' ':

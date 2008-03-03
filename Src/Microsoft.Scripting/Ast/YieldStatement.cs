@@ -21,8 +21,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly SourceLocation _start;
         private readonly SourceLocation _end;
 
-        private YieldTarget _target;
-
         internal YieldStatement(SourceLocation start, SourceLocation end, Expression /*!*/ expression)
             : base(AstNodeType.YieldStatement, typeof(void)) {
             _start = start;
@@ -40,12 +38,6 @@ namespace Microsoft.Scripting.Ast {
 
         public SourceLocation End {
             get { return _end; }
-        }
-
-        // TODO: Remove !!!
-        internal YieldTarget Target {
-            get { return _target; }
-            set { _target = value; }
         }
     }
 

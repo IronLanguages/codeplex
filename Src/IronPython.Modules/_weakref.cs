@@ -84,9 +84,9 @@ namespace IronPython.Modules {
             }
         }
 
-        public static object CallableProxyType;
-        public static object ProxyType;
-        public static object ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(@ref));
+        public static readonly PythonType CallableProxyType;
+        public static readonly PythonType ProxyType;
+        public static readonly PythonType ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(@ref));
 
         [PythonSystemType]
         public class @ref : IValueEquality {
@@ -241,17 +241,17 @@ namespace IronPython.Modules {
             /// Special equals because none of the special cases in Ops.Equals
             /// are applicable here, and the reference equality check breaks some tests.
             /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <returns></returns>
             private static bool RefEquals(CodeContext context, object x, object y) {
                 object ret;
+                if (PythonTypeOps.TryInvokeBinaryOperator(context, x, y, Symbols.OperatorEquals, out ret) &&
+                    ret != PythonOps.NotImplemented) {
+                    return (bool)ret;
+                }
 
-                ret = DynamicHelpers.GetPythonType(x).InvokeBinaryOperator(context, Operators.Equals, x, y);
-                if (ret != PythonOps.NotImplemented) return (bool)ret;
-
-                ret = DynamicHelpers.GetPythonType(y).InvokeBinaryOperator(context, Operators.Equals, y, x);
-                if (ret != PythonOps.NotImplemented) return (bool)ret;
+                if (PythonTypeOps.TryInvokeBinaryOperator(context, y, x, Symbols.OperatorEquals, out ret) &&
+                    ret != PythonOps.NotImplemented) {
+                    return (bool)ret;
+                }
 
                 return x.Equals(y);
             }
@@ -382,7 +382,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            string ICodeFormattable.ToCodeString(CodeContext context) {
+            public string/*!*/ __repr__(CodeContext/*!*/ context) {
                 object obj = target.Target;
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
@@ -605,7 +605,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            string ICodeFormattable.ToCodeString(CodeContext context) {
+            public string/*!*/ __repr__(CodeContext/*!*/ context) {
                 object obj = _target.Target;
                 GC.KeepAlive(this);
                 return String.Format("<weakproxy at {0} to {1} at {2}>",
@@ -744,7 +744,7 @@ namespace IronPython.Modules {
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<slot wrapper {0} of {1} objects>",
                 PythonOps.StringRepr(SymbolTable.IdToString(name)),
                 PythonOps.StringRepr(type.Name));

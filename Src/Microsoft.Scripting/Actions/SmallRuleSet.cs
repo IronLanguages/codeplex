@@ -109,19 +109,19 @@ namespace Microsoft.Scripting.Actions {
             PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "GenerateRule");
 
             MethodInfo mi = typeof(T).GetMethod("Invoke");
-            Compiler cg = Snippets.Shared.DefineMethod(
+            LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(
                 StubName,
                 mi.ReturnType,
                 ReflectionUtils.GetParameterTypes(mi.GetParameters()),
-                new ConstantPool()
+                null    // SourceUnit
             );
 
             cg.EmitLineInfo = false;
 
             if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
-                cg.ContextSlot = new PropertySlot(cg.ArgumentSlots[0], typeof(FastDynamicSite).GetProperty("Context"));
+                cg.ContextSlot = new PropertySlot(cg.GetLambdaArgumentSlot(0), typeof(FastDynamicSite).GetProperty("Context"));
             } else {
-                cg.ContextSlot = cg.ArgumentSlots[1];
+                cg.ContextSlot = cg.GetLambdaArgumentSlot(1);
             }
 
             foreach (StandardRule<T> rule in _rules) {
@@ -141,13 +141,13 @@ namespace Microsoft.Scripting.Actions {
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
 
-
-        private void EmitNoMatch(Compiler cg) {
-            for (int i = 0; i < cg.ArgumentSlots.Count; i++) {
-                cg.ArgumentSlots[i].EmitGet(cg);
+        private void EmitNoMatch(LambdaCompiler cg) {
+            int count = cg.GetLambdaArgumentSlotCount();
+            for (int i = 0; i < count; i++) {
+                cg.GetLambdaArgumentSlot(i).EmitGet(cg);
             }
-            cg.EmitCall(cg.ArgumentSlots[0].Type, "UpdateBindingAndInvoke");
-            cg.EmitReturn();
+            cg.EmitCall(cg.GetLambdaArgumentSlot(0).Type, "UpdateBindingAndInvoke");
+            cg.Emit(OpCodes.Ret);
             cg.Finish();
         }
 

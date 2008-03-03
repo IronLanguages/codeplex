@@ -25,13 +25,13 @@ namespace Microsoft.Scripting.Ast {
         private readonly ConstructorInfo/*!*/ _constructor;
         private readonly ReadOnlyCollection<Expression>/*!*/ _arguments;
 
-        internal NewExpression(ConstructorInfo/*!*/ constructor, ReadOnlyCollection<Expression>/*!*/ arguments)
-            : base(AstNodeType.New, constructor.DeclaringType) {
+        internal NewExpression(Type/*!*/ type, ConstructorInfo/*!*/ constructor, ReadOnlyCollection<Expression>/*!*/ arguments)
+            : base(AstNodeType.New, type) {
             _constructor = constructor;
             _arguments = arguments;
         }
 
-        public ConstructorInfo/*!*/ Constructor {
+        public ConstructorInfo Constructor {
             get { return _constructor; }
         }
 
@@ -56,7 +56,21 @@ namespace Microsoft.Scripting.Ast {
             ParameterInfo[] parameters = constructor.GetParameters();
             ValidateCallArguments(parameters, arguments);
 
-            return new NewExpression(constructor, CollectionUtils.ToReadOnlyCollection(arguments));
+            return new NewExpression(constructor.DeclaringType, constructor, CollectionUtils.ToReadOnlyCollection(arguments));
+        }
+
+        public static NewExpression New(Type type) {
+            Contract.RequiresNotNull(type, "type");
+
+            ReadOnlyCollection<Expression> noArgs = CollectionUtils.ToReadOnlyCollection<Expression>(new Expression[0]);
+
+            if (type.IsValueType) {
+                return new NewExpression(type, null, noArgs);
+            } else {
+                ConstructorInfo ci = type.GetConstructor(Type.EmptyTypes);
+                Contract.Requires(ci != null, "type", "type must have a parameterless constructor");
+                return new NewExpression(type, ci, noArgs);
+            }
         }
 
         public static NewExpression SimpleNewHelper(ConstructorInfo/*!*/ constructor, params Expression/*!*/[]/*!*/ arguments) {

@@ -35,7 +35,7 @@ namespace IronPython.Runtime.Types {
     /// The unbound representation of an event property
     /// </summary>
     [PythonSystemType("event#")]
-    public class ReflectedEvent : PythonTypeSlot, ICodeFormattable {
+    public sealed class ReflectedEvent : PythonTypeSlot, ICodeFormattable {
         private bool _clsOnly;
         private EventInfo/*!*/ _eventInfo;
         private WeakHash<object, HandlerList/*!*/> _handlerLists;
@@ -280,23 +280,33 @@ namespace IronPython.Runtime.Types {
         /// handler removal (we need to do custom delegate comparison there). If BCL enables the enumeration we could remove this.
         /// </summary>
         private sealed class HandlerList {
-            private readonly CopyOnWriteList<KeyValuePair<object, Delegate>> _handlers = new CopyOnWriteList<KeyValuePair<object, Delegate>>();
+            /// <summary>
+            /// Storage for the handlers - a key value pair of the callable object and the delegate handler.
+            /// 
+            /// The delegate handler is closed over the callable object.  Therefore as long as the object is alive the
+            /// delegate will stay alive and so will the callable object.  That means it's fine to have a weak reference
+            /// to both of these objects.
+            /// </summary>
+            private readonly CopyOnWriteList<KeyValuePair<WeakReference, WeakReference>> _handlers = new CopyOnWriteList<KeyValuePair<WeakReference, WeakReference>>();
 
             public HandlerList() {
             }
 
             public void AddHandler(object callableObject, Delegate handler) {
                 Assert.NotNull(handler);
-                _handlers.Add(new KeyValuePair<object, Delegate>(callableObject, handler));
+                _handlers.Add(new KeyValuePair<WeakReference, WeakReference>(new WeakReference(callableObject), new WeakReference(handler)));
             }
 
             public Delegate RemoveHandler(CodeContext/*!*/ context, object callableObject) {
                 Assert.NotNull(context);
 
-                List<KeyValuePair<object, Delegate>> copyOfHandlers = _handlers.GetCopyForRead();
+                List<KeyValuePair<WeakReference, WeakReference>> copyOfHandlers = _handlers.GetCopyForRead();
                 for (int i = copyOfHandlers.Count - 1; i >= 0; i--) {
-                    if (context.LanguageContext.EqualReturnBool(context, copyOfHandlers[i].Key, callableObject)) {
-                        Delegate handler = copyOfHandlers[i].Value;
+                    object key = copyOfHandlers[i].Key.Target;
+                    object value = copyOfHandlers[i].Value.Target;
+
+                    if (key != null && value != null && context.LanguageContext.EqualReturnBool(context, key, callableObject)) {
+                        Delegate handler = (Delegate)value;
                         _handlers.RemoveAt(i);
                         return handler;
                     }
@@ -315,7 +325,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        public string/*!*/ ToCodeString(CodeContext/*!*/ context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<event# {0} on {1}>", Info.Name, Info.DeclaringType.Name);
         }
 

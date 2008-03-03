@@ -84,50 +84,6 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
 
-        private StandardRule<T> MakeDynamicMatchRule(PythonType[] types) {
-            Debug.Assert(!IsComparision);    // fully implemented            
-
-            //TODO figure out caching strategy for these
-            StandardRule<T> ret = new StandardRule<T>();
-            PythonBinderHelper.MakeTest(ret, types);
-            if (Action.IsUnary) {
-                MakeDynamicTarget(DynamicInvokeUnaryOperation, ret);
-            } else if (IsInPlace) {
-                MakeDynamicTarget(DynamicInvokeInplaceOperation, ret);            
-            } else {
-                MakeDynamicTarget(DynamicInvokeBinaryOperation, ret);
-            }
-
-            return ret;
-        }
-
-        private delegate object DynamicOperationMethod(CodeContext context, Operators op, object x, object y);
-        private delegate object DynamicUnaryOperationMethod(CodeContext context, Operators op, object x);
-        private void MakeDynamicTarget(DynamicOperationMethod action, StandardRule<T> rule) {
-            Expression expr =
-                Ast.SimpleCallHelper(
-                    null,
-                    action.Method,
-                    Ast.CodeContext(),
-                    Ast.Constant(Operation),
-                    rule.Parameters[0],
-                    rule.Parameters[1]
-                );
-            rule.Target = rule.MakeReturn(Binder, expr);
-        }
-
-        private void MakeDynamicTarget(DynamicUnaryOperationMethod action, StandardRule<T> rule) {
-            Expression expr =
-                Ast.SimpleCallHelper(
-                    null,
-                    action.Method,
-                    Ast.CodeContext(),
-                    Ast.Constant(Operation),
-                    rule.Parameters[0]
-                );
-            rule.Target = rule.MakeReturn(Binder, expr);
-        }
-
 
         private StandardRule<T> MakeRuleForNoMatch(PythonType[] types) {
             // we get the error message w/ {0}, {1} so that TypeError formats it correctly
@@ -507,7 +463,7 @@ namespace IronPython.Runtime.Calls {
                                 args[0]
                             )
                         ),
-                        Ast.Action.Call(typeof(object), Ast.Read(tmp), args[1])
+                        Ast.Action.Call(typeof(object), ArrayUtils.Insert<Expression>(Ast.Read(tmp), ArrayUtils.RemoveFirst(args)))
                     );
                 }
             }
@@ -1734,7 +1690,6 @@ namespace IronPython.Runtime.Calls {
         /// </summary>
         private bool TryGetBinder(PythonType[] types, SymbolId op, SymbolId rop, out MethodBinder binder) {
             PythonType xType = types[0];
-            PythonType yType = types[1];
             binder = null;
 
             BuiltinFunction xBf;
@@ -1742,9 +1697,13 @@ namespace IronPython.Runtime.Calls {
                 return false;
             }
 
+            PythonType yType = null;
             BuiltinFunction yBf = null;
-            if (!xType.IsSubclassOf(yType) && !TryGetStaticFunction(rop, yType, out yBf)) {
-                return false;
+            if (types.Length > 1) {
+                yType = types[1];
+                if (!xType.IsSubclassOf(yType) && !TryGetStaticFunction(rop, yType, out yBf)) {
+                    return false;
+                }
             }
 
             if (yBf == xBf) {
@@ -1794,27 +1753,6 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public static object DynamicInvokeBinaryOperation(CodeContext context, Operators op, object x, object y) {
-            PythonType xDType = DynamicHelpers.GetPythonType(x);
-            PythonType yDType = DynamicHelpers.GetPythonType(y);
-            object ret;
-
-            if (xDType == yDType || !yDType.IsSubclassOf(xDType)) {
-                if (xDType.TryInvokeBinaryOperator(context, op, x, y, out ret) &&
-                    ret != PythonOps.NotImplemented) {
-                    return ret;
-                }
-            }
-
-            if (xDType != yDType) {
-                if (yDType.TryInvokeBinaryOperator(context, CompilerHelpers.OperatorToReverseOperator(op), y, x, out ret) &&
-                    ret != PythonOps.NotImplemented) {
-                    return ret;
-                }
-            }
-
-            throw PythonOps.TypeError(MakeBinaryOpErrorMessage(op, xDType.Name, yDType.Name));
-        }
 
         internal static string MakeBinaryOpErrorMessage(Operators op, string xType, string yType) {
             return string.Format("unsupported operand type(s) for {2}: '{0}' and '{1}'",
@@ -1835,7 +1773,7 @@ namespace IronPython.Runtime.Calls {
                 case Operators.RightShift: return ">>";
                 case Operators.BitwiseAnd: return "&";
                 case Operators.BitwiseOr: return "|";
-                case Operators.Xor: return "^";
+                case Operators.ExclusiveOr: return "^";
                 case Operators.LessThan: return "<";
                 case Operators.GreaterThan: return ">";
                 case Operators.LessThanOrEqual: return "<=";
@@ -1855,7 +1793,7 @@ namespace IronPython.Runtime.Calls {
                 case Operators.InPlaceRightShift: return ">>=";
                 case Operators.InPlaceBitwiseAnd: return "&=";
                 case Operators.InPlaceBitwiseOr: return "|=";
-                case Operators.InPlaceXor: return "^=";
+                case Operators.InPlaceExclusiveOr: return "^=";
                 case Operators.ReverseAdd: return "+";
                 case Operators.ReverseSubtract: return "-";
                 case Operators.ReversePower: return "**";
@@ -1868,7 +1806,7 @@ namespace IronPython.Runtime.Calls {
                 case Operators.ReverseRightShift: return ">>";
                 case Operators.ReverseBitwiseAnd: return "&";
                 case Operators.ReverseBitwiseOr: return "|";
-                case Operators.ReverseXor: return "^";
+                case Operators.ReverseExclusiveOr: return "^";
                 default: return op.ToString();
             }
         }
@@ -1888,178 +1826,55 @@ namespace IronPython.Runtime.Calls {
                 case Operators.NotEquals: return cmp != 0;
             }
             throw new ArgumentException("op");
-        }
-
-        /// <summary>
-        ///  Implements the -1, 0, -1 return value style sort dynamically. TODO: Better name?
-        /// </summary>
-        public static object DynamicInvokeSortCompareOperation(CodeContext context, Operators op, object x, object y) {
-            object ret = PythonOps.NotImplemented;
-
-            PythonType xType = DynamicHelpers.GetPythonType(x);
-            PythonType yType = DynamicHelpers.GetPythonType(y);
-
-            bool tryRich = true;
-            if (xType == yType) {
-                // use __cmp__ first if it's defined
-                if (DynamicHelpers.GetPythonType(x).TryInvokeBinaryOperator(context, Operators.Compare, x, y, out ret)) {
-                    if (ret != PythonOps.NotImplemented) {
-                        return ret;
-                    }
-
-                    if (xType != TypeCache.OldInstance) {
-                        // try __cmp__ backwards for new-style classes and don't fallback to
-                        // rich comparisons if available
-                        ret = PythonOps.InternalCompare(context, Operators.Compare, y, x);
-                        if (ret != PythonOps.NotImplemented) return -1 * Converter.ConvertToInt32(ret);
-                        tryRich = false;
-                    }
-                }
-            }
-
-            // next try equals, return 0 if we match.
-            if (tryRich) {
-                ret = PythonOps.RichEqualsHelper(x, y);
-                if (ret != PythonOps.NotImplemented) {
-                    if (PythonOps.IsTrue(ret)) return 0;
-                } else if (y != null) {
-                    // try the reverse
-                    ret = PythonOps.RichEqualsHelper(y, x);
-                    if (ret != PythonOps.NotImplemented && PythonOps.IsTrue(ret)) return 0;
-                }
-
-                // next try less than
-                ret = PythonOps.LessThanHelper(context, x, y);
-                if (ret != PythonOps.NotImplemented) {
-                    if (PythonOps.IsTrue(ret)) return -1;
-                } else if (y != null) {
-                    // try the reverse
-                    ret = PythonOps.GreaterThanHelper(context, y, x);
-                    if (ret != PythonOps.NotImplemented && PythonOps.IsTrue(ret)) return -1;
-                }
-
-                // finally try greater than
-                ret = PythonOps.GreaterThanHelper(context, x, y);
-                if (ret != PythonOps.NotImplemented) {
-                    if (PythonOps.IsTrue(ret)) return 1;
-                } else if (y != null) {
-                    //and the reverse
-                    ret = PythonOps.LessThanHelper(context, y, x);
-                    if (ret != PythonOps.NotImplemented && PythonOps.IsTrue(ret)) return 1;
-                }
-
-                if (xType != yType) {
-                    // finally try __cmp__ if our types are different
-                    ret = PythonOps.InternalCompare(context, Operators.Compare, x, y);
-                    if (ret != PythonOps.NotImplemented) return PythonOps.CompareToZero(ret);
-
-                    ret = PythonOps.InternalCompare(context, Operators.Compare, y, x);
-                    if (ret != PythonOps.NotImplemented) return -1 * PythonOps.CompareToZero(ret);
-                }
-            }
-
-            return PythonOps.CompareTypes(x, y);
-        }
-
-        public static object DynamicInvokeCompareOperation(CodeContext context, Operators op, object x, object y) {
-            object ret;
-
-            PythonType dt1 = DynamicHelpers.GetPythonType(x);
-            PythonType dt2 = DynamicHelpers.GetPythonType(y);
-
-            if (dt1.TryInvokeBinaryOperator(context, op, x, y, out ret) &&
-                ret != PythonOps.NotImplemented) {
-                return ret;
-            }
-            if (dt2.TryInvokeBinaryOperator(context,
-                CompilerHelpers.OperatorToReverseOperator(op), y, x, out ret) &&
-                ret != PythonOps.NotImplemented) {
-                return ret;
-            }
-
-            if (dt1.TryInvokeBinaryOperator(context, Operators.Compare, x, y, out ret) && ret != PythonOps.NotImplemented)
-                return RuntimeHelpers.BooleanToObject(FinishCompareOperation(PythonOps.CompareToZero(ret), op));
-
-            if (dt2.TryInvokeBinaryOperator(context, Operators.Compare, y, x, out ret) && ret != PythonOps.NotImplemented)
-                return RuntimeHelpers.BooleanToObject(FinishCompareOperation(-1 * PythonOps.CompareToZero(ret), op));
-
-            if (dt1 == dt2) {
-                return RuntimeHelpers.BooleanToObject(FinishCompareOperation((int)(IdDispenser.GetId(x) - IdDispenser.GetId(y)), op));
-            } else {
-                if (dt1 == TypeCache.None) return FinishCompareOperation(-1, op);
-                if (dt2 == TypeCache.None) return FinishCompareOperation(+1, op);
-                return RuntimeHelpers.BooleanToObject(FinishCompareOperation(string.CompareOrdinal(dt1.Name, dt2.Name), op));
-            }
-        }
-
-        public static object DynamicInvokeInplaceOperation(CodeContext context, Operators op, object x, object y) {
-            object ret;
-            PythonType dt = DynamicHelpers.GetPythonType(x);
-            if (dt.TryInvokeBinaryOperator(context, op, x, y, out ret) && ret != PythonOps.NotImplemented)
-                return ret;
-
-            //TODO something's backwards here - shouldn't need to make a new action
-            return DynamicInvokeBinaryOperation(context, DoOperationAction.Make(op).DirectOperation, x, y);
-        }
+        }       
 
         #region Unary Operators
 
         private StandardRule<T> MakeUnaryRule(PythonType[] types, Operators op) {
             if (op == Operators.Not) {
                 return MakeUnaryNotRule(types);
+            } else if (op == Operators.Documentation) {
+                return MakeDocumentationRule(types);
             }
 
-            BuiltinFunction func;
-            if (!TryGetStaticFunction(Symbols.OperatorToSymbol(op), types[0], out func)) {
-                return MakeDynamicMatchRule(types);
-            }
+            SlotOrFunction func = GetSlotOrFunction(types, Symbols.OperatorToSymbol(op));
 
-            if (func == null) {
+            if (!func.Success) {
                 // we get the error message w/ {0} so that PythonBinderHelper.TypeError formats it correctly
                 return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), "{0}"), types);
             }
 
-            MethodBinder binder = MethodBinder.MakeBinder(Binder, op.ToString(), func.Targets, PythonNarrowing.None, PythonNarrowing.All);
-
-            Debug.Assert(binder != null);
-
-            BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
             StandardRule<T> rule = new StandardRule<T>();
+            rule.Target = rule.MakeReturn(Binder, func.MakeCall(rule, rule.Parameters));
             PythonBinderHelper.MakeTest(rule, types);
-            rule.Target = rule.MakeReturn(Binder, MakeCall(target, rule, false));
+
+            return rule;
+        }
+
+        private StandardRule<T> MakeDocumentationRule(PythonType[] types) {
+            StandardRule<T> rule = new StandardRule<T>();
+            rule.Target = Ast.Action.GetMember(Symbols.Doc, typeof(string), rule.Parameters[0]);
+            PythonBinderHelper.MakeTest(rule, types);
             return rule;
         }
 
         private StandardRule<T> MakeUnaryNotRule(PythonType[] types) {
-            BuiltinFunction nonzero;
-            if (!TryGetStaticFunction(Symbols.NonZero, types[0], out nonzero)) {
-                return MakeDynamicNotRule(types);
-            }
-
-            BuiltinFunction len;
-            if (!TryGetStaticFunction(Symbols.Length, types[0], out len)) {
-                return MakeDynamicNotRule(types);
-            }
+            SlotOrFunction nonzero = GetSlotOrFunction(types, Symbols.NonZero);
+            SlotOrFunction length = GetSlotOrFunction(types, Symbols.Length);
 
             Expression notExpr;
             StandardRule<T> rule = new StandardRule<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
-            if (nonzero == null && len == null) {
+            if (!nonzero.Success && !length.Success) {
                 // always False or True for None
                 notExpr = types[0].IsNull ? Ast.True() : Ast.False();
             } else {
-                MethodBinder binder = MethodBinder.MakeBinder(Binder,
-                    "Not",
-                    nonzero != null ? nonzero.Targets : len.Targets,
-                    PythonNarrowing.None,
-                    PythonNarrowing.All);
+                SlotOrFunction target = nonzero.Success ? nonzero : length;
 
-                Debug.Assert(binder != null);
-                BindingTarget target = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
-                notExpr = MakeCall(target, rule, false);
+                notExpr = target.MakeCall(rule, rule.Parameters);
 
-                if (nonzero != null) {
+                if (nonzero.Success) {
                     // call non-zero and negate it
                     if (notExpr.Type == typeof(bool)) {
                         notExpr = Ast.Equal(notExpr, Ast.False());
@@ -2080,28 +1895,7 @@ namespace IronPython.Runtime.Calls {
             }
             rule.Target = rule.MakeReturn(Binder, notExpr);
             return rule;
-        }
-
-        private StandardRule<T> MakeDynamicNotRule(PythonType[] types) {
-            StandardRule<T> rule = new StandardRule<T>();
-            PythonBinderHelper.MakeTest(rule, types);
-            rule.Target = rule.MakeReturn(Binder,
-                Ast.Call(
-                    typeof(PythonOps).GetMethod("Not"),
-                    Ast.ConvertHelper(rule.Parameters[0], typeof(object))
-                )
-            );
-            return rule;
-        }
-
-        public static object DynamicInvokeUnaryOperation(CodeContext context, Operators op, object x) {
-            object ret;
-            PythonType dt = DynamicHelpers.GetPythonType(x);
-            if (dt.TryInvokeUnaryOperator(context, op, x, out ret) && ret != PythonOps.NotImplemented)
-                return ret;
-
-            throw PythonOps.TypeError(MakeUnaryOpErrorMessage(op.ToString(), DynamicHelpers.GetPythonType(x).Name));
-        }
+        }       
 
         #endregion
 
@@ -2131,7 +1925,7 @@ namespace IronPython.Runtime.Calls {
         }
         
         private static bool IsReverseOperator(Operators op) {
-            return op >= Operators.ReverseAdd && op <= Operators.ReverseXor;
+            return op >= Operators.ReverseAdd && op <= Operators.ReverseExclusiveOr;
         }
     }
 }

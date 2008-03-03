@@ -31,7 +31,7 @@ namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
     [PythonSystemType("builtin_function_or_method")]
-    public partial class BoundBuiltinFunction : PythonTypeSlot, IDynamicObject, ICodeFormattable {
+    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IDynamicObject, ICodeFormattable {
         private readonly BuiltinFunction/*!*/ _target;
         private readonly object _instance;
 
@@ -182,7 +182,7 @@ namespace IronPython.Runtime.Types {
 
         #region Public Python API Surface
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls"), StaticExtensionMethod("__new__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "cls")]
         public static object/*!*/ __new__(object cls, object newFunction, object inst) {
             return new Method(newFunction, inst, null);
         }
@@ -235,7 +235,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        string/*!*/ ICodeFormattable.ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<built-in method {0} of {1} object at {2}>",
                     __name__,
                     PythonOps.GetPythonTypeName(__self__),

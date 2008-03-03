@@ -19,7 +19,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-using Microsoft.Scripting.Hosting;
+// TODO: remove HAPI references:
+using Hosting_ScriptEngine = Microsoft.Scripting.Hosting.ScriptEngine;
 
 namespace Microsoft.Scripting.Shell {
 #if !SILVERLIGHT // SuperConsole (ConsoleColor)
@@ -208,14 +209,14 @@ namespace Microsoft.Scripting.Shell {
         /// <summary>
         /// Python Engine reference. Used for the tab-completion lookup.
         /// </summary>
-        private IScriptEngine _engine;
+        private Hosting_ScriptEngine _engine;
 
         /// <summary>
         /// The command line that this console is attached to.
         /// </summary>
         private CommandLine _commandLine;
 
-        public SuperConsole(CommandLine commandLine, IScriptEngine engine, bool colorful)
+        public SuperConsole(CommandLine commandLine, Hosting_ScriptEngine engine, bool colorful)
             : base(engine, colorful) {
             this._commandLine = commandLine;
             this._engine = engine;
@@ -253,7 +254,7 @@ namespace Microsoft.Scripting.Shell {
 
                 try {
                     string code = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}", attr);
-                    object value = _engine.Execute(_commandLine.Module, _engine.CreateScriptSourceFromString(code));
+                    object value = _engine.CreateScriptSourceFromString(code).Execute(_commandLine.Module);
                     IEnumerable<string> result = _engine.Operations.GetMemberNames(value);
                     _options.Root = root;
                     foreach (string option in result) {
@@ -611,7 +612,7 @@ namespace Microsoft.Scripting.Shell {
     }
 #else
     public sealed class SuperConsole : BasicConsole {
-        public SuperConsole(CommandLine commandLine, IScriptEngine engine, bool isColorful)
+        public SuperConsole(CommandLine commandLine, Hosting_ScriptEngine engine, bool isColorful)
             : base(engine, isColorful) {
         }
     }

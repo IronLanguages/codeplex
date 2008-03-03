@@ -43,8 +43,8 @@ namespace IronPython.Runtime.Types {
 
         #region Public Python API Surface
 
-        [StaticExtensionMethod("__new__")]
-        public static Scope/*!*/ MakeModule(CodeContext/*!*/ context, PythonType/*!*/ cls, params object[]/*!*/ args\u00F8) {
+        [StaticExtensionMethod]
+        public static Scope/*!*/ __new__(CodeContext/*!*/ context, PythonType/*!*/ cls, params object[]/*!*/ args\u00F8) {
             if (cls.IsSubclassOf(TypeCache.Module)) {
                 PythonModule module = PythonContext.GetContext(context).CreateModule("?");
                 
@@ -56,18 +56,16 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("{0} is not a subtype of module", cls.Name);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static Scope/*!*/ MakeModule(CodeContext/*!*/ context, PythonType/*!*/ cls, [ParamDictionary]PythonDictionary kwDict\u00F8, params object[]/*!*/ args\u00F8) {
-            return MakeModule(context, cls, args\u00F8);
+        [StaticExtensionMethod]
+        public static Scope/*!*/ __new__(CodeContext/*!*/ context, PythonType/*!*/ cls, [ParamDictionary]PythonDictionary kwDict\u00F8, params object[]/*!*/ args\u00F8) {
+            return __new__(context, cls, args\u00F8);
         }
 
-        [PythonName("__init__")]
-        public static void Initialize(Scope/*!*/ scope, string name) {
-            Initialize(scope, name, null);
+        public static void __init__(Scope/*!*/ scope, string name) {
+            __init__(scope, name, null);
         }
 
-        [PythonName("__init__")]
-        public static void Initialize(Scope/*!*/ scope, string name, string documentation) {
+        public static void __init__(Scope/*!*/ scope, string name, string documentation) {
             DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(name);
 
             if (documentation != null) {
@@ -75,15 +73,11 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        [PythonName("__repr__")]
-        [SpecialName]
-        public static string/*!*/ ToCodeString(Scope/*!*/ scope) {
-            return ToString(scope);
+        public static string/*!*/ __repr__(Scope/*!*/ scope) {
+            return __str__(scope);
         }
 
-        [PythonName("__str__")]
-        [SpecialName]
-        public static string/*!*/ ToString(Scope/*!*/ scope) {
+        public static string/*!*/ __str__(Scope/*!*/ scope) {
             PythonModule module = DefaultContext.DefaultPythonContext.EnsurePythonModule(scope);
             string file = module.GetFile() as string;
             string name = module.GetName() as string ?? "?";
@@ -94,39 +88,39 @@ namespace IronPython.Runtime.Types {
             return String.Format("<module '{0}' from '{1}'>", name, file);
         }
 
-        [PropertyMethod, PythonName("__name__")]
+        [PropertyMethod]
         public static object Get__name__(Scope/*!*/ scope) {
             return DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetName();
         }
 
-        [PropertyMethod, PythonName("__name__")]
+        [PropertyMethod]
         public static void Set__name__(Scope/*!*/ scope, object value) {
             DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(value);
         }
 
-        [PropertyMethod, PythonName("__dict__")]
+        [PropertyMethod]
         public static IAttributesCollection/*!*/ Get__dict__(Scope/*!*/ scope) {
-            return new GlobalsDictionary(scope);
+            return new PythonDictionary(new GlobalScopeDictionaryStorage(scope));
         }
 
-        [PropertyMethod, PythonName("__dict__")]
+        [PropertyMethod]
         public static IAttributesCollection Set__dict__(Scope/*!*/ scope, object value) {
             throw PythonOps.TypeError("readonly attribute");
         }
 
-        [PropertyMethod, PythonName("__dict__")]
+        [PropertyMethod]
         public static IAttributesCollection Delete__dict__(Scope/*!*/ scope) {
             throw PythonOps.TypeError("can't set attributes of built-in/extension type 'module'");
         }
         
-        [PropertyMethod, PythonName("__file__")]
+        [PropertyMethod]
         public static object Get__file__(Scope/*!*/ scope) {
             object file = DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetFile();
             if (file == null) throw PythonOps.AttributeError("module has no __file__ attribute");
             return file;
         }
 
-        [PropertyMethod, PythonName("__file__")]
+        [PropertyMethod]
         public static void Set__file__(Scope/*!*/ scope, object value) {
             DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetFile(value);
         }

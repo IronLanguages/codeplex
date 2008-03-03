@@ -164,7 +164,7 @@ def test_symbol_dict():
             try:
                 C.__dict__ = {}
                 AssertUnreachable()
-            except TypeError:
+            except AttributeError:
                 pass
         
         # replace an instance dictionary (containing non-string keys) w/ a new one.
@@ -942,5 +942,33 @@ def test_nullable_new():
     from System import Nullable
     AreEqual(clr.GetClrType(Nullable[()]).IsGenericType, False)
 
+def test_ctor_keyword_args_newslot():
+    """ctor keyword arg assignment contruction w/ new slot properties"""
+    x = BinderTest.KeywordDerived(SomeProperty = 'abc')
+    AreEqual(x.SomeProperty, 'abc')
+
+    x = BinderTest.KeywordDerived(SomeField = 'abc')
+    AreEqual(x.SomeField, 'abc')
+
+def test_enum_truth():
+    # zero enums are false, non-zero enums are true
+    import System
+    Assert(not System.StringSplitOptions.None)
+    Assert(System.StringSplitOptions.RemoveEmptyEntries)
+    AreEqual(System.StringSplitOptions.None.__nonzero__(), False)
+    AreEqual(System.StringSplitOptions.RemoveEmptyEntries.__nonzero__(), True)
+
+def test_bad_inheritance():
+    """verify a bad inheritance reports the type name you're inheriting from"""
+    import System
+    def f(): 
+        class x(System.Single): pass
+    def g(): 
+        class x(System.Version): pass
+    
+    AssertErrorWithPartialMessage(TypeError, 'System.Single', f)
+    AssertErrorWithPartialMessage(TypeError, 'System.Version', g)
+
 run_test(__name__)
 
+    

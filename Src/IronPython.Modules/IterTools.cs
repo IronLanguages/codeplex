@@ -110,7 +110,7 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonType("count")]
+        [PythonSystemType]
         public class count : IEnumerator {
             private int _cur, _start;
 
@@ -160,9 +160,9 @@ namespace IronPython.Modules {
                     result.AddNoLock(iter.Current);
                     yield return iter.Current;
                 }
-                if (result.Count != 0) {
+                if (result.__len__() != 0) {
                     for (; ; ) {
-                        for (int i = 0; i < result.Count; i++) {
+                        for (int i = 0; i < result.__len__(); i++) {
                             yield return result[i];
                         }
                     }
@@ -390,10 +390,13 @@ namespace IronPython.Modules {
 
         [PythonSystemType]
         public class izip : IEnumerator {
-            private IEnumerator[] _iters;
+            private readonly IEnumerator[]/*!*/ _iters;
+            private readonly object[]/*!*/ _currentValues;
 
             public izip(params object[] iterables) {
                 _iters = new IEnumerator[iterables.Length];
+                _currentValues = new object[iterables.Length];
+
                 for (int i = 0; i < iterables.Length; i++) {
                     _iters[i] = PythonOps.GetEnumerator(iterables[i]);
                 }
@@ -403,11 +406,7 @@ namespace IronPython.Modules {
 
             object IEnumerator.Current {
                 get {
-                    object[] res = new object[_iters.Length];
-                    for (int i = 0; i < res.Length; i++) {
-                        res[i] = _iters[i].Current;
-                    }
-                    return new PythonTuple(false, res);
+                    return PythonOps.MakeTuple((object[])_currentValues.Clone());
                 }
             }
 
@@ -416,6 +415,10 @@ namespace IronPython.Modules {
 
                 for (int i = 0; i < _iters.Length; i++) {
                     if (!MoveNextHelper(_iters[i])) return false;
+
+                    // values need to be extraced and saved as we move incase
+                    // the user passed the same iterable multiple times.
+                    _currentValues[i] = _iters[i].Current;
                 }
                 return true;
             }
@@ -459,7 +462,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public string ToCodeString(CodeContext context) {
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 if (_fInfinite) {
                     return String.Format("{0}({1})", PythonOps.GetPythonTypeName(this), PythonOps.Repr(_obj));
                 }
@@ -521,7 +524,7 @@ namespace IronPython.Modules {
                     PythonTuple args = iter.Current as PythonTuple;
                     if (args == null) throw PythonOps.TypeError("iterator must be a tuple");
 
-                    object[] objargs = new object[args.Count];
+                    object[] objargs = new object[args.__len__()];
                     for (int i = 0; i < objargs.Length; i++) {
                         objargs[i] = args[i];
                     }
@@ -580,10 +583,10 @@ namespace IronPython.Modules {
             bool IEnumerator.MoveNext() {
                 lock (_data) {
                     _curIndex++;
-                    if (_curIndex >= _data.Count && MoveNextHelper(_iter)) {
-                        _data.Add(_iter.Current);
+                    if (_curIndex >= _data.__len__() && MoveNextHelper(_iter)) {
+                        _data.append(_iter.Current);
                     }
-                    return _curIndex < _data.Count;
+                    return _curIndex < _data.__len__();
                 }
             }
 

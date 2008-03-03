@@ -18,29 +18,20 @@ using System.Runtime.Remoting;
 
 using Microsoft.Scripting.Utils;
 using System;
+using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
-
-    public interface ICompiledCode : IRemotable {
-        IScriptScope MakeOptimizedScope();
-        
-        void Execute(IScriptScope module);
-        object Evaluate(IScriptScope module);
-     
-#if !SILVERLIGHT
-        ObjectHandle EvaluateAndWrap(IScriptScope module);
-#endif
-    }
 
     /// <summary>
     /// Hosting API counterpart for <see cref="ScriptCode"/>.
     /// </summary>
-    public sealed class CompiledCode : ICompiledCode, ILocalObject {
+    public sealed class CompiledCode 
+#if !SILVERLIGHT 
+        : MarshalByRefObject 
+#endif
+    {
         private readonly ScriptEngine/*!*/ _engine;
         private readonly ScriptCode/*!*/ _code;
-
-        // should be called only from ScriptCode.FromCompiledCode:
-        internal ScriptCode/*!*/ ScriptCode { get { return _code; } }
 
         internal CompiledCode(ScriptEngine/*!*/ engine, ScriptCode/*!*/ code) {
             Assert.NotNull(engine);
@@ -50,7 +41,7 @@ namespace Microsoft.Scripting.Hosting {
             _code = code;
         }
 
-        public IScriptScope/*!*/ MakeOptimizedScope() {
+        public ScriptScope/*!*/ MakeOptimizedScope() {
             return new ScriptScope(_engine, _code.MakeOptimizedScope());
         }
 
@@ -58,7 +49,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute code within a given module context. 
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public void Execute(IScriptScope/*!*/ scope) {
+        public void Execute(ScriptScope/*!*/ scope) {
             Evaluate(scope);
         }
 
@@ -66,30 +57,21 @@ namespace Microsoft.Scripting.Hosting {
         /// Execute code within a given module context and returns the result.
         /// The module must be local with respect to the compiled code object.
         /// </summary>
-        public object Evaluate(IScriptScope/*!*/ scope) {
+        public object Evaluate(ScriptScope/*!*/ scope) {
             Contract.RequiresNotNull(scope, "scope");
-
-            ScriptScope localModule = RemoteWrapper.GetLocalArgument<ScriptScope>(scope, "module");
-            return _code.Run(localModule.Scope);
+            return _code.Run(scope.Scope);
         }
 
 #if !SILVERLIGHT
-
-        public ObjectHandle EvaluateAndWrap(IScriptScope module) {
+        public ObjectHandle EvaluateAndWrap(ScriptScope module) {
             return new ObjectHandle(Evaluate(module));
         }
 
-#endif
-
-        #region ILocalObject Members
-
-#if !SILVERLIGHT
-        RemoteWrapper ILocalObject.Wrap() {
-            return new RemoteCompiledCode(this);
+        // TODO: Figure out what is the right lifetime
+        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
+        public override object InitializeLifetimeService() {
+            return null;
         }
 #endif
-
-        #endregion
-
     }
 }

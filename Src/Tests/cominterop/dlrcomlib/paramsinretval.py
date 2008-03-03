@@ -72,35 +72,23 @@ class Py_System_String(System.String): pass
 
 class Py_Float(float): pass  
 
-#class Py_System_Float(System.Single): pass   #CodePlex 14982
-
 class Py_Double(float): pass  
 
 class Py_System_Double(System.Double): pass
 
 class Py_UShort(int): pass
 
-#class Py_System_UInt16(System.UInt16): pass  #CodePlex 14982
-
 class Py_ULong(long): pass
-
-#class Py_System_UInt32(System.UInt32): pass  #CodePlex 14982
 
 class Py_ULongLong(long): pass
 
-#class Py_System_UInt64(System.UInt64): pass  #CodePlex 14982
-
 class Py_Short(int): pass
-
-#class Py_System_Int16(System.Int16): pass    #CodePlex 14982
 
 class Py_Long(int): pass
 
 class Py_System_Int32(System.Int32): pass
 
 class Py_LongLong(long): pass
-
-#class Py_System_Int64(System.Int64): pass    #CodePlex 14982
 
 
 ###############################################################################
@@ -163,7 +151,7 @@ def typeErrorTrigger(in_type):
     
     if not preferComDispatch:
         ret_val["BSTR"] += MERLIN_324223_VALUES
-        ret_val["BSTR"] += FPN_VALUES + UINT_VALUES + INT_VALUES #Merlin 323232
+        ret_val["BSTR"] += FPN_VALUES + UINT_VALUES + INT_VALUES #Merlin 324232
         ret_val["BSTR"] += COMPLEX_VALUES #Merlin 374285
     
     if sys.platform=="win32":
@@ -245,8 +233,7 @@ def overflowErrorTrigger(in_type):
                      
     ############################################################              
     ret_val["BYTE"] = []
-    if not preferComDispatch: 
-        ret_val["BYTE"] += overflow_num_helper(System.Byte) #Merlin 324216
+    ret_val["BYTE"] += overflow_num_helper(System.Byte)
         
     ############################################################
     #Doesn't seem possible to create a value (w/o 1st overflowing
@@ -255,8 +242,7 @@ def overflowErrorTrigger(in_type):
     
     ############################################################ 
     ret_val["CHAR"] = []
-    if not preferComDispatch: 
-        ret_val["CHAR"] +=  overflow_num_helper(System.SByte) #Merlin 324216
+    ret_val["CHAR"] +=  overflow_num_helper(System.SByte)
     
     ############################################################
     ret_val["FLOAT"] = []  #Merlin 374289
@@ -267,28 +253,22 @@ def overflowErrorTrigger(in_type):
     
     ############################################################            
     ret_val["USHORT"] =  []
-    if not preferComDispatch: 
-        ret_val["USHORT"] += overflow_num_helper(System.UInt16)  #Merlin 324216
+    ret_val["USHORT"] += overflow_num_helper(System.UInt16)
       
     ret_val["ULONG"] =  []
-    if not preferComDispatch: 
-        ret_val["ULONG"] +=  overflow_num_helper(System.UInt32)  #Merlin 324216
+    ret_val["ULONG"] +=  overflow_num_helper(System.UInt32)
                
     ret_val["ULONGLONG"] =  []
-    if not preferComDispatch: 
-        ret_val["ULONGLONG"] +=  overflow_num_helper(System.UInt64) #Merlin 324216
+    ret_val["ULONGLONG"] +=  overflow_num_helper(System.UInt64)
       
     ret_val["SHORT"] =  []
-    if not preferComDispatch: 
-        ret_val["SHORT"] += overflow_num_helper(System.Int16) #Merlin 324216
+    ret_val["SHORT"] += overflow_num_helper(System.Int16)
       
     ret_val["LONG"] =  []
-    if not preferComDispatch: 
-        ret_val["LONG"] += overflow_num_helper(System.Int32) #Merlin 324216
+    ret_val["LONG"] += overflow_num_helper(System.Int32)
                 
     ret_val["LONGLONG"] =  []
-    if not preferComDispatch: 
-        ret_val["LONGLONG"] += overflow_num_helper(System.Int64) #Merlin 324216
+    ret_val["LONGLONG"] += overflow_num_helper(System.Int64)
     
     ############################################################
     return ret_val[in_type]    
@@ -532,7 +512,7 @@ def test_float():
     if not preferComDispatch:
         Assert(str(com_obj.mFloat(-3.402823e+039)), "-1.#INF") 
         Assert(str(com_obj.mFloat(3.402823e+039)), "1.#INF")
-    AssertError(EnvironmentError, com_obj.mFloat, 3.402823e+039, runonly=preferComDispatch, bugid="373662")
+    AssertError(OverflowError, com_obj.mFloat, 3.402823e+039, runonly=preferComDispatch, bugid="373662")
 
 
 def test_float_typeerrror():
@@ -665,7 +645,7 @@ def test_interface_types():
     AreEqual(com_obj.mIUnknown(com_obj), com_obj)
     
     #Merlin 323996
-    AssertError(COMException, com_obj.mIUnknown, None, runonly=preferComDispatch, bugid="323996") # DISP_E_TYPEMISMATCH when using VT_EMPTY
+    AssertError(TypeError, com_obj.mIUnknown, None, runonly=preferComDispatch, bugid="323996") # DISP_E_TYPEMISMATCH when using VT_EMPTY
     if not preferComDispatch:
         AreEqual(None, com_obj.mIUnknown(None)) # DISP_E_TYPEMISMATCH when using VT_EMPTY
 

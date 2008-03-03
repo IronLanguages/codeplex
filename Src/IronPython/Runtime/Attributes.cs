@@ -33,28 +33,7 @@ namespace IronPython.Runtime {
     [AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
     internal class PythonHiddenAttribute : Attribute {
     }
-
-    /// <summary>
-    /// PythonNameAttribute is used to decorate methods in the engine with the
-    /// names of the Python function that they implement
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-    public class PythonNameAttribute : ScriptNameAttribute {
-        
-        /// <summary>
-        /// Creates a new PythonNameAttribute that can rename a method
-        /// </summary>
-        public PythonNameAttribute(string name) : base(name) {
-        }
-
-        public override ContextId Context {
-            get {
-                return DefaultContext.Id;
-            }
-        }
-     
-    }
-
+    
     /// <summary>
     /// Marks that the return value of a function might include NotImplemented.
     /// 
@@ -139,24 +118,15 @@ namespace IronPython.Runtime {
     }
 
     /// <summary>
-    /// PythonTypeAttribute is used for two purposes:
-    /// 1. It can be used to specify the Python name of types in the engine which
-    ///    implement built-in types. For eg. The type IronPython.Runtime.Set in the engine
-    ///    represents the Python built-in "set". IronPython.Runtime.Function represents
-    ///    the Python built-in "function".
-    /// 2. There might be multiple types in the engine which represent the same
+    /// PythonTypeAttribute is used for type impersonation:
+    ///    There might be multiple types in the engine which represent the same
     ///    built-in type in Python. In such cases, the multiple types in the engine point
     ///    to a single type in the engine which represents a built-in Python type.
     ///    For eg, Function0, Function1, etc all point to IronPython.Runtime.Function.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = false)]
     public sealed class PythonTypeAttribute : ScriptTypeAttribute {
-        /// <summary>
-        /// Provides the Python name for a type.  
-        /// </summary>
-        /// <param name="name"></param>
-        public PythonTypeAttribute(string name) : base(name) {
-        }
+        
 
         /// <summary>
         /// Marks a type as impersonating another type.  The type's implementation will come from
@@ -212,10 +182,6 @@ namespace IronPython.Runtime {
     }
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    internal sealed class PythonClassMethodAttribute : PythonNameAttribute {
-        public PythonClassMethodAttribute(string name)
-            : base(name) {
-        }
-    }
-    
+    internal sealed class PythonClassMethodAttribute : Attribute {
+    }    
 }

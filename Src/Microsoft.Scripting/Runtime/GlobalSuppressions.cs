@@ -16,8 +16,5 @@
 using System.Diagnostics.CodeAnalysis;
 
 // TODO: fix all
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1048:DoNotDeclareVirtualMembersInSealedTypes", Scope = "member", Target = "Microsoft.Scripting.Hosting.CompiledCode.#Microsoft.Scripting.Hosting.IRemotable.GetType()")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1048:DoNotDeclareVirtualMembersInSealedTypes", Scope = "member", Target = "Microsoft.Scripting.Hosting.ScriptEnvironment.#Microsoft.Scripting.Hosting.IRemotable.GetType()")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1025:ReplaceRepetitiveArgumentsWithParamsArray", Scope = "member", Target = "Microsoft.Scripting.Runtime.CallTarget4.#Invoke(System.Object,System.Object,System.Object,System.Object)")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1025:ReplaceRepetitiveArgumentsWithParamsArray", Scope = "member", Target = "Microsoft.Scripting.Runtime.CallTarget5.#Invoke(System.Object,System.Object,System.Object,System.Object,System.Object)")]
-[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1048:DoNotDeclareVirtualMembersInSealedTypes", Scope = "member", Target = "Microsoft.Scripting.Hosting.ScriptScope.#Microsoft.Scripting.Hosting.IRemotable.GetType()")]

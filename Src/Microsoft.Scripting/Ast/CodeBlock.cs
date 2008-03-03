@@ -36,7 +36,6 @@ namespace Microsoft.Scripting.Ast {
         private readonly SourceLocation _end;
         private readonly Type _returnType;
         private readonly string _name;
-        private CodeBlock _parent;
         private Expression _body;
 
         private readonly ReadOnlyCollection<Variable> _parameters;
@@ -49,24 +48,28 @@ namespace Microsoft.Scripting.Ast {
         private readonly bool _visibleScope;
 
         // TODO: Make readonly
-        private bool _emitLocalDictionary;
-        private bool _parameterArray;
+        private readonly bool _emitLocalDictionary;
+        private readonly bool _parameterArray;
 
         #endregion
 
-        internal CodeBlock(SourceSpan span, string name, Type returnType, ReadOnlyCollection<Variable> parameters, List<Variable> variables, bool global, bool visible) {
+        internal CodeBlock(SourceSpan span, string name, Type returnType, Expression body, ReadOnlyCollection<Variable> parameters,
+                           List<Variable> variables, bool global, bool visible, bool dictionary, bool parameterArray) {
             Assert.NotNull(returnType);
             _start = span.Start;
             _end = span.End;
 
             _name = name;
             _returnType = returnType;
+            _body = body;
 
             _parameters = parameters;
             _variables = variables;
 
             _isGlobal = global;
             _visibleScope = visible;
+            _emitLocalDictionary = dictionary;
+            _parameterArray = parameterArray;
         }
 
         public SourceLocation Start {
@@ -105,9 +108,6 @@ namespace Microsoft.Scripting.Ast {
                 // When custom frames are turned on, we emit dictionaries everywhere
                 return ScriptDomainManager.Options.Frames || _emitLocalDictionary;
             }
-            set {
-                _emitLocalDictionary = value;
-            }
         }
 
         public bool IsGlobal {
@@ -116,12 +116,6 @@ namespace Microsoft.Scripting.Ast {
 
         internal bool ParameterArray {
             get { return _parameterArray; }
-            set { _parameterArray = value; }
-        }
-
-        public CodeBlock Parent {
-            get { return _parent; }
-            set { _parent = value; }
         }
 
         internal bool IsVisible {
@@ -130,7 +124,8 @@ namespace Microsoft.Scripting.Ast {
 
         public Expression Body {
             get { return _body; }
-            set { _body = value; }
+
+            internal set { _body = value; }
         }
 
         public List<Variable> Variables {
@@ -160,25 +155,28 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static CodeBlock GlobalCodeBlock(string name, Variable[] parameters, Variable[] variables) {
-            return CodeBlock(SourceSpan.None, name, typeof(object), parameters, variables, true, true);
+        public static CodeBlock GlobalCodeBlock(string name, Expression body, Variable[] parameters, Variable[] variables) {
+            return CodeBlock(SourceSpan.None, name, typeof(object), body, parameters, variables, true, true, false, false);
         }
 
-        public static CodeBlock CodeBlock(string name, Type returnType, Variable[] parameters, Variable[] variables) {
-            return CodeBlock(SourceSpan.None, name, returnType, parameters, variables);
+        public static CodeBlock CodeBlock(string name, Type returnType, Expression body, Variable[] parameters, Variable[] variables) {
+            return CodeBlock(SourceSpan.None, name, returnType, body, parameters, variables);
         }
 
-        public static CodeBlock CodeBlock(SourceSpan span, string name, Type returnType, Variable[] parameters, Variable[] variables) {
-            return CodeBlock(span, name, returnType, parameters, variables, false, true);
+        public static CodeBlock CodeBlock(SourceSpan span, string name, Type returnType, Expression body, Variable[] parameters, Variable[] variables) {
+            return CodeBlock(span, name, returnType, body, parameters, variables, false, true, false, false);
         }
 
-        public static CodeBlock CodeBlock(SourceSpan span, string name, Type returnType, Variable[] parameters, Variable[] variables, bool global, bool visible) {
+        public static CodeBlock CodeBlock(SourceSpan span, string name, Type returnType, Expression body, Variable[] parameters, Variable[] variables,
+                                          bool global, bool visible, bool dictionary, bool parameterArray) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(returnType, "returnType");
+            Contract.RequiresNotNull(body, "body");
             Contract.RequiresNotNullItems(parameters, "parameters");
             Contract.RequiresNotNullItems(variables, "variables");
 
-            CodeBlock block = new CodeBlock(span, name, returnType, CollectionUtils.ToReadOnlyCollection(parameters), new List<Variable>(variables), global, visible);
+            CodeBlock block = new CodeBlock(span, name, returnType, body, CollectionUtils.ToReadOnlyCollection(parameters),
+                                            new List<Variable>(variables), global, visible, dictionary, parameterArray);
 
             // TODO: Remove when variable no longer has block.
             SetBlock(parameters, block);

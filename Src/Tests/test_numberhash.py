@@ -80,4 +80,16 @@ def test_bigint_hash_quality():
   Assert(h1 != h2)
 
 
+def test_userhash_result():
+    class x(object):
+        def __hash__(self): return 1L
+    
+    AreEqual(hash(x()), 1)
+
+    class x(object):
+        def __hash__(self): return 1<<33L
+    
+    AreEqual(hash(x()), 2)
+
+
 run_test(__name__)

@@ -16,6 +16,11 @@
 import sys
 import nt
 
+from lib.cominterop_util import is_pywin32
+if not is_pywin32:
+    print "pywin32 is not installed.  Skipping this test."
+    sys.exit(0)
+
 if sys.platform=="win32":
 
     #Make sure we'll have access to pywin32
@@ -37,15 +42,5 @@ if sys.platform=="win32":
 
 
 #--Run tests-------------------------------------------------------------------
-from exceptions import SystemExit
-
-for test_module in ["hw_client"]:
-    print "--------------------------------------------------------------------"
-    print "Importing", test_module, "..."
-    try:
-        __import__(test_module)
-    except SystemExit, e:
-        if e.code!=0: 
-            raise Exception("Importing '%s' caused an unexpected exit code: %s" % (test_module, str(e.code)))
-    print ""
-
+from lib.cominterop_util import run_pkg_helper
+run_pkg_helper(__file__, exclude_list = ["hw"])

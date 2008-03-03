@@ -13,15 +13,5 @@
 #
 #####################################################################################
 
-from exceptions import SystemExit
-
-for test_module in ["obj", "method", "prop"]:
-    print "--------------------------------------------------------------------"
-    print "Importing", test_module, "..."
-    try:
-        __import__(test_module)
-    except SystemExit, e:
-        if e.code!=0: 
-            raise Exception("Importing '%s' caused an unexpected exit code: %s" % (test_module, str(e.code)))
-    print ""
-
+from lib.cominterop_util import run_pkg_helper
+run_pkg_helper(__file__)

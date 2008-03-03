@@ -486,7 +486,7 @@ namespace Microsoft.Scripting.Generation {
                 new ReturnBuilder(CompilerHelpers.GetReturnType(method)), 
                 methodParams, 
                 parameters,
-                CompilerHelpers.IsConstructor(method));
+                _binder.AllowKeywordArgumentSetting(method));
 
             if (hasDefaults) {
                 for (int defaultsUsed = 1; defaultsUsed < defaultBuilders.Count + 1; defaultsUsed++) {
@@ -617,8 +617,8 @@ namespace Microsoft.Scripting.Generation {
                 new ByRefReturnBuilder(_binder, returnArgs), 
                 method.GetParameters(), 
                 parameters,
-                CompilerHelpers.IsConstructor(method));
-
+                _binder.AllowKeywordArgumentSetting(method));
+            
             return MakeMethodCandidate(method, parameters, instanceBuilder, argBuilders, returnBuilder);
         }
 
@@ -679,14 +679,26 @@ namespace Microsoft.Scripting.Generation {
             foreach (SymbolId si in unusedNames) {
                 string strName = SymbolTable.IdToString(si);
 
-                FieldInfo fi = returnBuilder.ReturnType.GetField(strName);
-                if (fi != null) {
-                    bindableMembers.Add(fi);
-                }
+                Type curType = returnBuilder.ReturnType;
+                MemberInfo[] mis = curType.GetMember(strName);                
+                while (mis.Length != 1 && curType != null) {
+                    // see if we have a single member defined as the closest level
+                    mis = curType.GetMember(strName, BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.SetField | BindingFlags.SetProperty | BindingFlags.Instance);
 
-                PropertyInfo pi = returnBuilder.ReturnType.GetProperty(strName);
-                if (pi != null) {
-                    bindableMembers.Add(pi);
+                    if(mis.Length > 1) {
+                        break;
+                    }
+                    
+                    curType = curType.BaseType;
+                }
+                                
+                if (mis.Length == 1) {                    
+                    switch (mis[0].MemberType) {
+                        case MemberTypes.Property:
+                        case MemberTypes.Field:
+                            bindableMembers.Add(mis[0]);
+                            break;
+                    }
                 }
             }
             return bindableMembers;

@@ -24,7 +24,7 @@ namespace Microsoft.Scripting.Hosting {
     /// Internal class which binds a LanguageContext, StreamContentProvider, and Encoding together to produce
     /// a TextContentProvider which reads binary data with the correct language semantics.
     /// </summary>
-    sealed class EngineTextContentProvider : TextContentProvider {
+    internal sealed class EngineTextContentProvider : TextContentProvider {
         private readonly LanguageContext _context;
         private readonly StreamContentProvider _stream;
         private readonly Encoding _encoding;

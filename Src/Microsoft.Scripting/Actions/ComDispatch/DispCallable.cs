@@ -107,6 +107,18 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
                 return retVal;
             } catch (TargetInvocationException e) {
+                COMException comException = e.InnerException as COMException;
+                if (comException != null) {
+                    int errorCode = comException.ErrorCode;
+                    if (errorCode > ComHresults.DISP_E_UNKNOWNINTERFACE && errorCode < ComHresults.DISP_E_PARAMNOTOPTIONAL) {
+                        // If the current exception was caused because of a DISP_E_* errorcode, call
+                        // ComRuntimeHelpers.CheckThrowException which handles these errorcodes specially. This ensures
+                        // that we preserve identical behavior in both cases.
+                        ExcepInfo excepInfo = new ExcepInfo();
+                        ComRuntimeHelpers.CheckThrowException(comException.ErrorCode, ref excepInfo, UInt32.MaxValue, this);
+                    }
+                }
+
                 // Unwrap the real (inner) exception and raise it
                 throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
             }

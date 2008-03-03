@@ -126,6 +126,7 @@ namespace Microsoft.Scripting.Ast {
                     DefaultWalk((MemberExpression)node);
                     break;
                 case AstNodeType.NewArrayExpression:
+                case AstNodeType.NewArrayBounds:
                     DefaultWalk((NewArrayExpression)node);
                     break;
                 case AstNodeType.ReturnStatement:

@@ -18,7 +18,6 @@ using System.CodeDom;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 

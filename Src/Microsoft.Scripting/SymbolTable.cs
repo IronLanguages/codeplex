@@ -28,7 +28,7 @@ namespace Microsoft.Scripting {
 
         private const int InitialTableSize = 256;
         private static readonly Dictionary<int, string> _fieldDict = CreateFieldDictionary();
-
+        [Microsoft.Scripting.Runtime.MultiRuntimeAware]
         private static int _nextCaseInsensitiveId = 1;
 
         private static Dictionary<int, string>  CreateFieldDictionary() {

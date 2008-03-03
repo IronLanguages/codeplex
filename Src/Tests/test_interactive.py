@@ -216,18 +216,13 @@ def test_partial_lists():
     ipi.ExecutePartialLine("    2")
     response = ipi.ExecuteLine("]")
     Assert("[1, 2]" in response)
-    ipi.End()
-
-@disabled("CodePlex Work Item 5904")    
-def test_partial_lists_broken():
-    ipi = IronPythonInstance(executable, exec_prefix, extraArgs)
-    AreEqual(ipi.Start(), True)
+    
     ipi.ExecutePartialLine("[")
     ipi.ExecutePartialLine("")
     ipi.ExecutePartialLine("")
     response = ipi.ExecuteLine("]")
     Assert("[]" in response)
-    ipi.End()    
+    ipi.End()
     
 def test_partial_lists_cp3530():
 
@@ -334,7 +329,7 @@ def test_partial_dicts():
     ipi.ExecutePartialLine(",")
     ipi.ExecutePartialLine("3:45")
     response = ipi.ExecuteLine("}")
-    Assert("{'joe': 42, 3: 45}" in response)
+    Assert(repr({'joe':42, 3:45})  in response)
     
     ipi.ExecutePartialLine("{")
     ipi.ExecutePartialLine("")

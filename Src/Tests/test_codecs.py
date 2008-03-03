@@ -383,13 +383,13 @@ def test_file_encodings():
         #cleanup
         sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
 
-
-@disabled("CodePlex Work Item 13617")    
+@skip("silverlight")
 def test_file_encodings_negative():
     '''
-    Once this gets fixed, we should use *.py files in the correct encoding instead
-    of dynamically generating ASCII files.  Also, need variations on the encoding 
-    names.
+    TODO:
+    - we should use *.py files in the correct encoding instead
+    of dynamically generating ASCII files
+    - need variations on the encoding names
     '''
     import sys
     import nt

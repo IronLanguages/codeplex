@@ -41,11 +41,11 @@ namespace ToyScript {
             switch (context.SourceUnit.Kind) {
                 case SourceCodeKind.InteractiveCode:
                     context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(tp.ParseInteractiveStatement(), context.SourceUnit.Id);
+                    return ToyGenerator.Generate(tp.ParseInteractiveStatement(), context.SourceUnit.Path);
 
                 default:
                     context.SourceUnit.CodeProperties = SourceCodeProperties.None;
-                    return ToyGenerator.Generate(tp.ParseFile(), context.SourceUnit.Id);
+                    return ToyGenerator.Generate(tp.ParseFile(), context.SourceUnit.Path);
             }
         }
 

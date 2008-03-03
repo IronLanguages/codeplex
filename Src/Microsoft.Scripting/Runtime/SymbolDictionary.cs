@@ -372,7 +372,7 @@ namespace Microsoft.Scripting.Runtime {
 
         public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
 
-        public override IDictionary<object, object> AsObjectKeyedDictionary() {
+        public IDictionary<object, object> AsObjectKeyedDictionary() {
             return this;
         }
 

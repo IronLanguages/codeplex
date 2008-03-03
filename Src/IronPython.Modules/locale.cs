@@ -31,7 +31,17 @@ using Microsoft.Scripting.Runtime;
 [assembly: PythonModule("_locale", typeof(IronPython.Modules.PythonLocale))]
 namespace IronPython.Modules {
     public static class PythonLocale {
-        internal static LocaleInfo currentLocale = new LocaleInfo();
+        private static readonly object _localeKey = new object();
+        
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            EnsureLocaleInitialized(context);
+        }
+
+        internal static void EnsureLocaleInitialized(PythonContext context) {
+            if (!context.HasModuleState(_localeKey)) {
+                context.SetModuleState(_localeKey, new LocaleInfo());
+            }
+        }
 
         public static PythonType Error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "Error", "_locale", "");
 
@@ -52,8 +62,8 @@ namespace IronPython.Modules {
 
 The conventions table is a dictionary that contains information on how to use 
 the locale for numeric and monetary formatting")]
-        public static object localeconv() {
-            return currentLocale.GetConventionsTable();
+        public static object localeconv(CodeContext/*!*/ context) {
+            return GetLocaleInfo(context).GetConventionsTable();
         }
 
         [Documentation(@"Sets the current locale for the given category.
@@ -67,18 +77,18 @@ LC_TIME:      sets the locale for time functions [unused]
 
 If locale is None then the current setting is returned.
 ")]
-        public static object setlocale(object category, [DefaultParameterValue(null)]string locale) {
+        public static object setlocale(CodeContext/*!*/ context, object category, [DefaultParameterValue(null)]string locale) {
             if (locale == null) {
-                return currentLocale.GetLocale(category);
+                return GetLocaleInfo(context).GetLocale(category);
             }
 
-            currentLocale.SetLocale(category, locale);
+            GetLocaleInfo(context).SetLocale(category, locale);
             return null;
         }
 
         [Documentation("compares two strings using the current locale")]
-        public static int strcoll(string string1, string string2) {
-            return currentLocale.Collate.CompareInfo.Compare(string1, string2, CompareOptions.None);
+        public static int strcoll(CodeContext/*!*/ context, string string1, string string2) {
+            return GetLocaleInfo(context).Collate.CompareInfo.Compare(string1, string2, CompareOptions.None);
         }
 
         [Documentation(@"returns a transformed string that can be compared using the built-in cmp.
@@ -226,7 +236,7 @@ Currently returns the string unmodified")]
                 List res = new List(groups);
                 if (groups.Length > 0 && groups[groups.Length - 1] == 0) {
                     // replace zero w/ CHAR_MAX, no further grouping is performed
-                    res[res.Count - 1] = CHAR_MAX;
+                    res[res.__len__() - 1] = CHAR_MAX;
                 } else {
                     // append 0 to indicate we should repeatedly use the last one
                     res.AddNoLock(0);
@@ -235,5 +245,11 @@ Currently returns the string unmodified")]
                 return res;
             }
         }
+
+        internal static LocaleInfo/*!*/ GetLocaleInfo(CodeContext/*!*/ context) {
+            EnsureLocaleInitialized(PythonContext.GetContext(context));
+
+            return (LocaleInfo)PythonContext.GetContext(context).GetModuleState(_localeKey);
+        }        
     }
 }

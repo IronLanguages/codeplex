@@ -65,14 +65,6 @@ namespace Microsoft.Scripting.Actions {
                     case Operators.Negate:
                     case Operators.Positive:
                     case Operators.AbsoluteValue:
-                    case Operators.ConvertToBigInteger:
-                    case Operators.ConvertToBoolean:
-                    case Operators.ConvertToComplex:
-                    case Operators.ConvertToDouble:
-                    case Operators.ConvertToHex:
-                    case Operators.ConvertToInt32:
-                    case Operators.ConvertToOctal:
-                    case Operators.ConvertToString:
                     case Operators.Not:
                         return true;                    
                 }

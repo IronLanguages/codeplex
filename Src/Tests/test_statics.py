@@ -65,7 +65,7 @@ def test_field():
     AreEqual(o2.Field, 'OverrideAll.Field')
     
     def f(): o1.Field = 'SecondString'
-    AssertErrorWithMessage(AttributeError, "attribute 'Field' of 'OverrideNothing' object is read-only", f)
+    AssertErrorWithMessage(AttributeError, "'OverrideNothing' object has no attribute 'Field'", f)
 
     o2.Field = 'ThirdString'
     AreEqual(b.Field, 'FirstString')
@@ -75,7 +75,7 @@ def test_field():
     # del 
     def f(target): del target.Field
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, Base)
-    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideNothing'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, OverrideNothing)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Field' of builtin type 'Base'", f, b)
@@ -125,9 +125,9 @@ def test_property():
       
     # del 
     def f(target): del target.Property
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f, Base)
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'Base' object is read-only", f, OverrideNothing)
-    AssertErrorWithMessage(AttributeError, "attribute 'Property' of 'OverrideAll' object is read-only", f, OverrideAll)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, Base)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, b)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, o1)
@@ -195,9 +195,9 @@ def test_event():
 
     # del
     def f(target): del target.Event
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'Base' object is read-only", f, Base)
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'Base' object is read-only", f, OverrideNothing)
-    AssertErrorWithMessage(AttributeError, "attribute 'Event' of 'OverrideAll' object is read-only", f, OverrideAll)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, Base)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, b)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Event' of builtin type 'Base'", f, o1)
@@ -278,9 +278,9 @@ def test_method():
     # del 
     def f(target): del target.Method_None
 
-    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'Base'", f, Base)
-    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideNothing'", f, OverrideNothing)
-    AssertErrorWithMessage(AttributeError, "can't delete attributes of built-in/extension type 'OverrideAll'", f, OverrideAll)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, Base)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, OverrideNothing)
+    AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'OverrideAll'", f, OverrideAll)
     
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, b)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Method_None' of builtin type 'Base'", f, o1)

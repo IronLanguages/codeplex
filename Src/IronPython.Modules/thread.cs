@@ -34,29 +34,34 @@ using Microsoft.Scripting.Runtime;
 [assembly: PythonModule("thread", typeof(IronPython.Modules.PythonThread))]
 namespace IronPython.Modules {
     public static class PythonThread {
-        private static int _stackSize;
+        private static readonly object _stackSizeKey = new object();
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.SetModuleState(_stackSizeKey, 0);            
+        }
 
         #region Public API Surface
-        public static object LockType = DynamicHelpers.GetPythonTypeFromType(typeof(@lock));
-        public static PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "thread", "");
+
+        public static readonly PythonType LockType = DynamicHelpers.GetPythonTypeFromType(typeof(@lock));
+        public static readonly PythonType error = PythonExceptions.CreateSubType(PythonExceptions.Exception, "error", "thread", "");
 
         [Documentation("start_new_thread(function, [args, [kwDict]]) -> thread id\nCreates a new thread running the given function")]
-        public static object start_new_thread(CodeContext context, object function, object args, object kwDict) {
+        public static object start_new_thread(CodeContext/*!*/ context, object function, object args, object kwDict) {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
-            Thread t = CreateThread(new ThreadObj((CodeContext)context, function, tupArgs, kwDict).Start);
+            Thread t = CreateThread(context, new ThreadObj(context, function, tupArgs, kwDict).Start);
             t.Start();
 
             return t.ManagedThreadId;
         }
 
         [Documentation("start_new_thread(function, args, [kwDict]) -> thread id\nCreates a new thread running the given function")]
-        public static object start_new_thread(CodeContext context, object function, object args) {
+        public static object start_new_thread(CodeContext/*!*/ context, object function, object args) {
             PythonTuple tupArgs = args as PythonTuple;
             if (tupArgs == null) throw PythonOps.TypeError("2nd arg must be a tuple");
 
-            Thread t = CreateThread(new ThreadObj((CodeContext)context, function, tupArgs, null).Start);
+            Thread t = CreateThread(context, new ThreadObj(context, function, tupArgs, null).Start);
             t.IsBackground = true;
             t.Start();
 
@@ -81,15 +86,18 @@ namespace IronPython.Modules {
             return Thread.CurrentThread.ManagedThreadId;
         }
 
-        public static int stack_size() {
-            return _stackSize;
+        public static int stack_size(CodeContext/*!*/ context) {
+            return GetStackSize(context);
         }
 
-        public static int stack_size(int size) {
+        public static int stack_size(CodeContext/*!*/ context, int size) {
             if (size < 256 * 1024) throw PythonOps.ValueError("size too small: {0}", size);
 
-            _stackSize = size;
-            return _stackSize;
+            int oldSize = GetStackSize(context);
+            
+            SetStackSize(context, size);
+            
+            return oldSize;
         }
 
         // deprecated synonyms, wrappers over preferred names...
@@ -164,9 +172,10 @@ namespace IronPython.Modules {
 
         #region Internal Implementation details
 
-        private static Thread CreateThread(ThreadStart start) {
+        private static Thread CreateThread(CodeContext/*!*/ context, ThreadStart start) {
 #if !SILVERLIGHT
-            return (_stackSize != 0) ? new Thread(start, _stackSize) : new Thread(start);
+            int size = GetStackSize(context);
+            return (size != 0) ? new Thread(start, size) : new Thread(start);
 #else
             return new Thread(start);
 #endif
@@ -201,6 +210,15 @@ namespace IronPython.Modules {
                 }
             }
         }
+
         #endregion
+
+        private static int GetStackSize(CodeContext/*!*/ context) {
+            return (int)PythonContext.GetContext(context).GetModuleState(_stackSizeKey);
+        }
+
+        private static void SetStackSize(CodeContext/*!*/ context, int stackSize) {
+            PythonContext.GetContext(context).SetModuleState(_stackSizeKey, stackSize);
+        }
     }
 }

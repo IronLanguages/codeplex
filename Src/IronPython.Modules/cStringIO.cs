@@ -230,7 +230,7 @@ namespace IronPython.Modules {
 
             public List readlines() {
                 ThrowIfClosed();
-                List list = List.Make();
+                List list = PythonOps.MakeList();
                 while (!_sr.EOF) {
                     list.AddNoLock(readline());
                 }
@@ -239,7 +239,7 @@ namespace IronPython.Modules {
 
             public List readlines(int size) {
                 ThrowIfClosed();
-                List list = List.Make();
+                List list = PythonOps.MakeList();
                 while (!_sr.EOF) {
                     string line = readline();
                     list.AddNoLock(line);
@@ -379,7 +379,7 @@ namespace IronPython.Modules {
 
             public List readlines() {
                 ThrowIfClosed();
-                List list = List.Make();
+                List list = PythonOps.MakeList();
                 while (!_sr.EOF) {
                     list.AddNoLock(readline());
                 }
@@ -388,7 +388,7 @@ namespace IronPython.Modules {
 
             public List readlines(int size) {
                 ThrowIfClosed();
-                List list = List.Make();
+                List list = PythonOps.MakeList();
                 while (!_sr.EOF) {
                     string line = readline();
                     list.AddNoLock(line);

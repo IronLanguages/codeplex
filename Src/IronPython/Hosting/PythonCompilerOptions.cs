@@ -28,6 +28,7 @@ namespace IronPython.Compiler {
         Default = 0,
         AllowWithStatement = 1,
         TrueDivision = 2,
+        AbsoluteImports = 4,
     }
 
     [Serializable]
@@ -58,6 +59,16 @@ namespace IronPython.Compiler {
             set {
                 if (value) _languageFeatures |= PythonLanguageFeatures.AllowWithStatement;
                 else _languageFeatures &= ~PythonLanguageFeatures.AllowWithStatement;
+            }
+        }
+
+        public bool AbsoluteImports {
+            get {
+                return (_languageFeatures & PythonLanguageFeatures.AbsoluteImports) != 0;
+            }
+            set {
+                if (value) _languageFeatures |= PythonLanguageFeatures.AbsoluteImports;
+                else _languageFeatures &= ~PythonLanguageFeatures.AbsoluteImports;
             }
         }
 

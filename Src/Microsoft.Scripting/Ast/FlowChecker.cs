@@ -149,8 +149,8 @@ namespace Microsoft.Scripting.Ast {
                 } else {
                     // locals and parameters must have be tracked, except for global scope
                     Debug.Assert(
-                        variable.Kind != Variable.VariableKind.Local &&
-                        variable.Kind != Variable.VariableKind.Parameter ||
+                        variable.Kind != VariableKind.Local &&
+                        variable.Kind != VariableKind.Parameter ||
                         variable.Lift ||
                         variable.Block.IsGlobal,
                         "Untracked local/parameter " + variable.Name.ToString()

@@ -31,9 +31,7 @@ namespace Microsoft.Scripting.Ast {
         private Type _returnType;
         private List<Variable> _locals;
         private List<Variable> _params;
-        private List<CodeBlock> _children;
         private Expression _body;
-        private LambdaBuilder _parent;
         private bool _dictionary;
         private bool _global;
         private bool _visible = true;
@@ -123,21 +121,6 @@ namespace Microsoft.Scripting.Ast {
         }
 
         /// <summary>
-        /// Represents lexically enclosing lambda.
-        /// This will go away as soon as the lexically enclosing
-        /// lambda can be fully inferred from the structure.
-        /// </summary>
-        public LambdaBuilder Parent {
-            get {
-                return _parent;
-            }
-            set {
-                Contract.RequiresNotNull(value, "value");
-                _parent = value;
-            }
-        }
-
-        /// <summary>
         /// The generated lambda should have dictionary of locals
         /// instead of allocating them directly on the CLR stack.
         /// </summary>
@@ -219,9 +202,9 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates variable of a given kind and type.
         /// </summary>
-        public Variable CreateVariable(SymbolId name, Variable.VariableKind kind, Type type) {
+        public Variable CreateVariable(SymbolId name, VariableKind kind, Type type) {
             Contract.RequiresNotNull(type, "type");
-            Contract.Requires(kind != Variable.VariableKind.Parameter, "kind");
+            Contract.Requires(kind != VariableKind.Parameter, "kind");
             return Save(Variable.Create(name, kind, type), ref _locals);
         }
 
@@ -230,14 +213,14 @@ namespace Microsoft.Scripting.Ast {
         /// Creates a local variable with specified name and type.
         /// </summary>
         public Variable CreateLocalVariable(SymbolId name, Type type) {
-            return CreateVariable(name, Variable.VariableKind.Local, type);
+            return CreateVariable(name, VariableKind.Local, type);
         }
 
         /// <summary>
         /// Creates a temporary variable with specified name and type.
         /// </summary>
         public Variable CreateTemporaryVariable(SymbolId name, Type type) {
-            return CreateVariable(name, Variable.VariableKind.Temporary, type);
+            return CreateVariable(name, VariableKind.Temporary, type);
         }
 
         /// <summary>
@@ -257,8 +240,13 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New CodeBlock instance.</returns>
         public CodeBlock MakeLambda() {
             Validate();
-            CodeBlock block = Ast.CodeBlock(_span, _name, _returnType, ToArray(_params), ToArray(_locals), _global, _visible);
-            return FinishLambda(block);
+            CodeBlock block = Ast.CodeBlock(_span, _name, _returnType, _body, ToArray(_params), ToArray(_locals),
+                                            _global, _visible, _dictionary, _paramsArray);
+
+            // The builder is now completed
+            _completed = true;
+
+            return block;
         }
 
         /// <summary>
@@ -271,41 +259,9 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(next, "next");
 
             Validate();
-            CodeBlock block = Ast.Generator(_span, _name, generator, next, ToArray(_params), ToArray(_locals));
-            return FinishLambda(block);
-        }
+            CodeBlock block = Ast.Generator(_span, _name, generator, next, _body, ToArray(_params), ToArray(_locals));
 
-        /// <summary>
-        /// Completes the lambda that was just created.
-        /// This is essentially a workaround for the CodeBlock API which still
-        /// doesn't fully enforce the read/only restrictions.
-        /// </summary>
-        private CodeBlock FinishLambda(CodeBlock block) {
-            if (_children != null) {
-                foreach (CodeBlock child in _children) {
-                    child.Parent = block;
-                }
-            }
-
-            if (_body != null) {
-                block.Body = _body;
-            }
-
-            if (_dictionary) {
-                block.EmitLocalDictionary = true;
-            }
-
-            if (_paramsArray) {
-                block.ParameterArray = true;
-            }
-
-            if (_parent != null) {
-                _parent.AddChild(block);
-            }
-
-            // The builder is now completed and cannot
-            // be used to create other lambdas
-
+            // The builder is now completed
             _completed = true;
 
             return block;
@@ -324,15 +280,9 @@ namespace Microsoft.Scripting.Ast {
             if (_name == null) {
                 throw new InvalidOperationException("Name is missing");
             }
-        }
-
-        private void AddChild(CodeBlock block) {
-            Contract.RequiresNotNull(block, "block");
-
-            if (_children == null) {
-                _children = new List<CodeBlock>();
+            if (_body == null) {
+                throw new InvalidOperationException("Body is missing");
             }
-            _children.Add(block);
         }
 
         private static Variable[] ToArray(List<Variable> list) {

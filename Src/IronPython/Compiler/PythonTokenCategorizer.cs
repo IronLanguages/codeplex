@@ -20,6 +20,7 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Compiler {
 
@@ -50,7 +51,7 @@ namespace IronPython.Compiler {
         }
 
         public PythonTokenCategorizer() {
-            _tokenizer = new Tokenizer(new CompilerErrorSink(), true);
+            _tokenizer = new Tokenizer(ErrorSink.Null, true);
         }
 
         public override void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation) {

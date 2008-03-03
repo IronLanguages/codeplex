@@ -281,7 +281,7 @@ namespace IronPython.Runtime {
         #region Internal implementation details
 
         /// <summary>
-        /// Helper called from generated code after yield statement. 
+        /// Helper called from PythonOps after the yield statement
         /// Keepin this in a helper method:
         /// - reduces generated code size
         /// - allows better coupling with PythonGenerator.Throw()

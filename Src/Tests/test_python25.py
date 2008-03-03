@@ -288,13 +288,6 @@ def test_thread_lock():
     with file('abc.txt', 'w'):
         pass
 
-#------------------------------------------------------------------------------
-@skip("win32 silverlight")
-def test_nt_unlink():
-    import nt
-    nt.unlink('abc.txt')
-
-
 def setvar() : globals()["gblvar"] += 1
 
 def test_try_catch_finally():
@@ -598,10 +591,8 @@ def test_string_partition():
 
 def test_string_rpartition():
     AreEqual('http://www.codeplex.com/WorkItem/List.aspx?Project://Name=IronPython'.rpartition('://'), ('http://www.codeplex.com/WorkItem/List.aspx?Project','://','Name=IronPython'))
-    #CodePlex Work Item #10648
-    if sys.platform=="win32":
-        AreEqual('http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'.rpartition('stringnotpresent'), ('', '', 'http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'))
-        AreEqual('stringisnotpresent'.rpartition('presentofcoursenot'), ('','', 'stringisnotpresent'))
+    AreEqual('http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'.rpartition('stringnotpresent'), ('', '', 'http://www.codeplex.com/WorkItem/List.aspx?ProjectName=IronPython'))
+    AreEqual('stringisnotpresent'.rpartition('presentofcoursenot'), ('','', 'stringisnotpresent'))
     AreEqual(''.rpartition('stringnotpresent'), ('','',''))
     AreEqual('onlymatchingtext'.rpartition('onlymatchingtext'), ('','onlymatchingtext',''))
     AreEqual('alotoftextherethatisapartofprefixonlyprefix_nosuffix'.rpartition('_nosuffix'), ('alotoftextherethatisapartofprefixonlyprefix','_nosuffix',''))
@@ -631,8 +622,7 @@ def test_string_rpartition():
     str = prefix + sep + suffix                
 
     AreEqual(str.rpartition(sep),(prefix,sep,suffix))            
-    #CodePlex Work Item #10648
-    if sys.platform=="win32":  AreEqual(str.rpartition('nomatch'),('','', str))            
+    AreEqual(str.rpartition('nomatch'),('','', str))            
     AssertError(TypeError,str.rpartition,None)
     AssertError(ValueError,str.rpartition,'')
 
@@ -1282,5 +1272,37 @@ def test_importwarning():
             raise exc
         except exceptions.ImportWarning, e:
             pass
+
+def test_overflowwarning():
+    if sys.platform=="win32":
+        AssertError(AttributeError, lambda: exceptions.OverflowWarning)
+    else:
+        #Merlin 15346
+        #Please remove the snippet below once this bug is closed.
+        exceptions.OverflowWarning()
+
+@skip("silverlight")
+def test_cp5609():
+    from nt import remove
+    temp_name = "test_cp5609.txt"
+
+    with open(temp_name, "w") as f:
+        Assert(not f.closed)
+        f.write("xyz")
+        Assert(hasattr(f, "__enter__"))
+        Assert(hasattr(f, "__exit__"))
+    Assert(f.closed)
+    
+    with open(temp_name, "r") as f:
+        Assert(not f.closed)
+        AreEqual(f.readlines(), ["xyz"])
+        Assert(hasattr(f, "__enter__"))
+        Assert(hasattr(f, "__exit__"))
+    Assert(f.closed)
+    
+    remove(temp_name)
+    
+    
+
 
 run_test(__name__)

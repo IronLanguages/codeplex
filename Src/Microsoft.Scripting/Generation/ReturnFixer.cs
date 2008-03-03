@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Generation {
             this._argSlot = argSlot;
         }
 
-        internal static ReturnFixer EmitArgument(Compiler cg, Slot argSlot) {
+        internal static ReturnFixer EmitArgument(LambdaCompiler cg, Slot argSlot) {
             argSlot.EmitGet(cg);
             if (argSlot.Type.IsByRef) {
                 Type elementType = argSlot.Type.GetElementType();
@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal void FixReturn(Compiler cg) {
+        internal void FixReturn(LambdaCompiler cg) {
             _argSlot.EmitGet(cg);
             _refSlot.EmitGet(cg);
             cg.EmitCall(typeof(BinderOps).GetMethod("GetBox").MakeGenericMethod(_argSlot.Type.GetElementType()));

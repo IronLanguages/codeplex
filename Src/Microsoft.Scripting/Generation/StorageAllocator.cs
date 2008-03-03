@@ -19,13 +19,13 @@ using Microsoft.Scripting.Ast;
 namespace Microsoft.Scripting.Generation {
     // TODO: internal
     abstract class StorageAllocator {
-        public virtual void PrepareForEmit(Compiler cg) {
+        public virtual void PrepareForEmit(LambdaCompiler cg) {
         }
 
         // TODO: change the parameter to take Variable !!!
         public abstract Storage AllocateStorage(SymbolId name, Type type);
 
-        public virtual Slot GetAccessSlot(Compiler cg, CodeBlock block) {
+        public virtual Slot GetAccessSlot(LambdaCompiler cg, CodeBlock block) {
             return null;
         }
     }

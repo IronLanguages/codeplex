@@ -592,10 +592,20 @@ def Check(res, orig):
         i = i+1
     AreEqual(i, len(orig))
 
+def len_helper(o):
+    if hasattr(o, 'Count'): return o.Count
+    return len(o)
+
+def clear_helper(o):
+    if hasattr(o, 'Clear'):
+        o.Clear()
+    else:
+        del o[:]
+
 def CheckModify(res, orig):
     Check(res, orig)
 
-    index = res.Count
+    index = len_helper(res)
     res.Add(orig[0])
     Check(res, orig)
 
@@ -609,18 +619,24 @@ def CheckModify(res, orig):
     res.Insert(0, x)
     Check(res, orig)
 
-    if(hasattr(res, "Sort")):
-        res.Sort()
+    if(hasattr(res, "sort")):
+        res.sort()
         Check(res, orig)
 
-    res.Clear()
+    clear_helper(res)
     Check(res, orig)
 
+def keys_helper(o):
+    if hasattr(o, 'keys'): return o.keys()
+    
+    return o.Keys
+    
 def CheckDict(res, orig):
     if hasattr(res, "__len__"):
         AreEqual(len(res), len(orig))
     i = 0
-    for a in res.Keys:
+    
+    for a in keys_helper(res):
         AreEqual(res[a], orig[a])
         i = i+1
     AreEqual(i, len(orig))

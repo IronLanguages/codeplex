@@ -927,7 +927,7 @@ namespace IronPython.Compiler {
 
         [Conditional("DUMP_TOKENS")]
         private void DumpBeginningOfUnit() {
-            Console.WriteLine("--- Source unit: '{0}' ---", _sourceUnit.Id);
+            Console.WriteLine("--- Source unit: '{0}' ---", _sourceUnit.Path);
         }
 
         [Conditional("DUMP_TOKENS")]

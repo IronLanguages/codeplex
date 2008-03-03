@@ -218,7 +218,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(method, "method");
             Contract.RequiresNotNullItems(arguments, "arguments");
             Contract.RequiresNotNull(codeContextExpression, "codeContextExpression");
-            
+
             // We prefer to peek inside the delegate and call the target method directly. However, we need to
             // exclude DynamicMethods since Delegate.Method returns a dummy MethodInfo, and we cannot emit a call to it.
             bool inlineDelegateCall = true;
@@ -243,8 +243,8 @@ namespace Microsoft.Scripting.Ast {
                     if (inlineDelegateCall) {
                         realArgs.Add(instanceForCall);
                         instanceForCall = null;
-                    } 
-                    
+                    }
+
                     paramIndex++;
                 }
 
@@ -258,7 +258,7 @@ namespace Microsoft.Scripting.Ast {
                 arguments = realArgs.ToArray();
             }
 
-            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]) 
+            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1])
                 || method is CallTargetN || method is CallTargetWithContextN;
 
             if (inlineDelegateCall) {
@@ -285,12 +285,12 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNull(method, "method");
             Contract.RequiresNotNullItems(arguments, "arguments");
             Contract.Requires(instance != null ^ method.IsStatic, "instance");
-            
+
             ParameterInfo[] parameters = method.GetParameters();
             bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]);
             return ComplexCallHelperInternal(instance, method, parameters, hasParamArray, arguments);
         }
-        
+
         /// <summary>
         /// The complex call helper to create the AST method call node.
         /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
@@ -375,5 +375,29 @@ namespace Microsoft.Scripting.Ast {
                 throw new NotSupportedException("missing parameter value not yet supported");
             }
         }
+
+        public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) {
+            return ArrayIndex(array, (IList<Expression>)indexes);
+        }
+
+        public static MethodCallExpression ArrayIndex(Expression array, IList<Expression> indexes) {
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresNotNull(indexes, "indexes");
+
+            Type arrayType = array.Type;
+            Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+
+            ReadOnlyCollection<Expression> indexList = CollectionUtils.ToReadOnlyCollection(indexes);
+            Contract.Requires(array.Type.GetArrayRank() == indexList.Count, "indexes", "Incorrect number of indexes.");
+
+            foreach (Expression e in indexList) {
+                Contract.RequiresNotNull(e, "indexes");
+                Contract.Requires(e.Type == typeof(int), "indexes", "Array indexes must be ints.");
+            }
+
+            MethodInfo mi = array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance);
+            return Call(array, mi, indexList);
+        }
+
     }
 }

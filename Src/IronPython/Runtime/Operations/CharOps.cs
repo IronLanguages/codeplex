@@ -44,13 +44,11 @@ namespace IronPython.Runtime.Operations {
             return self != other;
         }
 
-        [SpecialName, PythonName("__hash__")]
-        public static int GetHashCode(char self) {
+        public static int __hash__(char self) {
             return new String(self, 1).GetHashCode();
         }
 
-        [SpecialName, PythonName("__cmp__")]
-        public static object Compare(char self, object other) {
+        public static object __cmp__(char self, object other) {
             string strOther;
 
             if (other is char) {

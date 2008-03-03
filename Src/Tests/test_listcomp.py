@@ -40,6 +40,7 @@ AreEqual([y for y in "python"], list("python"))
 y = 10
 AreEqual([x for x in "python" if y > 5], list("python"))
 AreEqual([x for x in "python" if y > 15], list())
+AreEqual([x for x, in [(1,)]], [1])
 
 ## negative
 

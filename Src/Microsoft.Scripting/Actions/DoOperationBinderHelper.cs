@@ -222,7 +222,7 @@ namespace Microsoft.Scripting.Actions {
                     case Operators.RightShift: expr = Ast.RightShift(Param0, Param1); break;
                     case Operators.BitwiseAnd: expr = Ast.And(Param0, Param1); break;
                     case Operators.BitwiseOr: expr = Ast.Or(Param0, Param1); break;
-                    case Operators.Xor: expr = Ast.ExclusiveOr(Param0, Param1); break;
+                    case Operators.ExclusiveOr: expr = Ast.ExclusiveOr(Param0, Param1); break;
                     default: throw new InvalidOperationException();
                 }
                 _rule.Target = _rule.MakeReturn(Binder, expr);
@@ -257,11 +257,14 @@ namespace Microsoft.Scripting.Actions {
                     break;                
                 case Operators.Documentation:
                     object[] attrs = _types[0].GetCustomAttributes(typeof(DocumentationAttribute), true);
+                    string documentation = String.Empty;
+                    
                     if (attrs.Length > 0) {
-                        _rule.Target = _rule.MakeReturn(Binder, Ast.Constant(((DocumentationAttribute)attrs[0]).Documentation));
-                        return true;
-                    }
-                    break;
+                        documentation = ((DocumentationAttribute)attrs[0]).Documentation;
+                    } 
+
+                    _rule.Target = _rule.MakeReturn(Binder, Ast.Constant(documentation));
+                    return true;
                 case Operators.MemberNames:
                     if (typeof(IMembersList).IsAssignableFrom(_types[0])) {
                         MakeIMembersListRule();

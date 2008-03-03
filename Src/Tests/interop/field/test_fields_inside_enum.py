@@ -33,10 +33,10 @@ def test_get_set():
     AssertErrorWithMatch(AttributeError, "attribute 'A' of 'EnumInt32' object is read-only", f)
     
     def f(): EnumInt32.B = 10
-    AssertErrorWithMatch(AttributeError, "Cannot set field B on type EnumInt32", f)
+    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
 
     def f(): EnumInt32.B = EnumInt32.A
-    AssertErrorWithMatch(AttributeError, "Cannot set field B on type EnumInt32", f)
+    AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
     
     def f(): desc.__set__(o, 12)
     AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)

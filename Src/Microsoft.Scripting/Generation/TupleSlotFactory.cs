@@ -32,13 +32,13 @@ namespace Microsoft.Scripting.Generation {
         private List<Slot> _slots = new List<Slot>();
         private List<SymbolId> _names = new List<SymbolId>();
         private Type _dictType, _tupleType;
-        private Dictionary<Compiler, List<Slot>> _concreteSlots;
+        private Dictionary<LambdaCompiler, List<Slot>> _concreteSlots;
 
         public TupleSlotFactory(Type dictType) {
             _dictType = dictType;
         }
 
-        protected virtual Slot PrepareSlotForEmit(Compiler cg) {
+        protected virtual Slot PrepareSlotForEmit(LambdaCompiler cg) {
             // Emit globals from context and cast to tuple type            
 
             // tmpLocal = ((tupleDictType)codeContext.Scope.GlobalScope.GetDictionary(context)).Tuple
@@ -53,8 +53,8 @@ namespace Microsoft.Scripting.Generation {
             return tmpLocal;
         }
 
-        public override void PrepareForEmit(Compiler cg) {
-            if (_concreteSlots == null) _concreteSlots = new Dictionary<Compiler, List<Slot>>();
+        public override void PrepareForEmit(LambdaCompiler cg) {
+            if (_concreteSlots == null) _concreteSlots = new Dictionary<LambdaCompiler, List<Slot>>();
             if (_concreteSlots.ContainsKey(cg)) return;
 
             Slot tmpLocal = PrepareSlotForEmit(cg);
@@ -66,7 +66,7 @@ namespace Microsoft.Scripting.Generation {
             _concreteSlots[cg] = concreteSlots;
         }
 
-        public Slot GetConcreteSlot(Compiler cg, int data) {
+        public Slot GetConcreteSlot(LambdaCompiler cg, int data) {
             return _concreteSlots[cg][data];
         }
 

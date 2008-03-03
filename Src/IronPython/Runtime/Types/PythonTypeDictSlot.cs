@@ -27,7 +27,7 @@ namespace IronPython.Runtime.Types {
     /// <summary>
     /// Provides a slot object for the dictionary to allow setting of the dictionary.
     /// </summary>
-    [PythonType("getset_descriptor")]
+    [PythonSystemType("getset_descriptor")]
     public sealed class PythonTypeDictSlot : PythonTypeSlot, ICodeFormattable {
         public PythonTypeDictSlot() {
         }
@@ -60,7 +60,7 @@ namespace IronPython.Runtime.Types {
                 return sdo.ReplaceDict((IAttributesCollection)value);
             }
 
-            if (instance == null) throw PythonOps.TypeError("'__dict__' of '{0}' objects is not writable", owner.Name);
+            if (instance == null) throw PythonOps.AttributeError("'__dict__' of '{0}' objects is not writable", owner.Name);
             return false;
         }
 
@@ -80,7 +80,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<attribute '__dict__' of 'type' objects");
         }
 

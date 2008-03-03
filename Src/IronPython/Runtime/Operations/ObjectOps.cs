@@ -40,21 +40,39 @@ namespace IronPython.Runtime.Operations {
 
     public static class ObjectOps {
         // Types for which the pickle module has built-in support (from PEP 307 case 2)
-        private static Dictionary<PythonType, object> nativelyPickleableTypes = null;
+        [MultiRuntimeAware]
+        private static Dictionary<PythonType, object> nativelyPickleableTypes;
 
-        [PropertyMethod, PythonName("__class__")]
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, params object[] args\u00F8) {
+            if (cls == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+
+            InstanceOps.CheckInitArgs(context, null, args\u00F8, cls);
+
+            return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
+        }
+
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
+            if (cls == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+
+            InstanceOps.CheckInitArgs(context, kwargs\u00F8, args\u00F8, cls);
+
+            return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
+        }
+
+        [PropertyMethod]
         public static PythonType Get__class__(object self) {
             return DynamicHelpers.GetPythonType(self);
         }
 
-        [PropertyMethod, PythonName("__class__")]
+        [PropertyMethod]
         public static void Set__class__(CodeContext context, object self, object value) {
             if (!new PythonTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetPythonType(self), value)) {
                 throw PythonOps.TypeError("__class__ assignment can only be performed on user defined types");
             }
         }
 
-        [SpecialName]
         public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
                 PythonTypeOps.GetName(DynamicHelpers.GetPythonType(self)),
@@ -74,31 +92,10 @@ namespace IronPython.Runtime.Operations {
             PythonOps.ObjectSetAttribute(context, self, SymbolTable.StringToId(name), value);
         }
 
-        [SpecialName]
         public static string __str__(object o) {
-            ICodeFormattable icf = o as ICodeFormattable;
-            if (icf != null) return icf.ToCodeString(DefaultContext.Default);
-
-            PythonType ut = DynamicHelpers.GetPythonType(o);
-            PythonTypeSlot dts;
-            object ret;
-            if (ut.TryResolveSlot(DefaultContext.Default, Symbols.Repr, out dts) &&
-                dts.TryGetValue(DefaultContext.Default, o, ut, out ret)) {
-
-                string strRet;
-                if (ret != null && Converter.TryConvertToString(PythonCalls.Call(ret), out strRet)) {
-                    return strRet;
-                }
-
-                throw PythonOps.TypeError("__repr__ returned non-string type ({0})", DynamicHelpers.GetPythonType(ret).Name);
-            }
-
-            // unreachable, all objects have __repr__
-            Debug.Assert(false);
-            throw new InvalidOperationException();
+            return PythonOps.StringRepr(o);
         }
 
-        [SpecialName]
         public static int __hash__(object self) {
             if (self == null) return NoneTypeOps.HashCode;
             return self.GetHashCode();
@@ -111,20 +108,24 @@ namespace IronPython.Runtime.Operations {
         static Dictionary<PythonType, object> NativelyPickleableTypes {
             get {
                 if (nativelyPickleableTypes == null) {
-                    nativelyPickleableTypes = new Dictionary<PythonType, object>();
-                    nativelyPickleableTypes.Add(TypeCache.None, null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(bool)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(int)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(double)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(Complex64)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(string)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(List)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldInstance)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldClass)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonFunction)), null);
-                    nativelyPickleableTypes.Add(DynamicHelpers.GetPythonTypeFromType(typeof(BuiltinFunction)), null);
+                    Dictionary<PythonType, object> typeDict = new Dictionary<PythonType, object>();
+                    typeDict.Add(TypeCache.None, null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(bool)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(int)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(double)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(Complex64)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(string)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonTuple)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(List)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonDictionary)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldInstance)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(OldClass)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(PythonFunction)), null);
+                    typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(BuiltinFunction)), null);
+
+                    // type dict needs to be ensured to be fully initialized before assigning back
+                    Thread.MemoryBarrier();
+                    nativelyPickleableTypes = typeDict;
                 }
                 return nativelyPickleableTypes;
             }
@@ -173,14 +174,14 @@ namespace IronPython.Runtime.Operations {
                     foreach (string slotName in slotNames) {
                         if (slotName == "__dict__") continue;
                         // don't reassign same-named slots from types earlier in the MRO
-                        if (initializedSlotValues.ContainsKey(slotName)) continue;
+                        if (initializedSlotValues.__contains__(slotName)) continue;
                         if (PythonOps.TryGetBoundAttr(obj, SymbolTable.StringToId(slotName), out slotValue)) {
                             initializedSlotValues[slotName] = slotValue;
                         }
                     }
                 }
             }
-            if (initializedSlotValues.Count == 0) return null;
+            if (initializedSlotValues.__len__() == 0) return null;
             return initializedSlotValues;
         }
 
@@ -203,8 +204,8 @@ namespace IronPython.Runtime.Operations {
             }
 
             PythonType closestNonPythonBase = FindClosestNonPythonBase(myType); // PEP 307 calls this "B"
-
-            object func = PythonOps.PythonReconstructor;
+            
+            object func = PythonContext.GetContext(context).PythonReconstructor;
 
             object funcArgs = PythonTuple.MakeTuple(
                 myType,
@@ -250,7 +251,7 @@ namespace IronPython.Runtime.Operations {
             object func, state, listIterator, dictIterator;
             object[] funcArgs;
 
-            func = PythonOps.NewObject;
+            func = PythonContext.GetContext(context).NewObject;
 
             object getNewArgsCallable;
             if (PythonOps.TryGetBoundAttr(context, myType, Symbols.GetNewArgs, out getNewArgsCallable)) {
@@ -259,16 +260,16 @@ namespace IronPython.Runtime.Operations {
                 if (newArgs == null) {
                     throw PythonOps.TypeError("__getnewargs__ should return a tuple");
                 }
-                funcArgs = new object[1 + newArgs.Count];
+                funcArgs = new object[1 + newArgs.__len__()];
                 funcArgs[0] = myType;
-                for (int i = 0; i < newArgs.Count; i++) funcArgs[i + 1] = newArgs[i];
+                for (int i = 0; i < newArgs.__len__(); i++) funcArgs[i + 1] = newArgs[i];
             } else {
                 funcArgs = new object[] { myType };
             }
 
-            if(!PythonOps.TryInvokeOperator(context,
-                    Operators.GetState,
+            if(!PythonTypeOps.TryInvokeUnaryOperator(context,
                     self,
+                    Symbols.GetState,
                     out state)) {
                 object dict;
                 if (!PythonOps.TryGetBoundAttr(context, self, Symbols.Dict, out dict)) {
@@ -276,7 +277,7 @@ namespace IronPython.Runtime.Operations {
                 }
 
                 PythonDictionary initializedSlotValues = GetInitializedSlotValues(self);
-                if (initializedSlotValues != null && initializedSlotValues.Count == 0) {
+                if (initializedSlotValues != null && initializedSlotValues.__len__() == 0) {
                     initializedSlotValues = null;
                 }
 

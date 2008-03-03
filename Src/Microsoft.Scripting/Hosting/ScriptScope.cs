@@ -20,33 +20,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Remoting;
 using System.Threading;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 using System.ComponentModel;
 
 namespace Microsoft.Scripting.Hosting {
-
-    public interface IScriptScope : IRemotable {
-        // module variables:
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        bool TryGetVariable(string name, out object value);
-        void SetVariable(string name, object value);
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
-        bool TryLookupVariable(string name, out object value);
-        object LookupVariable(string name); // TODO: rename to GetVariable
-        bool VariableExists(string name);
-        bool RemoveVariable(string name);
-        void ClearVariables();
-
-#if !SILVERLIGHT
-        ObjectHandle LookupVariableAndWrap(string name);
-        // TODO: void SetVariable(string name, ObjectHandle value);
-#endif
-
-        T GetVariable<T>(string/*!*/ name);
-    }
-
     /// <summary>
     /// A ScriptScope is a unit of execution for code.  It consists of a global Scope which
     /// all code executes in.  A ScriptScope can have an arbitrary initializer and arbitrary
@@ -55,11 +33,15 @@ namespace Microsoft.Scripting.Hosting {
     /// ScriptScope is not thread safe. Host should either lock when multiple threads could 
     /// access the same module or should make a copy for each thread.
     /// </summary>
-    public sealed class ScriptScope : IScriptScope, ILocalObject {
+    public sealed class ScriptScope 
+#if !SILVERLIGHT
+        : MarshalByRefObject
+#endif
+    {
         private readonly Scope/*!*/ _scope;
-        private readonly IScriptEngine/*!*/ _engine;
+        private readonly ScriptEngine/*!*/ _engine;
 
-        internal ScriptScope(IScriptEngine/*!*/ engine, Scope/*!*/ scope) {
+        internal ScriptScope(ScriptEngine/*!*/ engine, Scope/*!*/ scope) {
             Assert.NotNull(engine);
             Assert.NotNull(scope);
             
@@ -74,10 +56,6 @@ namespace Microsoft.Scripting.Hosting {
         }
 
 #if !SILVERLIGHT
-        RemoteWrapper ILocalObject.Wrap() {
-            return new RemoteScriptModule(this);
-        }
-
         public ObjectHandle LookupVariableAndWrap(string name) {
             return new ObjectHandle(LookupVariable(name));
         }

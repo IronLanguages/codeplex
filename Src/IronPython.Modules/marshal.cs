@@ -305,8 +305,8 @@ namespace IronPython.Modules {
             private void WriteList(object o) {
                 List l = o as List;
                 _bytes.Add((byte)'[');
-                WriteInt32(l.Count);
-                for (int i = 0; i < l.Count; i++) {
+                WriteInt32(l.__len__());
+                for (int i = 0; i < l.__len__(); i++) {
                     WriteObject(l[i]);
                 }
             }
@@ -325,8 +325,8 @@ namespace IronPython.Modules {
             private void WriteTuple(object o) {
                 PythonTuple t = o as PythonTuple;
                 _bytes.Add((byte)'(');
-                WriteInt32(t.Count);
-                for (int i = 0; i < t.Count; i++) {
+                WriteInt32(t.__len__());
+                for (int i = 0; i < t.__len__(); i++) {
                     WriteObject(t[i]);
                 }
             }
@@ -467,7 +467,7 @@ namespace IronPython.Modules {
                     case StackType.Dict:
                         PythonDictionary od = curStack.StackObj as PythonDictionary;
                         if (curStack.HaveKey) {
-                            od.Add(curStack.Key, res);
+                            od[curStack.Key] = res;
                             curStack.HaveKey = false;
                         } else {
                             curStack.HaveKey = true;

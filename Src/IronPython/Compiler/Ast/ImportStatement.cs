@@ -21,14 +21,16 @@ namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
 
     public class ImportStatement : Statement {
-        private readonly DottedName[] _names;
+        private readonly ModuleName[] _names;
         private readonly SymbolId[] _asNames;
+        private readonly bool _forceAbsolute;
 
         private PythonVariable[] _variables;
 
-        public ImportStatement(DottedName[] names, SymbolId[] asNames) {
+        public ImportStatement(ModuleName[] names, SymbolId[] asNames, bool forceAbsolute) {
             _names = names;
             _asNames = asNames;
+            _forceAbsolute = forceAbsolute;
         }
 
         internal PythonVariable[] Variables {
@@ -59,7 +61,8 @@ namespace IronPython.Compiler.Ast {
                                     _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
                                 ),
                                 Ast.CodeContext(),                                      // 1st arg - code context
-                                Ast.Constant(_names[i].MakeString())                    // 2nd arg - module name
+                                Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
+                                Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
                             )
                         )
                     )

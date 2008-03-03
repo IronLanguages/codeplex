@@ -14,15 +14,14 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Hosting;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
     /// Singleton LanguageContext which represents a language-neutral LanguageContext
     /// </summary>
-    public class InvariantContext : LanguageContext {
+    internal sealed class InvariantContext : LanguageContext {
         // friend: ScriptDomainManager
-        public InvariantContext(ScriptDomainManager/*!*/ manager)
+        internal InvariantContext(ScriptDomainManager/*!*/ manager)
             : base(manager) {
             // TODO: use InvariantBinder
             Binder = new DefaultActionBinder(new CodeContext(new Scope(this), this), Type.EmptyTypes);

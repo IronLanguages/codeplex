@@ -55,7 +55,6 @@ if not is_silverlight:
         return temp
     
     ironpython_dlls = [
-        "Microsoft.Scripting.Vestigial.dll",
         "Microsoft.Scripting.dll",
         "Microsoft.Scripting.Internal.dll",
         "IronPython.Modules.dll",
@@ -252,7 +251,7 @@ if is_silverlight:
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
-        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=31bf3856ad364e35"
+        ipt_fullname = "IronPythonTest, Version=1.0.0.0, PublicKeyToken=ccac92ed873b185c"
         if args: 
             return clr.LoadAssembly(ipt_fullname)
         else: 
@@ -394,6 +393,7 @@ def print_failures(failures):
     
         if is_cli:
             if '-X:ExceptionDetail' in System.Environment.GetCommandLineArgs():
+                load_iron_python_test()
                 from IronPythonTest import TestHelpers
                 print 'CLR Exception: ',
                 print TestHelpers.GetContext().FormatException(ex.clsException)

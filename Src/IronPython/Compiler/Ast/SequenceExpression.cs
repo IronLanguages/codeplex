@@ -20,6 +20,7 @@ using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using IronPython.Runtime.Operations;
 
     public abstract class SequenceExpression : Expression {
         private readonly Expression[] _items;
@@ -35,11 +36,6 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
             if (op != Operators.None) {
                 ag.AddError("augmented assign to sequence prohibited", Span);
-                return null;
-            }
-
-            if (_items.Length == 0) {
-                ag.AddError("can't assign to empty sequence", Span);
                 return null;
             }
 
@@ -114,16 +110,19 @@ namespace IronPython.Compiler.Ast {
                 );
 
                 // 7. target = array_temp[i], and add the transformed assignment into the list of sets
-                sets.Add(
-                    target.TransformSet(
-                        ag,
-                        emitIndividualSets ?                    // span
-                            target.Span :
-                            SourceSpan.None,
-                        element,
-                        Operators.None
-                    )
+                MSAst.Expression set = target.TransformSet(
+                    ag,
+                    emitIndividualSets ?                    // span
+                        target.Span :
+                        SourceSpan.None,
+                    element,
+                    Operators.None
                 );
+                if (set == null) {
+                    throw PythonOps.SyntaxError(string.Format("can't assign to {0}", target.NodeName), ag.Context.SourceUnit, target.Span, -1);
+                }
+
+                sets.Add(set);
             }
             // 9. add the sets as their own block so they cna be marked as a single span, if necessary.
             statements.Add(Ast.Block(leftSpan, sets.ToArray()));

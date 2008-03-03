@@ -44,15 +44,21 @@ namespace IronPython.Modules {
 
         private const int minYear = 1900;   // minimum year for python dates (CLS dates are bigger)
 
-        public static int altzone;
-        public static int daylight;
-        public static int timezone;
-        public static PythonTuple tzname;
-        public static bool accept2dyear = true;
+        public static readonly int altzone;
+        public static readonly int daylight;
+        public static readonly int timezone;
+        public static readonly PythonTuple tzname;
+        public const bool accept2dyear = true;
 
 #if !SILVERLIGHT    // System.Diagnostics.Stopwatch
+        [MultiRuntimeAware]
         private static Stopwatch sw;
 #endif
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            // we depend on locale, it needs to be initialized
+            PythonLocale.EnsureLocaleInitialized(context);
+        }
 
         static PythonTime() {
             
@@ -148,19 +154,19 @@ namespace IronPython.Modules {
             return GetDateTimeFromTuple(localTime).Ticks / 1.0e7;
         }
 
-        public static string strftime(string format) {
-            return strftime(format, DateTime.Now);
+        public static string strftime(CodeContext/*!*/ context, string format) {
+            return strftime(context, format, DateTime.Now);
         }
 
-        public static string strftime(string format, PythonTuple dateTime) {
-            return strftime(format, GetDateTimeFromTuple(dateTime));
+        public static string strftime(CodeContext/*!*/ context, string format, PythonTuple dateTime) {
+            return strftime(context, format, GetDateTimeFromTuple(dateTime));
         }
 
-        public static object strptime(string @string) {
-            return DateTime.Parse(@string, PythonLocale.currentLocale.Time.DateTimeFormat);
+        public static object strptime(CodeContext/*!*/ context, string @string) {
+            return DateTime.Parse(@string, PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat);
         }
 
-        public static object strptime(string @string, string format) {
+        public static object strptime(CodeContext/*!*/ context, string @string, string format) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, true, out postProc);
 
@@ -203,11 +209,11 @@ namespace IronPython.Modules {
                 try {
                     if (!StringUtils.TryParseDateTimeExact(@string,
                         String.Join("", formats),
-                        PythonLocale.currentLocale.Time.DateTimeFormat,
+                        PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat,
                         DateTimeStyles.AllowWhiteSpaces,
                         out res)) {
                         // If TryParseExact fails, fall back to DateTime.Parse which does a better job in some cases...
-                        res = DateTime.Parse(@string, PythonLocale.currentLocale.Time.DateTimeFormat);
+                        res = DateTime.Parse(@string, PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat);
                     }
                 } catch (FormatException e) {
                     throw PythonOps.ValueError(e.Message + Environment.NewLine + "data=" + @string + ", fmt=" + format + ", to: " + String.Join("", formats));
@@ -217,7 +223,7 @@ namespace IronPython.Modules {
             return GetDateTimeTuple(res);
         }
 
-        internal static string strftime(string format, DateTime dt) {
+        internal static string strftime(CodeContext/*!*/ context, string format, DateTime dt) {
             bool postProc;
             List<FormatInfo> formatInfo = PythonFormatToCLIFormat(format, false, out postProc);
             StringBuilder res = new StringBuilder();
@@ -225,10 +231,10 @@ namespace IronPython.Modules {
             for (int i = 0; i < formatInfo.Count; i++) {
                 switch (formatInfo[i].Type) {
                     case FormatInfoType.UserText: res.Append(formatInfo[i].Text); break;
-                    case FormatInfoType.SimpleFormat: res.Append(dt.ToString(formatInfo[i].Text, PythonLocale.currentLocale.Time.DateTimeFormat)); break;
+                    case FormatInfoType.SimpleFormat: res.Append(dt.ToString(formatInfo[i].Text, PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat)); break;
                     case FormatInfoType.CustomFormat:
                         // custom format strings need to be at least 2 characters long                        
-                        res.Append(dt.ToString("%" + formatInfo[i].Text, PythonLocale.currentLocale.Time.DateTimeFormat));
+                        res.Append(dt.ToString("%" + formatInfo[i].Text, PythonLocale.GetLocaleInfo(context).Time.DateTimeFormat));
                         break;
                 }
             }
@@ -407,11 +413,11 @@ namespace IronPython.Modules {
                 }
             }
 
-            return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, last);
+            return new struct_time(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, last);
         }
 
-        internal static StructTime GetDateTimeTuple(DateTime dt, bool dstMode) {
-            return new StructTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, dstMode ? 1 : 0);
+        internal static struct_time GetDateTimeTuple(DateTime dt, bool dstMode) {
+            return new struct_time(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, Weekday(dt), dt.DayOfYear, dstMode ? 1 : 0);
         }
 
         private static DateTime GetDateTimeFromTuple(PythonTuple t) {
@@ -432,7 +438,7 @@ namespace IronPython.Modules {
         }
 
         private static int[] ValidateDateTimeTuple(PythonTuple t) {
-            if (t.Count != MaxIndex) throw PythonOps.TypeError("expected tuple of length {0}", MaxIndex);
+            if (t.__len__() != MaxIndex) throw PythonOps.TypeError("expected tuple of length {0}", MaxIndex);
 
             int[] ints = new int[MaxIndex];
             for (int i = 0; i < MaxIndex; i++) {
@@ -461,71 +467,59 @@ namespace IronPython.Modules {
         }
 #endif
 
-        [PythonType("struct_time")]
-        public class StructTime : PythonTuple {
-            private static PythonType _StructTimeType = DynamicHelpers.GetPythonTypeFromType(typeof(StructTime));
+        [PythonSystemType]
+        public class struct_time : PythonTuple {
+            private static PythonType _StructTimeType = DynamicHelpers.GetPythonTypeFromType(typeof(struct_time));
 
-            public object Year {
-                [PythonName("tm_year")]
+            public object tm_year {
                 get { return _data[0]; }
             }
-            public object Month {
-                [PythonName("tm_mon")]
+            public object tm_mon {
                 get { return _data[1]; }
             }
-            public object Day {
-                [PythonName("tm_mday")]
+            public object tm_mday {
                 get { return _data[2]; }
             }
-            public object Hour {
-                [PythonName("tm_hour")]
+            public object tm_hour {
                 get { return _data[3]; }
             }
-            public object Minute {
-                [PythonName("tm_min")]
+            public object tm_min {
                 get { return _data[4]; }
             }
-            public object Second {
-                [PythonName("tm_sec")]
+            public object tm_sec {
                 get { return _data[5]; }
             }
-            public object DayOfWeek {
-                [PythonName("tm_wday")]
+            public object tm_wday {
                 get { return _data[6]; }
             }
-            public object DayOfYear {
-                [PythonName("tm_yday")]
+            public object tm_yday {
                 get { return _data[7]; }
             }
-            public object IsDaylightSavingTime {
-                [PythonName("tm_isdst")]
+            public object tm_isdst {
                 get { return _data[8]; }
             }
 
-            internal StructTime(int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst)
+            internal struct_time(int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst)
                 : base(new object[] { year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst }) {
             }
 
-            [PythonName("__new__")]
-            public static StructTime Make(CodeContext context, PythonType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
+            public static struct_time __new__(CodeContext context, PythonType cls, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
                 if (cls == _StructTimeType) {
-                    return new StructTime(year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst);
+                    return new struct_time(year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst);
                 } else {
-                    StructTime st = cls.CreateInstance(context, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst) as StructTime;
+                    struct_time st = cls.CreateInstance(context, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst) as struct_time;
                     if (st == null)
                         throw PythonOps.TypeError("{0} is not a subclass of time.struct_time", cls);
                     return st;
                 }
             }
 
-            [PythonName("__reduce__")]
-            public PythonTuple Reduce() {
-                return PythonTuple.MakeTuple(_StructTimeType, PythonTuple.MakeTuple(Year, Month, Day, Hour, Minute, Second, DayOfWeek, DayOfYear, IsDaylightSavingTime));
+            public PythonTuple __reduce__() {
+                return PythonTuple.MakeTuple(_StructTimeType, PythonTuple.MakeTuple(tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst));
             }
 
-            [PythonName("__getnewargs__")]
-            public static object GetNewArgs(CodeContext context, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
-                return PythonTuple.MakeTuple(StructTime.Make(context, _StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
+            public static object __getnewargs__(CodeContext context, int year, int month, int day, int hour, int minute, int second, int dayOfWeek, int dayOfYear, int isDst) {
+                return PythonTuple.MakeTuple(struct_time.__new__(context, _StructTimeType, year, month, day, hour, minute, second, dayOfWeek, dayOfYear, isDst));
             }
         }
     }

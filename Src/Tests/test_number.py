@@ -15,6 +15,11 @@
 
 from lib.assert_util import *
 
+def get_builtins_dict():
+    if type(__builtins__) is type(sys):
+        return __builtins__.__dict__
+    return __builtins__
+
 class complextest:
     def __init__(self, value): self.value = value
     def __float__(self) : return self.value
@@ -233,7 +238,7 @@ def test_conversions():
     AreEqual(int(myFakeInt()), 23)
     AreEqual(long(myFakeLong()), 23L)
     AreEqual(complex(myFakeComplex()), 0j + 23)
-    AreEqual(__builtins__.float(myFakeFloat()), 23.0)   # we redefined float above, go directly to the real float...
+    AreEqual(get_builtins_dict()['float'](myFakeFloat()), 23.0)   # we redefined float above, go directly to the real float...
     AreEqual(+myNegative(), 23)
     
     
@@ -409,7 +414,7 @@ def test_operators():
                     z = op(x, y)
                     try:
                         test(x,y,z)
-                    except __builtins__.Exception, e:
+                    except get_builtins_dict()['Exception'], e:
                         print x, " ", sym, " ", y, " ", z, "Failed"
                         print e
                         raise
@@ -2204,5 +2209,36 @@ def test_pow_edges():
     AreEqual(x.__pow__(2.0, 3.0), NotImplemented)
     AreEqual(x.__pow__(2.0, 3), NotImplemented)
     AreEqual(x.__pow__(2, 3.0), NotImplemented)
+
+def test_int_from_long():
+    """int(longVal) should return an int if it's within range"""
+    class x(long): pass
+    
+    for base in (long, x):
+        AreEqual(repr(int(base(1L))), '1')
+
+def test_float_special_methods():
+    AreEqual(float.__lt__(2.0, 3.0), True)
+    AreEqual(float.__lt__(3.0, 2.0), False)
+    AreEqual(float.__lt__(2.0, 2.0), False)
+    AreEqual(float.__lt__(-1.0e340, 1.0e340), True)
+    
+    AreEqual(float.__gt__(2.0, 3.0), False)
+    AreEqual(float.__gt__(3.0, 2.0), True)
+    AreEqual(float.__gt__(2.0, 2.0), False)
+    
+    AreEqual(float.__ge__(2.0, 3.0), False)
+    AreEqual(float.__ge__(3.0, 2.0), True)
+    AreEqual(float.__ge__(2.0, 2.0), True)
+    
+    AreEqual(float.__le__(2.0, 3.0), True)
+    AreEqual(float.__le__(3.0, 2.0), False)
+    AreEqual(float.__le__(2.0, 2.0), True)    
+    
+    AreEqual(float.__eq__(2.0, 3.0), False)
+    AreEqual(float.__eq__(3.0, 3.0), True)
+    
+    AreEqual(float.__ne__(2.0, 3.0), True)
+    AreEqual(float.__ne__(3.0, 3.0), False)
     
 run_test(__name__)

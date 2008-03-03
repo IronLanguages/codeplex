@@ -20,6 +20,8 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime.Types {
     class PythonTypeGetAttributeSlot : PythonTypeSlot {
         private PythonType _dt;
@@ -48,7 +50,7 @@ namespace IronPython.Runtime.Types {
 
                 dtb.RemoveSlot(context.LanguageContext.ContextId, _attrHook);
 
-                PythonTypeBasesSlot.PropagateGetAttributeFromMro(dtb, _dt.ResolutionOrder, _attrHook);
+                PythonTypeOps.PropagateGetAttributeFromMro(dtb, _dt.ResolutionOrder, _attrHook);
                 return true;
             }
 

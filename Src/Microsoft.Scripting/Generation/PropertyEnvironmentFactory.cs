@@ -66,13 +66,13 @@ namespace Microsoft.Scripting.Generation {
             set { _index = value; }
         }
 
-        public override void EmitStorage(Compiler cg) {
-            cg.EmitNew(StorageType.GetConstructor(ArrayUtils.EmptyTypes));
+        public override void EmitStorage(LambdaCompiler cg) {
+            cg.EmitNew(StorageType.GetConstructor(Type.EmptyTypes));
             cg.Emit(OpCodes.Dup);
             EmitNestedTupleInit(cg, StorageType);
         }
 
-        private static void EmitNestedTupleInit(Compiler cg, Type storageType) {
+        private static void EmitNestedTupleInit(LambdaCompiler cg, Type storageType) {
             if (Tuple.GetSize(storageType) > Tuple.MaxSize) {
                 Slot tmp = cg.GetLocalTmp(storageType);
                 tmp.EmitSet(cg);
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting.Generation {
                     if (t.IsSubclassOf(typeof(Tuple))) {
                         tmp.EmitGet(cg);
 
-                        cg.EmitNew(t.GetConstructor(ArrayUtils.EmptyTypes));
+                        cg.EmitNew(t.GetConstructor(Type.EmptyTypes));
                         cg.EmitPropertySet(storageType, String.Format("Item{0:D3}", i));
 
                         tmp.EmitGet(cg);
@@ -107,7 +107,7 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void EmitNewEnvironment(Compiler cg) {
+        public override void EmitNewEnvironment(LambdaCompiler cg) {
             ConstructorInfo ctor = EnvironmentType.GetConstructor(
                 new Type[] {
                     StorageType,
@@ -138,13 +138,13 @@ namespace Microsoft.Scripting.Generation {
             cg.FreeLocalTmp(tmp);
         }
 
-        public override void EmitGetStorageFromContext(Compiler cg) {
+        public override void EmitGetStorageFromContext(LambdaCompiler cg) {
             cg.EmitCodeContext();
             cg.EmitPropertyGet(typeof(CodeContext), "Scope");
             cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(StorageType));
         }
 
-        public override EnvironmentSlot CreateEnvironmentSlot(Compiler cg) {
+        public override EnvironmentSlot CreateEnvironmentSlot(LambdaCompiler cg) {
             return new FunctionEnvironmentSlot(cg.GetNamedLocal(StorageType, "$environment"), StorageType);
         }
 

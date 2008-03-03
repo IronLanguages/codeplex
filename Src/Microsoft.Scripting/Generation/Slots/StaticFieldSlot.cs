@@ -32,19 +32,19 @@ namespace Microsoft.Scripting.Generation {
 
             this._field = field;
         }
-        public override void EmitGet(Compiler cg) {
+        public override void EmitGet(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldGet(_field);
         }
 
-        public override void EmitGetAddr(Compiler cg) {
+        public override void EmitGetAddr(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldAddress(_field);
         }
 
-        public override void EmitSet(Compiler cg) {
+        public override void EmitSet(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
             cg.EmitFieldSet(_field);

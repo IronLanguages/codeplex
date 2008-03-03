@@ -38,14 +38,14 @@ namespace IronPython.Runtime.Operations {
     }
 
     public static partial class ComplexOps {
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Complex64) return new Complex64();
             return cls.CreateInstance(context);
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(
+        [StaticExtensionMethod]
+        public static object __new__(
             CodeContext context, 
             PythonType cls,
             [DefaultParameterValueAttribute(null)]object real,
@@ -81,13 +81,13 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PropertyMethod, PythonName("real")]
-        public static double GetReal(Complex64 self) {
+        [PropertyMethod]
+        public static double Getreal(Complex64 self) {
             return self.Real;
         }
 
-        [PropertyMethod, PythonName("imag")]
-        public static double GetImaginary(Complex64 self) {
+        [PropertyMethod]
+        public static double Getimag(Complex64 self) {
             return self.Imag;
         }
 
@@ -125,7 +125,7 @@ namespace IronPython.Runtime.Operations {
             return x - (quotient * y);
         }
 
-        [SpecialName, PythonName("__divmod__")]
+        [SpecialName]
         public static PythonTuple DivMod(Complex64 x, Complex64 y) {
             return PythonTuple.MakeTuple(FloorDivide(x, y), Mod(x, y));
         }
@@ -134,26 +134,22 @@ namespace IronPython.Runtime.Operations {
 
         #region Unary operators
 
-        [SpecialName, PythonName("__hash__")]
-        public static int GetHashCode(Complex64 x) {
+        public static int __hash__(Complex64 x) {
             return x.GetHashCode();
         }
 
-        [SpecialName, PythonName("__nonzero__")]
-        public static bool ConvertToBoolean(Complex64 x) {
+        public static bool __nonzero__(Complex64 x) {
             return !x.IsZero;
         }
 
-        [PythonName("conjugate")]
-        public static Complex64 Conjugate(Complex64 x) {
+        public static Complex64 conjugate(Complex64 x) {
             return x.Conjugate();
         }
 
-        [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext context, Complex64 self) {
+        public static object __getnewargs__(CodeContext context, Complex64 self) {
             if (!Object.ReferenceEquals(self, null)) {
                 return PythonTuple.MakeTuple(
-                    ComplexOps.Make(context,
+                    ComplexOps.__new__(context,
                         TypeCache.Complex64,
                         PythonOps.GetBoundAttr(context, self, Symbols.RealPart),
                         PythonOps.GetBoundAttr(context, self, Symbols.ImaginaryPart)
@@ -165,8 +161,7 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [PythonName("__coerce__")]
-        public static object Coerce(Complex64 x, object y) {
+        public static object __coerce__(Complex64 x, object y) {
             Complex64 right;
             if (Converter.TryConvertToComplex64(y, out right)) return PythonTuple.MakeTuple(x, right);
 
@@ -175,17 +170,22 @@ namespace IronPython.Runtime.Operations {
             return PythonOps.NotImplemented;
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string ToCodeRepresentation(Complex64 x) {
+        public static string __repr__(Complex64 x) {            
             if (x.Real != 0) {
                 if (x.Imag >= 0) {
-                    return "(" + x.Real.ToString("G") + "+" + x.Imag.ToString("G") + "j)";
+
+                    return "(" + FormatComplexValue(x.Real) + "+" + FormatComplexValue(x.Imag) + "j)";
                 } else {
-                    return "(" + x.Real.ToString("G") + x.Imag.ToString("G") + "j)";
+                    return "(" + FormatComplexValue(x.Real) + FormatComplexValue(x.Imag) + "j)";
                 }
             }
 
-            return x.Imag.ToString("G") + "j";
+            return FormatComplexValue(x.Imag) + "j";
+        }
+
+        private static string FormatComplexValue(double x) {
+            StringFormatter sf = new StringFormatter("%.6g", x);
+            return sf.Format();
         }
         
         // Unary Operations

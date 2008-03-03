@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Text;
 using System.Collections.Generic;
 
@@ -32,6 +33,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         public string MakeString() {
+            if (_names.Length == 0) return String.Empty;
+
             StringBuilder ret = new StringBuilder(SymbolTable.IdToString(_names[0]));
             for (int i = 1; i < _names.Length; i++) {
                 ret.Append('.');

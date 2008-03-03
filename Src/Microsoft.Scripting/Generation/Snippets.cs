@@ -19,7 +19,6 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using System.Threading;
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Ast;
@@ -46,6 +45,7 @@ namespace Microsoft.Scripting.Generation {
         private string _snippetsDirectory;
         private string _snippetsFileName;
         private bool _saveSnippets;
+        private bool _ilDebug;
         
         /// <summary>
         /// Directory where snippet assembly will be saved if SaveSnippets is set.
@@ -78,6 +78,15 @@ namespace Microsoft.Scripting.Generation {
                 Contract.Requires(!_optionsFrozen);
                 _saveSnippets = value; 
             }
+        }
+
+        /// <summary>
+        /// Write IL to a text file as it is generated.
+        /// This flag can be changed any time.
+        /// </summary>
+        public bool ILDebug {
+            get { return _ilDebug; }
+            set { _ilDebug = value; }
         }
 
         private Snippets() {
@@ -119,6 +128,20 @@ namespace Microsoft.Scripting.Generation {
             string name = (_snippetsFileName ?? "Snippets") + nameSuffix;
 
             return new AssemblyGen(new AssemblyName(name), dir, ".dll", emitSymbols);
+        }
+
+        internal string/*!*/ GetMethodILDumpFile(MethodBase/*!*/ method) {
+            string fullName = ((method.DeclaringType != null) ? method.DeclaringType.Name + "." : "") + method.Name;
+
+            if (fullName.Length > 100) {
+                fullName = fullName.Substring(0, 100);
+            }
+
+            string filename = String.Format("{0}_{1}.il", IOUtils.ToValidFileName(fullName), Interlocked.Increment(ref _methodNameIndex));
+
+            string dir = _snippetsDirectory ?? Path.Combine(Path.GetTempPath(), "__DLRIL");
+            Directory.CreateDirectory(dir);
+            return Path.Combine(dir, filename);
         }
 
         public void Dump() {
@@ -175,68 +198,6 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        internal Compiler/*!*/ DefineMethod(string/*!*/ methodName, Type/*!*/ returnType, IList<Type/*!*/>/*!*/ paramTypes, ConstantPool constantPool) {
-            return DefineMethod(methodName, returnType, paramTypes, null, constantPool, null, false);
-        }
-
-        internal Compiler/*!*/ DefineUnsafeMethod(string/*!*/ methodName, Type/*!*/ returnType, IList<Type/*!*/>/*!*/ paramTypes,
-            IList<string> paramNames, ConstantPool constantPool) {
-            return DefineMethod(methodName, returnType, paramTypes, paramNames, constantPool, null, true);
-        }
-
-        internal Compiler/*!*/ DefineMethod(string/*!*/ methodName, Type/*!*/ returnType, IList<Type/*!*/>/*!*/ paramTypes,
-            IList<string> paramNames, ConstantPool constantPool, SourceUnit source) {
-            return DefineMethod(methodName, returnType, paramTypes, paramNames, constantPool, source, false);
-        }
-
-        private Compiler/*!*/ DefineMethod(string/*!*/ methodName, Type/*!*/ returnType, IList<Type/*!*/>/*!*/ paramTypes,
-            IList<string> paramNames, ConstantPool constantPool, SourceUnit source, bool isUnsafe) {
-
-            Assert.NotEmpty(methodName);
-            Assert.NotNull(returnType);
-            Assert.NotNullItems(paramTypes);
-            // TODO: Debug.Assert(methodName.IndexOf("##") == -1);
-
-            Compiler result;
-            bool debugMode = source != null && source.LanguageContext.DomainManager.GlobalOptions.DebugMode;
-            bool emitSymbols = debugMode && source.HasPath;
-            AssemblyGen assembly = GetAssembly(emitSymbols, isUnsafe);
-
-            //
-            // Generate a static method if either
-            // 1) we want to dump all geneated IL to an assembly on disk (SaveSnippets on)
-            // 2) the method is debuggable, i.e. DebugMode is on and a source unit is associated with the method
-            //
-            if (_saveSnippets || emitSymbols) {
-                TypeGen typeGen = assembly.DefinePublicType(methodName, typeof(object), false);
-
-                result = typeGen.DefineMethod(methodName, returnType, paramTypes, paramNames, constantPool);
-                
-                // emit symbols iff we have a source unit (and are in debug mode, see GenerateStaticMethod):
-                result.SetDebugSymbols(source, emitSymbols);
-            } else {
-                string uniqueName = methodName + "##" + Interlocked.Increment(ref _methodNameIndex);
-
-                Type[] parameterTypes = CompilerHelpers.MakeParamTypeArray(paramTypes, constantPool);
-                DynamicMethod target = ReflectionUtils.CreateDynamicMethod(uniqueName, returnType, parameterTypes, assembly.ModuleBuilder);
-                result = new Compiler(null, assembly, target, target.GetILGenerator(), parameterTypes, constantPool);
-                
-                // emits line number setting instructions if source unit available:
-                if (debugMode) {
-                    result.SetDebugSymbols(source, false);
-                    result.EmitLineInfo = true; // TODO: ??
-                }
-            }
-
-            // do not allocate constants to static fields:
-            result.CacheConstants = false;
-
-            // this is a dynamic method:
-            result.DynamicMethod = true;
-
-            return result;
-        }
-
         public TypeGen/*!*/ DefineUnsafeType(string/*!*/ name, Type/*!*/ parent) {
             return DefineType(name, parent, false, null, true);
         }
@@ -252,5 +213,13 @@ namespace Microsoft.Scripting.Generation {
             return GetAssembly(emitSymbols, isUnsafe).DefinePublicType(name, parent, preserveName);
         }
 
+        internal DynamicMethod CreateDynamicMethod(string name, Type returnType, Type[] parameterTypes) {
+            // We don't care which assembly we get, all we need is to tag the dynamic method on it
+            // and even that only sometimes ...
+            AssemblyGen assembly = GetAssembly(false, false);
+            string uniqueName = name + "##" + Interlocked.Increment(ref _methodNameIndex);
+
+            return ReflectionUtils.CreateDynamicMethod(uniqueName, returnType, parameterTypes, assembly.ModuleBuilder);
+        }
     }
 }

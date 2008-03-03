@@ -584,16 +584,33 @@ namespace Microsoft.Scripting.Ast {
         // NewArrayExpression
         private static void WriteNewArrayExpression(AstWriter aw, Expression expr) {
             NewArrayExpression node = (NewArrayExpression)expr;
-            aw.Out(".new " + node.Type.Name + " = {");
-            if (node.Expressions != null && node.Expressions.Count > 0) {
-                aw.NewLine(); aw.Indent();
-                foreach (Expression e in node.Expressions) {
-                    aw.WalkNode(e);
-                    aw.Out(",", Flow.NewLine);
+
+            if (node.NodeType == AstNodeType.NewArrayBounds) {
+                // .new MyType[expr1, expr2]
+                aw.Out(".new " + node.Type.GetElementType().Name + "[");
+                if (node.Expressions != null && node.Expressions.Count > 0) {
+                    aw.NewLine(); aw.Indent();
+                    foreach (Expression e in node.Expressions) {
+                        aw.WalkNode(e);
+                        aw.Out(",", Flow.NewLine);
+                    }
+                    aw.Dedent();
                 }
-                aw.Dedent();
+                aw.Out("]");
+
+            } else {
+                // .new MyType = {expr1, expr2}
+                aw.Out(".new " + node.Type.Name + " = {");
+                if (node.Expressions != null && node.Expressions.Count > 0) {
+                    aw.NewLine(); aw.Indent();
+                    foreach (Expression e in node.Expressions) {
+                        aw.WalkNode(e);
+                        aw.Out(",", Flow.NewLine);
+                    }
+                    aw.Dedent();
+                }
+                aw.Out("}");
             }
-            aw.Out("}");
         }
 
         // NewExpression

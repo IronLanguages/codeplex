@@ -29,34 +29,32 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(NamespaceTracker), typeof(ReflectedPackageOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedPackageOps {
-        [PropertyMethod, PythonName("__file__")]
-        public static object GetFilename(NamespaceTracker self) {
+        [PropertyMethod]
+        public static object Get__file__(NamespaceTracker self) {
             if (self.PackageAssemblies.Count == 1) {
                 return self.PackageAssemblies[0].FullName;
             }
 
             List res = new List();
             for (int i = 0; i < self.PackageAssemblies.Count; i++) {
-                res.Add(self.PackageAssemblies[i].FullName);
+                res.append(self.PackageAssemblies[i].FullName);
             }
             return res;                        
         }
 
-        [SpecialName, PythonName("__repr__")]
-        public static string ToCodeString(NamespaceTracker self) {
-            return ToString(self);
+        public static string __repr__(NamespaceTracker self) {
+            return __str__(self);
         }
 
-        [SpecialName, PythonName("__str__")]
-        public static string ToString(NamespaceTracker self) {
+        public static string __str__(NamespaceTracker self) {
             if (self.PackageAssemblies.Count != 1) {
-                return String.Format("<module '{0}' (CLS module, {1} assemblies loaded)>", GetName(self.Name), self.PackageAssemblies.Count);
+                return String.Format("<module '{0}' (CLS module, {1} assemblies loaded)>", Get__name__(self.Name), self.PackageAssemblies.Count);
             }
-            return String.Format("<module '{0}' (CLS module from {1})>", GetName(self.Name), self.PackageAssemblies[0].FullName);
+            return String.Format("<module '{0}' (CLS module from {1})>", Get__name__(self.Name), self.PackageAssemblies[0].FullName);
         }
 
-        [PropertyMethod, PythonName("__dict__")]
-        public static IAttributesCollection GetDictionary(CodeContext context, NamespaceTracker self) {
+        [PropertyMethod]
+        public static IAttributesCollection Get__dict__(CodeContext context, NamespaceTracker self) {
             PythonDictionary res = new PythonDictionary();
             foreach (KeyValuePair<object, object> kvp in self) {
                 if (kvp.Value is TypeGroup || kvp.Value is NamespaceTracker) {
@@ -68,12 +66,12 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        [PropertyMethod, PythonName("__name__")]
-        public static string GetName(CodeContext context, NamespaceTracker self) {
-            return GetName(self.Name);
+        [PropertyMethod]
+        public static string Get__name__(CodeContext context, NamespaceTracker self) {
+            return Get__name__(self.Name);
         }
 
-        private static string GetName(string name) {
+        private static string Get__name__(string name) {
             int lastDot = name.LastIndexOf('.');
             if (lastDot == -1) return name;
 

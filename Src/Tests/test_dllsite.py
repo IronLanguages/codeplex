@@ -339,14 +339,16 @@ def main():
     Runs the test by spawning off another IP process which 
     utilizes the newly created DLLs directory.
     '''
-    setUp()
+    try:
+        setUp()
     
-    Directory.SetCurrentDirectory(ORIG_DIR)
+        Directory.SetCurrentDirectory(ORIG_DIR)
     
-    from lib.process_util import launch_ironpython
-    ret_val = launch_ironpython("dllsite.py", "OKtoRun")
-
-    cleanUp()
+        from lib.process_util import launch_ironpython_changing_extensions
+        ret_val = launch_ironpython_changing_extensions("dllsite.py", add=["-S"], additionalScriptParams=("OKtoRun",))
+        
+    finally:
+        cleanUp()
     
     exit(ret_val)
     

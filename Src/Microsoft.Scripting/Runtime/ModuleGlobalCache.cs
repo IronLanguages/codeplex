@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Runtime {
     public sealed class ModuleGlobalCache {
         private object _value;
 
-        internal static object NotCaching = new object();
+        internal static readonly object NotCaching = new object();
 
         /// <summary>
         /// Creates a new ModuleGlobalCache with the specified value.

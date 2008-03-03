@@ -228,7 +228,7 @@ def test_basic():
 def test_delete():
     def del_p(): del ClassWithProperties.InstanceSimpleStructProperty
     AssertErrorWithMatch(AttributeError, 
-        "attribute 'InstanceSimpleStructProperty' of 'ClassWithProperties' object is read-only",
+        "cannot delete attribute 'InstanceSimpleStructProperty' of builtin type 'ClassWithProperties'",
         del_p)
 
     def del_p(): del ClassWithReadOnly.InstanceProperty

@@ -18,7 +18,7 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
     interface ILazySlotFactory<T> {
-        Slot GetConcreteSlot(Compiler cg, T data);
+        Slot GetConcreteSlot(LambdaCompiler cg, T data);
     }
 
 
@@ -33,19 +33,19 @@ namespace Microsoft.Scripting.Generation {
             _type = type;
         }
 
-        public override void EmitGet(Compiler cg) {
+        public override void EmitGet(LambdaCompiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitGet(cg);
         }
 
-        public override void EmitGetAddr(Compiler cg) {
+        public override void EmitGetAddr(LambdaCompiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitGetAddr(cg);
         }
 
-        public override void EmitSet(Compiler cg) {
+        public override void EmitSet(LambdaCompiler cg) {
             _factory.GetConcreteSlot(cg, _data).EmitSet(cg);
         }
 
-        public override void EmitSet(Compiler cg, Slot val) {
+        public override void EmitSet(LambdaCompiler cg, Slot val) {
             _factory.GetConcreteSlot(cg, _data).EmitSet(cg, val);
         }
 

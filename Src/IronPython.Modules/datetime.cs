@@ -277,7 +277,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            string ICodeFormattable.ToCodeString(CodeContext context) {
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 if (_seconds == 0 && _microseconds == 0) {
                     return String.Format("datetime.timedelta({0})", _days);
                 } else if (_microseconds == 0) {
@@ -550,8 +550,8 @@ namespace IronPython.Modules {
                     _dateTime.ToString(" HH:mm:ss yyyy", CultureInfo.InvariantCulture);
             }
 
-            public string strftime(string dateFormat) {
-                return PythonTime.strftime(dateFormat, _dateTime);
+            public string strftime(CodeContext/*!*/ context, string dateFormat) {
+                return PythonTime.strftime(context, dateFormat, _dateTime);
             }
 
             public override bool Equals(object obj) {
@@ -641,7 +641,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            string ICodeFormattable.ToCodeString(CodeContext context) {
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 return string.Format("datetime.date({0}, {1}, {2})", _dateTime.Year, _dateTime.Month, _dateTime.Day);
             }
 
@@ -1017,7 +1017,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            string ICodeFormattable.ToCodeString(CodeContext context) {
+            public override string/*!*/ __repr__(CodeContext/*!*/ context) {
                 StringBuilder sb = new StringBuilder();
                 sb.AppendFormat("datetime.datetime({0}, {1}, {2}, {3}, {4}",
                     InternalDateTime.Year,
@@ -1218,8 +1218,9 @@ namespace IronPython.Modules {
                 return sb.ToString();
             }
 
-            public object strftime(string format) {
-                return PythonTime.strftime(format,
+            public object strftime(CodeContext/*!*/ context, string format) {
+                return PythonTime.strftime(context,
+                    format,
                     new DateTime(1900, 1, 1, _timeSpan.Hours, _timeSpan.Minutes, _timeSpan.Seconds, _timeSpan.Milliseconds));
             }
 
@@ -1310,7 +1311,7 @@ namespace IronPython.Modules {
 
             #region ICodeFormattable Members
 
-            public string ToCodeString(CodeContext context) {
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
                 StringBuilder sb = new StringBuilder();
                 if (microsecond != 0)
                     sb.AppendFormat("datetime.time({0}, {1}, {2}, {3}", hour, minute, second, microsecond);

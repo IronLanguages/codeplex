@@ -22,9 +22,6 @@ namespace Microsoft.Scripting.Runtime {
     /// Indicates an extension method should be added as a static method, not a instance method.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
-    public sealed class StaticExtensionMethodAttribute : ScriptNameAttribute {
-        public StaticExtensionMethodAttribute(string name)
-            : base(name) {
-        }
+    public sealed class StaticExtensionMethodAttribute : Attribute {
     }
 }

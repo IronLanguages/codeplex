@@ -28,7 +28,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
         private Dictionary<SymbolId, ComEventDesc> _events;
 
-        private static Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
+        private static readonly Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
 
         private ComTypeDesc() {
             _funcs = new Dictionary<SymbolId, ComMethodDesc>();

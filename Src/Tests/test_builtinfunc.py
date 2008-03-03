@@ -21,14 +21,18 @@ for stuff in [bool, True, False]:
 
 items = globals().items() #4716
 
+import sys
 def cp946():
-    if "hasattr" not in dir(__builtins__):
+    builtins = __builtins__
+    if type(builtins) is type(sys):
+        builtins = builtins.__dict__
+    
+    if "hasattr" not in builtins:
         raise "hasattr should be in __builtins__"
-    if "HasAttr" in dir(__builtins__):
+    if "HasAttr" in builtins:
         raise "HasAttr should not be in __builtins__"
 
 cp946()
-import sys
 if sys.platform=="cli":
     import clr
 cp946()

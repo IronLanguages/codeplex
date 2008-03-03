@@ -866,6 +866,32 @@ namespace IronPythonTest.BinderTest {
         }
     }
 
+    public class KeywordBase {
+        public object SomeField;
+
+        public object SomeProperty {
+            get {
+                return SomeField;
+            }
+            set {
+                SomeField = value;
+            }
+        }
+    }
+
+    public class KeywordDerived : KeywordBase {
+        public new string SomeField;
+
+        public new string SomeProperty {
+            get {
+                return SomeField;
+            }
+            set {
+                SomeField = value;
+            }
+        }
+    }
+
     public class GenericOnlyConflict<T> { }
     public class GenericOnlyConflict<T1, T2> { }
 }

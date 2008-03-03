@@ -151,21 +151,16 @@ namespace IronPython.Runtime {
                 case '\x668': value = 8; break;
                 case '9':
                 case '\x669': value = 9; break;
-                case 'a':
-                case 'A': value = 10; break;
-                case 'b':
-                case 'B': value = 11; break;
-                case 'c':
-                case 'C': value = 12; break;
-                case 'd':
-                case 'D': value = 13; break;
-                case 'e':
-                case 'E': value = 14; break;
-                case 'f':
-                case 'F': value = 15; break;
                 default:
-                    value = -1;
-                    return false;
+                    if (ch >= 'a' && ch <= 'z') {
+                        value = ch - 'a' + 10;
+                    } else if (ch >= 'A' && ch <= 'Z') {
+                        value = ch - 'A' + 10;
+                    } else {
+                        value = -1;
+                        return false;
+                    }
+                    break;
             }
             return true;
         }
@@ -268,6 +263,9 @@ namespace IronPython.Runtime {
                     }
                     if (!HexValue(text[start], out digit)) break;
                     if (!(digit < b)) {
+                        if (text[start] == 'l' || text[start] == 'L') {
+                            break;
+                        }
                         throw new ArgumentException("Invalid integer literal");
                     }
 
@@ -385,6 +383,9 @@ namespace IronPython.Runtime {
                 if (start >= end) break;
                 if (!HexValue(text[start], out digit)) break;
                 if (!(digit < b)) {
+                    if (text[start] == 'l' || text[start] == 'L') {
+                        break;
+                    }
                     throw new ArgumentException("Invalid integer literal");
                 }
                 ret = ret * b + digit;
@@ -418,7 +419,7 @@ namespace IronPython.Runtime {
         }
 
         private static double ParseFloatNoCatch(string text) {
-            return double.Parse(ReplaceUnicodeDigits(text), System.Globalization.CultureInfo.CurrentCulture.NumberFormat); //??? is this fully Python compatible
+            return double.Parse(ReplaceUnicodeDigits(text), System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static string ReplaceUnicodeDigits(string text) {
@@ -477,10 +478,14 @@ namespace IronPython.Runtime {
         }
 
         public static Complex64 ParseImaginary(string text) {
-            return Complex64.MakeImaginary(double.Parse(
-                text.Substring(0, text.Length - 1),
-                System.Globalization.CultureInfo.InvariantCulture.NumberFormat
-                ));
+            try {
+                return Complex64.MakeImaginary(double.Parse(
+                    text.Substring(0, text.Length - 1),
+                    System.Globalization.CultureInfo.InvariantCulture.NumberFormat
+                    ));
+            } catch (OverflowException) {
+                return new Complex64(0, Double.PositiveInfinity);
+            }
         }
     }
 }

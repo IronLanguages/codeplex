@@ -271,7 +271,12 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public void CopyTo(KeyValuePair<object, object>[]/*!*/ array, int arrayIndex) {
-            throw new NotImplementedException();
+            Contract.RequiresNotNull(array, "array");
+            Contract.RequiresArrayRange(array, arrayIndex, Count, "araryIndex", "Count");
+
+            foreach (KeyValuePair<object, object> kvp in ((IEnumerable<KeyValuePair<object, object>>)this)) {
+                array[arrayIndex++] = kvp;
+            }
         }
 
         public int Count {
@@ -529,7 +534,7 @@ namespace Microsoft.Scripting.Runtime {
 
         public ICollection<object> Keys { get { return AsObjectKeyedDictionary().Keys; } }
 
-        public override IDictionary<object, object> AsObjectKeyedDictionary() {
+        public IDictionary<object, object> AsObjectKeyedDictionary() {
             return this;
         }
 

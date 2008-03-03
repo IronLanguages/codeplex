@@ -227,6 +227,10 @@ def test_array_type():
     type_helper(str, "")
     type_helper(str, " ")
     type_helper(str, "abc")
-    
+
+def test_uint_maxval():
+    import array
+    a = array.array('I', [0xFFFFFFFF])
+    AreEqual(a[0], 4294967295)
     
 run_test(__name__)

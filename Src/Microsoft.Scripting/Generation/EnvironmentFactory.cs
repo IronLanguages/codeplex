@@ -69,19 +69,19 @@ namespace Microsoft.Scripting.Generation {
         ///     SymbolId[] of names in the environment
         ///     SymbolId[] of names in the outer environment
         /// </summary>
-        public abstract void EmitNewEnvironment(Compiler cg);
+        public abstract void EmitNewEnvironment(LambdaCompiler cg);
 
         /// <summary>
         /// Emits the creation of the underlying storage object.
         /// </summary>
         /// <param name="cg"></param>
-        public abstract void EmitStorage(Compiler cg);
+        public abstract void EmitStorage(LambdaCompiler cg);
 
-        public abstract void EmitGetStorageFromContext(Compiler cg);
+        public abstract void EmitGetStorageFromContext(LambdaCompiler cg);
 
         /// <summary>
         /// Creates the slot that holds onto the environment for the specified Compiler.
         /// </summary>
-        public abstract EnvironmentSlot CreateEnvironmentSlot(Compiler cg);        
+        public abstract EnvironmentSlot CreateEnvironmentSlot(LambdaCompiler cg);        
     }
 }

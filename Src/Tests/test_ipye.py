@@ -83,7 +83,7 @@ def c():
 def test_formatexception():
     try:
         import Microsoft.Scripting
-        se = Microsoft.Scripting.Hosting.ScriptEnvironment.Create()
+        se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()
         pe = se.GetEngine('py')
         
         AssertError(TypeError, pe.FormatException, None)
@@ -103,7 +103,7 @@ def test_formatexception():
 def test_formatexception_showclrexceptions():
     try:
         import Microsoft.Scripting
-        se = Microsoft.Scripting.Hosting.ScriptEnvironment.Create()
+        se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()
         pe = se.GetEngine('py')
 
         pe.Options.ShowClrExceptions = True
@@ -129,7 +129,7 @@ def test_formatexception_exceptiondetail():
     ''' 
     try:
         import Microsoft.Scripting
-        se = Microsoft.Scripting.Hosting.ScriptEnvironment.Create()
+        se = Microsoft.Scripting.Hosting.ScriptRuntime.Create()
         pe = se.GetEngine('py')
 
         IronPythonTest.TestHelpers.GetContext().Options.ExceptionDetail = True

@@ -192,8 +192,8 @@ namespace IronPython.Runtime {
         }
 
         public static PythonTuple Reduce(PythonDictionary items, PythonType type) {
-            object[] keys = new object[items.Keys.Count];
-            items.Keys.CopyTo(keys, 0);
+            object[] keys = new object[items.keys().__len__()];
+            ((IList)items.keys()).CopyTo(keys, 0);
             return PythonTuple.MakeTuple(type, PythonTuple.MakeTuple(new List(keys)), null);
         }
     }
@@ -240,7 +240,7 @@ namespace IronPython.Runtime {
         #region ISet
 
         public int __len__() {
-            return items.Count;
+            return items.__len__();
         }
 
         public bool __contains__(object value) {
@@ -248,7 +248,7 @@ namespace IronPython.Runtime {
             value = SetHelpers.GetHashableSetIfSet(value);
 
             PythonOps.Hash(value);    // make sure we have a hashable item
-            return items.ContainsKey(value);
+            return items.__contains__(value);
         }
 
         public bool issubset(object set) {
@@ -354,8 +354,8 @@ namespace IronPython.Runtime {
 
         public void add(object o) {
             PythonOps.Hash(o);// make sure we're hashable
-            if (!items.ContainsKey(o)) {
-                items.Add(o, o);
+            if (!items.__contains__(o)) {
+                items[o] = o;
             }
         }
 
@@ -388,27 +388,27 @@ namespace IronPython.Runtime {
             o = SetHelpers.GetHashableSetIfSet(o);
 
             PythonOps.Hash(o);
-            if (!items.ContainsKey(o)) throw PythonOps.KeyError(o);
+            if (!items.__contains__(o)) throw PythonOps.KeyError(o);
 
-            items.Remove(o);
+            items.__delitem__(o);
         }
 
         public void discard(object o) {
             o = SetHelpers.GetHashableSetIfSet(o);
 
-            items.Remove(o);
+            ((IDictionary)items).Remove(o);
         }
 
         public object pop() {
-            foreach (object o in items.Keys) {
-                items.Remove(o);
+            foreach (object o in items.keys()) {
+                items.__delitem__(o);
                 return o;
             }
             throw PythonOps.KeyError("pop from an empty set");
         }
 
         public void clear() {
-            items.Clear();
+            items.clear();
         }
 
         #endregion
@@ -443,7 +443,7 @@ namespace IronPython.Runtime {
         }
 
         [SpecialName]
-        public SetCollection InPlaceXor(object s) {
+        public SetCollection InPlaceExclusiveOr(object s) {
             ISet set = s as ISet;
             if (set == null) throw PythonOps.TypeError("unsupported operand type(s) for ^=: {0} and {1}", PythonOps.StringRepr(PythonTypeOps.GetName(s)), PythonOps.StringRepr(PythonTypeOps.GetName(this)));
 
@@ -508,23 +508,15 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            int count = this.items.Count;
+            int count = this.items.__len__();
 
-            foreach (object o in items.Keys) {
-                if (count != this.items.Count) {
+            foreach (object o in items.keys()) {
+                if (count != this.items.__len__()) {
                     throw PythonOps.RuntimeError("set changed during iteration");
                 }
 
                 yield return o;
             }
-        }
-
-        #endregion
-
-        #region Object overrides
-        
-        public override string ToString() {
-            return (SetHelpers.SetToString(this, this.items.Keys));
         }
 
         #endregion
@@ -603,10 +595,10 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
-            int count = this.items.Count;
+            int count = this.items.__len__();
 
-            foreach (object o in items.Keys) {
-                if (count != this.items.Count) {
+            foreach (object o in items.keys()) {
+                if (count != this.items.__len__()) {
                     throw PythonOps.RuntimeError("set changed during iteration");
                 }
 
@@ -618,8 +610,8 @@ namespace IronPython.Runtime {
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
-            return ToString();
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
+            return SetHelpers.SetToString(this, this.items.keys());
         }
 
         #endregion
@@ -631,7 +623,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection.Count {
-            get { return this.items.Count; }
+            get { return this.items.__len__(); }
         }
 
         bool ICollection.IsSynchronized {
@@ -701,7 +693,7 @@ namespace IronPython.Runtime {
 
             PythonDictionary items = ListToDictionary(setData);
 
-            if (items.Count == 0) {
+            if (items.__len__() == 0) {
                 fs = EMPTY;
             } else {
                 fs = new FrozenSetCollection(items);
@@ -715,8 +707,8 @@ namespace IronPython.Runtime {
             PythonDictionary items = new PythonDictionary();
             while (setData.MoveNext()) {
                 object o = setData.Current;
-                if (!items.ContainsKey(o)) {
-                    items.Add(o, o);
+                if (!items.__contains__(o)) {
+                    items[o] = o;
                 }
             }
             return items;
@@ -746,7 +738,7 @@ namespace IronPython.Runtime {
         #region ISet
 
         public int __len__() {
-            return items.Count;
+            return items.__len__();
         }
 
         public bool __contains__(object value) {
@@ -754,7 +746,7 @@ namespace IronPython.Runtime {
             value = SetHelpers.GetHashableSetIfSet(value);
 
             PythonOps.Hash(value);// make sure we have a hashable item
-            return items.ContainsKey(value);
+            return items.__contains__(value);
         }
 
         public bool issubset(object set) {
@@ -783,14 +775,14 @@ namespace IronPython.Runtime {
 
         void ISet.PrivAdd(object adding) {
             PythonOps.Hash(adding);// make sure we're hashable
-            if (!items.ContainsKey(adding)) {
-                items.Add(adding, adding);
+            if (!items.__contains__(adding)) {
+                items[adding] = adding;
             }
         }
 
         void ISet.PrivRemove(object removing) {
             PythonOps.Hash(removing);// make sure we're hashable
-            items.Remove(removing);
+            items.__delitem__(removing);
         }
 
         void ISet.SetData(IEnumerable set) {
@@ -914,7 +906,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return items.Keys.GetEnumerator();
+            return ((IEnumerable)items.keys()).GetEnumerator();
         }
 
         #endregion
@@ -924,27 +916,29 @@ namespace IronPython.Runtime {
             // added in different order) and needs to be fairly collision free.
             hashCode = 6551;
 
-            int[] hash_codes = new int[items.Keys.Count];
+            int[] hash_codes = new int[items.keys().__len__()];
 
             int i = 0;
-            foreach (object o in items.Keys) {
+            foreach (object o in items.keys()) {
                 hash_codes[i++] = PythonOps.Hash(o);
             }
 
             Array.Sort(hash_codes);
 
-            for (int j = 0; j < hash_codes.Length; j++) {
-                hashCode = (hashCode << 5) ^ (hashCode >> 26) ^ (hash_codes[j]);
+            int hash1 = 6551;
+            int hash2 = hash1;
+
+            for (i = 0; i < hash_codes.Length; i += 2) {
+                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ hash_codes[i];
+
+                if (i == hash_codes.Length - 1) {
+                    break;
+                }
+                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ hash_codes[i + 1];
             }
+
+            hashCode = hash1 + (hash2 * 1566083941);
         }
-
-        #region Object Overrides
-
-        public override string ToString() {
-            return (SetHelpers.SetToString(this, this.items.Keys));
-        }
-
-        #endregion
 
         #region IRichComparable
 
@@ -1027,15 +1021,15 @@ namespace IronPython.Runtime {
         #region IEnumerable<object> Members
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator() {
-            return items.Keys.GetEnumerator();
+            return ((ICollection<object>)items.keys()).GetEnumerator();
         }
 
         #endregion
 
         #region ICodeFormattable Members
 
-        string ICodeFormattable.ToCodeString(CodeContext context) {
-            return ToString();
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
+            return SetHelpers.SetToString(this, this.items.keys());
         }
 
         #endregion
@@ -1047,7 +1041,7 @@ namespace IronPython.Runtime {
         }
 
         int ICollection.Count {
-            get { return items.Count; }
+            get { return items.__len__(); }
         }
 
         bool ICollection.IsSynchronized {

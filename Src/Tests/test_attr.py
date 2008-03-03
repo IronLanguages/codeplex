@@ -223,4 +223,28 @@ def test_access_checks():
     attr_access(OldStyleClass())
     attr_access(C())
 
+@skip("silverlight")
+def test_cp13686():
+    import toimport
+    import sys
+    import nt
+    mod_list = [toimport, sys, nt]
+    
+    mod_names = {}
+    for mod in mod_list:
+        mod_names[mod] = mod.__name__
+    
+    for mod in mod_list:
+        AssertError(AttributeError, getattr, mod, "name")
+        setattr(mod, "name", "xyz")
+        AreEqual(getattr(mod, "name"), "xyz")
+        
+        AreEqual(getattr(mod, "__name__"), mod_names[mod])
+        setattr(mod, "__name__", "badname")
+        AreEqual(getattr(mod, "__name__"), "badname")
+    
+    if is_cli:
+        import System
+        AssertError(AttributeError, setattr, System, "name", "xyz")    
+
 run_test(__name__)

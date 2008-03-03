@@ -137,7 +137,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         protected void MakeMissingMemberError(Type type) {
-            AddToBody(Binder.MakeMissingMemberError(Rule, type, StringName));
+            AddToBody(Binder.MakeMissingMemberError(type, StringName).MakeErrorForRule(Rule, Binder));
         }
 
         protected void MakeReadOnlyMemberError(Type type) {

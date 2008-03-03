@@ -464,7 +464,7 @@ namespace Microsoft.Scripting.Actions {
         /// Emits the test and target of the rule emitting the code using the provided
         /// compiler, branching to ifFalse if the test is not satisfied.
         /// </summary>
-        internal void Emit(Compiler cg, Label ifFalse) {
+        internal void Emit(LambdaCompiler cg, Label ifFalse) {
             Assert.NotNull(_test, _target);
 
             // Need to make sure we aren't generating into two different CodeGens at the same time
@@ -477,7 +477,7 @@ namespace Microsoft.Scripting.Actions {
                 }
 
                 CodeBlockInfo top = _analyzed.Top;
-                DlrCompiler tc = new DlrCompiler(_analyzed);
+                Compiler tc = new Compiler(_analyzed);
 
                 cg.InitializeRule(tc, top);
 

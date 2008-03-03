@@ -224,7 +224,7 @@ namespace IronPython.Runtime.Operations {
 
             public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) {
                 // we need an instance...
-                ConstructorInfo ci = sourceType.GetConstructor(ArrayUtils.EmptyTypes);
+                ConstructorInfo ci = sourceType.GetConstructor(Type.EmptyTypes);
                 if (ci != null) {
                     object value = ci.Invoke(ArrayUtils.EmptyObjects);
                     object result;

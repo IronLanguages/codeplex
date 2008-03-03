@@ -20,11 +20,14 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
+using IronPython.Runtime.Operations;
+
 namespace IronPython.Runtime.Types {
     /// <summary>
     /// A TypeSlot is an item that gets stored in a type's dictionary.  Slots provide an 
     /// opportunity to customize access at runtime when a value is get or set from a dictionary.
     /// </summary>
+    [PythonSystemType]
     public class PythonTypeSlot {
         /// <summary>
         /// Gets the value stored in the slot for the given instance. 
@@ -56,10 +59,10 @@ namespace IronPython.Runtime.Types {
         /// <returns>true if the value was deleted, false if it can't be deleted</returns>
         internal virtual bool TryDeleteValue(CodeContext context, object instance, PythonType owner) {            
             object dummy;
-            return DynamicHelpers.GetPythonType(this).TryInvokeBinaryOperator(context,
-                Operators.DeleteDescriptor,
+            return PythonTypeOps.TryInvokeBinaryOperator(context,
                 this,
                 instance ?? owner,
+                Symbols.DeleteDescriptor,
                 out dummy);
         }
 

@@ -31,6 +31,8 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using System.Text;
+    using IronPython.Runtime.Calls;
 
 
     public delegate bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value);
@@ -51,12 +53,12 @@ namespace IronPython.Runtime.Types {
 #endif
     public class PythonType : ICustomMembers, IDynamicObject {
         private string _name;                               // the name of the type
-        internal PythonTypeAttributes _attrs;              // attributes of the type
-        private List<PythonType> _resolutionOrder;        // the search order for methods in the type
+        internal PythonTypeAttributes _attrs;               // attributes of the type
+        private List<PythonType> _resolutionOrder;          // the search order for methods in the type
         private Dictionary<SymbolId, SlotInfo> _dict;       // type-level slots & attributes
         private VTable _operators;                          // table of operators for fast dispatch    
         private ContextId _context;                         // the context this type was created from
-        internal PythonTypeBuilder _builder;              // the builder who created this, or null if we're fully initialized        
+        internal PythonTypeBuilder _builder;                // the builder who created this, or null if we're fully initialized        
         private TryGetMemberCustomizer _getboundmem;        // customized delegate for getting a member
         private SetMemberCustomizer _setmem;                // customized delegate for setting a member
         private DeleteMemberCustomizer _delmem;             // customized delegate fr deleting values.
@@ -66,7 +68,7 @@ namespace IronPython.Runtime.Types {
         private int _altVersion;                            // the alternate version of  the type, when the version is DynamicVersion
         private bool _hasGetAttribute;                      // true if the type has __getattribute__, false otherwise.
 
-        private List<PythonType> _bases;                   // the base classes of the type
+        private List<PythonType> _bases;                    // the base classes of the type
         private object _ctor;                               // fast implementation of ctor
         private List<WeakReference> _subtypes;              // all of the subtypes of the PythonType
         private Type _underlyingSystemType;                 // the underlying CLI system type for this type
@@ -76,8 +78,11 @@ namespace IronPython.Runtime.Types {
         private List<bool> _allowKeywordCtor;               // true if a context disallows keyword args constructing the type.
         private bool _extended, _isPythonType;
         private DynamicSite<object, object[], object> _ctorSite;
+        private PythonContext _pythonContext;               // the context the type was created from, or null for system types.
+        private OldClass _oldClass;
 
         public const int DynamicVersion = Int32.MinValue;   // all lookups should be dynamic
+        [MultiRuntimeAware]
         private static int MasterVersion = 1, MasterAlternateVersion;
         private static readonly Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
         internal static PythonType _pythonTypeType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
@@ -89,6 +94,11 @@ namespace IronPython.Runtime.Types {
             UnderlyingSystemType = underlyingSystemType;
             _resolutionOrder = new List<PythonType>(1);
             _resolutionOrder.Add(this);
+        }
+
+        public PythonType(PythonContext/*!*/ context, Type underlyingSystemType)
+            : this(underlyingSystemType) {
+            _pythonContext = context;
         }
 
         /// <summary>
@@ -550,43 +560,134 @@ namespace IronPython.Runtime.Types {
         }
 
         public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
-            if (action.Kind == DynamicActionKind.CreateInstance) {
-                if (IsSystemType) {
-                    MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
-                    StandardRule<T> rule;
-                    if (ctors.Length > 0) {
-                        rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
-                    } else {
-                        rule = new StandardRule<T>();
-                        rule.Target =
-                           rule.MakeError(
-                               Ast.New(
-                                   typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
-                                   Ast.Constant("Cannot create instances of " + Name)
-                               )
-                           );
-                    }
-                    rule.AddTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
-                    return rule;
+            switch(action.Kind) {
+                case DynamicActionKind.CreateInstance: return GetCreateInstanceAction<T>(action, context, args);
+                case DynamicActionKind.GetMember: return GetGetMemberRule<T>(action, context);
+                case DynamicActionKind.SetMember: return GetSetMemberRule<T>(action, context, args);
+                case DynamicActionKind.DeleteMember: return GetDeleteMemberRule<T>(action, context);
+            }
+
+            return null;
+        }
+
+        private StandardRule<T> GetCreateInstanceAction<T>(DynamicAction action, CodeContext context, object[] args) {
+            if (IsSystemType) {
+                MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
+                StandardRule<T> rule;
+                if (ctors.Length > 0) {
+                    rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
                 } else {
-                    // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
-                    // a minimal level of interop until then.
-                    StandardRule<T> rule = new StandardRule<T>();
-
-                    // calling NonDefaultNew(context, type, args)
-                    Expression call = Ast.ComplexCallHelper(
-                        typeof(InstanceOps).GetMethod("NonDefaultNew"),
-                        ArrayUtils.Insert<Expression>((Expression)Ast.CodeContext(), 
-                                           Ast.Convert(rule.Parameters[0], typeof(PythonType)), 
-                                           ArrayUtils.RemoveFirst(rule.Parameters))
-                    );
-
-                    rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
-                    rule.Test = Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0]));
-                    return rule;
+                    rule = new StandardRule<T>();
+                    rule.Target =
+                       rule.MakeError(
+                           Ast.New(
+                               typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                               Ast.Constant("Cannot create instances of " + Name)
+                           )
+                       );
                 }
+                rule.AddTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
+                return rule;
+            } else {
+                // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
+                // a minimal level of interop until then.
+                StandardRule<T> rule = new StandardRule<T>();
+
+                // calling NonDefaultNew(context, type, args)
+                Expression call = Ast.ComplexCallHelper(
+                    typeof(InstanceOps).GetMethod("NonDefaultNew"),
+                    ArrayUtils.Insert<Expression>((Expression)Ast.CodeContext(),
+                                       Ast.Convert(rule.Parameters[0], typeof(PythonType)),
+                                       ArrayUtils.RemoveFirst(rule.Parameters))
+                );
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
+                rule.Test = Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0]));
+                return rule;
+            }
+        }
+
+        private StandardRule<T> GetSetMemberRule<T>(DynamicAction action, CodeContext context, params object[] args) {
+            if (IsSystemType) {
+                MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
+                args = (object[])args.Clone();
+                args[0] = tt;
+                StandardRule<T> rule = new PythonSetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                rule.Test = Ast.Equal(
+                    rule.Parameters[0],
+                    Ast.RuntimeConstant(this)
+                );
+                return rule;
             }
             return null;
+        }
+
+        private StandardRule<T> GetGetMemberRule<T>(DynamicAction action, CodeContext context) {
+            if (IsSystemType && !IsPythonType) {
+                MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
+                StandardRule<T> rule = new GetMemberBinderHelper<T>(context, (GetMemberAction)action, new object[] { tt }).MakeNewRule();
+                if (rule.IsError && context.LanguageContext.Binder.GetMember(action, UnderlyingSystemType, SymbolTable.IdToString(((GetMemberAction)action).Name)).Count == 0) {
+                    // lookup on type
+                    tt = MemberTracker.FromMemberInfo(typeof(PythonType));
+                    rule = new GetMemberBinderHelper<T>(context, (GetMemberAction)action, new object[] { tt }).MakeNewRule();
+                }
+
+                rule.Test = Ast.Equal(
+                    rule.Parameters[0],
+                    Ast.RuntimeConstant(this)
+                );
+                return rule;
+            }
+            return null;
+        }
+
+        private StandardRule<T> GetDeleteMemberRule<T>(DynamicAction action, CodeContext context) {
+            if (IsSystemType) {
+                MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
+                StandardRule<T> rule = new DeleteMemberBinderHelper<T>(context, (DeleteMemberAction)action, new object[] { tt }).MakeRule();
+                rule.Test = Ast.Equal(
+                    rule.Parameters[0],
+                    Ast.RuntimeConstant(this)
+                );
+                return rule;
+            }
+            return null;
+        }
+
+        private StandardRule<T> GetCreateInstanceRule<T>(CodeContext context, object[] args, CreateInstanceAction cia) {
+            if (IsSystemType) {
+                MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
+                StandardRule<T> rule;
+                if (ctors.Length > 0) {
+                    rule = new CallBinderHelper<T, CallAction>(context, cia, args, ctors).MakeRule();
+                } else {
+                    rule = new StandardRule<T>();
+                    rule.Target =
+                       rule.MakeError(
+                           Ast.New(
+                               typeof(ArgumentTypeException).GetConstructor(new Type[] { typeof(string) }),
+                               Ast.Constant("Cannot create instances of " + Name)
+                           )
+                       );
+                }
+                rule.AddTest(Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0])));
+                return rule;
+            } else {
+                // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
+                // a minimal level of interop until then.
+                StandardRule<T> rule = new StandardRule<T>();
+
+                // calling NonDefaultNew(context, type, args)
+                Expression call = Ast.ComplexCallHelper(
+                    typeof(InstanceOps).GetMethod("NonDefaultNew"),
+                    ArrayUtils.Insert<Expression>((Expression)Ast.CodeContext(), 
+                                       Ast.Convert(rule.Parameters[0], typeof(PythonType)), 
+                                       ArrayUtils.RemoveFirst(rule.Parameters))
+                );
+
+                rule.Target = rule.MakeReturn(context.LanguageContext.Binder, call);
+                rule.Test = Ast.Equal(rule.Parameters[0], Ast.RuntimeConstant(args[0]));
+                return rule;
+            }
         }
 
         #endregion
@@ -706,119 +807,33 @@ namespace IronPython.Runtime.Types {
             return false;
         }
 
-        private enum CaseInsensitiveMatch {
-            NoMatch,                    // name doesn't exist on the type at all
-            ExactMatch,                 // name exists with the exact casing
-            InexactMatch,               // there's exactly one match, but with different casing
-            AmbiguousMatch              // multiple instances of the different casings, none matches exactly
-        }
-
         /// <summary>
-        /// Searches the resolution order for the slots that match the name in case insensitive manner.
+        /// Searches the resolution order for a slot matching by name.
+        /// 
+        /// Includes searching for methods in old-style classes
         /// </summary>
-        public bool TryResolveSlotCaseInsensitive(CodeContext context, SymbolId name, out PythonTypeSlot slot, out SymbolId actualName) {
-            // Initialize the output parameters
-            slot = null;
-            actualName = SymbolId.Invalid;
-            bool ambiguous = false;
-
+        public bool TryResolveMixedSlot(CodeContext context, SymbolId name, out PythonTypeSlot slot) {
             for (int i = 0; i < _resolutionOrder.Count; i++) {
-                PythonTypeSlot candidate;
-                SymbolId candidateName;
-                switch (_resolutionOrder[i].TryLookupSlotCaseInsensitive(context, name, out candidate, out candidateName)) {
-                    case CaseInsensitiveMatch.ExactMatch:
-                        // exact match - search is over
-                        slot = candidate;
-                        actualName = candidateName;
-                        return true;
+                PythonType dt = _resolutionOrder[i];
 
-                    case CaseInsensitiveMatch.InexactMatch:
-                        // inexact match. If we already have inexact candidate, we have ambiguous lookup,
-                        // unless we find exact match later
+                if (dt.TryLookupSlot(context, name, out slot)) {
+                    return true;
+                }
+
+                if (dt.OldClass != null) {
+                    object ret;
+                    if (dt.OldClass.TryLookupSlot(name, out ret)) {
+                        slot = ret as PythonTypeSlot;
                         if (slot == null) {
-                            // first possible match encountered
-                            slot = candidate;
-                            actualName = candidateName;
-                        } else {
-                            // if the name is the same, we are ok, in that case continue to use the first
-                            // match we found. If the name doesn't match, we have ambiguous result, unless
-                            // we find exact match later.
-                            if (candidateName != actualName) {
-                                ambiguous = true;
-                            }
+                            slot = new PythonTypeUserDescriptorSlot(ret);
                         }
-                        break;
-
-                    case CaseInsensitiveMatch.AmbiguousMatch:
-                        // ambiguous match. We need to find an exact match to succeed.
-                        ambiguous = true;
-                        break;
-
-                    case CaseInsensitiveMatch.NoMatch:
-                        // no match - keep looking with the parent.
-                        break;
+                        return true;
+                    }
                 }
             }
 
-            if (slot != null && !ambiguous) {
-                return true;
-            } else {
-                slot = null;
-                actualName = SymbolId.Invalid;
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Looks up the slots on the dynamic mixin, using case insensitive comparison.
-        /// Matching slots are added to the list.
-        /// </summary>
-        private CaseInsensitiveMatch TryLookupSlotCaseInsensitive(CodeContext context, SymbolId name, out PythonTypeSlot slot, out SymbolId actualName) {
-            bool ambiguous = false;
-
-            // Initialize the result
             slot = null;
-            actualName = SymbolId.Invalid;
-
-            foreach (KeyValuePair<SymbolId, SlotInfo> kvp in _dict) {
-                PythonTypeSlot current;
-                if (kvp.Key.CaseInsensitiveEquals(name) &&
-                    TryExtractVisibleSlot(context, kvp.Value, out current)) {
-
-                    // We have case insensitive match. Is it an exact match?
-                    if (kvp.Key == name) {
-                        slot = current;
-                        actualName = kvp.Key;
-                        return CaseInsensitiveMatch.ExactMatch;
-                    }
-
-                    // We have case insensitive match only. Is it the first one?
-                    if (slot == null) {
-                        slot = current;
-                        actualName = kvp.Key;
-                    } else {
-                        // Already have case insensitive match, so unless we find exact match later,
-                        // this is an ambiguous match.
-                        ambiguous = true;
-                    }
-                }
-            }
-
-            // Do we have at least one candidate?
-            if (slot != null) {
-                // Do we have more than one?
-                if (ambiguous) {
-                    slot = null;
-                    actualName = SymbolId.Invalid;
-                    return CaseInsensitiveMatch.AmbiguousMatch;
-                } else {
-                    // Exactly one candidate based on insensitive match
-                    return CaseInsensitiveMatch.InexactMatch;
-                }
-            } else {
-                // nothing found
-                return CaseInsensitiveMatch.NoMatch;
-            }
+            return false;
         }
 
         #region Instance Access Helpers
@@ -905,7 +920,7 @@ namespace IronPython.Runtime.Types {
             }
 
             try {
-                if (TryInvokeBinaryOperator(context, Operators.GetBoundMember, instance, name.ToString(), out value)) {
+                if (PythonTypeOps.TryInvokeBinaryOperator(context, instance, SymbolTable.IdToString(name), Symbols.GetBoundAttr, out value)) {
                     return true;
                 }
             } catch (MissingMemberException) {
@@ -925,7 +940,7 @@ namespace IronPython.Runtime.Types {
         public bool TryGetBoundMember(CodeContext context, object instance, SymbolId name, out object value) {
             Initialize();
 
-            if (_getboundmem != null) {
+            if (_getboundmem != null && instance != null) {
                 return _getboundmem(context, instance, name, out value);
             }
 
@@ -958,7 +973,7 @@ namespace IronPython.Runtime.Types {
             }
 
             try {
-                if (TryInvokeBinaryOperator(context, Operators.GetBoundMember, instance, name.ToString(), out value)) {
+                if (TryInvokeBinaryOperator(context, Operators.GetBoundMember, instance, name.ToString(), out value)) {                
                     return true;
                 }
             } catch (MissingMemberException) {
@@ -1152,7 +1167,7 @@ namespace IronPython.Runtime.Types {
                     }
                 }
             }
-
+            
             object names;
             if (self != null && TryInvokeUnaryOperator(context, Operators.GetMemberNames, self, out names)) {
                 IList<SymbolId> symNames = names as IList<SymbolId>;
@@ -1162,6 +1177,7 @@ namespace IronPython.Runtime.Types {
                     keys[si] = si;
                 }
             }
+
 
             return new List<SymbolId>(keys.Keys);
         }        
@@ -1203,8 +1219,8 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public bool TryInvokeUnaryOperator(CodeContext context, Operators op, object self, out object ret) {
-            Contract.RequiresNotNull(context, "context"); 
-            
+            Contract.RequiresNotNull(context, "context");
+
             Initialize();
 
             int opIndex = (int)op;
@@ -1319,34 +1335,6 @@ namespace IronPython.Runtime.Types {
             ret = null;
             return false;
         }
-
-        public object InvokeUnaryOperator(CodeContext context, Operators op, object self) {
-            object ret;
-            if (TryInvokeUnaryOperator(context, op, self, out ret)) {
-                return ret;
-            }
-
-            throw new MissingMemberException(String.Format(CultureInfo.CurrentCulture, "missing operator {0}", op.ToString()));
-        }
-
-        public object InvokeBinaryOperator(CodeContext context, Operators op, object self, object other) {
-            object ret;
-            if (TryInvokeBinaryOperator(context, op, self, other, out ret)) {
-                return ret;
-            }
-
-            throw new MissingMemberException(String.Format(CultureInfo.CurrentCulture, "missing operator {0}", op.ToString()));
-        }
-
-        public object InvokeTernaryOperator(CodeContext context, Operators op, object self, object value1, object value2) {
-            object ret;
-            if (TryInvokeTernaryOperator(context, op, self, value1, value2, out ret)) {
-                return ret;
-            }
-
-            throw new MissingMemberException(String.Format(CultureInfo.CurrentCulture, "missing operator {0}", op.ToString()));
-        }
-
 
         public bool HasDynamicMembers(CodeContext context) {
             Initialize();
@@ -1542,6 +1530,21 @@ namespace IronPython.Runtime.Types {
             }
             set {
                 _isPythonType = value;
+            }
+        }
+
+        internal OldClass OldClass {
+            get {
+                return _oldClass;
+            }
+            set {
+                _oldClass = value;
+            }
+        }
+
+        internal PythonContext PythonContext {
+            get {
+                return _pythonContext;
             }
         }
 

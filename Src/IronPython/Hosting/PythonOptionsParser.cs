@@ -29,6 +29,7 @@ using Microsoft.Scripting.Utils;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
 
@@ -62,9 +63,9 @@ namespace IronPython.Hosting {
             base.Parse(args);
 
             PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
-            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = List.Make(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = PythonOps.MakeList(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
             if (scriptOpt.WarningFilters != null)
-                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = IronPython.Runtime.List.Make(scriptOpt.WarningFilters);
+                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = PythonOps.MakeListFromSequence(scriptOpt.WarningFilters);
 
             PythonFunction.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }

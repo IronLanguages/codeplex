@@ -49,8 +49,7 @@ namespace IronPython.Runtime.Operations {
 
         #region ICodeFormattable Members
 
-        [SpecialName, PythonName("__repr__")]
-        public virtual string ToCodeString(CodeContext/*!*/ context) {
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             return StringOps.Quote(Value);
         }
 
@@ -60,28 +59,28 @@ namespace IronPython.Runtime.Operations {
 
         [return: MaybeNotImplemented]
         public static object operator >(ExtensibleString self, object other) {
-            object res = StringOps.Compare(self.Value, other);
+            object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) > 0;
             return PythonOps.NotImplemented;
         }
 
         [return: MaybeNotImplemented]
         public static object operator <(ExtensibleString self, object other) {
-            object res = StringOps.Compare(self.Value, other);
+            object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) < 0;
             return PythonOps.NotImplemented;
         }
 
         [return: MaybeNotImplemented]
         public static object operator >=(ExtensibleString self, object other) {
-            object res = StringOps.Compare(self.Value, other);
+            object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) >= 0;
             return PythonOps.NotImplemented;
         }
 
         [return: MaybeNotImplemented]
         public static object operator <=(ExtensibleString self, object other) {
-            object res = StringOps.Compare(self.Value, other);
+            object res = StringOps.__cmp__(self.Value, other);
             if (res is int) return ((int)res) <= 0;
             return PythonOps.NotImplemented;
         }
@@ -89,8 +88,7 @@ namespace IronPython.Runtime.Operations {
         #endregion
 
         [return: MaybeNotImplemented]
-        [PythonName("__eq__")]
-        public object RichEquals(object other) {
+        public object __eq__(object other) {
             if (other is string || other is ExtensibleString)
                 return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
 
@@ -98,9 +96,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         [return: MaybeNotImplemented]
-        [PythonName("__ne__")]
-        public object RichNotEquals(object other) {
-            object res = RichEquals(other);
+        public object __ne__(object other) {
+            object res = __eq__(other);
             if (res != PythonOps.NotImplemented) return PythonOps.Not(res);
 
             return res;
@@ -108,8 +105,7 @@ namespace IronPython.Runtime.Operations {
 
         #region IValueEquality members
 
-        [PythonName("__hash__")]
-        public virtual int GetValueHashCode() {
+        int IValueEquality.GetValueHashCode() {
             return GetHashCode();
         }
 
@@ -141,19 +137,17 @@ namespace IronPython.Runtime.Operations {
         }
 
         public object __getslice__(int start, int stop) {
-            return StringOps.GetSlice(Value, start, stop);
+            return StringOps.__getslice__(Value, start, stop);
         }
 
         #endregion
 
         #region IPythonContainer Members
 
-        [SpecialName, PythonName("__len__")]
         public virtual int __len__() {
             return Value.Length;
         }
 
-        [SpecialName, PythonName("__contains__")]
         public virtual bool __contains__(object value) {
             if (value is string) return Value.Contains((string)value);
             else if (value is ExtensibleString) return Value.Contains(((ExtensibleString)value).Value);
@@ -173,8 +167,8 @@ namespace IronPython.Runtime.Operations {
     /// defined in the CLS System.String type.
     /// </summary>
     public static class StringOps {
-
         internal const int LowestUnicodeValue = 0x7f;
+        private static readonly char[] Whitespace = new char[] { ' ', '\t', '\n', '\r', '\f' };
 
         internal static object FastNew(object context, object x) {
             if (x == null) {
@@ -185,7 +179,7 @@ namespace IronPython.Runtime.Operations {
                 string s = (string)x;
                 for (int i = 0; i < s.Length; i++) {
                     if (s[i] > '\x80')
-                        return StringOps.Make(
+                        return StringOps.__new__(
                             (CodeContext)context,
                             (PythonType)DynamicHelpers.GetPythonTypeFromType(typeof(String)),
                             s,
@@ -200,8 +194,8 @@ namespace IronPython.Runtime.Operations {
 
         #region Python Constructors
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext/*!*/ context, PythonType cls) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls) {
             if (cls == TypeCache.String) {
                 return "";
             } else {
@@ -209,8 +203,8 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext/*!*/ context, PythonType cls, object @object) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, object @object) {
             if (cls == TypeCache.String) {
                 return FastNew(context, @object);
             } else {
@@ -218,8 +212,8 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext/*!*/ context, PythonType cls,
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext/*!*/ context, PythonType cls,
             object @string,
             [DefaultParameterValue(null)] string encoding,
             [DefaultParameterValue("strict")] string errors) {
@@ -228,7 +222,7 @@ namespace IronPython.Runtime.Operations {
             if (str == null) throw PythonOps.TypeError("converting to unicode: need string, got {0}", DynamicHelpers.GetPythonType(@string).Name);
 
             if (cls == TypeCache.String) {
-                return Decode(context, str, encoding ?? PythonContext.GetContext(context).GetDefaultEncodingName(), errors);
+                return decode(context, str, encoding ?? PythonContext.GetContext(context).GetDefaultEncodingName(), errors);
             } else {
                 return cls.CreateInstance(context, str, encoding, errors);
             }
@@ -238,32 +232,29 @@ namespace IronPython.Runtime.Operations {
 
         #region Python __ methods
 
-        [SpecialName, PythonName("__contains__")]
-        public static bool Contains(string s, string item) {
+        public static bool __contains__(string s, string item) {
             return s.Contains(item);
         }
 
-        [SpecialName, PythonName("__contains__")]
-        public static bool Contains(string s, char item) {
+        public static bool __contains__(string s, char item) {
             return s.IndexOf(item) != -1;
         }
 
-        [SpecialName, PythonName("__len__")]
-        public static int GetLength(string s) {
+        public static int __len__(string s) {
             return s.Length;
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static string GetItem(string s, int index) {
             return RuntimeHelpers.CharToString(s[PythonOps.FixIndex(index, s.Length)]);
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static string GetItem(string s, object index) {
             return GetItem(s, Converter.ConvertToIndex(index));
         }
 
-        [SpecialName, PythonName("__getitem__")]
+        [SpecialName]
         public static string GetItem(string s, Slice slice) {
             if (slice == null) throw PythonOps.TypeError("string indicies must be slices or integers");
             int start, stop, step;
@@ -294,8 +285,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__getslice__")]
-        public static string GetSlice(string self, int x, int y) {
+        public static string __getslice__(string self, int x, int y) {
             Slice.FixSliceArguments(self.Length, ref x, ref y);
             if (x >= y) return String.Empty;
 
@@ -307,20 +297,17 @@ namespace IronPython.Runtime.Operations {
 
         #region Public Python methods
 
-        [PythonName("capitalize")]
-        public static string Capitalize(string self) {
+        public static string capitalize(string self) {
             if (self.Length == 0) return self;
             return Char.ToUpper(self[0]) + self.Substring(1).ToLower();
         }
 
         //  default fillchar (padding char) is a space
-        [PythonName("center")]
-        public static string Center(string self, int width) {
-            return Center(self, width, ' ');
+        public static string center(string self, int width) {
+            return center(self, width, ' ');
         }
 
-        [PythonName("center")]
-        public static string Center(string self, int width, char fillchar) {
+        public static string center(string self, int width, char fillchar) {
             int spaces = width - self.Length;
             if (spaces <= 0) return self;
 
@@ -331,18 +318,15 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("count")]
-        public static int Count(string self, string sub) {
-            return Count(self, sub, 0, self.Length);
+        public static int count(string self, string sub) {
+            return count(self, sub, 0, self.Length);
         }
 
-        [PythonName("count")]
-        public static int Count(string self, string sub, int start) {
-            return Count(self, sub, start, self.Length);
+        public static int count(string self, string sub, int start) {
+            return count(self, sub, start, self.Length);
         }
 
-        [PythonName("count")]
-        public static int Count(string self, string ssub, int start, int end) {
+        public static int count(string self, string ssub, int start, int end) {
             if (ssub == null) throw PythonOps.TypeError("expected string for 'sub' argument, got NoneType");
             string v = self;
             if (v.Length == 0) return 0;
@@ -361,55 +345,47 @@ namespace IronPython.Runtime.Operations {
             return count;
         }
 
-        [PythonName("decode")]
-        public static string Decode(CodeContext/*!*/ context, string s) {
-            return Decode(context, s, Missing.Value, "strict");
+        public static string decode(CodeContext/*!*/ context, string s) {
+            return decode(context, s, Missing.Value, "strict");
         }
 
-        [PythonName("decode")]
-        public static string Decode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
+        public static string decode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
             return RawDecode(context, s, encoding, errors);
         }
 
-        [PythonName("encode")]
-        public static string Encode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
+        public static string encode(CodeContext/*!*/ context, string s, [Optional]object encoding, [DefaultParameterValue("strict")]string errors) {
             return RawEncode(context, s, encoding, errors);
         }
 
-        [PythonName("endswith")]
-        public static bool EndsWith(string self, object suffix) {
+        public static bool endswith(string self, object suffix) {
             TryStringOrTuple(suffix);
             if (suffix is string)
-                return EndsWith(self, suffix as string);
+                return endswith(self, suffix as string);
             else
-                return EndsWith(self, suffix as PythonTuple);
+                return endswith(self, suffix as PythonTuple);
         }
 
-        [PythonName("endswith")]
-        public static bool EndsWith(string self, object suffix, int start) {
+        public static bool endswith(string self, object suffix, int start) {
             TryStringOrTuple(suffix);
             if (suffix is string)
-                return EndsWith(self, suffix as string, start);
+                return endswith(self, suffix as string, start);
             else
-                return EndsWith(self, suffix as PythonTuple, start);
+                return endswith(self, suffix as PythonTuple, start);
         }
 
-        [PythonName("endswith")]
-        public static bool EndsWith(string self, object suffix, int start, int end) {
+        public static bool endswith(string self, object suffix, int start, int end) {
             TryStringOrTuple(suffix);
             if (suffix is string)
-                return EndsWith(self, suffix as string, start, end);
+                return endswith(self, suffix as string, start, end);
             else
-                return EndsWith(self, suffix as PythonTuple, start, end);
+                return endswith(self, suffix as PythonTuple, start, end);
         }
 
-        [PythonName("expandtabs")]
-        public static string ExpandTabs(string self) {
-            return ExpandTabs(self, 8);
+        public static string expandtabs(string self) {
+            return expandtabs(self, 8);
         }
 
-        [PythonName("expandtabs")]
-        public static string ExpandTabs(string self, int tabsize) {
+        public static string expandtabs(string self, int tabsize) {
             StringBuilder ret = new StringBuilder(self.Length * 2);
             string v = self;
             int col = 0;
@@ -433,8 +409,7 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("find")]
-        public static int Find(string self, string sub) {
+        public static int find(string self, string sub) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (sub.Length == 1) return self.IndexOf(sub[0]);
             CompareInfo c = CultureInfo.InvariantCulture.CompareInfo;
@@ -442,14 +417,12 @@ namespace IronPython.Runtime.Operations {
 
         }
 
-        [PythonName("find")]
-        public static int Find(string self, string sub, int start) {
+        public static int find(string self, string sub, int start) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
             return self.IndexOf(sub, PythonOps.FixSliceIndex(start, self.Length));
         }
 
-        [PythonName("find")]
-        public static int Find(string self, string sub, int start, int end) {
+        public static int find(string self, string sub, int start, int end) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
             start = PythonOps.FixSliceIndex(start, self.Length);
             end = PythonOps.FixSliceIndex(end, self.Length);
@@ -457,28 +430,24 @@ namespace IronPython.Runtime.Operations {
             return self.IndexOf(sub, start, end - start);
         }
 
-        [PythonName("index")]
-        public static int Index(string self, string sub) {
+        public static int index(string self, string sub) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            return Index(self, sub, 0, self.Length);
+            return index(self, sub, 0, self.Length);
         }
 
-        [PythonName("index")]
-        public static int Index(string self, string sub, int start) {
+        public static int index(string self, string sub, int start) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            return Index(self, sub, start, self.Length);
+            return index(self, sub, start, self.Length);
         }
 
-        [PythonName("index")]
-        public static int Index(string self, string sub, int start, int end) {
+        public static int index(string self, string sub, int start, int end) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            int ret = Find(self, sub, start, end);
+            int ret = find(self, sub, start, end);
             if (ret == -1) throw PythonOps.ValueError("substring {0} not found in {1}", sub, self);
             return ret;
         }
 
-        [PythonName("isalnum")]
-        public static bool IsAlnum(string self) {
+        public static bool isalnum(string self) {
             if (self.Length == 0) return false;
             string v = self;
             for (int i = v.Length - 1; i >= 0; i--) {
@@ -487,8 +456,7 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        [PythonName("isalpha")]
-        public static bool IsAlpha(string self) {
+        public static bool isalpha(string self) {
             if (self.Length == 0) return false;
             string v = self;
             for (int i = v.Length - 1; i >= 0; i--) {
@@ -497,8 +465,7 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        [PythonName("isdigit")]
-        public static bool IsDigit(string self) {
+        public static bool isdigit(string self) {
             if (self.Length == 0) return false;
             string v = self;
             for (int i = v.Length - 1; i >= 0; i--) {
@@ -507,8 +474,7 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        [PythonName("isspace")]
-        public static bool IsSpace(string self) {
+        public static bool isspace(string self) {
             if (self.Length == 0) return false;
             string v = self;
             for (int i = v.Length - 1; i >= 0; i--) {
@@ -517,13 +483,11 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        [PythonName("isdecimal")]
-        public static bool IsDecimal(string self) {
-            return IsNumeric(self);
+        public static bool isdecimal(string self) {
+            return isnumeric(self);
         }
 
-        [PythonName("isnumeric")]
-        public static bool IsNumeric(string self) {
+        public static bool isnumeric(string self) {
             if (String.IsNullOrEmpty(self)) return false;
 
             foreach (char c in self) {
@@ -532,8 +496,7 @@ namespace IronPython.Runtime.Operations {
             return true;
         }
 
-        [PythonName("islower")]
-        public static bool IsLower(string self) {
+        public static bool islower(string self) {
             if (self.Length == 0) return false;
             string v = self;
             bool hasLower = false;
@@ -544,8 +507,7 @@ namespace IronPython.Runtime.Operations {
             return hasLower;
         }
 
-        [PythonName("isupper")]
-        public static bool IsUpper(string self) {
+        public static bool isupper(string self) {
             if (self.Length == 0) return false;
             string v = self;
             bool hasUpper = false;
@@ -560,8 +522,7 @@ namespace IronPython.Runtime.Operations {
         //  character in self; also, uppercase characters may only follow uncased
         //  characters (e.g. whitespace) and lowercase characters only cased ones. 
         //  return false otherwise.
-        [PythonName("istitle")]
-        public static bool IsTitle(string self) {
+        public static bool istitle(string self) {
             if (self == null || self.Length == 0) return false;
 
             string v = self;
@@ -589,8 +550,7 @@ namespace IronPython.Runtime.Operations {
             return containsUpper;
         }
 
-        [PythonName("isunicode")]
-        public static bool IsUnicode(string self) {
+        public static bool isunicode(string self) {
             foreach (char c in self) {
                 if (c >= LowestUnicodeValue) return true;
             }
@@ -600,8 +560,7 @@ namespace IronPython.Runtime.Operations {
         //  Return a string which is the concatenation of the strings 
         //  in the sequence seq. The separator between elements is the 
         //  string providing this method
-        [PythonName("join")]
-        public static string Join(string self, object sequence) {
+        public static string join(string self, object sequence) {
             IEnumerator seq = PythonOps.GetEnumerator(sequence);
             if (!seq.MoveNext()) return "";
 
@@ -625,13 +584,11 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("ljust")]
-        public static string LJust(string self, int width) {
-            return LJust(self, width, ' ');
+        public static string ljust(string self, int width) {
+            return ljust(self, width, ' ');
         }
 
-        [PythonName("ljust")]
-        public static string LJust(string self, int width, char fillchar) {
+        public static string ljust(string self, int width, char fillchar) {
             int spaces = width - self.Length;
             if (spaces <= 0) return self;
 
@@ -641,26 +598,20 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("lower")]
-        public static string Lower(string self) {
+        public static string lower(string self) {
             return self.ToLower();
         }
 
-        private static readonly char[] Whitespace = new char[] { ' ', '\t', '\n', '\r', '\f' };
-        [PythonName("lstrip")]
-        public static string LStrip(string self) {
+        public static string lstrip(string self) {
             return self.TrimStart(Whitespace);
         }
 
-        [PythonName("lstrip")]
-        public static string LStrip(string self, string chars) {
-            if (chars == null) return LStrip(self);
+        public static string lstrip(string self, string chars) {
+            if (chars == null) return lstrip(self);
             return self.TrimStart(chars.ToCharArray());
         }
 
-        [PythonVersion(2, 5)]
-        [PythonName("partition")]
-        public static PythonTuple Partition(string self, string sep) {
+        public static PythonTuple partition(string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");
             if (sep.Length == 0)
@@ -669,7 +620,7 @@ namespace IronPython.Runtime.Operations {
             object[] obj = new object[3] { "", "", "" };
 
             if (self.Length != 0) {
-                int index = Find(self, sep);
+                int index = find(self, sep);
                 if (index == -1) {
                     obj[0] = self;
                 } else {
@@ -681,17 +632,15 @@ namespace IronPython.Runtime.Operations {
             return new PythonTuple(obj);
         }
 
-        [PythonName("replace")]
-        public static string Replace(string self, string old, string new_) {
+        public static string replace(string self, string old, string new_) {
             if (old == null) throw PythonOps.TypeError("expected string for 'old' argument, got NoneType");
             if (old.Length == 0) return ReplaceEmpty(self, new_, self.Length + 1);
             return self.Replace(old, new_);
         }
 
-        [PythonName("replace")]
-        public static string Replace(string self, string old, string new_, int maxsplit) {
+        public static string replace(string self, string old, string new_, int maxsplit) {
             if (old == null) throw PythonOps.TypeError("expected string for 'old' argument, got NoneType");
-            if (maxsplit == -1) return Replace(self, old, new_);
+            if (maxsplit == -1) return replace(self, old, new_);
             if (old.Length == 0) return ReplaceEmpty(self, new_, maxsplit);
 
             string v = self;
@@ -711,20 +660,17 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("rfind")]
-        public static int RFind(string self, string sub) {
+        public static int rfind(string self, string sub) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            return RFind(self, sub, 0, self.Length);
+            return rfind(self, sub, 0, self.Length);
         }
 
-        [PythonName("rfind")]
-        public static int RFind(string self, string sub, int start) {
+        public static int rfind(string self, string sub, int start) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
-            return RFind(self, sub, start, self.Length);
+            return rfind(self, sub, start, self.Length);
         }
 
-        [PythonName("rfind")]
-        public static int RFind(string self, string sub, int start, int end) {
+        public static int rfind(string self, string sub, int start, int end) {
             if (sub == null) throw PythonOps.TypeError("expected string, got NoneType");
 
             start = PythonOps.FixSliceIndex(start, self.Length);
@@ -737,30 +683,25 @@ namespace IronPython.Runtime.Operations {
             return self.LastIndexOf(sub, end - 1, end - start);
         }
 
-        [PythonName("rindex")]
-        public static int RIndex(string self, string sub) {
-            return RIndex(self, sub, 0, self.Length);
+        public static int rindex(string self, string sub) {
+            return rindex(self, sub, 0, self.Length);
         }
 
-        [PythonName("rindex")]
-        public static int RIndex(string self, string sub, int start) {
-            return RIndex(self, sub, start, self.Length);
+        public static int rindex(string self, string sub, int start) {
+            return rindex(self, sub, start, self.Length);
         }
 
-        [PythonName("rindex")]
-        public static int RIndex(string self, string sub, int start, int end) {
-            int ret = RFind(self, sub, start, end);
+        public static int rindex(string self, string sub, int start, int end) {
+            int ret = rfind(self, sub, start, end);
             if (ret == -1) throw PythonOps.ValueError("substring {0} not found in {1}", sub, self);
             return ret;
         }
 
-        [PythonName("rjust")]
-        public static string RJust(string self, int width) {
-            return RJust(self, width, ' ');
+        public static string rjust(string self, int width) {
+            return rjust(self, width, ' ');
         }
 
-        [PythonName("rjust")]
-        public static string RJust(string self, int width, char fillchar) {
+        public static string rjust(string self, int width, char fillchar) {
             int spaces = width - self.Length;
             if (spaces <= 0) return self;
 
@@ -770,9 +711,7 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonVersion(2, 5)]
-        [PythonName("rpartition")]
-        public static PythonTuple Rpartition(string self, string sep) {
+        public static PythonTuple rpartition(string self, string sep) {
             if (sep == null)
                 throw PythonOps.TypeError("expected string, got NoneType");
             if (sep.Length == 0)
@@ -780,9 +719,9 @@ namespace IronPython.Runtime.Operations {
 
             object[] obj = new object[3] { "", "", "" };
             if (self.Length != 0) {
-                int index = RFind(self, sep);
+                int index = rfind(self, sep);
                 if (index == -1) {
-                    obj[0] = self;
+                    obj[2] = self;
                 } else {
                     obj[0] = self.Substring(0, index);
                     obj[1] = sep;
@@ -793,57 +732,48 @@ namespace IronPython.Runtime.Operations {
         }
 
         //  when no maxsplit arg is given then just use split
-        [PythonName("rsplit")]
-        public static List RSplit(string self) {
+        public static List rsplit(string self) {
             return SplitInternal(self, (char[])null, -1);
         }
 
-        [PythonName("rsplit")]
-        public static List RSplit(string self, string sep) {
-            return Split(self, sep, -1);
+        public static List rsplit(string self, string sep) {
+            return split(self, sep, -1);
         }
 
-        [PythonName("rsplit")]
-        public static List RSplit(string self, string sep, int maxsplit) {
-
+        public static List rsplit(string self, string sep, int maxsplit) {
             //  rsplit works like split but needs to split from the right;
             //  reverse the original string (and the sep), split, reverse 
             //  the split list and finally reverse each element of the list
             string reversed = Reverse(self);
             if (sep != null) sep = Reverse(sep);
             List temp = null, ret = null;
-            temp = Split(reversed, sep, maxsplit);
-            temp.Reverse();
-            if (temp.Count != 0)
+            temp = split(reversed, sep, maxsplit);
+            temp.reverse();
+            if (temp.__len__() != 0)
                 ret = new List();
             foreach (string s in temp)
                 ret.AddNoLock(Reverse(s));
             return ret;
         }
 
-        [PythonName("rstrip")]
-        public static string RStrip(string self) {
+        public static string rstrip(string self) {
             return self.TrimEnd(Whitespace);
         }
 
-        [PythonName("rstrip")]
-        public static string RStrip(string self, string chars) {
-            if (chars == null) return RStrip(self);
+        public static string rstrip(string self, string chars) {
+            if (chars == null) return rstrip(self);
             return self.TrimEnd(chars.ToCharArray());
         }
 
-        [PythonName("split")]
-        public static List Split(string self) {
+        public static List split(string self) {
             return SplitInternal(self, (char[])null, -1);
         }
 
-        [PythonName("split")]
-        public static List Split(string self, string sep) {
-            return Split(self, sep, -1);
+        public static List split(string self, string sep) {
+            return split(self, sep, -1);
         }
 
-        [PythonName("split")]
-        public static List Split(string self, string sep, int maxsplit) {
+        public static List split(string self, string sep, int maxsplit) {
             if (sep == null) return SplitInternal(self, (char[])null, maxsplit);
 
             if (sep.Length == 0) {
@@ -855,13 +785,11 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("splitlines")]
-        public static List SplitLines(string self) {
-            return SplitLines(self, false);
+        public static List splitlines(string self) {
+            return splitlines(self, false);
         }
 
-        [PythonName("splitlines")]
-        public static List SplitLines(string self, bool keepends) {
+        public static List splitlines(string self, bool keepends) {
             List ret = new List();
             int i, linestart;
             for (i = 0, linestart = 0; i < self.Length; i++) {
@@ -890,49 +818,41 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        [PythonName("startswith")]
-        public static bool StartsWith(string self, object prefix) {
+        public static bool startswith(string self, object prefix) {
             TryStringOrTuple(prefix);
             if (prefix is string)
-                return StartsWith(self, prefix as string);
+                return startswith(self, prefix as string);
             else
-                return StartsWith(self, prefix as PythonTuple);
+                return startswith(self, prefix as PythonTuple);
 
         }
 
-        [PythonName("startswith")]
-        public static bool StartsWith(string self, object prefix, int start) {
+        public static bool startswith(string self, object prefix, int start) {
             TryStringOrTuple(prefix);
             if (prefix is string)
-                return StartsWith(self, prefix as string, start);
+                return startswith(self, prefix as string, start);
             else
-                return StartsWith(self, prefix as PythonTuple, start);
+                return startswith(self, prefix as PythonTuple, start);
         }
 
-
-        [PythonName("startswith")]
-        public static bool StartsWith(string self, object prefix, int start, int end) {
+        public static bool startswith(string self, object prefix, int start, int end) {
             TryStringOrTuple(prefix);
             if (prefix is string)
-                return StartsWith(self, prefix as string, start, end);
+                return startswith(self, prefix as string, start, end);
             else
-                return StartsWith(self, prefix as PythonTuple, start, end);
+                return startswith(self, prefix as PythonTuple, start, end);
         }
 
-
-        [PythonName("strip")]
-        public static string Strip(string self) {
+        public static string strip(string self) {
             return self.Trim();
         }
 
-        [PythonName("strip")]
-        public static string Strip(string self, string chars) {
-            if (chars == null) return Strip(self);
+        public static string strip(string self, string chars) {
+            if (chars == null) return strip(self);
             return self.Trim(chars.ToCharArray());
         }
 
-        [PythonName("swapcase")]
-        public static string SwapCase(string self) {
+        public static string swapcase(string self) {
             StringBuilder ret = new StringBuilder(self);
             for (int i = 0; i < ret.Length; i++) {
                 char ch = ret[i];
@@ -942,8 +862,7 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("title")]
-        public static string Title(string self) {
+        public static string title(string self) {
             if (self == null || self.Length == 0) return self;
 
             char[] retchars = self.ToCharArray();
@@ -970,14 +889,13 @@ namespace IronPython.Runtime.Operations {
         //translate on a unicode string differs from that on an ascii
         //for unicode, the table argument is actually a dictionary with
         //character ordinals as keys and the replacement strings as values
-        [PythonName("translate")]
-        public static string Translate(string self, PythonDictionary table) {
+        public static string translate(string self, PythonDictionary table) {
             if (table == null) throw PythonOps.TypeError("expected dictionary or string, got NoneType");
             if (self.Length == 0) return self;
             StringBuilder ret = new StringBuilder();
             for (int i = 0, idx = 0; i < self.Length; i++) {
                 idx = (int)self[i];
-                if (table.ContainsKey(idx))
+                if (table.__contains__(idx))
                     ret.Append((string)table[idx]);
                 else
                     ret.Append(self[i]);
@@ -985,13 +903,11 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("translate")]
-        public static string Translate(string self, string table) {
-            return Translate(self, table, (string)null);
+        public static string translate(string self, string table) {
+            return translate(self, table, (string)null);
         }
 
-        [PythonName("translate")]
-        public static string Translate(string self, string table, string deletechars) {
+        public static string translate(string self, string table, string deletechars) {
             if (table == null) throw PythonOps.TypeError("expected string, got NoneType");
             if (table.Length != 256)
                 throw PythonOps.ValueError("translation table must be 256 characters long");
@@ -1006,13 +922,11 @@ namespace IronPython.Runtime.Operations {
             return ret.ToString();
         }
 
-        [PythonName("upper")]
-        public static string Upper(string self) {
+        public static string upper(string self) {
             return self.ToUpper();
         }
 
-        [PythonName("zfill")]
-        public static string ZFill(string self, int width) {
+        public static string zfill(string self, int width) {
             int spaces = width - self.Length;
             if (spaces <= 0) return self;
 
@@ -1101,25 +1015,24 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static string ConvertFromChar(char c) {
             return RuntimeHelpers.CharToString(c);
         }
 
-        [ExplicitConversionMethod]
+        [SpecialName, ExplicitConversionMethod]
         public static char ConvertToChar(string s) {
             if (s.Length == 1) return s[0];
             throw PythonOps.TypeErrorForTypeMismatch("char", s);
         }
 
-        [ImplicitConversionMethod]
+        [SpecialName, ImplicitConversionMethod]
         public static IEnumerator ConvertToIEnumerator(string s) {
             return StringOps.GetEnumerator(s);
         }
 
-        [SpecialName, PythonName("__cmp__")]
         [return: MaybeNotImplemented]
-        public static object Compare(string self, object obj) {
+        public static object __cmp__(string self, object obj) {
             if (obj == null) return 1;
 
             string otherStr;
@@ -1138,11 +1051,10 @@ namespace IronPython.Runtime.Operations {
             return ret == 0 ? 0 : (ret < 0 ? -1 : +1);
         }
 
-        [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext/*!*/ context, string self) {
+        public static object __getnewargs__(CodeContext/*!*/ context, string self) {
             if (!Object.ReferenceEquals(self, null)) {
                 // Cast self to object to avoid exception caused by trying to access SystemState on DefaultContext
-                return PythonTuple.MakeTuple(StringOps.Make(context, TypeCache.String, (object)self));
+                return PythonTuple.MakeTuple(StringOps.__new__(context, TypeCache.String, (object)self));
             }
             throw PythonOps.TypeErrorForBadInstance("__getnewargs__ requires a 'str' object but received a '{0}'", self);
         }
@@ -1173,7 +1085,7 @@ namespace IronPython.Runtime.Operations {
             return ReprEncode(s, (char)0, ref isUnicode);
         }
 
-        public static bool TryGetEncoding(Encoding defaultEncoding, string name, out Encoding encoding) {
+        internal static bool TryGetEncoding(Encoding defaultEncoding, string name, out Encoding encoding) {
             if (name == null) {
                 encoding = defaultEncoding;
                 return true;
@@ -1386,7 +1298,7 @@ namespace IronPython.Runtime.Operations {
                     default:
                         e.DecoderFallback = new PythonDecoderFallback(encoding,
                             s,
-                            PythonOps.LookupEncodingError(errors));
+                            PythonOps.LookupEncodingError(context, errors));
                         break;
                 }
 #endif
@@ -1395,7 +1307,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             // look for user-registered codecs
-            PythonTuple codecTuple = PythonOps.LookupEncoding(encoding);
+            PythonTuple codecTuple = PythonOps.LookupEncoding(context, encoding);
             if (codecTuple != null) {
                 return UserDecodeOrEncode(codecTuple[/*Modules.PythonCodecs.DecoderIndex*/1], s);
             }
@@ -1443,7 +1355,7 @@ namespace IronPython.Runtime.Operations {
                     default:
                         e.EncoderFallback = new PythonEncoderFallback(encoding,
                             s,
-                            PythonOps.LookupEncodingError(errors));
+                            PythonOps.LookupEncodingError(context, errors));
                         break;
                 }
 
@@ -1452,7 +1364,7 @@ namespace IronPython.Runtime.Operations {
             }
 
                 // look for user-registered codecs
-            PythonTuple codecTuple = PythonOps.LookupEncoding(encoding);
+            PythonTuple codecTuple = PythonOps.LookupEncoding(context, encoding);
             if (codecTuple != null) {
                 return UserDecodeOrEncode(codecTuple[/*Modules.PythonCodecs.EncoderIndex*/0], s);
             }
@@ -1639,7 +1551,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static List SplitEmptyString(bool separators) {
-            List ret = List.MakeEmptyList(1);
+            List ret = PythonOps.MakeEmptyList(1);
             if (separators) {
                 ret.AddNoLock(String.Empty);
             }
@@ -1656,8 +1568,8 @@ namespace IronPython.Runtime.Operations {
                 
                 r = StringUtils.Split(self, seps, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, 
                     (seps == null) ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
-     
-                List ret = List.MakeEmptyList(r.Length);
+
+                List ret = PythonOps.MakeEmptyList(r.Length);
                 foreach (string s in r) ret.AddNoLock(s);
                 return ret;
             }
@@ -1669,7 +1581,7 @@ namespace IronPython.Runtime.Operations {
             } else {
                 string[] r = StringUtils.Split(self, separator, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, StringSplitOptions.None);
 
-                List ret = List.MakeEmptyList(r.Length);
+                List ret = PythonOps.MakeEmptyList(r.Length);
                 foreach (string s in r) ret.AddNoLock(s);
                 return ret;
             }
@@ -1692,7 +1604,7 @@ namespace IronPython.Runtime.Operations {
             return ret;
         }
 
-        private static bool EndsWith(string self, string suffix) {
+        private static bool endswith(string self, string suffix) {
             return self.EndsWith(suffix);
         }
 
@@ -1704,7 +1616,7 @@ namespace IronPython.Runtime.Operations {
         //    0   1   2   3   4    
         //   -5  -4  -3  -2  -1
 
-        private static bool EndsWith(string self, string suffix, int start) {
+        private static bool endswith(string self, string suffix, int start) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indice to its positive counterpart
@@ -1718,7 +1630,7 @@ namespace IronPython.Runtime.Operations {
         //  With optional start, test beginning at that position (the char at that index is
         //  included in the test). With optional end, stop comparing at that position (the 
         //  char at that index is not included in the test)
-        private static bool EndsWith(string self, string suffix, int start, int end) {
+        private static bool endswith(string self, string suffix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -1736,7 +1648,7 @@ namespace IronPython.Runtime.Operations {
         }
 
 
-        private static bool EndsWith(string self, PythonTuple suffix) {
+        private static bool endswith(string self, PythonTuple suffix) {
             foreach (object obj in suffix) {
                 if (self.EndsWith(GetString(obj))) {
                     return true;
@@ -1745,7 +1657,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool EndsWith(string self, PythonTuple suffix, int start) {
+        private static bool endswith(string self, PythonTuple suffix, int start) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indice to its positive counterpart
@@ -1761,7 +1673,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool EndsWith(string self, PythonTuple suffix, int start, int end) {
+        private static bool endswith(string self, PythonTuple suffix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -1784,11 +1696,11 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool StartsWith(string self, string prefix) {
+        private static bool startswith(string self, string prefix) {
             return self.StartsWith(prefix);
         }
 
-        private static bool StartsWith(string self, string prefix, int start) {
+        private static bool startswith(string self, string prefix, int start) {
             int len = self.Length;
             if (start > len) return false;
             if (start < 0) {
@@ -1798,7 +1710,7 @@ namespace IronPython.Runtime.Operations {
             return self.Substring(start).StartsWith(prefix);
         }
 
-        private static bool StartsWith(string self, string prefix, int start, int end) {
+        private static bool startswith(string self, string prefix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -1815,7 +1727,7 @@ namespace IronPython.Runtime.Operations {
             return self.Substring(start, end - start).StartsWith(prefix);
         }
 
-        private static bool StartsWith(string self, PythonTuple prefix) {
+        private static bool startswith(string self, PythonTuple prefix) {
             foreach (object obj in prefix) {
                 if (self.StartsWith(GetString(obj))) {
                     return true;
@@ -1824,7 +1736,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool StartsWith(string self, PythonTuple prefix, int start) {
+        private static bool startswith(string self, PythonTuple prefix, int start) {
             int len = self.Length;
             if (start > len) return false;
             if (start < 0) {
@@ -1839,7 +1751,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static bool StartsWith(string self, PythonTuple prefix, int start, int end) {
+        private static bool startswith(string self, PythonTuple prefix, int start, int end) {
             int len = self.Length;
             if (start > len) return false;
             // map the negative indices to their positive counterparts
@@ -2061,7 +1973,7 @@ namespace IronPython.Runtime.Operations {
                 PythonTuple tres = res as PythonTuple;
 
                 // verify the result is sane...
-                if (tres != null && tres.Count == 2) {
+                if (tres != null && tres.__len__() == 2) {
                     if (!Converter.TryConvertToString(tres[0], out replacement)) ok = false;
                     if (ok) {
                         int bytesSkipped;

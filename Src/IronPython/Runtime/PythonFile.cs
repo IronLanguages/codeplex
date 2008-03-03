@@ -1365,19 +1365,15 @@ namespace IronPython.Runtime {
             close();
         }
 
-        public override string ToString() {
+        #region ICodeFormattable Members
+
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             return string.Format("<{0} file '{1}', mode '{2}' at 0x{3:X8}>",
                 _isOpen ? "open" : "closed",
                 _name ?? "<uninitialized file>",
                 _mode ?? "<uninitialized file>",
                 this.GetHashCode()
                 );
-        }
-
-        #region ICodeFormattable Members
-
-        string ICodeFormattable.ToCodeString(CodeContext context) {
-            return ToString();
         }
 
         #endregion

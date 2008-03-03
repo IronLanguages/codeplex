@@ -37,7 +37,7 @@ namespace Microsoft.Scripting.Runtime {
     /// language based upon its calling context.  When searching the
     /// language-sensitive dictionary is searched first.  If no matches are found the lookup
     /// is delegated back to the LanguageContext.  If the LanguageContext fails to lookup
-    /// the name it delegates back to the (Host or ScriptEnvironment?)
+    /// the name it delegates back to the (Host or ScriptRuntime?)
     /// 
     /// Each member of the Scope can optionally have a certain set of attributes associated
     /// with it (ScopeMemberAttributes).  These permit members of the scope to be read-only,

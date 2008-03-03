@@ -17,11 +17,23 @@ using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 
 namespace Microsoft.Scripting.Ast {
+    /// <summary>
+    /// CodeBlockInfo is a data structure in which Compiler keeps information related co compiling
+    /// CodeBlock. Within the tree the parent/child relationship is expressed implicitly through
+    /// the tree structure. Because compiler needs to walk the parent chain (for example to resolve
+    /// closures), the parent link is kept here as a reference to the parent's CodeBlockInfo.
+    /// code:CodeBlock.
+    /// </summary>
     class CodeBlockInfo {
         /// <summary>
         /// The CodeBlock to which this info belongs.
         /// </summary>
         private readonly CodeBlock _block;
+
+        /// <summary>
+        /// The block info of the parent block. Parent is lexically enclosing block.
+        /// </summary>
+        private readonly CodeBlockInfo _parent;
 
         /// <summary>
         /// Variables referenced from this code block.
@@ -32,6 +44,11 @@ namespace Microsoft.Scripting.Ast {
         /// Try statements in this block (if the block is generator)
         /// </summary>
         private Dictionary<TryStatement, TryStatementInfo> _tryInfos;
+
+        /// <summary>
+        /// Yield statements in this block (if the block has yields)
+        /// </summary>
+        private Dictionary<YieldStatement, YieldTarget> _yieldTargets;
 
         /// <summary>
         /// The factory to create the environment (if the block has environment)
@@ -62,12 +79,17 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private IList<YieldTarget> _topTargets;
 
-        internal CodeBlockInfo(CodeBlock block) {
+        internal CodeBlockInfo(CodeBlock block, CodeBlockInfo parent) {
             _block = block;
+            _parent = parent;
         }
 
         internal CodeBlock CodeBlock {
             get { return _block; }
+        }
+
+        internal CodeBlockInfo Parent {
+            get { return _parent; }
         }
 
         internal Dictionary<Variable, VariableReference> References {
@@ -126,8 +148,12 @@ namespace Microsoft.Scripting.Ast {
             _generatorTemps += count;
         }
 
-        internal void PopulateGeneratorInfo(Dictionary<TryStatement, TryStatementInfo> infos, List<YieldTarget> topTargets, int temps) {
-            _tryInfos = infos;
+        internal void PopulateGeneratorInfo(Dictionary<TryStatement, TryStatementInfo> tryInfos,
+                                            Dictionary<YieldStatement, YieldTarget> yieldTargets, 
+                                            List<YieldTarget> topTargets, 
+                                            int temps) {
+            _tryInfos = tryInfos;
+            _yieldTargets = yieldTargets;
             _topTargets = topTargets;
             AddGeneratorTemps(temps);
         }
@@ -136,6 +162,15 @@ namespace Microsoft.Scripting.Ast {
             TryStatementInfo tsi;
             if (_tryInfos != null && _tryInfos.TryGetValue(ts, out tsi)) {
                 return tsi;
+            } else {
+                return null;
+            }
+        }
+
+        internal YieldTarget TryGetYieldTarget(YieldStatement ys) {
+            YieldTarget yt;
+            if (_yieldTargets != null && _yieldTargets.TryGetValue(ys, out yt)) {
+                return yt;
             } else {
                 return null;
             }

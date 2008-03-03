@@ -37,7 +37,11 @@ namespace IronPython.Modules {
         public const int DEBUG_SAVEALL = 32;
         public const int DEBUG_LEAK = (DEBUG_COLLECTABLE | DEBUG_UNCOLLECTABLE | DEBUG_INSTANCES | DEBUG_OBJECTS | DEBUG_SAVEALL);
 
-        static PythonTuple thresholds = PythonTuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024);
+        private static readonly object _threadholdKey = new object();
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {            
+            context.SetModuleState(_threadholdKey, PythonTuple.MakeTuple(64 * 1024, 256 * 1024, 1024 * 1024));
+        }
 
         public static void enable() {
         }
@@ -81,12 +85,12 @@ namespace IronPython.Modules {
             throw PythonOps.NotImplementedError("gc.get_objects isn't implemented");
         }
 
-        public static void set_threshold(params object[] args) {
-            thresholds = PythonTuple.MakeTuple(args);
+        public static void set_threshold(CodeContext/*!*/ context, params object[] args) {
+            SetThresholds(context, PythonTuple.MakeTuple(args));
         }
 
-        public static PythonTuple get_threshold() {
-            return thresholds;
+        public static PythonTuple get_threshold(CodeContext/*!*/ context) {
+            return GetThresholds(context);
         }
 
         public static object[] get_referrers(params object[] objs) {
@@ -104,5 +108,12 @@ namespace IronPython.Modules {
             }
         }
 
+        private static PythonTuple GetThresholds(CodeContext/*!*/ context) {
+            return (PythonTuple)PythonContext.GetContext(context).GetModuleState(_threadholdKey);
+        }
+
+        private static void SetThresholds(CodeContext/*!*/ context, PythonTuple thresholds) {
+            PythonContext.GetContext(context).SetModuleState(_threadholdKey, thresholds);
+        }
     }
 }

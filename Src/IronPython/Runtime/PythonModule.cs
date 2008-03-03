@@ -29,7 +29,10 @@ namespace IronPython.Runtime {
         ShowClsMethods = 4,
         Optimized = 8,
         Initialize = 16,
-        WithStatement = 32
+        WithStatement = 32,
+        AbsoluteImports = 64,
+        NoBuiltins = 128,
+        ModuleBuiltins = 256,
     }
 
     public class PythonModule : ScopeExtension {
@@ -37,6 +40,7 @@ namespace IronPython.Runtime {
         private bool _isPythonCreatedModule;
         private bool _showCls;
         private bool _withStatement;
+        private bool _absoluteImports;
 
         internal PythonModule(Scope scope)
             : base(scope) {
@@ -67,6 +71,15 @@ namespace IronPython.Runtime {
             }
             set {
                 _withStatement = value;
+            }
+        }
+
+        public bool AbsoluteImports {
+            get {
+                return _absoluteImports;
+            }
+            set {
+                _absoluteImports = value;
             }
         }
 

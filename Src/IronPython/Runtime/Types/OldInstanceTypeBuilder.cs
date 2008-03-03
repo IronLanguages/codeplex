@@ -39,7 +39,9 @@ namespace IronPython.Runtime.Types {
             dtb.SetCustomSetter(SetMemberCustomizer);
             dtb.SetCustomDeleter(DeleteMemberCustomizer);
 
-            return (PythonType)dtb.Finish(false);
+            PythonType res = (PythonType)dtb.Finish(false);
+            res.OldClass = oc;
+            return res;
         }
 
         private static void SetMemberCustomizer(CodeContext context, object instance, SymbolId name, object value) {

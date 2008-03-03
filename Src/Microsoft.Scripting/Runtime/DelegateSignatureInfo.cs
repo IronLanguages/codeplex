@@ -105,19 +105,16 @@ namespace Microsoft.Scripting.Runtime {
                 delegateParams[i] = _parameters[i].ParameterType;
             }
 
-            // Create new constant pool
-            ConstantPool constants = new ConstantPool();
-
             // Create the method
-            Compiler cg = Snippets.Shared.DefineMethod(ToString(), _returnType, delegateParams, constants);
+            LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(ToString(), _returnType, delegateParams, null);
 
             // Add the space for the delegate target and save the index at which it was placed,
             // most likely zero.
-            int targetIndex = constants.Count;
+            int targetIndex = cg.ConstantPool.Count;
 #if DEBUG
-            Slot target = constants.AddData(TargetPlaceHolder);
+            Slot target = cg.ConstantPool.AddData(TargetPlaceHolder);
 #else
-            Slot target = constants.AddData(null);
+            Slot target = cg.ConstantPool.AddData(null);
 #endif
 
             // Add the CodeContext into the constant pool
@@ -126,13 +123,13 @@ namespace Microsoft.Scripting.Runtime {
             cg.ContextSlot = context;
 
             // Emit the stub
-            StubGenerator.EmitClrCallStub(cg, target, 0, StubGenerator.CallType.None);
+            StubGenerator.EmitClrCallStub(cg, target, StubGenerator.CallType.None);
 
             // Finish the method
             MethodInfo method = cg.CreateDelegateMethodInfo();
 
             // Save the constants in the delegate info class
-            return new DelegateInfo(method, constants.Data, targetIndex);
+            return new DelegateInfo(method, cg.ConstantPool.Data, targetIndex);
         }
     }
 
@@ -156,11 +153,12 @@ namespace Microsoft.Scripting.Runtime {
             Assert.NotNull(delegateType, target);
 
             object[] clone = (object[])_constants.Clone();
+            Closure closure = new Closure(null, clone);
 #if DEBUG
             Debug.Assert(clone[_target] == DelegateSignatureInfo.TargetPlaceHolder);
 #endif
             clone[_target] = target;
-            return ReflectionUtils.CreateDelegate(_method, delegateType, clone);
+            return ReflectionUtils.CreateDelegate(_method, delegateType, closure);
         }
     }
 }

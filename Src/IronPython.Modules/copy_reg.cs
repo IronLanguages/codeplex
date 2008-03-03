@@ -32,69 +32,33 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Modules {
     [Documentation("Provides global reduction-function registration for pickling and copying objects.")]
     public static class PythonCopyReg {
+        private static readonly object _dispatchTableKey = new object();
+        private static readonly object _extensionRegistryKey = new object();
+        private static readonly object _invertedRegistryKey = new object();
+        private static readonly object _extensionCacheKey = new object();
 
-        private static PythonDictionary dispatchTable = new PythonDictionary();
-        private static PythonDictionary extensionCache = new PythonDictionary();
-        private static PythonDictionary extensionRegistry = new PythonDictionary();
-        private static PythonDictionary invertedRegistry = new PythonDictionary();
+        internal static PythonDictionary GetDispatchTable(CodeContext/*!*/ context) {
+            EnsureModuleInitialized(context);
 
-        private static BuiltinFunction pythonReduceComplex;
-
-        public static PythonDictionary dispatch_table {
-            get { return dispatchTable; }
-            set { dispatchTable = value; }
+            return (PythonDictionary)PythonContext.GetContext(context).GetModuleState(_dispatchTableKey);
         }
 
-        public static PythonDictionary _extension_cache {
-            get { return extensionCache; }
-            set { extensionCache = value; }
+        internal static PythonDictionary GetExtensionRegistry(CodeContext/*!*/ context) {
+            EnsureModuleInitialized(context);
+
+            return (PythonDictionary)PythonContext.GetContext(context).GetModuleState(_extensionRegistryKey);
         }
 
-        public static PythonDictionary _extension_registry {
-            get { return extensionRegistry; }
-            set { extensionRegistry = value; }
+        internal static PythonDictionary GetInvertedRegistry(CodeContext/*!*/ context) {
+            EnsureModuleInitialized(context);
+
+            return (PythonDictionary)PythonContext.GetContext(context).GetModuleState(_invertedRegistryKey);
         }
 
-        public static PythonDictionary _inverted_registry {
-            get { return invertedRegistry; }
-            set { invertedRegistry = value; }
-        }
+        internal static PythonDictionary GetExtensionCache(CodeContext/*!*/ context) {
+            EnsureModuleInitialized(context);
 
-        public static BuiltinFunction PythonReduceComplex {
-            [PythonName("pickle_complex")] get { return pythonReduceComplex; }
-            [PythonName("pickle_complex")] set { pythonReduceComplex = value; }
-        }
-
-        public static BuiltinFunction PythonReconstructor {
-            [PythonName("_reconstructor")] get { return PythonOps.PythonReconstructor; }
-            [PythonName("_reconstructor")] set { PythonOps.PythonReconstructor = value; }
-        }
-
-        public static BuiltinFunction PythonNewObject {
-            [PythonName("__newobj__")] get { return PythonOps.NewObject; }
-            [PythonName("__newobj__")] set { PythonOps.NewObject = value; }
-        }
-
-        static PythonCopyReg() {
-            pythonReduceComplex = BuiltinFunction.MakeMethod(
-                "pickle_complex",
-                typeof(PythonCopyReg).GetMethod("pickle_complex"),
-                FunctionType.Function | FunctionType.AlwaysVisible
-            );
-
-            PythonReconstructor = BuiltinFunction.MakeMethod(
-                "_reconstructor",
-                typeof(PythonCopyReg).GetMethod("_reconstructor"),
-                FunctionType.Function | FunctionType.AlwaysVisible
-            );
-
-            PythonNewObject = BuiltinFunction.MakeMethod(
-                "__newobj__",
-                typeof(PythonCopyReg).GetMethod("__newobj__"),
-                FunctionType.Function | FunctionType.AlwaysVisible
-            );
-
-            dispatchTable[TypeCache.Complex64] = pythonReduceComplex;
+            return (PythonDictionary)PythonContext.GetContext(context).GetModuleState(_extensionCacheKey);
         }
 
         #region Public API
@@ -113,10 +77,10 @@ namespace IronPython.Modules {
             + "The constructor argument is ignored, and exists only for backwards\n"
             + "compatibility."
             )]
-        public static void pickle(object type, object function, [DefaultParameterValue(null)] object ctor) {
+        public static void pickle(CodeContext/*!*/ context, object type, object function, [DefaultParameterValue(null)] object ctor) {
             EnsureCallable(function, "reduction functions must be callable");
             if (ctor != null) constructor(ctor);
-            dispatchTable[type] = function;
+            GetDispatchTable(context)[type] = function;
         }
 
         [Documentation("constructor(object) -> None\n\n"
@@ -149,50 +113,50 @@ namespace IronPython.Modules {
             );
         }
 
-        public static void clear_extension_cache() {
-            extensionCache.Clear();
+        public static void clear_extension_cache(CodeContext/*!*/ context) {            
+            GetExtensionCache(context).clear();
         }
 
         [Documentation("Register an extension code.")]
-        public static void add_extension(object moduleName, object objectName, object value) {
+        public static void add_extension(CodeContext/*!*/ context, object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
-            bool keyExists = extensionRegistry.ContainsKey(key);
-            bool codeExists = invertedRegistry.ContainsKey(code);
+            bool keyExists = GetExtensionRegistry(context).__contains__(key);
+            bool codeExists = GetInvertedRegistry(context).__contains__(code);
 
             if (!keyExists && !codeExists) {
-                extensionRegistry[key] = code;
-                invertedRegistry[code] = key;
+                GetExtensionRegistry(context)[key] = code;
+                GetInvertedRegistry(context)[code] = key;
             } else if (keyExists && codeExists &&
-                PythonOps.EqualRetBool(extensionRegistry[key], code) &&
-                PythonOps.EqualRetBool(invertedRegistry[code], key)
+                PythonOps.EqualRetBool(GetExtensionRegistry(context)[key], code) &&
+                PythonOps.EqualRetBool(GetInvertedRegistry(context)[code], key)
             ) {
                 // nop
             } else {
                 if (keyExists) {
-                    throw PythonOps.ValueError("key {0} is already registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(extensionRegistry[key]));
+                    throw PythonOps.ValueError("key {0} is already registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(GetExtensionRegistry(context)[key]));
                 } else { // codeExists
-                    throw PythonOps.ValueError("code {0} is already in use for key {1}", PythonOps.Repr(code), PythonOps.Repr(invertedRegistry[code]));
+                    throw PythonOps.ValueError("code {0} is already in use for key {1}", PythonOps.Repr(code), PythonOps.Repr(GetInvertedRegistry(context)[code]));
                 }
             }
         }
 
         [Documentation("Unregister an extension code. (only for testing)")]
-        public static void remove_extension(object moduleName, object objectName, object value) {
+        public static void remove_extension(CodeContext/*!*/ context, object moduleName, object objectName, object value) {
             PythonTuple key = PythonTuple.MakeTuple(moduleName, objectName);
             int code = GetCode(value);
 
             object existingKey;
             object existingCode;
 
-            if (extensionRegistry.TryGetValue(key, out existingCode) &&
-                invertedRegistry.TryGetValue(code, out existingKey) &&
+            if (((IDictionary<object, object>)GetExtensionRegistry(context)).TryGetValue(key, out existingCode) &&
+                ((IDictionary<object, object>)GetInvertedRegistry(context)).TryGetValue(code, out existingKey) &&
                 PythonOps.EqualRetBool(existingCode, code) &&
                 PythonOps.EqualRetBool(existingKey, key)
             ) {
-                extensionRegistry.DeleteItem(key);
-                invertedRegistry.DeleteItem(code);
+                GetExtensionRegistry(context).__delitem__(key);
+                GetInvertedRegistry(context).__delitem__(code);
             } else {
                 throw PythonOps.ValueError("key {0} is not registered with code {1}", PythonOps.Repr(key), PythonOps.Repr(code));
             }
@@ -240,5 +204,23 @@ namespace IronPython.Modules {
 
         #endregion
 
+        private static void EnsureModuleInitialized(CodeContext context) {
+            if (!PythonContext.GetContext(context).HasModuleState(_dispatchTableKey)) {
+                Importer.ImportBuiltin(context, "copy_reg");
+            }
+        }
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            context.NewObject = (BuiltinFunction)dict[SymbolTable.StringToId("__newobj__")];
+            context.PythonReconstructor = (BuiltinFunction)dict[SymbolTable.StringToId("_reconstructor")];
+
+            PythonDictionary dispatchTable = new PythonDictionary();
+            dispatchTable[TypeCache.Complex64] = dict[SymbolTable.StringToId("pickle_complex")];
+
+            context.SetModuleState(_dispatchTableKey, dict[SymbolTable.StringToId("dispatch_table")] = dispatchTable);
+            context.SetModuleState(_extensionRegistryKey, dict[SymbolTable.StringToId("_extension_registry")] = new PythonDictionary());
+            context.SetModuleState(_invertedRegistryKey, dict[SymbolTable.StringToId("_inverted_registry")] = new PythonDictionary());
+            context.SetModuleState(_extensionCacheKey, dict[SymbolTable.StringToId("_extension_cache")] = new PythonDictionary());
+        }
     }
 }

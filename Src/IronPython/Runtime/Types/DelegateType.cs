@@ -34,8 +34,8 @@ using IronPython.Compiler;
 [assembly: PythonExtensionType(typeof(Delegate), typeof(DelegateOps))]
 namespace IronPython.Runtime.Types {
     public static class DelegateOps {
-        [StaticExtensionMethod("__new__")]
-        public static object MakeNew(PythonType type, object function) {
+        [StaticExtensionMethod]
+        public static object __new__(PythonType type, object function) {
             if (type == null) throw PythonOps.TypeError("expected type for 1st param, got {0}", PythonTypeOps.GetName(type));
 
             return RuntimeHelpers.GetDelegate(function, type.UnderlyingSystemType);

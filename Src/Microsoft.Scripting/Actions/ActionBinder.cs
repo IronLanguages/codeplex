@@ -389,6 +389,15 @@ namespace Microsoft.Scripting.Actions {
 
         #region Error Production
 
+        public virtual ErrorInfo MakeContainsGenericParametersError(MemberTracker tracker) {
+            return ErrorInfo.FromException(
+                Ast.Ast.New(
+                    typeof(InvalidOperationException).GetConstructor(new Type[] { typeof(string) }),
+                    Ast.Ast.Constant(String.Format(Resources.InvalidOperation_ContainsGenericParameters, tracker.DeclaringType.Name, tracker.Name))
+                )
+            );
+        }
+
         public virtual ErrorInfo MakeMissingMemberErrorInfo(Type type, string name) {
             return ErrorInfo.FromException(
                 Ast.Ast.New(
@@ -409,6 +418,39 @@ namespace Microsoft.Scripting.Actions {
 
         public ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, params Expression[]/*!*/ parameters) {
             return MakeStaticPropertyInstanceAccessError(tracker, isAssignment, (IList<Expression>)parameters);
+        }
+
+        /// <summary>
+        /// Called when a set is attempting to assign to a field or property from a derived class through the base class.
+        /// 
+        /// The default behavior is to allow the assignment.
+        /// </summary>
+        public virtual ErrorInfo MakeStaticAssignFromDerivedTypeError(Type accessingType, MemberTracker assigning, Expression assignedValue) {
+            switch (assigning.MemberType) {
+                case TrackerTypes.Property:
+                    PropertyTracker pt = (PropertyTracker)assigning;
+                    MethodInfo setter = pt.GetSetMethod() ?? pt.GetSetMethod(true);
+                    return ErrorInfo.FromValueNoError(
+                        Ast.Ast.SimpleCallHelper(
+                            setter,
+                            ConvertExpression(
+                                assignedValue,
+                                setter.GetParameters()[0].ParameterType
+                            )
+                        )
+                    );
+                case TrackerTypes.Field:
+                    FieldTracker ft = (FieldTracker)assigning;
+                    return ErrorInfo.FromValueNoError(
+                        Ast.Ast.AssignField(
+                            null,
+                            ft.Field,
+                            ConvertExpression(assignedValue, ft.FieldType)
+                        )
+                    );
+                default:
+                    throw new InvalidOperationException();
+            }
         }
 
         /// <summary>
@@ -547,25 +589,34 @@ namespace Microsoft.Scripting.Actions {
             );
         }
 
-        
-        #endregion
-
-        #region Deprecated Error production
-
         /// <summary>
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
         /// doing this for the time being until we get a more robust error return mechanism.
         /// 
         /// Deprecated, use the non-generic version instead
         /// </summary>
-        public virtual Expression MakeMissingMemberError<T>(StandardRule<T> rule, Type type, string name) {
-            return rule.MakeError(
+        public virtual ErrorInfo MakeMissingMemberError(Type type, string name) {
+            return ErrorInfo.FromException(
                 Ast.Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
                     Ast.Ast.Constant(name)
                 )
             );
         }
+        
+        
+        /// <summary>
+        /// Checks to see if the language allows keyword arguments to be bound to instance fields or
+        /// properties and turned into sets.  By default this is only allowed on contructors.
+        /// </summary>
+        protected internal virtual bool AllowKeywordArgumentSetting(MethodBase method) {
+            return CompilerHelpers.IsConstructor(method);
+        }
+
+        #endregion
+
+        #region Deprecated Error production
+
         
         /// <summary>
         /// Provides a way for the binder to provide a custom error message when lookup fails.  Just
@@ -602,7 +653,7 @@ namespace Microsoft.Scripting.Actions {
 
                 foreach (Type ext in extTypes) {
                     foreach (MemberInfo mi in ext.GetMember(name)) {
-                        members.Add(MemberTracker.FromMemberInfo(mi, true));
+                        members.Add(MemberTracker.FromMemberInfo(mi, type));
                     }
 
                     // TODO: Support indexed getters/setters w/ multiple methods
@@ -654,7 +705,7 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="memberTracker">The member which is being returned to the user.</param>
         /// <param name="type">Tthe type which the memberTrack was accessed from</param>
         /// <returns></returns>
-        protected internal virtual Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
+        public virtual Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
             if (memberTracker.MemberType == TrackerTypes.Bound) {
                 BoundMemberTracker bmt = (BoundMemberTracker)memberTracker;
                 return Ast.Ast.New(

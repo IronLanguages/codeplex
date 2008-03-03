@@ -26,7 +26,7 @@ namespace Microsoft.Scripting.Generation {
             _storageType = storageType;
         }
 
-        public override void EmitGetDictionary(Compiler cg) {
+        public override void EmitGetDictionary(LambdaCompiler cg) {
             EmitGet(cg);
             foreach (PropertyInfo pi in Tuple.GetAccessPath(_storageType, 0)) {
                 cg.EmitPropertyGet(pi);

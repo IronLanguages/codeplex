@@ -30,12 +30,12 @@ namespace Microsoft.Scripting.Generation {
             _wrapper = builtinWrapper;
         }
 
-        public override void EmitGet(Compiler cg) {
+        public override void EmitGet(LambdaCompiler cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "CurrentValue");
         }
 
-        public override void EmitSet(Compiler cg) {
+        public override void EmitSet(LambdaCompiler cg) {
             Slot val = cg.GetLocalTmp(Type);
             val.EmitSet(cg);
 
@@ -46,30 +46,30 @@ namespace Microsoft.Scripting.Generation {
             cg.FreeLocalTmp(val);
         }
 
-        public override void EmitSet(Compiler cg, Slot val) {
+        public override void EmitSet(LambdaCompiler cg, Slot val) {
             _wrapper.EmitGet(cg);
             val.EmitGet(cg);
             cg.EmitPropertySet(typeof(ModuleGlobalWrapper), "CurrentValue");
         }
 
-        public void EmitGetRaw(Compiler cg) {
+        public void EmitGetRaw(LambdaCompiler cg) {
             _wrapper.EmitGet(cg);
             cg.EmitPropertyGet(typeof(ModuleGlobalWrapper), "RawValue");
         }
 
-        public override void EmitCheck(Compiler cg, SymbolId name) {
+        public override void EmitCheck(LambdaCompiler cg, SymbolId name) {
             // checks are handled in the get_CurrentValue
         }
 
-        public void EmitWrapperAddr(Compiler cg) {
+        public void EmitWrapperAddr(LambdaCompiler cg) {
             _wrapper.EmitGetAddr(cg);
         }
 
-        public void EmitWrapper(Compiler cg) {
+        public void EmitWrapper(LambdaCompiler cg) {
             _wrapper.EmitGet(cg);
         }
 
-        public override void EmitGetAddr(Compiler cg) {
+        public override void EmitGetAddr(LambdaCompiler cg) {
             throw new NotSupportedException("Can't get address of module global.");
         }
 

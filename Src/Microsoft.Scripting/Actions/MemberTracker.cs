@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Actions {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
         public static readonly MemberTracker[] EmptyTrackers = new MemberTracker[0];
 
-        private static Dictionary<MemberInfo, MemberTracker> _trackers = new Dictionary<MemberInfo, MemberTracker>();
+        private static readonly Dictionary<MemberInfo, MemberTracker> _trackers = new Dictionary<MemberInfo, MemberTracker>();
 
         internal MemberTracker() {
         }
@@ -65,10 +65,10 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public static MemberTracker FromMemberInfo(MemberInfo member) {
-            return FromMemberInfo(member, false);
+            return FromMemberInfo(member, null);
         }
 
-        public static MemberTracker FromMemberInfo(MemberInfo member, bool isExtension) {
+        public static MemberTracker FromMemberInfo(MemberInfo member, Type extending) {
             Contract.RequiresNotNull(member, "member");
 
             lock (_trackers) {
@@ -81,8 +81,8 @@ namespace Microsoft.Scripting.Actions {
                     case MemberTypes.Field: res = new FieldTracker((FieldInfo)member); break;
                     case MemberTypes.Method:
                         MethodInfo mi = (MethodInfo)member;
-                        if (isExtension) {
-                            res = new MethodTracker(mi, member.IsDefined(typeof(StaticExtensionMethodAttribute), false));
+                        if (extending != null) {
+                            res = new ExtensionMethodTracker(mi, member.IsDefined(typeof(StaticExtensionMethodAttribute), false), extending);
                         } else {
                             res = new MethodTracker(mi);
                         }

@@ -104,7 +104,6 @@ namespace IronPython.Runtime.Exceptions {
                 _type = type;
             }
 
-            [StaticExtensionMethod("__new__")]
             public static object __new__(PythonType/*!*/ cls, params object[] args) {
                 return Activator.CreateInstance(cls.UnderlyingSystemType, cls);
             }
@@ -114,7 +113,7 @@ namespace IronPython.Runtime.Exceptions {
             /// </summary>
             public virtual void __init__(params object[] args) {
                 _args = PythonTuple.MakeTuple(args ?? new object[] { null });
-                if (_args.Count == 1) {
+                if (_args.__len__() == 1) {
                     _message = _args[0];
                 } 
             }
@@ -177,8 +176,8 @@ namespace IronPython.Runtime.Exceptions {
 
             public override string/*!*/ ToString() {
                 if (_args == null) return string.Empty;
-                if (_args.Count == 0) return String.Empty;
-                if (_args.Count == 1) {
+                if (_args.__len__() == 0) return String.Empty;
+                if (_args.__len__() == 1) {
                     string str;
                     Extensible<string> extStr;
 
@@ -253,8 +252,8 @@ namespace IronPython.Runtime.Exceptions {
             /// Implements __repr__ which returns the type name + the args
             /// tuple code formatted.
             /// </summary>
-            string/*!*/ ICodeFormattable.ToCodeString(CodeContext context) {
-                return _type.Name + ((PythonTuple)args).ToCodeString(context);
+            public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
+                return _type.Name + ((ICodeFormattable)args).__repr__(context);
             }
 
             #endregion
@@ -367,7 +366,7 @@ namespace IronPython.Runtime.Exceptions {
             public override string ToString() {
                 PythonTuple t = ((PythonTuple)args) as PythonTuple;
                 if (t != null) {
-                    switch (t.Count) {
+                    switch (t.__len__()) {
                         case 0: return PythonOps.ToString(null);
                         case 1: return PythonOps.ToString(t[0]);
                         case 2:
@@ -390,8 +389,8 @@ namespace IronPython.Runtime.Exceptions {
                     msg = args[0];
                     if (args.Length >= 2) {
                         PythonTuple locationInfo = PythonTuple.Make(args[1]);
-                        if (locationInfo.Count != 4) {
-                            throw PythonOps.IndexError("SyntaxError expected tuple with 4 arguments, got {0}", locationInfo.Count);
+                        if (locationInfo.__len__() != 4) {
+                            throw PythonOps.IndexError("SyntaxError expected tuple with 4 arguments, got {0}", locationInfo.__len__());
                         }
 
                         filename = locationInfo[0];

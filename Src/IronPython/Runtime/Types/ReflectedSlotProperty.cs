@@ -30,7 +30,7 @@ namespace IronPython.Runtime.Types {
     /// Represents a member of a user-defined type which defines __slots__.  The names listed in
     /// __slots__ have storage allocated for them with the type and provide fast get/set access.
     /// </summary>
-    [PythonType("member_descriptor")]
+    [PythonSystemType("member_descriptor")]
     class ReflectedSlotProperty : PythonTypeSlot, ICodeFormattable {
         private string _name;
         private SlotInfo _slotInfo;
@@ -66,14 +66,10 @@ namespace IronPython.Runtime.Types {
             return TrySetValue(context, instance, owner, Uninitialized.Instance);
         }
 
-        public override string ToString() {
-            return String.Format("<member '{0}'>", _name); // <member '{0}' of '{1}' objects> - but we don't know our type name
-        }
-
         #region ICodeFormattable Members
 
-        public string ToCodeString(CodeContext context) {
-            return ToString();
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
+            return String.Format("<member '{0}'>", _name); // <member '{0}' of '{1}' objects> - but we don't know our type name
         }
 
         #endregion

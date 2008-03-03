@@ -27,7 +27,7 @@ using IronPython.Runtime.Calls;
 namespace IronPython.Runtime {
 
     public interface ICodeFormattable {
-        string ToCodeString(CodeContext context);
+        string/*!*/ __repr__(CodeContext/*!*/ context);
     }
 
     public interface ISequence {

@@ -58,7 +58,7 @@ namespace IronPython.Runtime.Exceptions {
             if (!PythonOps.TryGetBoundAttr(pyObj, Symbols.Arguments, out args)) return 0;
             PythonTuple t = args as PythonTuple;
 
-            if (t == null || t.Count == 0) return 0;
+            if (t == null || t.__len__() == 0) return 0;
 
             if (TypeCache.Int32.IsInstanceOfType(t[0]))
                 return Converter.ConvertToInt32(t[0]);

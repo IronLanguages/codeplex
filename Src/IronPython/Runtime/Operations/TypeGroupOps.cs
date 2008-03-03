@@ -27,8 +27,7 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(TypeGroup), typeof(TypeGroupOps))]
 namespace IronPython.Runtime.Operations {
     public static class TypeGroupOps {
-        [SpecialName, PythonName("__repr__")]
-        public static string ToCodeRepresentation(TypeGroup self) {
+        public static string __repr__(TypeGroup self) {
             StringBuilder sb = new StringBuilder("<types ");
             bool pastFirstType = false;
             foreach(Type type in self.Types) {
@@ -80,7 +79,7 @@ namespace IronPython.Runtime.Operations {
 
         [SpecialName]
         public static PythonType GetItem(TypeGroup self, PythonTuple tuple) {
-            if (tuple.Count == 0) {
+            if (tuple.__len__() == 0) {
                 return DynamicHelpers.GetPythonTypeFromType(self.NonGenericType);
             }
 

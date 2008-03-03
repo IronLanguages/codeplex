@@ -41,6 +41,7 @@ namespace Microsoft.Scripting.Math {
         public static readonly BigInteger Zero = new BigInteger(0, new uint[0]);
         [SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly BigInteger One = new BigInteger(+1, new uint[] { 1 });
+        private const int bias = 1075;
 
         [CLSCompliant(false)]
         public static BigInteger Create(ulong v)
@@ -166,7 +167,6 @@ namespace Microsoft.Scripting.Math {
             return (ulong)((ulong)i1 | ((ulong)i2 << 32));
         }
 
-        private static int bias = 1075;
         public static BigInteger Create(double v) {
             if (Double.IsNaN(v) || Double.IsInfinity(v)) {
                 throw new OverflowException();

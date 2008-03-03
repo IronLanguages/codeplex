@@ -529,8 +529,6 @@ def test_check_dictionary():
                 AssertUnreachable()
             except AttributeError:
                 pass
-            except TypeError:
-                print "CodePlex Work Item #10577"
         
         # replace an instance dictionary (containing non-string keys) w/ a new one.
         a.newInstanceAttr = 1
@@ -564,6 +562,74 @@ def test_call_type_call():
     
     AreEqual(type.__call__(bool, True), True)
     AreEqual(type.__call__(bool), False)
+    
+    #User-defined old/new style classes
+    call_mapper = {}
+    
+    class KOld0:
+        def __call__(self):
+            return 2
+    call_mapper[KOld0] = lambda: [type(KOld0()).__call__(KOld0())]
+            
+    class KOld1:
+        def __call__(self, p):
+            return 2
+    call_mapper[KOld1] = lambda: [type(KOld1()).__call__(KOld1(), 3.14),
+                                  type(KOld1()).__call__(KOld1(), p=3.14),
+                                  type(KOld1()).__call__(KOld1(), **{"p":3.14}),
+                                  type(KOld1()).__call__(KOld1(), (1, 2, 3))  ]
+            
+    class KOldArgs:
+        def __call__(self, *args):
+            return 2
+    call_mapper[KOldArgs] = lambda: [type(KOldArgs()).__call__(KOldArgs())]
+            
+    class KOldKwargs:
+        def __call__(self, **kwargs):
+            return 2
+    call_mapper[KOldKwargs] = lambda: [type(KOldKwargs()).__call__(KOldKwargs())]
+            
+    class KOldArgsKwargs:
+        def __call__(self, *args, **kwargs):
+            return 2
+    call_mapper[KOldArgsKwargs] = lambda: [type(KOldArgsKwargs()).__call__(KOldArgsKwargs())]
+            
+    
+    
+    class KNew0(object):
+        def __call__(self):
+            return 2
+    call_mapper[KNew0] = lambda: [type(KNew0()).__call__(KNew0())]
+            
+    class KNew1(object):
+        def __call__(self, p):
+            return 2
+    call_mapper[KNew1] = lambda: [type(KNew1()).__call__(KNew1(), 3.14),
+                                  type(KNew1()).__call__(KNew1(), p=3.14),
+                                  type(KNew1()).__call__(KNew1(), **{"p":3.14}),
+                                  type(KNew1()).__call__(KNew1(), []),
+                                  ]
+            
+    class KNewArgs(object):
+        def __call__(self, *args):
+            return 2
+    call_mapper[KNewArgs] = lambda: [type(KNewArgs()).__call__(KNewArgs()) ]
+            
+    class KNewKwargs(object):
+        def __call__(self, **kwargs):
+            return 2
+    call_mapper[KNewKwargs] = lambda: [type(KNewKwargs()).__call__(KNewKwargs())]
+            
+    class KNewArgsKwargs(object):
+        def __call__(self, *args, **kwargs):
+            return 2
+    call_mapper[KNewArgsKwargs] = lambda: [type(KNewArgsKwargs()).__call__(KNewArgsKwargs())]
+
+    
+    for K in call_mapper.keys():
+        for ret_val in call_mapper[K]():
+            AreEqual(ret_val, 2)
+
 
 def test_cp8246():
     
@@ -2353,6 +2419,23 @@ def test_cp10709():
     for temp in dir(KNew) + dir(KNew()) + dir(KOld) + dir(KOld()):
         Assert("lambda" not in temp)
         
-
+def test_oldstyle_fancycallable():
+    class C : pass
+        
+    x = C(*())
+    Assert(x.__class__ is C)
+    x = C(**{})
+    Assert(x.__class__ is C)
+    x = C(*(), **{})
+    Assert(x.__class__ is C)
+    
+    class C:
+        def __init__(self, a):
+            pass
+    
+    x = C(*(2,))
+    #Merlin 382112 AssertError(TypeError, lambda: C(*(None,)))
+    x = C(**{'a': None})
+    
 
 run_test(__name__)

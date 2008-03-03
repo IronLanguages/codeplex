@@ -293,7 +293,7 @@ namespace IronPython.Runtime.Calls {
 
             public override Expression GetExpression(ActionBinder binder, StandardRule<T> rule) {
                 BindingTarget target = _creating.IsSystemType ?
-                    GetTypeConstructor(binder, _creating, ArrayUtils.EmptyTypes) :
+                    GetTypeConstructor(binder, _creating, Type.EmptyTypes) :
                     GetTypeConstructor(binder, _creating, new Type[] { typeof(PythonType) });
 
                 Debug.Assert(target.Success);

@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Diagnostics;
@@ -30,15 +31,15 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
     [StructLayout(LayoutKind.Sequential)]
     public struct ExcepInfo {
-        private IntPtr bstrDescription;
-        private IntPtr bstrHelpFile;
-        private IntPtr bstrSource;
-        private int dwHelpContext;
-        private IntPtr pfnDeferredFillIn;
-        private IntPtr pvReserved;
-        private int scode;
         private short wCode;
         private short wReserved;
+        private IntPtr bstrSource;
+        private IntPtr bstrDescription;
+        private IntPtr bstrHelpFile;
+        private int dwHelpContext;
+        private IntPtr pvReserved;
+        private IntPtr pfnDeferredFillIn;
+        private int scode;
 
 #if DEBUG
         static ExcepInfo() {
@@ -57,21 +58,21 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         internal void Dummy() {
+            wCode = 0;
+            wReserved = 0; wReserved++;
+            bstrSource = IntPtr.Zero;
             bstrDescription = IntPtr.Zero;
             bstrHelpFile = IntPtr.Zero;
-            bstrSource = IntPtr.Zero;
             dwHelpContext = 0;
             pfnDeferredFillIn = IntPtr.Zero;
             pvReserved = IntPtr.Zero;
             scode = 0;
-            wCode = 0;
-            wReserved = 0; wReserved++;
             
             throw new InvalidOperationException("This method exists only to keep the compiler happy");
         }
-
+        
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        internal COMException GetException() {
+        internal Exception GetException() {
             Debug.Assert(pfnDeferredFillIn == IntPtr.Zero); // TODO
 #if DEBUG
             System.Diagnostics.Debug.Assert(wReserved != -1);
@@ -79,11 +80,24 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 #endif
 
             int errorCode = (scode != 0) ? scode : wCode;
+            Exception exception = Marshal.GetExceptionForHR(errorCode);
+
             string message = ConvertAndFreeBstr(ref bstrDescription);
-            string source = ConvertAndFreeBstr(ref bstrSource);
-            // TODO: Why do we need to include source here?
-            COMException exception = new COMException(message ?? source, errorCode);
-            exception.Source = source;
+            if (message != null) {
+                // If we have a custom message, create a new Exception object with the message set correctly.
+                // We need to create a new object because "exception.Message" is a read-only property.
+                if (exception is COMException) {
+                    exception = new COMException(message, errorCode);
+                } else {
+                    Type exceptionType = exception.GetType();
+                    ConstructorInfo ctor = exceptionType.GetConstructor(new Type[] { typeof(string) });
+                    if (ctor != null) {
+                        exception = (Exception)ctor.Invoke(new object[] { message });
+                    }
+                }
+            }
+
+            exception.Source = ConvertAndFreeBstr(ref bstrSource);
 
             string helpLink = ConvertAndFreeBstr(ref bstrHelpFile);
             if (dwHelpContext != 0) {

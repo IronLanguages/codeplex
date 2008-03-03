@@ -125,6 +125,7 @@
     <Compile Include="Compiler\Ast\ListComprehensionIf.cs" />
     <Compile Include="Compiler\Ast\ListExpression.cs" />
     <Compile Include="Compiler\Ast\MemberExpression.cs" />
+    <Compile Include="Compiler\Ast\ModuleName.cs" />
     <Compile Include="Compiler\Ast\NameExpression.cs" />
     <Compile Include="Compiler\Ast\Node.cs" />
     <Compile Include="Compiler\Ast\OrExpression.cs" />
@@ -136,6 +137,7 @@
     <Compile Include="Compiler\Ast\PythonOperator.cs" />
     <Compile Include="Compiler\Ast\PythonReference.cs" />
     <Compile Include="Compiler\Ast\RaiseStatement.cs" />
+    <Compile Include="Compiler\Ast\RelativeModuleName.cs" />
     <Compile Include="Compiler\Ast\ReturnStatement.cs" />
     <Compile Include="Compiler\Ast\ScopeStatement.cs" />
     <Compile Include="Compiler\Ast\SequenceExpression.cs" />
@@ -170,7 +172,6 @@
     <Compile Include="Hosting\PythonCompilerOptions.cs" />
     <Compile Include="Hosting\PythonConsoleOptions.cs" />
     <Compile Include="Hosting\PythonEngineOptions.cs" />
-    <Compile Include="Hosting\CompilerErrorSink.cs" />
     <Compile Include="Hosting\ResourceFile.cs" />
     <Compile Include="Hosting\PythonOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -183,6 +184,8 @@
     </Compile>
     <Compile Include="Runtime\Calls\PythonConvertToBinderHelper.cs" />
     <Compile Include="Runtime\Calls\PythonSetMemberBinderHelper.cs" />
+    <Compile Include="Runtime\CommonDictionaryStorage.cs" />
+    <Compile Include="Runtime\DictionaryStorage.cs" />
     <Compile Include="Runtime\Exceptions\AssertionException.Generated.cs" />
     <Compile Include="Runtime\Exceptions\DeprecationWarningException.Generated.cs" />
     <Compile Include="Runtime\Exceptions\EnvironmentException.Generated.cs" />
@@ -217,6 +220,7 @@
     <Compile Include="Runtime\IParameterSequence.cs" />
     <Compile Include="Runtime\KwCallInfo.cs" />
     <Compile Include="Runtime\MissingParameter.cs" />
+    <Compile Include="Runtime\Types\ComObject.cs" />
     <Compile Include="Runtime\NameType.cs" />
     <Compile Include="Runtime\Operations\PythonTypeOps.cs" />
     <Compile Include="Runtime\PythonAsciiEncoding.cs" />
@@ -239,20 +243,19 @@
     <Compile Include="Runtime\CompareUtil.cs" />
     <Compile Include="Runtime\ConversionWrappers.cs" />
     <Compile Include="Runtime\Converter.cs" />
-    <Compile Include="Runtime\Dict.cs" />
+    <Compile Include="Runtime\PythonDictionary.cs" />
     <Compile Include="Runtime\DictComparers.cs" />
     <Compile Include="Runtime\DictionaryOps.cs" />
     <Compile Include="Runtime\DocBuilder.cs" />
     <Compile Include="Runtime\Enumerate.cs" />
     <Compile Include="Runtime\Exceptions\TraceBack.cs" />
     <Compile Include="Runtime\Generator.cs" />
-    <Compile Include="Runtime\GlobalsDictionary.cs" />
+    <Compile Include="Runtime\GlobalScopeDictionaryStorage.cs" />
     <Compile Include="Runtime\Importer.cs" />
     <Compile Include="Runtime\Interfaces.cs" />
-    <Compile Include="Runtime\Interfaces.Generated.cs" />
     <Compile Include="Runtime\List.cs" />
     <Compile Include="Runtime\LiteralParser.cs" />
-    <Compile Include="Runtime\LocalsDictionary.cs" />
+    <Compile Include="Runtime\LocalScopeDictionaryStorage.cs" />
     <Compile Include="Runtime\ObjectAttributesAdapter.cs" />
     <Compile Include="Runtime\Operations\ArrayOps.cs" />
     <Compile Include="Runtime\Operations\BoolOps.cs" />
@@ -285,7 +288,7 @@
     <Compile Include="Runtime\PythonModule.cs" />
     <Compile Include="Runtime\PythonNarrowing.cs" />
     <Compile Include="Runtime\PythonTypeContext.cs" />
-    <Compile Include="Runtime\ScopeDictionary.cs" />
+    <Compile Include="Runtime\ScopeDictionaryStorage.cs" />
     <Compile Include="Runtime\Set.cs" />
     <Compile Include="Runtime\Slice.cs" />
     <Compile Include="Runtime\StringFormatter.cs" />
@@ -294,20 +297,17 @@
     <Compile Include="Runtime\Symbols.Generated.cs" />
     <Compile Include="Runtime\PythonTuple.cs" />
     <Compile Include="Runtime\sys.cs" />
-    <Compile Include="Runtime\Types\ComObject.cs" />
+    <Compile Include="Runtime\ThrowingErrorSink.cs" />
     <Compile Include="Runtime\Types\CustomOldClassDictionary.cs" />
     <Compile Include="Runtime\Types\DelegateBuilder.cs" />
     <Compile Include="Runtime\Types\DelegateInvoker.cs" />
     <Compile Include="Runtime\Types\DelegateType.cs" />
     <Compile Include="Runtime\Types\DictProxy.cs" />
     <Compile Include="Runtime\Types\FunctionType.cs" />
-    <Compile Include="Runtime\Types\PythonTypeBasesSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeChangedEventArgs.cs" />
     <Compile Include="Runtime\Types\PythonTypeDictSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeExtender.cs" />
     <Compile Include="Runtime\Types\PythonTypeGetAttributeSlot.cs" />
-    <Compile Include="Runtime\Types\PythonTypeMroSlot.cs" />
-    <Compile Include="Runtime\Types\PythonTypeNameSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeTypeSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeUserDescriptorSlot.cs" />
     <Compile Include="Runtime\Types\PythonTypeWeakRefSlot.cs" />

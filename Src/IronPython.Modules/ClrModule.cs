@@ -41,13 +41,22 @@ namespace IronPython.Modules {
     /// .NET/CLS interop with Python.  
     /// </summary>
     public static class ClrModule {
-        public static ReferencesList References = new ReferencesList();
+        public static readonly object _referencesKey = new object();
+
+        public static void PerformModuleReload(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict) {
+            if (!context.HasModuleState(_referencesKey)) {
+                ReferencesList rl = new ReferencesList();
+
+                dict[SymbolTable.StringToId("References")] = rl;
+                context.SetModuleState(_referencesKey, rl);
+            }
+        }
 
         #region Public methods
 
         // TODO: should be a property
-        public static IScriptEnvironment/*!*/ GetCurrentRuntime(CodeContext/*!*/ context) {
-            return context.LanguageContext.DomainManager.Environment;
+        public static ScriptDomainManager/*!*/ GetCurrentRuntime(CodeContext/*!*/ context) {
+            return context.LanguageContext.DomainManager;
         }
 
         public static void AddReference(CodeContext/*!*/ context, params object[] references) {
@@ -194,7 +203,10 @@ namespace IronPython.Modules {
             if (context.LanguageContext.DomainManager.LoadAssembly(assembly)) {
                 // Add it to the references tuple if we
                 // loaded a new assembly.
-                References.Add(assembly);
+                ReferencesList rl = (ReferencesList)PythonContext.GetContext(context).GetModuleState(_referencesKey);
+                lock (rl) {
+                    rl.Add(assembly);
+                }
             }
         }
 
@@ -267,7 +279,7 @@ namespace IronPython.Modules {
         #endregion       
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")] // TODO: fix
-        public class ReferencesList : List<Assembly>, ICodeFormattable {
+        public sealed class ReferencesList : List<Assembly>, ICodeFormattable {
 
             public new void Add(Assembly other) {
                 base.Add(other);
@@ -285,8 +297,7 @@ namespace IronPython.Modules {
                 return this;
             }
 
-            [SpecialName]
-            public string ToCodeString(CodeContext context) {
+            public string/*!*/ __repr__(CodeContext/*!*/ context) {
                 StringBuilder res = new StringBuilder("(");
                 string comma = "";
                 foreach (Assembly asm in this) {
@@ -327,7 +338,7 @@ namespace IronPython.Modules {
                 throw PythonOps.TypeError("cannot update path, it is not a list");
             }
 
-            list.Add(path);
+            list.append(path);
 
             Assembly asm = DefaultContext.Default.LanguageContext.LoadAssemblyFromFile(file);
             if (asm == null) throw PythonOps.IOError("file does not exist: {0}", file);
@@ -357,7 +368,7 @@ namespace IronPython.Modules {
         public static PythonType StrongBox {
             get {
                 if (_strongBoxType == null) {
-                    _strongBoxType = DynamicHelpers.GetPythonTypeFromType(typeof(StrongBox<>));
+                    _strongBoxType = DynamicHelpers.GetPythonTypeFromType(typeof(Microsoft.Scripting.Utils.StrongBox<>));
                 }
                 return _strongBoxType;
             }

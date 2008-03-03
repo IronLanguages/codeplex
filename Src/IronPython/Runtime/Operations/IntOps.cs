@@ -33,12 +33,27 @@ namespace IronPython.Runtime.Operations {
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
 
-            if (o is string) return Make(null, (string)o, 10);
-            if (o is double) return DoubleOps.ToInteger((double)o);
+            if (o is string) return __new__(null, (string)o, 10);
+            if (o is double) return DoubleOps.__int__((double)o);
             if (o is int) return o;
-            if (o is BigInteger) return o;
-            if ((el = o as Extensible<BigInteger>) != null) return el.Value;
-            if (o is float) return DoubleOps.ToInteger((double)(float)o);
+            if (o is BigInteger) {
+                BigInteger bi = o as BigInteger;
+                int res;
+                if (bi.AsInt32(out res)) {
+                    return RuntimeHelpers.Int32ToObject(res);
+                }
+                return o; 
+            }
+
+            if ((el = o as Extensible<BigInteger>) != null) {
+                int res;
+                if (el.Value.AsInt32(out res)) {
+                    return RuntimeHelpers.Int32ToObject(res);
+                }
+                return el.Value;
+            }
+
+            if (o is float) return DoubleOps.__int__((double)(float)o);
 
             if (o is Complex64) throw PythonOps.TypeError("can't convert complex to int; use int(abs(z))");
 
@@ -83,8 +98,9 @@ namespace IronPython.Runtime.Operations {
             return _intSite.Invoke(o);
         }
 
-        public static object Make(CodeContext context, object o) {
-            return Make(context, TypeCache.Int32, o);
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, object o) {
+            return __new__(context, TypeCache.Int32, o);
         }
 
         private static void ValidateType(PythonType cls) {
@@ -92,8 +108,8 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.TypeError("int.__new__(bool) is not safe, use bool.__new__()");
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(PythonType cls, string s, int radix) {
+        [StaticExtensionMethod]
+        public static object __new__(PythonType cls, string s, int radix) {
             ValidateType(cls);
 
             // radix 16 allows a 0x preceding it... We either need a whole new
@@ -117,8 +133,8 @@ namespace IronPython.Runtime.Operations {
             return s;
         }
 
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls, object x) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls, object x) {
             if (cls == TypeCache.Int32)  return FastNew(x); // TODO: Call site?
 
             ValidateType(cls);
@@ -129,8 +145,8 @@ namespace IronPython.Runtime.Operations {
 
         // "int()" calls ReflectedType.Call(), which calls "Activator.CreateInstance" and return directly.
         // this is for derived int creation or direct calls to __new__...
-        [StaticExtensionMethod("__new__")]
-        public static object Make(CodeContext context, PythonType cls) {
+        [StaticExtensionMethod]
+        public static object __new__(CodeContext context, PythonType cls) {
             if (cls == TypeCache.Int32) return 0;
 
             return cls.CreateInstance(context);
@@ -145,7 +161,7 @@ namespace IronPython.Runtime.Operations {
             return RuntimeHelpers.Int32ToObject(FloorDivideImpl(x, y));
         }
 
-        public static int FloorDivideImpl(int x, int y) {
+        internal static int FloorDivideImpl(int x, int y) {
             int q = x / y;
 
             if (x >= 0) {
@@ -278,21 +294,19 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [SpecialName, PythonName("__divmod__")]
-        public static object DivMod(int x, int y) {
+        public static PythonTuple __divmod__(int x, int y) {
             return PythonTuple.MakeTuple(Divide(x, y), Mod(x, y));
         }
 
-        [SpecialName, PythonName("__divmod__")]
         [return: MaybeNotImplemented]
-        public static object DivMod(int x, object y) {
+        public static object __divmod__(int x, object y) {
             return PythonOps.NotImplemented;
         }
 
 
         #region Unary Operators
-        [PythonName("__oct__")]
-        public static string Oct(int x) {
+
+        public static string __oct__(int x) {
             if (x == 0) {
                 return "0";
             } else if (x > 0) {
@@ -302,8 +316,7 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        [PythonName("__hex__")]
-        public static string Hex(int x) {
+        public static string __hex__(int x) {
             if (x < 0) {
                 return "-0x" + (-x).ToString("x");
             } else {
@@ -313,27 +326,31 @@ namespace IronPython.Runtime.Operations {
 
         #endregion
 
-        [PythonName("__getnewargs__")]
-        public static object GetNewArgs(CodeContext context, int self) {
-            return PythonTuple.MakeTuple(Int32Ops.Make(context, TypeCache.Int32, self));
+        public static object __getnewargs__(CodeContext context, int self) {
+            return PythonTuple.MakeTuple(Int32Ops.__new__(context, TypeCache.Int32, self));
         }
         
-        internal static object ReverseDivMod(int x, int y) {
-            return DivMod(y, x);
+        public static object __rdivmod__(int x, int y) {
+            return __divmod__(y, x);
         }
 
-        [PythonName("__int__")]
         public static int __int__(int self) {
             return self;
         }
 
-        [PythonName("__index__")]
         public static int __index__(int self) {
             return self;
         }
 
-        [PythonName("__coerce__")]
-        public static object Coerce(CodeContext context, int x, object o) {
+        public static BigInteger __long__(int self) {
+            return (BigInteger)self;
+        }
+
+        public static double __float__(int self) {
+            return (double)self;
+        }
+
+        public static object __coerce__(CodeContext context, int x, object o) {
             // called via builtin.coerce()
             int val;
             if (Converter.TryConvertToInt32(o, out val)) {
@@ -341,6 +358,5 @@ namespace IronPython.Runtime.Operations {
             }
             return PythonOps.NotImplemented;
         }
-
     }
 }

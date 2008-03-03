@@ -19,7 +19,6 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
-using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting {
@@ -54,9 +53,10 @@ namespace Microsoft.Scripting {
 
         }
 
+        [MultiRuntimeAware]
         private static int totalEvents = 0;
-        private static Dictionary<Categories, Dictionary<string, int>> _events = MakeEventsDictionary();
-        private static Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
+        private static readonly Dictionary<Categories, Dictionary<string, int>> _events = MakeEventsDictionary();
+        private static readonly Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
 
         private static Dictionary<Categories, Dictionary<string, int>> MakeEventsDictionary() {
             Dictionary<Categories, Dictionary<string, int>> result = new Dictionary<Categories, Dictionary<string, int>>();

@@ -342,7 +342,7 @@ namespace Microsoft.Scripting.Generation {
             Contract.RequiresNotNull(excType != null, "excType");
             Contract.Requires(excType.IsSubclassOf(typeof(Exception)) || excType == typeof(Exception), "excType");
 
-            ConstructorInfo constructor = excType.GetConstructor(ArrayUtils.EmptyTypes);
+            ConstructorInfo constructor = excType.GetConstructor(Type.EmptyTypes);
             Contract.Requires(constructor != null, "No default constructor for the exception");
 
             EmitNew(constructor);
@@ -1127,6 +1127,27 @@ namespace Microsoft.Scripting.Generation {
                 emit(i);
 
                 EmitStoreElement(elementType);
+            }
+        }
+
+        /// <summary>
+        /// Emits an array construction code.  
+        /// The code assumes that bounds for all dimensions
+        /// are already emitted.
+        /// </summary>
+        public void EmitArray(Type arrayType) {
+            Contract.RequiresNotNull(arrayType, "arrayType");
+            Contract.Requires(arrayType.IsArray, "arrayType", "arryaType must be an array type");
+
+            int rank = arrayType.GetArrayRank();
+            if (rank == 1) {
+                Emit(OpCodes.Newarr, arrayType.GetElementType());
+            } else {
+                Type[] types = new Type[rank];
+                for (int i = 0; i < rank; i++) {
+                    types[i] = typeof(int);
+                }
+                EmitNew(arrayType, types);
             }
         }
 

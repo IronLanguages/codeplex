@@ -70,11 +70,16 @@ namespace IronPython.Runtime {
         }
 
         [Documentation("__import__(name, globals, locals, fromlist) -> module\n\nImport a module.")]
-        public static object __import__(CodeContext/*!*/ context, string name, object globals, object locals, object fromList) {
-            //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
-            ISequence from = fromList as ISequence;
+        public static object __import__(CodeContext/*!*/ context, string name, object globals, object locals, object fromlist) {
+            return __import__(context, name, globals, locals, fromlist, -1);
+        }
 
-            object ret = Importer.ImportModule(context, name, from != null && from.__len__() > 0);
+        [Documentation("__import__(name, globals, locals, fromlist) -> module\n\nImport a module.")]
+        public static object __import__(CodeContext/*!*/ context, string name, object globals, object locals, object fromlist, int level) {
+            //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
+            ISequence from = fromlist as ISequence;
+
+            object ret = Importer.ImportModule(context, globals, name, from != null && from.__len__() > 0, level);
             if (ret == null) {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
@@ -107,7 +112,7 @@ namespace IronPython.Runtime {
             if (o is bool) return (((bool)o) ? 1 : 0);
             if (o is string) throw PythonOps.TypeError("bad operand type for abs()");
             BigInteger bi = o as BigInteger;
-            if (!Object.ReferenceEquals(bi, null)) return BigIntegerOps.Abs(bi);
+            if (!Object.ReferenceEquals(bi, null)) return BigIntegerOps.__abs__(bi);
             if (o is Complex64) return ComplexOps.Abs((Complex64)o);
 
             object value;
@@ -214,7 +219,7 @@ namespace IronPython.Runtime {
             string unitPath = String.IsNullOrEmpty(filename) ? null : filename;
 
             switch (kind) {
-                case "exec": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.Default); break;
+                case "exec": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.Statements); break;
                 case "eval": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.Expression); break;
                 case "single": sourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.SingleStatement); break;
                 default: 
@@ -223,9 +228,8 @@ namespace IronPython.Runtime {
 
             if ((cflags & CompileFlags.CO_DONT_IMPLY_DEDENT) != 0) {
                 // re-parse in interactive code mode to see if this is valid
-                ErrorSink es = new CompilerErrorSink();
                 SourceUnit altSourceUnit = context.LanguageContext.CreateSnippet(source, unitPath, SourceCodeKind.InteractiveCode);
-                CompilerContext compilerContext = new CompilerContext(altSourceUnit, null, es);
+                CompilerContext compilerContext = new CompilerContext(altSourceUnit, opts, ThrowingErrorSink.Default);
                 Parser p = Parser.CreateParser(compilerContext, PythonContext.GetPythonOptions(context), false, false);
                 SourceCodeProperties prop;
                 IronPython.Compiler.Ast.PythonAst ast = p.ParseInteractiveCode(out prop);
@@ -235,7 +239,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            ScriptCode compiledCode = context.LanguageContext.CompileSourceCode(sourceUnit, opts);
+            ScriptCode compiledCode = sourceUnit.Compile(opts, ThrowingErrorSink.Default);
             compiledCode.EnsureCompiled();
 
             FunctionCode res = new FunctionCode(compiledCode, cflags);
@@ -269,16 +273,16 @@ namespace IronPython.Runtime {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public static List dir(CodeContext/*!*/ context) {
-            List res = List.Make(LocalsAsAttributesCollection(context).Keys);
+            List res = PythonOps.MakeListFromSequence(LocalsAsAttributesCollection(context).Keys);
 
-            res.Sort();
+            res.sort();
             return res;
         }
 
         public static List dir(CodeContext/*!*/ context, object o) {
             IList<object> ret = PythonOps.GetAttrNames(context, o);
             List lret = new List(ret);
-            lret.Sort();
+            lret.sort();
             return lret;
         }
 
@@ -364,9 +368,10 @@ namespace IronPython.Runtime {
             Scope scope = GetExecEvalScope(context, globals, locals);
 
             // TODO: remove TrimStart
-            SourceUnit expr_code = context.LanguageContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
+            SourceUnit source = context.LanguageContext.CreateSnippet(expression.TrimStart(' ', '\t'), SourceCodeKind.Expression);
+            ScriptCode compiledCode = source.Compile(GetDefaultCompilerOptions(context, true, 0), ThrowingErrorSink.Default);
 
-            return context.LanguageContext.CompileSourceCode(expr_code, GetDefaultCompilerOptions(context, true, 0)).Run(scope, context.ModuleContext, true);
+            return compiledCode.Run(scope, context.ModuleContext, true);
         }
 
         public static void execfile(CodeContext/*!*/ context, object filename) {
@@ -401,7 +406,7 @@ namespace IronPython.Runtime {
             ScriptCode code;
 
             try {
-                code = context.LanguageContext.CompileSourceCode(sourceUnit, GetDefaultCompilerOptions(context, true, 0));
+                code = sourceUnit.Compile(GetDefaultCompilerOptions(context, true, 0), ThrowingErrorSink.Default);
             } catch (UnauthorizedAccessException x) {
                 throw PythonOps.IOError(x);
             }
@@ -442,9 +447,9 @@ namespace IronPython.Runtime {
         /// doesn't call __getitem__, but filter does!
         /// </summary>
         public static PythonTuple filter(object function, [NotNull]PythonTuple tuple) {
-            List<object> res = new List<object>(tuple.Count);
-            
-            for (int i = 0; i < tuple.Count; i++) {
+            List<object> res = new List<object>(tuple.__len__());
+
+            for (int i = 0; i < tuple.__len__(); i++) {
                 object obj = tuple[i];
                 object t = (function != null) ? PythonCalls.Call(function, obj) : obj;
 
@@ -486,7 +491,7 @@ namespace IronPython.Runtime {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:ValidateArgumentsOfPublicMethods")]
         public static IAttributesCollection globals(CodeContext/*!*/ context) {
-            return new GlobalsDictionary(context.Scope);
+            return new PythonDictionary(new GlobalScopeDictionaryStorage(context.Scope));
         }
 
         public static bool hasattr(CodeContext/*!*/ context, object o, string name) {
@@ -553,7 +558,7 @@ namespace IronPython.Runtime {
                             if (!PythonOps.TryGetBoundAttr(context, module, SymbolTable.StringToId(strVal), out modVal))
                                 continue;
 
-                            candidates.Add(modVal);
+                            candidates.append(modVal);
                         }
                     }
 
@@ -562,7 +567,7 @@ namespace IronPython.Runtime {
                     type = null;
                     builtinFunction = null;
                     function = null;
-                    for (int i = 0; i < candidates.Count; i++) {
+                    for (int i = 0; i < candidates.__len__(); i++) {
                         if ((type = candidates[i] as PythonType) != null) {
                             break;
                         }
@@ -682,7 +687,7 @@ namespace IronPython.Runtime {
 
                 IList<object> names = oldClass.GetMemberNames(context);
                 List sortNames = new List(names);
-                sortNames.Sort();
+                sortNames.sort();
                 names = sortNames;
                 foreach (string name in names) {
                     if (name == "__class__") continue;
@@ -781,7 +786,7 @@ namespace IronPython.Runtime {
         }
 
         internal static IAttributesCollection LocalsAsAttributesCollection(CodeContext/*!*/ context) {
-            return LocalsDictionary.GetDictionaryFromScope(context.Scope);
+            return LocalScopeDictionaryStorage.GetDictionaryFromScope(context.Scope);
         }
 
         public static readonly PythonType @long = DynamicHelpers.GetPythonTypeFromType(typeof(BigInteger));
@@ -1065,7 +1070,7 @@ namespace IronPython.Runtime {
                 stop = 0;
             }
 
-            List ret = List.MakeEmptyList(stop);
+            List ret = PythonOps.MakeEmptyList(stop);
             for (int i = 0; i < stop; i++) ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
             return ret;
         }
@@ -1096,7 +1101,7 @@ namespace IronPython.Runtime {
 
             long length = (long)stop - (long)start;
             if (Int32.MinValue <= length && length <= Int32.MaxValue) {
-                List ret = List.MakeEmptyList(stop - start);
+                List ret = PythonOps.MakeEmptyList(stop - start);
                 for (int i = start; i < stop; i++) ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
                 return ret;
             }
@@ -1110,7 +1115,7 @@ namespace IronPython.Runtime {
             BigInteger length = stop - start;
             int ilength;
             if (length.AsInt32(out ilength)) {
-                List ret = List.MakeEmptyList(ilength);
+                List ret = PythonOps.MakeEmptyList(ilength);
                 for (int i = 0; i < ilength; i++) {
                     ret.AddNoLock(start + i);
                 }
@@ -1135,13 +1140,13 @@ namespace IronPython.Runtime {
             List ret;
             if (step > 0) {
                 if (start > stop) stop = start;
-                ret = List.MakeEmptyList((stop - start) / step);
+                ret = PythonOps.MakeEmptyList((stop - start) / step);
                 for (int i = start; i < stop; i += step) {
                     ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
                 }
             } else {
                 if (start < stop) stop = start;
-                ret = List.MakeEmptyList((stop - start) / step);
+                ret = PythonOps.MakeEmptyList((stop - start) / step);
                 for (int i = start; i > stop; i += step) {
                     ret.AddNoLock(RuntimeHelpers.Int32ToObject(i));
                 }
@@ -1164,7 +1169,7 @@ namespace IronPython.Runtime {
 
             int ilength;
             if (length.AsInt32(out ilength)) {
-                List ret = List.MakeEmptyList(ilength);
+                List ret = PythonOps.MakeEmptyList(ilength);
                 for (int i = 0; i < ilength; i++) {
                     ret.AddNoLock(start);
                     start = start + step;
@@ -1305,11 +1310,11 @@ namespace IronPython.Runtime {
             [DefaultParameterValueAttribute(false)]bool reverse) {
 
             IEnumerator iter = PythonOps.GetEnumerator(iterable);
-            List l = List.MakeEmptyList(10);
+            List l = PythonOps.MakeEmptyList(10);
             while (iter.MoveNext()) {
                 l.AddNoLock(iter.Current);
             }
-            l.Sort(cmp, key, reverse);
+            l.sort(cmp, key, reverse);
             return l;
         }
 
@@ -1385,7 +1390,7 @@ namespace IronPython.Runtime {
 
             int N = seqs.Length;
             if (N == 2) return zip(seqs[0], seqs[1]);
-            if (N == 0) return List.Make();
+            if (N == 0) return PythonOps.MakeList();
             IEnumerator[] iters = new IEnumerator[N];
             for (int i = 0; i < N; i++) iters[i] = PythonOps.GetEnumerator(seqs[i]);
 
@@ -1418,7 +1423,7 @@ namespace IronPython.Runtime {
             } else if (((cflags & CompileFlags.CO_FUTURE_DIVISION) != 0)) {
                 pco = new PythonCompilerOptions(true);
             } else {
-                pco = DefaultContext.DefaultPythonContext.CreateDefaultCompilerOptions();
+                pco = DefaultContext.DefaultPythonContext.GetPythonCompilerOptions();
             }
 
             // The options created this way never creates
@@ -1457,7 +1462,7 @@ namespace IronPython.Runtime {
             Scope scope = new Scope(python, new Scope(python, globals), GetAttrLocals(context, localsDict));
 
             if (!globals.ContainsKey(Symbols.Builtins)) {
-                globals[Symbols.Builtins] = python.BuiltinModuleInstance;
+                globals[Symbols.Builtins] = python.BuiltinModuleInstance.Dict;
             }
             return scope;
         }

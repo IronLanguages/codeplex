@@ -35,6 +35,8 @@ def test_simply_derive():
     class C(AbstractNotEmptyClass): pass
     
     #class C(EmptyDelegate): pass
+    
+    class C(System.Double): pass
 
 def test_multiple_typegroup():
     class C(IInterfaceGroup1, IInterfaceGroup2): pass
@@ -50,9 +52,14 @@ def test_negative_simply_derive():
         class C(EmptyEnum): pass
     def f3():
         class C(SealedClass): pass
+    def f4():
+        class C(System.Single): pass
 
-    for f in [f1, f2, f3]:
-        AssertErrorWithMessage(TypeError, "cannot derive from sealed or value types", f)
+    
+    AssertErrorWithMessage(TypeError, "cannot derive from Merlin.Testing.BaseClass.EmptyStruct because it is a value type", f1)
+    AssertErrorWithMessage(TypeError, "cannot derive from Merlin.Testing.BaseClass.EmptyEnum because it is a value type", f2)
+    AssertErrorWithMessage(TypeError, "cannot derive from Merlin.Testing.BaseClass.SealedClass because it is sealed", f3)
+    AssertErrorWithMessage(TypeError, "cannot derive from System.Single because it is a value type", f4)
 
     # open generic
     def f():

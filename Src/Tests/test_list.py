@@ -50,15 +50,12 @@ if is_cli or is_silverlight:
         y.append(xenum.Current)
     AreEqual(x, y)
 
-# Disallow assignment to empty list
-#When #10643 gets fixed, it will be necessary to remove the AssertError calls
-#below and replace them with the actual assignments which are allowed in 2.5.
-@skip("win32", "CodePlex Work Item 10643")
 def test_assign_to_empty():
+    # should all succeed
     y = []
-    AssertError(SyntaxError, compile, "[] = y", "Error", "exec")
-    AssertError(SyntaxError, compile, "[], t = y, 0", "Error", "exec")
-    AssertError(SyntaxError, compile, "[[[]]]=[[y]]", "Error", "exec")
+    [] = y
+    [], t = y, 0
+    [[[]]] = [[y]]
     del y
 
 def test_unpack():
@@ -255,9 +252,14 @@ def test_pass_pythonlist_to_clr():
     pl = {"redmond" : 10, "seattle" : 20}
     cl = System.Collections.Generic.Dictionary[str, int]()
     for x, y in pl.iteritems(): cl.Add(x, y)
-        
+    
+    pll = list(pl.iteritems())
+    cll = list(cl)
+    pll.sort(lambda x, y: cmp(x[0], y[0]))
+    cll.sort(lambda x, y: cmp(x.Key, y.Key))
+
     def check_content():
-        for x, y in zip(cl, pl.iteritems()): 
+        for x, y in zip(cll, pll): 
             AreEqual(x.Key, y[0])
             AreEqual(x.Value, y[1])
       
@@ -370,4 +372,11 @@ def test_getslice():
             for x in listType(range(5))[input:input]:
                 AreEqual(type(x), int)
     
+    
+def test_repr():
+    class mylist(list):
+        def __repr__(self): return 'abc'
+
+    AreEqual(repr(mylist()), 'abc')
+
 run_test(__name__)

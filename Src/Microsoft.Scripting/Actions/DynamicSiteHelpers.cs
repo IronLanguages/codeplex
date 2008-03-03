@@ -24,8 +24,8 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public static partial class DynamicSiteHelpers {
-        private static Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
-        private static Dictionary<Type, CreateFastSite> _fastSiteCtors = new Dictionary<Type, CreateFastSite>();
+        private static readonly Dictionary<Type, CreateSite> _siteCtors = new Dictionary<Type, CreateSite>();
+        private static readonly Dictionary<Type, CreateFastSite> _fastSiteCtors = new Dictionary<Type, CreateFastSite>();
 
         /// <summary>
         /// Checks to see if a given delegate is used as a "fast" target.  A fast target

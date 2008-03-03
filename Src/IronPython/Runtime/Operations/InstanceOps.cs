@@ -66,7 +66,8 @@ namespace IronPython.Runtime.Operations {
     ///     get: added for types that implement IDescriptor
     /// </summary>
     public static class InstanceOps {
-        internal static readonly BuiltinFunction New = CreateFunction("__new__", "DefaultNew", "DefaultNewKW");
+        [MultiRuntimeAware]
+        private static BuiltinFunction _New;
         internal static readonly BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
         internal static readonly BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
         internal static readonly BuiltinFunction NonDefaultNewInst = CreateNonDefaultNew();
@@ -77,6 +78,19 @@ namespace IronPython.Runtime.Operations {
             ExtensionTypeAttribute.RegisterType(typeof(object), typeof(InstanceOps));
         }
 
+        internal static BuiltinFunction New {
+            get {
+                if (_New == null) {
+                    PythonTypeSlot pts;
+                    TypeCache.Object.TryResolveSlot(DefaultContext.Default, Symbols.NewInst, out pts);
+                    Debug.Assert(pts is BuiltinFunction);
+
+                    _New = (BuiltinFunction)pts;
+                }
+                return _New;
+            }
+        }
+
         internal static BuiltinFunction CreateNonDefaultNew() {
             return CreateFunction("__new__", "NonDefaultNew", "NonDefaultNewKW", "NonDefaultNewKWNoParams");
         }
@@ -85,14 +99,6 @@ namespace IronPython.Runtime.Operations {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
 
             CheckInitArgs(context, null, args\u00F8, type\u00F8);
-
-            return type\u00F8.CreateInstance(context, ArrayUtils.EmptyObjects);
-        }
-
-        public static object DefaultNewKW(CodeContext context, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
-            if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
-
-            CheckInitArgs(context, kwargs\u00F8, args\u00F8, type\u00F8);
 
             return type\u00F8.CreateInstance(context, ArrayUtils.EmptyObjects);
         }
@@ -138,22 +144,24 @@ namespace IronPython.Runtime.Operations {
             return overloads\u00F8.CallHelper(context, finalArgs, names, null);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args\u00F8"), PythonName("__init__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args\u00F8")]
         public static void DefaultInit(CodeContext context, object self, params object[] args\u00F8) {
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "kwargs\u00F8"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args\u00F8"), PythonName("__init__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "self"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "kwargs\u00F8"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "args\u00F8")]
         public static void DefaultInitKW(CodeContext context, object self, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), StaticExtensionMethod("__new__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
+        [StaticExtensionMethod]
         public static object NonDefaultNew(CodeContext context, PythonType type\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
             return type\u00F8.CreateInstance(context, args\u00F8);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), StaticExtensionMethod("__new__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
+        [StaticExtensionMethod]
         public static object NonDefaultNewKW(CodeContext context, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
             if (args\u00F8 == null) args\u00F8 = new object[1];
@@ -163,7 +171,8 @@ namespace IronPython.Runtime.Operations {
             return type\u00F8.CreateInstance(context, args\u00F8, names);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), StaticExtensionMethod("__new__")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
+        [StaticExtensionMethod]
         public static object NonDefaultNewKWNoParams(CodeContext context, PythonType type\u00F8, [ParamDictionary] IAttributesCollection kwargs\u00F8) {
             if (type\u00F8 == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(type\u00F8)));
 
@@ -236,7 +245,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object ReprHelper(CodeContext context, object self) {
-            return ((ICodeFormattable)self).ToCodeString(context);
+            return ((ICodeFormattable)self).__repr__(context);
         }
 
         public static string ToStringMethod(object self) {
@@ -322,7 +331,7 @@ namespace IronPython.Runtime.Operations {
             throw PythonOps.AttributeErrorForMissingAttribute(dt == null ? "?" : dt.Name, Symbols.GetDescriptor);
         }
 
-        private static void CheckInitArgs(CodeContext context, IAttributesCollection dict, object[] args, PythonType pt) {
+        internal static void CheckInitArgs(CodeContext context, IAttributesCollection dict, object[] args, PythonType pt) {
             PythonTypeSlot dts;
             object initObj;
             if (((args != null && args.Length > 0) || (dict != null && dict.Count > 0)) &&

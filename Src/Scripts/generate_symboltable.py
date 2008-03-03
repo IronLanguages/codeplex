@@ -144,6 +144,7 @@ fieldList = [
     ('update', 'Update'),
     ('this', 'ThisArgument'),
     ('__index__', 'Index'),
+    ('absolute_import', 'AbsoluteImport'),
     ]
 
 def generate_symbols(cw):

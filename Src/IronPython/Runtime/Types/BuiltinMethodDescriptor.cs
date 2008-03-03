@@ -39,7 +39,6 @@ namespace IronPython.Runtime.Types {
         #region Internal APIs
 
         internal object UncheckedGetAttribute(object instance) {
-            if (instance == null) return this;
             return new BoundBuiltinFunction(_template, instance);
         }
 
@@ -175,7 +174,7 @@ namespace IronPython.Runtime.Types {
 
         #region ICodeFormattable Members
 
-        string/*!*/ ICodeFormattable.ToCodeString(CodeContext context) {
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
             return String.Format("<method {0} of {1} objects>",
                 PythonOps.StringRepr(Template.Name),
                 PythonOps.StringRepr(PythonTypeOps.GetName(DeclaringType)));

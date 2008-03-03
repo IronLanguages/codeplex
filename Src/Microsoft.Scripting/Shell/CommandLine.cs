@@ -26,14 +26,14 @@ namespace Microsoft.Scripting.Shell {
 
     public class CommandLine {
         private IConsole _console;
-        private IScriptEngine _engine;
+        private ScriptEngine _engine;
         private ConsoleOptions _options;
-        private IScriptScope _module;
+        private ScriptScope _module;
 
         protected IConsole Console { get { return _console; } }
-        protected IScriptEngine Engine { get { return _engine; } }
+        protected ScriptEngine Engine { get { return _engine; } }
         protected ConsoleOptions Options { get { return _options; } }
-        protected internal IScriptScope Module { get { return _module; } set { _module = value; } }
+        protected internal ScriptScope Module { get { return _module; } set { _module = value; } }
 
         protected virtual string Prompt { get { return Resources.ConsolePrompt; } }
         protected virtual string PromptContinuation { get { return Resources.ConsoleContinuePrompt; } } 
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Shell {
         /// Executes the comand line - depending upon the options provided we will
         /// either run a single file, a single command, or enter the interactive loop.
         /// </summary>
-        public int Run(IScriptEngine engine, IConsole console, ConsoleOptions options) {
+        public int Run(ScriptEngine engine, IConsole console, ConsoleOptions options) {
             Contract.RequiresNotNull(engine, "engine");
             Contract.RequiresNotNull(console, "console");
             Contract.RequiresNotNull(options, "options");
@@ -101,7 +101,7 @@ namespace Microsoft.Scripting.Shell {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        protected virtual void Shutdown(IScriptEngine engine) {
+        protected virtual void Shutdown(ScriptEngine engine) {
             try {
                 engine.Shutdown();
             } catch (Exception e) {
@@ -132,47 +132,30 @@ namespace Microsoft.Scripting.Shell {
         
         #endregion
 
-        /// <summary>
-        /// Runs the specified filename
-        ///
-        /// TODO minimize code duplication in overriding classes
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         protected virtual int RunFile(string filename) {
-            int result = 1;
-            if (Options.HandleExceptions) {
-                try {
-                    Engine.ExecuteProgram(Engine.CreateScriptSourceFromFile(filename));
-                    result = 0;
-                } catch (Exception e) {
-                    Console.Write(Engine.FormatException(e), Style.Error);
-                }
-            } else {
-                Engine.ExecuteProgram(Engine.CreateScriptSourceFromFile(filename));
-                result = 0;
-            }
-
-            return result;
+            return RunFile(Engine.CreateScriptSourceFromFile(filename));
         }
 
+        protected virtual int RunCommand(string command) {
+            return RunFile(Engine.CreateScriptSourceFromString(command));
+        }
+        
         /// <summary>
-        /// Runs a single line of text as the only input to the language.  The console exits afterwards.
-        /// 
-        /// TODO minimize code duplication in overriding classes
+        /// Runs the specified filename
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        protected virtual int RunCommand(string command) {
+        protected virtual int RunFile(ScriptSource/*!*/ source) {
             int result = 1;
 
             if (Options.HandleExceptions) {
                 try {
-                    Engine.ExecuteProgram(Engine.CreateScriptSourceFromString(command));
+                    source.ExecuteProgram();
                     result = 0;
                 } catch (Exception e) {
                     Console.Write(Engine.FormatException(e), Style.Error);
                 }
             } else {
-                Engine.ExecuteProgram(Engine.CreateScriptSourceFromString(command));
+                source.ExecuteProgram();
                 result = 0;
             }
 
@@ -294,9 +277,13 @@ namespace Microsoft.Scripting.Shell {
                 return null;
             }
 
-            _engine.Execute(_module, _engine.CreateScriptSourceFromString(s, SourceCodeKind.InteractiveCode));
+            ExecuteCommand(s);
 
             return null;
+        }
+
+        protected virtual void ExecuteCommand(string/*!*/ command) {
+            _engine.CreateScriptSourceFromString(command, SourceCodeKind.InteractiveCode).Execute(_module);
         }
 
         /// <summary>
@@ -340,8 +327,8 @@ namespace Microsoft.Scripting.Shell {
 
                 string code = b.ToString();
 
-
-                SourceCodeProperties props = _engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode).GetCodeProperties(_module); 
+                ScriptSource command = _engine.CreateScriptSourceFromString(code, SourceCodeKind.InteractiveCode);
+                SourceCodeProperties props = command.GetCodeProperties(_engine.GetCompilerOptions(_module)); 
 
                 if (SourceCodePropertiesUtils.IsCompleteOrInvalid(props, allowIncompleteStatement)) {
                     return props != SourceCodeProperties.IsEmpty ? code : null;

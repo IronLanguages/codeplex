@@ -31,7 +31,7 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Runtime.Operations {
 
     // Used to map signatures to specific targets on the embedded reflected method.
-    public class BuiltinFunctionOverloadMapper {
+    public class BuiltinFunctionOverloadMapper : ICodeFormattable {
         private BuiltinFunction _function;
         private object _instance;
 
@@ -110,7 +110,7 @@ namespace IronPython.Runtime.Operations {
             return GetOverload(key, Function.Targets);
         }
 
-        public override string ToString() {
+        public virtual string/*!*/ __repr__(CodeContext/*!*/ context) {
             PythonDictionary overloadList = new PythonDictionary();
 
             foreach (MethodBase mb in Targets) {
@@ -119,12 +119,6 @@ namespace IronPython.Runtime.Operations {
             }
             return overloadList.ToString();
         }
-
-        [SpecialName, PythonName("__repr__")]
-        public string ToCodeRepresentation() {
-            return ToString();
-        }
-
     }
 
     public class ConstructorOverloadMapper : BuiltinFunctionOverloadMapper {

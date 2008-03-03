@@ -33,56 +33,55 @@ namespace Microsoft.Scripting.Generation {
         /// <summary>
         /// Generates stub to receive the CLR call and then call the dynamic language code.
         /// </summary>
-        public static void  EmitClrCallStub(Compiler cg, Slot callTarget, int firstArg, CallType functionAttributes) {
+        public static void EmitClrCallStub(LambdaCompiler cg, Slot callTarget, CallType functionAttributes) {
             List<ReturnFixer> fixers = new List<ReturnFixer>(0);
-            IList<Slot> args = cg.ArgumentSlots;
-            int nargs = args.Count - firstArg;
-            
+            int argsCount = cg.GetLambdaArgumentSlotCount();
+
             CallAction action;
             if ((functionAttributes & CallType.ArgumentList) != 0) {
-                ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, nargs);
-                infos[nargs - 1] = new ArgumentInfo(ArgumentKind.List);
+                ArgumentInfo[] infos = CompilerHelpers.MakeRepeatedArray(ArgumentInfo.Simple, argsCount);
+                infos[argsCount - 1] = new ArgumentInfo(ArgumentKind.List);
 
                 action = CallAction.Make(new CallSignature(infos));
             } else {
-                action = CallAction.Make(nargs);
+                action = CallAction.Make(argsCount);
             }
 
             // Create strongly typed return type from the site.
             // This will, among other things, generate tighter code.
-            Type[] siteArguments = CompilerHelpers.MakeRepeatedArray(typeof(object), nargs + 2);
+            Type[] siteArguments = CompilerHelpers.MakeRepeatedArray(typeof(object), argsCount + 2);
             Type result = CompilerHelpers.GetReturnType(cg.Method);
             if (result != typeof(void)) {
-                siteArguments[nargs + 1] = result;
+                siteArguments[argsCount + 1] = result;
             }
 
             bool fast;
-            Slot site = cg.CreateDynamicSite(action, 
-                siteArguments, 
+            Slot site = cg.CreateDynamicSite(action,
+                siteArguments,
                 out fast);
 
             site.EmitGet(cg);
             if (!fast) cg.EmitCodeContext();
 
             if (DynamicSiteHelpers.IsBigTarget(site.Type)) {
-                cg.EmitTuple(site.Type.GetGenericArguments()[0], args.Count + 1, delegate(int index) {
+                cg.EmitTuple(site.Type.GetGenericArguments()[0], argsCount + 1, delegate(int index) {
                     if (index == 0) {
                         callTarget.EmitGet(cg);
                     } else {
-                        ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[index - 1]);
+                        ReturnFixer rf = ReturnFixer.EmitArgument(cg, cg.GetLambdaArgumentSlot(index - 1));
                         if (rf != null) fixers.Add(rf);
                     }
                 });
             } else {
                 callTarget.EmitGet(cg);
 
-                for (int i = firstArg; i < args.Count; i++) {
-                    ReturnFixer rf = ReturnFixer.EmitArgument(cg, args[i]);
+                for (int i = 0; i < argsCount; i++) {
+                    ReturnFixer rf = ReturnFixer.EmitArgument(cg, cg.GetLambdaArgumentSlot(i));
                     if (rf != null) fixers.Add(rf);
                 }
             }
 
-            cg.EmitCall(site.Type, "Invoke"); 
+            cg.EmitCall(site.Type, "Invoke");
 
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(cg);
@@ -91,7 +90,7 @@ namespace Microsoft.Scripting.Generation {
             if (result == typeof(void)) {
                 cg.Emit(OpCodes.Pop);
             }
-            cg.EmitReturn();
+            cg.Emit(OpCodes.Ret);
         }
 
         private static Type[] CreateSignatureWithContext(int count) {

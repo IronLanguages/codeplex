@@ -17,7 +17,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting;
-using VariableKind = Microsoft.Scripting.Ast.Variable.VariableKind;
+using VariableKind = Microsoft.Scripting.Ast.VariableKind;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -184,13 +184,14 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal void ReportSyntaxWarning(string message, Node node) {
-            _context.Errors.Add(_context.SourceUnit, message, node.Span, -1, Microsoft.Scripting.Hosting.Severity.Warning);
+            _context.Errors.Add(_context.SourceUnit, message, node.Span, -1, Severity.Warning);
             throw PythonOps.SyntaxWarning(message, _context.SourceUnit, node.Span, -1);
         }
 
         internal void ReportSyntaxError(string message, Node node) {
             // TODO: Change the error code (-1)
-            throw _context.Errors.Add(PythonOps.SyntaxError(message, _context.SourceUnit, node.Span, -1));
+            _context.Errors.Add(_context.SourceUnit, message, node.Span, -1, Severity.FatalError);
+            throw PythonOps.SyntaxError(message, _context.SourceUnit, node.Span, -1);
         }
 
         #region AstBinder Overrides
