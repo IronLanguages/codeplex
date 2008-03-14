@@ -109,6 +109,7 @@ def test_read_write_fidelity():
     # Check nothing changed.
     Assert(data == orig_data)
     
+def test_cp10983():
     # writing non-unicode characters > 127 should be preserved
     x = open(temp_file, 'w')
     x.write('\xa33')
@@ -120,6 +121,17 @@ def test_read_write_fidelity():
     
     AreEqual(ord(data[0]), 163)
     AreEqual(ord(data[1]), 51)
+    
+    x = open(temp_file, 'w')
+    x.write("a2\xa33\u0163\x0F\x0FF\t\\\x0FF\x0FE\x00\x01\x7F\x7E\x80")
+    x.close()
+    
+    x = open(temp_file)
+    data = x.read()
+    x.close()
+    
+    AreEqual(data, 'a2\xa33\\u0163\x0f\x0fF\t\\\x0fF\x0fE\x00\x01\x7F\x7E\x80')
+    
     
 
 # Helper used to format newline characters into a visible format.

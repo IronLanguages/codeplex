@@ -240,7 +240,7 @@ namespace IronPython.Runtime.Exceptions {
 
             private void EnsureDict() {
                 if (_dict == null) {
-                    Interlocked.CompareExchange<IAttributesCollection>(ref _dict, new SymbolDictionary(), null);
+                    Interlocked.CompareExchange<IAttributesCollection>(ref _dict, PythonDictionary.MakeSymbolDictionary(), null);
                 }
             }
 

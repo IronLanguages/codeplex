@@ -101,7 +101,6 @@ expressions = [
     Expression("MemberExpression",              "MemberExpression",                     True),
     Expression("NewArrayExpression",            "NewArrayExpression",                   True),
     Expression("OnesComplement",                "UnaryExpression",                      True),
-    Expression("ParamsExpression",              "IntrinsicExpression",                  True),
     Expression("ReturnStatement",               "ReturnStatement",                      True),
     Expression("ScopeStatement",                "ScopeStatement",                       True),
     Expression("SwitchStatement",               "SwitchStatement",                      True),
@@ -118,7 +117,7 @@ def get_unique_types():
 def gen_scripting_walker(cw):
     nodes = get_unique_types() + [
             "CatchBlock",
-            "CodeBlock",
+            "LambdaExpression",
             "GeneratorCodeBlock",
             "IfStatementTest",
             "SwitchCase"

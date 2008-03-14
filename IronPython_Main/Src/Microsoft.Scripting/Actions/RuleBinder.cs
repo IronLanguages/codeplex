@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Actions {
     /// Rule binder resolves variables in the rule and nested lambdas.
     /// </summary>
     class RuleBinder : VariableBinder {
-        private readonly CodeBlockInfo _top = new CodeBlockInfo(null, null);
+        private readonly LambdaInfo _top = new LambdaInfo(null, null);
         private readonly Type _result;
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace Microsoft.Scripting.Actions {
 
             rb.BindTheScopes();
 
-            return new AnalyzedRule(rb._top, rb.Blocks, rb.Infos);
+            return new AnalyzedRule(rb._top, rb.Lambdas, rb.Infos);
         }
 
         private RuleBinder(Type result) {
@@ -69,7 +69,7 @@ namespace Microsoft.Scripting.Actions {
                     _top.References[variable] = new VariableReference(variable);
                 }
             } else {
-                // Call base class for reference within a code block.
+                // Call base class for reference within a lambda.
                 base.Reference(variable);
             }
         }

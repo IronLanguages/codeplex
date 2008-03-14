@@ -836,6 +836,11 @@ def test_meta_path():
 def test_import_kw_args():
     AreEqual(__import__(name = 'sys', globals = globals(), locals = locals(), fromlist = [], level = -1), sys)
 
+def test_import_list_empty_string():
+    """importing w/ an empty string in the from list should be ignored"""
+    x = __import__('lib', {}, {}, [''])
+    Assert(not '' in dir(x))
+
 #------------------------------------------------------------------------------
 run_test(__name__)
 if is_silverlight==False:

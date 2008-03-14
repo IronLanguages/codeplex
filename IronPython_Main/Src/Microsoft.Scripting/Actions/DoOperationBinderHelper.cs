@@ -40,6 +40,14 @@ namespace Microsoft.Scripting.Actions {
         }
 
         public StandardRule<T> MakeRule() {
+
+#if !SILVERLIGHT
+            if (ComDispatch.ComObject.Is__ComObject(_types[0])) {
+                _rule.Target = ComDispatch.ComObject.GetTargetForDoOperation(_rule, Binder, Action);
+                return _rule;
+            }
+#endif
+
             if (Action.Operation == Operators.GetItem || 
                 Action.Operation == Operators.SetItem) {
                 // try default member first, then look for special name methods.
@@ -362,7 +370,7 @@ namespace Microsoft.Scripting.Actions {
                     return true;
                 }
             }
-            
+
             MethodInfo[] defaults = GetMethodsFromDefaults(_types[0].GetDefaultMembers(), oper);
             if (defaults.Length != 0) {
                 MethodBinder binder = MethodBinder.MakeBinder(Binder,

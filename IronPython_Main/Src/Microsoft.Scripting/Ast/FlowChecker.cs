@@ -122,13 +122,13 @@ namespace Microsoft.Scripting.Ast {
         private BitArray _bits;
         private List<ExitState> _exit;
 
-        CodeBlock _block;
+        LambdaExpression _lambda;
 
         Dictionary<Variable, int> _indices = new Dictionary<Variable, int>();
 
-        private FlowChecker(CodeBlock block) {
-            List<Variable> variables = block.Variables;
-            ReadOnlyCollection<Variable> parameters = block.Parameters;
+        private FlowChecker(LambdaExpression lambda) {
+            List<Variable> variables = lambda.Variables;
+            ReadOnlyCollection<Variable> parameters = lambda.Parameters;
 
             _bits = new BitArray((variables.Count + parameters.Count) * 2);
             int index = 0;
@@ -138,7 +138,7 @@ namespace Microsoft.Scripting.Ast {
             foreach (Variable parameter in parameters) {
                 _indices[parameter] = index++;
             }
-            _block = block;
+            _lambda = lambda;
         }
 
         private bool TryGetIndex(Variable variable, out int index) {
@@ -152,7 +152,7 @@ namespace Microsoft.Scripting.Ast {
                         variable.Kind != VariableKind.Local &&
                         variable.Kind != VariableKind.Parameter ||
                         variable.Lift ||
-                        variable.Block.IsGlobal,
+                        variable.Lambda.IsGlobal,
                         "Untracked local/parameter " + variable.Name.ToString()
                     );
                 }
@@ -184,9 +184,9 @@ namespace Microsoft.Scripting.Ast {
 
         #region Public API
 
-        public static void Check(CodeBlock block) {
-            FlowChecker fc = new FlowChecker(block);
-            fc.WalkNode(block);
+        public static void Check(LambdaExpression lambda) {
+            FlowChecker fc = new FlowChecker(lambda);
+            fc.WalkNode(lambda);
         }
 
         #endregion
@@ -287,8 +287,8 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-        // CodeBlock
-        protected internal override bool Walk(CodeBlock node) {
+        // LambdaExpression
+        protected internal override bool Walk(LambdaExpression node) {
             foreach (Variable p in node.Parameters) {
                 // Define the parameters
                 Define(p);
@@ -320,7 +320,7 @@ namespace Microsoft.Scripting.Ast {
 
         // GeneratorCodeBlock
         protected internal override bool Walk(GeneratorCodeBlock node) {
-            return Walk((CodeBlock)node);
+            return Walk((LambdaExpression)node);
         }
 
         // DoStatement
@@ -530,7 +530,7 @@ namespace Microsoft.Scripting.Ast {
         [Conditional("DEBUG")]
         public void Dump(BitArray bits) {
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendFormat("FlowChecker ({0})", _block is CodeBlock ? ((CodeBlock)_block).Name : "");
+            sb.AppendFormat("FlowChecker ({0})", _lambda is LambdaExpression ? ((LambdaExpression)_lambda).Name : "");
             sb.Append('{');
             bool comma = false;
 

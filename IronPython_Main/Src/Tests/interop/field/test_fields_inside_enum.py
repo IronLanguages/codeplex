@@ -16,10 +16,11 @@
 from lib.assert_util import *
 skiptest("silverlight")
 
-add_clr_assemblies("fieldtests", "typesamples")
+add_clr_assemblies("fieldtests", "typesamples", "baseclasscs")
 
 from Merlin.Testing.FieldTest import *
 from Merlin.Testing.TypeSample import *
+from Merlin.Testing.BaseClass import EmptyEnum
 
 def test_get_set():
     o = EnumInt32()
@@ -46,6 +47,36 @@ def test_get_set():
 
     def f(): desc.__set__(None, EnumInt32.B) 
     AssertErrorWithMatch(AttributeError, "attribute 'B' of 'EnumInt32' object is read-only", f)
+
+def test_enum_bool():
+    
+    
+    #An empty enumeration
+    Assert(not bool(EmptyEnum())) 
+
+    #__nonzero__
+    o = EnumInt32()
+    Assert(not o.A.__nonzero__())
+    Assert(o.B.__nonzero__())
+
+    for enum_type in [
+                        EnumByte,
+                        EnumSByte,
+                        EnumUInt16, 
+                        EnumInt16,
+                        EnumUInt32, 
+                        EnumInt32,
+                        EnumUInt64, 
+                        EnumInt64,
+                        ]:
+        Assert(not bool(enum_type().A))
+        Assert(not bool(enum_type.A))
+        Assert(bool(enum_type().B))
+        Assert(bool(enum_type.B))
+        Assert(bool(enum_type().C))
+        Assert(bool(enum_type.C))
+        Assert(enum_type)
+        Assert(not bool(enum_type()))
     
 run_test(__name__)
 

@@ -78,21 +78,11 @@ def gen_args_paramscall(nparams):
 
 
 def call_targets(cw):
-    cw.write("")
     for nparams in range(MAX_ARGS+1):
         cw.write("public delegate object CallTarget%d(%s);" %
                  (nparams, make_params(nparams)))
-    cw.write("")
 
-def calltargets_with_this(cw):
-    cw.write("")
-    for nparams in range(MAX_ARGS+1):
-        cw.write("public delegate object CallTargetWithThis%d(%s);" %
-                 (nparams, make_params(nparams, "object instance")))
-    cw.write("")
-    
-CodeGenerator("Call Targets", call_targets).doit()
-CodeGenerator("Call Targets With This", calltargets_with_this).doit()
+CodeGenerator("Python Call Targets", call_targets).doit()
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
@@ -225,9 +215,8 @@ def gen_python_methods(cw):
 
 CodeGenerator("Python Call Operations", gen_python_methods).doit()
 
-def gen_count(cw):
-    cw.write("public const int MaximumCallArgs = %s;" % MAX_ARGS)
+def gen_python_switch(cw):
+    for nparams in range(MAX_ARGS+1):
+        cw.write("case %d: return typeof(CallTarget%d);" % (nparams, nparams))
 
-CodeGenerator("MaximumCallArgs", gen_count).doit()
-
-
+CodeGenerator("Python Call Target Switch", gen_python_switch).doit()

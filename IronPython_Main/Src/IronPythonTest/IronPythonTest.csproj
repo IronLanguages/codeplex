@@ -36,7 +36,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
     </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Silverlight Release' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -46,7 +46,7 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" '$(SilverlightBuild)' != 'true' " />

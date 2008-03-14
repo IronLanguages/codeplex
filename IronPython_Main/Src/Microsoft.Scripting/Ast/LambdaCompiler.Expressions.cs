@@ -140,10 +140,6 @@ namespace Microsoft.Scripting.Ast {
                     Emit((NewArrayExpression)node);
                     break;
 
-                case AstNodeType.ParamsExpression:
-                    EmitParamsExpression();
-                    break;
-
                 case AstNodeType.UnboundAssignment:
                     Emit((UnboundAssignment)node);
                     break;
@@ -590,7 +586,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(CodeBlockExpression node) {
-            EmitDelegateConstruction(this, node.Block, node.ForceWrapperMethod, node.IsStronglyTyped, node.DelegateType);
+            EmitDelegateConstruction(node.Block, node.Type);
         }
 
         // Emit the generator intrinsic arg used in a GeneratorCodeBlock.
@@ -681,11 +677,6 @@ namespace Microsoft.Scripting.Ast {
                 }
                 EmitArray(node.Type);
             }
-        }
-
-        private void EmitParamsExpression() {
-            Debug.Assert(ParamsSlot != null);
-            ParamsSlot.EmitGet(this);
         }
 
         private void Emit(UnboundAssignment node) {

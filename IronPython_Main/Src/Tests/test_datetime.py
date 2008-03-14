@@ -1069,4 +1069,14 @@ def test_invariant():
             delta = datetime.timedelta(microseconds= -pow10 - y)
             AreEqual(delta * 3, delta + delta + delta)
 
+@skip("win32")
+def test_cli_interop():
+    # can construct Python datetime from .NET datetime
+    import System
+    now = System.DateTime.Now
+    pyNow = datetime.datetime(System.DateTime.Now)
+    AreEqual(pyNow.month, now.Month)
+    AreEqual(pyNow.day, now.Day)
+    AreEqual(pyNow.year, now.Year)
+    
 run_test(__name__)

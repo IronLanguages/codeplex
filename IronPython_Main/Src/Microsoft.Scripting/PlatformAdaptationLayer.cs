@@ -38,13 +38,18 @@ namespace Microsoft.Scripting {
     }
 #endif
 
+    /// <summary>
+    /// Abstracts system operations that are used by DLR and could potentially be platform specific.
+    /// The host can implement its PAL to adapt DLR to the platform it is running on.
+    /// For example, the Silverlight host adapts some file operations to work against files on the server.
+    /// </summary>
     [Serializable]
     public class PlatformAdaptationLayer {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes")]
         public static readonly PlatformAdaptationLayer/*!*/ Default = new PlatformAdaptationLayer();
 
-        // TODO: dictionary should be static?
 #if SILVERLIGHT
+        // this dictionary is readonly after initialization:
         private Dictionary<string, string> _assemblyFullNames = new Dictionary<string, string>();
 
         public PlatformAdaptationLayer() {
@@ -52,11 +57,10 @@ namespace Microsoft.Scripting {
         }
 
         // TODO: remove the need for this
-        // TODO: does this list need to be complete?
         private void LoadSilverlightAssemblyNameMapping() {
             // non-trasparent assemblies
-            AssemblyName clrAssembly = new AssemblyName(typeof(object).Assembly.FullName);
-            foreach (string asm in new string[] {
+            AssemblyName platformKeyVer = new AssemblyName(typeof(object).Assembly.FullName);
+            AddAssemblyMappings(platformKeyVer,
                 "mscorlib",
                 "System",
                 "System.Core",
@@ -66,17 +70,12 @@ namespace Microsoft.Scripting {
                 "System.Windows",
                 "System.Windows.Browser",
                 "System.Xml",
-                "System.Xml.Dtd",
-                "System.Xml.Serialization",
-                "Microsoft.VisualBasic",
-            }) {
-                clrAssembly.Name = asm;
-                _assemblyFullNames.Add(asm.ToLower(), clrAssembly.FullName);
-            }
+                "Microsoft.VisualBasic"
+            );
 
-            // transparent assemblies
-            AssemblyName dlrAssembly = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);            
-            foreach (string asm in new string[] {
+            // DLR + language assemblies
+            AssemblyName languageKeyVer = new AssemblyName(typeof(PlatformAdaptationLayer).Assembly.FullName);
+            AddAssemblyMappings(languageKeyVer, 
                 "Microsoft.Scripting",
                 "Microsoft.Scripting.Silverlight",
                 "IronPython",
@@ -84,15 +83,30 @@ namespace Microsoft.Scripting {
                 "IronRuby",
                 "IronRuby.Libraries",
                 "Microsoft.JScript.Compiler",
-                "Microsoft.JScript.Runtime",
-                "Microsoft.VisualBasic.Compiler",
-                "Microsoft.VisualBasic.Scripting",
+                "Microsoft.JScript.Runtime"
+            );
+
+            // transparent assemblies => same version as mscorlib but uses transparent key (same as languages)
+            AssemblyName transparentKeyVer = new AssemblyName(typeof(object).Assembly.FullName);
+            transparentKeyVer.SetPublicKeyToken(languageKeyVer.GetPublicKeyToken());
+            AddAssemblyMappings(transparentKeyVer,
                 "System.ServiceModel",
                 "System.ServiceModel.Syndication",
+                "System.Windows.Controls",
+                "System.Windows.Controls.Data",
+                "System.Windows.Controls.Data.Design",
+                "System.Windows.Controls.Design",
+                "System.Windows.Controls.Extended",
+                "System.Windows.Controls.Extended.Design",
                 "System.Xml.Linq",
-            }) {
-                dlrAssembly.Name = asm;
-                _assemblyFullNames.Add(asm.ToLower(), dlrAssembly.FullName);
+                "System.Xml.Serialization"
+            );
+        }
+
+        private void AddAssemblyMappings(AssemblyName keyVersion, params string[] names) {
+            foreach (string asm in names) {
+                keyVersion.Name = asm;
+                _assemblyFullNames.Add(asm.ToLower(), keyVersion.FullName);
             }
         }
 
@@ -135,19 +149,10 @@ namespace Microsoft.Scripting {
 
         #region Virtual File System
 
-        /// <summary>
-        /// Normalizes a specified path.
-        /// </summary>
-        /// <param name="path">Path to normalize.</param>
-        /// <returns>Normalized path.</returns>
-        /// <exception cref="ArgumentException"><paramref name="path"/> is not a valid path.</exception>
-        /// <remarks>
-        /// Normalization should be idempotent, i.e. NormalizePath(NormalizePath(path)) == NormalizePath(path) for any valid path.
-        /// </remarks>
-        public virtual string/*!*/ NormalizePath(string/*!*/ path) {
-            Contract.RequiresNotNull(path, "path");
-
-            return (path.Length > 0) ? GetFullPath(path) : "";
+        public StringComparer/*!*/ PathComparer {
+            get {
+                return StringComparer.Ordinal;
+            }
         }
 
         public virtual bool FileExists(string path) {

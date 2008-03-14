@@ -117,16 +117,16 @@ namespace Microsoft.Scripting.Ast {
 
         private class BlockTempMaker : TempMaker {
             /// <summary>
-            /// CodeBlock the body of which is being rewritten
+            /// LambdaExpression the body of which is being rewritten
             /// </summary>
-            private readonly CodeBlock _block;
+            private readonly LambdaExpression _lambda;
 
-            internal BlockTempMaker(CodeBlock block) {
-                Debug.Assert(block != null);
-                _block = block;
+            internal BlockTempMaker(LambdaExpression lambda) {
+                Debug.Assert(lambda != null);
+                _lambda = lambda;
             }
             protected internal override Variable MakeTemp(string name, Type type) {
-                return _block.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
+                return _lambda.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
             }
         }
 
@@ -170,9 +170,9 @@ namespace Microsoft.Scripting.Ast {
 
         #region Rewriter entry points
 
-        public static void RewriteBlock(CodeBlock block) {
-            AstRewriter ar = new AstRewriter(new BlockTempMaker(block));
-            ar.Rewrite(block);
+        public static void RewriteBlock(LambdaExpression lambda) {
+            AstRewriter ar = new AstRewriter(new BlockTempMaker(lambda));
+            ar.Rewrite(lambda);
         }
 
         public static void RewriteRule(StandardRule rule) {
@@ -186,17 +186,17 @@ namespace Microsoft.Scripting.Ast {
             _tm = tm;
         }
 
-        private void Rewrite(CodeBlock block) {
+        private void Rewrite(LambdaExpression lambda) {
             VerifyTemps();
 
-            // Block starts with an empty stack
-            Expression body = RewriteExpressionFreeTemps(this, block.Body, Stack.Empty);
+            // Lambda starts with an empty stack
+            Expression body = RewriteExpressionFreeTemps(this, lambda.Body, Stack.Empty);
 
             VerifyTemps();
 
-            if ((object)body != (object)block.Body) {
+            if ((object)body != (object)lambda.Body) {
                 FixBreakAndContinue();
-                block.Body = body;
+                lambda.Body = body;
             }
         }
 

@@ -272,6 +272,13 @@ def test_str_dict():
         else:
             Assert(not temp_key in str.__dict__.keys(), "str.__dict__ bug was fixed.  Please update test.")
     
-        
+def test_formatting_userdict():
+    """verify user mapping object works with string formatting"""
+    class mydict(object):
+        def __getitem__(self, key):
+            if key == 'abc': return 42
+            elif key == 'bar': return 23
+            raise KeyError, key
+    AreEqual('%(abc)s %(bar)s' % (mydict()), '42 23')
 
 run_test(__name__)

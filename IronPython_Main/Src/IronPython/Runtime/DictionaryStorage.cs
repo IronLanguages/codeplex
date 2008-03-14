@@ -17,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Scripting;
 
 namespace IronPython.Runtime {
     /// <summary>
@@ -27,9 +28,24 @@ namespace IronPython.Runtime {
     /// </summary>
     public abstract class DictionaryStorage  {
         public abstract void Add(object key, object value);
+
+        public virtual void Add(SymbolId key, object value) {
+            Add(SymbolTable.IdToString(key), value);
+        }
+
         public abstract bool Contains(object key);
+        
+        public virtual bool Contains(SymbolId key) {
+            return Contains(SymbolTable.IdToString(key));
+        }
+
         public abstract bool Remove(object key);
         public abstract bool TryGetValue(object key, out object value);
+
+        public virtual bool TryGetValue(SymbolId key, out object value) {
+            return TryGetValue(SymbolTable.IdToString(key), out value);
+        }
+
         public abstract int Count { get; }
         public abstract void Clear();
         public abstract List<KeyValuePair<object, object>> GetItems();

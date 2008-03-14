@@ -180,7 +180,7 @@ namespace IronPython.Runtime {
             if (level <= 0) {
                 if (newmod == null) {
                     newmod = ImportTopAbsolute(context, parts[0]);
-
+                    
                     if (newmod == null) {
                         return null;
                     }
@@ -334,7 +334,7 @@ namespace IronPython.Runtime {
                 }
             }
 
-            SourceUnit sourceUnit = pc.TryGetSourceFileUnit(fileName, pc.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, fileName, pc.DefaultEncoding, SourceCodeKind.File);
 
             if (sourceUnit == null) {
                 throw PythonOps.SystemError("module source file not found");
@@ -555,7 +555,14 @@ namespace IronPython.Runtime {
         private static object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {
             object ret;
             if (!PythonContext.GetContext(context).DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
-                ret = PythonContext.GetContext(context).DomainManager.UseModule(name);
+                try {
+                    ret = PythonContext.GetContext(context).DomainManager.UseModule(name);
+                } catch (FileNotFoundException) {
+                    return null;
+                } catch (AmbiguousFileNameException e) {
+                    throw PythonOps.ImportError(String.Format("Found multiple modules of the same name '{0}': '{1}' and '{2}'", 
+                        name, e.FirstPath, e.SecondPath));
+                }
             }
 
             MemberTracker res = ret as MemberTracker;
@@ -694,7 +701,7 @@ namespace IronPython.Runtime {
             }
             
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit sourceUnit = pc.TryGetSourceFileUnit(path, pc.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, path, pc.DefaultEncoding, SourceCodeKind.File);
             if (sourceUnit == null) {
                 return null;
             }

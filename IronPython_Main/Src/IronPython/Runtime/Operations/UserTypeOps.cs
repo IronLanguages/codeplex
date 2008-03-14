@@ -1196,7 +1196,7 @@ namespace IronPython.Runtime.Operations {
         private static IAttributesCollection GetDictionary(IPythonObject self) {
             IAttributesCollection dict = self.Dict;
             if (dict == null) {
-                dict = self.SetDict(new SymbolDictionary());
+                dict = self.SetDict(PythonDictionary.MakeSymbolDictionary());
             }
             return dict;
         }

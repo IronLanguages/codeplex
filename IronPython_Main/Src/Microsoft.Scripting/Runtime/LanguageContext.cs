@@ -140,10 +140,10 @@ namespace Microsoft.Scripting.Runtime {
         public virtual void UpdateSourceCodeProperties(CompilerContext/*!*/ context) {
             Contract.RequiresNotNull(context, "context");
 
-            CodeBlock block = ParseSourceCode(context);
+            LambdaExpression lambda = ParseSourceCode(context);
 
             if (!context.SourceUnit.CodeProperties.HasValue) {
-                context.SourceUnit.CodeProperties = (block != null) ? SourceCodeProperties.None : SourceCodeProperties.IsInvalid;
+                context.SourceUnit.CodeProperties = (lambda != null) ? SourceCodeProperties.None : SourceCodeProperties.IsInvalid;
             }
         }
 
@@ -358,7 +358,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <param name="context">Compiler context.</param>
         /// <returns><b>null</b> on failure.</returns>
         /// <remarks>Could also set the code properties and line/file mappings on the source unit.</remarks>
-        public abstract CodeBlock ParseSourceCode(CompilerContext context);
+        public abstract LambdaExpression ParseSourceCode(CompilerContext context);
 
         public virtual string/*!*/ DisplayName {
             get {
@@ -478,15 +478,6 @@ namespace Microsoft.Scripting.Runtime {
             Contract.Requires(EnumBounds.IsValid(kind), "kind");
             
             return new SourceUnit(this, contentProvider, path, kind);
-        }
-
-        // TODO: remove this?
-        public SourceUnit TryGetSourceFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(encoding, "encoding");
-            Contract.Requires(EnumBounds.IsValid(kind), "kind");
-            
-            return _domainManager.Host.TryGetSourceFileUnit(this, path, encoding, kind);
         }
 
         #endregion

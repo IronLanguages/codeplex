@@ -342,7 +342,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
         /// If no correct visible type can be found then the member is not visible and we won't call it.
         /// </summary>
-        private static MemberInfo[] FilterNonVisibleMembers(Type type, MemberInfo[] foundMembers) {
+        internal static MemberInfo[] FilterNonVisibleMembers(Type type, MemberInfo[] foundMembers) {
             if (!type.IsVisible && foundMembers.Length > 0 && !ScriptDomainManager.Options.PrivateBinding) {
                 // need to remove any members that we can't get through other means
                 List<MemberInfo> foundVisible = null;
@@ -640,6 +640,19 @@ namespace Microsoft.Scripting.Actions {
         }
 
         #endregion
+
+        public virtual ErrorInfo MakeEventValidation(StandardRule rule, MemberGroup members) {
+            EventTracker ev = (EventTracker)members[0];
+
+            // handles in place addition of events - this validates the user did the right thing.
+            return ErrorInfo.FromValueNoError(
+                Ast.Ast.Call(
+                    typeof(BinderOps).GetMethod("SetEvent"),
+                    Ast.Ast.RuntimeConstant(ev),
+                    rule.Parameters[1]
+                )
+            );
+        }
 
         protected virtual string GetTypeName(Type t) {
             return t.Name;

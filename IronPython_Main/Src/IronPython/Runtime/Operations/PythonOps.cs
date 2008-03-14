@@ -26,6 +26,11 @@ using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
+
+#if !SILVERLIGHT
+using Microsoft.Scripting.Actions.ComDispatch;
+#endif
+
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Math;
@@ -602,9 +607,6 @@ namespace IronPython.Runtime.Operations {
         private static void MakePythonTypeTable() {
             RegisterLanguageAssembly(Assembly.GetExecutingAssembly());
             RuntimeHelpers.TypeExtended += new EventHandler<RuntimeHelpers.TypeExtendedEventArgs>(DynamicHelpers_TypeExtended);
-
-            // TODO: Remove impersonation
-            PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(typeof(SymbolDictionary))).SetImpersonationType(typeof(PythonDictionary));
 
             // TODO: Contest specific MRO?
             PythonTypeBuilder.GetBuilder(DynamicHelpers.GetPythonTypeFromType(typeof(bool))).AddInitializer(delegate(PythonTypeBuilder builder) {
@@ -1489,13 +1491,22 @@ namespace IronPython.Runtime.Operations {
             IMembersList memList = o as IMembersList;
 
             if (memList != null) {
-
                 return memList.GetMemberNames(context);
             }
 
             List res = new List();
-            foreach(SymbolId x in DynamicHelpers.GetPythonType(o).GetMemberNames(context, o))
+
+            foreach (SymbolId x in DynamicHelpers.GetPythonType(o).GetMemberNames(context, o)) {
                 res.AddNoLock(SymbolTable.IdToString(x));
+            }
+
+#if !SILVERLIGHT
+            if(o != null && ComObject.Is__ComObject(o.GetType())){
+                foreach (SymbolId symbol in ComObject.ObjectToComObject(o).GetMemberNames(context)) {
+                    res.AddNoLock(SymbolTable.IdToString(symbol));
+                }
+            }
+#endif
 
             //!!! ugly, we need to check fro non-SymbolID keys
             IPythonObject dyno = o as IPythonObject;
@@ -1620,7 +1631,7 @@ namespace IronPython.Runtime.Operations {
                 return RuntimeHelpers.True;
             }
             object getitem;
-            if (PythonOps.TryGetBoundAttr(context, o, Symbols.GetItem, out getitem)) {
+            if ((o is IPythonObject || o is OldInstance) && PythonOps.TryGetBoundAttr(context, o, Symbols.GetItem, out getitem)) {
                 if (!context.ModuleContext.ShowCls) {
                     // in standard Python methods aren't mapping types, therefore
                     // if the user hasn't broken out of that box yet don't treat 
@@ -1952,20 +1963,15 @@ namespace IronPython.Runtime.Operations {
             return TypeCache.OldInstance;
         }
 
-        public static object MakeClass(CodeContext/*!*/ context, string name, object[] bases, string selfNames, Delegate body) {
-            CodeContext bodyContext;
-            CallTarget0 target;
-            CallTargetWithContext0 targetWithContext;
-            if ((target = body as CallTarget0) != null) {
-                bodyContext = (CodeContext)target();
-            } else if ((targetWithContext = body as CallTargetWithContext0) != null) {
-                bodyContext = (CodeContext)((CallTargetWithContext0)body)(context);
-            } else {
-                bodyContext = (CodeContext)((CallTargetWithContextN)body)(context);
-            }
+        public static object MakeClass(CodeContext/*!*/ context, string name, object[] bases, string selfNames, CallTarget0 body) {
+            CodeContext bodyContext = (CodeContext)body();
 
             IAttributesCollection vars = bodyContext.Scope.Dict;
 
+            return MakeClass(context, name, bases, selfNames, vars);
+        }
+
+        internal static object MakeClass(CodeContext context, string name, object[] bases, string selfNames, IAttributesCollection vars) {
             foreach (object dt in bases) {
                 if (dt is TypeGroup) {
                     object[] newBases = new object[bases.Length];
@@ -2887,7 +2893,7 @@ namespace IronPython.Runtime.Operations {
                 if (Mro.IsOldStyle(t)) {
                     OldClass oc = (OldClass)ToPythonType(t);
                     object ret;
-                    if (oc.__dict__.TryGetValue(name, out ret)) {
+                    if (oc.__dict__._storage.TryGetValue(name, out ret)) {
                         if (instance != null) return oc.GetOldStyleDescriptor(context, ret, instance, oc);
                         return ret;
                     }
@@ -2916,6 +2922,11 @@ namespace IronPython.Runtime.Operations {
             foreach (PythonExtensionTypeAttribute et in attrs) {
                 ExtendOneType(et, DynamicHelpers.GetPythonTypeFromType(et.Extends));
             }
+
+#if !SILVERLIGHT
+            PythonExtensionTypeAttribute cotet = new PythonExtensionTypeAttribute(ComObject.ComObjectType, typeof(ComOps));
+            ExtendOneType(cotet, DynamicHelpers.GetPythonTypeFromType(cotet.Extends));
+#endif
         }
 
         internal static void ExtendOneType(PythonExtensionTypeAttribute et, PythonType dt) {

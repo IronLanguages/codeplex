@@ -442,12 +442,38 @@ if is_cli:
 		
 	repeat_on_class(C1, C2) 
 
+@skip("win32")
+def test_dict_to_idict():
+    """verify dicts can be converted to IDictionaries"""
+    load_iron_python_test()
+    from IronPythonTest import DictConversion
+    class MyDict(dict): pass
+    class KOld: pass
+    class KNew(object): pass
+    class KOldDerived(KOld): pass
+    class KNewDerived(KNew): pass
 
-    def test_dict_to_idict():
-        """verify dicts can be converted to IDictionaries"""
-        load_iron_python_test()
-        from IronPythonTest import DictConversion
-        AreEqual(list(DictConversion.ToIDictionary({1:100, 2:200, 3:300, 4:400})), [1,2,3,4,100,200,300,400])
+    test_dicts = [
+                    {},
+                    {1:100},
+                    {None:None},
+                    {object:object},
+                    {1:100, 2:200},
+                    {1:100, 2:200, 3:300, 4:400},
+                    #MyDict.__dict__,  #CodePlex 15471
+                    KOld.__dict__,
+                    #KNew.__dict__, #CodePlex 15471
+                    KOldDerived.__dict__,
+                    #KNewDerived.__dict__, #CodePlex 15471
+                    ]
+    
+    for temp_dict in test_dicts:
+        expected = temp_dict.keys() + temp_dict.values()
+        AreEqual(  list(DictConversion.ToIDictionary(temp_dict)), 
+                    expected)
+        AreEqual(  list(DictConversion.ToIDictionary(MyDict(temp_dict))), 
+                    expected)
+        
 
 #####################################################################
 ## coverage for FieldIdDict
@@ -681,8 +707,7 @@ def test_DictionaryUnionEnumerator():
     # Add non-string attribute
     d[1] = 100
     e = System.Collections.IDictionary.GetEnumerator(d)
-    # This returns an instance of DictionaryUnionEnumerator
-    AreEqual(e.GetType().Name.__contains__("DictionaryUnionEnumerator"), True)
+
     AssertError(SystemError, getattr, e, "Key")
     AreEqual(e.MoveNext(), True)
     AreEqual(e.Key, 1)
@@ -871,5 +896,39 @@ def test_keys_not_as_property():
             "iteration over non-sequence of type <type 'builtin_function_or_method'>", 
             "'builtin_function_or_method' object is not iterable",
             f)
+
+def test_dict_class_dictionary():
+    class KOld:
+        KLASS_MEMBER = 3.14
+        def aFunc(): pass
+        def aMethod(self): pass
+        
+    class KNew(object):
+        KLASS_MEMBER = 3.14
+        def aFunc(): pass
+        def aMethod(self): pass
+        
+        
+    for K in [KOld, KNew]:
+        temp_dict = dict(K.__dict__)
+        
+        #class member has the correct value?
+        AreEqual(K.__dict__["KLASS_MEMBER"], 3.14)
+        #CodePlex 14501
+        #AreEqual(temp_dict["KLASS_MEMBER"], 3.14)
+        
+        #methods show up?
+        for func_name in ["aFunc", "aMethod"]:
+            Assert(func_name in K.__dict__.keys())
+            Assert(func_name in temp_dict.keys())
+        
+    expected_keys = [   '__module__', 'KLASS_MEMBER', 'aFunc', 'aMethod', 
+                        #'__dict__', #CodePlex 14501
+                        '__weakref__', '__doc__']
+    for expected_key in expected_keys:
+        Assert(KNew.__dict__.has_key(expected_key), expected_key)
+        Assert(temp_dict.has_key(expected_key), expected_key)
+        
+
 
 run_test(__name__)

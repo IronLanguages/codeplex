@@ -29,7 +29,10 @@ using System.Threading;
 using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
-
+    /// <summary>
+    /// Represents a Dynamic Language Runtime in Hosting API. 
+    /// Hosting API counterpart for <see cref="ScriptDomainManager"/>.
+    /// </summary>
     public sealed class ScriptRuntime 
 #if !SILVERLIGHT
         : MarshalByRefObject 
@@ -70,16 +73,26 @@ namespace Microsoft.Scripting.Hosting {
             _globals = new ScriptScope(GetEngineNoLockNoNotification(manager.Globals.Language, out freshEngineCreated), manager.Globals);
         }
 
+        /// <summary>
+        /// Creates ScriptRuntime in the current app-domain and initialized with default settings.
+        /// Also creates a default ScriptHost instance associated with the runtime, also in the current app-domain.
+        /// </summary>
         public static ScriptRuntime/*!*/ Create() {
             return CreateInternal(null, null);
         }
 
+        /// <summary>
+        /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
+        /// Creates an instance of host class specified in the setup and associates it with the created runtime.
+        /// Both Runtime and ScriptHost are collocated in the current app-domain.
+        /// </summary>
         public static ScriptRuntime/*!*/ Create(ScriptRuntimeSetup/*!*/ setup) {
             Contract.RequiresNotNull(setup, "setup");
             return CreateInternal(null, setup);
         }
 
-        public static ScriptRuntime/*!*/ CreateInternal(AppDomain domain, ScriptRuntimeSetup setup) {
+        // Creates Runtime in specified app-domain and initialized according to specified setup.
+        private static ScriptRuntime/*!*/ CreateInternal(AppDomain domain, ScriptRuntimeSetup setup) {
             if (domain != null && domain != AppDomain.CurrentDomain) {
 #if SILVERLIGHT
                 throw Assert.Unreachable;
@@ -113,22 +126,34 @@ namespace Microsoft.Scripting.Hosting {
         #region Remoting
 
 #if !SILVERLIGHT
+        /// <summary>
+        /// Creates ScriptRuntime in the specified app-domain and initialized with default settings.
+        /// Also creates a default ScriptHost instance associated with the runtime, also in the given app-domain.
+        /// </summary>
         public static ScriptRuntime/*!*/ Create(AppDomain/*!*/ domain) {
             return CreateInternal(domain, null);
         }
-        
+
+        /// <summary>
+        /// Creates ScriptRuntime in the current app-domain and initialized according to the the specified settings.
+        /// Creates an instance of host class specified in the setup and associates it with the created runtime.
+        /// Both Runtime and ScriptHost are collocated in the specified app-domain.
+        /// </summary>
         public static ScriptRuntime/*!*/ Create(AppDomain/*!*/ domain, ScriptRuntimeSetup/*!*/ setup) {
             Contract.RequiresNotNull(domain, "domain");
             return CreateInternal(domain, setup);
         }
 
+        // Factory object used for creating remote Runtime.
         private sealed class RemoteRuntimeFactory : MarshalByRefObject {
             public readonly ScriptRuntime/*!*/ Runtime;
 
+            // Runs in the app-domain remote to the user of the factory.
             public RemoteRuntimeFactory(ScriptRuntimeSetup setup) {
                 Runtime = ScriptRuntime.CreateInternal(null, setup);
             }
 
+            // Runs in the same app-domain as the user of the factory and returns a remote reference to the created Runtime.
             public static ScriptRuntime/*!*/ CreateRuntime(AppDomain/*!*/ domain, ScriptRuntimeSetup setup) {
                 RemoteRuntimeFactory rd = (RemoteRuntimeFactory)domain.CreateInstanceAndUnwrap(typeof(RemoteRuntimeFactory).Assembly.FullName,
                     typeof(RemoteRuntimeFactory).FullName, false, BindingFlags.Default, null, new object[] { setup }, null, null, null);
@@ -174,19 +199,19 @@ namespace Microsoft.Scripting.Hosting {
 
         #endregion
 
-        public string[] GetRegisteredFileExtensions() {
+        public string/*!*/[]/*!*/ GetRegisteredFileExtensions() {
             return _manager.GetRegisteredFileExtensions();
         }
 
-        public string[] GetRegisteredLanguageIdentifiers() {
+        public string/*!*/[]/*!*/ GetRegisteredLanguageIdentifiers() {
             return _manager.GetRegisteredLanguageIdentifiers();
         }
 
-        internal string[] GetRegisteredFileExtensions(LanguageContext context) {
+        internal string/*!*/[]/*!*/ GetRegisteredFileExtensions(LanguageContext context) {
             return _manager.GetRegisteredFileExtensions(context);
         }
 
-        internal string[] GetRegisteredLanguageIdentifiers(LanguageContext context) {
+        internal string/*!*/[]/*!*/ GetRegisteredLanguageIdentifiers(LanguageContext context) {
             return _manager.GetRegisteredLanguageIdentifiers(context);
         }
 
@@ -243,6 +268,9 @@ namespace Microsoft.Scripting.Hosting {
             return GetEngine(_manager.GetLanguageContext(languageContextType));
         }
 
+        /// <summary>
+        /// Gets engine for the specified language.
+        /// </summary>
         internal ScriptEngine/*!*/ GetEngine(LanguageContext/*!*/ language) {
             Assert.NotNull(language);
 
@@ -259,6 +287,10 @@ namespace Microsoft.Scripting.Hosting {
             return engine;
         }
 
+        /// <summary>
+        /// Looks up the engine for the specified language. It the engine hasn't been created in this Runtime, it is instantiated here.
+        /// The method doesn't lock nor send notifications to the host.
+        /// </summary>
         private ScriptEngine/*!*/ GetEngineNoLockNoNotification(LanguageContext/*!*/ language, out bool freshEngineCreated) {
             Debug.Assert(_engines != null, "Invalid ScriptRuntime initialiation order");
 

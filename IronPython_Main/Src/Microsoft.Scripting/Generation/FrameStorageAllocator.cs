@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Generation {
             return new FrameStorage(name, type);
         }
 
-        public override Slot GetAccessSlot(LambdaCompiler cg, CodeBlock block) {
+        public override Slot GetAccessSlot(LambdaCompiler cg, LambdaExpression lambda) {
             return cg.ContextSlot;
         }
     }

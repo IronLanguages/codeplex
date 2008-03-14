@@ -249,47 +249,6 @@ namespace Microsoft.Scripting.Utils {
             return result;
         }
 
-        public static Type GetDelegateType(Type[] arguments, Type returnType) {
-            Assert.NotNull(arguments, returnType);
-            Type result;
-
-            if (returnType == typeof(void)) {
-                switch (arguments.Length) {
-                    case 0: return typeof(Action);
-                    case 1: result = typeof(Action<>); break;
-                    case 2: result = typeof(Action<,>); break;
-                    case 3: result = typeof(Action<,,>); break;
-                    case 4: result = typeof(Action<,,,>); break;
-                    case 5: result = typeof(Action<,,,,>); break;
-                    case 6: result = typeof(Action<,,,,,>); break;
-                    case 7: result = typeof(Action<,,,,,,>); break;
-                    case 8: result = typeof(Action<,,,,,,,>); break;
-                    default:
-                        throw new NotImplementedException("Action delegate not implemented for " + arguments.Length + " arguments.");
-                }
-            } else {
-                arguments = ArrayUtils.Append(arguments, returnType);
-                switch (arguments.Length) {
-                    case 0: throw Assert.Unreachable;
-                    case 1: result = typeof(Function<>); break;
-                    case 2: result = typeof(Function<,>); break;
-                    case 3: result = typeof(Function<,,>); break;
-                    case 4: result = typeof(Function<,,,>); break;
-                    case 5: result = typeof(Function<,,,,>); break;
-                    case 6: result = typeof(Function<,,,,,>); break;
-                    case 7: result = typeof(Function<,,,,,,>); break;
-                    case 8: result = typeof(Function<,,,,,,,>); break;
-                    case 9: result = typeof(Function<,,,,,,,,>); break;
-                    default:
-                        throw new NotImplementedException("Function delegate not implemented for " + arguments.Length + " arguments.");
-                }
-            }
-
-            return result.MakeGenericType(arguments);
-        }
-
-        public const int MaxSignatureSize = 8;
-
         public static bool SignatureEquals(MethodInfo method, params Type[] requiredSignature) {
             Contract.RequiresNotNull(method, "method");
 

@@ -178,7 +178,11 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             // TODO: new StackTrace(...) is SecurityCritical in Silverlight
-#if !SILVERLIGHT
+#if SILVERLIGHT
+            foreach (DynamicStackFrame result in dynamicFrames) {
+                yield return result;
+            }
+#else
             foreach (DynamicStackFrame result in GetStackFrames(new StackTrace(e, true), dynamicFrames, reverseOrder)) {
                 yield return result;
             }
@@ -213,7 +217,7 @@ namespace Microsoft.Scripting.Runtime {
                 Type parentType = method.DeclaringType;
                 if (parentType != null) {
                     string typeName = parentType.FullName;
-                    if (typeName == "Microsoft.Scripting.Ast.CodeBlock" && method.Name == "DoExecute") {
+                    if (typeName == "Microsoft.Scripting.Ast.LambdaExpression" && method.Name == "DoExecute") {
                         // Evaluated frame -- Replace with dynamic frame
                         Debug.Assert(dynamicFrames.Count > 0);
                         //if (dynamicFrames.Count == 0) continue;

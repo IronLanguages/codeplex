@@ -29,10 +29,13 @@ using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
-    /// These are some generally useful helper methods.
-    /// Currently the only methods are those to cached boxed representations of commonly
-    /// used primitive types so that they can be shared.  This is useful to most dynamic
-    /// languages that use object as a universal type.
+    /// These are some generally useful helper methods. Currently the only methods are those to
+    /// cached boxed representations of commonly used primitive types so that they can be shared.
+    /// This is useful to most dynamic languages that use object as a universal type.
+    /// 
+    /// The methods in RuntimeHelepers are caleld by the generated code. From here the methods may
+    /// dispatch to other parts of the runtime to get bulk of the work done, but the entry points
+    /// should be here.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public static class RuntimeHelpers {
@@ -660,6 +663,22 @@ namespace Microsoft.Scripting.Runtime {
 
         public static Delegate CreateDynamicClosure(MethodInfo mi, RuntimeTypeHandle @delegate, CodeContext context, object[] constants) {
             return ReflectionUtils.CreateDelegate(mi, Type.GetTypeFromHandle(@delegate), new Closure(context, constants));
+        }
+
+        /// <summary>
+        /// Used by the code gen of wrapper methods which extract subset of the params array
+        /// manually, but then extract the rest in bulk if the underlying method also takes
+        /// params array.
+        /// 
+        /// This calls ArrayUtils.ShiftLeft, but performs additional checks that
+        /// ArrayUtils.ShiftLeft assumes.
+        /// </summary>
+        public static T[] ShiftParamsArray<T>(T[] array, int count) {
+            if (array != null && array.Length > count) {
+                return ArrayUtils.ShiftLeft(array, count);
+            } else {
+                return new T[0];
+            }
         }
     }
 }

@@ -20,10 +20,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace IronPython.Runtime.Types {
-    public class CustomOldClassDictionaryStorage : CommonDictionaryStorage {
+    public sealed class CustomOldClassDictionaryStorage : SymbolIdDictionaryStorage {
         private int _keyVersion;
         private SymbolId[] _extraKeys;
-        private object[] _values;        
+        private object[] _values;
 
         public CustomOldClassDictionaryStorage(SymbolId[] extraKeys, int keyVersion) {
             _extraKeys = extraKeys;
@@ -46,7 +46,25 @@ namespace IronPython.Runtime.Types {
             base.Add(key, value);
         }
 
+        public override void Add(SymbolId key, object value) {
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                _values[ikey] = value;
+            } else {
+                base.Add(key, value);
+            }
+        }
+
         public override bool Contains(object key) {
+            int ikey = FindKey(key);
+            if (ikey != -1) {
+                return _values[ikey] != Uninitialized.Instance;
+            }
+
+            return base.Contains(key);
+        }
+
+        public override bool Contains(SymbolId key) {
             int ikey = FindKey(key);
             if (ikey != -1) {
                 return _values[ikey] != Uninitialized.Instance;
@@ -83,6 +101,22 @@ namespace IronPython.Runtime.Types {
             return base.TryGetValue(key, out value);
         }
 
+        public override bool TryGetValue(SymbolId key, out object value) {
+            int ikey = FindKey(key);
+
+            if (ikey != -1) {
+                value = _values[ikey];
+                if (value != Uninitialized.Instance) {
+                    return true;
+                }
+
+                value = null;
+                return false;
+            }
+
+            return base.TryGetValue(key, out value);
+        }
+
         public override int Count {
             get { 
                 int count = base.Count;
@@ -91,12 +125,17 @@ namespace IronPython.Runtime.Types {
                         count++;
                     }
                 }
+
                 return count;
             }
         }
 
         public override void Clear() {
-            throw new System.NotImplementedException();
+            for (int i = 0; i < _values.Length; i++) {
+                _values[i] = Uninitialized.Instance;
+            }
+
+            base.Clear();
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {
@@ -107,6 +146,7 @@ namespace IronPython.Runtime.Types {
                     res.Add(new KeyValuePair<object, object>(SymbolTable.IdToString(_extraKeys[i]), _values[i]));
                 }
             }
+
             return res;
         }
 

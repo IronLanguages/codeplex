@@ -72,7 +72,7 @@
     <DocumentationFile>..\..\Bin\Silverlight Debug\Microsoft.Scripting.xml</DocumentationFile>
     <NoWarn>1591,618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>..\..\Utilities\Silverlight\x86ret\</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -85,7 +85,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>..\..\Utilities\Silverlight\x86ret\</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
@@ -110,6 +110,7 @@
     <Compile Include="Actions\ArgumentInfo.cs" />
     <Compile Include="Actions\CallSignature.cs" />
     <Compile Include="Actions\ComDispatch\BoundDispEvent.cs" />
+    <Compile Include="Actions\ComDispatch\ComDispIds.cs" />
     <Compile Include="Actions\ComDispatch\ComEventDesc.cs" />
     <Compile Include="Actions\ComDispatch\ComEventSink.cs" />
     <Compile Include="Actions\ComDispatch\ComEventSinkProxy.cs" />
@@ -117,15 +118,26 @@
     <Compile Include="Actions\ComDispatch\ComHresults.cs" />
     <Compile Include="Actions\ComDispatch\ComInterop.cs" />
     <Compile Include="Actions\ComDispatch\ComMethodDesc.cs" />
+    <Compile Include="Actions\ComDispatch\ComObject.cs" />
+    <Compile Include="Actions\ComDispatch\ComObjectWithTypeInfo.cs" />
+    <Compile Include="Actions\ComDispatch\ComObjectWithTypeInfoDoOperationBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\ComObjectWithTypeInfoGetMemberBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\ComObjectWithTypeInfoSetMemberBinderHelper.cs" />
     <Compile Include="Actions\ComDispatch\ComParamDesc.cs" />
     <Compile Include="Actions\ComDispatch\ComReferenceArgBuilder.cs" />
     <Compile Include="Actions\ComDispatch\ComRuntimeHelpers.cs" />
     <Compile Include="Actions\ComDispatch\ComTypeDesc.cs" />
     <Compile Include="Actions\ComDispatch\DispCallable.cs" />
-    <Compile Include="Actions\ComDispatch\DispIndexer.cs" />
     <Compile Include="Actions\ComDispatch\DispMethod.cs" />
+    <Compile Include="Actions\ComDispatch\DispPropertyGet.cs" />
+    <Compile Include="Actions\ComDispatch\DispPropertyPut.cs" />
     <Compile Include="Actions\ComDispatch\ExcepInfo.cs" />
+    <Compile Include="Actions\ComDispatch\GenericComObject.cs" />
     <Compile Include="Actions\ComDispatch\IDispatchCallBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchComObject.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchComObjectDoOperationBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchComObjectGetMemberBinderHelper.cs" />
+    <Compile Include="Actions\ComDispatch\IDispatchComObjectSetMemberBinderHelper.cs" />
     <Compile Include="Actions\ComDispatch\IDispatchObject.cs" />
     <Compile Include="Actions\ComDispatch\VarEnumSelector.cs" />
     <Compile Include="Actions\ComDispatch\Variant.cs" />
@@ -189,6 +201,7 @@
     <Compile Include="Compilers\SourceUnit.cs" />
     <Compile Include="Compilers\SourceUnitReader.cs" />
     <Compile Include="Compilers\TokenizerBuffer.cs" />
+    <Compile Include="AmbiguousFileNameException.cs" />
     <Compile Include="Hosting\ErrorListener.cs" />
     <Compile Include="Hosting\ErrorListenerProxy.cs" />
     <Compile Include="Hosting\HostingHelpers.cs" />
@@ -204,9 +217,8 @@
     <Compile Include="Ast\BinaryExpression.cs" />
     <Compile Include="Ast\CatchBlock.cs" />
     <Compile Include="Ast\CatchRecord.cs" />
-    <Compile Include="Ast\CodeBlockInfo.cs" />
-    <Compile Include="Ast\CodeBlockInvoker.cs" />
-    <Compile Include="Ast\CodeBlockWalker.cs" />
+    <Compile Include="Ast\LambdaInfo.cs" />
+    <Compile Include="Ast\LambdaWalker.cs" />
     <Compile Include="Ast\CommaAddress.cs" />
     <Compile Include="Ast\LambdaCompiler.Address.cs" />
     <Compile Include="Ast\LambdaCompiler.Block.cs" />
@@ -218,10 +230,6 @@
     <Compile Include="Ast\ControlFlow.cs" />
     <Compile Include="Ast\AstRewriter.cs" />
     <Compile Include="Ast\ForestRewriter.cs" />
-    <Compile Include="Ast\Interpreter.Block.cs" />
-    <Compile Include="Ast\Interpreter.cs" />
-    <Compile Include="Ast\Interpreter.Generated.cs" />
-    <Compile Include="Ast\InterpreterData.cs" />
     <Compile Include="Ast\IntrinsicExpression.cs" />
     <Compile Include="Ast\ISpan.cs" />
     <Compile Include="Ast\Compiler.cs" />
@@ -233,12 +241,16 @@
     <Compile Include="Ast\DeleteUnboundExpression.cs" />
     <Compile Include="Ast\DoStatementBuilder.cs" />
     <Compile Include="Ast\EvaluationAddress.cs" />
-    <Compile Include="Ast\InterpretChecker.cs" />
     <Compile Include="Ast\IfStatementBuilder.cs" />
     <Compile Include="Ast\MemberAssignment.cs" />
     <Compile Include="Ast\AstNodeType.cs" />
     <Compile Include="Ast\SwitchStatementBuilder.cs" />
     <Compile Include="Ast\TypeUtils.cs" />
+    <Compile Include="Interpreter\Interpreter.Block.cs" />
+    <Compile Include="Interpreter\Interpreter.cs" />
+    <Compile Include="Interpreter\Interpreter.Generated.cs" />
+    <Compile Include="Interpreter\InterpretChecker.cs" />
+    <Compile Include="Interpreter\LambdaInvoker.cs" />
     <Compile Include="Runtime\BinderOps.cs" />
     <Compile Include="Runtime\Cast.cs" />
     <Compile Include="Runtime\Cast.Generated.cs" />
@@ -266,7 +278,7 @@
     <Compile Include="Ast\TypeBinaryExpression.cs" />
     <Compile Include="Ast\UnaryExpression.cs" />
     <Compile Include="Ast\ClosureBinder.cs" />
-    <Compile Include="Ast\CodeBlock.cs" />
+    <Compile Include="Ast\LambdaExpression.cs" />
     <Compile Include="Ast\CodeBlockExpression.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
     <Compile Include="Ast\FlowChecker.cs" />

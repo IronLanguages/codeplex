@@ -885,6 +885,21 @@ def test_yield_except_crazy2():
     AreEqual(g.send(ValueError), 'c') # Cause us to skip the first except handler
     AreEqual(g.send(MyError), 'd')
     g.close()
-    
 
+# Yield statements without any return values.    
+def test_yield_empty():
+    def f():
+        yield
+    
+    g = f()
+    AreEqual(g.next(), None)
+    
+    def f():
+        if True:
+            yield
+        yield
+    g = f()
+    AreEqual(g.next(), None)
+    AreEqual(g.next(), None)
+    
 run_test(__name__)

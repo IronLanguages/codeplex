@@ -94,7 +94,6 @@ namespace Microsoft.Scripting.Ast {
             RewriteMemberExpression,                                    //    MemberExpression
             RewriteNewArrayExpression,                                  //    NewArrayExpression
             RewriteUnaryExpression,                                     //    OnesComplement
-            RewriteIntrinsicExpression,                                 //    ParamsExpression
             RewriteReturnStatement,                                     //    ReturnStatement
             RewriteScopeStatement,                                      //    ScopeStatement
             RewriteSwitchStatement,                                     //    SwitchStatement

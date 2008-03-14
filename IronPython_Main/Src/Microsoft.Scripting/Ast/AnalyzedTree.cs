@@ -23,31 +23,31 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     class AnalyzedTree {
         /// <summary>
-        /// List of all blocks in the tree.
+        /// List of all lambdas in the tree.
         /// This is sorted pre-order as a result of the analysis.
         /// </summary>
-        private readonly List<CodeBlockInfo> _blocks;
+        private readonly List<LambdaInfo> _lambdas;
 
         /// <summary>
-        /// The dictionary of all code blocks and their infos in the tree.
-        /// This includes both instances of CodeBlock and GeneratorCodeBlock
+        /// The dictionary of all lambdas and their infos in the tree.
+        /// This includes both instances of LambdaExpression and GeneratorCodeBlock
         /// </summary>
-        private readonly Dictionary<CodeBlock, CodeBlockInfo> _infos;
+        private readonly Dictionary<LambdaExpression, LambdaInfo> _infos;
 
-        internal AnalyzedTree(List<CodeBlockInfo> blocks, Dictionary<CodeBlock, CodeBlockInfo> infos) {
-            _blocks = blocks;
+        internal AnalyzedTree(List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos) {
+            _lambdas = lambdas;
             _infos = infos;
         }
 
-        internal List<CodeBlockInfo> Blocks {
+        internal List<LambdaInfo> Lambdas {
             get {
-                return _blocks;
+                return _lambdas;
             }
         }
 
-        internal CodeBlockInfo GetCbi(CodeBlock cb) {
-            Debug.Assert(_infos != null && _infos.ContainsKey(cb));
-            return _infos[cb];
+        internal LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
+            Debug.Assert(_infos != null && _infos.ContainsKey(lambda));
+            return _infos[lambda];
         }
     }
 
@@ -57,18 +57,18 @@ namespace Microsoft.Scripting.Ast {
     /// </summary>
     class AnalyzedRule : AnalyzedTree {
         /// <summary>
-        /// The rule doesn't have top-level code block because the rule
-        /// consists of two expressions. This CodeBlockInfo stores information
-        /// about the top level expressions, but has no reference to code block.
+        /// The rule doesn't have top-level lambda because the rule
+        /// consists of two expressions. This LambdaInfo stores information
+        /// about the top level expressions, but has no reference to lambda.
         /// </summary>
-        private readonly CodeBlockInfo _top;
+        private readonly LambdaInfo _top;
 
-        internal AnalyzedRule(CodeBlockInfo top, List<CodeBlockInfo> blocks, Dictionary<CodeBlock, CodeBlockInfo> infos)
-            : base(blocks, infos) {
+        internal AnalyzedRule(LambdaInfo top, List<LambdaInfo> lambdas, Dictionary<LambdaExpression, LambdaInfo> infos)
+            : base(lambdas, infos) {
             _top = top;
         }
 
-        internal CodeBlockInfo Top {
+        internal LambdaInfo Top {
             get { return _top; }
         }
     }

@@ -17,16 +17,18 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
+
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    public class ComTypeDesc {
+    internal class ComTypeDesc {
         private string _typeName;
+        private string _documentation;
         private Guid _guid;
         private Dictionary<SymbolId, ComDispatch.ComMethodDesc> _funcs;
         private Dictionary<SymbolId, ComEventDesc> _events;
+        private ComMethodDesc _getItem;
+        private ComMethodDesc _setItem;
 
         private static readonly Dictionary<SymbolId, ComEventDesc> _EmptyEventsDict = new Dictionary<SymbolId, ComEventDesc>();
 
@@ -35,46 +37,64 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             _events = _EmptyEventsDict;
         }
 
-        public ComTypeDesc(ComTypes.ITypeInfo typeInfo) {
-            this._typeName = GetNameOfType(typeInfo);
+        internal ComTypeDesc(ComTypes.ITypeInfo typeInfo) {
+            GetInfoFromType(typeInfo, out _typeName, out _documentation);
         }
 
-        public static ComTypeDesc CreateEmptyTypeDesc() {
+        internal static ComTypeDesc CreateEmptyTypeDesc() {
             return new ComTypeDesc();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        public static Dictionary<SymbolId, ComEventDesc> EmptyEvents {
+        internal static Dictionary<SymbolId, ComEventDesc> EmptyEvents {
             get { return _EmptyEventsDict; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        public Dictionary<SymbolId, ComDispatch.ComMethodDesc> Funcs {
+        internal Dictionary<SymbolId, ComDispatch.ComMethodDesc> Funcs {
             get { return _funcs; }
             set { _funcs = value; }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")] // TODO: remove this when COM support is completely moved to the DLR
-        public Dictionary<SymbolId, ComEventDesc> Events {
+        internal Dictionary<SymbolId, ComEventDesc> Events {
             get { return _events; }
             set { _events = value; }
         }
 
-        public string TypeName {
+        internal string TypeName {
             get { return _typeName; }
         }
 
-        public Guid Guid {
+        internal string Documentation {
+            get { return _documentation; }
+        }
+
+        internal Guid Guid {
             get { return _guid; }
             set { _guid = value; }
         }
 
-        public static string GetNameOfType(ComTypes.ITypeInfo typeInfo) {
-            string name;
-            string strDocString;
+        internal ComMethodDesc GetItem {
+            get { return _getItem; }
+            set { _getItem = value; }
+        }
+
+        internal ComMethodDesc SetItem {
+            get { return _setItem; }
+            set { _setItem = value; }
+        }
+
+        internal static void GetInfoFromType(ComTypes.ITypeInfo typeInfo, out string name, out string documentation) {
             int dwHelpContext;
             string strHelpFile;
-            typeInfo.GetDocumentation(-1, out name, out strDocString, out dwHelpContext, out strHelpFile);
+            typeInfo.GetDocumentation(-1, out name, out documentation, out dwHelpContext, out strHelpFile);
+        }
+
+        internal static string GetNameOfType(ComTypes.ITypeInfo typeInfo) {
+            string name;
+            string documentation;
+            GetInfoFromType(typeInfo, out name, out documentation);
             return name;
         }
     }

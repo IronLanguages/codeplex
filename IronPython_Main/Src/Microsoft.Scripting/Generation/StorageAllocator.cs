@@ -25,7 +25,7 @@ namespace Microsoft.Scripting.Generation {
         // TODO: change the parameter to take Variable !!!
         public abstract Storage AllocateStorage(SymbolId name, Type type);
 
-        public virtual Slot GetAccessSlot(LambdaCompiler cg, CodeBlock block) {
+        public virtual Slot GetAccessSlot(LambdaCompiler cg, LambdaExpression lambda) {
             return null;
         }
     }

@@ -16,12 +16,12 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.InteropServices.ComTypes;
-using VarEnum = System.Runtime.InteropServices.VarEnum;
-using Marshal = System.Runtime.InteropServices.Marshal;
 using System.Diagnostics;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
+
+using Marshal = System.Runtime.InteropServices.Marshal;
+using VarEnum = System.Runtime.InteropServices.VarEnum;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
@@ -47,11 +47,17 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// Creates a representation for the paramter of a COM method
         /// </summary>
         internal ComParamDesc(ref ELEMDESC elemDesc, string name) {
+            // Ensure _defaultValue is set to DBNull.Value regardless of whether or not the 
+            // default value is extracted from the parameter description.  Failure to do so
+            // yields a runtime exception in the ToString() function.
+            _defaultValue = DBNull.Value;
+
             if (!String.IsNullOrEmpty(name)) {
                 // This is a parameter, not a return value
                 this._isOut = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOUT) != 0;
                 this._isOpt = (elemDesc.desc.paramdesc.wParamFlags & PARAMFLAG.PARAMFLAG_FOPT) != 0;
-                _defaultValue = PARAMDESCEX.GetDefaultValue(ref elemDesc.desc.paramdesc);
+                // TODO: The PARAMDESCEX struct has a memory issue that needs to be resolved.  For now, we ignore it.
+                //_defaultValue = PARAMDESCEX.GetDefaultValue(ref elemDesc.desc.paramdesc);
             }
 
             _name = name;

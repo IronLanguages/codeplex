@@ -19,11 +19,11 @@ using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// The builder for creating the CodeBlock and GeneratorCodeBlock nodes
+    /// The builder for creating the LambdaExpression and GeneratorCodeBlock nodes
     /// Since the nodes require that parameters and variables are created
-    /// before hand and then passed to the factories creating CodeBlock or
+    /// before hand and then passed to the factories creating LambdaExpression or
     /// GeneratorCodeBlock, this builder keeps track of the different pieces
-    /// and at the end creates the CodeBlock/GeneratorCodeBlock.
+    /// and at the end creates the LambdaExpression/GeneratorCodeBlock.
     /// </summary>
     public class LambdaBuilder {
         private SourceSpan _span;
@@ -31,11 +31,11 @@ namespace Microsoft.Scripting.Ast {
         private Type _returnType;
         private List<Variable> _locals;
         private List<Variable> _params;
+        private Variable _paramsArray;
         private Expression _body;
         private bool _dictionary;
         private bool _global;
         private bool _visible = true;
-        private bool _paramsArray;
         private bool _completed;
 
         internal LambdaBuilder(SourceSpan span, string name, Type returnType) {
@@ -108,6 +108,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         /// <summary>
+        /// The params array argument, if any.
+        /// </summary>
+        public Variable ParamsArray {
+            get {
+                return _paramsArray;
+            }
+        }
+
+        /// <summary>
         /// The body of the lambda. This must be non-null.
         /// </summary>
         public Expression Body {
@@ -130,21 +139,6 @@ namespace Microsoft.Scripting.Ast {
             }
             set {
                 _dictionary = value;
-            }
-        }
-
-        /// <summary>
-        /// Enable parameter array on the lambda?
-        /// Currently this will turn the whole signature to params object[]
-        /// We need to change that to represent specified parameters as
-        /// they are, and add params object[] at the end.
-        /// </summary>
-        public bool ParamsArray {
-            get {
-                return _paramsArray;
-            }
-            set {
-                _paramsArray = value;
             }
         }
 
@@ -181,23 +175,25 @@ namespace Microsoft.Scripting.Ast {
         /// Parameters collection.
         /// </summary>
         public Variable CreateParameter(SymbolId name, Type type) {
-            return CreateParameter(name, type, true);
+            Contract.RequiresNotNull(type, "type");
+            return Save(Variable.Parameter(name, type), ref _params);
         }
 
         /// <summary>
-        /// Creates a parameter on the lambda with a given name and type.
-        /// If lambda is marked with "ParameterArray", the parameter will
-        /// be allocated in the array.
+        /// Creates a params array argument on the labmda.
         /// 
-        /// Parameters maintain the order in which they are created,
-        /// however custom ordering is possible via direct access to
-        /// Parameters collection.
+        /// The params array argument is added to the signature immediately. Before the lambda is
+        /// created, the builder validates that it is still the last (since the caller can modify
+        /// the order of parameters explicitly by maniuplating the parameter list)
         /// </summary>
-        public Variable CreateParameter(SymbolId name, Type type, bool inParameterArray) {
+        public Variable CreataParamsArray(SymbolId name, Type type) {
             Contract.RequiresNotNull(type, "type");
-            return Save(Variable.Parameter(name, type, inParameterArray), ref _params);
-        }
+            Contract.Requires(type.IsArray, "type");
+            Contract.Requires(type.GetArrayRank() == 1, "type");
+            Contract.Requires(_paramsArray == null, "type", "Already have parameter array");
 
+            return Save(_paramsArray = Variable.Parameter(name, type), ref _params);
+        }
 
         /// <summary>
         /// Creates variable of a given kind and type.
@@ -234,37 +230,37 @@ namespace Microsoft.Scripting.Ast {
         }
 
         /// <summary>
-        /// Creates the CodeBlock from the builder.
+        /// Creates the LambdaExpression from the builder.
         /// After this operation, the builder can no longer be used to create other instances.
         /// </summary>
-        /// <returns>New CodeBlock instance.</returns>
-        public CodeBlock MakeLambda() {
+        /// <returns>New LambdaExpression instance.</returns>
+        public LambdaExpression MakeLambda() {
             Validate();
-            CodeBlock block = Ast.CodeBlock(_span, _name, _returnType, _body, ToArray(_params), ToArray(_locals),
-                                            _global, _visible, _dictionary, _paramsArray);
+            LambdaExpression lambda = Ast.Lambda(_span, _name, _returnType, _body, ToArray(_params), ToArray(_locals),
+                                            _global, _visible, _dictionary, _paramsArray != null);
 
             // The builder is now completed
             _completed = true;
 
-            return block;
+            return lambda;
         }
 
         /// <summary>
-        /// Creates the generator CodeBlock from the builder.
+        /// Creates the generator LambdaExpression from the builder.
         /// After this operation, the builder can no longer be used to create other instances.
         /// </summary>
-        /// <returns>New CodeBlock instance.</returns>
-        public CodeBlock MakeGenerator(Type generator, Type next) {
+        /// <returns>New LambdaExpression instance.</returns>
+        public LambdaExpression MakeGenerator(Type generator, Type next) {
             Contract.RequiresNotNull(generator, "generator");
             Contract.RequiresNotNull(next, "next");
 
             Validate();
-            CodeBlock block = Ast.Generator(_span, _name, generator, next, _body, ToArray(_params), ToArray(_locals));
+            LambdaExpression lambda = Ast.Generator(_span, _name, generator, next, _body, ToArray(_params), ToArray(_locals));
 
             // The builder is now completed
             _completed = true;
 
-            return block;
+            return lambda;
         }
 
         /// <summary>
@@ -282,6 +278,11 @@ namespace Microsoft.Scripting.Ast {
             }
             if (_body == null) {
                 throw new InvalidOperationException("Body is missing");
+            }
+
+            if (_paramsArray != null &&
+                (_params.Count == 0 || _params[_params.Count -1] != _paramsArray)) {
+                throw new InvalidOperationException("The params array parameter is not last in the parameter list");
             }
         }
 

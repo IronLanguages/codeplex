@@ -79,7 +79,7 @@ namespace IronPython.Runtime {
         [return: MaybeNotImplemented]
         [SpecialName]
         public static object Equal(IDictionary<object, object> self, object other) {
-            if (!(other is PythonDictionary || other is CustomSymbolDictionary || other is SymbolDictionary))
+            if (!(other is PythonDictionary || other is IDictionary<object, object>))
                 return PythonOps.NotImplemented;
 
             return EqualsHelper(self, other);

@@ -20,6 +20,10 @@ using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
 
+    /// <summary>
+    /// The host can use this class to track for errors reported during script parsing and compilation.
+    /// Hosting API counterpart for <see cref="ErrorSink"/>.
+    /// </summary>
     public abstract class ErrorListener
 #if !SILVERLIGHT
  : MarshalByRefObject

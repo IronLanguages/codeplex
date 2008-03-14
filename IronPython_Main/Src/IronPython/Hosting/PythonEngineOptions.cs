@@ -39,7 +39,6 @@ namespace IronPython {
         private int _maximumRecursion = Int32.MaxValue;
         private Severity _indentationInconsistencySeverity;
         private PythonDivisionOptions _division;
-        private bool _preferComDispatchOverTypeInfo;
         private bool _stripDocStrings;
         private bool _optimize;
 
@@ -91,15 +90,6 @@ namespace IronPython {
         public PythonDivisionOptions DivisionOptions {
             get { return _division; }
             set { _division = value; }
-        }
-
-        /// <summary>
-        /// Use pure IDispatch-based invocation when calling methods/proeprties 
-        /// on System.__ComObject
-        /// </summary>
-        public bool PreferComDispatchOverTypeInfo {
-            get { return _preferComDispatchOverTypeInfo; }
-            set { _preferComDispatchOverTypeInfo = value; }
         }
 
         public PythonEngineOptions Clone() {

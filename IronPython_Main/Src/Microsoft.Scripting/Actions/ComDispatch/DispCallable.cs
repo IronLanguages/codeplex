@@ -16,20 +16,13 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
-using System.Threading;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using Microsoft.Contracts;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -50,6 +43,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         [Confined]
         public override string/*!*/ ToString() {
             return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
+        }
+
+        public bool IsPropertyPut {
+            get { return _methodDesc.IsPropertyPut; }
+        }
+
+        public bool IsPropertyGet {
+            get { return _methodDesc.IsPropertyGet; }
         }
 
         public IDispatchObject DispatchObject { get { return _dispatch; } }

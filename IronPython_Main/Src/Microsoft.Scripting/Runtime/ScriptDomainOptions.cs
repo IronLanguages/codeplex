@@ -14,10 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Diagnostics;
 
 using Microsoft.Scripting.Generation;
 
@@ -38,6 +34,7 @@ namespace Microsoft.Scripting.Runtime {
         private bool _showRules;
         private bool _cachePointersInApartment;
         private bool _tupleBasedOptimizedScopes;
+        private bool _preferComDispatchOverTypeInfo;
 
         /// <summary>
         /// Whether the application is in debug mode.
@@ -143,6 +140,23 @@ namespace Microsoft.Scripting.Runtime {
             get { return _cachePointersInApartment; }
             set {
                 _cachePointersInApartment = value;
+                if (_cachePointersInApartment) {
+                    _preferComDispatchOverTypeInfo = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Use pure IDispatch-based invocation when calling methods/properties
+        /// on System.__ComObject
+        /// </summary>
+        public bool PreferComDispatchOverTypeInfo {
+            get { return _preferComDispatchOverTypeInfo; }
+            set {
+                _preferComDispatchOverTypeInfo = value;
+                if (!_preferComDispatchOverTypeInfo) {
+                    _cachePointersInApartment = false;
+                }
             }
         }
 

@@ -105,7 +105,7 @@ namespace IronPython.Runtime {
 
             InitializeBuiltins();
 
-            _systemState = CreateModule("sys", null, new Scope(this, new SymbolDictionary()), null, ModuleOptions.NoBuiltins).Scope;
+            _systemState = CreateModule("sys", null, new Scope(this, PythonDictionary.MakeSymbolDictionary()), null, ModuleOptions.NoBuiltins).Scope;
             InitializeSystemState();
 #if SILVERLIGHT
             AddToPath("");
@@ -266,7 +266,7 @@ namespace IronPython.Runtime {
                 Scope scope = scopeObj as Scope;
                 if (scope != null) {
                     PythonModule module = EnsurePythonModule(scope);
-                    if (DomainManager.PathComparer.Compare(module.GetFile(), path) == 0) {
+                    if (DomainManager.PAL.PathComparer.Compare(module.GetFile(), path) == 0) {
                         return module;
                     }
                 }
@@ -276,7 +276,7 @@ namespace IronPython.Runtime {
 
         public override string DisplayName {
             get {
-                return "IronPython 2.0 Alpha";
+                return "IronPython 2.0 Beta";
             }
         }
 
@@ -320,7 +320,7 @@ namespace IronPython.Runtime {
             IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, SystemState.Dict, typeof(SysModule));
         }
 
-        public override CodeBlock ParseSourceCode(CompilerContext context) {
+        public override LambdaExpression ParseSourceCode(CompilerContext context) {
             Contract.RequiresNotNull(context, "context");
 
             PyAst.PythonAst ast;
@@ -577,7 +577,7 @@ namespace IronPython.Runtime {
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName) {
-            return CreateModule(moduleName, null, new Dictionary<string, object>(), ModuleOptions.None);
+            return CreateModule(moduleName, null, PythonDictionary.MakeSymbolDictionary(), ModuleOptions.None);
         }
 
         public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type) {
@@ -585,13 +585,13 @@ namespace IronPython.Runtime {
         }
 
         public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type, ModuleOptions options) {
-            SymbolDictionary dict = new SymbolDictionary();
+            PythonDictionary dict = PythonDictionary.MakeSymbolDictionary();
             IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
             return CreateModule(moduleName, null, new Scope(this, dict), null, options);
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName, ModuleOptions options) {
-            return CreateModule(moduleName, null, new Dictionary<string, object>(), options);
+            return CreateModule(moduleName, null, PythonDictionary.MakeSymbolDictionary(), options);
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IDictionary<string, object> globals, ModuleOptions options) {
@@ -599,12 +599,19 @@ namespace IronPython.Runtime {
             Contract.RequiresNotNull(globals, "globals");
 
             IAttributesCollection globalDict = globals as IAttributesCollection ?? new PythonDictionary(new StringDictionaryStorage(globals));
-            return CreateModule(moduleName, fileName, new Scope(this, globalDict), null, options);
+            return CreateModule(moduleName, fileName, globalDict, options);
+        }
+
+        public PythonModule/*!*/ CreateModule(string moduleName, string fileName, IAttributesCollection globals, ModuleOptions options) {
+            Contract.RequiresNotNull(moduleName, "moduleName");
+            Contract.RequiresNotNull(globals, "globals");
+
+            return CreateModule(moduleName, fileName, new Scope(this, globals), null, options);
         }
 
         private PythonModule/*!*/ CreateModule(string moduleName, string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
             if (scope == null) {
-                scope = new Scope(this, new SymbolDictionary());
+                scope = new Scope(this, PythonDictionary.MakeSymbolDictionary());
             }
 
             PythonModule module = CreatePythonModule(moduleName, fileName, scope, options);
@@ -653,7 +660,7 @@ namespace IronPython.Runtime {
             // for a package and we need to set the __path__ variable appropriately
             if (fileName != null && Path.GetFileName(fileName) == "__init__.py") {
                 string dirname = Path.GetDirectoryName(fileName);
-                string dir_path = DomainManager.Host.PlatformAdaptationLayer.NormalizePath(dirname);
+                string dir_path = DomainManager.Host.PlatformAdaptationLayer.GetFullPath(dirname);
                 module.Scope.SetName(ContextId, Symbols.Path, PythonOps.MakeList(dir_path));
             }
 

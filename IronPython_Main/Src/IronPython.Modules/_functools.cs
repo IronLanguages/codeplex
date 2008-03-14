@@ -218,7 +218,7 @@ namespace IronPython.Modules {
 
             private IAttributesCollection EnsureDict() {
                 if (_dict == null) {
-                    _dict = new SymbolDictionary();
+                    _dict = PythonDictionary.MakeSymbolDictionary();
                 }
                 return _dict;
             }

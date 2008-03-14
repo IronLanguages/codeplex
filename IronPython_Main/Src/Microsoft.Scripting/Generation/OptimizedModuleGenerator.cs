@@ -71,8 +71,8 @@ namespace Microsoft.Scripting.Generation {
             LambdaCompiler compiler = GenerateScriptMethod();
             Scope scope = GenerateScriptScope();
 
-            CallTargetWithContext0 target;
-            target = (CallTargetWithContext0)compiler.CreateDelegate(typeof(CallTargetWithContext0));
+            DlrMainCallTarget target;
+            target = (DlrMainCallTarget)compiler.CreateDelegate(typeof(DlrMainCallTarget));
 
             // TODO: clean this up after clarifying dynamic site initialization logic
             Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContext, compiler.Method.DeclaringType);
@@ -113,7 +113,7 @@ namespace Microsoft.Scripting.Generation {
             );
 
             compiler.SetDebugSymbols(_scriptCode.SourceUnit);
-            compiler.GenerateCodeBlock(_scriptCode.CodeBlock);
+            compiler.GenerateLambda(_scriptCode.Lambda);
 
             compiler.Finish();
 
@@ -309,10 +309,12 @@ namespace Microsoft.Scripting.Generation {
 
                 ModuleGlobalSlot builtin = slot as ModuleGlobalSlot;
                 Debug.Assert(builtin != null);
-                builtin.EmitGetRaw(cg);
+
+                // Expects to push as an object.
+                builtin.EmitGetRawFromObject(cg);
                 cg.Emit(OpCodes.Stind_Ref);
 
-                builtin.EmitGetRaw(cg);
+                builtin.EmitGetRawFromObject(cg);
                 cg.EmitUninitialized();
                 cg.Emit(OpCodes.Ceq);
                 cg.Emit(OpCodes.Not);
@@ -353,7 +355,8 @@ namespace Microsoft.Scripting.Generation {
                 Label next = cg.DefineLabel();
                 cg.Emit(OpCodes.Brfalse_S, next);
 
-                slot.EmitSet(cg, valueSlot);
+                ModuleGlobalSlot builtin = (ModuleGlobalSlot) slot; 
+                builtin.EmitSetRawFromObject(cg, valueSlot);
                 cg.EmitInt(1);
                 cg.Emit(OpCodes.Ret);
                 cg.MarkLabel(next);

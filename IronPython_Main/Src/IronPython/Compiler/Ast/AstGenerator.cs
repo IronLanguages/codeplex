@@ -99,7 +99,7 @@ namespace IronPython.Compiler.Ast {
             get { return _loopDepth > 0; }
         }
 
-        internal static MSAst.CodeBlock TransformAst(CompilerContext context, PythonAst ast) {
+        internal static MSAst.LambdaExpression TransformAst(CompilerContext context, PythonAst ast) {
             return ast.TransformToAst(context);
         }
 

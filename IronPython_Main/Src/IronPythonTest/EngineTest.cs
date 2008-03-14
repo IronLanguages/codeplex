@@ -60,6 +60,10 @@ namespace IronPythonTest {
         public static LanguageContext GetContext(CodeContext context) {
             return context.LanguageContext;
         }
+
+        public static ScriptDomainOptions GetGlobalOptions() {
+            return ScriptDomainManager.Options;
+        }
     }
 
     public delegate int IntIntDelegate(int arg);

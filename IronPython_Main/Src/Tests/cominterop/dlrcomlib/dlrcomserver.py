@@ -69,9 +69,10 @@ def test_errorInfo():
 def test_documentation():
     import IronPython
     ops = IronPython.Hosting.PythonEngine.CurrentEngine.Operations
-    AssertError(SystemError, ops.GetDocumentation, com_obj.IntArguments, skip=preferComDispatch, bugid="TODO")
     if preferComDispatch:
         AreEqual("void IntArguments(Int32 arg1, Int32 arg2)", ops.GetDocumentation(com_obj.IntArguments))
+    else:
+        AreEqual("IntArguments(self, int arg1, int arg2)", ops.GetDocumentation(com_obj.IntArguments))
     
 
 def test_namedArgs():

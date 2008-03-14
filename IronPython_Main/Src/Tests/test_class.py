@@ -1796,17 +1796,32 @@ def test_getattribute_getattr():
 def test_setattr():
     # verify defining __setattr__ works
     global setCalled
-    setCalled = False
-    class TestClass(object): 
+    
+    class KNew(object): 
         def __setattr__(self, name, value):
             global setCalled
             setCalled = True
             object.__setattr__(self, name, value)
+            
+    class KOld: 
+        def __setattr__(self, name, value):
+            global setCalled
+            setCalled = True
+            self.__dict__[name] = value
+
+    class KNewSub(KNew): pass
     
-    x = TestClass()
-    x.abc = 23
-    AreEqual(x.abc, 23)
-    AreEqual(setCalled, True)
+    class KOldSub(KOld): pass
+
+    for K in [  KOld, 
+                #KOldSub, #CodePlex 8018
+                KNew, 
+                KNewSub]:
+        setCalled = False   
+        x = K()
+        x.abc = 23
+        AreEqual(x.abc, 23)
+        AreEqual(setCalled, True)
 
 def test_dynamic_getattribute():
     # verify adding / removing __getattribute__ succeeds
@@ -2436,6 +2451,150 @@ def test_oldstyle_fancycallable():
     x = C(*(2,))
     #Merlin 382112 AssertError(TypeError, lambda: C(*(None,)))
     x = C(**{'a': None})
+
+def test_oldclass_newclass_construction():
+    """calling __new__ on and old-class passing in new-classes should result in a new-style type"""
+    class nc(object): pass
     
+    class oc: pass
+    
+    newType = type(oc).__new__(type(oc), 'foo', (nc, oc), {})
+    AreEqual(type(newType), type)
+
+def test_inherited_getattribute():
+    """inherited getattribute should be respected"""
+    class x(object):
+        def __getattribute__(self, name):
+            if name == 'abc': return 42
+            return object.__getattribute__(self, name)
+    
+    class y(x): pass
+
+    AreEqual(y().abc, 42)
+
+GETATTRIBUTE_CALLED = False
+def test_cp13820():
+    global GETATTRIBUTE_CALLED
+    GETATTRIBUTE_CALLED = False
+    
+    class KOld:
+        def __getattribute__(self, name):
+            global GETATTRIBUTE_CALLED
+            GETATTRIBUTE_CALLED = True
+            print "__getattribute__ was called by:", name
+            return 1
+            
+        def __init__(self):
+            return
+            
+        def __del__(self):
+            return
+            
+        def __str__(self): return ""
+        
+        def __cmp__(self, other): return 0
+        
+        def __hash__(self): return 1
+        
+        def __nonzero__(self): return 1
+        
+        def __get__(self, instance, owner): return 3
+        
+        def __delete__(self, instance): return
+        
+        def __len__(self): return 4
+        
+        def __getitem__(self, key): return 5
+        
+        def __setitem__(self, key, value): return
+        
+        def  __getslice__(self, i, j): return 6
+        
+        def __contains__(self, obj): return True
+        
+        def __add__(self, other): return 7
+            
+        def __hex__(self): return hex(9)
+        
+        def __coerce__(self, other): return None
+        
+        def __lt__(self, other): return True
+    
+    class KNew(object):
+        def __getattribute__(self, name):
+            global GETATTRIBUTE_CALLED
+            GETATTRIBUTE_CALLED = True
+            print "__getattribute__ was called by:", name
+            return 1
+            
+        def __init__(self):
+            return
+            
+        def __del__(self):
+            return
+            
+        def __str__(self): return ""
+        
+        def __cmp__(self, other): return 0
+        
+        def __hash__(self): return 1
+        
+        def __nonzero__(self): return 1
+        
+        def __get__(self, instance, owner): return 3
+        
+        def __delete__(self, instance): return
+        
+        def __len__(self): return 4
+        
+        def __getitem__(self, key): return 5
+        
+        def __setitem__(self, key, value): return
+        
+        def  __getslice__(self, i, j): return 6
+        
+        def __contains__(self, obj): return True
+        
+        def __add__(self, other): return 7
+            
+        def __hex__(self): return hex(9)
+        
+        def __coerce__(self, other): return None
+        
+        def __lt__(self, other): return True    
+        
+    for K in [KOld, KNew]:
+        obj = K()
+        if sys.platform=="win32" or K!=KNew: #CodePlex 13820
+            str(obj)
+        obj==3
+        hash(obj)
+        bool(obj)
+        obj[3]
+        obj[3] = 4
+        len(obj)
+        obj[1:3]
+        if K==KOld: hasattr(obj, "abc")
+        obj + 3
+        hex(obj)
+        obj<9
+        del obj
+        Assert(not GETATTRIBUTE_CALLED)
+
+def test_keyword_type_construction():
+    """using type.__call__ should accept keyword arguments"""
+    class x(object):
+        def __new__(cls, *args, **kwargs):
+            return object.__new__(cls)
+        def __init__(self, *args, **kwargs):
+            for x, y in kwargs.iteritems():
+                setattr(self, x, y)
+            return object.__init__(self)
+    
+    obj = type.__call__(x, *(), **{'abc':2})
+    AreEqual(obj.abc, 2)
+    
+    obj = x.__call__(*(), **{'abc':3})
+    AreEqual(obj.abc, 3)
 
 run_test(__name__)

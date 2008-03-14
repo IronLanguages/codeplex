@@ -74,6 +74,10 @@ namespace IronPython.Runtime {
             _storage = new CommonDictionaryStorage();
         }
 
+        internal static PythonDictionary MakeSymbolDictionary() {
+            return new PythonDictionary(new SymbolIdDictionaryStorage());
+        }
+
         public void __init__(CodeContext/*!*/ context, object o, [ParamDictionary] IAttributesCollection kwArgs) {
             update(context, o);
             update(context, kwArgs);
@@ -215,6 +219,8 @@ namespace IronPython.Runtime {
 
         public virtual object this[object key] {
             get {
+                Debug.Assert(!(key is SymbolId));
+
                 object ret;
                 if (_storage.TryGetValue(key, out ret)) return ret;
 
@@ -231,6 +237,8 @@ namespace IronPython.Runtime {
                 throw PythonOps.KeyError(key);
             }
             set {
+                Debug.Assert(!(key is SymbolId));
+
                 _storage.Add(key, value);
             }
         }
@@ -396,7 +404,7 @@ namespace IronPython.Runtime {
 
         [return: MaybeNotImplemented]
         public object __eq__(object other) {
-            if (!(other is PythonDictionary || other is CustomSymbolDictionary || other is SymbolDictionary))
+            if (!(other is PythonDictionary || other is IDictionary<object, object>))
                 return PythonOps.NotImplemented;
 
             return RuntimeHelpers.BooleanToObject(((IValueEquality)this).ValueEquals(other));
@@ -493,6 +501,8 @@ namespace IronPython.Runtime {
 
         class DictEnumerator : IDictionaryEnumerator {
             private IEnumerator<KeyValuePair<object, object>> _enumerator;
+            private bool _moved;
+
             public DictEnumerator(IEnumerator<KeyValuePair<object, object>> enumerator) {
                 _enumerator = enumerator;
             }
@@ -500,15 +510,20 @@ namespace IronPython.Runtime {
             #region IDictionaryEnumerator Members
 
             public DictionaryEntry Entry {
-                get { return new DictionaryEntry(_enumerator.Current.Key, _enumerator.Current.Value);  }
+                get {
+                    // List<T> enumerator doesn't throw, so we need to.
+                    if (!_moved) throw new InvalidOperationException();
+
+                    return new DictionaryEntry(_enumerator.Current.Key, _enumerator.Current.Value);  
+                }
             }
 
             public object Key {
-                get { return _enumerator.Current.Key; }
+                get { return Entry.Key; }
             }
 
             public object Value {
-                get { return _enumerator.Current.Value; }
+                get { return Entry.Value; }
             }
 
             #endregion
@@ -520,11 +535,18 @@ namespace IronPython.Runtime {
             }
 
             public bool MoveNext() {
-                return _enumerator.MoveNext();
+                if (_enumerator.MoveNext()) {
+                    _moved = true;
+                    return true;
+                }
+
+                _moved = false;
+                return false;
             }
 
             public void Reset() {
                 _enumerator.Reset();
+                _moved = false;
             }
 
             #endregion
@@ -631,12 +653,13 @@ namespace IronPython.Runtime {
         }
 
         bool IAttributesCollection.TryGetValue(SymbolId name, out object value) {
-            if (DictionaryOps.TryGetValueVirtual(DefaultContext.Default, this, SymbolTable.IdToString(name), ref DefaultGetItem, out value)) {
+            if (GetType() != typeof(PythonDictionary) &&
+                DictionaryOps.TryGetValueVirtual(DefaultContext.Default, this, SymbolTable.IdToString(name), ref DefaultGetItem, out value)) {
                 return true;
             }
 
             // call Dict.TryGetValue to get the real value.
-            return ((IDictionary<object, object>)this).TryGetValue(SymbolTable.IdToString(name), out value);
+            return _storage.TryGetValue(name, out value);
         }
 
         object IAttributesCollection.this[SymbolId name] {
@@ -644,7 +667,12 @@ namespace IronPython.Runtime {
                 return this[SymbolTable.IdToString(name)];
             }
             set {
-                this[SymbolTable.IdToString(name)] = value;
+                if (GetType() == typeof(PythonDictionary)) {
+                    // no need to call virtual version
+                    _storage.Add(name, value);
+                } else {
+                    this[SymbolTable.IdToString(name)] = value;
+                }
             }
         }
 

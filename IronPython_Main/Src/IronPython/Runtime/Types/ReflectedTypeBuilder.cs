@@ -74,13 +74,6 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public static PythonType Build(Type t) {
             PerfTrack.NoteEvent(PerfTrack.Categories.ReflectedTypes, t);
-
-#if !SILVERLIGHT // COM
-            if (ComObject.Is__ComObject(t)) {
-                return ComTypeBuilder.ComType;
-            }
-#endif
-
             ReflectedTypeBuilder rtb = new ReflectedTypeBuilder();
             return rtb.DoBuild(t);
         }

@@ -36,6 +36,10 @@ def test_main(level='full'):
         'generate_comdispatch',
         'generate_tree',
         ]
+    #Merlin 277482
+    import System
+    if [System.IntPtr.Size==8]:
+        generators.remove('generate_ops')
 
     for gen in generators:
             print "Running", gen

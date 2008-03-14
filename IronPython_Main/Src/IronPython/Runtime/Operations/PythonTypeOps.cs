@@ -409,12 +409,33 @@ namespace IronPython.Runtime.Operations {
             
             [SpecialName]
             public object Call(CodeContext/*!*/ context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
-                // This is not symmetric with the simple Call() overload.
-                // (Bug 365660: handle the case when _type == null)
-                return PythonCalls.CallWithKeywordArgs(_type, args, dict);
+                PythonType type = _type;
+                if (_type == null) {
+                    type = PopType(args);
+                    args = ArrayUtils.RemoveFirst(args);
+                }
+
+                if (args == null) args = ArrayUtils.EmptyObjects;
+
+                object[] finalArgs = new object[args.Length + dict.Count];
+                string[] names = new string[dict.Count];
+
+                Array.Copy(args, finalArgs, args.Length);
+                int i = 0;
+                foreach (KeyValuePair<SymbolId, object> kvp in dict.SymbolAttributes) {
+                    finalArgs[args.Length + i] = kvp.Value;
+                    names[i] = SymbolTable.IdToString(kvp.Key);
+                    i++;
+                }
+
+                return PythonTypeOps.CallWorker(context, type, new KwCallInfo(finalArgs, names));
             }
 
             private static object CallWithoutType(CodeContext/*!*/ context, object[] args) {
+                return PythonTypeOps.CallWorker(context, PopType(args), ArrayUtils.RemoveFirst(args));
+            }
+
+            private static PythonType PopType(object[] args) {
                 if (args == null || args.Length == 0)
                     throw PythonOps.TypeError("type.__call__ needs an argument");
 
@@ -423,8 +444,7 @@ namespace IronPython.Runtime.Operations {
                     throw PythonOps.TypeError("type.__call__ requires a type object but received an {0}",
                         PythonOps.StringRepr(DynamicHelpers.GetPythonType(args[0])));
                 }
-
-                return PythonTypeOps.CallWorker(context, dt, ArrayUtils.RemoveFirst(args));
+                return dt;
             }
 
             internal override bool TryGetValue(CodeContext/*!*/ context, object instance, PythonType owner, out object value) {
@@ -544,7 +564,7 @@ namespace IronPython.Runtime.Operations {
             // don't run __init__ if it's not a subclass of ourselves,
             // or if this is the user doing type(x), or if it's a standard
             // .NET type which doesn't have an __init__ method (this is a perf optimization)
-            return (!cls.IsSystemType || cls.GetContextTag(DefaultContext.Id) != null) &&
+            return (!cls.IsSystemType || cls.IsPythonType || cls.GetContextTag(DefaultContext.Id) != null) &&
                 newObjectType.IsSubclassOf(cls) &&                
                 (cls != TypeCache.PythonType || argCnt > 1);
         }

@@ -251,7 +251,7 @@ namespace Microsoft.Scripting.Hosting {
 
             int result = 0;
             foreach (string filePath in _options.Files) {
-                ScriptSource scriptSource = engine.Runtime.Host.TryGetSourceFileUnit(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
+                ScriptSource scriptSource = engine.Runtime.Host.TryGetSourceFile(engine, filePath, StringUtils.DefaultEncoding, SourceCodeKind.File);
                 if (scriptSource == null) {
                     throw new FileNotFoundException(string.Format("Source file '{0}' not found.", filePath));
                 }

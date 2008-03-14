@@ -37,7 +37,9 @@ namespace Microsoft.Scripting.Generation {
         public abstract void EmitGet(LambdaCompiler cg);
         public abstract void EmitGetAddr(LambdaCompiler cg);
 
+        #region emit Set methods
         // Must override at least one of these two methods or get infinite loop
+        // 
         public virtual void EmitSet(LambdaCompiler cg, Slot val) {
             Contract.RequiresNotNull(val, "val");
             Contract.RequiresNotNull(cg, "cg");
@@ -47,6 +49,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         // This override assumes that the IL stack already holds the value to be assigned from.
+        // This default implementation assumes the top of stack is typeof(Object).
         public virtual void EmitSet(LambdaCompiler cg) {
             Contract.RequiresNotNull(cg, "cg");
 
@@ -59,6 +62,7 @@ namespace Microsoft.Scripting.Generation {
 
             cg.FreeLocalTmp(localTmpVal);
         }
+        #endregion // emit Set methods
 
         // Slots are to be implemented as dictionaries for Python. However,
         // for performance and better integration with the CLI, the engine
@@ -75,9 +79,12 @@ namespace Microsoft.Scripting.Generation {
             // Emit the following:
             //     <name> = Uninitialized.instance;
 
-            Debug.Assert(Type == typeof(object));
-
+            // This pushes on typeof(Uninitialized), which is a System.Object. Slots that support
+            // value-types must override this to deal with boxing.
+            Debug.Assert(!Type.IsValueType);
             cg.EmitUninitialized();
+            
+            
             EmitSet(cg);
         }
 

@@ -39,6 +39,28 @@ def test_bool_dir():
             Assert(stuff in t_list, "%s should be in dir(bool), but is not" % (stuff))
 
 
-
+def test__coerce__():
+    for simple_type in [int, long, float, str, unicode, bool, object]:
+        AreEqual(NotImplemented, True.__coerce__(simple_type))
+        AreEqual(NotImplemented, False.__coerce__(simple_type))
+        
+def test__float__():
+    AreEqual(float(True), 1.0)
+    AreEqual(float(False), 0.0)
+    
+def test__index__():
+    AreEqual(True.__index__(), 1)
+    AreEqual(False.__index__(), 0)
+    
+def test__long__():
+    AreEqual(long(True), 1L)
+    AreEqual(long(False), 0L)
+    
+def test__rdivmod__():
+    AreEqual(divmod(True, True),  (1, 0))
+    AreEqual(divmod(False, True), (0, 0))
+    AssertError(ZeroDivisionError, divmod, True,  False)
+    AssertError(ZeroDivisionError, divmod, False, False)
+    
 
 run_test(__name__)

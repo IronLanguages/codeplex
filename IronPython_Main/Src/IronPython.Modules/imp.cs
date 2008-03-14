@@ -202,9 +202,9 @@ namespace IronPython.Modules {
             
             // TODO: is this supposed to open PythonFile with Python-specific behavior?
             // we may need to insert additional layer to SourceUnit content provider if so
-            PythonContext pythonContext = PythonContext.GetContext(context);
-            SourceUnit codeUnit = pythonContext.TryGetSourceFileUnit(pathname, pythonContext.DefaultEncoding, SourceCodeKind.File);
-            return pythonContext.CompileAndInitializeModule(name, pathname, codeUnit);
+            PythonContext pc = PythonContext.GetContext(context);
+            SourceUnit codeUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, pathname, pc.DefaultEncoding, SourceCodeKind.File);
+            return pc.CompileAndInitializeModule(name, pathname, codeUnit);
         }
 
         public static object load_source(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ pathname, PythonFile/*!*/ file) {

@@ -38,8 +38,8 @@ namespace IronPython.Runtime.Calls {
 
         public StandardRule<T> MakeRule() {
             Type type = CompilerHelpers.GetType(Arguments[0]);
-            // we extend None & our standard built-in python types.  DLR doesn't support COM objects natively yet.
-            if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type) || type.IsCOMObject) {
+            // we extend None & our standard built-in python types.
+            if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type)) {
                 // look up in the PythonType so that we can 
                 // get our custom method names (e.g. string.startswith)            
                 PythonType argType = DynamicHelpers.GetPythonTypeFromType(type);

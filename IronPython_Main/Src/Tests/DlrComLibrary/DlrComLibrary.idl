@@ -1,0 +1,491 @@
+// DlrComLibrary.idl : IDL source for DlrComLibrary
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (DlrComLibrary.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+    object,
+    uuid(F2CC97FB-0240-48AB-9706-C0327AC050C5),
+    dual,
+    nonextensible,
+    helpstring("IDlrComServer Interface"),
+    pointer_default(unique)
+]
+interface IDlrComServer : IDispatch{
+    [id(1), helpstring("method SimpleMethod")] HRESULT SimpleMethod(void);
+    [id(2), helpstring("method IntArguments")] HRESULT IntArguments([in] LONG arg1, [in] LONG arg2);
+    [id(3), helpstring("method StringArguments")] HRESULT StringArguments([in] BSTR arg1, [in] BSTR arg2);
+    [id(4), helpstring("method ObjectArguments")] HRESULT ObjectArguments([in] IUnknown* arg1, [in] IUnknown* arg2);
+    [id(5), helpstring("method TestErrorInfo")] HRESULT TestErrorInfo(void);
+    [id(6), helpstring("method TestErrorInfo")] HRESULT GetByteArray([out, retval]SAFEARRAY(byte)* ppsaRetVal);
+    [id(7), helpstring("method TestErrorInfo")] HRESULT GetIntArray([out, retval]SAFEARRAY(int)* ppsaRetVal);
+    [id(8), helpstring("method TestErrorInfo")] HRESULT GetObjArray([out, retval]SAFEARRAY(IUnknown*)* ppsaRetVal);
+    [id(9), helpstring("method SumArgs")] HRESULT SumArgs([in] LONG a1, [in] LONG a2, [in] LONG a3, [in] LONG a4, [in] LONG a5, [out,retval] LONG* result);
+	[propget, id(DISPID_NEWENUM), helpstring("property _NewEnum")] HRESULT _NewEnum([out, retval] IUnknown** ppUnk);
+};
+[
+    object,
+    uuid(A9A88FB0-71C4-48BB-BD5D-464B49EB90B3),
+    dual,
+    nonextensible,
+    helpstring("IDlrComStopwatch Interface"),
+    pointer_default(unique)
+]
+interface IDlrComStopwatch : IDispatch{
+    [id(1), helpstring("method Start")] HRESULT Start(void);
+    [propget, id(2), helpstring("property ElapsedSeconds")] HRESULT ElapsedSeconds([out, retval] DOUBLE* pVal);
+};
+[
+    object,
+    uuid(FC172182-9429-4E67-8100-65C11C5D7D20),
+    dual,
+    nonextensible,
+    helpstring("IParamsInRetval Interface"),
+    pointer_default(unique)
+]
+interface IParamsInRetval : IDispatch{
+    [id(1), helpstring("method mBstr")] HRESULT mBstr([in] BSTR a, [out,retval] BSTR* b);
+    [id(2), helpstring("method mByte")] HRESULT mByte([in] BYTE a, [out,retval] BYTE* b);
+    [id(3), helpstring("method mChar")] HRESULT mChar([in] CHAR a, [out,retval] CHAR* b);
+    [id(4), helpstring("method mCy")] HRESULT mCy([in] CY a, [out,retval] CY* b);
+    [id(5), helpstring("method mDate")] HRESULT mDate([in] DATE a, [out,retval] DATE* b);
+    [id(6), helpstring("method mDouble")] HRESULT mDouble([in] DOUBLE a, [out,retval] DOUBLE* b);
+    [id(7), helpstring("method mFloat")] HRESULT mFloat([in] FLOAT a, [out,retval] FLOAT* b);
+    [id(8), helpstring("method mIDispatch")] HRESULT mIDispatch([in] IDispatch* a, [out,retval] IDispatch** b);
+    [id(9), helpstring("method mIFontDisp")] HRESULT mIFontDisp([in] IFontDisp* a, [out,retval] IDispatch** b);
+    [id(10), helpstring("method mIPictureDisp")] HRESULT mIPictureDisp([in] IPictureDisp* a, [out,retval] IDispatch** b);
+    [id(11), helpstring("method mIUnknown")] HRESULT mIUnknown([in] IUnknown* a, [out,retval] IUnknown** b);
+    [id(12), helpstring("method mLong")] HRESULT mLong([in] LONG a, [out,retval] LONG* b);
+    [id(13), helpstring("method mLongLong")] HRESULT mLongLong([in] LONGLONG a, [out,retval] LONGLONG* b);
+    [id(14), helpstring("method mOleColor")] HRESULT mOleColor([in] OLE_COLOR a, [out,retval] OLE_COLOR* b);
+    [id(15), helpstring("method mOleXposHimetric")] HRESULT mOleXposHimetric([in] OLE_XPOS_HIMETRIC a, [out,retval] OLE_XPOS_HIMETRIC* b);
+    [id(16), helpstring("method mOleYposHimetric")] HRESULT mOleYposHimetric([in] OLE_YPOS_HIMETRIC a, [out,retval] OLE_YPOS_HIMETRIC* b);
+    [id(17), helpstring("method mOleXsizeHimetric")] HRESULT mOleXsizeHimetric([in] OLE_XSIZE_HIMETRIC a, [out,retval] OLE_XSIZE_HIMETRIC* b);
+    [id(18), helpstring("method mOleYsizeHimetric")] HRESULT mOleYsizeHimetric([in] OLE_YSIZE_HIMETRIC a, [out,retval] OLE_YSIZE_HIMETRIC* b);
+    [id(19), helpstring("method mOleXposPixels")] HRESULT mOleXposPixels([in] OLE_XPOS_PIXELS a, [out,retval] OLE_XPOS_PIXELS* b);
+    [id(20), helpstring("method mOleYposPixels")] HRESULT mOleYposPixels([in] OLE_YPOS_PIXELS a, [out,retval] OLE_YPOS_PIXELS* b);
+    [id(21), helpstring("method mOleXsizePixels")] HRESULT mOleXsizePixels([in] OLE_XSIZE_PIXELS a, [out,retval] OLE_XSIZE_PIXELS* b);
+    [id(22), helpstring("method mOleYsizePixels")] HRESULT mOleYsizePixels([in] OLE_YSIZE_PIXELS a, [out,retval] OLE_YSIZE_PIXELS* b);
+    [id(23), helpstring("method mOleHandle")] HRESULT mOleHandle([in] OLE_HANDLE a, [out,retval] OLE_HANDLE* b);
+    [id(24), helpstring("method mOleOptExclusive")] HRESULT mOleOptExclusive([in] OLE_OPTEXCLUSIVE a, [out,retval] OLE_OPTEXCLUSIVE* b);
+    [id(25), helpstring("method mOleTristate")] HRESULT mOleTristate([in] enum OLE_TRISTATE a, [out,retval] enum OLE_TRISTATE* b);
+    [id(26), helpstring("method mScode")] HRESULT mScode([in] SCODE a, [out,retval] SCODE* b);
+    [id(27), helpstring("method mShort")] HRESULT mShort([in] SHORT a, [out,retval] SHORT* b);
+    [id(28), helpstring("method mUlong")] HRESULT mUlong([in] ULONG a, [out,retval] ULONG* b);
+    [id(29), helpstring("method mULongLong")] HRESULT mULongLong([in] ULONGLONG a, [out,retval] ULONGLONG* b);
+    [id(30), helpstring("method mUShort")] HRESULT mUShort([in] USHORT a, [out,retval] USHORT* b);
+    [id(31), helpstring("method mVariant")] HRESULT mVariant([in] VARIANT a, [out,retval] VARIANT* b);
+    [id(32), helpstring("method mVariantBool")] HRESULT mVariantBool([in] VARIANT_BOOL a, [out,retval] VARIANT_BOOL* b);
+};
+[
+    object,
+    uuid(40731681-F91E-4CEA-BD64-468E949B5BE6),
+    dual,
+    nonextensible,
+    helpstring("IOutParams Interface"),
+    pointer_default(unique)
+]
+interface IOutParams : IDispatch{
+    [id(1), helpstring("method mBstr")] HRESULT mBstr([in] BSTR a, [out] BSTR* b);
+    [id(2), helpstring("method mByte")] HRESULT mByte([in] BYTE a, [out] BYTE* b);
+    [id(3), helpstring("method mChar")] HRESULT mChar([in] CHAR a, [out] CHAR* b);
+    [id(4), helpstring("method mCy")] HRESULT mCy([in] CY a, CY* b);
+    [id(5), helpstring("method mDate")] HRESULT mDate([in] DATE a, [out] DATE* b);
+    [id(6), helpstring("method mDouble")] HRESULT mDouble([in] DOUBLE a, [out] DOUBLE* b);
+    [id(7), helpstring("method mFloat")] HRESULT mFloat([in] FLOAT a, [out] FLOAT* b);
+    [id(8), helpstring("method mIDispatch")] HRESULT mIDispatch([in] IDispatch* a, [out] IDispatch** b);
+    [id(9), helpstring("method mIFontDisp")] HRESULT mIFontDisp([in] IFontDisp* a, [out] IDispatch** b);
+    [id(10), helpstring("method mIPictureDisp")] HRESULT mIPictureDisp([in] IPictureDisp* a, [out] IDispatch** b);
+    [id(11), helpstring("method mIUnknown")] HRESULT mIUnknown([in] IUnknown* a, [out] IUnknown** b);
+    [id(12), helpstring("method mLong")] HRESULT mLong([in] LONG a, [out] LONG* b);
+    [id(13), helpstring("method mLongLong")] HRESULT mLongLong([in] LONGLONG a, [out] LONGLONG* b);
+    [id(14), helpstring("method mOleColor")] HRESULT mOleColor([in] OLE_COLOR a, [out] OLE_COLOR* b);
+    [id(15), helpstring("method mOleXposHimetric")] HRESULT mOleXposHimetric([in] OLE_XPOS_HIMETRIC a, [out] OLE_XPOS_HIMETRIC* b);
+    [id(16), helpstring("method mOleYposHimetric")] HRESULT mOleYposHimetric([in] OLE_YPOS_HIMETRIC a, [out] OLE_YPOS_HIMETRIC* b);
+    [id(17), helpstring("method mOleXsizeHimetric")] HRESULT mOleXsizeHimetric([in] OLE_XSIZE_HIMETRIC a, [out] OLE_XSIZE_HIMETRIC* b);
+    [id(18), helpstring("method mOleYsizeHimetric")] HRESULT mOleYsizeHimetric([in] OLE_YSIZE_HIMETRIC a, [out] OLE_YSIZE_HIMETRIC* b);
+    [id(19), helpstring("method mOleXposPixels")] HRESULT mOleXposPixels([in] OLE_XPOS_PIXELS a, [out] OLE_XPOS_PIXELS* b);
+    [id(20), helpstring("method mOleYposPixels")] HRESULT mOleYposPixels([in] OLE_YPOS_PIXELS a, [out] OLE_YPOS_PIXELS* b);
+    [id(21), helpstring("method mOleXsizePixels")] HRESULT mOleXsizePixels([in] OLE_XSIZE_PIXELS a, [out] OLE_XSIZE_PIXELS* b);
+    [id(22), helpstring("method mOleYsizePixels")] HRESULT mOleYsizePixels([in] OLE_YSIZE_PIXELS a, [out] OLE_YSIZE_PIXELS* b);
+    [id(23), helpstring("method mOleHandle")] HRESULT mOleHandle([in] OLE_HANDLE a, [out] OLE_HANDLE* b);
+    [id(24), helpstring("method mOleOptExclusive")] HRESULT mOleOptExclusive([in] OLE_OPTEXCLUSIVE a, [out] OLE_OPTEXCLUSIVE* b);
+    [id(25), helpstring("method mOleTristate")] HRESULT mOleTristate([in] enum OLE_TRISTATE a, [out] enum OLE_TRISTATE* b);
+    [id(26), helpstring("method mScode")] HRESULT mScode([in] SCODE a, [out] SCODE* b);
+    [id(27), helpstring("method mShort")] HRESULT mShort([in] SHORT a, [out] SHORT* b);
+    [id(28), helpstring("method mUlong")] HRESULT mUlong([in] ULONG a, [out] ULONG* b);
+    [id(29), helpstring("method mULongLong")] HRESULT mULongLong([in] ULONGLONG a, [out] ULONGLONG* b);
+    [id(30), helpstring("method mUShort")] HRESULT mUShort([in] USHORT a, [out] USHORT* b);
+    [id(31), helpstring("method mVariant")] HRESULT mVariant([in] VARIANT a, [out] VARIANT* b);
+    [id(32), helpstring("method mVariantBool")] HRESULT mVariantBool([in] VARIANT_BOOL a, [out] VARIANT_BOOL* b);
+};
+[
+	object,
+	uuid(19B40F5B-0DDA-462B-A42F-C8BB9199FDA1),
+	dual,
+	nonextensible,
+	helpstring("IOptionalParams Interface"),
+	pointer_default(unique)
+]
+interface IOptionalParams : IDispatch{
+	[id(1), helpstring("method Only one param and that is optional")] HRESULT mSingleOptionalParam([in, optional] VARIANT a);
+	[id(2), helpstring("method One optional param")] HRESULT mOneOptionalParam([in] VARIANT a, [in, optional] VARIANT b);
+	[id(3), helpstring("method Two optional params")] HRESULT mTwoOptionalParams([in] VARIANT a, [in, optional] VARIANT b, [in,optional] VARIANT c);
+	[id(4), helpstring("method Param with Default Value")] HRESULT mOptionalParamWithDefaultValue([in] VARIANT a, [in, defaultvalue("3")] VARIANT b, [out,retval] VARIANT* c);	
+	[id(5), helpstring("method Optional Out Param")] HRESULT mOptionalOutParam([in] VARIANT a, [out, optional] VARIANT* b);	
+	[id(6), helpstring("method Optional String Param")] HRESULT mOptionalStringParam([in, optional] BSTR a, [out, retval] BSTR* b);	
+	[id(7), helpstring("method Optional Int Param")] HRESULT mOptionalIntParam([in, optional] int a, [out, retval] int* b);		
+};
+[
+	object,
+	uuid(A79E0CAC-269A-4801-9EBC-2AED1D3B966A),
+	dual,
+	nonextensible,
+	helpstring("IMultipleParams Interface"),
+	pointer_default(unique)
+]
+interface IMultipleParams : IDispatch{
+	[id(1), helpstring("method mZeroParams")] HRESULT mZeroParams(void);
+	[id(2), helpstring("method mOneParam")] HRESULT mOneParamNoRetval([in] BSTR a);
+	[id(3), helpstring("method mOneParam")] HRESULT mOneParam([in] BSTR a, [out,retval] BSTR* b);
+	[id(4), helpstring("method mTwoParams")] HRESULT mTwoParams([in] BYTE a, [in] BYTE b, [out,retval] BYTE* c);
+	[id(5), helpstring("method mThreeParams")] HRESULT mThreeParams([in] DOUBLE a, [in] DOUBLE b, [in] DOUBLE c, [out,retval] DOUBLE* d);
+	[id(6), helpstring("method mFourParams")] HRESULT mFourParams([in] VARIANT_BOOL a, [in] ULONG b, [in] BSTR c, [in] ULONG d, [out, retval] ULONG* e);
+	[id(7), helpstring("method mFiveParams")] HRESULT mFiveParams([in] BSTR a, FLOAT b, [in] BSTR c, [in] FLOAT d, [in] FLOAT e, [out,retval] FLOAT* f);
+};
+[
+	object,
+	uuid(10862F5B-82A3-44C5-B68F-AA507DAC6033),
+	dual,
+	nonextensible,
+	helpstring("IInOutParams Interface"),
+	pointer_default(unique)
+]
+interface IInOutParams : IDispatch{
+	[id(1), helpstring("method mBstr")] HRESULT mBstr([in, out] BSTR* a);
+    [id(2), helpstring("method mByte")] HRESULT mByte([in, out] BYTE* a);
+	[id(3), helpstring("method mDouble")] HRESULT mDouble([in, out] DOUBLE* a);
+    [id(4), helpstring("method mTwoInOutParams")] HRESULT mTwoInOutParams([in, out] DOUBLE* a, [in, out] DOUBLE* b);
+    [id(5), helpstring("method mInAndInOutParams")] HRESULT mInAndInOutParams([in] CY a, [in, out] CY* b);
+    [id(6), helpstring("method mOutAndInOutParams")] HRESULT mOutAndInOutParams([in, out] DATE* a, [out] DATE* b);    
+    [id(7), helpstring("method mIDispatch")] HRESULT mIDispatch([in,out] IDispatch** a);	
+	[id(8), helpstring("method mSingleRefParam")] HRESULT mSingleRefParam([ref] DOUBLE* a);
+	[id(9), helpstring("method mSingleRefParam")] HRESULT mTwoRefParams([ref] BSTR* a, [ref] IDispatch** b);
+
+};
+[
+	object,
+	uuid(D37E4B4B-A065-4167-8E78-06A129EA0EDD),
+	dual,
+	nonextensible,
+	helpstring("IReturnValues Interface"),
+	pointer_default(unique),
+	local //this is needed for methods to have non-HRESULT return values
+]
+interface IReturnValues : IDispatch{	
+	[id(1), helpstring("method mNullRefException")] HRESULT mNullRefException();
+	[id(2), helpstring("method mGeneriCOMException")] HRESULT mGenericCOMException();
+	[id(3), helpstring("method mNoRetVal")] void mNoRetVal();
+	[id(4), helpstring("method mIntRetVal")] int mIntRetVal();
+	[id(5), helpstring("method mTwoRetVals")] int mTwoRetVals([out,retval] int* a);
+};
+[
+	object,
+	uuid(1C7609FC-E97C-463D-B224-CED727952D03),
+	dual,
+	nonextensible,
+	helpstring("IDlrUniversalObj Interface"),
+	pointer_default(unique)
+]
+interface IDlrUniversalObj : IDispatch{
+	[id(1), helpstring("method m0")] HRESULT m0(void);
+	[id(2), helpstring("method m2")] HRESULT m2([in] BSTR arg1, [in] BSTR arg2);
+	[id(3), helpstring("method m1kw1")] HRESULT m1kw1([in] VARIANT arg1, [in, optional] VARIANT arg2);
+};
+[
+	object,
+	uuid(CB97A8EB-CA00-456B-BD07-1E6E2A04EAC5),
+	dual,
+	nonextensible,
+	helpstring("ISimpleErrors Interface"),
+	pointer_default(unique)
+]
+interface ISimpleErrors : IDispatch{
+	[id(1), helpstring("method genMseeAppDomainUnloaded")] HRESULT genMseeAppDomainUnloaded(void);
+	[id(2), helpstring("method genCorApplication")] HRESULT genCorApplication(void);
+	[id(3), helpstring("method genCorArgument")] HRESULT genCorArgument(void);
+	[id(4), helpstring("method genInvalidArg")] HRESULT genInvalidArg(void);
+	[id(5), helpstring("method genCorArgumentOutOfRange")] HRESULT genCorArgumentOutOfRange(void);
+	[id(6), helpstring("method genCorArithmetic")] HRESULT genCorArithmetic(void);
+	[id(7), helpstring("method genErrorArithmeticOverflow")] HRESULT genErrorArithmeticOverflow(void);
+	[id(8), helpstring("method genCorArrayTypeMismatch")] HRESULT genCorArrayTypeMismatch(void);
+	[id(9), helpstring("method genCorBadImageFormat")] HRESULT genCorBadImageFormat(void);
+	[id(10), helpstring("method genErrorBadFormat")] HRESULT genErrorBadFormat(void);
+	
+	[id(12), helpstring("method genCorContextMarshal")] HRESULT genCorContextMarshal(void);
+	
+	[id(14), helpstring("method genNTEFail")] HRESULT genNTEFail(void);
+	[id(15), helpstring("method genCorDirectoryNotFound")] HRESULT genCorDirectoryNotFound(void);
+	[id(16), helpstring("method genErrorPathNotFound")] HRESULT genErrorPathNotFound(void);
+	[id(17), helpstring("method genCorDivideByZero")] HRESULT genCorDivideByZero(void);
+	[id(18), helpstring("method genCorDuplicateWaitObject")] HRESULT genCorDuplicateWaitObject(void);
+	[id(19), helpstring("method genCorEndOfStream")] HRESULT genCorEndOfStream(void);
+	[id(20), helpstring("method genCorTypeLoad")] HRESULT genCorTypeLoad(void);
+	[id(21), helpstring("method genCorException")] HRESULT genCorException(void);
+	[id(22), helpstring("method genCorExecutionEngine")] HRESULT genCorExecutionEngine(void);
+	[id(23), helpstring("method genCorFieldAccess")] HRESULT genCorFieldAccess(void);
+	[id(24), helpstring("method genCorFileNotFound")] HRESULT genCorFileNotFound(void);
+	[id(25), helpstring("method genErrorFileNotFound")] HRESULT genErrorFileNotFound(void);
+	[id(26), helpstring("method genCorFormat")] HRESULT genCorFormat(void);
+	[id(27), helpstring("method genCorIndexOutOfRange")] HRESULT genCorIndexOutOfRange(void);
+	[id(28), helpstring("method genCorInvalidCast")] HRESULT genCorInvalidCast(void);
+	[id(29), helpstring("method genNoInterface")] HRESULT genNoInterface(void);
+	[id(30), helpstring("method genCorInvalidCOMObject")] HRESULT genCorInvalidCOMObject(void);
+	[id(31), helpstring("method genCorInvalidFilterCriteria")] HRESULT genCorInvalidFilterCriteria(void);
+	[id(32), helpstring("method genCorInvalidOleVariantType")] HRESULT genCorInvalidOleVariantType(void);
+	[id(33), helpstring("method genCorInvalidOperation")] HRESULT genCorInvalidOperation(void);
+	[id(34), helpstring("method genCorIO")] HRESULT genCorIO(void);
+	[id(35), helpstring("method genCorMemberAccess")] HRESULT genCorMemberAccess(void);
+	[id(36), helpstring("method genCorMethodAccess")] HRESULT genCorMethodAccess(void);
+	[id(37), helpstring("method genCorMissingField")] HRESULT genCorMissingField(void);
+	[id(38), helpstring("method genCorMissingManifestResource")] HRESULT genCorMissingManifestResource(void);
+	[id(39), helpstring("method genCorMissingMember")] HRESULT genCorMissingMember(void);
+	[id(40), helpstring("method genCorMissingMethod")] HRESULT genCorMissingMethod(void);
+	[id(41), helpstring("method genCorMulticastNotSupported")] HRESULT genCorMulticastNotSupported(void);
+	[id(42), helpstring("method genCorNotFiniteNumber")] HRESULT genCorNotFiniteNumber(void);
+	[id(43), helpstring("method genNotImpl")] HRESULT genNotImpl(void);
+	[id(44), helpstring("method genCorNotSupported")] HRESULT genCorNotSupported(void);
+	[id(45), helpstring("method genCorNullReference")] HRESULT genCorNullReference(void);
+	[id(46), helpstring("method genPointer")] HRESULT genPointer(void);
+	[id(47), helpstring("method genCorOutOfMemory")] HRESULT genCorOutOfMemory(void);
+	[id(48), helpstring("method genOutOfMemory")] HRESULT genOutOfMemory(void);
+	[id(49), helpstring("method genCorOverflow")] HRESULT genCorOverflow(void);
+	[id(50), helpstring("method genCorPathTooLong")] HRESULT genCorPathTooLong(void);
+	[id(51), helpstring("method genErrorFilenameExcedRange")] HRESULT genErrorFilenameExcedRange(void);
+	[id(52), helpstring("method genCorRank")] HRESULT genCorRank(void);
+	[id(53), helpstring("method genCorTargetInvocation")] HRESULT genCorTargetInvocation(void);
+	[id(54), helpstring("method genCorReflectionTypeLoad")] HRESULT genCorReflectionTypeLoad(void);
+	[id(55), helpstring("method genCorRemoting")] HRESULT genCorRemoting(void);
+	[id(56), helpstring("method genCorSafeArrayTypeMismatch")] HRESULT genCorSafeArrayTypeMismatch(void);
+	[id(57), helpstring("method genCorSecurity")] HRESULT genCorSecurity(void);
+	[id(58), helpstring("method genCorSerialization")] HRESULT genCorSerialization(void);
+	[id(59), helpstring("method genCorStackOverflow")] HRESULT genCorStackOverflow(void);
+	[id(60), helpstring("method genErrorStackOverflow")] HRESULT genErrorStackOverflow(void);
+	[id(61), helpstring("method genCorSynchronizationLock")] HRESULT genCorSynchronizationLock(void);
+	[id(62), helpstring("method genCorSystem")] HRESULT genCorSystem(void);
+	[id(63), helpstring("method genCorTarget")] HRESULT genCorTarget(void);
+	[id(64), helpstring("method genCorTargetParamCount")] HRESULT genCorTargetParamCount(void);
+	[id(65), helpstring("method genCorThreadAborted")] HRESULT genCorThreadAborted(void);
+	[id(66), helpstring("method genCorThreadInterrupted")] HRESULT genCorThreadInterrupted(void);
+	[id(67), helpstring("method genCorThreadState")] HRESULT genCorThreadState(void);
+	[id(68), helpstring("method genCorThreadStop")] HRESULT genCorThreadStop(void);
+	[id(69), helpstring("method genCorTypeInitialization")] HRESULT genCorTypeInitialization(void);
+	[id(70), helpstring("method genCorVerification")] HRESULT genCorVerification(void);
+	
+	
+	[id(73), helpstring("method genUndefinedHresult")] HRESULT genUndefinedHresult([in] ULONG hresult);
+	[id(74), helpstring("method genDispArrayIsLocked")] HRESULT genDispArrayIsLocked(void);
+	[id(75), helpstring("method genDispBadCallee")] HRESULT genDispBadCallee(void);
+	[id(76), helpstring("method genDispBadIndex")] HRESULT genDispBadIndex(void);
+	[id(77), helpstring("method genDispBadParamCount")] HRESULT genDispBadParamCount(void);
+	[id(78), helpstring("method genDispBadVarType")] HRESULT genDispBadVarType(void);
+	[id(79), helpstring("method genDispBufferTooSmall")] HRESULT genDispBufferTooSmall(void);
+	[id(80), helpstring("method genDispDivByZero")] HRESULT genDispDivByZero(void);
+	[id(81), helpstring("method genDispException")] HRESULT genDispException(void);
+	[id(82), helpstring("method genDispMemberNotFound")] HRESULT genDispMemberNotFound(void);
+	[id(83), helpstring("method genDispNoNamedArgs")] HRESULT genDispNoNamedArgs(void);
+	[id(84), helpstring("method genDispNotACollection")] HRESULT genDispNotACollection(void);
+	[id(85), helpstring("method genDispOverflow")] HRESULT genDispOverflow(void);
+	[id(86), helpstring("method genDispParamNotFound")] HRESULT genDispParamNotFound(void);
+	[id(87), helpstring("method genDispParamNotOptional")] HRESULT genDispParamNotOptional(void);
+	[id(88), helpstring("method genDispTypeMismatch")] HRESULT genDispTypeMismatch(void);
+	[id(89), helpstring("method genDispUnknownInterface")] HRESULT genDispUnknownInterface(void);
+	[id(90), helpstring("method genDispUnknownLCID")] HRESULT genDispUnknownLCID(void);
+	[id(91), helpstring("method genDispUnknownName")] HRESULT genDispUnknownName(void);
+};
+[
+	object,
+	uuid(0798D8F9-F543-4BEB-9A59-0FFB59BFC676),
+	dual,
+	nonextensible,
+	helpstring("IProperties Interface"),
+	pointer_default(unique)
+]
+interface IProperties : IDispatch{
+	[propget, id(1), helpstring("property pBstr")] HRESULT pBstr([out, retval] BSTR* pVal);
+	[propput, id(1), helpstring("property pBstr")] HRESULT pBstr([in] BSTR newVal);
+	[propget, id(2), helpstring("property pVariant")] HRESULT pVariant([out, retval] VARIANT* pVal);
+	[propput, id(2), helpstring("property pVariant")] HRESULT pVariant([in] VARIANT newVal);
+	[propget, id(3), helpstring("property pDate")] HRESULT pDate([out, retval] DATE* pVal);
+	[propput, id(3), helpstring("property pDate")] HRESULT pDate([in] DATE newVal);
+	[propget, id(4), helpstring("property pLong")] HRESULT pLong([out, retval] LONG* pVal);
+	[propput, id(4), helpstring("property pLong")] HRESULT pLong([in] LONG newVal);	
+	[propget, id(5), helpstring("property RefProperty")] HRESULT RefProperty([out, retval] IDispatch** pVal);
+	[propputref, id(5), helpstring("property RefProperty")] HRESULT RefProperty([in] IDispatch* newVal);
+	[propget, id(6), helpstring("property PutAndPutRefProperty")] HRESULT PutAndPutRefProperty([out, retval] DOUBLE* pVal);
+	[propput, id(6), helpstring("property PutAndPutRefProperty")] HRESULT PutAndPutRefProperty([in] DOUBLE newVal);
+	[propputref, id(6), helpstring("property PutAndPutRefProperty")] HRESULT PutAndPutRefProperty([in] DOUBLE* newVal);
+	[propget, id(7), helpstring("property ReadOnlyProperty")] HRESULT ReadOnlyProperty([out, retval] CHAR* pVal);
+	[propput, id(8), helpstring("property WriteOnlyProperty")] HRESULT WriteOnlyProperty([in] DATE newVal);
+	[propget, id(9), helpstring("property PropertyWithParam")] HRESULT PropertyWithParam(DOUBLE a, [out, retval] DOUBLE* pVal);
+	[propput, id(9), helpstring("property PropertyWithParam")] HRESULT PropertyWithParam(DOUBLE a, [in] DOUBLE newVal);
+	[propget, id(10), helpstring("property PropertyWithOutParam")] HRESULT PropertyWithOutParam([out] BSTR* a, [out, retval] BSTR* pVal);
+	[propput, id(10), helpstring("property PropertyWithOutParam")] HRESULT PropertyWithOutParam([out] BSTR* a, [in] BSTR newVal);
+	[propget, id(11), helpstring("property PropertyWithTwoParams")] HRESULT PropertyWithTwoParams(DOUBLE a, DOUBLE b, [out, retval] DOUBLE* pVal);
+	[propput, id(11), helpstring("property PropertyWithTwoParams")] HRESULT PropertyWithTwoParams(DOUBLE a, DOUBLE b, [in] DOUBLE newVal);
+	[propget, id(DISPID_VALUE), helpstring("property DefaultProperty")] HRESULT DefaultProperty([in] SHORT a, [out, retval] VARIANT_BOOL* pVal);
+	[propput, id(DISPID_VALUE), helpstring("property DefaultProperty")] HRESULT DefaultProperty([in] SHORT a, [in] VARIANT_BOOL newVal);
+};
+[
+	object,
+	uuid(4B34EF67-CCF2-4BA5-981E-9745EB9ACBCA),
+	dual,
+	nonextensible,
+	helpstring("IDispEvents Interface"),
+	pointer_default(unique)
+]
+interface IDispEvents : IDispatch{
+	[propget, id(1), helpstring("property neg_scenario")] HRESULT neg_scenario([out, retval] VARIANT_BOOL* pVal);
+	[propput, id(1), helpstring("property neg_scenario")] HRESULT neg_scenario([in] VARIANT_BOOL newVal);
+	[propget, id(2), helpstring("property expected_hresult")] HRESULT expected_hresult([out, retval] ULONG* pVal);
+	[propput, id(2), helpstring("property expected_hresult")] HRESULT expected_hresult([in] ULONG newVal);
+	[id(3), helpstring("method triggerNull"), source] HRESULT triggerNull(void);
+	[id(4), helpstring("method triggerInOutretBool")] HRESULT triggerInOutretBool([in] VARIANT_BOOL inval, [out,retval] VARIANT_BOOL* ret);
+	[id(5), helpstring("method triggerInOutBstr")] HRESULT triggerInOutBstr([in] BSTR inval, [out,retval] BSTR* outval);
+	[id(6), helpstring("method triggerUShort"), source] HRESULT triggerUShort([in] USHORT inval);
+	[id(7), helpstring("method triggerNullShort")] HRESULT triggerNullShort(void);
+};
+[
+    uuid(A50D2773-4B1B-428A-B5B4-9300E1B50484),
+    version(1.0),
+    helpstring("DlrComLibrary 1.0 Type Library")
+]
+library DlrComLibraryLib
+{
+    importlib("stdole2.tlb");
+    [
+        uuid(581E22B2-2D0B-4E36-9B18-A19DA0608B69),
+        helpstring("_IDlrComServerEvents Interface")
+    ]
+    dispinterface _IDlrComServerEvents
+    {
+        properties:
+        methods:
+    };
+    [
+        uuid(EDD67229-048F-4A1C-A43A-F00A6171CD7F),
+        helpstring("DlrComServer Class")
+    ]
+    coclass DlrComServer
+    {
+        [default] interface IDlrComServer;
+        [default, source] dispinterface _IDlrComServerEvents;
+    };
+    [
+        uuid(DAB5F04A-6CEE-48C2-9413-2847A547FE21),
+        helpstring("DlrComStopwatch Class")
+    ]
+    coclass DlrComStopwatch
+    {
+        [default] interface IDlrComStopwatch;
+    };
+    [
+        uuid(5EE5ED79-00A0-4E7B-81C9-EC43CEE5FFB3),
+        helpstring("ParamsInRetval Class")
+    ]
+    coclass ParamsInRetval
+    {
+        [default] interface IParamsInRetval;
+    };
+    [
+        uuid(CEF80056-7DAA-40C3-9FFB-B9F3CB451CB0),
+        helpstring("OutParams Class")
+    ]
+    coclass OutParams
+    {
+        [default] interface IOutParams;
+    };
+	[
+		uuid(9E918131-8CAA-49EE-B0D8-0A3FE985FE62),
+		helpstring("OptionalParams Class")
+	]
+	coclass OptionalParams
+	{
+		[default] interface IOptionalParams;
+	};
+	[
+		uuid(7FB4E1C7-CAD6-4527-9F3B-FC75C18D9BFA),
+		helpstring("MultipleParams Class")
+	]
+	coclass MultipleParams
+	{
+		[default] interface IMultipleParams;
+	};
+	[
+		uuid(024D4FBD-58DC-4C40-8ECD-E5E4D7146FE5),
+		helpstring("InOutParams Class")
+	]
+	coclass InOutParams
+	{
+		[default] interface IInOutParams;
+	};
+	[
+		uuid(A8B9D4EB-ED86-416C-BD3C-35D3F63BCCC3),
+		helpstring("ReturnValues Class")
+	]
+	coclass ReturnValues
+	{
+		[default] interface IReturnValues;
+	};
+	[
+		uuid(5CBF3144-CAAC-46A5-9205-F0F73B60E2B3),
+		helpstring("DlrUniversalObj Class")
+	]
+	coclass DlrUniversalObj
+	{
+		[default] interface IDlrUniversalObj;
+	};
+	[
+		uuid(F2A8BF44-87A2-4225-B949-466AFE7ECAAC),
+		helpstring("SimpleErrors Class")
+	]
+	coclass SimpleErrors
+	{
+		[default] interface ISimpleErrors;
+	};
+	[
+		uuid(780DCCAE-1B2D-4DC8-BE8A-065690F3CD7E),
+		helpstring("Properties Class")
+	]
+	coclass Properties
+	{
+		[default] interface IProperties;
+	};
+	[
+		uuid(5085C771-E2D1-47F0-BBB1-71C333AC6236),
+		helpstring("_IDispEventsEvents Interface")
+	]
+	dispinterface _IDispEventsEvents
+	{
+		properties:
+		methods:
+			[id(1), helpstring("method eNull")] HRESULT eNull(void);
+			[id(2), helpstring("method eInOutretBool")] HRESULT eInOutretBool([in] VARIANT_BOOL inval, [out,retval] VARIANT_BOOL* ret);
+			[id(3), helpstring("method eInOutBstr")] HRESULT eInOutBstr([in] BSTR inval, [out] BSTR* outval);
+			[id(4), helpstring("method eInUshort - passed in value should always be 42")] HRESULT eInUshort([in] USHORT inval);
+			[id(5), helpstring("method eNullShort")] SHORT eNullShort(void);
+	};
+	[
+		uuid(275076D1-733B-44F3-BFBA-927774AC8EA7),
+		helpstring("DispEvents Class")
+	]
+	coclass DispEvents
+	{
+		[default] interface IDispEvents;
+		[default, source] dispinterface _IDispEventsEvents;
+	};
+};

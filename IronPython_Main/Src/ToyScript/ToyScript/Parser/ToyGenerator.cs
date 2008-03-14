@@ -54,7 +54,7 @@ namespace ToyScript.Parser {
             return _scope.TopScope.GetOrMakeLocal(name);
         }
 
-        internal static MSAst.CodeBlock Generate(Statement statement, string name) {
+        internal static MSAst.LambdaExpression Generate(Statement statement, string name) {
             ToyGenerator tg = new ToyGenerator(name);
 
             MSAst.Expression body = statement.Generate(tg);

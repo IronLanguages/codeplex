@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
 
     /// <summary>
     /// Dynamic Language Runtime Compiler.
-    /// This part compiles code blocks.
+    /// This part compiles lambdas.
     /// </summary>
     partial class LambdaCompiler {
         // Should this be in TypeGen directly?
@@ -40,12 +40,12 @@ namespace Microsoft.Scripting.Ast {
 
         private static readonly string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
-        private void EmitEnvironmentIDs(CodeBlock block) {
+        private void EmitEnvironmentIDs(LambdaExpression lambda) {
             int size = 0;
-            foreach (Variable prm in block.Parameters) {
+            foreach (Variable prm in lambda.Parameters) {
                 if (prm.Lift) size++;
             }
-            foreach (Variable var in block.Variables) {
+            foreach (Variable var in lambda.Variables) {
                 if (var.Lift) size++;
             }
 
@@ -53,16 +53,16 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(TypeGen != null);
 
                 LambdaCompiler cctor = TypeGen.TypeInitializer;
-                cctor.EmitEnvironmentIdArray(block, size);
-                Slot fields = TypeGen.AddStaticField(typeof(SymbolId[]), "__symbolIds$" + block.Name + "$" + Interlocked.Increment(ref _Counter));
+                cctor.EmitEnvironmentIdArray(lambda, size);
+                Slot fields = TypeGen.AddStaticField(typeof(SymbolId[]), "__symbolIds$" + lambda.Name + "$" + Interlocked.Increment(ref _Counter));
                 fields.EmitSet(cctor);
                 fields.EmitGet(this);
             } else {
-                EmitEnvironmentIdArray(block, size);
+                EmitEnvironmentIdArray(lambda, size);
             }
         }
 
-        private void EmitEnvironmentIdArray(CodeBlock block, int size) {
+        private void EmitEnvironmentIdArray(LambdaExpression lambda, int size) {
             // Create the array for the names
             EmitInt(size);
             Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -70,13 +70,13 @@ namespace Microsoft.Scripting.Ast {
             int index = 0;
             EmitDebugMarker("--- Environment IDs ---");
 
-            foreach (Variable prm in block.Parameters) {
+            foreach (Variable prm in lambda.Parameters) {
                 if (prm.Lift) {
                     EmitSetVariableName(this, index++, prm.Name);
                 }
             }
 
-            foreach (Variable var in block.Variables) {
+            foreach (Variable var in lambda.Variables) {
                 if (var.Lift) {
                     EmitSetVariableName(this, index++, var.Name);
                 }
@@ -92,51 +92,51 @@ namespace Microsoft.Scripting.Ast {
             cg.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(SymbolId) }));
         }
 
-        private static void CreateEnvironmentFactory(CodeBlockInfo cbi, bool generator) {
-            if (cbi.HasEnvironment) {
-                CodeBlock cb = cbi.CodeBlock;
+        private static void CreateEnvironmentFactory(LambdaInfo li, bool generator) {
+            if (li.HasEnvironment) {
+                LambdaExpression lambda = li.Lambda;
 
                 // Get the environment size
                 int size = 0;
 
                 if (generator) {
-                    size += cbi.GeneratorTemps;
+                    size += li.GeneratorTemps;
 
-                    foreach (Variable var in cb.Variables) {
+                    foreach (Variable var in lambda.Variables) {
                         if (var.IsTemporary) {
                             size++;
                         }
                     }
                 }
 
-                foreach (Variable parm in cb.Parameters) {
+                foreach (Variable parm in lambda.Parameters) {
                     if (parm.Lift) size++;
                 }
-                foreach (Variable var in cb.Variables) {
+                foreach (Variable var in lambda.Variables) {
                     if (var.Lift) size++;
                 }
 
                 // Find the right environment factory for the size of elements to store
-                cbi.EnvironmentFactory = CreateEnvironmentFactory(size);
+                li.EnvironmentFactory = CreateEnvironmentFactory(size);
             }
         }
 
-        private static EnvironmentSlot EmitEnvironmentAllocation(LambdaCompiler cg, CodeBlockInfo cbi) {
-            Debug.Assert(cbi.EnvironmentFactory != null);
+        private static EnvironmentSlot EmitEnvironmentAllocation(LambdaCompiler cg, LambdaInfo li) {
+            Debug.Assert(li.EnvironmentFactory != null);
 
             cg.EmitDebugMarker("-- ENV ALLOC START --");
 
-            cbi.EnvironmentFactory.EmitStorage(cg);
+            li.EnvironmentFactory.EmitStorage(cg);
             cg.Emit(OpCodes.Dup);
             // Store the environment reference in the local
-            EnvironmentSlot environmentSlot = cbi.EnvironmentFactory.CreateEnvironmentSlot(cg);
+            EnvironmentSlot environmentSlot = li.EnvironmentFactory.CreateEnvironmentSlot(cg);
             environmentSlot.EmitSet(cg);
 
             // Emit the names array for the environment constructor
-            cg.EmitEnvironmentIDs(cbi.CodeBlock);
+            cg.EmitEnvironmentIDs(li.Lambda);
             // Emit code to generate the new instance of the environment
 
-            cbi.EnvironmentFactory.EmitNewEnvironment(cg);
+            li.EnvironmentFactory.EmitNewEnvironment(cg);
 
             cg.EmitDebugMarker("-- ENV ALLOC END --");
 
@@ -158,32 +158,32 @@ namespace Microsoft.Scripting.Ast {
             return ctxSlot;
         }
 
-        private static void CreateSlots(LambdaCompiler cg, CodeBlockInfo cbi) {
+        private static void CreateSlots(LambdaCompiler cg, LambdaInfo li) {
             Debug.Assert(cg != null);
-            Debug.Assert(cbi != null);
+            Debug.Assert(li != null);
 
-            CodeBlock cb = cbi.CodeBlock;
+            LambdaExpression lambda = li.Lambda;
 
-            if (cbi.HasEnvironment) {
+            if (li.HasEnvironment) {
                 // we're an environment slot, we need our own environment slot, and we're
                 // going to update our Context slot to point to a CodeContext which has
                 // its Locals pointing at our Environment.
-                cg.EnvironmentSlot = EmitEnvironmentAllocation(cg, cbi);
-                cg.ContextSlot = CreateEnvironmentContext(cg, cb.IsVisible);
+                cg.EnvironmentSlot = EmitEnvironmentAllocation(cg, li);
+                cg.ContextSlot = CreateEnvironmentContext(cg, lambda.IsVisible);
             }
 
-            cg.Allocator.Block = cb;
+            cg.Allocator.Lambda = lambda;
 
-            CreateAccessSlots(cg, cbi);
+            CreateAccessSlots(cg, li);
 
-            foreach (Variable prm in cb.Parameters) {
-                prm.Allocate(cg, cbi);
+            foreach (Variable prm in lambda.Parameters) {
+                prm.Allocate(cg, li);
             }
-            foreach (Variable var in cb.Variables) {
-                var.Allocate(cg, cbi);
+            foreach (Variable var in lambda.Variables) {
+                var.Allocate(cg, li);
             }
-            foreach (VariableReference r in cbi.References.Values) {
-                r.CreateSlot(cg, cbi);
+            foreach (VariableReference r in li.References.Values) {
+                r.CreateSlot(cg, li);
                 Debug.Assert(r.Slot != null);
             }
 
@@ -191,34 +191,34 @@ namespace Microsoft.Scripting.Ast {
             cg.Allocator.GlobalAllocator.PrepareForEmit(cg);
         }
 
-        private static void CreateAccessSlots(LambdaCompiler cg, CodeBlockInfo cbi) {
-            CreateClosureAccessSlots(cg, cbi);
-            CreateScopeAccessSlots(cg, cbi);
+        private static void CreateAccessSlots(LambdaCompiler cg, LambdaInfo li) {
+            CreateClosureAccessSlots(cg, li);
+            CreateScopeAccessSlots(cg, li);
         }
 
-        private static void CreateClosureAccessSlots(LambdaCompiler cg, CodeBlockInfo cbi) {
+        private static void CreateClosureAccessSlots(LambdaCompiler cg, LambdaInfo li) {
             ScopeAllocator allocator = cg.Allocator;
-            CodeBlock cb = cbi.CodeBlock;
+            LambdaExpression lambda = li.Lambda;
 
             // Current context is accessed via environment slot, if any
-            if (cbi.HasEnvironment) {
-                allocator.AddClosureAccessSlot(cb, cg.EnvironmentSlot);
+            if (li.HasEnvironment) {
+                allocator.AddClosureAccessSlot(lambda, cg.EnvironmentSlot);
             }
 
-            if (cbi.IsClosure) {
+            if (li.IsClosure) {
                 Slot scope = cg.GetLocalTmp(typeof(Scope));
                 cg.EmitCodeContext();
                 cg.EmitPropertyGet(typeof(CodeContext), "Scope");
-                if (cbi.HasEnvironment) {
+                if (li.HasEnvironment) {
                     cg.EmitPropertyGet(typeof(Scope), "Parent");
                 }
                 scope.EmitSet(cg);
 
-                CodeBlockInfo currentInfo = cbi;
-                CodeBlock current = cb;
+                LambdaInfo currentInfo = li;
+                LambdaExpression currentLambda = lambda;
                 do {
-                    CodeBlockInfo parentInfo = currentInfo.Parent;
-                    CodeBlock parent = parentInfo.CodeBlock;
+                    LambdaInfo parentInfo = currentInfo.Parent;
+                    LambdaExpression parent = parentInfo.Lambda;
 
                     if (parentInfo.EnvironmentFactory != null) {
                         scope.EmitGet(cg);
@@ -234,7 +234,7 @@ namespace Microsoft.Scripting.Ast {
                     cg.EmitPropertyGet(typeof(Scope), "Parent");
                     scope.EmitSet(cg);
 
-                    current = parent;
+                    currentLambda = parent;
                     currentInfo = parentInfo;
                 } while (currentInfo != null && currentInfo.IsClosure);
 
@@ -242,16 +242,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static void CreateScopeAccessSlots(LambdaCompiler cg, CodeBlockInfo cbi) {
+        private static void CreateScopeAccessSlots(LambdaCompiler cg, LambdaInfo li) {
             ScopeAllocator allocator = cg.Allocator;
             for (; ; ) {
-                if (allocator == null) {
-                    // TODO: interpreted mode anomaly
-                    break;
-                }
-                if (allocator.Block != null) {
-                    CodeBlockInfo abCbi = cg.GetCbi(allocator.Block);
-                    if (!abCbi.IsClosure) {
+                if (allocator.Lambda != null) {
+                    LambdaInfo abLi = cg.GetLambdaInfo(allocator.Lambda);
+                    if (!abLi.IsClosure) {
                         break;
                     }
                 }
@@ -259,12 +255,12 @@ namespace Microsoft.Scripting.Ast {
             }
 
             while (allocator != null) {
-                if (allocator.Block != null) {
-                    foreach (VariableReference reference in cbi.References.Values) {
-                        if (!reference.Variable.Lift && reference.Variable.Block == allocator.Block) {
-                            Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Block);
+                if (allocator.Lambda != null) {
+                    foreach (VariableReference reference in li.References.Values) {
+                        if (!reference.Variable.Lift && reference.Variable.Lambda == allocator.Lambda) {
+                            Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Lambda);
                             if (accessSlot != null) {
-                                cg.Allocator.AddScopeAccessSlot(allocator.Block, accessSlot);
+                                cg.Allocator.AddScopeAccessSlot(allocator.Lambda, accessSlot);
                             }
                             break;
                         }
@@ -274,71 +270,206 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // Used by Interpreter. Move to CompilerHelpers.
-        internal static bool NeedsWrapperMethod(CodeBlock block, bool hasContextParameter, bool hasThis, bool stronglyTyped) {
-            if (stronglyTyped) {
-                // strongly typed delegate signature includes the context explicitly, block parameters don't:
-                return block.Parameters.Count + (hasContextParameter ? 1 : 0) > ReflectionUtils.MaxSignatureSize;
+        /// <summary>
+        /// Emits a delegate to the method generated for the LambdaExpression.
+        /// May end up creating a wrapper to match the requested delegate type.
+        /// </summary>
+        /// <param name="lambda">Lambda for which to generate a delegate</param>
+        /// <param name="delegateType">Type of the delegate.</param>
+        private void EmitDelegateConstruction(LambdaExpression lambda, Type delegateType) {
+            FlowChecker.Check(lambda);
+
+            LambdaInfo li = GetLambdaInfo(lambda);
+
+            bool needsClosure = li.IsClosure || !(ContextSlot is StaticFieldSlot);
+
+            //
+            // Emit the lambda itself
+            //
+            LambdaCompiler lc = Compiler.ProvideLambdaImplementation(this, lambda, needsClosure);
+
+            lc = CreateWrapperIfNeeded(lc, lambda, delegateType);
+
+            EmitSequencePointNone();
+            EmitDelegateConstruction(lc, delegateType, needsClosure);
+        }
+
+        /// <summary>
+        /// If lambda and delegate signatures match, no need to create wrapper, otherwise
+        /// we create wrapper and generate code to pass arguments through to the underlying method.
+        /// </summary>
+        private LambdaCompiler CreateWrapperIfNeeded(LambdaCompiler lc, LambdaExpression lambda, Type type) {
+            Debug.Assert(typeof(Delegate).IsAssignableFrom(type) && type != typeof(Delegate));
+
+            Type[] blockSig = Ast.GetLambdaSignature(lambda);
+            MethodInfo invoke = type.GetMethod("Invoke");
+            ParameterInfo[] parameters = invoke.GetParameters();
+
+            if (SignaturesMatch(blockSig, parameters)) {
+                //
+                // No wrapper needed if signatures match
+                //
+                return lc;
             } else {
-                // call-target signature includes both the context and 'this' parameter implicitly, block parameters don't include context but they include 'this' parameter:
-                return block.Parameters.Count - (hasThis ? 1 : 0) > CallTargets.MaximumCallArgs;
+                //
+                // No match, must create wrapper
+                //
+                return lc.CreateWrapper(lambda, blockSig, invoke, parameters);
             }
         }
 
-        private static void EmitDelegateConstruction(LambdaCompiler cg, CodeBlock block, bool forceWrapperMethod, bool stronglyTyped, Type delegateType) {
-            FlowChecker.Check(block);
-
-            CodeBlockInfo cbi = cg.GetCbi(block);
-
-            bool needsClosure = cbi.IsClosure || !(cg.ContextSlot is StaticFieldSlot);
-            bool hasThis = block.HasThis();
-            bool needsWrapper = block.ParameterArray ? false : (forceWrapperMethod || NeedsWrapperMethod(block, needsClosure, hasThis, stronglyTyped));
-
-            LambdaCompiler impl = cg.Compiler.ProvideCodeBlockImplementation(cg, block, needsClosure, hasThis);
-
-            // if the method has more than our maximum # of args wrap
-            // it in a method that takes an object[] instead.
-            if (needsWrapper) {
-                impl = impl.MakeWrapperMethodN(hasThis);
-                impl.Finish();
-
-                if (delegateType == null) {
-                    delegateType = GetWrapperDelegateType(hasThis);
-                }
-            } else if (block.ParameterArray) {
-                if (delegateType == null) {
-                    delegateType = GetWrapperDelegateType(hasThis);
-                }
-            } else {
-                if (delegateType == null) {
-                    if (stronglyTyped) {
-                        delegateType = ReflectionUtils.GetDelegateType(GetParameterTypes(block), block.ReturnType);
-                    } else {
-                        delegateType = CallTargets.GetTargetType(block.Parameters.Count - (hasThis ? 1 : 0), hasThis);
+        /// <summary>
+        /// Signatures match if the length is the same and they have identical types.
+        /// </summary>
+        private static bool SignaturesMatch(Type/*!*/[]/*!*/ blockSig, ParameterInfo/*!*/[]/*!*/ parameters) {
+            if (blockSig.Length == parameters.Length) {
+                for (int i = 0; i < parameters.Length; i++) {
+                    if (blockSig[i] != parameters[i].ParameterType) {
+                        // different types
+                        return false;
                     }
                 }
-            }
+                // same
+                return true;
+            } else {
+                // The delegate must have fewer parameters than lambda (not counting the params array)
+                // and must be parameter array
+                if (parameters.Length == 0 ||
+                    !CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]) ||
+                    parameters.Length - 1 > blockSig.Length) {
 
-            cg.EmitSequencePointNone();
-            cg.EmitDelegateConstruction(impl, delegateType, needsClosure);
+                    // TODO: Validate this in the factory
+                    throw new InvalidOperationException("Wrong delegate type");
+                }
+
+                return false;
+            }
         }
 
-        private static Type GetWrapperDelegateType(bool hasThis) {
-            return hasThis ? typeof(CallTargetWithThisN) : typeof(CallTargetN);
-        }
+        /// <summary>
+        /// Creates the wrapper for the lambda to match delegate signature.
+        /// The wrapper can have parameter array, and so can the lambda.
+        /// 
+        /// The wrapper will propagate parameters from the wrapper into the method
+        /// backing the lambda, extracting them from the wrapper's parameter array
+        /// if necessary, and also (if lambda itself takes parameter array) shift the
+        /// wrapper's parameter array to pass it down to the lambda's method.
+        /// </summary>
+        /// <param name="lambda">LambdaExpression compiled by lc that we are building wrapper for.</param>
+        /// <param name="lambdaSig">Signature of the lambda (parameters only)</param>
+        /// <param name="wrapInvoke">"Invoke" method of the wrapper delegate type.</param>
+        /// <param name="wrapSig">The wrapper delegate signature (parameters)</param>
+        /// <returns>LambdaCompiler for the wrapper.</returns>
+        private LambdaCompiler CreateWrapper(LambdaExpression/*!*/ lambda, Type/*!*/[]/*!*/ lambdaSig,
+            MethodInfo/*!*/ wrapInvoke, ParameterInfo/*!*/[]/*!*/ wrapSig) {
 
-        private static Type[] GetParameterTypes(CodeBlock block) {
-            ReadOnlyCollection<Variable> parameters = block.Parameters;
-            Type[] result = new Type[parameters.Count];
-            for (int i = 0; i < parameters.Count; i++) {
-                result[i] = parameters[i].Type;
+            // Must be called on the compiler that originally compiled the lambda.
+            Debug.Assert(_info != null && _info.Lambda == lambda);
+            // Lambda must have at least as many parameters as the delegate, not counting the
+            // params array
+            Debug.Assert(lambdaSig.Length >= wrapSig.Length ||
+                         (wrapSig.Length > 0 && CompilerHelpers.IsParamArray(wrapSig[wrapSig.Length - 1]) &&
+                          lambdaSig.Length >= wrapSig.Length - 1));
+
+            ConstantPool constants = ConstantPool.IsBound ? ConstantPool.CopyData() : null;
+
+            // Create wrapper compiler
+            LambdaCompiler wlc = CreateLambdaCompiler(
+                Method.Name,
+                wrapInvoke.ReturnType,
+                ReflectionUtils.GetParameterTypes(wrapSig),
+                null,                           // parameter names
+                constants,
+                _firstLambdaArgument > 0        // closure?
+            );
+
+            Debug.Assert(_firstLambdaArgument == wlc._firstLambdaArgument);
+
+            // Pass the closure through, if any
+            if (_firstLambdaArgument > 0) {
+                wlc.GetArgumentSlot(0).EmitGet(wlc);
             }
-            return result;
+
+            bool paramArray = wrapSig.Length > 0 && CompilerHelpers.IsParamArray(wrapSig[wrapSig.Length - 1]);
+
+            // How many parameters can we simply copy forward?
+            int copy = wrapSig.Length;
+            if (paramArray) copy --;                // do not copy the last parameter, it is a params array
+
+            int current = 0;                        // the parameter being currently emitted
+
+            //
+            // First step is easy, simply copy the parameters that we can copy
+            //
+            while (current < copy) {
+                Slot slot = wlc.GetLambdaArgumentSlot(current);
+                slot.EmitGet(wlc);
+
+                // Cast to match the lambda signature, if needed
+                wlc.EmitCast(slot.Type, lambdaSig[current]);
+
+                current++;
+            }
+
+            //
+            // If the wrapper has a parameter array, we need to extract the parameters from it
+            //
+            if (paramArray) {
+                Slot wrapperArray = wlc.GetLambdaArgumentSlot(wrapSig.Length - 1);
+                Type elementType = wrapSig[wrapSig.Length - 1].ParameterType.GetElementType();
+
+                int extract = lambdaSig.Length - current;    // we already copied "current" number of parameters
+                if (lambda.ParameterArray) extract --;       // do not extract last if the lambda has parameter array too
+
+                int extracting = 0;                         // index into the the wrapper's parameter array
+
+                //
+                // Extract the parameters that get passed to underlying method one by one
+                // to pass them as actual arguments
+                //
+                while (extracting < extract) {
+                    wrapperArray.EmitGet(wlc);
+                    wlc.EmitInt(extracting);
+                    wlc.EmitLoadElement(elementType);
+
+                    wlc.EmitCast(elementType, lambdaSig[current]);
+
+                    extracting++; current++;
+                }
+
+                //
+                // Extract the rest of the array in bulk
+                //
+                if (lambda.ParameterArray) {
+                    wrapperArray.EmitGet(wlc);
+                    wlc.EmitInt(extract);               // this is how many we already extracted
+
+                    // Call the helper
+                    MethodInfo shifter = typeof(RuntimeHelpers).GetMethod("ShiftParamsArray");
+                    shifter = shifter.MakeGenericMethod(elementType);
+                    wlc.EmitCall(shifter);
+
+                    // just copied the last parameter
+                    current++;
+                }
+            } else {
+                // With no parameter array, we must have dealt with all wrapper's arguments
+                Debug.Assert(current == wrapSig.Length);
+            }
+
+            // We must be done with all parameters to the lambdas method now
+            Debug.Assert(current == lambdaSig.Length);
+
+            MethodInfo method = (MethodInfo)Method;
+            wlc.EmitCall(method);
+            wlc.EmitCast(method.ReturnType, wrapInvoke.ReturnType);
+            wlc.Emit(OpCodes.Ret);
+            return wlc;
         }
 
         /// <summary>
         /// Creates the signature for the actual CLR method to create. The base types come from the
-        /// lambda/CodeBlock (or its wrapper method), this method may pre-pend an argument to hold
+        /// lambda/LambdaExpression (or its wrapper method), this method may pre-pend an argument to hold
         /// closure information (for closing over constant pool or the lexical closure)
         /// </summary>
         private static Type/*!*/[]/*!*/ MakeParameterTypeArray(IList<Type/*!*/>/*!*/ baseTypes, ConstantPool cp, bool closure) {
@@ -362,52 +493,22 @@ namespace Microsoft.Scripting.Ast {
             return signature;
         }
 
-        // Used by Interpreter and TreeCompiler
-        internal static void ComputeSignature(CodeBlock block, bool hasThis, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
+        /// <summary>
+        /// Creates the signature for the lambda as list of types and list of names separately
+        /// </summary>
+        private static void ComputeSignature(LambdaExpression lambda, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
             paramTypes = new List<Type>();
             paramNames = new List<SymbolId>();
 
-            int parameterIndex = 0;
+            int index = 0;
 
-            if (block.ParameterArray) {
-                int startIndex = 0;
-                if (hasThis) {
-                    paramTypes.Add(typeof(Object));
-                    paramNames.Add(SymbolTable.StringToId("$this"));
-                    block.Parameters[0].ParameterIndex = parameterIndex++;
-                    startIndex = 1;
-                }
-
-                paramTypes.Add(typeof(object[]));
-                paramNames.Add(SymbolTable.StringToId("$params"));
-
-                for (int index = startIndex; index < block.Parameters.Count; index++) {
-                    block.Parameters[index].ParameterIndex = index - startIndex;
-                }
-            } else {
-                foreach (Variable p in block.Parameters) {
-                    paramTypes.Add(p.Type);
-                    paramNames.Add(p.Name);
-                    p.ParameterIndex = parameterIndex++;
-                }
+            foreach (Variable p in lambda.Parameters) {
+                paramTypes.Add(p.Type);
+                paramNames.Add(p.Name);
+                p.ParameterIndex = index++;
             }
 
-            implName = GetGeneratedName(block.Name);
-        }
-
-        // Used by Interpreter. Doesn't do much in a way of compilation.
-        internal static void ComputeDelegateSignature(CodeBlock block, Type delegateType, out List<Type> paramTypes, out List<SymbolId> paramNames, out string implName) {
-            implName = GetGeneratedName(block.Name);
-
-            MethodInfo invoke = delegateType.GetMethod("Invoke");
-            ParameterInfo[] pis = invoke.GetParameters();
-            paramNames = new List<SymbolId>();
-            paramTypes = new List<Type>();
-
-            foreach (ParameterInfo pi in pis) {
-                paramTypes.Add(pi.ParameterType);
-                paramNames.Add(SymbolTable.StringToId(pi.Name));
-            }
+            implName = GetGeneratedName(lambda.Name);
         }
 
         private static string GetGeneratedName(string prefix) {
@@ -417,7 +518,7 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
-        internal static LambdaCompiler CreateCodeBlockCompiler(LambdaCompiler outer, CodeBlock block, bool closure, bool hasThis) {
+        internal static LambdaCompiler CreateLambdaCompiler(LambdaCompiler outer, LambdaExpression lambda, bool closure) {
             List<Type> paramTypes;
             List<SymbolId> paramNames;
             LambdaCompiler impl;
@@ -427,20 +528,18 @@ namespace Microsoft.Scripting.Ast {
             ConstantPool cp = outer.DynamicMethod ? new ConstantPool() : null;
 
             // Create the signature
-            ComputeSignature(block, hasThis, out paramTypes, out paramNames, out implName);
+            ComputeSignature(lambda, out paramTypes, out paramNames, out implName);
 
             // Create the new method & setup its locals
-            impl = outer.CreateLambdaCompiler(implName, block.ReturnType, paramTypes, SymbolTable.IdsToStrings(paramNames), cp, closure);
+            impl = outer.CreateLambdaCompiler(implName, lambda.ReturnType, paramTypes, SymbolTable.IdsToStrings(paramNames), cp, closure);
 
-            impl.InitializeCompilerAndBlock(outer.Compiler, block);
+            impl.InitializeCompilerAndLambda(outer.Compiler, lambda);
+
+            // TODO: Can this go, if so, closure can be handled completely inside!!!
             if (closure) {
                 impl.CreateClosureContextSlot();
             } else {
                 impl.ContextSlot = outer.ContextSlot;
-            }
-
-            if (block.ParameterArray) {
-                impl.ParamsSlot = impl.GetLambdaArgumentSlot(paramTypes.Count - 1);
             }
 
             impl.Allocator = CompilerHelpers.CreateLocalStorageAllocator(outer, impl);
@@ -453,83 +552,24 @@ namespace Microsoft.Scripting.Ast {
             ContextSlot = new FieldSlot(GetArgumentSlot(0), typeof(Closure).GetField("Context"));
         }
 
-        /// <summary>
-        /// Creates a wrapper method for the user-defined function. This allows us to use the
-        /// CallTargetN delegate against the function when we don't have a CallTarget# which is
-        /// large enough.
-        /// 
-        /// Used by Interpreter.
-        /// </summary>
-        internal LambdaCompiler MakeWrapperMethodN(bool needsThis) {
-            LambdaCompiler wrapper;
-            Slot argSlot;
-            ConstantPool staticData = ConstantPool.IsBound ? ConstantPool.CopyData() : null;
-
-            //
-            // Calculate size
-            //
-            int count = 1;                  // typeof(object[]) is always present
-            if (needsThis) count++;         // this
-
-            Type[] parameters = new Type[count];
-
-            //
-            // Populate the array
-            //
-            int index = 0;
-            if (needsThis) parameters[index++] = typeof(object);
-            parameters[index] = typeof(object[]);
-
-            //
-            // Create the LambdaCompiler
-            //
-            wrapper = CreateLambdaCompiler(Method.Name, typeof(object), parameters, null, staticData, _firstLambdaArgument > 0);
-
-            Debug.Assert(_firstLambdaArgument == wrapper._firstLambdaArgument);
-
-            int keep = count + _firstLambdaArgument - 1;
-            argSlot = wrapper.GetArgumentSlot(keep);
-
-            int arg = 0;
-            while (arg < keep) {
-                wrapper.GetArgumentSlot(arg++).EmitGet(wrapper);
-            }
-
-            int arrayIndex = 0;
-            while (arg < GetArgumentSlotCount()) {
-                argSlot.EmitGet(wrapper);
-                wrapper.EmitInt(arrayIndex++);
-                wrapper.Emit(OpCodes.Ldelem_Ref);
-
-                Slot argumentSlot = GetArgumentSlot(arg++);
-                if (argumentSlot.Type != typeof(object)) {
-                    wrapper.EmitCast(typeof(object), argumentSlot.Type);
-                }
-            }
-
-            wrapper.EmitCall((MethodInfo)Method);
-            wrapper.Emit(OpCodes.Ret);
-            return wrapper;
-        }
-
         // Called by Compiler
-        internal void EmitFunctionImplementation(CodeBlockInfo block) {
-            CodeBlock cb = block.CodeBlock;
+        internal void EmitFunctionImplementation(LambdaInfo li) {
+            LambdaExpression lambda = li.Lambda;
 
             EmitStackTraceTryBlockStart();
 
             // emit the actual body
-            EmitBody(this, block);
+            EmitBody(this, li);
 
             string displayName;
 
             if (_source != null) {
-                displayName = _source.GetSymbolDocument(cb.Start.Line) ?? cb.Name;
+                displayName = _source.GetSymbolDocument(lambda.Start.Line) ?? lambda.Name;
             } else {
-                displayName = cb.Name;
+                displayName = lambda.Name;
             }
 
-            EmitStackTraceFaultBlock(cb.Name, displayName);
+            EmitStackTraceFaultBlock(lambda.Name, displayName);
         }
 
         private void EmitStackTraceTryBlockStart() {
@@ -571,68 +611,59 @@ namespace Microsoft.Scripting.Ast {
         }
 
         // Used by TreeCompiler
-        private static void EmitBody(LambdaCompiler cg, CodeBlockInfo cbi) {
-            GeneratorCodeBlock gcb = cbi.CodeBlock as GeneratorCodeBlock;
+        private static void EmitBody(LambdaCompiler cg, LambdaInfo li) {
+            GeneratorCodeBlock gcb = li.Lambda as GeneratorCodeBlock;
             if (gcb != null) {
-                EmitGeneratorCodeBlockBody(cg, cbi);
+                EmitGeneratorCodeBlockBody(cg, li);
             } else {
-                EmitCodeBlockBody(cg, cbi);
+                EmitLambdaBody(cg, li);
             }
         }
 
-        private static void EmitCodeBlockBody(LambdaCompiler cg, CodeBlockInfo cbi) {
-            CodeBlock cb = cbi.CodeBlock;
+        private static void EmitLambdaBody(LambdaCompiler cg, LambdaInfo li) {
+            LambdaExpression lambda = li.Lambda;
 
-            Debug.Assert(cb.GetType() == typeof(CodeBlock));
+            Debug.Assert(lambda.GetType() == typeof(LambdaExpression));
 
-            CreateEnvironmentFactory(cbi, false);
-            CreateSlots(cg, cbi);
-            if (cg.InterpretedMode) {
-                foreach (VariableReference vr in cbi.References.Values) {
-                    if (vr.Variable.Kind == VariableKind.Local && vr.Variable.Block == cb) {
-                        vr.Slot.EmitSetUninitialized(cg);
-                    }
-                }
-            }
+            CreateEnvironmentFactory(li, false);
+            CreateSlots(cg, li);
 
-            cg.EmitBlockStartPosition(cb);
-
-            cg.EmitExpressionAndPop(cb.Body);
-
-            cg.EmitBlockEndPosition(cb);
+            cg.EmitBlockStartPosition(lambda);
+            cg.EmitExpressionAndPop(lambda.Body);
+            cg.EmitBlockEndPosition(lambda);
 
             // TODO: Skip if Body is guaranteed to return
-            if (cb.ReturnType != typeof(void)) {
-                if (TypeUtils.CanAssign(typeof(object), cb.ReturnType)) {
+            if (lambda.ReturnType != typeof(void)) {
+                if (TypeUtils.CanAssign(typeof(object), lambda.ReturnType)) {
                     cg.EmitNull();
                 } else {
-                    cg.EmitMissingValue(cb.ReturnType);
+                    cg.EmitMissingValue(lambda.ReturnType);
                 }
             }
             cg.EmitReturn();
         }
 
-        private void EmitBlockStartPosition(CodeBlock block) {
+        private void EmitBlockStartPosition(LambdaExpression lambda) {
             // ensure a break point exists at the top
             // of the file if there isn't a statement
             // flush with the start of the file.
-            if (!block.Start.IsValid) {
+            if (!lambda.Start.IsValid) {
                 return;
             }
 
-            ISpan span = block.Body as ISpan;
+            ISpan span = lambda.Body as ISpan;
             if (span != null && span.Start.IsValid) {
-                if (span.Start != block.Start) {
-                    EmitPosition(block.Start, block.Start);
+                if (span.Start != lambda.Start) {
+                    EmitPosition(lambda.Start, lambda.Start);
                 }
             } else {
-                Block body = block.Body as Block;
+                Block body = lambda.Body as Block;
                 if (body != null) {
                     for (int i = 0; i < body.Expressions.Count; i++) {
                         span = body.Expressions[i] as ISpan;
                         if (span != null && span.Start.IsValid) {
-                            if (span.Start != block.Start) {
-                                EmitPosition(block.Start, block.Start);
+                            if (span.Start != lambda.Start) {
+                                EmitPosition(lambda.Start, lambda.Start);
                             }
                             break;
                         }
@@ -641,12 +672,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private void EmitBlockEndPosition(CodeBlock block) {
+        private void EmitBlockEndPosition(LambdaExpression lambda) {
             // ensure we emit a sequence point at the end
             // so the user can inspect any info before exiting
             // the function.  Also make sure additional code
             // isn't associated with this function.
-            EmitPosition(block.End, block.End);
+            EmitPosition(lambda.End, lambda.End);
             EmitSequencePointNone();
         }
 
@@ -664,20 +695,14 @@ namespace Microsoft.Scripting.Ast {
 
         #region GeneratorCodeBlock
 
-        private static void EmitGeneratorCodeBlockBody(LambdaCompiler cg, CodeBlockInfo cbi) {
-            Debug.Assert(cbi.CodeBlock.GetType() == typeof(GeneratorCodeBlock));
+        private static void EmitGeneratorCodeBlockBody(LambdaCompiler cg, LambdaInfo li) {
+            Debug.Assert(li.Lambda.GetType() == typeof(GeneratorCodeBlock));
 
-            GeneratorCodeBlock gcb = (GeneratorCodeBlock)cbi.CodeBlock;
+            GeneratorCodeBlock gcb = (GeneratorCodeBlock)li.Lambda;
 
-            if (!cg.HasAllocator) {
-                // In the interpreted case, we do not have an allocator yet
-                Debug.Assert(cg.InterpretedMode);
-                cg.Allocator = CompilerHelpers.CreateFrameAllocator();
-            }
-
-            cg.Allocator.Block = gcb;
-            CreateEnvironmentFactory(cbi, true);
-            EmitGeneratorBody(cg, cbi, gcb);
+            cg.Allocator.Lambda = gcb;
+            CreateEnvironmentFactory(li, true);
+            EmitGeneratorBody(cg, li, gcb);
             cg.EmitReturn();
         }
 
@@ -704,13 +729,13 @@ namespace Microsoft.Scripting.Ast {
 
             // Namespace without er factory - all locals must exist ahead of time
             ncg.Allocator = new ScopeAllocator(impl.Allocator, null);
-            ncg.Allocator.Block = null;       // No scope is active at this point
+            ncg.Allocator.Lambda = null;       // No scope is active at this point
 
             // We are emitting generator, mark the Compiler
             ncg.IsGenerator = true;
 
             // Inherit the compiler
-            ncg.InitializeCompilerAndBlock(impl.Compiler, block);
+            ncg.InitializeCompilerAndLambda(impl.Compiler, block);
 
             return ncg;
         }
@@ -719,36 +744,36 @@ namespace Microsoft.Scripting.Ast {
         /// Emits the body of the function that creates a Generator object.  Also creates another
         /// Compiler for the inner method which implements the user code defined in the generator.
         /// </summary>
-        private static void EmitGeneratorBody(LambdaCompiler impl, CodeBlockInfo cbi, GeneratorCodeBlock block) {
+        private static void EmitGeneratorBody(LambdaCompiler impl, LambdaInfo li, GeneratorCodeBlock block) {
             LambdaCompiler ncg = CreateGeneratorLambdaCompiler(impl, block);
             ncg.EmitLineInfo = impl.EmitLineInfo;
             ncg.Allocator.GlobalAllocator.PrepareForEmit(ncg);
 
             Slot flowedContext = impl.ContextSlot;
             // If there are no locals in the generator than we don't need the environment
-            if (cbi.HasEnvironment) {
+            if (li.HasEnvironment) {
                 // Environment creation is emitted into outer function that returns the generator
                 // function and then flowed into the generator method on each call via the Generator
                 // instance.
-                impl.EnvironmentSlot = EmitEnvironmentAllocation(impl, cbi);
+                impl.EnvironmentSlot = EmitEnvironmentAllocation(impl, li);
                 flowedContext = CreateEnvironmentContext(impl, block.IsVisible);
 
-                InitializeGeneratorEnvironment(impl, cbi, block);
+                InitializeGeneratorEnvironment(impl, li, block);
 
                 // Promote env storage to local variable
                 // envStorage = ((FunctionEnvironment)context.Locals).Tuple
-                cbi.EnvironmentFactory.EmitGetStorageFromContext(ncg);
+                li.EnvironmentFactory.EmitGetStorageFromContext(ncg);
 
-                ncg.EnvironmentSlot = cbi.EnvironmentFactory.CreateEnvironmentSlot(ncg);
+                ncg.EnvironmentSlot = li.EnvironmentFactory.CreateEnvironmentSlot(ncg);
                 ncg.EnvironmentSlot.EmitSet(ncg);
 
-                CreateGeneratorTemps(ncg, cbi);
+                CreateGeneratorTemps(ncg, li);
             }
 
-            CreateReferenceSlots(ncg, cbi);
+            CreateReferenceSlots(ncg, li);
 
             // Emit the generator body 
-            EmitGenerator(ncg, cbi, block);
+            EmitGenerator(ncg, li, block);
 
             flowedContext.EmitGet(impl);
             impl.EmitDelegateConstruction(ncg, block.DelegateType, false);
@@ -759,18 +784,18 @@ namespace Microsoft.Scripting.Ast {
             return name + "$g" + _GeneratorCounter++;
         }
 
-        private static void CreateReferenceSlots(LambdaCompiler cg, CodeBlockInfo cbi) {
-            CreateAccessSlots(cg, cbi);
-            foreach (VariableReference r in cbi.References.Values) {
-                r.CreateSlot(cg, cbi);
+        private static void CreateReferenceSlots(LambdaCompiler cg, LambdaInfo li) {
+            CreateAccessSlots(cg, li);
+            foreach (VariableReference r in li.References.Values) {
+                r.CreateSlot(cg, li);
                 Debug.Assert(r.Slot != null);
             }
         }
 
-        private static void CreateGeneratorTemps(LambdaCompiler cg, CodeBlockInfo block) {
-            for (int i = 0; i < block.GeneratorTemps; i++) {
+        private static void CreateGeneratorTemps(LambdaCompiler cg, LambdaInfo li) {
+            for (int i = 0; i < li.GeneratorTemps; i++) {
                 cg.Allocator.AddGeneratorTemp(
-                    block.EnvironmentFactory.MakeEnvironmentReference(
+                    li.EnvironmentFactory.MakeEnvironmentReference(
                         SymbolTable.StringToId("temp$" + i)
                     ).CreateSlot(cg.EnvironmentSlot)
                 );
@@ -779,18 +804,18 @@ namespace Microsoft.Scripting.Ast {
 
         // The slots for generators are created in 2 steps. In the outer function,
         // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
-        private static void InitializeGeneratorEnvironment(LambdaCompiler cg, CodeBlockInfo cbi, GeneratorCodeBlock block) {
+        private static void InitializeGeneratorEnvironment(LambdaCompiler cg, LambdaInfo li, GeneratorCodeBlock block) {
             cg.Allocator.AddClosureAccessSlot(block, cg.EnvironmentSlot);
             foreach (Variable p in block.Parameters) {
-                p.Allocate(cg, cbi);
+                p.Allocate(cg, li);
             }
             foreach (Variable d in block.Variables) {
-                d.Allocate(cg, cbi);
+                d.Allocate(cg, li);
             }
         }
 
-        private static void EmitGenerator(LambdaCompiler ncg, CodeBlockInfo cbi, GeneratorCodeBlock block) {
-            IList<YieldTarget> topTargets = cbi.TopTargets;
+        private static void EmitGenerator(LambdaCompiler ncg, LambdaInfo li, GeneratorCodeBlock block) {
+            IList<YieldTarget> topTargets = li.TopTargets;
             Debug.Assert(topTargets != null);
 
             Label[] jumpTable = new Label[topTargets.Count];

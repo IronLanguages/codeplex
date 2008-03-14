@@ -17,7 +17,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 namespace Microsoft.Scripting.Ast {
-    sealed class YieldLabelBuilder : CodeBlockWalker {
+    sealed class YieldLabelBuilder : LambdaWalker {
         sealed class ExceptionBlock {
             public enum TryStatementState {
                 Try,
@@ -75,12 +75,12 @@ namespace Microsoft.Scripting.Ast {
         private YieldLabelBuilder() {
         }
 
-        internal static void BuildYieldTargets(GeneratorCodeBlock gcb, CodeBlockInfo cbi) {
+        internal static void BuildYieldTargets(GeneratorCodeBlock gcb, LambdaInfo lambdaInfo) {
             YieldLabelBuilder ylb = new YieldLabelBuilder();
             ylb.WalkNode(gcb.Body);
 
             // Populate results into the CodeBlockInfo
-            cbi.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
+            lambdaInfo.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
         }
 
         #region AstWalker method overloads

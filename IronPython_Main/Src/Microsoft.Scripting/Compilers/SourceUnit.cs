@@ -203,11 +203,11 @@ namespace Microsoft.Scripting {
 
         #region Parsing, Compilation, Execution
 
-        public CodeBlock Parse(ErrorSink/*!*/ errorSink) {
+        public LambdaExpression Parse(ErrorSink/*!*/ errorSink) {
             return Parse(_language.GetCompilerOptions(), errorSink);
         }
 
-        public CodeBlock Parse(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
+        public LambdaExpression Parse(CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink) {
             Contract.RequiresNotNull(errorSink, "errorSink");
             Contract.RequiresNotNull(options, "options");
 
@@ -233,16 +233,16 @@ namespace Microsoft.Scripting {
             Contract.RequiresNotNull(errorSink, "errorSink");
             Contract.RequiresNotNull(options, "options");
 
-            CodeBlock block = Parse(options, errorSink);
+            LambdaExpression lambda = Parse(options, errorSink);
 
             // provided sink didn't throw an exception:
-            if (block == null) {
+            if (lambda == null) {
                 return null;
             }
 
             // TODO: Do we really need a compiler context here?
             CompilerContext context = new CompilerContext(this, options, errorSink);
-            return new ScriptCode(block, _language, context);
+            return new ScriptCode(lambda, _language, context);
         }
 
         public object Execute(Scope/*!*/ scope) {

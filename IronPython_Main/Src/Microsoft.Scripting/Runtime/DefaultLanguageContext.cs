@@ -47,7 +47,7 @@ namespace Microsoft.Scripting.Runtime {
             : base(manager) {
         }
 
-        public override CodeBlock ParseSourceCode(CompilerContext context) {
+        public override LambdaExpression ParseSourceCode(CompilerContext context) {
             throw new NotImplementedException();
         }
     }

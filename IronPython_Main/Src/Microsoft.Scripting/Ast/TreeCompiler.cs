@@ -38,8 +38,8 @@ namespace Microsoft.Scripting.Ast {
                 );
             }
 
-            CodeBlock cb = Ast.CodeBlock("<expression>", expression.Type, body, new Variable[0], new Variable[0]);
-            return CompileBlock<T>(cb);
+            LambdaExpression lambda = Ast.Lambda("<expression>", expression.Type, body, new Variable[0], new Variable[0]);
+            return CompileBlock<T>(lambda);
         }
 
         public static T CompileStatement<T>(Expression expression) {
@@ -51,17 +51,17 @@ namespace Microsoft.Scripting.Ast {
                 Ast.Return()
             );
 
-            CodeBlock cb = Ast.CodeBlock("<statement>", typeof(void), body, new Variable[0], new Variable[0]);
-            return CompileBlock<T>(cb);
+            LambdaExpression lambda = Ast.Lambda("<statement>", typeof(void), body, new Variable[0], new Variable[0]);
+            return CompileBlock<T>(lambda);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "block")]
-        public static T CompileBlock<T>(CodeBlock block) {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lambda")]
+        public static T CompileBlock<T>(LambdaExpression lambda) {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
-            Contract.RequiresNotNull(block, "block");
+            Contract.RequiresNotNull(lambda, "lambda");
 
             // Call compiler to create the delegate.
-            return LambdaCompiler.CompileCodeBlock<T>(block);
+            return LambdaCompiler.CompileLambda<T>(lambda);
         }
     }
 }

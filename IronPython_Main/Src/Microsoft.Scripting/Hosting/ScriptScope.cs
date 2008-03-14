@@ -32,6 +32,8 @@ namespace Microsoft.Scripting.Hosting {
     /// 
     /// ScriptScope is not thread safe. Host should either lock when multiple threads could 
     /// access the same module or should make a copy for each thread.
+    ///
+    /// Hosting API counterpart for <see cref="Scope"/>.
     /// </summary>
     public sealed class ScriptScope 
 #if !SILVERLIGHT

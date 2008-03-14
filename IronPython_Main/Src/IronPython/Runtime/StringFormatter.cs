@@ -23,12 +23,29 @@ using Microsoft.Scripting.Math;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using System.Collections.Generic;
+using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     /// <summary>
     /// StringFormatter provides Python's % style string formatting services.
     /// </summary>
     internal class StringFormatter {
+        const int UnspecifiedPrecision = -1; // Use the default precision
+
+        private object _data;
+        private int _dataIndex;
+
+        private string _str;
+        private int _index;
+        private char _curCh;
+
+        // The options for formatting the current formatting specifier in the format string
+        internal FormatSettings _opts;
+        // Should ddd.0 be displayed as "ddd" or "ddd.0". "'%g' % ddd.0" needs "ddd", but str(ddd.0) needs "ddd.0"
+        internal bool _TrailingZeroAfterWholeFloat = false;
+
+        private StringBuilder _buf;
 
         // This is a ThreadStatic since so that formatting operations on one thread do not interfere with other threads
         [ThreadStatic]
@@ -48,24 +65,6 @@ namespace IronPython.Runtime {
                 return NumberFormatInfoForThread;
             }
         }
-
-        #region Instance members
-        const int UnspecifiedPrecision = -1; // Use the default precision
-
-        private object _data;
-        private int _dataIndex;
-
-        private string _str;
-        private int _index;
-        private char _curCh;
-
-        // The options for formatting the current formatting specifier in the format string
-        internal FormatSettings _opts;
-        // Should ddd.0 be displayed as "ddd" or "ddd.0". "'%g' % ddd.0" needs "ddd", but str(ddd.0) needs "ddd.0"
-        internal bool _TrailingZeroAfterWholeFloat = false;
-
-        private StringBuilder _buf;
-        #endregion
 
         #region Constructors
         public StringFormatter(string str, object data) {
@@ -322,7 +321,13 @@ namespace IronPython.Runtime {
             IDictionary<object, object> map = _data as IDictionary<object, object>;
             if (map == null) {
                 IAttributesCollection iac = _data as IAttributesCollection;
-                if (iac == null) throw PythonOps.TypeError("format requires a mapping");
+                if (iac == null) {
+                    if (PythonOps.IsMappingType(DefaultContext.Default, _data) == RuntimeHelpers.True) {
+                        return PythonOps.GetIndex(_data, key);
+                    }
+
+                    throw PythonOps.TypeError("format requires a mapping");
+                }
 
                 object res;
                 if (iac.TryGetValue(SymbolTable.StringToId(key), out res)) return res;
@@ -371,7 +376,7 @@ namespace IronPython.Runtime {
         }
 
         private void CheckDataUsed() {
-            if (!(_data is IDictionary) && !(_data is IAttributesCollection)) {
+            if (PythonOps.IsMappingType(DefaultContext.Default, _data) == RuntimeHelpers.False) {
                 if ((!(_data is PythonTuple) && _dataIndex != 1) ||
                     (_data is PythonTuple && _dataIndex != ((PythonTuple)_data).__len__())) {
                     throw PythonOps.TypeError("not all arguments converted during string formatting");

@@ -164,9 +164,9 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(CatchBlock node) { return true; }
         protected internal virtual void PostWalk(CatchBlock node) { }
 
-        // CodeBlock
-        protected internal virtual bool Walk(CodeBlock node) { return true; }
-        protected internal virtual void PostWalk(CodeBlock node) { }
+        // LambdaExpression
+        protected internal virtual bool Walk(LambdaExpression node) { return true; }
+        protected internal virtual void PostWalk(LambdaExpression node) { }
 
         // GeneratorCodeBlock
         protected internal virtual bool Walk(GeneratorCodeBlock node) { return true; }

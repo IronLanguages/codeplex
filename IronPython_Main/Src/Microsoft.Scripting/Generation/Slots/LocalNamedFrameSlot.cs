@@ -51,10 +51,6 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override void EmitSetUninitialized(LambdaCompiler cg) {
-            // In interpreted mode, we depend on setting values to Uninitialized to implement scope rules correctly.
-            if (cg.InterpretedMode) {
-                base.EmitSetUninitialized(cg);
-            }
         }
 
         public override void EmitDelete(LambdaCompiler cg, SymbolId name, bool check) {

@@ -35,17 +35,17 @@ namespace Microsoft.Scripting.Ast {
             Break = 0x8000      // newline if column > MaxColumn
         };
 
-        private struct CodeBlockId {
-            private readonly CodeBlock _block;
+        private struct LambdaId {
+            private readonly LambdaExpression _lambda;
             private readonly int _id;
 
-            internal CodeBlockId(CodeBlock block, int id) {
-                _block = block;
+            internal LambdaId(LambdaExpression lambda, int id) {
+                _lambda = lambda;
                 _id = id;
             }
 
-            internal CodeBlock CodeBlock {
-                get { return _block; }
+            internal LambdaExpression Lambda {
+                get { return _lambda; }
             }
             internal int Id {
                 get { return _id; }
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Ast {
         private TextWriter _out;
         private int _column;
 
-        private Queue<CodeBlockId> _blocks;
+        private Queue<LambdaId> _lambdaIds;
         private int _blockid;
         private Stack<Alignment> _stack = new Stack<Alignment>();
         private int _delta;
@@ -123,8 +123,8 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Write out the given AST (only if ShowASTs or DumpASTs is enabled)
         /// </summary>
-        internal static void Dump(CodeBlock/*!*/ block) {
-            Debug.Assert(block != null);
+        internal static void Dump(LambdaExpression/*!*/ lambda) {
+            Debug.Assert(lambda != null);
 
             if (ScriptDomainManager.Options.ShowASTs) {
 #if !SILVERLIGHT
@@ -132,16 +132,16 @@ namespace Microsoft.Scripting.Ast {
                 try {
                     Console.ForegroundColor = GetAstColor();
 #endif
-                    Dump(block, System.Console.Out);
+                    Dump(lambda, System.Console.Out);
 #if !SILVERLIGHT
                 } finally {
                     Console.ForegroundColor = color;
                 }
 #endif
             } else if (ScriptDomainManager.Options.DumpASTs) {
-                StreamWriter sw = new StreamWriter(GetFilePath(block.Name), true);
+                StreamWriter sw = new StreamWriter(GetFilePath(lambda.Name), true);
                 using (sw) {
-                    Dump(block, sw);
+                    Dump(lambda, sw);
                 }
             }
         }
@@ -166,12 +166,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static void Dump(CodeBlock/*!*/ block, TextWriter/*!*/ writer) {
-            Debug.Assert(block != null);
+        private static void Dump(LambdaExpression/*!*/ lambda, TextWriter/*!*/ writer) {
+            Debug.Assert(lambda != null);
             Debug.Assert(writer != null);
 
             AstWriter dv = new AstWriter(writer);
-            dv.DoDump(block);
+            dv.DoDump(lambda);
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace Microsoft.Scripting.Ast {
             return path + ".ast";
         }
 
-        private void DoDump(CodeBlock node) {
+        private void DoDump(LambdaExpression node) {
             WritePrologue(node.Name);
 
             WalkNode(node);
@@ -226,25 +226,25 @@ namespace Microsoft.Scripting.Ast {
         private void WriteBlocks() {
             Debug.Assert(_stack.Count == 0);
 
-            while (_blocks != null && _blocks.Count > 0) {
-                CodeBlockId b = _blocks.Dequeue();
+            while (_lambdaIds != null && _lambdaIds.Count > 0) {
+                LambdaId b = _lambdaIds.Dequeue();
                 WriteLine();
                 WriteLine("//");
-                WriteLine("// CODE BLOCK: {0} ({1})", b.CodeBlock.Name, b.Id);
+                WriteLine("// LAMBDA: {0} ({1})", b.Lambda.Name, b.Id);
                 WriteLine("//");
                 WriteLine();
 
-                WalkNode(b.CodeBlock);
+                WalkNode(b.Lambda);
 
                 Debug.Assert(_stack.Count == 0);
             }
         }
 
-        private int Enqueue(CodeBlock block) {
-            if (_blocks == null) {
-                _blocks = new Queue<CodeBlockId>();
+        private int Enqueue(LambdaExpression lambda) {
+            if (_lambdaIds == null) {
+                _lambdaIds = new Queue<LambdaId>();
             }
-            _blocks.Enqueue(new CodeBlockId(block, ++_blockid));
+            _lambdaIds.Enqueue(new LambdaId(lambda, ++_blockid));
             return _blockid;
         }
 
@@ -333,12 +333,12 @@ namespace Microsoft.Scripting.Ast {
             _Writers[(int)node.NodeType](this, node);
         }
 
-        private void WalkNode(CodeBlock node) {
+        private void WalkNode(LambdaExpression node) {
             GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
             if (gcb != null) {
                 WriteGeneratorCodeBlock(gcb);
             } else {
-                WriteCodeBlock(node);
+                WriteLambda(node);
             }
         }
 
@@ -398,7 +398,7 @@ namespace Microsoft.Scripting.Ast {
             aw.Out("] = ");
             aw.WalkNode(node.Value);
         }
-
+      
         // BinaryExpression
         private static void WriteBinaryExpression(AstWriter aw, Expression expr) {
             BinaryExpression node = (BinaryExpression)expr;
@@ -458,13 +458,7 @@ namespace Microsoft.Scripting.Ast {
         private static void WriteCodeBlockExpression(AstWriter aw, Expression expr) {
             CodeBlockExpression node = (CodeBlockExpression)expr;
             int id = aw.Enqueue(node.Block);
-            aw.Out(String.Format(".block ({0} #{1}", node.Block.Name, id));
-            aw.Indent();
-            bool nl = false;
-            if (node.ForceWrapperMethod) { nl = true; aw.Out(Flow.NewLine, "ForceWrapper"); }
-            if (node.IsStronglyTyped) { nl = true; aw.Out(Flow.NewLine, "StronglyTyped"); }
-            aw.Dedent();
-            aw.Out(nl ? Flow.NewLine : Flow.None, ")");
+            aw.Out(String.Format(".block ({0} {1} #{2})", node.Block.Name, node.Type, id));
         }
 
         // ConditionalExpression
@@ -529,9 +523,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.EnvironmentExpression:
                     aw.Out(".env");
-                    break;
-                case AstNodeType.ParamsExpression:
-                    aw.Out(".params");
                     break;
             }
         }
@@ -840,18 +831,18 @@ namespace Microsoft.Scripting.Ast {
             aw.Out(";", Flow.NewLine);
         }
 
-        private static string GetCodeBlockInfo(CodeBlock block) {
-            string info = String.Format("{0} {1} (", block.ReturnType.Name, block.Name);
-            if (block.IsGlobal) {
+        private static string GetLambdaInfo(LambdaExpression lambda) {
+            string info = String.Format("{0} {1} (", lambda.ReturnType.Name, lambda.Name);
+            if (lambda.IsGlobal) {
                 info += " global,";
             }
-            if (!block.IsVisible) {
+            if (!lambda.IsVisible) {
                 info += " hidden,";
             }
-            if (block.ParameterArray) {
+            if (lambda.ParameterArray) {
                 info += " param array,";
             }
-            if (block.EmitLocalDictionary) {
+            if (lambda.EmitLocalDictionary) {
                 info += " local dict";
             }
             info += ")";
@@ -863,16 +854,13 @@ namespace Microsoft.Scripting.Ast {
             if (v.Lift) {
                 descr += ",Lift";
             }
-            if (v.InParameterArray) {
-                descr += ",InParameterArray";
-            }
             descr += ")";
             Out(descr);
             NewLine();
         }
 
-        private void DumpBlock(CodeBlock node) {
-            Out(GetCodeBlockInfo(node));
+        private void DumpBlock(LambdaExpression node) {
+            Out(GetLambdaInfo(node));
             Out("(");
             Indent();
             foreach (Variable v in node.Parameters) {
@@ -892,9 +880,9 @@ namespace Microsoft.Scripting.Ast {
             Out("}");
         }
 
-        // CodeBlock
-        private void WriteCodeBlock(CodeBlock node) {
-            Out(".codeblock", Flow.Space);
+        // LambdaExpression
+        private void WriteLambda(LambdaExpression node) {
+            Out(".lambda", Flow.Space);
             DumpBlock(node);
         }
 

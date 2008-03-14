@@ -35,6 +35,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using System.IO;
 
 [assembly: PythonModule("__builtin__", typeof(Builtin))]
 namespace IronPython.Runtime {
@@ -79,7 +80,7 @@ namespace IronPython.Runtime {
             //!!! remove suppress in GlobalSuppressions.cs when CodePlex 2704 is fixed.
             ISequence from = fromlist as ISequence;
 
-            object ret = Importer.ImportModule(context, globals, name, from != null && from.__len__() > 0, level);
+            object ret = Importer.ImportModule(context, globals, name, from != null && from.__len__() > 0, level);            
             if (ret == null) {
                 throw PythonOps.ImportError("No module named {0}", name);
             }
@@ -91,7 +92,9 @@ namespace IronPython.Runtime {
                 for (int i = 0; i < from.__len__(); i++) {
                     object attrName = from[i];
 
-                    if (Converter.TryConvertToString(attrName, out strAttrName) && strAttrName != null && strAttrName != "*") {
+                    if (Converter.TryConvertToString(attrName, out strAttrName) && 
+                        !String.IsNullOrEmpty(strAttrName) && 
+                        strAttrName != "*") {
                         try {
                             attrValue = Importer.ImportFrom(context, mod, strAttrName);
                         } catch (ImportException) {
@@ -397,7 +400,8 @@ namespace IronPython.Runtime {
 
             Scope execScope = GetExecEvalScope(context, g, l);
             string path = Converter.ConvertToString(filename);
-            SourceUnit sourceUnit = context.LanguageContext.TryGetSourceFileUnit(path, PythonContext.GetContext(context).DefaultEncoding, SourceCodeKind.File);
+            PythonContext pc = PythonContext.GetContext(context);
+            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, path, pc.DefaultEncoding, SourceCodeKind.File);
 
             if (sourceUnit == null) {
                 throw PythonOps.IOError("execfile: specified file doesn't exist");

@@ -683,6 +683,10 @@ namespace IronPython.Modules {
                 _tz = tzinfo;
             }
 
+            public datetime(DateTime dt)
+                : this(dt, 0, null) {
+            }
+
             internal datetime(DateTime dt, int lostMicroseconds, tzinfo tzinfo) {
                 this.InternalDateTime = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
                 this._lostMicroseconds = dt.Millisecond * 1000 + lostMicroseconds;
@@ -707,7 +711,7 @@ namespace IronPython.Modules {
                     _lostMicroseconds = _lostMicroseconds % 1000;
                 }
             }
-
+            
             // other constructors, all class methods:
             public new static object today() {
                 return new datetime(DateTime.Now, 0, null);

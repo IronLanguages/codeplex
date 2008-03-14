@@ -20,6 +20,8 @@ using System.Reflection.Emit;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Generation {
+
+    // TODO: Make internal
     public abstract class DynamicILGen : ILGen {
         protected DynamicILGen(ILGenerator il)
             : base(il) {
@@ -30,8 +32,9 @@ namespace Microsoft.Scripting.Generation {
             return CreateDelegate<T>(out mi);
         }
 
-        // TODO: We shouldn't need the MethodInfo result...
         public abstract T CreateDelegate<T>(out MethodInfo mi);
+
+        public abstract MethodInfo Finish();
     }
 
     class DynamicILGenMethod : DynamicILGen {
@@ -47,6 +50,10 @@ namespace Microsoft.Scripting.Generation {
             mi = _dm;
             return (T)(object)_dm.CreateDelegate(typeof(T), null);
         }
+
+        public override MethodInfo Finish() {
+            return _dm;
+        }
     }
 
     class DynamicILGenType : DynamicILGen {
@@ -61,10 +68,17 @@ namespace Microsoft.Scripting.Generation {
 
         public override T CreateDelegate<T>(out MethodInfo mi) {
             Contract.Requires(typeof(T).IsSubclassOf(typeof(Delegate)), "T");
-
-            Type t = _tb.CreateType();
-            mi = t.GetMethod(_mb.Name);
+            mi = CreateMethod();
             return (T)(object)Delegate.CreateDelegate(typeof(T), mi);
+        }
+
+        private MethodInfo CreateMethod() {
+            Type t = _tb.CreateType();
+            return t.GetMethod(_mb.Name);
+        }
+
+        public override MethodInfo Finish() {
+            return CreateMethod();
         }
     }
 }

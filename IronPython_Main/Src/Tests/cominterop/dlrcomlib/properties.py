@@ -49,8 +49,9 @@ def test_ref_properties():
     #and corrupts com_obj rendering it useless after that. Hence the following line is commented.
     #AreEqual(com_obj.RefProperty, com_obj)
     
-    com_obj.PutAndPutRefProperty = 2.0
-    AreEqual(com_obj.PutAndPutRefProperty, 4.0) #The set_ multiples the value by 2 but the let_ does not in the com object.
+    if preferComDispatch: #Merlin XXXXXX
+        com_obj.PutAndPutRefProperty = 2.0
+        AreEqual(com_obj.PutAndPutRefProperty, 4.0) #The set_ multiples the value by 2 but the let_ does not in the com object.
     if not preferComDispatch: #Merlin 380784
         com_obj.let_PutAndPutRefProperty(2.0)
         AreEqual(com_obj.PutAndPutRefProperty, 2.0)
