@@ -19,7 +19,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
-using VariableKind = Microsoft.Scripting.Ast.VariableKind;
+using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Compiler.Ast {
     public abstract class ScopeStatement : Statement {
@@ -70,14 +70,23 @@ namespace IronPython.Compiler.Ast {
             get { return false; }
         }
 
-        internal virtual void CreateVariables(AstGenerator ag) {
+        internal virtual void CreateVariables(AstGenerator ag, List<MSAst.Expression> init) {
             if (_variables != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _variables) {
+                    PythonVariable pv = kv.Value;
                     // Publish variables for this context only (there may be references to the global variables
                     // in the dictionary also that were used for name binding lookups
                     // Do not publish parameters, they will get created separately.
-                    if (kv.Value.Scope == this && kv.Value.Kind != VariableKind.Parameter) {
-                        kv.Value.Transform(ag);
+                    if (pv.Scope == this && pv.Kind != VariableKind.Parameter) {
+                        MSAst.VariableExpression var = pv.Transform(ag);
+                        if (pv.Unassigned && pv.Kind == VariableKind.Local) {
+                            init.Add(
+                                MSAst.Ast.Assign(
+                                    var,
+                                    MSAst.Ast.ReadField(null, typeof(Uninitialized).GetField("Instance"))
+                                )
+                            );
+                        }
                     }
                 }
             }

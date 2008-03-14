@@ -14,6 +14,7 @@
  * ***************************************************************************/
 
 using System;
+using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -27,7 +28,12 @@ namespace Microsoft.Scripting.Runtime {
             Binder = new DefaultActionBinder(new CodeContext(new Scope(this), this), Type.EmptyTypes);
         }
 
-        public override Microsoft.Scripting.Ast.LambdaExpression ParseSourceCode(CompilerContext context) {
+        internal override bool CanCreateSourceCode {
+            get { return false; }
+        }
+
+        public override LambdaExpression ParseSourceCode(CompilerContext/*!*/ context) {
+            // invariant langauge doesn't have a grammar:
             throw new NotSupportedException();
         }
     }

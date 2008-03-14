@@ -20,19 +20,6 @@ add_clr_assemblies("baseclasscs")
 
 from Merlin.Testing.Accessibility import *
 
-class PythonType1(CliClass): pass
-class PythonDerivedType1(PythonType1): pass
-
-class PythonType2(DerivedCliClass): pass
-class PythonDerivedType2(PythonType2): pass
-
-p, f = 0, 1
-
-read_matrix = [ # private, internal, protected, public 
-    [],
-    [],
-]
-
 def throw_for_read_private_internal(x):
     AssertError(AttributeError, lambda: x.private_static_field)
     AssertError(AttributeError, lambda: x.private_static_method)
@@ -109,7 +96,6 @@ def all_read(x):
     x.public_instance_event
     x.public_instance_nestedclass
     
-
 def test_access_outside(): 
     class C1(CliClass): 
         __slots__ = []
@@ -182,6 +168,14 @@ def test_access_inside():
         x = C()
         x.m()
 
+# TODO: Try against PythonDerivedType1, PythonDerivedType2?
+class PythonType1(CliClass): pass
+class PythonDerivedType1(PythonType1): pass
+class PythonType2(DerivedCliClass): pass
+class PythonDerivedType2(PythonType2): pass
+
+# TODO: cover x.member where x is CLR type or instance.
+#       x.protected_instance_method should throw.
 def test_reflected_type():
     for C in [CliClass, DerivedCliClass]:
         #print C.internal_static_field

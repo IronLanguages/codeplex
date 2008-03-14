@@ -24,11 +24,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public virtual object GetValue(CodeContext context, bool outParam) {
-            return Interpreter.Evaluate(context, _expr);
+            return Interpreter.Interpreter.Evaluate(context, _expr);
         }
 
         public virtual object AssignValue(CodeContext context, object value) {
-            return Interpreter.EvaluateAssign(context, _expr, value);
+            return Interpreter.Interpreter.EvaluateAssign(context, _expr, value);
         }
 
         protected Expression Expression {

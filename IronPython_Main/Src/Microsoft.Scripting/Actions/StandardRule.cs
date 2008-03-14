@@ -43,8 +43,8 @@ namespace Microsoft.Scripting.Actions {
         private bool _error;                        // true if the rule represents an error
 
         // TODO revisit these fields and their uses when LambdaExpression moves down
-        internal Variable[] _paramVariables;        // TODO: Remove me when we can refer to params as expressions
-        internal List<Variable> _temps;             // TODO: Remove me when ASTs can have free-floating variables
+        internal VariableExpression[] _paramVariables;        // TODO: Remove me when we can refer to params as expressions
+        internal List<VariableExpression> _temps;             // TODO: Remove me when ASTs can have free-floating variables
         internal AnalyzedRule _analyzed;            // TODO: Remove me when the above 2 are gone
         private bool _canInterpretTarget = true;    // true if we can interpret this rule
 
@@ -93,11 +93,11 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Allocates a temporary variable for use during the rule.
         /// </summary>
-        public Variable GetTemporary(Type type, string name) {
+        public VariableExpression GetTemporary(Type type, string name) {
             if (_temps == null) {
-                _temps = new List<Variable>();
+                _temps = new List<VariableExpression>();
             }
-            Variable ret = Variable.Temporary(SymbolTable.StringToId(name), type);
+            VariableExpression ret = VariableExpression.Temporary(SymbolTable.StringToId(name), type);
             _temps.Add(ret);
             return ret;
         }
@@ -105,7 +105,7 @@ namespace Microsoft.Scripting.Actions {
         public Expression MakeReturn(ActionBinder binder, Expression expr) {
             // we create a temporary here so that ConvertExpression doesn't need to (because it has no way to declare locals).
             if (expr.Type != typeof(void)) {
-                Variable variable = GetTemporary(expr.Type, "$retVal");
+                VariableExpression variable = GetTemporary(expr.Type, "$retVal");
                 Expression read = Ast.ReadDefined(variable);
                 Expression conv = binder.ConvertExpression(read, ReturnType);
                 if (conv == read) return Ast.Return(expr);
@@ -172,7 +172,7 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// Gets the logical parameters to the dynamic site in the form of Variables.
         /// </summary>
-        internal Variable[] ParamVariables {
+        internal VariableExpression[] ParamVariables {
             get {
                 return _paramVariables;
             }
@@ -204,9 +204,9 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         ///  Gets the temporary variables allocated by this rule.
         /// </summary>
-        internal Variable[] TemporaryVariables {
+        internal VariableExpression[] TemporaryVariables {
             get {
-                return _temps == null ? new Variable[] { } : _temps.ToArray();
+                return _temps == null ? new VariableExpression[] { } : _temps.ToArray();
             }
         }
 
@@ -372,28 +372,32 @@ namespace Microsoft.Scripting.Actions {
         private SmallRuleSet<T> _monomorphicRuleSet;
 
         public StandardRule() {
-            int firstParameter = DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
+            int firstParameter = GetFirstParameterIndex();
             
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
             if (!DynamicSiteHelpers.IsBigTarget(typeof(T))) {
                 _parameters = new Expression[pis.Length - firstParameter];
-                List<Variable> paramVars = new List<Variable>();
+                List<VariableExpression> paramVars = new List<VariableExpression>();
                 for (int i = firstParameter; i < pis.Length; i++) {
-                    Variable p = MakeParameter(i, "$arg" + (i - firstParameter), pis[i].ParameterType);
+                    VariableExpression p = MakeParameter("$arg" + (i - firstParameter), pis[i].ParameterType);
                     paramVars.Add(p);
                     _parameters[i - firstParameter] = Ast.ReadDefined(p);
                 }
                 _paramVariables = paramVars.ToArray();
             } else {
-                MakeTupleParameters(firstParameter, typeof(T).GetGenericArguments()[0]);
+                MakeTupleParameters(typeof(T).GetGenericArguments()[0]);
             }
         }
 
-        private void MakeTupleParameters(int firstParameter, Type tupleType) {
+        private static int GetFirstParameterIndex() {
+            return DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
+        }
+
+        private void MakeTupleParameters(Type tupleType) {
             int count = Tuple.GetSize(tupleType);
 
-            Variable tupleVar = MakeParameter(firstParameter, "$arg0", tupleType);
-            _paramVariables = new Variable[] { tupleVar };
+            VariableExpression tupleVar = MakeParameter("$arg0", tupleType);
+            _paramVariables = new VariableExpression[] { tupleVar };
             Expression tuple = Ast.ReadDefined(tupleVar);
 
             _parameters = new Expression[count];
@@ -406,10 +410,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private Variable MakeParameter(int index, string name, Type type) {
-            Variable ret = Variable.Parameter(SymbolTable.StringToId(name), type);
-            ret.ParameterIndex = index;
-            return ret;
+        private VariableExpression MakeParameter(string name, Type type) {
+            return VariableExpression.Parameter(SymbolTable.StringToId(name), type);
         }
 
         /// <summary>
@@ -431,7 +433,7 @@ namespace Microsoft.Scripting.Actions {
         internal object ExecuteTarget(object site, CodeContext context, object [] args) {
             if (CanInterpretTarget) {
                 // Interpret the target in the common case
-                return Interpreter.Execute(context, Target);
+                return Interpreter.Interpreter.Execute(context, Target);
             }
 
             // The target cannot be interpreted. We will execute the compiled rule. However, this will
@@ -473,7 +475,7 @@ namespace Microsoft.Scripting.Actions {
                 // And rewrite the AST if needed
                 if (_analyzed == null) {
                     AstRewriter.RewriteRule(this);
-                    _analyzed = RuleBinder.Bind(_test, _target, ReturnType);
+                    _analyzed = RuleBinder.Bind(this, ReturnType, GetFirstParameterIndex());
                 }
 
                 LambdaInfo top = _analyzed.Top;
@@ -481,9 +483,7 @@ namespace Microsoft.Scripting.Actions {
 
                 cg.InitializeRule(tc, top);
 
-                foreach (VariableReference vr in top.References.Values) {
-                    vr.CreateSlot(cg, top);
-                }
+                top.CreateReferenceSlots(cg);
 
                 if (_test != null) {
                     cg.EmitBranchFalse(_test, ifFalse);

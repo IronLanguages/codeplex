@@ -13,30 +13,18 @@
  *
  * ***************************************************************************/
 
-using System;
-using Microsoft.Scripting;
-using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Runtime;
 
-namespace IronPython.Compiler.Ast {
-    class PythonReference {
-        private SymbolId _name;
-        private PythonVariable _variable;
-
-        public PythonReference(SymbolId name) {
-            _name = name;
-        }
-
-        public SymbolId Name {
-            get { return _name; }
-        }
-
-        internal PythonVariable PythonVariable {
-            get { return _variable; }
-            set { _variable = value; }
-        }
-
-        internal MSAst.VariableExpression Variable {
-            get { return _variable != null ? _variable.Variable : null; }
+namespace Microsoft.Scripting.Interpreter {
+    public static class InterpreterHelpers {
+        /// <summary>
+        /// Used by interpreter to invoke the dynamic site via the action binder.
+        /// </summary>
+        public static object ExecuteRule<T>(ActionBinder ab, CodeContext cc, DynamicAction action, object[] args) {
+            T target = default(T);
+            RuleSet<T> rules = null;
+            return ab.UpdateSiteAndExecute<T>(cc, action, args, null, ref target, ref rules);
         }
     }
 }

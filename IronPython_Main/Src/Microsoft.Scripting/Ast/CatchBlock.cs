@@ -23,10 +23,10 @@ namespace Microsoft.Scripting.Ast {
         private readonly SourceLocation _header;
         private readonly SourceLocation _end;
         private readonly Type /*!*/ _test;
-        private readonly Variable _var;
+        private readonly VariableExpression _var;
         private readonly Expression /*!*/ _body;
 
-        internal CatchBlock(SourceSpan span, SourceLocation header, Type /*!*/ test, Variable target, Expression /*!*/ body) {
+        internal CatchBlock(SourceSpan span, SourceLocation header, Type /*!*/ test, VariableExpression target, Expression /*!*/ body) {
             _test = test;
             _var = target;
             _body = body;
@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        public Variable Variable {
+        public VariableExpression Variable {
             get { return _var; }
         }
 
@@ -71,11 +71,11 @@ namespace Microsoft.Scripting.Ast {
             return Catch(SourceSpan.None, SourceLocation.None, type, null, body);
         }
 
-        public static CatchBlock Catch(Type type, Variable target, Expression body) {
+        public static CatchBlock Catch(Type type, VariableExpression target, Expression body) {
             return Catch(SourceSpan.None, SourceLocation.None, type, target, body);
         }
 
-        public static CatchBlock Catch(SourceSpan span, SourceLocation header, Type type, Variable target, Expression body) {
+        public static CatchBlock Catch(SourceSpan span, SourceLocation header, Type type, VariableExpression target, Expression body) {
             Contract.RequiresNotNull(type, "type");
             Contract.Requires(target == null || TypeUtils.CanAssign(target.Type, type), "target");
             Contract.RequiresNotNull(body, "body");

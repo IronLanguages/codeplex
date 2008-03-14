@@ -40,29 +40,27 @@ namespace Microsoft.Scripting.Ast {
 
         private static readonly string[] _GeneratorSigNames = new string[] { "$gen", "$ret" };
 
-        private void EmitEnvironmentIDs(LambdaExpression lambda) {
+        private void EmitEnvironmentIDs(LambdaInfo li) {
             int size = 0;
-            foreach (Variable prm in lambda.Parameters) {
-                if (prm.Lift) size++;
-            }
-            foreach (Variable var in lambda.Variables) {
-                if (var.Lift) size++;
+
+            foreach (VariableInfo vi in li.Variables.Values) {
+                if (vi.Lift) size++;
             }
 
             if (!IsDynamicMethod) {
                 Debug.Assert(TypeGen != null);
 
                 LambdaCompiler cctor = TypeGen.TypeInitializer;
-                cctor.EmitEnvironmentIdArray(lambda, size);
-                Slot fields = TypeGen.AddStaticField(typeof(SymbolId[]), "__symbolIds$" + lambda.Name + "$" + Interlocked.Increment(ref _Counter));
+                cctor.EmitEnvironmentIdArray(li, size);
+                Slot fields = TypeGen.AddStaticField(typeof(SymbolId[]), "__symbolIds$" + li.Lambda.Name + "$" + Interlocked.Increment(ref _Counter));
                 fields.EmitSet(cctor);
                 fields.EmitGet(this);
             } else {
-                EmitEnvironmentIdArray(lambda, size);
+                EmitEnvironmentIdArray(li, size);
             }
         }
 
-        private void EmitEnvironmentIdArray(LambdaExpression lambda, int size) {
+        private void EmitEnvironmentIdArray(LambdaInfo li, int size) {
             // Create the array for the names
             EmitInt(size);
             Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -70,17 +68,12 @@ namespace Microsoft.Scripting.Ast {
             int index = 0;
             EmitDebugMarker("--- Environment IDs ---");
 
-            foreach (Variable prm in lambda.Parameters) {
-                if (prm.Lift) {
-                    EmitSetVariableName(this, index++, prm.Name);
+            foreach (VariableInfo vi in li.Variables.Values) {
+                if (vi.Lift) {
+                    EmitSetVariableName(this, index++, vi.Variable.Name);
                 }
             }
 
-            foreach (Variable var in lambda.Variables) {
-                if (var.Lift) {
-                    EmitSetVariableName(this, index++, var.Name);
-                }
-            }
             EmitDebugMarker("--- End Environment IDs ---");
         }
 
@@ -102,18 +95,15 @@ namespace Microsoft.Scripting.Ast {
                 if (generator) {
                     size += li.GeneratorTemps;
 
-                    foreach (Variable var in lambda.Variables) {
-                        if (var.IsTemporary) {
+                    foreach (VariableInfo vi in li.Variables.Values) {
+                        if (vi.Variable.NodeType == AstNodeType.TemporaryVariable) {
                             size++;
                         }
                     }
                 }
 
-                foreach (Variable parm in lambda.Parameters) {
-                    if (parm.Lift) size++;
-                }
-                foreach (Variable var in lambda.Variables) {
-                    if (var.Lift) size++;
+                foreach (VariableInfo vi in li.Variables.Values) {
+                    if (vi.Lift) size++;
                 }
 
                 // Find the right environment factory for the size of elements to store
@@ -133,7 +123,7 @@ namespace Microsoft.Scripting.Ast {
             environmentSlot.EmitSet(cg);
 
             // Emit the names array for the environment constructor
-            cg.EmitEnvironmentIDs(li.Lambda);
+            cg.EmitEnvironmentIDs(li);
             // Emit code to generate the new instance of the environment
 
             li.EnvironmentFactory.EmitNewEnvironment(cg);
@@ -176,16 +166,11 @@ namespace Microsoft.Scripting.Ast {
 
             CreateAccessSlots(cg, li);
 
-            foreach (Variable prm in lambda.Parameters) {
-                prm.Allocate(cg, li);
+            foreach (VariableInfo vi in li.Variables.Values) {
+                vi.Allocate(cg, li);
             }
-            foreach (Variable var in lambda.Variables) {
-                var.Allocate(cg, li);
-            }
-            foreach (VariableReference r in li.References.Values) {
-                r.CreateSlot(cg, li);
-                Debug.Assert(r.Slot != null);
-            }
+
+            li.CreateReferenceSlots(cg);
 
             cg.Allocator.LocalAllocator.PrepareForEmit(cg);
             cg.Allocator.GlobalAllocator.PrepareForEmit(cg);
@@ -198,11 +183,10 @@ namespace Microsoft.Scripting.Ast {
 
         private static void CreateClosureAccessSlots(LambdaCompiler cg, LambdaInfo li) {
             ScopeAllocator allocator = cg.Allocator;
-            LambdaExpression lambda = li.Lambda;
 
             // Current context is accessed via environment slot, if any
             if (li.HasEnvironment) {
-                allocator.AddClosureAccessSlot(lambda, cg.EnvironmentSlot);
+                allocator.AddClosureAccessSlot(li.Lambda, cg.EnvironmentSlot);
             }
 
             if (li.IsClosure) {
@@ -214,29 +198,26 @@ namespace Microsoft.Scripting.Ast {
                 }
                 scope.EmitSet(cg);
 
-                LambdaInfo currentInfo = li;
-                LambdaExpression currentLambda = lambda;
+                LambdaInfo current = li;
                 do {
-                    LambdaInfo parentInfo = currentInfo.Parent;
-                    LambdaExpression parent = parentInfo.Lambda;
+                    LambdaInfo parent = current.Parent;
 
-                    if (parentInfo.EnvironmentFactory != null) {
+                    if (parent.EnvironmentFactory != null) {
                         scope.EmitGet(cg);
 
-                        cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parentInfo.EnvironmentFactory.StorageType));
+                        cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(parent.EnvironmentFactory.StorageType));
 
-                        Slot storage = new LocalSlot(cg.DeclareLocal(parentInfo.EnvironmentFactory.StorageType), cg);
+                        Slot storage = new LocalSlot(cg.DeclareLocal(parent.EnvironmentFactory.StorageType), cg);
                         storage.EmitSet(cg);
-                        allocator.AddClosureAccessSlot(parent, storage);
+                        allocator.AddClosureAccessSlot(parent.Lambda, storage);
                     }
 
                     scope.EmitGet(cg);
                     cg.EmitPropertyGet(typeof(Scope), "Parent");
                     scope.EmitSet(cg);
 
-                    currentLambda = parent;
-                    currentInfo = parentInfo;
-                } while (currentInfo != null && currentInfo.IsClosure);
+                    current = parent;
+                } while (current != null && current.IsClosure);
 
                 cg.FreeLocalTmp(scope);
             }
@@ -256,8 +237,8 @@ namespace Microsoft.Scripting.Ast {
 
             while (allocator != null) {
                 if (allocator.Lambda != null) {
-                    foreach (VariableReference reference in li.References.Values) {
-                        if (!reference.Variable.Lift && reference.Variable.Lambda == allocator.Lambda) {
+                    foreach (VariableInfo vi in li.Slots.Keys) {
+                        if (!vi.Lift && vi.Lambda == allocator.Lambda) {
                             Slot accessSlot = allocator.LocalAllocator.GetAccessSlot(cg, allocator.Lambda);
                             if (accessSlot != null) {
                                 cg.Allocator.AddScopeAccessSlot(allocator.Lambda, accessSlot);
@@ -277,8 +258,6 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="lambda">Lambda for which to generate a delegate</param>
         /// <param name="delegateType">Type of the delegate.</param>
         private void EmitDelegateConstruction(LambdaExpression lambda, Type delegateType) {
-            FlowChecker.Check(lambda);
-
             LambdaInfo li = GetLambdaInfo(lambda);
 
             bool needsClosure = li.IsClosure || !(ContextSlot is StaticFieldSlot);
@@ -500,12 +479,9 @@ namespace Microsoft.Scripting.Ast {
             paramTypes = new List<Type>();
             paramNames = new List<SymbolId>();
 
-            int index = 0;
-
-            foreach (Variable p in lambda.Parameters) {
+            foreach (VariableExpression p in lambda.Parameters) {
                 paramTypes.Add(p.Type);
                 paramNames.Add(p.Name);
-                p.ParameterIndex = index++;
             }
 
             implName = GetGeneratedName(lambda.Name);
@@ -612,9 +588,8 @@ namespace Microsoft.Scripting.Ast {
 
         // Used by TreeCompiler
         private static void EmitBody(LambdaCompiler cg, LambdaInfo li) {
-            GeneratorCodeBlock gcb = li.Lambda as GeneratorCodeBlock;
-            if (gcb != null) {
-                EmitGeneratorCodeBlockBody(cg, li);
+            if (li.Lambda.NodeType == AstNodeType.Generator) {
+                EmitGeneratorLambdaBody(cg, li);
             } else {
                 EmitLambdaBody(cg, li);
             }
@@ -693,16 +668,16 @@ namespace Microsoft.Scripting.Ast {
             return new PropertyEnvironmentFactory(tupleType, envType);
         }
 
-        #region GeneratorCodeBlock
+        #region GeneratorLambdaExpression
 
-        private static void EmitGeneratorCodeBlockBody(LambdaCompiler cg, LambdaInfo li) {
-            Debug.Assert(li.Lambda.GetType() == typeof(GeneratorCodeBlock));
+        private static void EmitGeneratorLambdaBody(LambdaCompiler cg, LambdaInfo li) {
+            Debug.Assert(li.Lambda.GetType() == typeof(GeneratorLambdaExpression));
 
-            GeneratorCodeBlock gcb = (GeneratorCodeBlock)li.Lambda;
+            GeneratorLambdaExpression gle = (GeneratorLambdaExpression)li.Lambda;
 
-            cg.Allocator.Lambda = gcb;
+            cg.Allocator.Lambda = gle;
             CreateEnvironmentFactory(li, true);
-            EmitGeneratorBody(cg, li, gcb);
+            EmitGeneratorBody(cg, li, gle);
             cg.EmitReturn();
         }
 
@@ -710,7 +685,7 @@ namespace Microsoft.Scripting.Ast {
         /// Defines the method with the correct signature and sets up the context slot appropriately.
         /// </summary>
         /// <returns></returns>
-        private static LambdaCompiler CreateGeneratorLambdaCompiler(LambdaCompiler impl, GeneratorCodeBlock block) {
+        private static LambdaCompiler CreateGeneratorLambdaCompiler(LambdaCompiler impl, GeneratorLambdaExpression block) {
             // Create the GenerateNext function
             LambdaCompiler ncg = impl.CreateLambdaCompiler(
                 GetGeneratorMethodName(block.Name),     // Method Name
@@ -744,7 +719,7 @@ namespace Microsoft.Scripting.Ast {
         /// Emits the body of the function that creates a Generator object.  Also creates another
         /// Compiler for the inner method which implements the user code defined in the generator.
         /// </summary>
-        private static void EmitGeneratorBody(LambdaCompiler impl, LambdaInfo li, GeneratorCodeBlock block) {
+        private static void EmitGeneratorBody(LambdaCompiler impl, LambdaInfo li, GeneratorLambdaExpression block) {
             LambdaCompiler ncg = CreateGeneratorLambdaCompiler(impl, block);
             ncg.EmitLineInfo = impl.EmitLineInfo;
             ncg.Allocator.GlobalAllocator.PrepareForEmit(ncg);
@@ -786,10 +761,7 @@ namespace Microsoft.Scripting.Ast {
 
         private static void CreateReferenceSlots(LambdaCompiler cg, LambdaInfo li) {
             CreateAccessSlots(cg, li);
-            foreach (VariableReference r in li.References.Values) {
-                r.CreateSlot(cg, li);
-                Debug.Assert(r.Slot != null);
-            }
+            li.CreateReferenceSlots(cg);
         }
 
         private static void CreateGeneratorTemps(LambdaCompiler cg, LambdaInfo li) {
@@ -804,17 +776,14 @@ namespace Microsoft.Scripting.Ast {
 
         // The slots for generators are created in 2 steps. In the outer function,
         // the slots are allocated, whereas in the actual generator they are CreateSlot'ed
-        private static void InitializeGeneratorEnvironment(LambdaCompiler cg, LambdaInfo li, GeneratorCodeBlock block) {
+        private static void InitializeGeneratorEnvironment(LambdaCompiler cg, LambdaInfo li, GeneratorLambdaExpression block) {
             cg.Allocator.AddClosureAccessSlot(block, cg.EnvironmentSlot);
-            foreach (Variable p in block.Parameters) {
-                p.Allocate(cg, li);
-            }
-            foreach (Variable d in block.Variables) {
-                d.Allocate(cg, li);
+            foreach (VariableInfo vi in li.Variables.Values) {
+                vi.Allocate(cg, li);
             }
         }
 
-        private static void EmitGenerator(LambdaCompiler ncg, LambdaInfo li, GeneratorCodeBlock block) {
+        private static void EmitGenerator(LambdaCompiler ncg, LambdaInfo li, GeneratorLambdaExpression block) {
             IList<YieldTarget> topTargets = li.TopTargets;
             Debug.Assert(topTargets != null);
 

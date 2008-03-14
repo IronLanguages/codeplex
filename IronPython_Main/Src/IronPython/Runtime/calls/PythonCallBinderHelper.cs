@@ -75,7 +75,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             // then get the statement for calling __init__
-            Variable allocatedInst = Rule.GetTemporary(createExpr.Type, "newInst");
+            VariableExpression allocatedInst = Rule.GetTemporary(createExpr.Type, "newInst");
             Expression tmpRead = Ast.Read(allocatedInst);
             Expression initCall = initAdapter.MakeInitCall(Binder, Rule, tmpRead);
 
@@ -618,7 +618,7 @@ namespace IronPython.Runtime.Calls {
                 !type.UnderlyingSystemType.IsArray;
         }
 
-        private Expression GetFinalizerInitialization(Variable variable) {
+        private Expression GetFinalizerInitialization(VariableExpression variable) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("InitializeForFinalization"),
                 Ast.ConvertHelper(Ast.ReadDefined(variable), typeof(object))

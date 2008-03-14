@@ -36,9 +36,6 @@ namespace Microsoft.Scripting.Actions {
         private CodeContext _context;
         private readonly RuleCache _ruleCache = new RuleCache();
 
-        // The ReflectiveCaller cache
-        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
-
         protected ActionBinder(CodeContext context) {
             _context = context;
         }
@@ -81,13 +78,6 @@ namespace Microsoft.Scripting.Actions {
             AstWriter.Dump(rule);
 #endif        
             return rule;
-        }
-
-        public object ExecuteRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
-            T target = default(T);
-            RuleSet<T> rules = null;
-            
-            return UpdateSiteAndExecute<T>(callerContext, action, args, null, ref target, ref rules);
         }
 
         /// <summary>
@@ -133,7 +123,7 @@ namespace Microsoft.Scripting.Actions {
 
                 CodeContext tmpCtx = callerContext.Scope.GetTemporaryVariableContext(callerContext, rule.ParamVariables, callArgs);
                 try {
-                    if ((bool)Interpreter.Evaluate(tmpCtx, rule.Test)) {
+                    if ((bool)Interpreter.Interpreter.Evaluate(tmpCtx, rule.Test)) {
                         if (site != null) {
                             DynamicSiteHelpers.UpdateSite<T>(callerContext, site, ref target, ref rules, rule);
                         }
@@ -153,28 +143,6 @@ namespace Microsoft.Scripting.Actions {
             PerfTrack.NoteEvent(PerfTrack.Categories.Rules, "MakeRule " + action.ToString() + " " + CompilerHelpers.GetType(args[0]).Name);
         }
         
-        /// <summary>
-        /// Gets a rule for the provided action and arguments and executes it without compiling.
-        /// </summary>
-        public object Execute(CodeContext/*!*/ cc, DynamicAction/*!*/ action, Type/*!*/[]/*!*/ types, object[]/*!*/ args) {
-            Contract.RequiresNotNull(cc, "context");
-            Contract.RequiresNotNull(action, "action");
-            Contract.RequiresNotNullItems(types, "types");
-            Contract.RequiresNotNull(args, "args");
-
-            ReflectedCaller rc;
-            lock (_executeSites) {
-                ValueArray<Type> array = new ValueArray<Type>(types);
-                if (!_executeSites.TryGetValue(array, out rc)) {
-                    Type siteType = DynamicSiteHelpers.MakeDynamicSiteTargetType(types);
-                    MethodInfo target = typeof(ActionBinder).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
-                    _executeSites[array] = rc = ReflectedCaller.Create(target);
-
-                }
-            }
-            return rc.Invoke(this, cc, action, args);
-        }
-
         public virtual AbstractValue AbstractExecute(DynamicAction action, IList<AbstractValue> args) {
             throw new NotImplementedException();
         }

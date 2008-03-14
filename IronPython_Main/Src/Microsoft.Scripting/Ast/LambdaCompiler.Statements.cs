@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Ast {
         private void Emit(DeleteStatement node) {
             EmitPosition(node.Start, node.End);
             Slot slot = GetVariableSlot(node.Variable);
-            slot.EmitDelete(this, node.Variable.Name, !node.IsDefined);
+            slot.EmitDelete(this, node.Variable.Name);
         }
 
         private void Emit(DoStatement node) {

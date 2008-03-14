@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Ast {
 
         /// <summary>
         /// The dictionary of all lambdas and their infos in the tree.
-        /// This includes both instances of LambdaExpression and GeneratorCodeBlock
+        /// This includes both instances of LambdaExpression and GeneratorLambdaExpression
         /// </summary>
         private readonly Dictionary<LambdaExpression, LambdaInfo> _infos;
 

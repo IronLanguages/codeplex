@@ -36,17 +36,18 @@ def test_instantiation():
 
     # negative
     y = d(x.MInt32Void)
-    #y()
+    AssertError(TypeError, y)
     
     y = d(x.MVoidInt32Int32)
-    #y(1, 2)
+    AssertError(TypeError, y, 1, 2)
     
+    # need more scenario coverage
     y = d(x.MVoidRefInt32)
     y(2)
     
     y = d(x.MVoidOutInt32)
     z = clr.StrongBox[int](2)
-    #print y(z)
+    #y(z)
     
     d = VoidVoidDelegate
     y = d(x.MVoidOutInt32)

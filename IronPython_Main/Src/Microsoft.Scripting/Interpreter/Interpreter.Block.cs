@@ -23,26 +23,16 @@ using System.Threading;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Ast {
+namespace Microsoft.Scripting.Interpreter {
     /// <summary>
     /// Interpreter partial class. This part contains interpretation code for lambdas.
     /// </summary>
     internal static partial class Interpreter {
         private static object DoExecute(CodeContext context, LambdaExpression lambda) {
-            object ret;
-
-            // Make sure that locals owned by this block mask any identically-named variables in outer scopes
-            if (!lambda.IsGlobal) {
-                foreach (Variable v in lambda.Variables) {
-                    if (v.Kind == VariableKind.Local && v.Lambda == lambda) {
-                        Interpreter.EvaluateAssignVariable(context, v, Uninitialized.Instance);
-                    }
-                }
-            }
-
             context.Scope.SourceLocation = lambda.Start;
-            ret = Interpreter.Interpret(context, lambda.Body);
+            object ret = Interpreter.Interpret(context, lambda.Body);
 
             ControlFlow cf = ret as ControlFlow;
             if (cf != null) {
@@ -115,18 +105,18 @@ namespace Microsoft.Scripting.Ast {
 
         private static int _Interpreted;
 
-        private static Dictionary<CodeBlockExpression, MethodInfo> _Delegates;
+        private static Dictionary<LambdaExpression, MethodInfo> _Delegates;
 
         /// <summary>
-        /// Gets the delegate associated with the CodeBlockExpression.
+        /// Gets the delegate associated with the LambdaExpression.
         /// Either it uses cached MethodInfo and creates delegate from it, or it will generate
         /// completely new dynamic method, store it in a cache and use it to create the delegate.
         /// </summary>
-        private static Delegate GetDelegateForInterpreter(CodeContext context, CodeBlockExpression node) {
+        private static Delegate GetDelegateForInterpreter(CodeContext context, LambdaExpression node) {
             if (_Delegates == null) {
-                Interlocked.CompareExchange<Dictionary<CodeBlockExpression, MethodInfo>>(
+                Interlocked.CompareExchange<Dictionary<LambdaExpression, MethodInfo>>(
                     ref _Delegates,
-                    new Dictionary<CodeBlockExpression, MethodInfo>(),
+                    new Dictionary<LambdaExpression, MethodInfo>(),
                     null
                 );
             }
@@ -143,7 +133,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             if (! found || method == null) {
-                method = CreateDelegateForInterpreter(node.Block, node.Type);
+                method = CreateDelegateForInterpreter(node, node.Type);
 
                 //
                 // LOCK to store the MethodInfo
@@ -161,7 +151,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
 
-            return ReflectionUtils.CreateDelegate(method, node.Type, new LambdaInvoker(node.Block, context));
+            return ReflectionUtils.CreateDelegate(method, node.Type, new LambdaInvoker(node, context));
         }
 
         /// <summary>

@@ -80,14 +80,20 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.BoundAssignment:
                     DefaultWalk((BoundAssignment)node);
                     break;
-                case AstNodeType.BoundExpression:
-                    DefaultWalk((BoundExpression)node);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    DefaultWalk((VariableExpression)node);
                     break;
                 case AstNodeType.BreakStatement:
                     DefaultWalk((BreakStatement)node);
                     break;
-                case AstNodeType.CodeBlockExpression:
-                    DefaultWalk((CodeBlockExpression)node);
+                case AstNodeType.Lambda:
+                    DefaultWalk((LambdaExpression)node);
+                    break;
+                case AstNodeType.Generator:
+                    DefaultWalk((GeneratorLambdaExpression)node);
                     break;
                 case AstNodeType.CodeContextExpression:
                 case AstNodeType.EnvironmentExpression:
@@ -160,12 +166,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public void WalkNode(LambdaExpression node) {
-            GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
-            if (gcb != null) {
-                DefaultWalk(gcb);
-            } else {
-                DefaultWalk(node);
-            }
+            DefaultWalk(node);
+        }
+
+        public void WalkNode(GeneratorLambdaExpression node) {
+            DefaultWalk(node);
         }
 
         public void WalkNode(IfStatementTest node) {
@@ -213,17 +218,9 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // BoundExpression
-        private void DefaultWalk(BoundExpression node) {
+        // Variable
+        private void DefaultWalk(VariableExpression node) {
             Walk(node);
-            PostWalk(node);
-        }
-
-        // CodeBlockExpression
-        private void DefaultWalk(CodeBlockExpression node) {
-            if (Walk(node)) {
-                WalkNode(node.Block);
-            }
             PostWalk(node);
         }
 
@@ -483,8 +480,8 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // GeneratorCodeBlock
-        private void DefaultWalk(GeneratorCodeBlock node) {
+        // GeneratorLambdaExpression
+        private void DefaultWalk(GeneratorLambdaExpression node) {
             if (Walk(node)) {
                 WalkNode(node.Body);
             }

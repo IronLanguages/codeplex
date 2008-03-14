@@ -41,14 +41,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         SymbolId[] _keywordArgNames;
         int _totalExplicitArgs; // Includes the individial elements of ArgumentKind.Dictionary (if any)
 
-        Variable _dispatchObject;
-        Variable _dispatchPointer;
-        Variable _dispId;
-        Variable _dispParams;
-        Variable _paramVariants;
-        Variable _invokeResult;
-        Variable _returnValue;
-        Variable _dispIdsOfKeywordArgsPinned;
+        VariableExpression _dispatchObject;
+        VariableExpression _dispatchPointer;
+        VariableExpression _dispId;
+        VariableExpression _dispParams;
+        VariableExpression _paramVariants;
+        VariableExpression _invokeResult;
+        VariableExpression _returnValue;
+        VariableExpression _dispIdsOfKeywordArgsPinned;
 
         public IDispatchCallBinderHelper(CodeContext context, CallAction action, object[] args)
             : base(context, action, args) {
@@ -84,9 +84,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             //
             // Declare variables
             //
-            Variable excepInfo = Rule.GetTemporary(typeof(ExcepInfo), "excepInfo");
-            Variable argErr = Rule.GetTemporary(typeof(uint), "argErr");
-            Variable hresult = Rule.GetTemporary(typeof(int), "hresult");
+            VariableExpression excepInfo = Rule.GetTemporary(typeof(ExcepInfo), "excepInfo");
+            VariableExpression argErr = Rule.GetTemporary(typeof(uint), "argErr");
+            VariableExpression hresult = Rule.GetTemporary(typeof(int), "hresult");
 
             List<Expression> tryStatements = new List<Expression>();
             Expression expr;
@@ -326,7 +326,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                     Ast.Constant(1));
                 exprs.Add(expr);
 
-                Variable _propertyPutDispId = Rule.GetTemporary(typeof(int), "propertyPutDispId");
+                VariableExpression _propertyPutDispId = Rule.GetTemporary(typeof(int), "propertyPutDispId");
 
                 expr = Ast.Write(
                     _propertyPutDispId,

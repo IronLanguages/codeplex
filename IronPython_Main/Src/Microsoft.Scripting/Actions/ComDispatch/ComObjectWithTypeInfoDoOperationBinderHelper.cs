@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Expression MakeIndexOperationTarget() {
             List<Expression> expressions = new List<Expression>();
             SymbolId methodName = SymbolTable.StringToId(Action.Operation == Operators.GetItem ? ComObjectWithTypeInfo.PropertyGetDefault : ComObjectWithTypeInfo.PropertyPutDefault); 
-            Variable dispIndexer = _rule.GetTemporary(typeof(object), "dispIndexer");
+            VariableExpression dispIndexer = _rule.GetTemporary(typeof(object), "dispIndexer");
 
             expressions.Add(
                 Ast.Write(

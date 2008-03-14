@@ -569,7 +569,7 @@ namespace IronPython.Runtime.Calls {
         class FunctionBinderHelper<T> : BinderHelper<T, CallAction> {
             private PythonFunction _func;                           // the function we're calling
             private StandardRule<T> _rule = new StandardRule<T>();  // the rule we're producing
-            private Variable _dict, _params, _paramsLen;            // splatted dictionary & params + the initial length of the params array, null if not provided.
+            private VariableExpression _dict, _params, _paramsLen;            // splatted dictionary & params + the initial length of the params array, null if not provided.
             private List<Expression> _init;                          // a set of initialization code (e.g. creating a list for the params array)
             private Expression _error;                              // a custom error expression if the default needs to be overridden.
             private bool _extractedParams;                          // true if we needed to extract a parameter from the parameter list.
@@ -912,7 +912,7 @@ namespace IronPython.Runtime.Calls {
                     if (exprArgs.Length != 0) {
                         // if we have arguments run the tests after the last arg is evaluated.
                         Expression last = exprArgs[exprArgs.Length - 1];
-                        Variable temp = _rule.GetTemporary(last.Type, "$temp");
+                        VariableExpression temp = _rule.GetTemporary(last.Type, "$temp");
                         tests.Insert(0, Ast.Assign(temp, last));
                         tests.Add(Ast.Read(temp));
                         exprArgs[exprArgs.Length - 1] = Ast.Comma(tests.ToArray());
@@ -1034,7 +1034,7 @@ namespace IronPython.Runtime.Calls {
                 );
             }
 
-            private Expression VariableOrNull(Variable var, Type type) {
+            private Expression VariableOrNull(VariableExpression var, Type type) {
                 if (var != null) {
                     return Ast.ConvertHelper(
                         Ast.ReadDefined(var),
@@ -1132,7 +1132,7 @@ namespace IronPython.Runtime.Calls {
                 }
 
                 Expression[] dictCreator = new Expression[count];
-                BoundExpression dictRef = Ast.ReadDefined(_dict);
+                VariableExpression dictRef = Ast.ReadDefined(_dict);
 
                 count = 0;
                 dictCreator[count++] = Ast.Assign(

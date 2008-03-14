@@ -456,21 +456,20 @@ namespace Microsoft.Scripting.Ast {
         #endregion
 
         private static AnalyzedTree AnalyzeLambda(LambdaExpression lambda) {
-            DumpBlock(lambda);
+            DumpLambda(lambda);
 
             ForestRewriter.Rewrite(lambda);
             AnalyzedTree at = ClosureBinder.Bind(lambda);
-            FlowChecker.Check(lambda);
 
-            DumpBlock(lambda);
+            DumpLambda(lambda);
 
             return at;
         }
 
         [Conditional("DEBUG")]
-        private static void DumpBlock(LambdaExpression lambda) {
+        private static void DumpLambda(LambdaExpression lambda) {
 #if DEBUG
-            AstWriter.Dump(lambda);
+            AstWriter.Dump(lambda, lambda.Name);
 #endif
         }
 
@@ -841,15 +840,6 @@ namespace Microsoft.Scripting.Ast {
             if (slot != null) {
                 Debug.Assert(!_freeSlots.Contains(slot));
                 _freeSlots.Add(slot);
-            }
-        }
-
-        private void EmitGet(Slot slot, SymbolId name, bool check) {
-            Debug.Assert(slot != null, "slot");
-
-            slot.EmitGet(this);
-            if (check) {
-                slot.EmitCheck(this, name);
             }
         }
 
@@ -1524,8 +1514,8 @@ namespace Microsoft.Scripting.Ast {
             return temp;
         }
 
-        private Slot GetVariableSlot(Variable variable) {
-            return _info.References[variable].Slot;
+        private Slot GetVariableSlot(VariableExpression variable) {
+            return _info.GetVariableSlot(variable);
         }
 
         internal void InitializeCompilerAndLambda(Compiler tc, LambdaExpression lambda) {

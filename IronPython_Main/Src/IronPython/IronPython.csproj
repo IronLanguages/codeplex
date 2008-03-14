@@ -109,6 +109,7 @@
     <Compile Include="Compiler\Ast\ExecStatement.cs" />
     <Compile Include="Compiler\Ast\Expression.cs" />
     <Compile Include="Compiler\Ast\ExpressionStatement.cs" />
+    <Compile Include="Compiler\Ast\FlowChecker.cs" />
     <Compile Include="Compiler\Ast\ForStatement.cs" />
     <Compile Include="Compiler\Ast\FromImportStatement.cs" />
     <Compile Include="Compiler\Ast\FunctionDefinition.cs" />
@@ -148,6 +149,7 @@
     <Compile Include="Compiler\Ast\UnaryExpression.cs" />
     <Compile Include="Compiler\Ast\PythonVariable.cs" />
     <Compile Include="Compiler\Ast\PythonWalker.Generated.cs" />
+    <Compile Include="Compiler\Ast\VariableKind.cs" />
     <Compile Include="Compiler\Ast\WhileStatement.cs" />
     <Compile Include="Compiler\Ast\WithStatement.cs" />
     <Compile Include="Compiler\Ast\YieldExpression.cs" />

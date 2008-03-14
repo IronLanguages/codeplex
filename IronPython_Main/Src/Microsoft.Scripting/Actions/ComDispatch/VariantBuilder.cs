@@ -51,7 +51,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         internal List<Expression> WriteArgumentVariant(
             MethodBinderContext context, 
-            Variable paramVariants, 
+            VariableExpression paramVariants, 
             int variantIndex,
             IList<Expression> parameters) {
             List<Expression> exprs = new List<Expression>();
@@ -111,7 +111,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
-        internal List<Expression> Clear(Variable paramVariants) {
+        internal List<Expression> Clear(VariableExpression paramVariants) {
             List<Expression> exprs = new List<Expression>();
             Expression expr;
 

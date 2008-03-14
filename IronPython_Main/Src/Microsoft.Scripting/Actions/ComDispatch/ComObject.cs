@@ -146,7 +146,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// This function returns an AST statement that implements the relevant method/property lookup/invoke.
         /// </returns>
         public static Expression GetTargetForGetMember(StandardRule rule, ActionBinder binder, MemberAction action) {
-            Variable comObject = rule.GetTemporary(typeof(ComObject), "comObject");
+            VariableExpression comObject = rule.GetTemporary(typeof(ComObject), "comObject");
             List<Expression> expressions = new List<Expression>();
 
             expressions.Add(
@@ -181,7 +181,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="action">The set member that is to be performed.</param>
         /// <returns>This function returns an AST statement that implements the required property set invocation.</returns>
         public static Expression GetTargetForSetMember(StandardRule rule, ActionBinder binder, MemberAction action) {
-            Variable comObject = rule.GetTemporary(typeof(ComObject), "comObject");
+            VariableExpression comObject = rule.GetTemporary(typeof(ComObject), "comObject");
             List<Expression> expressions = new List<Expression>();
 
             expressions.Add(
@@ -220,7 +220,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// <param name="action">The do operation that is to be performed.</param>
         /// <returns>This function returns an AST statement that implements the indexed operation "propertyget".</returns>
         public static Expression GetTargetForDoOperation(StandardRule rule, ActionBinder binder, DoOperationAction action) {
-            Variable comObject = rule.GetTemporary(typeof(ComObject), "comObject");
+            VariableExpression comObject = rule.GetTemporary(typeof(ComObject), "comObject");
             List<Expression> expressions = new List<Expression>();
 
             expressions.Add(

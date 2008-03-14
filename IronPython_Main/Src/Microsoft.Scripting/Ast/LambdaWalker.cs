@@ -23,11 +23,7 @@ namespace Microsoft.Scripting.Ast {
             // Do not recurse into nested lambda
             return false;
         }
-        protected internal override bool Walk(CodeBlockExpression node) {
-            // Do not recurse into nested code block expression
-            return false;
-        }
-        protected internal override bool Walk(GeneratorCodeBlock node) {
+        protected internal override bool Walk(GeneratorLambdaExpression node) {
             // Do not recurse into nested generator code block
             return false;
         }

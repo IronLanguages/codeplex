@@ -88,37 +88,9 @@ namespace Microsoft.Scripting.Generation {
             EmitSet(cg);
         }
 
-        public virtual void EmitDelete(LambdaCompiler cg, SymbolId name, bool check) {
+        public virtual void EmitDelete(LambdaCompiler cg, SymbolId name) {
             Contract.RequiresNotNull(cg, "cg");
-
-            // First check that the Name exists. Otherwise, deleting it
-            // should cause a NameError
-            if (check /*&& Options.CheckInitialized*/) {
-                EmitGet(cg);
-                EmitCheck(cg, name);
-                cg.Emit(OpCodes.Pop);
-            }
-
             EmitSetUninitialized(cg);
-        }
-
-        public virtual void EmitCheck(LambdaCompiler cg, SymbolId name) {
-            Contract.RequiresNotNull(cg, "cg");
-
-            Label endCheck = cg.DefineLabel();
-            cg.Emit(OpCodes.Dup);
-            cg.EmitUninitialized();
-            cg.Emit(OpCodes.Bne_Un_S, endCheck);
-            if (_local) {
-                cg.EmitSymbolId(name);
-                cg.EmitCall(typeof(RuntimeHelpers), "ThrowUnboundLocalError");
-            } else {
-                cg.Emit(OpCodes.Pop);
-                cg.EmitCodeContext();
-                cg.EmitSymbolId(name);
-                cg.EmitCall(typeof(RuntimeHelpers), "LookupName");
-            }
-            cg.MarkLabel(endCheck);
         }
 
         public abstract Type Type { get; }

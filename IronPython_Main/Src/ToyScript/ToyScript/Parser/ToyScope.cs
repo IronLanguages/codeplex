@@ -26,7 +26,7 @@ namespace ToyScript.Parser {
     class ToyScope {
         private ToyScope _parent;
         private MSAst.LambdaBuilder _block;
-        private Dictionary<string, MSAst.Variable> _variables = new Dictionary<string, MSAst.Variable>();
+        private Dictionary<string, MSAst.VariableExpression> _variables = new Dictionary<string, MSAst.VariableExpression>();
 
         public ToyScope(string name, ToyScope parent) {
             _block = MSAst.Ast.Lambda(name ?? "<toyblock>", typeof(object));
@@ -49,18 +49,18 @@ namespace ToyScript.Parser {
             }
         }
 
-        public MSAst.Variable CreateParameter(string name) {
-            MSAst.Variable variable = _block.CreateParameter(SymbolTable.StringToId(name), typeof(object));
+        public MSAst.VariableExpression CreateParameter(string name) {
+            MSAst.VariableExpression variable = _block.CreateParameter(SymbolTable.StringToId(name), typeof(object));
             _variables[name] = variable;
             return variable;
         }
 
-        public MSAst.Variable GetOrMakeLocal(string name) {
+        public MSAst.VariableExpression GetOrMakeLocal(string name) {
             return GetOrMakeLocal(name, typeof(object));
         }
 
-        public MSAst.Variable GetOrMakeLocal(string name, Type type) {
-            MSAst.Variable variable;
+        public MSAst.VariableExpression GetOrMakeLocal(string name, Type type) {
+            MSAst.VariableExpression variable;
             if (_variables.TryGetValue(name, out variable)) {
                 return variable;
             }
@@ -69,8 +69,8 @@ namespace ToyScript.Parser {
             return variable;
         }
 
-        public MSAst.Variable LookupName(string name) {
-            MSAst.Variable var;
+        public MSAst.VariableExpression LookupName(string name) {
+            MSAst.VariableExpression var;
             if (_variables.TryGetValue(name, out var)) {
                 return var;
             }
@@ -82,8 +82,13 @@ namespace ToyScript.Parser {
             }
         }
 
-        public MSAst.Variable CreateTemporaryVariable(string name, Type type) {
+        public MSAst.VariableExpression CreateTemporaryVariable(string name, Type type) {
             return _block.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
+        }
+
+        public MSAst.LambdaExpression FinishScope(MSAst.Expression body, Type lambdaType) {
+            _block.Body = body;
+            return _block.MakeLambda(lambdaType);
         }
 
         public MSAst.LambdaExpression FinishScope(MSAst.Expression body) {

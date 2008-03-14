@@ -75,12 +75,12 @@ namespace Microsoft.Scripting.Ast {
         private YieldLabelBuilder() {
         }
 
-        internal static void BuildYieldTargets(GeneratorCodeBlock gcb, LambdaInfo lambdaInfo) {
+        internal static void BuildYieldTargets(GeneratorLambdaExpression gle, LambdaInfo li) {
             YieldLabelBuilder ylb = new YieldLabelBuilder();
-            ylb.WalkNode(gcb.Body);
+            ylb.WalkNode(gle.Body);
 
-            // Populate results into the CodeBlockInfo
-            lambdaInfo.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
+            // Populate results into the LambdaInfo
+            li.PopulateGeneratorInfo(ylb._tryInfos, ylb._yieldTargets, ylb._topTargets, ylb._temps);
         }
 
         #region AstWalker method overloads

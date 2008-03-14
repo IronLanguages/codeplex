@@ -181,7 +181,7 @@ namespace IronPython.Runtime.Operations {
 
             if (pt.TryResolveSlot(context, Symbols.Length, out pts)) {
                 StandardRule<T> rule = new StandardRule<T>();
-                Variable tmp = rule.GetTemporary(typeof(object), "func");
+                VariableExpression tmp = rule.GetTemporary(typeof(object), "func");
 
                 rule.Target =
                     Ast.Block(
@@ -206,7 +206,7 @@ namespace IronPython.Runtime.Operations {
 
             if (pt.TryResolveSlot(context, symbolId, out pts) && !IsBuiltinConversion(context, pts, symbolId, pt)) {                
                 StandardRule<T> rule = new StandardRule<T>();
-                Variable tmp = rule.GetTemporary(typeof(object), "func");
+                VariableExpression tmp = rule.GetTemporary(typeof(object), "func");
 
                 Expression callExpr = Ast.Call(
                     PythonOps.GetConversionHelper(returner, convertToAction.ResultKind),
@@ -265,7 +265,7 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        private static Expression AddExtensibleSelfCheck<T>(object self, Type toType, StandardRule<T> rule, Variable tmp, Expression callExpr) {
+        private static Expression AddExtensibleSelfCheck<T>(object self, Type toType, StandardRule<T> rule, VariableExpression tmp, Expression callExpr) {
             callExpr = Ast.Comma(
                 Ast.Assign(tmp, callExpr),
                 Ast.Condition(
@@ -302,7 +302,7 @@ namespace IronPython.Runtime.Operations {
             );
 
             if (sdo.PythonType.TryResolveSlot(context, Symbols.Call, out callSlot)) {
-                Variable tmp = rule.GetTemporary(typeof(object), "callSlot");
+                VariableExpression tmp = rule.GetTemporary(typeof(object), "callSlot");
                 Expression[] callArgs = ArrayUtils.MakeArray(rule.Parameters);
                 callArgs[0] = Ast.Read(tmp);
 
@@ -342,7 +342,7 @@ namespace IronPython.Runtime.Operations {
             PythonTypeSlot dts;
             IPythonObject sdo = (IPythonObject)args[0];
             StandardRule<T> rule = new StandardRule<T>();
-            Variable tmp = rule.GetTemporary(typeof(object), "lookupRes");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "lookupRes");
 
             if (TryGetGetAttribute(context, sdo, out dts)) {
                 Debug.Assert(sdo.PythonType.HasGetAttribute);
@@ -439,7 +439,7 @@ namespace IronPython.Runtime.Operations {
             return rule;
         }
 
-        private static void MakeGetAttributeRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Variable tmp) {
+        private static void MakeGetAttributeRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, VariableExpression tmp) {
                 // type defines read it and call it (we read it so that we can
                 // share this rule amongst multiple types - this trades off a little
                 // perf for the __getattribute__ case while reducing the number of
@@ -455,7 +455,7 @@ namespace IronPython.Runtime.Operations {
                     )
                 );
 
-                Variable slotTmp = rule.GetTemporary(typeof(PythonTypeSlot), "slotTmp");
+                VariableExpression slotTmp = rule.GetTemporary(typeof(PythonTypeSlot), "slotTmp");
                 Expression body = Ast.If(
                             Ast.Call(
                                 typeof(PythonOps).GetMethod("TryResolveTypeSlot"),
@@ -477,7 +477,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static Expression MakeCustomMembersGetBody<T>(CodeContext context, GetMemberAction action, string typeName, StandardRule<T> rule) {
-            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
 
             return Ast.IfThenElse(
                 Ast.Call(
@@ -493,7 +493,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static Expression MakeCustomMembersSetBody<T>(CodeContext context, SetMemberAction action, string typeName, StandardRule<T> rule) {
-            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
 
             return rule.MakeReturn(context.LanguageContext.Binder, 
                 Ast.Comma(
@@ -510,7 +510,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         internal static Expression MakeCustomMembersDeleteBody<T>(CodeContext context, DeleteMemberAction action, string typeName, StandardRule<T> rule) {
-            Variable tmp = rule.GetTemporary(typeof(object), "custmemres");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "custmemres");
 
             return rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
@@ -595,7 +595,7 @@ namespace IronPython.Runtime.Operations {
         /// are present.  We will call this twice to produce a search before a slot and after
         /// a slot.
         /// </summary>
-        private static Expression MakeOldStyleAccess<T>(CodeContext context, StandardRule<T> rule, SymbolId name, IPythonObject sdo, Expression body, Variable tmp) {
+        private static Expression MakeOldStyleAccess<T>(CodeContext context, StandardRule<T> rule, SymbolId name, IPythonObject sdo, Expression body, VariableExpression tmp) {
             return Ast.Block(
                 body,
                 Ast.If(
@@ -611,12 +611,12 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        private static Expression MakeGetAttrRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Expression body, Variable tmp, PythonTypeSlot getattr) {
+        private static Expression MakeGetAttrRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Expression body, VariableExpression tmp, PythonTypeSlot getattr) {
             Expression slot = Ast.WeakConstant(getattr);
             return MakeGetAttrRule(context, action, rule, body, tmp, slot);
         }
 
-        private static Expression MakeGetAttrRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Expression body, Variable tmp, Expression getattr) {
+        private static Expression MakeGetAttrRule<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Expression body, VariableExpression tmp, Expression getattr) {
             body = Ast.Block(
                 body,
                 Ast.If(
@@ -642,7 +642,7 @@ namespace IronPython.Runtime.Operations {
             return body;
         }
 
-        private static Expression MakeGetAttrCall<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Variable tmp) {
+        private static Expression MakeGetAttrCall<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, VariableExpression tmp) {
             Expression ret = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Action.Call(
                     typeof(object),
@@ -761,7 +761,7 @@ namespace IronPython.Runtime.Operations {
                 );
         }
 
-        private static Expression MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, PythonTypeSlot dts, Expression body, Variable tmp, Type userType) {
+        private static Expression MakeSlotAccess<T>(CodeContext context, StandardRule<T> rule, PythonTypeSlot dts, Expression body, VariableExpression tmp, Type userType) {
             ReflectedSlotProperty rsp = dts as ReflectedSlotProperty;
             if (rsp != null) {                
                 // we need to fall back to __getattr__ if the value is not defined, so call it and check the result.
@@ -847,7 +847,7 @@ namespace IronPython.Runtime.Operations {
             );
         }
 
-        private static IfStatementBuilder MakeDictionaryAccess<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, Variable tmp) {
+        private static IfStatementBuilder MakeDictionaryAccess<T>(CodeContext context, GetMemberAction action, StandardRule<T> rule, VariableExpression tmp) {
             return Ast.If(
                 Ast.AndAlso(
                     Ast.NotEqual(
@@ -1011,7 +1011,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static void MakeSlotsSetTarget<T>(CodeContext context, StandardRule<T> rule, ReflectedSlotProperty rsp, Expression value) {
-            Variable tmp = rule.GetTemporary(typeof(object), "res");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "res");
 
             // type has __slots__ defined for this member, call the setter directly
             rule.Target = rule.MakeReturn(
@@ -1051,7 +1051,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static void MakeSetAttrTarget<T>(CodeContext context, SetMemberAction action, IPythonObject sdo, StandardRule<T> rule, PythonTypeSlot dts) {
-            Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __setattr__
             rule.Target = 
                 Ast.IfThenElse(
@@ -1077,7 +1077,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static void MakeDeleteAttrTarget<T>(CodeContext context, DeleteMemberAction action, IPythonObject sdo, StandardRule<T> rule, PythonTypeSlot dts) {
-            Variable tmp = rule.GetTemporary(typeof(object), "boundVal");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "boundVal");
             // call __delattr__
             rule.Target =
                 Ast.IfThenElse(

@@ -100,7 +100,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Expression MakeIndexOperationTarget() {
 
             List<Expression> _expressions = new List<Expression>();
-            Variable _dispIndexer = _rule.GetTemporary(typeof(object), "dispCallable");
+            VariableExpression _dispIndexer = _rule.GetTemporary(typeof(object), "dispCallable");
 
             MethodInfo _indexMethod =
                 Action.Operation == Operators.GetItem ?

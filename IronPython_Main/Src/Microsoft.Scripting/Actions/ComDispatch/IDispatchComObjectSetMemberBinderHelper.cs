@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         private Expression MakeSetMemberTarget() {
 
             Expression fallback = MakeSetMemberTargetForLanguageExtension();
-            Variable exception = Rule.GetTemporary(typeof(Exception), "exception");
+            VariableExpression exception = Rule.GetTemporary(typeof(Exception), "exception");
 
             AddToBody(
                 Ast.Block(

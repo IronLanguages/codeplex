@@ -462,7 +462,7 @@ namespace IronPython.Runtime.Calls {
                 if (_function != null) {
                     return _function.MakeExpression(rule, args);
                 } else {
-                    Variable tmp = rule.GetTemporary(typeof(object), "slotVal");
+                    VariableExpression tmp = rule.GetTemporary(typeof(object), "slotVal");
 
                     return Ast.Comma(
                         PythonBinderHelper.MakeTryGetTypeMember<T>(
@@ -527,7 +527,7 @@ namespace IronPython.Runtime.Calls {
         private bool MakeOneCompareGeneric(SlotOrFunction target, StandardRule<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Function<Expression, StandardRule<T>, bool, Expression> returner) {
             if (target == null || !target.Success) return true;
 
-            Variable tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
+            VariableExpression tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
             Expression call = target.MakeCall(rule, CheckTypesAndReverse(rule, reverse, types));
             Expression assign = Ast.Assign(tmp, call);
             Expression ret = returner(Ast.ReadDefined(tmp), rule, reverse);
@@ -766,8 +766,8 @@ namespace IronPython.Runtime.Calls {
         /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
         /// </summary>
         private Expression DoCoerce(StandardRule<T> rule, Operators op, PythonType[] types, bool reverse, Function<Expression, Expression> returnTransform) {
-            Variable coerceResult = rule.GetTemporary(typeof(object), "coerceResult");
-            Variable coerceTuple = rule.GetTemporary(typeof(PythonTuple), "coerceTuple");
+            VariableExpression coerceResult = rule.GetTemporary(typeof(object), "coerceResult");
+            VariableExpression coerceTuple = rule.GetTemporary(typeof(PythonTuple), "coerceTuple");
 
             if (!_testCoerceRecursionCheck) {
                 // during coercion we need to enforce recursion limits if
@@ -844,14 +844,14 @@ namespace IronPython.Runtime.Calls {
             return Ast.Empty();
         }
 
-        private static MethodCallExpression CoerceTwo(Variable coerceTuple) {
+        private static MethodCallExpression CoerceTwo(VariableExpression coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultTwo"),
                 Ast.Read(coerceTuple)
             );
         }
 
-        private static MethodCallExpression CoerceOne(Variable coerceTuple) {
+        private static MethodCallExpression CoerceOne(VariableExpression coerceTuple) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("GetCoerceResultOne"),
                 Ast.Read(coerceTuple)
@@ -1150,7 +1150,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             public override void CompleteRuleTarget(StandardRule<T> rule, Expression[] args, Function<bool> customFailure) {
-                Variable callable = rule.GetTemporary(typeof(object), "slot");
+                VariableExpression callable = rule.GetTemporary(typeof(object), "slot");
 
                 Expression retVal = Ast.Action.Call(
                     typeof(object),
@@ -1216,7 +1216,7 @@ namespace IronPython.Runtime.Calls {
         /// Derived IndexBuilder for calling __*slice__ methods
         /// </summary>
         class SliceBuilder : IndexBuilder {
-            private Variable _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
+            private VariableExpression _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
 
             public SliceBuilder(StandardRule<T> rule, PythonType[] types, Callable callable)
                 : base(rule, types, callable) {
@@ -1424,7 +1424,7 @@ namespace IronPython.Runtime.Calls {
                 PythonTypeSlot pts;
                 if (types[i].TryResolveSlot(Context, Symbols.Index, out pts)) {
                     foundIndexable = true;
-                    Variable tmp = ret.GetTemporary(typeof(object), "slotVal");
+                    VariableExpression tmp = ret.GetTemporary(typeof(object), "slotVal");
                     indexArgs[i] = Ast.Comma(
                         PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.RuntimeConstant(types[i])),
                         Ast.Action.Call(typeof(int), Ast.Read(tmp))
@@ -1574,7 +1574,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, StandardRule<T> block, Expression self, params Expression[] args) {
-            Variable callable = block.GetTemporary(typeof(object), "slot");
+            VariableExpression callable = block.GetTemporary(typeof(object), "slot");
             return Ast.IfThen(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("SlotTryGetValue"),
@@ -1601,7 +1601,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         private Expression CheckNotImplemented(StandardRule<T> block, Expression call) {
-            Variable tmp = block.GetTemporary(call.Type, "tmp");
+            VariableExpression tmp = block.GetTemporary(call.Type, "tmp");
 
             Expression notImplCheck = Ast.IfThen(
                 Ast.NotEqual(

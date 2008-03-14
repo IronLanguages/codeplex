@@ -491,7 +491,7 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 // if the conversion to T succeeds then produce the nullable<T>, otherwise return default(retType)
                 Expression conversion = Ast.Action.ConvertTo(valueType, Action.ResultKind, _rule.Parameters[0], typeof(object));
-                Variable tmp = _rule.GetTemporary(typeof(object), "tmp");
+                VariableExpression tmp = _rule.GetTemporary(typeof(object), "tmp");
                 _rule.Target =
                     Ast.If(
                         Ast.NotEqual(

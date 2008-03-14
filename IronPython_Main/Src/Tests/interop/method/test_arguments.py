@@ -16,26 +16,16 @@
 from lib.assert_util import *
 skiptest("silverlight")
 
-if is_cli:
-    add_clr_assemblies("methodargs", "typesamples")
+add_clr_assemblies("methodargs", "typesamples")
 
-    from Merlin.Testing import *
-    from Merlin.Testing.Call import *
-    from Merlin.Testing.TypeSample import *
-    
-    from clr import StrongBox
-    box_int = StrongBox[int]
+from Merlin.Testing import *
+from Merlin.Testing.Call import *
+from Merlin.Testing.TypeSample import *
 
-    o = VariousParameters()
-    
-else:
-    def M100(): pass
-    def M200(arg): pass
-    def M201(arg=20): pass
-    def M202(*arg): pass
-    
-    def M300(x, y): pass
-    def M350(x, *y): pass
+from clr import StrongBox
+box_int = StrongBox[int]
+
+o = VariousParameters()
 
 def test_0_1_args():
 
@@ -64,13 +54,13 @@ def test_0_1_args():
     f(arg = 1, **{})
     f(**{"arg" : 1})
     f(*(), **{"arg" : 1})
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got multiple values for keyword argument 'arg'", lambda: f(1, arg = 1))
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got multiple values for keyword argument 'arg'", lambda: f(arg = 1, *(1,)))
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(1, arg = 1))
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(arg = 1, *(1,)))
     AssertErrorWithMessage(TypeError, "M200() got an unexpected keyword argument 'other'", lambda: f(other = 1))
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got an unexpected keyword argument 'other'", lambda: f(1, other = 1))
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got an unexpected keyword argument 'other'", lambda: f(other = 1, arg = 2))
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got an unexpected keyword argument 'other'", lambda: f(arg = 1, other = 2))
-    AssertErrorWithMessages(TypeError, "M200() takes exactly 1 argument (2 given)", "M200() got multiple values for keyword argument 'arg'", lambda: f(arg = 1, **{'arg' : 2})) # msg
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(1, other = 1))
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(other = 1, arg = 2))
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(arg = 1, other = 2))
+    AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(arg = 1, **{'arg' : 2})) # msg
 
     # public void M201([DefaultParameterValue(20)] int arg) { Flag.Reset(); Flag.Set(arg); }
     f = is_cli and o.M201 or M201
@@ -87,13 +77,13 @@ def test_0_1_args():
     f(arg = 1, **{})
     f(**{"arg" : 1})
     f(*(), **{"arg" : 1})
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got multiple values for keyword argument 'arg'", lambda: f(1, arg = 1))# msg
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got multiple values for keyword argument 'arg'", lambda: f(arg = 1, *(1,)))# msg
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(1, arg = 1))# msg
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(arg = 1, *(1,)))# msg
     AssertErrorWithMessage(TypeError, "M201() got an unexpected keyword argument 'other'", lambda: f(other = 1))
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got an unexpected keyword argument 'other'", lambda: f(1, other = 1))
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got an unexpected keyword argument 'other'", lambda: f(**{ "other" : 1, "arg" : 2}))
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got an unexpected keyword argument 'other'", lambda: f(arg = 1, other = 2))
-    AssertErrorWithMessages(TypeError, "M201() takes at most 1 argument (2 given)", "M201() got an unexpected keyword argument 'arg1'", lambda: f(arg1 = 1, other = 2))
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(1, other = 1))
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(**{ "other" : 1, "arg" : 2}))
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(arg = 1, other = 2))
+    AssertErrorWithMessage(TypeError, "M201() takes at most 1 argument (2 given)", lambda: f(arg1 = 1, other = 2))
     AssertErrorWithMessage(TypeError, "M201() got an unexpected keyword argument 'arg1'", lambda: f(**{ "arg1" : 1}))
 
     # public void M202(params int[] arg) { Flag.Reset(); Flag.Set(arg.Length); }
@@ -106,7 +96,7 @@ def test_0_1_args():
     f(1, *(2, 3))
     f(*(1, 2, 3, 4))
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(arg = 1))# msg
-    AssertErrorWithMessages(TypeError, "M202() takes at least 1 argument (2 given)", "M202() got an unexpected keyword argument 'arg'", lambda: f(1, arg = 2))# msg
+    AssertErrorWithMessage(TypeError, "M202() takes at least 1 argument (2 given)", lambda: f(1, arg = 2))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(**{'arg': 3}))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'other'", lambda: f(**{'other': 4}))
 
@@ -173,13 +163,13 @@ def test_two_args():
     f(*(3, 4))
     AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(1, *(2, 3)))
     
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (1 given)", 'M300() takes exactly 2 non-keyword arguments (0 given)', lambda: f(y = 1))
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (1 given)", lambda: f(y = 1))
     f(y = 2, x = 1)
     AssertErrorWithMessage(TypeError, "M300() got an unexpected keyword argument 'x2'", lambda: f(y = 1, x2 = 2))
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (3 given)", "M300() got an unexpected keyword argument 'z'", lambda: f(x = 1, y = 1, z = 3))
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(x = 1, y = 1, z = 3))
     #AssertError(SyntaxError, eval, "f(x=1, y=2, y=3)")
     
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (1 given)", 'M300() takes exactly 2 non-keyword arguments (1 given)', lambda: f(**{"x":1}))  # msg
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (1 given)", lambda: f(**{"x":1}))  # msg
     f(**{"x":1, "y":2})
     
     # ...
@@ -188,17 +178,17 @@ def test_two_args():
     # positional/keyword
     f(1, y = 2)
     AssertErrorWithMessage(TypeError, "M300() got multiple values for keyword argument 'x'", lambda: f(2, x = 1))    # msg    
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (3 given)", "M300() got multiple values for keyword argument 'x'", lambda: f(1, y = 1, x = 2)) # msg
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(1, y = 1, x = 2)) # msg
     
     # positional / **
     f(1, **{'y': 2})
     AssertErrorWithMessage(TypeError, "M300() got multiple values for keyword argument 'x'", lambda: f(2, ** {'x':1}))
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (3 given)", "M300() got multiple values for keyword argument 'x'", lambda: f(1, ** {'y':1, 'x':2})) 
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(1, ** {'y':1, 'x':2})) 
     
     # keyword / *
     f(y = 2, *(1,))
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (3 given)", "M300() got multiple values for keyword argument 'y'", lambda: f(y = 2, *(1,2)))
-    AssertErrorWithMessages(TypeError, "M300() takes exactly 2 arguments (3 given)", "M300() got multiple values for keyword argument 'x'", lambda: f(y = 2, x = 1, *(3,)))
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(y = 2, *(1,2)))
+    AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (3 given)", lambda: f(y = 2, x = 1, *(3,)))
     
     # keyword / **
     f(y = 2, **{'x' : 1})

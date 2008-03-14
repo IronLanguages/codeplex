@@ -70,11 +70,11 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
             // 1. Evaluate the expression and assign the value to the temp.
-            MSAst.BoundExpression right_temp = ag.MakeTempExpression("unpacking");
+            MSAst.VariableExpression right_temp = ag.MakeTempExpression("unpacking");
 
             // 2. Add the assignment "right_temp = right" into the suite/block
             statements.Add(
-                AstGenerator.MakeAssignment(right_temp.Variable, right)
+                AstGenerator.MakeAssignment(right_temp, right)
                 );
 
             // 3. Call GetEnumeratorValues on the right side (stored in temp)
@@ -86,12 +86,12 @@ namespace IronPython.Compiler.Ast {
             );
 
             // 4. Create temporary variable for the array
-            MSAst.BoundExpression array_temp = ag.MakeTempExpression("array", typeof(object[]));
+            MSAst.VariableExpression array_temp = ag.MakeTempExpression("array", typeof(object[]));
 
             // 5. Assign the value of the method call (mce) into the array temp
             // And add the assignment "array_temp = Ops.GetEnumeratorValues(...)" into the block
             statements.Add(
-                AstGenerator.MakeAssignment(array_temp.Variable, enumeratorValues, rightSpan)
+                AstGenerator.MakeAssignment(array_temp, enumeratorValues, rightSpan)
                 );
 
             List<MSAst.Expression> sets = new List<MSAst.Expression>();            

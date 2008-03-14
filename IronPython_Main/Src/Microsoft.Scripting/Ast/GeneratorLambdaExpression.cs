@@ -34,7 +34,7 @@ namespace Microsoft.Scripting.Ast {
     /// The inner function of the generator will have the signature:
     /// bool GetNext(GeneratorType, out object value);
     /// </summary>
-    public sealed class GeneratorCodeBlock : LambdaExpression {
+    public sealed class GeneratorLambdaExpression : LambdaExpression {
         /// <summary>
         /// The type of the generator instance.
         /// The LambdaExpression will emit code to create a new instance of this type, using constructor:
@@ -46,8 +46,8 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Type _next;
 
-        internal GeneratorCodeBlock(SourceSpan span, string name, Type generator, Type next, Expression body, ReadOnlyCollection<Variable> parameters, List<Variable> variables)
-            : base(span, name, typeof(object), body, parameters, variables, false, true, false, false) {
+        internal GeneratorLambdaExpression(SourceSpan span, Type lambdaType, string name, Type generator, Type next, Expression body, ReadOnlyCollection<VariableExpression> parameters, List<VariableExpression> variables)
+            : base(AstNodeType.Generator, span, lambdaType, name, typeof(object), body, parameters, variables, false, true, false, false) {
             _generator = generator;
             _next = next;
         }
@@ -62,8 +62,9 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static LambdaExpression Generator(SourceSpan span, string name, Type generator, Type next, Expression body, Variable[] parameters, Variable[] variables) {
+        public static LambdaExpression Generator(SourceSpan span, Type delegateType, string name, Type generator, Type next, Expression body, VariableExpression[] parameters, VariableExpression[] variables) {
             Contract.RequiresNotNull(name, "name");
+            Contract.RequiresNotNull(delegateType, "delegateType");
             Contract.RequiresNotNull(generator, "generator");
             Contract.RequiresNotNull(next, "next");
             Contract.RequiresNotNull(body, "body");
@@ -71,15 +72,14 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNullItems(parameters, "parameters");
             Contract.RequiresNotNullItems(variables, "variables");
 
-            LambdaExpression block = new GeneratorCodeBlock(span, name, generator, next, body,
+
+            LambdaExpression lambda = new GeneratorLambdaExpression(span, delegateType, name, generator, next, body,
                                                      CollectionUtils.ToReadOnlyCollection(parameters),
-                                                     new List<Variable>(variables));
+                                                     new List<VariableExpression>(variables));
 
-            // TODO: Remove when variable no longer has block.
-            SetBlock(parameters, block);
-            SetBlock(variables, block);
+            ValidateDelegateType(lambda, delegateType);
 
-            return block;
+            return lambda;
         }
     }
 }

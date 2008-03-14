@@ -14,8 +14,9 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Ast {
+namespace Microsoft.Scripting.Interpreter {
     static partial class Interpreter {
 
         private delegate object InterpretDelegate(CodeContext context, Expression expression);
@@ -44,7 +45,7 @@ namespace Microsoft.Scripting.Ast {
             InterpretBinaryExpression,                                  //    GreaterThan
             InterpretBinaryExpression,                                  //    GreaterThanOrEqual
                                                                         // ** Invoke
-                                                                        // ** Lambda
+            InterpretLambdaExpression,                                  //    Lambda
             InterpretBinaryExpression,                                  //    LeftShift
             InterpretBinaryExpression,                                  //    LessThan
             InterpretBinaryExpression,                                  //    LessThanOrEqual
@@ -76,11 +77,10 @@ namespace Microsoft.Scripting.Ast {
             InterpretArrayIndexAssignment,                              //    ArrayIndexAssignment
             InterpretBlock,                                             //    Block
             InterpretBoundAssignment,                                   //    BoundAssignment
-            InterpretBoundExpression,                                   //    BoundExpression
             InterpretBreakStatement,                                    //    BreakStatement
-            InterpretCodeBlockExpression,                               //    CodeBlockExpression
             InterpretIntrinsicExpression,                               //    CodeContextExpression
             InterpretIntrinsicExpression,                               //    GeneratorIntrinsic
+            InterpretGeneratorLambdaExpression,                         //    Generator
             InterpretContinueStatement,                                 //    ContinueStatement
             InterpretDeleteStatement,                                   //    DeleteStatement
             InterpretDeleteUnboundExpression,                           //    DeleteUnboundExpression
@@ -88,15 +88,19 @@ namespace Microsoft.Scripting.Ast {
             InterpretEmptyStatement,                                    //    EmptyStatement
             InterpretIntrinsicExpression,                               //    EnvironmentExpression
             InterpretExpressionStatement,                               //    ExpressionStatement
+            InterpretVariableExpression,                                //    GlobalVariable
             InterpretLabeledStatement,                                  //    LabeledStatement
+            InterpretVariableExpression,                                //    LocalVariable
             InterpretLoopStatement,                                     //    LoopStatement
             InterpretMemberAssignment,                                  //    MemberAssignment
             InterpretMemberExpression,                                  //    MemberExpression
             InterpretNewArrayExpression,                                //    NewArrayExpression
             InterpretUnaryExpression,                                   //    OnesComplement
+            InterpretVariableExpression,                                //    Parameter
             InterpretReturnStatement,                                   //    ReturnStatement
             InterpretScopeStatement,                                    //    ScopeStatement
             InterpretSwitchStatement,                                   //    SwitchStatement
+            InterpretVariableExpression,                                //    TemporaryVariable
             InterpretThrowStatement,                                    //    ThrowStatement
             InterpretTryStatement,                                      //    TryStatement
             InterpretUnboundAssignment,                                 //    UnboundAssignment

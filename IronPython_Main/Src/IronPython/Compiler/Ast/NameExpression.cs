@@ -25,6 +25,7 @@ namespace IronPython.Compiler.Ast {
     public class NameExpression : Expression {
         private readonly SymbolId _name;
         private PythonReference _reference;
+        private bool _assigned;                  // definitely assigned
 
         public NameExpression(SymbolId name) {
             _name = name;
@@ -39,30 +40,44 @@ namespace IronPython.Compiler.Ast {
             set { _reference = value; }
         }
 
+        internal bool Assigned {
+            get { return _assigned; }
+            set { _assigned = value; }
+        }
+
         public override string ToString() {
             return base.ToString() + ":" + SymbolTable.IdToString(_name);
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.Variable variable;
+            MSAst.VariableExpression variable;
+
+            MSAst.Expression read;
             if ((variable = _reference.Variable) != null) {
-                return Ast.Read(variable);
+                read = Ast.Read(variable);
             } else {
-                return Ast.Read(_name);
+                read = Ast.Read(_name);
             }
+
+            if (!_assigned) {
+                read = Ast.Call(
+                    AstGenerator.GetHelperMethod("CheckUninitialized"),
+                    read,
+                    Ast.Constant(_name)
+                );
+            }
+
+            return read;
         }
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
-            MSAst.Variable variable = _reference.Variable;
+            MSAst.VariableExpression variable = _reference.Variable;
             MSAst.Expression assignment;
 
+            Type vt = variable != null ? variable.Type : typeof(object);
+
             if (op != Operators.None) {
-                right = Ast.Action.Operator(
-                    op,
-                    variable != null ? variable.Type : typeof(object),
-                    variable != null ? (MSAst.Expression)Ast.Read(variable) : (MSAst.Expression)Ast.Read(_name),
-                    right
-                );
+                right = Ast.Action.Operator(op, vt, Transform(ag, vt),  right);
             }
 
             if (variable != null) {
@@ -78,9 +93,16 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            MSAst.Variable variable;
+            MSAst.VariableExpression variable;
             if ((variable = _reference.Variable) != null) {
-                return Ast.Delete(Span, variable);
+                MSAst.Expression del = Ast.Delete(Span, variable);
+                if (!_assigned) {
+                    del = Ast.Block(
+                        Transform(ag, variable.Type),
+                        del
+                    );
+                }
+                return del;
             } else {
                 return Ast.Statement(Span, Ast.Delete(_name));
             }

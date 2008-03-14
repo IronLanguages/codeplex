@@ -34,9 +34,9 @@ namespace Microsoft.Scripting.Runtime {
         /// <summary> can be any dictionary or IMapping. </summary>        
         private readonly Scope _scope;
         private readonly LanguageContext _languageContext;
-        private ScopeExtension _moduleContext; // internally mutable, optional (shouldn't be used when not set)
+        private readonly ScopeExtension _moduleContext; // internally mutable, optional (shouldn't be used when not set)
         private LocalScope _localScope;
-        private CodeContext _parent; // TODO: Ruby hack, move to local scope
+        private readonly CodeContext _parent; // TODO: Ruby hack, move to local scope
 
         public LocalScope LocalScope {
             get { return _localScope; }

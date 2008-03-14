@@ -33,7 +33,7 @@ namespace IronPython.Compiler.Ast {
 
     internal class AstGenerator {
         private readonly MSAst.LambdaBuilder _block;
-        private List<MSAst.Variable> _temps;
+        private List<MSAst.VariableExpression> _temps;
         private readonly CompilerContext _context;
         private readonly bool _print;
         private int _loopDepth = 0;
@@ -108,9 +108,9 @@ namespace IronPython.Compiler.Ast {
             _context.Errors.Add(_context.SourceUnit, message, span, -1, Severity.Error);
         }
 
-        public MSAst.Variable MakeTemp(SymbolId name, Type type) {
+        public MSAst.VariableExpression MakeTemp(SymbolId name, Type type) {
             if (_temps != null) {
-                foreach (MSAst.Variable temp in _temps) {
+                foreach (MSAst.VariableExpression temp in _temps) {
                     if (temp.Type == type) {
                         _temps.Remove(temp);
                         return temp;
@@ -121,34 +121,30 @@ namespace IronPython.Compiler.Ast {
         }
 
 
-        public MSAst.BoundExpression MakeTempExpression(string name) {
+        public MSAst.VariableExpression MakeTempExpression(string name) {
             return MakeTempExpression(name, typeof(object));
         }
 
-        public MSAst.BoundExpression MakeTempExpression(string name, Type type) {
+        public MSAst.VariableExpression MakeTempExpression(string name, Type type) {
             return Ast.Read(MakeTemp(SymbolTable.StringToId(name), type));
         }
 
-        public void FreeTemp(MSAst.BoundExpression be) {
-            FreeTemp(be.Variable);
-        }
-
-        public void FreeTemp(MSAst.Variable temp) {
+        public void FreeTemp(MSAst.VariableExpression temp) {
             if (IsGenerator) {
                 return;
             }
 
             if (_temps == null) {
-                _temps = new List<MSAst.Variable>();
+                _temps = new List<MSAst.VariableExpression>();
             }
             _temps.Add(temp);
         }
 
-        internal static MSAst.Expression MakeAssignment(MSAst.Variable variable, MSAst.Expression right) {
+        internal static MSAst.Expression MakeAssignment(MSAst.VariableExpression variable, MSAst.Expression right) {
             return MakeAssignment(variable, right, SourceSpan.None);
         }
 
-        internal static MSAst.Expression MakeAssignment(MSAst.Variable variable, MSAst.Expression right, SourceSpan span) {
+        internal static MSAst.Expression MakeAssignment(MSAst.VariableExpression variable, MSAst.Expression right, SourceSpan span) {
             return Ast.Statement(
                 span,
                 Ast.Assign(variable, Ast.Convert(right, variable.Type))

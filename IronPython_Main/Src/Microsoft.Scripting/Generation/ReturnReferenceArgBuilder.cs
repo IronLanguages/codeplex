@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Generation {
     /// updated return value is returned as one of the resulting return values.
     /// </summary>
     class ReturnReferenceArgBuilder : SimpleArgBuilder {
-        Variable _tmp;
+        VariableExpression _tmp;
 
         public ReturnReferenceArgBuilder(int index, Type type)
             : base(index, type) {

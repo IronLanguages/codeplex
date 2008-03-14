@@ -48,7 +48,7 @@ namespace ToyScript.Parser.Ast {
             }
 
             MSAst.Expression body = _body.Generate(tg);
-            MSAst.LambdaExpression block = scope.FinishScope(body);
+            MSAst.LambdaExpression lambda = scope.FinishScope(body, typeof(ToyCallTarget));
 
             tg.PopScope();
 
@@ -58,7 +58,7 @@ namespace ToyScript.Parser.Ast {
                     typeof(ToyFunction).GetMethod("Create"),
                     Ast.Constant(_name),
                     Ast.NewArray(typeof(string[]), names),
-                    Ast.CodeBlockExpression(block, typeof(ToyCallTarget))
+                    lambda
                 )
             );
         }

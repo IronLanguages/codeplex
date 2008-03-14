@@ -34,7 +34,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             // 1. Create temp for the result
-            MSAst.BoundExpression dictionary = null;
+            MSAst.VariableExpression dictionary = null;
             dictionary = ag.MakeTempExpression("dictionary", typeof(PythonDictionary)); 
 
             // 2. Array for the comma expression parts:
@@ -45,7 +45,7 @@ namespace IronPython.Compiler.Ast {
 
             // 3. Create the dictionary by calling MakeDict(_items.Length)
             parts[0] = Ast.Assign(
-                dictionary.Variable,
+                dictionary,
                 Ast.Call(
                     AstGenerator.GetHelperMethod("MakeDict"),
                     Ast.Constant(_items.Length)
@@ -62,12 +62,12 @@ namespace IronPython.Compiler.Ast {
                 // Eval order should be:
                 //   { 2 : 1, 4 : 3, 6 :5 }
                 // This is backwards from parameter list eval, so create temporaries to swap ordering.
-                MSAst.BoundExpression key   = ag.MakeTempExpression("key", typeof(object));
-                MSAst.BoundExpression value = ag.MakeTempExpression("value", typeof(object));
+                MSAst.VariableExpression key   = ag.MakeTempExpression("key", typeof(object));
+                MSAst.VariableExpression value = ag.MakeTempExpression("value", typeof(object));
                 
                 parts[index + 1] = Ast.Comma(
-                    Ast.Assign(value.Variable, ag.TransformOrConstantNull(slice.SliceStop, typeof(object))),
-                    Ast.Assign(key.Variable, ag.TransformOrConstantNull(slice.SliceStart, typeof(object))),
+                    Ast.Assign(value, ag.TransformOrConstantNull(slice.SliceStop, typeof(object))),
+                    Ast.Assign(key, ag.TransformOrConstantNull(slice.SliceStart, typeof(object))),
                     Ast.Call(dictionary, setter, key, value)
                     );
                 ag.FreeTemp(value);

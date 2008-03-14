@@ -210,7 +210,7 @@ namespace IronPythonTest {
             // reset the same variable with integer
             scope.SetVariable(clspartName, 1);
             _pe.CreateScriptSourceFromString("if 1 != clsPart: raise AssertionError('test failed')", SourceCodeKind.Statements).Execute(scope);
-            AreEqual((int)scope.LookupVariable(clspartName), 1);
+            AreEqual((int)scope.GetVariable(clspartName), 1);
 
             ScriptSource su = _pe.CreateScriptSourceFromString("");
             AssertExceptionThrown<ArgumentNullException>(delegate() {
@@ -229,13 +229,13 @@ namespace IronPythonTest {
             scope3.SetVariable("x", 2);
 
             AreEqual(0, _pe.CreateScriptSourceFromString("x").Execute<int>(scope1));
-            AreEqual(0, (int)scope1.LookupVariable("x"));
+            AreEqual(0, (int)scope1.GetVariable("x"));
 
             AreEqual(1, _pe.CreateScriptSourceFromString("x").Execute<int>(scope2));
-            AreEqual(1, (int)scope2.LookupVariable("x"));
+            AreEqual(1, (int)scope2.GetVariable("x"));
 
             AreEqual(2, _pe.CreateScriptSourceFromString("x").Execute<int>(scope3));
-            AreEqual(2, (int)scope3.LookupVariable("x"));
+            AreEqual(2, (int)scope3.GetVariable("x"));
         }
 
         public void ScenarioEvaluateInPublishedEngineModule() {

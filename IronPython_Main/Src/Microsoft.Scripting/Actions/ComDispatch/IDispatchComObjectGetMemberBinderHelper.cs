@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         private Expression MakeGetMemberTarget() {
-            Variable dispCallable = Rule.GetTemporary(typeof(object), "dispCallable");
+            VariableExpression dispCallable = Rule.GetTemporary(typeof(object), "dispCallable");
             
             // The fallback expression permits us to get at language-specific extensions for
             // COM objects.  For example, in Python, every class supports the "__repr__" method.

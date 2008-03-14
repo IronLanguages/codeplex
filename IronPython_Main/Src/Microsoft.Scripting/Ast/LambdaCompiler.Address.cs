@@ -41,8 +41,11 @@ namespace Microsoft.Scripting.Ast {
                     AddresOf((BoundAssignment)node);
                     break;
 
-                case AstNodeType.BoundExpression:
-                    AddresOf((BoundExpression)node, type);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    AddresOf((VariableExpression)node, type);
                     break;
 
                 case AstNodeType.Block:
@@ -66,9 +69,9 @@ namespace Microsoft.Scripting.Ast {
             slot.EmitGetAddr(this);
         }
 
-        private void AddresOf(BoundExpression node, Type type) {
+        private void AddresOf(VariableExpression node, Type type) {
             if (type == node.Type) {
-                Slot slot = GetVariableSlot(node.Variable);
+                Slot slot = GetVariableSlot(node);
                 slot.EmitGetAddr(this);
             } else {
                 EmitExpressionAddress(node, type);

@@ -469,10 +469,15 @@ def test_dict_to_idict():
     
     for temp_dict in test_dicts:
         expected = temp_dict.keys() + temp_dict.values()
-        AreEqual(  list(DictConversion.ToIDictionary(temp_dict)), 
-                    expected)
-        AreEqual(  list(DictConversion.ToIDictionary(MyDict(temp_dict))), 
-                    expected)
+        expected.sort()
+        
+        to_idict = list(DictConversion.ToIDictionary(temp_dict))
+        to_idict.sort()
+        AreEqual(to_idict, expected)
+        
+        to_idict = list(DictConversion.ToIDictionary(MyDict(temp_dict)))
+        to_idict.sort()
+        AreEqual(to_idict, expected)
         
 
 #####################################################################

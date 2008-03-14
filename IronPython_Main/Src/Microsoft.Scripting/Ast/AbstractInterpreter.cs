@@ -26,8 +26,11 @@ namespace Microsoft.Scripting.Ast {
 
         internal AbstractValue Evaluate(Expression e) {
             switch (e.NodeType) {
-                case AstNodeType.BoundExpression:
-                    return AbstractEvaluate((BoundExpression)e);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    return AbstractEvaluate((VariableExpression)e);
                 default:
                     throw new NotImplementedException("Abstract interpretation for " + e.NodeType.ToString());
             }
@@ -42,8 +45,8 @@ namespace Microsoft.Scripting.Ast {
             return _context.Binder.AbstractExecute(node.Action, values);
         }
 
-        private AbstractValue AbstractEvaluate(BoundExpression node) {
-            return _context.Lookup(node.Variable);
+        private AbstractValue AbstractEvaluate(VariableExpression node) {
+            return _context.Lookup(node);
         }
 
         private AbstractValue AbstractEvaluate(ConstantExpression node) {

@@ -271,7 +271,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Used for conversions to bool
         /// </summary>
-        internal static Expression GetConvertByLengthBody(Variable tmp) {
+        internal static Expression GetConvertByLengthBody(VariableExpression tmp) {
             return Ast.NotEqual(
                 Ast.Action.ConvertTo(
                     typeof(int),
@@ -289,7 +289,7 @@ namespace IronPython.Runtime.Calls {
             return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, Variable tmp) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, VariableExpression tmp) {
             return MakeTryGetTypeMember(rule, dts, tmp,
                 rule.Parameters[0],
                 Ast.ReadProperty(
@@ -301,7 +301,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, Variable tmp, Expression instance, Expression pythonType) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
                 Ast.CodeContext(),

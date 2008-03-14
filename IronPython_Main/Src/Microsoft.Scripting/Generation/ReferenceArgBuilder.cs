@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     class ReferenceArgBuilder : SimpleArgBuilder {
         private Type _elementType;
-        private Variable _tmp;
+        private VariableExpression _tmp;
 
         public ReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {

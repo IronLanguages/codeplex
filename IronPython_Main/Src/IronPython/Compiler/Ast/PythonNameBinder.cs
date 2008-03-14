@@ -17,7 +17,6 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Scripting;
-using VariableKind = Microsoft.Scripting.Ast.VariableKind;
 
 using IronPython.Runtime;
 using IronPython.Runtime.Operations;
@@ -158,6 +157,11 @@ namespace IronPython.Compiler.Ast {
 
             // Finish the globals
             unboundAst.Bind(this);
+
+            // Run flow checker
+            foreach (ScopeStatement scope in _scopes) {
+                FlowChecker.Check(scope);
+            }
         }
 
         private void PushScope(ScopeStatement node) {
@@ -179,7 +183,7 @@ namespace IronPython.Compiler.Ast {
 
         internal PythonVariable DefineDeleted(SymbolId name) {
             PythonVariable variable = _currentScope.EnsureVariable(name);
-            variable.MarkDeleted();
+            variable.Deleted = true;
             return variable;
         }
 

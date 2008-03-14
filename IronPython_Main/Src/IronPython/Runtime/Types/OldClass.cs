@@ -551,8 +551,8 @@ namespace IronPython.Runtime.Types {
             }
 
             // TODO: If we know __init__ wasn't present we could construct the OldInstance directly.
-            Variable tmp = rule.GetTemporary(typeof(object), "init");
-            Variable instTmp = rule.GetTemporary(typeof(object), "inst");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "init");
+            VariableExpression instTmp = rule.GetTemporary(typeof(object), "inst");
             rule.Test = rule.MakeTypeTest(typeof(OldClass), 0);
             rule.Target =
                 rule.MakeReturn(context.LanguageContext.Binder,
@@ -723,7 +723,7 @@ namespace IronPython.Runtime.Types {
                 );
             } else {
                 if (action.IsNoThrow) {
-                    Variable tmp = rule.GetTemporary(typeof(object), "lookupVal");
+                    VariableExpression tmp = rule.GetTemporary(typeof(object), "lookupVal");
                     target =
                         Ast.Condition(
                             Ast.Call(

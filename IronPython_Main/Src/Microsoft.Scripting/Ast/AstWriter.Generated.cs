@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
             WriteBinaryExpression,                  //    GreaterThan
             WriteBinaryExpression,                  //    GreaterThanOrEqual
                                                     // ** Invoke
-                                                    // ** Lambda
+            WriteLambdaExpression,                  //    Lambda
             WriteBinaryExpression,                  //    LeftShift
             WriteBinaryExpression,                  //    LessThan
             WriteBinaryExpression,                  //    LessThanOrEqual
@@ -75,11 +75,10 @@ namespace Microsoft.Scripting.Ast {
             WriteArrayIndexAssignment,              //    ArrayIndexAssignment
             WriteBlock,                             //    Block
             WriteBoundAssignment,                   //    BoundAssignment
-            WriteBoundExpression,                   //    BoundExpression
             WriteBreakStatement,                    //    BreakStatement
-            WriteCodeBlockExpression,               //    CodeBlockExpression
             WriteIntrinsicExpression,               //    CodeContextExpression
             WriteIntrinsicExpression,               //    GeneratorIntrinsic
+            WriteGeneratorLambdaExpression,         //    Generator
             WriteContinueStatement,                 //    ContinueStatement
             WriteDeleteStatement,                   //    DeleteStatement
             WriteDeleteUnboundExpression,           //    DeleteUnboundExpression
@@ -87,15 +86,19 @@ namespace Microsoft.Scripting.Ast {
             WriteEmptyStatement,                    //    EmptyStatement
             WriteIntrinsicExpression,               //    EnvironmentExpression
             WriteExpressionStatement,               //    ExpressionStatement
+            WriteVariableExpression,                //    GlobalVariable
             WriteLabeledStatement,                  //    LabeledStatement
+            WriteVariableExpression,                //    LocalVariable
             WriteLoopStatement,                     //    LoopStatement
             WriteMemberAssignment,                  //    MemberAssignment
             WriteMemberExpression,                  //    MemberExpression
             WriteNewArrayExpression,                //    NewArrayExpression
             WriteUnaryExpression,                   //    OnesComplement
+            WriteVariableExpression,                //    Parameter
             WriteReturnStatement,                   //    ReturnStatement
             WriteScopeStatement,                    //    ScopeStatement
             WriteSwitchStatement,                   //    SwitchStatement
+            WriteVariableExpression,                //    TemporaryVariable
             WriteThrowStatement,                    //    ThrowStatement
             WriteTryStatement,                      //    TryStatement
             WriteUnboundAssignment,                 //    UnboundAssignment

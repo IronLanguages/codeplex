@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.Ast {
         // we bind against this class as opposed to our base class. 
         
         // If we don't override this, then we'd bind to base.Walk(LambdaExpression) instead. 
-        protected internal override bool Walk(GeneratorCodeBlock node) {
+        protected internal override bool Walk(GeneratorLambdaExpression node) {
             return CommonLambda(node);
         }
 
