@@ -22,10 +22,17 @@ using System.Reflection;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Ast {
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Interpreter")]
+
+namespace Microsoft.Scripting.Interpreter {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     internal static partial class Interpreter {
+
+        // The ReflectiveCaller cache
+        private static readonly Dictionary<ValueArray<Type>, ReflectedCaller>/*!*/ _executeSites = new Dictionary<ValueArray<Type>, ReflectedCaller>();
 
         #region Entry points
 
@@ -465,12 +472,19 @@ namespace Microsoft.Scripting.Ast {
                 args[i] = argValue;
             }
 
-            return context.LanguageContext.Binder.Execute(
-                context,
-                node.Action,
-                CompilerHelpers.GetSiteTypes(node),
-                args
-            );
+            Type[] types = CompilerHelpers.GetSiteTypes(node);
+
+            ReflectedCaller rc;
+            lock (_executeSites) {
+                ValueArray<Type> array = new ValueArray<Type>(types);
+                if (!_executeSites.TryGetValue(array, out rc)) {
+                    Type siteType = DynamicSiteHelpers.MakeDynamicSiteTargetType(types);
+                    MethodInfo target = typeof(InterpreterHelpers).GetMethod("ExecuteRule").MakeGenericMethod(siteType);
+                    _executeSites[array] = rc = ReflectedCaller.Create(target);
+
+                }
+            }
+            return rc.Invoke(context.LanguageContext.Binder, context, node.Action, args);
         }
 
         private static object InterpretArrayIndexAssignment(CodeContext context, Expression expr) {
@@ -501,30 +515,30 @@ namespace Microsoft.Scripting.Ast {
             return value;
         }
 
-        private static object InterpretBoundExpression(CodeContext context, Expression expr) {
-            BoundExpression node = (BoundExpression)expr;
+        private static object InterpretVariableExpression(CodeContext context, Expression expr) {
+            VariableExpression node = (VariableExpression)expr;
             object ret;
-            switch (node.Variable.Kind) {
-                case VariableKind.Temporary:
-                    if (!context.Scope.TemporaryStorage.TryGetValue(node.Variable, out ret)) {
-                        throw context.LanguageContext.MissingName(node.Variable.Name);
+            switch (node.NodeType) {
+                case AstNodeType.TemporaryVariable:
+                    if (!context.Scope.TemporaryStorage.TryGetValue(node, out ret)) {
+                        throw context.LanguageContext.MissingName(node.Name);
                     } else {
                         return ret;
                     }
-                case VariableKind.Parameter:
+                case AstNodeType.Parameter:
                     // This is sort of ugly: parameter variables can be stored either as locals or as temporaries (in case of $argn).
-                    if (!context.Scope.TemporaryStorage.TryGetValue(node.Variable, out ret) || ret == Uninitialized.Instance) {
-                        return RuntimeHelpers.LookupName(context, node.Variable.Name);
+                    if (!context.Scope.TemporaryStorage.TryGetValue(node, out ret) || ret == Uninitialized.Instance) {
+                        return RuntimeHelpers.LookupName(context, node.Name);
                     } else {
                         return ret;
                     }
-                case VariableKind.Global:
-                    return RuntimeHelpers.LookupGlobalName(context, node.Variable.Name);
+                case AstNodeType.GlobalVariable:
+                    return RuntimeHelpers.LookupGlobalName(context, node.Name);
                 default:
-                    if (!context.LanguageContext.TryLookupName(context, node.Variable.Name, out ret)) {
-                        throw context.LanguageContext.MissingName(node.Variable.Name);
+                    if (!context.LanguageContext.TryLookupName(context, node.Name, out ret)) {
+                        throw context.LanguageContext.MissingName(node.Name);
                     } else if (ret == Uninitialized.Instance) {
-                        RuntimeHelpers.ThrowUnboundLocalError(node.Variable.Name);
+                        RuntimeHelpers.ThrowUnboundLocalError(node.Name);
                         return null;
                     } else {
                         return ret;
@@ -532,8 +546,13 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object InterpretCodeBlockExpression(CodeContext context, Expression expr) {
-            CodeBlockExpression node = (CodeBlockExpression)expr;
+        private static object InterpretLambdaExpression(CodeContext context, Expression expr) {
+            LambdaExpression node = (LambdaExpression)expr;
+            return GetDelegateForInterpreter(context, node);
+        }
+
+        private static object InterpretGeneratorLambdaExpression(CodeContext context, Expression expr) {
+            GeneratorLambdaExpression node = (GeneratorLambdaExpression)expr;
             return GetDelegateForInterpreter(context, node);
         }
 
@@ -602,7 +621,6 @@ namespace Microsoft.Scripting.Ast {
             ConstructorInfo constructor;
 
             if (node.NodeType == AstNodeType.NewArrayBounds) {
-                Debug.Assert(false, "debug me");
                 int rank = node.Type.GetArrayRank();
                 Type[] types = new Type[rank];
                 object[] bounds = new object[rank];
@@ -700,11 +718,11 @@ namespace Microsoft.Scripting.Ast {
         private static object InterpretDeleteStatement(CodeContext context, Expression expr) {
             DeleteStatement node = (DeleteStatement)expr;
             context.Scope.SourceLocation = node.Start;
-            switch (node.Variable.Kind) {
-                case VariableKind.Temporary:
+            switch (node.Variable.NodeType) {
+                case AstNodeType.TemporaryVariable:
                     context.Scope.TemporaryStorage.Remove(node.Variable);
                     break;
-                case VariableKind.Global:
+                case AstNodeType.GlobalVariable:
                     RuntimeHelpers.RemoveGlobalName(context, node.Variable.Name);
                     break;
                 default:
@@ -1012,8 +1030,11 @@ namespace Microsoft.Scripting.Ast {
 
         internal static object EvaluateAssign(CodeContext context, Expression node, object value) {
             switch (node.NodeType) {
-                case AstNodeType.BoundExpression:
-                    return EvaluateAssign(context, (BoundExpression)node, value);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    return EvaluateAssign(context, (VariableExpression)node, value);
                 case AstNodeType.BoundAssignment:
                     return EvaluateAssign(context, (BoundAssignment)node, value);
                 case AstNodeType.MemberExpression:
@@ -1023,20 +1044,20 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static object EvaluateAssign(CodeContext context, BoundExpression node, object value) {
-            return EvaluateAssignVariable(context, node.Variable, value);
+        private static object EvaluateAssign(CodeContext context, VariableExpression node, object value) {
+            return EvaluateAssignVariable(context, node, value);
         }
 
         private static object EvaluateAssign(CodeContext context, BoundAssignment node, object value) {
             return EvaluateAssignVariable(context, node.Variable, value);
         }
 
-        private static object EvaluateAssignVariable(CodeContext context, Variable var, object value) {
-            switch (var.Kind) {
-                case VariableKind.Temporary:
+        private static object EvaluateAssignVariable(CodeContext context, VariableExpression var, object value) {
+            switch (var.NodeType) {
+                case AstNodeType.TemporaryVariable:
                     context.Scope.TemporaryStorage[var] = value;
                     break;
-                case VariableKind.Global:
+                case AstNodeType.GlobalVariable:
                     RuntimeHelpers.SetGlobalName(context, var.Name, value);
                     break;
                 default:
@@ -1071,8 +1092,11 @@ namespace Microsoft.Scripting.Ast {
 
         private static EvaluationAddress EvaluateAddress(CodeContext context, Expression node) {
             switch (node.NodeType) {
-                case AstNodeType.BoundExpression:
-                    return EvaluateAddress((BoundExpression)node);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    return EvaluateAddress((VariableExpression)node);
                 case AstNodeType.Block:
                     return EvaluateAddress(context, (Block)node);
                 case AstNodeType.Conditional:
@@ -1082,7 +1106,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        private static EvaluationAddress EvaluateAddress(BoundExpression node) {
+        private static EvaluationAddress EvaluateAddress(VariableExpression node) {
             return new VariableAddress(node);
         }
 

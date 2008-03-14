@@ -100,8 +100,8 @@ namespace Microsoft.Scripting {
             bool doEvaluation = tryEvaluate || _languageContext.Options.InterpretedMode;
             if (_simpleTarget == null && _optimizedTarget == null
                 && doEvaluation
-                && Ast.InterpretChecker.CanEvaluate(_code)) {
-                return Interpreter.TopLevelExecute(_code, codeContext);
+                && Interpreter.InterpretChecker.CanEvaluate(_code)) {
+                return Interpreter.Interpreter.TopLevelExecute(_code, codeContext);
             }
 
             if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?

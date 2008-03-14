@@ -23,18 +23,18 @@ namespace Microsoft.Scripting.Ast {
     public class AbstractContext {
         private ActionBinder _binder;
 
-        private Dictionary<Variable, Variable> _variableMap;
+        private Dictionary<VariableExpression, VariableExpression> _variableMap;
 
         public AbstractContext(ActionBinder binder) {
             _binder = binder;
         }
 
         public void SetupToLambda() {
-            _variableMap = new Dictionary<Variable, Variable>();
+            _variableMap = new Dictionary<VariableExpression, VariableExpression>();
         }
 
-        public AbstractValue Lookup(Variable variable) {
-            Variable newVar = _variableMap[variable];
+        public AbstractValue Lookup(VariableExpression variable) {
+            VariableExpression newVar = _variableMap[variable];
             return AbstractValue.LimitType(newVar.Type, Ast.ReadDefined(newVar));
         }
 

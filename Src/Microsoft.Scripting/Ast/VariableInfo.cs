@@ -16,108 +16,65 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
 
     /// <summary>
-    /// Variable represents actual memory/dictionary location in the generated code.
+    /// VariableInfo stores read/write information needed by the compiler to emit a variable
     /// </summary>
-    public sealed class Variable {
-        private readonly SymbolId _name;
-        private readonly VariableKind _kind;
-        private readonly Type _type;
+    internal sealed class VariableInfo {
+        private readonly VariableExpression/*!*/ _variable;
 
-        // TODO: REMOVE !!!
-        private LambdaExpression _lambda;
+        private readonly LambdaExpression _lambda;  // hold onto the LambdaExpression for convenience
 
-        private int _parameter;                     // parameter index
+        private readonly int _parameter;            // parameter index
         private Storage _storage;                   // storage for the variable, used to create slots
 
         private bool _lift;             // Lift variable/parameter to closure
-        private bool _unassigned;       // Variable ever referenced without being assigned
-        private bool _uninitialized;    // Variable ever used either uninitialized or after deletion
-        
-        private Variable(SymbolId name, VariableKind kind, Type type) {
-            _name = name;
-            _kind = kind;
 
-            // enables case: 
-            //
-            // temp = CreateVariable(..., expression.Type, ...)
-            // Ast.Assign(temp, expression)
-            //
-            // where Type is void.
-            _type = (type != typeof(void)) ? type : typeof(object); 
+        internal VariableInfo(VariableExpression/*!*/ variable, LambdaExpression lambda)
+            : this(variable, lambda, -1) {
         }
 
-        public SymbolId Name {
-            get { return _name; }
+        internal VariableInfo(VariableExpression/*!*/ variable, LambdaExpression lambda, int parameterIndex) {
+            Debug.Assert(variable != null);
+            Debug.Assert(parameterIndex < 0 || variable.NodeType == AstNodeType.Parameter);
+            _variable = variable;
+            _lambda = lambda;
+            _parameter = parameterIndex;
         }
 
         internal LambdaExpression Lambda {
             get { return _lambda; }
-            set { _lambda = value; }
         }
 
-        public VariableKind Kind {
-            get { return _kind; }
+        internal VariableExpression Variable {
+            get { return _variable; }
         }
 
-        public Type Type {
-            get { return _type; }
-        }
-
-        public bool IsTemporary {
-            get {
-                return _kind == VariableKind.Temporary;
-            }
-        }
-
-        internal int ParameterIndex {
-            get { return _parameter; }
-            set { _parameter = value; }
-        }
-
-        public bool Lift {
+        internal bool Lift {
             get { return _lift; }
         }
 
-        internal bool Unassigned {
-            get { return _unassigned; }
-        }
-
-        internal void UnassignedUse() {
-            _unassigned = true;
-        }
-
-        internal bool Uninitialized {
-            get { return _uninitialized; }
-        }
-
-        internal void UninitializedUse() {
-            _uninitialized = true;
-        }
-
         internal void LiftToClosure() {
-            switch(_kind) {
-                case VariableKind.Local:
-                case VariableKind.Parameter:
+            switch (_variable.NodeType) {
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
                     _lift = true;
                     break;
                 default:
-                    throw new InvalidOperationException(String.Format("Cannot lift variable of kind {0} to a closure ('{1}')", _kind, _name));
+                    throw new InvalidOperationException(String.Format("Cannot lift variable of type {0} to a closure ('{1}')", _variable.NodeType, _variable.Name));
             }
         }
 
         internal void Allocate(LambdaCompiler cg, LambdaInfo li) {
-            Debug.Assert(cg.Allocator.Lambda == Lambda);
+            Debug.Assert(cg.Allocator.Lambda == _lambda);
 
-            switch (_kind) {
-                case VariableKind.Local:
+            switch (_variable.NodeType) {
+                case AstNodeType.LocalVariable:
                     if (_lambda.IsGlobal) {
                         // Local on global level, simply allocate the storage
-                        _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
+                        _storage = cg.Allocator.LocalAllocator.AllocateStorage(_variable.Name, _variable.Type);
                     } else {
                         Slot slot;
                         // If lifting local into closure, allocate in the environment
@@ -126,36 +83,30 @@ namespace Microsoft.Scripting.Ast {
                             slot = AllocInEnv(cg, li);
                         } else {
                             // Allocate the storage
-                            _storage = cg.Allocator.LocalAllocator.AllocateStorage(_name, _type);
+                            _storage = cg.Allocator.LocalAllocator.AllocateStorage(_variable.Name, _variable.Type);
                             // No access slot for local variables, pass null.
                             slot = _storage.CreateSlot(_storage.RequireAccessSlot ? cg.Allocator.GetScopeAccessSlot(_lambda) : null);
                             MarkLocal(slot);
                         }
-                        // TODO: Remove!!!
-                        if (_unassigned && _type == typeof(object)) {
-                            // Emit initialization (environments will be initialized all at once)
-                            // Only set variables of type object to "Uninitialized"
-                            slot.EmitSetUninitialized(cg);
-                        }
                     }
                     break;
-                case VariableKind.Parameter:
+                case AstNodeType.Parameter:
                     // Lifting parameter into closure, allocate in env and move.
                     if (_lift) {
                         Slot slot = AllocInEnv(cg, li);
-                        Slot src = GetArgumentSlot(cg);
+                        Slot src = cg.GetLambdaArgumentSlot(_parameter);
                         // Copy the value from the parameter (src) into the environment (slot)
                         slot.EmitSet(cg, src);
                     } else {
-                        Debug.Assert(cg.Allocator.Lambda == Lambda);
+                        Debug.Assert(cg.Allocator.Lambda == _lambda);
                         // Nothing to do here
                     }
                     break;
 
-                case VariableKind.Global:
-                    _storage = cg.Allocator.GlobalAllocator.AllocateStorage(_name, _type);
+                case AstNodeType.GlobalVariable:
+                    _storage = cg.Allocator.GlobalAllocator.AllocateStorage(_variable.Name, _variable.Type);
                     break;
-                case VariableKind.Temporary:
+                case AstNodeType.TemporaryVariable:
                     // Nothing to do here
                     break;
             }
@@ -172,7 +123,7 @@ namespace Microsoft.Scripting.Ast {
             // TODO: We should verify this before coming here.
             Debug.Assert(li.EnvironmentFactory != null, "Allocating in environment without environment factory.\nIs HasEnvironment set?");
 
-            _storage = li.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+            _storage = li.EnvironmentFactory.MakeEnvironmentReference(_variable.Name, _variable.Type);
             return _storage.CreateSlot(cg.Allocator.GetClosureAccessSlot(_lambda));
         }
 
@@ -183,36 +134,36 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal Slot CreateSlot(LambdaCompiler cg, LambdaInfo li) {
-            switch (_kind) {
-                case VariableKind.Local:
+            switch (_variable.NodeType) {
+                case AstNodeType.LocalVariable:
                     if (_storage == null) {
                         // Fall back on a runtime lookup if this variable does not have storage associated with it
                         // (e.g. if the variable belongs to a lambda in interpreted mode).
-                        return new LocalNamedFrameSlot(cg.ContextSlot, _name);
+                        return new LocalNamedFrameSlot(cg.ContextSlot, _variable.Name);
                     } else {
                         return CreateSlotForVariable(cg);
                     }
 
-                case VariableKind.Parameter:
+                case AstNodeType.Parameter:
                     if (_lift) {
                         if (_storage == null) {
-                            return new LocalNamedFrameSlot(cg.ContextSlot, _name);
+                            return new LocalNamedFrameSlot(cg.ContextSlot, _variable.Name);
                         } else {
                             return CreateSlotForVariable(cg);
                         }
                     } else {
-                        return MarkLocal(GetArgumentSlot(cg));
+                        return MarkLocal(cg.GetLambdaArgumentSlot(_parameter));
                     }
 
-                case VariableKind.Global:
+                case AstNodeType.GlobalVariable:
                     if (_storage == null) {
-                        return new NamedFrameSlot(cg.ContextSlot, _name);
+                        return new NamedFrameSlot(cg.ContextSlot, _variable.Name);
                     } else {
                         // Globals are accessed via context slot
                         return _storage.CreateSlot(cg.ContextSlot);
                     }
 
-                case VariableKind.Temporary:
+                case AstNodeType.TemporaryVariable:
                     if (cg.IsGenerator) {
                         // Allocate in environment if emitting generator.
                         // This must be done here for now because the environment
@@ -221,19 +172,14 @@ namespace Microsoft.Scripting.Ast {
                         // which is not marked IsGenerator so the generator temps
                         // would go onto CLR stack rather than environment.
                         // TODO: Fix this once we have lifetime analysis in place.
-                        _storage = li.EnvironmentFactory.MakeEnvironmentReference(_name, _type);
+                        _storage = li.EnvironmentFactory.MakeEnvironmentReference(_variable.Name, _variable.Type);
                         return CreateSlotForVariable(cg);
                     } else {
-                        return cg.GetNamedLocal(_type, SymbolTable.IdToString(_name));
+                        return cg.GetNamedLocal(_variable.Type, SymbolTable.IdToString(_variable.Name));
                     }
             }
 
-            Debug.Assert(false, "Unexpected variable kind: " + _kind.ToString());
-            return null;
-        }
-
-        private Slot GetArgumentSlot(LambdaCompiler cg) {
-            return cg.GetLambdaArgumentSlot(_parameter);
+            throw new ArgumentException("Unexpected node type: " + _variable.NodeType.ToString());
         }
 
         private Slot CreateSlotForVariable(LambdaCompiler cg) {
@@ -241,33 +187,13 @@ namespace Microsoft.Scripting.Ast {
             Slot access = null;
             if (_storage.RequireAccessSlot) {
                 // TODO: May need to check that the lambda is a generator here
-                access = _lift || _kind == VariableKind.Temporary ?
+                access = _lift || _variable.NodeType == AstNodeType.TemporaryVariable ?
                     cg.Allocator.GetClosureAccessSlot(_lambda) :
                     cg.Allocator.GetScopeAccessSlot(_lambda);
             }
             Slot slot = _storage.CreateSlot(access);
             return MarkLocal(slot);
         }
-
-        #region Factory methods
-
-        public static Variable Parameter(SymbolId name, Type type) {
-            return new Variable(name, VariableKind.Parameter, type);
-        }
-
-        public static Variable Local(SymbolId name, Type type) {
-            return new Variable(name,  VariableKind.Local, type);
-        }
-
-        public static Variable Temporary(SymbolId name, Type type) {
-            return new Variable(name, VariableKind.Temporary, type);
-        }
-
-        public static Variable Create(SymbolId name, VariableKind kind, Type type) {
-            Contract.Requires(kind != VariableKind.Parameter, "kind");
-            return new Variable(name, kind, type);
-        }
-
-        #endregion
+      
     }
 }

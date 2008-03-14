@@ -53,7 +53,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression right = ag.Transform(_right);
 
             Type t = left.Type == right.Type ? left.Type : typeof(object);
-            MSAst.Variable tmp = ag.MakeTemp(Symbols.All, t);
+            MSAst.VariableExpression tmp = ag.MakeTemp(Symbols.All, t);
             
             return Ast.Condition(
                 Ast.Action.ConvertTo(

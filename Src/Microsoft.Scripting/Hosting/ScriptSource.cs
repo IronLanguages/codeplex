@@ -166,7 +166,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Execute the code in the specified ScriptScope and return a result.
         /// 
-        /// ExecuteAndGetAsHandle returns an ObjectHandle wrapping the resulting value 
+        /// ExecuteAndWrap returns an ObjectHandle wrapping the resulting value 
         /// of running the code.  
         /// 
         /// When the ScriptSource is a file or statement, the engine decides what is 
@@ -174,7 +174,7 @@ namespace Microsoft.Scripting.Hosting {
         /// by the last expression or statement, but languages that are not expression 
         /// based may return null.
         /// </summary>
-        public ObjectHandle ExecuteAndGetAsHandle(ScriptScope/*!*/ scope) {
+        public ObjectHandle ExecuteAndWrap(ScriptScope/*!*/ scope) {
             return new ObjectHandle(Execute(scope));
         }
 #endif

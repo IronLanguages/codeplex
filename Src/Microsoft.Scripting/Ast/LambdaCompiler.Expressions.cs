@@ -103,12 +103,16 @@ namespace Microsoft.Scripting.Ast {
                     Emit((BoundAssignment)node);
                     break;
 
-                case AstNodeType.BoundExpression:
-                    Emit((BoundExpression)node);
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.Parameter:
+                case AstNodeType.TemporaryVariable:
+                    Emit((VariableExpression)node);
                     break;
 
-                case AstNodeType.CodeBlockExpression:
-                    Emit((CodeBlockExpression)node);
+                case AstNodeType.Lambda:
+                case AstNodeType.Generator:
+                    Emit((LambdaExpression)node);
                     break;
 
                 case AstNodeType.CodeContextExpression:
@@ -373,6 +377,7 @@ namespace Microsoft.Scripting.Ast {
 
         private void Emit(MethodCallExpression node) {
             // Emit instance, if calling an instance method
+
             if (!node.Method.IsStatic) {
                 Type type = node.Method.DeclaringType;
 
@@ -572,26 +577,23 @@ namespace Microsoft.Scripting.Ast {
                     throw new InvalidOperationException();
                 }
                 // fall through & emit the store from Nullable<T> -> Nullable<T>
-            } 
+            }
             EmitExpression(node.Value);
             Emit(OpCodes.Dup);
             GetVariableSlot(node.Variable).EmitSet(this);
         }
 
-        private void Emit(BoundExpression node) {
-            // Do not emit CheckInitialized for variables that are defined, or for temp variables.
-            // Only emit CheckInitialized for variables of type object
-            bool check = !node.IsDefined && !node.Variable.IsTemporary && node.Variable.Type == typeof(object);
-            EmitGet(GetVariableSlot(node.Variable), node.Name, check);
+        private void Emit(VariableExpression node) {
+            GetVariableSlot(node).EmitGet(this);
         }
 
-        private void Emit(CodeBlockExpression node) {
-            EmitDelegateConstruction(node.Block, node.Type);
+        private void Emit(LambdaExpression node) {
+            EmitDelegateConstruction(node, node.Type);
         }
 
-        // Emit the generator intrinsic arg used in a GeneratorCodeBlock.
+        // Emit the generator intrinsic arg used in a GeneratorLambdaExpression.
         private void EmitGeneratorIntrinsic() {
-            // This is coupled to the codegen in GeneratorCodeBlock, 
+            // This is coupled to the codegen in GeneratorLambdaExpression, 
             // which always uses the 1st arg.
             GetLambdaArgumentSlot(0).EmitGet(this);
         }

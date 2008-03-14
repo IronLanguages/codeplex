@@ -391,7 +391,8 @@ function exceptiondetail-helper
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;hwExcept()" 2>&1
 	if (! "$stuff".Contains("Hello World Exception")) {show-failure "Failed: $stuff"; }
 	if (! "$stuff".Contains("at Microsoft.Scripting.")) {show-failure "Failed: $stuff"; }
-	if (! "$stuff".Contains(":line ")) {show-failure "Failed: $stuff"; }
+	#Merlin 395056
+	#if (! "$stuff".Contains(":line ")) {show-failure "Failed: $stuff"; }
 	
 	$stuff = dlrexe "-X:ExceptionDetail" $args[1..$args.Length] -c "from except_test import *;complexExcept()" 2>&1
 	if (! "$stuff".Contains("OverflowError: System.FormatException: format message ---> System.Exception: clr message")) 

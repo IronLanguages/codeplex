@@ -88,7 +88,7 @@ namespace Microsoft.Scripting.Generation {
             }
 
             if (_argumentType.IsByRef) {
-                Variable tmp = context.GetTemporary(_argumentType.GetElementType(), "optRef");
+                VariableExpression tmp = context.GetTemporary(_argumentType.GetElementType(), "optRef");
                 return Ast.Comma(
                     Ast.Assign(
                         tmp,

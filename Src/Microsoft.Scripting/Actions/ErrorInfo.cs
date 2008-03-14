@@ -105,9 +105,9 @@ namespace Microsoft.Scripting.Actions {
             switch(_kind) {
                 case ErrorInfoKind.Error:
                 case ErrorInfoKind.Success:
-                    return Interpreter.Evaluate(context, _value);                    
+                    return Interpreter.Interpreter.Evaluate(context, _value);                    
                 case ErrorInfoKind.Exception:
-                    throw (Exception)Interpreter.Evaluate(context, _value);
+                    throw (Exception)Interpreter.Interpreter.Evaluate(context, _value);
                 default:
                     throw new InvalidOperationException();
             }

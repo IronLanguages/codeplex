@@ -45,15 +45,15 @@ namespace Microsoft.Scripting.Ast {
             /// <summary>
             /// List of free temporary variables. These can be recycled for new temps.
             /// </summary>
-            private List<Variable> _freeTemps;
+            private List<VariableExpression> _freeTemps;
 
             /// <summary>
             /// Stack of currently active temporary variables.
             /// </summary>
-            private Stack<Variable> _usedTemps;
+            private Stack<VariableExpression> _usedTemps;
 
-            internal Variable Temp(Type type) {
-                Variable temp;
+            internal VariableExpression Temp(Type type) {
+                VariableExpression temp;
                 if (_freeTemps != null) {
                     // Recycle from the free-list if possible.
                     for (int i = _freeTemps.Count - 1; i >= 0; i--) {
@@ -69,21 +69,21 @@ namespace Microsoft.Scripting.Ast {
                 return UseTemp(temp);
             }
 
-            private Variable UseTemp(Variable temp) {
+            private VariableExpression UseTemp(VariableExpression temp) {
                 Debug.Assert(_freeTemps == null || !_freeTemps.Contains(temp));
                 Debug.Assert(_usedTemps == null || !_usedTemps.Contains(temp));
 
                 if (_usedTemps == null) {
-                    _usedTemps = new Stack<Variable>();
+                    _usedTemps = new Stack<VariableExpression>();
                 }
                 _usedTemps.Push(temp);
                 return temp;
             }
 
-            private void FreeTemp(Variable temp) {
+            private void FreeTemp(VariableExpression temp) {
                 Debug.Assert(_freeTemps == null || !_freeTemps.Contains(temp));
                 if (_freeTemps == null) {
-                    _freeTemps = new List<Variable>();
+                    _freeTemps = new List<VariableExpression>();
                 }
                 _freeTemps.Add(temp);
             }
@@ -112,7 +112,7 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(_usedTemps == null || _usedTemps.Count == 0);
             }
 
-            protected internal abstract Variable MakeTemp(string name, Type type);
+            protected internal abstract VariableExpression MakeTemp(string name, Type type);
         }
 
         private class BlockTempMaker : TempMaker {
@@ -125,7 +125,7 @@ namespace Microsoft.Scripting.Ast {
                 Debug.Assert(lambda != null);
                 _lambda = lambda;
             }
-            protected internal override Variable MakeTemp(string name, Type type) {
+            protected internal override VariableExpression MakeTemp(string name, Type type) {
                 return _lambda.CreateTemporaryVariable(SymbolTable.StringToId(name), type);
             }
         }
@@ -141,7 +141,7 @@ namespace Microsoft.Scripting.Ast {
                 _rule = rule;
             }
 
-            protected internal override Variable MakeTemp(string name, Type type) {
+            protected internal override VariableExpression MakeTemp(string name, Type type) {
                 return _rule.GetTemporary(type, name);
             }
         }
@@ -225,7 +225,7 @@ namespace Microsoft.Scripting.Ast {
 
         #region Temps
 
-        private Variable Temp(Type type) {
+        private VariableExpression Temp(Type type) {
             return _tm.Temp(type);
         }
 
@@ -250,7 +250,7 @@ namespace Microsoft.Scripting.Ast {
         ///     return value: temp
         /// </summary>
         private Expression ToTemp(Expression expression, out Expression save) {
-            Variable temp = Temp(expression.Type);
+            VariableExpression temp = Temp(expression.Type);
             save = Ast.Assign(temp, expression);
             return Ast.Read(temp);
         }
@@ -432,18 +432,23 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // BoundExpression
-        private static Expression RewriteBoundExpression(AstRewriter ar, Expression expr, Stack stack) {
+        // Variable
+        private static Expression RewriteVariableExpression(AstRewriter ar, Expression expr, Stack stack) {
             // No action necessary, regardless of the stack state
             return expr;
         }
 
-        // CodeBlockExpression
-        private static Expression RewriteCodeBlockExpression(AstRewriter ar, Expression expr, Stack stack) {
+        // LambdaExpression
+        private static Expression RewriteLambdaExpression(AstRewriter ar, Expression expr, Stack stack) {
             // No action necessary, regardless of the stack state.
             return expr;
         }
 
+        // LambdaExpression
+        private static Expression RewriteGeneratorLambdaExpression(AstRewriter ar, Expression expr, Stack stack) {
+            // No action necessary, regardless of the stack state.
+            return expr;
+        }
 
         // ConditionalExpression
         private static Expression RewriteConditionalExpression(AstRewriter ar, Expression expr, Stack stack) {

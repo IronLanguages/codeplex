@@ -82,6 +82,13 @@ namespace Microsoft.Scripting.Runtime {
             get { return _domainManager; }
         }
 
+        /// <summary>
+        /// Whether the language can parse code and create source units.
+        /// </summary>
+        internal virtual bool CanCreateSourceCode {
+            get { return true; }
+        }
+
         #region Scope
 
         public virtual Scope GetScope(string/*!*/ path) {
@@ -476,7 +483,8 @@ namespace Microsoft.Scripting.Runtime {
             Contract.RequiresNotNull(contentProvider, "contentProvider");
             Contract.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
             Contract.Requires(EnumBounds.IsValid(kind), "kind");
-            
+            Contract.Requires(CanCreateSourceCode);
+
             return new SourceUnit(this, contentProvider, path, kind);
         }
 

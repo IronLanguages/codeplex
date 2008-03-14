@@ -38,8 +38,8 @@ namespace Microsoft.Scripting.Ast {
                 );
             }
 
-            LambdaExpression lambda = Ast.Lambda("<expression>", expression.Type, body, new Variable[0], new Variable[0]);
-            return CompileBlock<T>(lambda);
+            LambdaExpression lambda = Ast.Lambda(typeof(T),"<expression>", expression.Type, body, new VariableExpression[0], new VariableExpression[0]);
+            return CompileLambda<T>(lambda);
         }
 
         public static T CompileStatement<T>(Expression expression) {
@@ -51,12 +51,12 @@ namespace Microsoft.Scripting.Ast {
                 Ast.Return()
             );
 
-            LambdaExpression lambda = Ast.Lambda("<statement>", typeof(void), body, new Variable[0], new Variable[0]);
-            return CompileBlock<T>(lambda);
+            LambdaExpression lambda = Ast.Lambda(typeof(T), "<statement>", typeof(void), body, new VariableExpression[0], new VariableExpression[0]);
+            return CompileLambda<T>(lambda);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "lambda")]
-        public static T CompileBlock<T>(LambdaExpression lambda) {
+        public static T CompileLambda<T>(LambdaExpression lambda) {
             Contract.Requires(typeof(Delegate).IsAssignableFrom(typeof(T)), "T");
             Contract.RequiresNotNull(lambda, "lambda");
 

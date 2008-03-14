@@ -69,11 +69,11 @@ namespace IronPython.Compiler.Ast {
                 List<MSAst.Expression> statements = new List<MSAst.Expression>();
 
                 // 1. Create temp variable for the right value
-                MSAst.BoundExpression right_temp = ag.MakeTempExpression("assignment");
+                MSAst.VariableExpression right_temp = ag.MakeTempExpression("assignment");
 
                 // 2. right_temp = right
                 statements.Add(
-                    AstGenerator.MakeAssignment(right_temp.Variable, right)
+                    AstGenerator.MakeAssignment(right_temp, right)
                     );
 
                 // Do left to right assignment

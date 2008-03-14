@@ -80,9 +80,9 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 1. mgr = (EXPR)
             //******************************************************************
-            MSAst.BoundExpression manager = ag.MakeTempExpression("with_manager");
+            MSAst.VariableExpression manager = ag.MakeTempExpression("with_manager");
             statements[0] = AstGenerator.MakeAssignment(
-                manager.Variable,
+                manager,
                 ag.Transform(_contextManager),
                 new SourceSpan(Start, _header)
             );
@@ -90,9 +90,9 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 2. exit = mgr.__exit__  # Not calling it yet
             //******************************************************************
-            MSAst.BoundExpression exit = ag.MakeTempExpression("with_exit");
+            MSAst.VariableExpression exit = ag.MakeTempExpression("with_exit");
             statements[1] = AstGenerator.MakeAssignment(
-                exit.Variable,
+                exit,
                 Ast.Action.GetMember(
                     SymbolTable.StringToId("__exit__"),
                     typeof(object),
@@ -103,9 +103,9 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 3. value = mgr.__enter__()
             //******************************************************************
-            MSAst.BoundExpression value = ag.MakeTempExpression("with_value");
+            MSAst.VariableExpression value = ag.MakeTempExpression("with_value");
             statements[2] = AstGenerator.MakeAssignment(
-                value.Variable,
+                value,
                 Ast.Action.Call(
                     typeof(object),
                     Ast.Action.GetMember(
@@ -119,9 +119,9 @@ namespace IronPython.Compiler.Ast {
             //******************************************************************
             // 4. exc = True
             //******************************************************************
-            MSAst.BoundExpression exc = ag.MakeTempExpression("with_exc", typeof(bool));
+            MSAst.VariableExpression exc = ag.MakeTempExpression("with_exc", typeof(bool));
             statements[3] = AstGenerator.MakeAssignment(
-                exc.Variable,
+                exc,
                 Ast.True()
             );
 
@@ -143,7 +143,7 @@ namespace IronPython.Compiler.Ast {
             //          exit(None, None, None)
             //******************************************************************
 
-            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
+            MSAst.VariableExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
 
             statements[4] =
                 // try:
@@ -164,7 +164,7 @@ namespace IronPython.Compiler.Ast {
                         ag.Transform(_body)
 
                 // except:
-                ).Catch(typeof(Exception), exception.Variable,
+                ).Catch(typeof(Exception), exception,
                     Ast.Block(
                         // Python specific exception handling code
                         Ast.Call(
@@ -172,7 +172,7 @@ namespace IronPython.Compiler.Ast {
                         ),
                         // exc = False
                         AstGenerator.MakeAssignment(
-                            exc.Variable,
+                            exc,
                             Ast.False()
                         ),
                         //  if not exit(*sys.exc_info()):
@@ -204,7 +204,7 @@ namespace IronPython.Compiler.Ast {
             return Ast.Block(_body.Span, statements);
         }
 
-        private MSAst.Expression MakeExitCall(MSAst.BoundExpression exit, MSAst.Expression exception) {
+        private MSAst.Expression MakeExitCall(MSAst.VariableExpression exit, MSAst.Expression exception) {
             // The 'with' statement's exceptional clause explicitly does not set the thread's current exception information.
             // So while the pseudo code says:
             //    exit(*sys.exc_info())

@@ -14,8 +14,9 @@
  * ***************************************************************************/
 
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Ast {
+namespace Microsoft.Scripting.Interpreter {
     /// <summary>
     /// Helper class used by the interpreter to package lambda as a delegate,
     /// allow it being called, and then resume interpretation.

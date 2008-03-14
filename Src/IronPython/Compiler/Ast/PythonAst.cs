@@ -21,7 +21,6 @@ using IronPython.Runtime;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using MSAst = Microsoft.Scripting.Ast;
-using VariableKind = Microsoft.Scripting.Ast.VariableKind;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -99,7 +98,7 @@ namespace IronPython.Compiler.Ast {
             get { return true; }
         }
 
-        internal override void CreateVariables(AstGenerator ag) {
+        internal override void CreateVariables(AstGenerator ag, List<MSAst.Expression> init) {
             if (_globals != null) {
                 foreach (KeyValuePair<SymbolId, PythonVariable> kv in _globals) {
                     if (kv.Value.Scope == this) {
@@ -108,7 +107,7 @@ namespace IronPython.Compiler.Ast {
                 }
             }
 
-            base.CreateVariables(ag);
+            base.CreateVariables(ag, init);
         }
 
         internal PythonVariable EnsureGlobalVariable(PythonNameBinder binder, SymbolId name) {
@@ -150,8 +149,9 @@ namespace IronPython.Compiler.Ast {
             AstGenerator ag = new AstGenerator(context, _body.Span, name, false, _printExpressions);
             ag.Block.Global = true;
 
+            List<MSAst.Expression> init = new List<MSAst.Expression>();
             // Create the variables
-            CreateVariables(ag);
+            CreateVariables(ag, init);
 
             MSAst.Expression bodyStmt = ag.Transform(_body);            
             MSAst.Expression docStmt;
@@ -167,6 +167,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             ag.Block.Body = Ast.Block(
+                Ast.Block(init),
                 docStmt,
                 bodyStmt ?? Ast.Empty() //  bodyStmt could be null if we have an error - e.g. a top level break
             );

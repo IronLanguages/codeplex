@@ -21,28 +21,18 @@ namespace Microsoft.Scripting.Ast {
     /// AST node representing deletion of the variable value.
     /// </summary>
     public sealed class DeleteStatement : Expression, ISpan {
-        private readonly Variable /*!*/ _var;
+        private readonly VariableExpression /*!*/ _var;
         private readonly SourceLocation _start;
         private readonly SourceLocation _end;
 
-        // This could probably be removed only with a tiny perf penalty
-        // where each occurence of delete (rare as they are) would check
-        // for Uninitialized.
-        private bool _defined;
-
-        internal DeleteStatement(SourceLocation start, SourceLocation end, Variable /*!*/ var)
+        internal DeleteStatement(SourceLocation start, SourceLocation end, VariableExpression /*!*/ var)
             : base(AstNodeType.DeleteStatement, typeof(void)) {
             _start = start;
             _end = end;
             _var = var;
         }
 
-        internal bool IsDefined {
-            get { return _defined; }
-            set { _defined = value; }
-        }
-
-        public Variable Variable {
+        public VariableExpression Variable {
             get { return _var; }
         }
 
@@ -56,7 +46,7 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static DeleteStatement Delete(SourceSpan span, Variable variable) {
+        public static DeleteStatement Delete(SourceSpan span, VariableExpression variable) {
             Contract.RequiresNotNull(variable, "variable");
             return new DeleteStatement(span.Start, span.End, variable);
         }

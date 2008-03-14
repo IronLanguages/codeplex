@@ -176,7 +176,7 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= ((tmp = {_left}) == null) ? {right} : tmp
         /// '??' operator in C#.
         /// </summary>
-        public static Expression Coalesce(Expression left, Expression right, out Variable temp) {
+        public static Expression Coalesce(Expression left, Expression right, out VariableExpression temp) {
             return CoalesceInternal(left, right, null, false, out temp);
         }
 
@@ -185,7 +185,7 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= IsTrue(tmp = {left}) ? {right} : tmp
         /// Generalized AND semantics.
         /// </summary>
-        public static Expression CoalesceTrue(Expression left, Expression right, MethodInfo isTrue, out Variable temp) {
+        public static Expression CoalesceTrue(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
             Contract.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, false, out temp);
         }
@@ -195,19 +195,19 @@ namespace Microsoft.Scripting.Ast {
         /// {result} ::= IsTrue(tmp = {left}) ? tmp : {right}
         /// Generalized OR semantics.
         /// </summary>
-        public static Expression CoalesceFalse(Expression left, Expression right, MethodInfo isTrue, out Variable temp) {
+        public static Expression CoalesceFalse(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
             Contract.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, true, out temp);
         }
 
-        private static Expression CoalesceInternal(Expression left, Expression right, MethodInfo isTrue, bool isReverse, out Variable temp) {
+        private static Expression CoalesceInternal(Expression left, Expression right, MethodInfo isTrue, bool isReverse, out VariableExpression temp) {
             Contract.RequiresNotNull(left, "left");
             Contract.RequiresNotNull(right, "right");
 
             // A bit too strict, but on a safe side.
             Contract.Requires(left.Type == right.Type, "Expression types must match");
 
-            temp = Variable.Temporary(SymbolTable.StringToId("tmp_left"), left.Type);
+            temp = VariableExpression.Temporary(SymbolTable.StringToId("tmp_left"), left.Type);
 
             Expression condition;
             if (isTrue != null) {
@@ -237,7 +237,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Expression Coalesce(LambdaBuilder builder, Expression left, Expression right) {
-            Variable temp;
+            VariableExpression temp;
             Expression result = Coalesce(left, right, out temp);
             builder.AddTemp(temp);
             return result;
@@ -250,7 +250,7 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static Expression CoalesceTrue(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
             Contract.RequiresNotNull(isTrue, "isTrue");
-            Variable temp;
+            VariableExpression temp;
             Expression result = CoalesceTrue(left, right, isTrue, out temp);
             builder.AddTemp(temp);
             return result;
@@ -263,7 +263,7 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static Expression CoalesceFalse(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
             Contract.RequiresNotNull(isTrue, "isTrue");
-            Variable temp;
+            VariableExpression temp;
             Expression result = CoalesceFalse(left, right, isTrue, out temp);
             builder.AddTemp(temp);
             return result;

@@ -94,13 +94,13 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression rleft = ag.Transform(bright.Left);
 
             // Store it in the temp
-            MSAst.BoundExpression temp = ag.MakeTempExpression("chained_comparison");
+            MSAst.VariableExpression temp = ag.MakeTempExpression("chained_comparison");
 
             // Create binary operation: left <_op> (temp = rleft)
             MSAst.Expression comparison = MakeBinaryOperation(
                 _op,
                 left,
-                Ast.Assign(temp.Variable, Ast.Convert(rleft, temp.Variable.Type)),
+                Ast.Assign(temp, Ast.Convert(rleft, temp.Type)),
                 typeof(object),
                 Span
             );

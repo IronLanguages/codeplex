@@ -106,7 +106,7 @@ namespace IronPython.Runtime.Calls {
                 Debug.Assert(dtValue.IsSystemType);
                 AddToBody(AddClsCheck(parent, clsOnly, MakeMemberRuleTarget(parent.UnderlyingSystemType, dtValue.UnderlyingSystemType)));
             } else {
-                Variable tmp = Rule.GetTemporary(typeof(object), "res");
+                VariableExpression tmp = Rule.GetTemporary(typeof(object), "res");
 
                 AddToBody(
                         AddClsCheck(

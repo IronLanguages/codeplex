@@ -194,7 +194,7 @@
     <Compile Include="Actions\TypeTracker.cs" />
     <Compile Include="Ast\Closure.cs" />
     <Compile Include="Ast\LambdaBuilder.cs" />
-    <Compile Include="Ast\VariableKind.cs" />
+    <Compile Include="Ast\VariableInfo.cs" />
     <Compile Include="CompilerOptions.cs" />
     <Compile Include="Compilers\ErrorSink.cs" />
     <Compile Include="Compilers\ParserSink.cs" />
@@ -251,6 +251,7 @@
     <Compile Include="Interpreter\Interpreter.Generated.cs" />
     <Compile Include="Interpreter\InterpretChecker.cs" />
     <Compile Include="Interpreter\LambdaInvoker.cs" />
+    <Compile Include="Interpreter\InterpreterHelpers.cs" />
     <Compile Include="Runtime\BinderOps.cs" />
     <Compile Include="Runtime\Cast.cs" />
     <Compile Include="Runtime\Cast.Generated.cs" />
@@ -279,16 +280,13 @@
     <Compile Include="Ast\UnaryExpression.cs" />
     <Compile Include="Ast\ClosureBinder.cs" />
     <Compile Include="Ast\LambdaExpression.cs" />
-    <Compile Include="Ast\CodeBlockExpression.cs" />
     <Compile Include="Ast\DeleteStatement.cs" />
-    <Compile Include="Ast\FlowChecker.cs" />
-    <Compile Include="Ast\GeneratorCodeBlock.cs" />
+    <Compile Include="Ast\GeneratorLambdaExpression.cs" />
     <Compile Include="Ast\ActionExpression.cs" />
     <Compile Include="Ast\ArgumentKind.cs" />
     <Compile Include="Ast\ArrayIndexAssignment.cs" />
     <Compile Include="Ast\Block.cs" />
     <Compile Include="Ast\BoundAssignment.cs" />
-    <Compile Include="Ast\BoundExpression.cs" />
     <Compile Include="Ast\BreakStatement.cs" />
     <Compile Include="Actions\DynamicSite.cs" />
     <Compile Include="Actions\DynamicSite.Generated.cs" />
@@ -315,8 +313,7 @@
     <Compile Include="Ast\TryStatement.cs" />
     <Compile Include="Ast\UnboundAssignment.cs" />
     <Compile Include="Ast\UnboundExpression.cs" />
-    <Compile Include="Ast\Variable.cs" />
-    <Compile Include="Ast\VariableReference.cs" />
+    <Compile Include="Ast\VariableExpression.cs" />
     <Compile Include="Ast\Walker.Generated.cs" />
     <Compile Include="Ast\LoopStatement.cs" />
     <Compile Include="Ast\YieldLabelBuilder.cs" />

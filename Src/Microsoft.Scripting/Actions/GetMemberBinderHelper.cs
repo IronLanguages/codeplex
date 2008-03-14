@@ -175,7 +175,7 @@ namespace Microsoft.Scripting.Actions {
         protected void MakeOperatorGetMemberBody(Type type, string name) {
             MethodInfo getMem = GetMethod(type, name);
             if (getMem != null && getMem.IsSpecialName) {
-                Variable tmp = Rule.GetTemporary(typeof(object), "getVal");
+                VariableExpression tmp = Rule.GetTemporary(typeof(object), "getVal");
                 AddToBody(
                     Ast.If(
                         Ast.NotEqual(
@@ -192,7 +192,7 @@ namespace Microsoft.Scripting.Actions {
         }
 
         private void MakeCustomMembersBody(Type type) {
-            Variable tmp = Rule.GetTemporary(typeof(object), "lookupRes");
+            VariableExpression tmp = Rule.GetTemporary(typeof(object), "lookupRes");
             AddToBody(
                         Ast.If(
                             Ast.Call(

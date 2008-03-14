@@ -123,8 +123,8 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Write out the given AST (only if ShowASTs or DumpASTs is enabled)
         /// </summary>
-        internal static void Dump(LambdaExpression/*!*/ lambda) {
-            Debug.Assert(lambda != null);
+        internal static void Dump(Expression/*!*/ expression, string description) {
+            Debug.Assert(expression != null);
 
             if (ScriptDomainManager.Options.ShowASTs) {
 #if !SILVERLIGHT
@@ -132,16 +132,16 @@ namespace Microsoft.Scripting.Ast {
                 try {
                     Console.ForegroundColor = GetAstColor();
 #endif
-                    Dump(lambda, System.Console.Out);
+                    Dump(expression, description, System.Console.Out);
 #if !SILVERLIGHT
                 } finally {
                     Console.ForegroundColor = color;
                 }
 #endif
             } else if (ScriptDomainManager.Options.DumpASTs) {
-                StreamWriter sw = new StreamWriter(GetFilePath(lambda.Name), true);
+                StreamWriter sw = new StreamWriter(GetFilePath(description), true);
                 using (sw) {
-                    Dump(lambda, sw);
+                    Dump(expression, description, sw);
                 }
             }
         }
@@ -164,14 +164,6 @@ namespace Microsoft.Scripting.Ast {
                 }
 #endif
             }
-        }
-
-        private static void Dump(LambdaExpression/*!*/ lambda, TextWriter/*!*/ writer) {
-            Debug.Assert(lambda != null);
-            Debug.Assert(writer != null);
-
-            AstWriter dv = new AstWriter(writer);
-            dv.DoDump(lambda);
         }
 
         /// <summary>
@@ -198,43 +190,34 @@ namespace Microsoft.Scripting.Ast {
             return path + ".ast";
         }
 
-        private void DoDump(LambdaExpression node) {
-            WritePrologue(node.Name);
+        private void DoDump(Expression node, string description) {
+            WritePrologue(description);
 
             WalkNode(node);
-
-            WriteBlocks();
             WriteLine();
-        }
 
-        private void DoDump(Expression node, string name) {
-            WritePrologue(name);
-
-            WalkNode(node);
-
-            WriteBlocks();
+            WriteLambdas();
             WriteLine();
         }
 
         private void WritePrologue(string name) {
             WriteLine("//");
-            WriteLine("// AST {0}", name);
+            WriteLine("// AST: {0}", name);
             WriteLine("//");
             WriteLine();
         }
 
-        private void WriteBlocks() {
+        private void WriteLambdas() {
             Debug.Assert(_stack.Count == 0);
 
             while (_lambdaIds != null && _lambdaIds.Count > 0) {
                 LambdaId b = _lambdaIds.Dequeue();
                 WriteLine();
                 WriteLine("//");
-                WriteLine("// LAMBDA: {0} ({1})", b.Lambda.Name, b.Id);
+                WriteLine("// LAMBDA: {0}({1})", b.Lambda.Name, b.Id);
                 WriteLine("//");
+                DumpLambda(b.Lambda);
                 WriteLine();
-
-                WalkNode(b.Lambda);
 
                 Debug.Assert(_stack.Count == 0);
             }
@@ -331,15 +314,6 @@ namespace Microsoft.Scripting.Ast {
 
             Debug.Assert((int)node.NodeType < _Writers.Length);
             _Writers[(int)node.NodeType](this, node);
-        }
-
-        private void WalkNode(LambdaExpression node) {
-            GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
-            if (gcb != null) {
-                WriteGeneratorCodeBlock(gcb);
-            } else {
-                WriteLambda(node);
-            }
         }
 
         // More proper would be to make this a virtual method on Action
@@ -446,19 +420,26 @@ namespace Microsoft.Scripting.Ast {
             aw.WalkNode(node.Value);
         }
 
-        // BoundExpression
-        private static void WriteBoundExpression(AstWriter aw, Expression expr) {
-            BoundExpression node = (BoundExpression)expr;
-            aw.Out("(.bound ");
+        // Variable
+        private static void WriteVariableExpression(AstWriter aw, Expression expr) {
+            VariableExpression node = (VariableExpression)expr;
+            aw.Out("(.var ");
             aw.Out(SymbolTable.IdToString(node.Name));
             aw.Out(")");
         }
 
-        // CodeBlockExpression
-        private static void WriteCodeBlockExpression(AstWriter aw, Expression expr) {
-            CodeBlockExpression node = (CodeBlockExpression)expr;
-            int id = aw.Enqueue(node.Block);
-            aw.Out(String.Format(".block ({0} {1} #{2})", node.Block.Name, node.Type, id));
+        // LambdaExpression
+        private static void WriteLambdaExpression(AstWriter aw, Expression expr) {
+            LambdaExpression node = (LambdaExpression)expr;
+            int id = aw.Enqueue(node);
+            aw.Out(String.Format(".lambda ({0} {1} #{2})", node.Name, node.Type, id));
+        }
+
+        // GeneratorLambdaExpression
+        private static void WriteGeneratorLambdaExpression(AstWriter aw, Expression expr) {
+            GeneratorLambdaExpression node = (GeneratorLambdaExpression)expr;
+            int id = aw.Enqueue(node);
+            aw.Out(String.Format(".generator ({0} {1} #{2})", node.Name, node.Type, id));
         }
 
         // ConditionalExpression
@@ -832,7 +813,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static string GetLambdaInfo(LambdaExpression lambda) {
-            string info = String.Format("{0} {1} (", lambda.ReturnType.Name, lambda.Name);
+            string info = lambda.NodeType == AstNodeType.Generator ? ".generator ": ".lambda ";
+
+            info += String.Format("{0} {1} (", lambda.ReturnType.Name, lambda.Name);
             if (lambda.IsGlobal) {
                 info += " global,";
             }
@@ -849,47 +832,32 @@ namespace Microsoft.Scripting.Ast {
             return info;
         }
 
-        private void DumpVariable(Variable v) {
-            string descr = String.Format("{2} {0} ({1}", SymbolTable.IdToString(v.Name), v.Kind.ToString(), v.Type.Name);
-            if (v.Lift) {
-                descr += ",Lift";
-            }
+        private void DumpVariable(VariableExpression v) {
+            string descr = String.Format("{2} {0} ({1}", SymbolTable.IdToString(v.Name), v.NodeType.ToString().Replace("Variable", ""), v.Type.Name);
             descr += ")";
             Out(descr);
             NewLine();
         }
 
-        private void DumpBlock(LambdaExpression node) {
+        private void DumpLambda(LambdaExpression node) {
             Out(GetLambdaInfo(node));
             Out("(");
             Indent();
-            foreach (Variable v in node.Parameters) {
+            foreach (VariableExpression v in node.Parameters) {
                 Out(Flow.NewLine, ".arg", Flow.Space);
                 DumpVariable(v);
             }
             Dedent();
             Out(") {");
             Indent();
-            foreach (Variable v in node.Variables) {
+            foreach (VariableExpression v in node.Variables) {
                 Out(Flow.NewLine, ".var", Flow.Space);
                 DumpVariable(v);
             }
             Out(Flow.NewLine, "", Flow.NewLine);
             WalkNode(node.Body);
             Dedent();
-            Out("}");
-        }
-
-        // LambdaExpression
-        private void WriteLambda(LambdaExpression node) {
-            Out(".lambda", Flow.Space);
-            DumpBlock(node);
-        }
-
-        // GeneratorCodeBlock
-        private void WriteGeneratorCodeBlock(GeneratorCodeBlock node) {
-            Out(".generator", Flow.Space);
-            DumpBlock(node);
+            Out(Flow.NewLine, "}");
         }
 
         #endregion

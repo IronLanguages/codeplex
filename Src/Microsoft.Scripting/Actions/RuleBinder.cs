@@ -31,10 +31,19 @@ namespace Microsoft.Scripting.Actions {
         /// <summary>
         /// RuleBinder entry point
         /// </summary>
-        internal static AnalyzedRule Bind(Expression test, Expression target, Type result) {
+        internal static AnalyzedRule Bind(StandardRule rule, Type result, int paramStartIndex) {
             RuleBinder rb = new RuleBinder(result);
-            rb.WalkNode(test);
-            rb.WalkNode(target);
+
+            // Add variables defined in the rule
+            foreach (VariableExpression v in rule.ParamVariables) {
+                rb._top.Variables.Add(v, new VariableInfo(v, null, paramStartIndex++));
+            }
+            foreach (VariableExpression v in rule.TemporaryVariables) {
+                rb._top.Variables.Add(v, new VariableInfo(v, null));
+            }
+
+            rb.WalkNode(rule.Test);
+            rb.WalkNode(rule.Target);
 
             rb.BindTheScopes();
 
@@ -61,13 +70,11 @@ namespace Microsoft.Scripting.Actions {
             return true;
         }
 
-        protected override void Reference(Variable variable) {
+        protected override void Reference(VariableExpression variable) {
             Debug.Assert(variable != null);
             if (Stack == null || Stack.Count == 0) {
                 // Top level reference inside the rule.
-                if (!_top.References.ContainsKey(variable)) {
-                    _top.References[variable] = new VariableReference(variable);
-                }
+                _top.AddVariableReference(variable);
             } else {
                 // Call base class for reference within a lambda.
                 base.Reference(variable);

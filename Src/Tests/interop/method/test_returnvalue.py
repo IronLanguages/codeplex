@@ -23,6 +23,8 @@ from Merlin.Testing import *
 from Merlin.Testing.Call import *
 from Merlin.Testing.TypeSample import *
 
+# seems not a good test
+
 c = C()
 
 def test_return_null():

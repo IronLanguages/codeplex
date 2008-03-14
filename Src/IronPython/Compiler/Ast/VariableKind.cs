@@ -13,9 +13,9 @@
  *
  * ***************************************************************************/
 
-namespace Microsoft.Scripting.Ast {
+namespace IronPython.Compiler.Ast {
 
-    public enum VariableKind {
+    internal enum VariableKind {
 
         /// <summary>
         /// Local variable.
@@ -43,7 +43,6 @@ namespace Microsoft.Scripting.Ast {
         /// Global variable
         /// 
         /// Should only appear in global (top level) lambda.
-        /// TODO: Pythonism, globals should go away and be handled on Python side only
         /// </summary>
         Global
     };

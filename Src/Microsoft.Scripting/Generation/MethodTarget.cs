@@ -200,7 +200,7 @@ namespace Microsoft.Scripting.Generation {
 
             if (updates != null) {
                 if (ret.Type != typeof(void)) {
-                    Variable temp = rule.GetTemporary(ret.Type, "$ret");
+                    VariableExpression temp = rule.GetTemporary(ret.Type, "$ret");
                     updates.Insert(0, Ast.Assign(temp, ret));
                     updates.Add(Ast.Read(temp));
                     ret = Ast.Comma(updates.ToArray());

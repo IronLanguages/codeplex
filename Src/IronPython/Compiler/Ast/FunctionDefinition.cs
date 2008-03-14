@@ -222,13 +222,14 @@ namespace IronPython.Compiler.Ast {
             List<MSAst.Expression> names = new List<MSAst.Expression>();
             TransformParameters(ag, bodyGen, defaults, names);
 
+            List<MSAst.Expression> statements = new List<MSAst.Expression>();
+
             // Create variables and references. Since references refer to
             // parameters, do this after parameters have been created.
-            CreateVariables(bodyGen);
+            CreateVariables(bodyGen, statements);
 
             // Initialize parameters - unpack tuples.
             // Since tuples unpack into locals, this must be done after locals have been created.
-            List<MSAst.Expression> statements = new List<MSAst.Expression>();
             InitializeParameters(bodyGen, statements);
 
             // For generators, we need to do a check before the first statement for Generator.Throw() / Generator.Close().
@@ -265,10 +266,10 @@ namespace IronPython.Compiler.Ast {
             //  before it's invoked. This is because the restoration must occur at every place the function returns from 
             //  a yield point. That's different than the finally semantics in a generator.
             if (!IsGenerator && this._canSetSysExcInfo) {
-                MSAst.BoundExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
+                MSAst.VariableExpression extracted = bodyGen.MakeTempExpression("$ex", typeof(Exception));
                 MSAst.Expression s = Ast.Try(
                     Ast.Assign(
-                        extracted.Variable,
+                        extracted,
                         Ast.Call(
                             AstGenerator.GetHelperMethod("SaveCurrentException")
                         )
@@ -284,21 +285,19 @@ namespace IronPython.Compiler.Ast {
 
             bodyGen.Block.Body = body;
 
+            FunctionAttributes flags = ComputeFlags(_parameters);
             MSAst.LambdaExpression code;
             if (IsGenerator) {
-                code = bodyGen.Block.MakeGenerator(typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
+                code = bodyGen.Block.MakeGenerator(GetDelegateType(_parameters, flags != FunctionAttributes.None), typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
             } else {
-                code = bodyGen.Block.MakeLambda();
+                code = bodyGen.Block.MakeLambda(GetDelegateType(_parameters, flags != FunctionAttributes.None));
             }
-
-            FunctionAttributes flags = ComputeFlags(_parameters);
 
             MSAst.Expression ret = Ast.Call(
                 typeof(PythonOps).GetMethod("MakeFunction"),                               // method
                 Ast.CodeContext(),                                                              // 1. Emit CodeContext
                 Ast.Constant(SymbolTable.IdToString(_name)),                                    // 2. FunctionName
-                Ast.CodeBlockExpression(code,
-                    GetDelegateType(code, flags != FunctionAttributes.None)),                   // 3. delegate
+                code,                                                                           // 3. delegate
                 Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
                 Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
                 Ast.Constant(flags),                                                            // 6. flags
@@ -407,8 +406,8 @@ namespace IronPython.Compiler.Ast {
         /// <summary>
         /// Determines delegate type for the Python function
         /// </summary>
-        private static Type GetDelegateType(MSAst.LambdaExpression/*!*/ block, bool wrapper) {
-            return PythonCallTargets.GetPythonTargetType(wrapper, block.Parameters.Count);
+        private static Type GetDelegateType(Parameter[] parameters, bool wrapper) {
+            return PythonCallTargets.GetPythonTargetType(wrapper, parameters.Length);
         }
     }
 }

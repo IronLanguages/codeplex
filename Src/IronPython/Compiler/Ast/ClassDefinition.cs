@@ -86,7 +86,7 @@ namespace IronPython.Compiler.Ast {
             // Python semantics: The variables bound local in the class
             // scope are accessed by name - the dictionary behavior of classes
             if (TryGetVariable(name, out variable)) {
-                return variable.Kind == MSAst.VariableKind.Local ? null : variable;
+                return variable.Kind == VariableKind.Local ? null : variable;
             }
 
             // Try to bind in outer scopes
@@ -107,7 +107,8 @@ namespace IronPython.Compiler.Ast {
 
             AstGenerator body = new AstGenerator(ag, SourceSpan.None, SymbolTable.IdToString(_name), false, false);
 
-            CreateVariables(body);
+            List<MSAst.Expression> init = new List<MSAst.Expression>();
+            CreateVariables(body, init);
 
             // Create the body
             MSAst.Expression bodyStmt = body.Transform(_body);
@@ -134,20 +135,21 @@ namespace IronPython.Compiler.Ast {
             body.Block.Dictionary = true;
             body.Block.Visible = false;
             body.Block.Body = Ast.Block(
+                Ast.Block(init),
                 modStmt,
                 docStmt,
                 bodyStmt,
                 returnStmt
             );
 
-            MSAst.LambdaExpression block = body.Block.MakeLambda();
+            MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Runtime.Calls.CallTarget0));
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 Ast.CodeContext(),
                 Ast.Constant(SymbolTable.IdToString(_name)),
                 bases,
                 Ast.Constant(FindSelfNames()),
-                Ast.CodeBlockExpression(block, typeof(IronPython.Runtime.Calls.CallTarget0))
+                lambda
             );
 
             return Ast.Statement(

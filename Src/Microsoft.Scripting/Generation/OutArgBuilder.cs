@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Generation {
     class OutArgBuilder : ArgBuilder {
         private Type _parameterType;
         private bool _isRef;
-        private Variable _tmp;
+        private VariableExpression _tmp;
 
         public OutArgBuilder(ParameterInfo parameter) {
             _parameterType = parameter.ParameterType.IsByRef ? parameter.ParameterType.GetElementType() : parameter.ParameterType;

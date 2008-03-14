@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Runtime {
         private IAttributesCollection _dict;
         private ScopeAttributeDictionary _attrs;
         private ContextSensitiveScope _contextScopes;
-        private IDictionary<Variable, object> _temps;
+        private IDictionary<VariableExpression, object> _temps;
         private bool _isVisible;
         private SourceLocation _sourceLocation;
 
@@ -255,10 +255,10 @@ namespace Microsoft.Scripting.Runtime {
         /// different than the Scope objects, so separate functions exist for pushing and popping them relative
         /// to the current scope.
         /// </summary>
-        internal IDictionary<Ast.Variable, object> TemporaryStorage {
+        internal IDictionary<Ast.VariableExpression, object> TemporaryStorage {
             get {
                 if (_temps == null) {
-                    _temps = new Dictionary<Variable, object>();
+                    _temps = new Dictionary<VariableExpression, object>();
                 }
                 return _temps;
             }
@@ -269,7 +269,7 @@ namespace Microsoft.Scripting.Runtime {
         /// When this function is called, the variables given by paramVars will be set to the values given by paramValues;
         /// when the returned object is disposed of, the supplied paramVars and tempVars variables will be removed from temporary storage.
         /// </summary>
-        internal CodeContext GetTemporaryVariableContext(CodeContext context, Variable[] paramVars, object[] paramValues) {
+        internal CodeContext GetTemporaryVariableContext(CodeContext context, VariableExpression[] paramVars, object[] paramValues) {
             Debug.Assert(paramVars.Length == paramValues.Length);
 
             Scope scope = CloneForTemporaries();

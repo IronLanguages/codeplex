@@ -185,7 +185,7 @@ namespace IronPython.Runtime.Types {
         private static StandardRule<T> MakeConvertToIEnumerator<T>(CodeContext context, ConvertToAction convertToAction) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldInstance));
-            Variable tmp = rule.GetTemporary(typeof(object), "tmp");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
             // build up:
             // if(hasattr(this, '__iter__')) { 
             //    return PythonEnumerator.Create(this)
@@ -231,7 +231,7 @@ namespace IronPython.Runtime.Types {
         private static StandardRule<T> MakeConvertToIEnumerable<T>(CodeContext context, ConvertToAction convertToAction) {
             StandardRule<T> rule = new StandardRule<T>();
             rule.MakeTest(typeof(OldInstance));
-            Variable tmp = rule.GetTemporary(typeof(object), "tmp");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
             // build up:
             // if(hasattr(this, '__iter__')) { 
             //    return PythonEnumerable.Create(this)
@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, Variable tmp, Expression @else, Expression call) {
+        private static Expression MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(res.Parameters[0], typeof(OldInstance)),
@@ -276,7 +276,7 @@ namespace IronPython.Runtime.Types {
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
             // this favors less code generation.
-            Variable tmp = rule.GetTemporary(typeof(object), "callFunc"); // , Symbols.ConvertToComplex, "ConvertToComplex"
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "callFunc"); // , Symbols.ConvertToComplex, "ConvertToComplex"
 
             Expression failed = PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
             Expression tryFloat = MakeConvertCallBody<T>(context, convertToAction, Symbols.ConvertToFloat, "ConvertToFloat", rule, tmp, failed);
@@ -292,7 +292,7 @@ namespace IronPython.Runtime.Types {
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
             // this favors less code generation.
-            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "callFunc");
 
             Expression failed =  PythonBinderHelper.GetConversionFailedReturnValue<T>(context, convertToAction, rule);
             rule.Target = MakeConvertCallBody<T>(context, convertToAction, symbolId, returner, rule, tmp, failed);
@@ -300,7 +300,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, Variable tmp, Expression @else) {
+        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, VariableExpression tmp, Expression @else) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
@@ -328,7 +328,7 @@ namespace IronPython.Runtime.Types {
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
             // this favors less code generation.
-            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "callFunc");
 
             // Python anything can be converted to a bool (by default if it's not null it's true).  If we don't
             // find the conversion methods, and the request comes from Python, the result is true.
@@ -384,7 +384,7 @@ namespace IronPython.Runtime.Types {
             
             // we could get better throughput w/ a more specific rule against our current custom old class but
             // this favors less code generation.
-            Variable tmp = rule.GetTemporary(typeof(object), "callFunc");
+            VariableExpression tmp = rule.GetTemporary(typeof(object), "callFunc");
             Expression[] callParams = ArrayUtils.MakeArray(rule.Parameters);
             callParams[0] = Ast.Read(tmp);
             rule.Target =
@@ -427,7 +427,7 @@ namespace IronPython.Runtime.Types {
 
             StandardRule<T> rule = new StandardRule<T>();
 
-            Variable tmp = rule.GetTemporary(typeof(CustomOldClassDictionaryStorage), "dict");
+            VariableExpression tmp = rule.GetTemporary(typeof(CustomOldClassDictionaryStorage), "dict");
             Expression tryGetValue = Ast.Call(
                 Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
                 typeof(OldInstance).GetMethod("GetOptimizedDictionary"),
@@ -497,7 +497,7 @@ namespace IronPython.Runtime.Types {
              switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     if (((GetMemberAction)action).IsNoThrow) {
-                        Variable tmp = rule.GetTemporary(typeof(object), "tmp");
+                        VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
 
                         target = Ast.Condition(
                                     Ast.Call(

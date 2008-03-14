@@ -3318,5 +3318,12 @@ namespace IronPython.Runtime.Operations {
         public static IEnumerator CreatePythonEnumerator(object baseObject) {
             return PythonEnumerator.Create(baseObject);
         }
+
+        public static object CheckUninitialized(object value, SymbolId name) {
+            if (value == Uninitialized.Instance) {
+                RuntimeHelpers.ThrowUnboundLocalError(name);
+            }
+            return value;
+        }
     }
 }

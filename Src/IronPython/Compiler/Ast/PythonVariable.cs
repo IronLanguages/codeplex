@@ -18,6 +18,7 @@ using System.Diagnostics;
 
 using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Ast {
     class PythonVariable {
@@ -26,15 +27,21 @@ namespace IronPython.Compiler.Ast {
         private readonly ScopeStatement _scope;
         private bool _visible = true;       // variable visible to the nested scopes - the default
         private bool _deleted;              // del x
+        private bool _unassigned;           // Variable ever referenced without being assigned
+        private bool _uninitialized;        // Variable ever used either uninitialized or after deletion
 
-        private MSAst.VariableKind _kind;
-        private MSAst.Variable _variable;
+        private bool _fallback;             // If uninitialized, lookup in builtins
 
-        public PythonVariable(SymbolId name, MSAst.VariableKind kind, ScopeStatement scope)
+        private int _index;                 // Index for flow checker
+
+        private VariableKind _kind;
+        private MSAst.VariableExpression _variable;
+
+        public PythonVariable(SymbolId name, VariableKind kind, ScopeStatement scope)
             : this(name, typeof(object), kind, scope) {
         }
 
-        public PythonVariable(SymbolId name, Type type, MSAst.VariableKind kind, ScopeStatement scope) {
+        public PythonVariable(SymbolId name, Type type, VariableKind kind, ScopeStatement scope) {
             _name = name;
             _type = type;
             _kind = kind;
@@ -53,7 +60,7 @@ namespace IronPython.Compiler.Ast {
             get { return _scope; }
         }
 
-        public MSAst.VariableKind Kind {
+        public VariableKind Kind {
             get { return _kind; }
             set { _kind = value; }
         }
@@ -67,26 +74,52 @@ namespace IronPython.Compiler.Ast {
 
         internal bool Deleted {
             get { return _deleted; }
-        }
-        internal void MarkDeleted() {
-            _deleted = true;
+            set { _deleted = value; }
         }
 
-        public MSAst.Variable Variable {
+        internal int Index {
+            get { return _index; }
+            set { _index = value; }
+        }
+
+        public bool Unassigned {
+            get { return _unassigned; }
+            set { _unassigned = value; }
+        }
+
+        public bool Uninitialized {
+            get { return _uninitialized; }
+            set { _uninitialized = value; }
+        }
+
+        internal bool Fallback {
+            get { return _fallback; }
+            set { _fallback = value; }
+        }
+
+        public MSAst.VariableExpression Variable {
             get {
                 Debug.Assert(_variable != null);
                 return _variable;
             }
         }
 
-        internal void SetParameter(MSAst.Variable parameter) {
+        internal void SetParameter(MSAst.VariableExpression parameter) {
             Debug.Assert(_variable == null);
             _variable = parameter;
         }
 
-        internal MSAst.Variable Transform(AstGenerator ag) {
-            Debug.Assert(_kind != MSAst.VariableKind.Parameter);
-            return _variable = ag.Block.CreateVariable(_name, _kind, _type);
+        internal MSAst.VariableExpression Transform(AstGenerator ag) {
+            Debug.Assert(_kind != VariableKind.Parameter);
+            switch (_kind) {
+                case VariableKind.Global:
+                    return _variable = ag.Block.CreateGlobalVariable(_name, _type);
+                case VariableKind.Local:
+                    return _variable = ag.Block.CreateLocalVariable(_name, _type);
+                case VariableKind.Temporary:
+                    return _variable = ag.Block.CreateTemporaryVariable(_name, _type);
+                default: throw Assert.Unreachable;
+            }
         }
     }
 }

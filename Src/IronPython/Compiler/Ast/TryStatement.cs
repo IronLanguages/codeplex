@@ -80,14 +80,14 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression @else = ag.Transform(_else);
             MSAst.Expression @finally = ag.Transform(_finally);
 
-            MSAst.Variable exception;
+            MSAst.VariableExpression exception;
             MSAst.Expression @catch = TransformHandlers(ag, out exception);
 
             // We have else clause, must generate guard around it
             if (@else != null) {
                 Debug.Assert(@catch != null);
 
-                MSAst.BoundExpression runElse = ag.MakeTempExpression("run_else", typeof(bool));
+                MSAst.VariableExpression runElse = ag.MakeTempExpression("run_else", typeof(bool));
 
                 //  run_else = true;
                 //  try {
@@ -101,11 +101,11 @@ namespace IronPython.Compiler.Ast {
                 //  }
                 MSAst.Expression result =
                     Ast.Block(
-                        Ast.Write(runElse.Variable, Ast.True()),
+                        Ast.Write(runElse, Ast.True()),
                         Ast.Try(
                             Span, _header, body
                         ).Catch(exception.Type, exception,
-                            Ast.Write(runElse.Variable, Ast.False()),
+                            Ast.Write(runElse, Ast.False()),
                             @catch
                         ),
                         Ast.IfThen(runElse,
@@ -149,20 +149,20 @@ namespace IronPython.Compiler.Ast {
         /// <param name="ag"></param>
         /// <param name="variable">The variable for the exception in the catch block.</param>
         /// <returns>Null if there are no except handlers. Else the statement to go inside the catch handler</returns>
-        private MSAst.Expression TransformHandlers(AstGenerator ag, out MSAst.Variable variable) {
+        private MSAst.Expression TransformHandlers(AstGenerator ag, out MSAst.VariableExpression variable) {
             if (_handlers == null || _handlers.Length == 0) {
                 variable = null;
                 return null;
             }
 
-            MSAst.BoundExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
-            MSAst.BoundExpression extracted = ag.MakeTempExpression("extracted", typeof(object));
+            MSAst.VariableExpression exception = ag.MakeTempExpression("exception", typeof(Exception));
+            MSAst.VariableExpression extracted = ag.MakeTempExpression("extracted", typeof(object));
 
             // The variable where the runtime will store the exception.
-            variable = exception.Variable;
+            variable = exception;
 
             List<MSAst.IfStatementTest> tests = new List<MSAst.IfStatementTest>(_handlers.Length);
-            MSAst.BoundExpression converted = null;
+            MSAst.VariableExpression converted = null;
             MSAst.Expression catchAll = null;
 
             for (int index = 0; index < _handlers.Length; index++) {
@@ -201,7 +201,7 @@ namespace IronPython.Compiler.Ast {
                         ist = Ast.IfCondition(
                             tsh.Span, tsh.Header,
                             Ast.NotEqual(
-                                Ast.Assign(converted.Variable, test),
+                                Ast.Assign(converted, test),
                                 Ast.Null()
                             ),
                             Ast.Block(
@@ -280,7 +280,7 @@ namespace IronPython.Compiler.Ast {
             //  }
             return Ast.Try(
                 Ast.Assign(
-                    extracted.Variable,
+                    extracted,
                     Ast.Call(
                         AstGenerator.GetHelperMethod("SetCurrentException"),
                         Ast.CodeContext(),

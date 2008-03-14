@@ -13,6 +13,7 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Scripting.Generation;
 
@@ -36,9 +37,14 @@ namespace Microsoft.Scripting.Ast {
         private readonly LambdaInfo _parent;
 
         /// <summary>
+        /// Variables defined in this lambda.
+        /// </summary>
+        private readonly Dictionary<VariableExpression, VariableInfo> _variables = new Dictionary<VariableExpression, VariableInfo>();
+
+        /// <summary>
         /// Variables referenced from this lambda.
         /// </summary>
-        private readonly Dictionary<Variable, VariableReference> _references = new Dictionary<Variable, VariableReference>();
+        private readonly Dictionary<VariableInfo, Slot> _slots = new Dictionary<VariableInfo, Slot>();
 
         /// <summary>
         /// Try statements in this lambda (if the lambda is generator)
@@ -82,6 +88,16 @@ namespace Microsoft.Scripting.Ast {
         internal LambdaInfo(LambdaExpression lambda, LambdaInfo parent) {
             _lambda = lambda;
             _parent = parent;
+
+            if (lambda != null) {
+                int index = 0;
+                foreach (VariableExpression v in lambda.Parameters) {
+                    _variables.Add(v, new VariableInfo(v, _lambda, index++));
+                }
+                foreach (VariableExpression v in lambda.Variables) {
+                    _variables.Add(v, new VariableInfo(v, _lambda));
+                }
+            }
         }
 
         internal LambdaExpression Lambda {
@@ -92,8 +108,12 @@ namespace Microsoft.Scripting.Ast {
             get { return _parent; }
         }
 
-        internal Dictionary<Variable, VariableReference> References {
-            get { return _references; }
+        internal Dictionary<VariableInfo, Slot> Slots {
+            get { return _slots; }
+        }
+
+        internal Dictionary<VariableExpression, VariableInfo> Variables {
+            get { return _variables; }
         }
 
         internal EnvironmentFactory EnvironmentFactory {
@@ -138,10 +158,11 @@ namespace Microsoft.Scripting.Ast {
             get { return _topTargets; }
         }
 
-        internal void Reference(Variable variable) {
-            if (!_references.ContainsKey(variable)) {
-                _references[variable] = new VariableReference(variable);
-            }
+        /// <summary>
+        /// Marks the variable as being referenced in this lambda
+        /// </summary>
+        internal void AddVariableReference(VariableExpression variable) {
+            _slots[GetVariableInfo(variable)] = null;
         }
 
         internal void AddGeneratorTemps(int count) {
@@ -149,8 +170,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         internal void PopulateGeneratorInfo(Dictionary<TryStatement, TryStatementInfo> tryInfos,
-                                            Dictionary<YieldStatement, YieldTarget> yieldTargets, 
-                                            List<YieldTarget> topTargets, 
+                                            Dictionary<YieldStatement, YieldTarget> yieldTargets,
+                                            List<YieldTarget> topTargets,
                                             int temps) {
             _tryInfos = tryInfos;
             _yieldTargets = yieldTargets;
@@ -174,6 +195,32 @@ namespace Microsoft.Scripting.Ast {
             } else {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Gets the compiler state corresponding to the Variable
+        /// Searches parent LambdaInfos if the variable is not defined in this lambda
+        /// </summary>
+        internal VariableInfo GetVariableInfo(VariableExpression variable) {
+            VariableInfo result;
+            LambdaInfo definingLambda = this;
+            while (!definingLambda.Variables.TryGetValue(variable, out result)) {
+                definingLambda = definingLambda.Parent;
+                if (definingLambda == null) {
+                    throw new ArgumentException("Could not resolve Variable " + variable.Name);
+                }
+            }
+            return result;
+        }
+
+        internal void CreateReferenceSlots(LambdaCompiler cg) {
+            foreach (VariableInfo vi in new List<VariableInfo>(_slots.Keys)) {
+                _slots[vi] = vi.CreateSlot(cg, this);
+            }
+        }
+
+        internal Slot GetVariableSlot(VariableExpression variable) {
+            return _slots[GetVariableInfo(variable)];
         }
     }
 }

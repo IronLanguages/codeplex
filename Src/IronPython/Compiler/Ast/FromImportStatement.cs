@@ -79,7 +79,7 @@ namespace IronPython.Compiler.Ast {
                 // from a[.b] import x [as xx], [ y [ as yy] ] [ , ... ]
 
                 List<MSAst.Expression> statements = new List<MSAst.Expression>();
-                MSAst.BoundExpression module = ag.MakeTempExpression("module");
+                MSAst.VariableExpression module = ag.MakeTempExpression("module");
 
                 // Create initializer of the array of names being passed to ImportWithNames
                 MSAst.ConstantExpression[] names = new MSAst.ConstantExpression[_names.Length];
@@ -92,7 +92,7 @@ namespace IronPython.Compiler.Ast {
                     Ast.Statement(
                         _root.Span,
                         Ast.Assign(
-                            module.Variable,
+                            module,
                             Ast.Call(
                                 AstGenerator.GetHelperMethod("ImportWithNames"),
                                 Ast.CodeContext(),

@@ -68,8 +68,8 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
-        protected internal override bool Walk(BoundExpression node) {
-            Reference(node.Variable);
+        protected internal override bool Walk(VariableExpression node) {
+            Reference(node);
             return true;
         }
 
@@ -95,11 +95,11 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(li.Lambda == node);
         }
 
-        protected internal override bool Walk(GeneratorCodeBlock node) {
+        protected internal override bool Walk(GeneratorLambdaExpression node) {
             return Push(node);
         }
 
-        protected internal override void PostWalk(GeneratorCodeBlock node) {
+        protected internal override void PostWalk(GeneratorLambdaExpression node) {
             LambdaInfo li = Pop();
             Debug.Assert(li.Lambda == node);
             Debug.Assert(li.TopTargets == null);
@@ -110,9 +110,9 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
-        protected virtual void Reference(Variable variable) {
+        protected virtual void Reference(VariableExpression variable) {
             Debug.Assert(variable != null);
-            _stack.Peek().Reference(variable);
+            _stack.Peek().AddVariableReference(variable);
         }
 
         private bool Push(LambdaExpression lambda) {
@@ -122,7 +122,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // We've seen this lambda already
-            // (referenced from multiple CodeBlockExpressions)
+            // (referenced from multiple LambdaExpressions)
             if (_infos.ContainsKey(lambda)) {
                 return false;
             }
@@ -177,21 +177,17 @@ namespace Microsoft.Scripting.Ast {
             // If the function is generator or needs custom frame,
             // lift locals to closure
             LambdaExpression lambda = lambdaInfo.Lambda;
-            if (lambda is GeneratorCodeBlock || lambda.EmitLocalDictionary) {
+            if (lambda is GeneratorLambdaExpression || lambda.EmitLocalDictionary) {
                 LiftLocalsToClosure(lambdaInfo);
             }
             ResolveClosure(lambdaInfo);
         }
 
         private static void LiftLocalsToClosure(LambdaInfo lambdaInfo) {
-            // Lift all parameters
-            foreach (Variable p in lambdaInfo.Lambda.Parameters) {
-                p.LiftToClosure();
-            }
-            // Lift all locals
-            foreach (Variable d in lambdaInfo.Lambda.Variables) {
-                if (d.Kind == VariableKind.Local) {
-                    d.LiftToClosure();
+            // Lift all parameters and locals
+            foreach (VariableInfo vi in lambdaInfo.Variables.Values) {
+                if (vi.Variable.NodeType == AstNodeType.Parameter || vi.Variable.NodeType == AstNodeType.LocalVariable) {
+                    vi.LiftToClosure();
                 }
             }
             lambdaInfo.HasEnvironment = true;
@@ -200,22 +196,20 @@ namespace Microsoft.Scripting.Ast {
         private void ResolveClosure(LambdaInfo li) {
             LambdaExpression lambda = li.Lambda;
 
-            foreach (VariableReference r in li.References.Values) {
-                Debug.Assert(r.Variable != null);
-
-                if (r.Variable.Lambda == lambda) {
+            foreach (VariableInfo vi in li.Slots.Keys) {
+                if (vi.Lambda == lambda) {
                     // local reference => no closure
                     continue;
                 }
 
                 // Global variables as local
-                if (r.Variable.Kind == VariableKind.Global ||
-                    (r.Variable.Kind == VariableKind.Local && r.Variable.Lambda.IsGlobal)) {
+                if (vi.Variable.NodeType == AstNodeType.GlobalVariable ||
+                    (vi.Variable.NodeType == AstNodeType.LocalVariable && vi.Lambda.IsGlobal)) {
                     continue;
                 }
 
                 // Lift the variable into the closure
-                r.Variable.LiftToClosure();
+                vi.LiftToClosure();
 
                 // Mark all parent scopes between the use and the definition
                 // as closures/environment
@@ -232,16 +226,16 @@ namespace Microsoft.Scripting.Ast {
                                 "referenced from lambda '{1}' " +
                                 "and defined in lambda {2}).\n" +
                                 "Is LambdaExpression.Parent set correctly?",
-                                SymbolTable.IdToString(r.Variable.Name),
+                                SymbolTable.IdToString(vi.Variable.Name),
                                 li.Lambda.Name ?? "<unnamed>",
-                                r.Variable.Lambda != null ? (r.Variable.Lambda.Name ?? "<unnamed>") : "<unknown>"
+                                vi.Lambda != null ? (vi.Lambda.Name ?? "<unnamed>") : "<unknown>"
                             )
                         );
                     }
 
                     parent.HasEnvironment = true;
                     current = parent;
-                } while (current.Lambda != r.Variable.Lambda);
+                } while (current.Lambda != vi.Lambda);
             }
         }
 

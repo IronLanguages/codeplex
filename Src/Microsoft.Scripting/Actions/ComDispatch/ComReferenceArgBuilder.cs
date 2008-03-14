@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// in the two worlds. ReferenceArgBuilder cannot be used as is in such cases
     /// </summary>
     internal class ComReferenceArgBuilder : ReferenceArgBuilder {
-        private Variable _unmanagedTemp;
+        private VariableExpression _unmanagedTemp;
 
         internal ComReferenceArgBuilder(int index, Type parameterType)
             : base(index, parameterType) {

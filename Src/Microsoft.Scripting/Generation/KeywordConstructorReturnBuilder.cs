@@ -60,7 +60,7 @@ namespace Microsoft.Scripting.Generation {
         internal override Expression ToExpression(MethodBinderContext context, IList<ArgBuilder> args, IList<Expression> parameters, Expression ret) {
             List<Expression> sets = new List<Expression>();
 
-            Variable tmp = context.GetTemporary(ret.Type, "val");
+            VariableExpression tmp = context.GetTemporary(ret.Type, "val");
             sets.Add(
                 Ast.Assign(tmp, ret)
             );

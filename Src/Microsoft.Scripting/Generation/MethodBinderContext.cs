@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
             return _actionBinder.ConvertExpression(expr, type);
         }
 
-        public Variable GetTemporary(Type type, string name) {            
+        public VariableExpression GetTemporary(Type type, string name) {            
             return _rule.GetTemporary(type, name);
         }
 

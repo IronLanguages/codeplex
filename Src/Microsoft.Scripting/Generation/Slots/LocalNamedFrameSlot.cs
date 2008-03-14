@@ -53,7 +53,7 @@ namespace Microsoft.Scripting.Generation {
         public override void EmitSetUninitialized(LambdaCompiler cg) {
         }
 
-        public override void EmitDelete(LambdaCompiler cg, SymbolId name, bool check) {
+        public override void EmitDelete(LambdaCompiler cg, SymbolId name) {
             // Emit the following:
             //    RuntimeHelpers.RemoveName(context, symbol_id)
             _frame.EmitGet(cg);

@@ -42,15 +42,15 @@ namespace ToyScript.Parser {
             _scope = _scope.Parent;
         }
 
-        internal MSAst.Variable LookupName(string name) {
+        internal MSAst.VariableExpression LookupName(string name) {
             return _scope.LookupName(name);
         }
 
-        internal MSAst.Variable GetOrMakeLocal(string name) {
+        internal MSAst.VariableExpression GetOrMakeLocal(string name) {
             return _scope.GetOrMakeLocal(name);
         }
 
-        internal MSAst.Variable GetOrMakeGlobal(string name) {
+        internal MSAst.VariableExpression GetOrMakeGlobal(string name) {
             return _scope.TopScope.GetOrMakeLocal(name);
         }
 

@@ -35,18 +35,18 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Catch(Type type, Expression body) {
-            return Catch(type, (Variable)null, body);
+            return Catch(type, (VariableExpression)null, body);
         }
 
         public TryStatementBuilder Catch(Type type, params Expression[] body) {
             return Catch(type, null, body);
         }
 
-        public TryStatementBuilder Catch(Type type, Variable holder, params Expression[] body) {
+        public TryStatementBuilder Catch(Type type, VariableExpression holder, params Expression[] body) {
             return Catch(type, holder, Ast.Block(body));
         }
 
-        public TryStatementBuilder Catch(Type type, Variable holder, Expression body) {
+        public TryStatementBuilder Catch(Type type, VariableExpression holder, Expression body) {
             if (_skipNext) {
                 _skipNext = false;
                 return this;
@@ -67,11 +67,11 @@ namespace Microsoft.Scripting.Ast {
             return this;
         }
 
-        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, params Expression[] body) {
+        public TryStatementBuilder Filter(Type type, VariableExpression holder, Expression condition, params Expression[] body) {
             return Filter(type, holder, condition, Ast.Block(body));
         }
 
-        public TryStatementBuilder Filter(Type type, Variable holder, Expression condition, Expression body) {
+        public TryStatementBuilder Filter(Type type, VariableExpression holder, Expression condition, Expression body) {
             if (_skipNext) {
                 _skipNext = false;
                 return this;

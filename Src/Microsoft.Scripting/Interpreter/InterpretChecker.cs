@@ -15,8 +15,9 @@
 
 using System.Diagnostics;
 using System.Collections.Generic;
+using Microsoft.Scripting.Ast;
 
-namespace Microsoft.Scripting.Ast {
+namespace Microsoft.Scripting.Interpreter {
     /// <summary>
     /// Determine if we should evaluate a given tree in interpreted mode.
     /// Currently, we can evaluate everything that does not contain as-yet-unsupported nodes.
@@ -33,13 +34,15 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private bool Check(LambdaExpression lambda) {
-            WalkNode(lambda);
+            // explicitly walk the lambda body.
+            // walker will not recurse into lambdas and will put them in the queue instead.
+            WalkNode(lambda.Body);
 
             Debug.Assert(_expressionDepth == 0);
 
             while (_ok && _lambdas != null && _lambdas.Count > 0) {
                 lambda = _lambdas.Dequeue();
-                WalkNode(lambda);
+                WalkNode(lambda.Body);
                 Debug.Assert(_expressionDepth == 0);
             }
 
@@ -64,22 +67,22 @@ namespace Microsoft.Scripting.Ast {
         protected internal override bool Walk(BoundAssignment node) { return Push(); }
         protected internal override void PostWalk(BoundAssignment node) { Pop(); }
 
-        // BoundExpression
-        protected internal override bool Walk(BoundExpression node) { return Push(); }
-        protected internal override void PostWalk(BoundExpression node) { Pop(); }
+        // Variable
+        protected internal override bool Walk(VariableExpression node) { return Push(); }
+        protected internal override void PostWalk(VariableExpression node) { Pop(); }
 
         // BreakStatement
         protected internal override bool Walk(BreakStatement node) {
             return DisallowControlFlowInExpression();
         }
 
-        // CodeBlockExpression
-        protected internal override bool Walk(CodeBlockExpression node) {
+        // LambdaExpression
+        protected internal override bool Walk(LambdaExpression node) {
             // Do not recurse into nested lambdas, but process them later
             if (_lambdas == null) {
                 _lambdas = new Queue<LambdaExpression>();
             }
-            _lambdas.Enqueue(node.Block);
+            _lambdas.Enqueue(node);
             return false;
         }
 
@@ -182,7 +185,7 @@ namespace Microsoft.Scripting.Ast {
             _expressionDepth--;
         }
 
-        private bool DisallowControlFlowInExpression() { 
+        private bool DisallowControlFlowInExpression() {
             if (_expressionDepth > 0) {
                 _ok = false;
             }

@@ -65,10 +65,10 @@ namespace IronPython.Compiler.Ast {
                     )
                 );
             } else {
-                MSAst.BoundExpression temp = ag.MakeTempExpression("inplace");
+                MSAst.VariableExpression temp = ag.MakeTempExpression("inplace");
                 return Ast.Block(
                     new SourceSpan(Span.Start, span.End),
-                    Ast.Assign(temp.Variable, ag.Transform(_target)),
+                    Ast.Assign(temp, ag.Transform(_target)),
                     Ast.Action.SetMember(
                         _name,
                         typeof(object),

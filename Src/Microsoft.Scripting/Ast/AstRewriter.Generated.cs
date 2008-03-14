@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.Ast {
             RewriteBinaryExpression,                                    //    GreaterThan
             RewriteBinaryExpression,                                    //    GreaterThanOrEqual
                                                                         // ** Invoke
-                                                                        // ** Lambda
+            RewriteLambdaExpression,                                    //    Lambda
             RewriteBinaryExpression,                                    //    LeftShift
             RewriteBinaryExpression,                                    //    LessThan
             RewriteBinaryExpression,                                    //    LessThanOrEqual
@@ -76,11 +76,10 @@ namespace Microsoft.Scripting.Ast {
             RewriteArrayIndexAssignment,                                //    ArrayIndexAssignment
             RewriteBlock,                                               //    Block
             RewriteBoundAssignment,                                     //    BoundAssignment
-            RewriteBoundExpression,                                     //    BoundExpression
             RewriteBreakStatement,                                      //    BreakStatement
-            RewriteCodeBlockExpression,                                 //    CodeBlockExpression
             RewriteIntrinsicExpression,                                 //    CodeContextExpression
             RewriteIntrinsicExpression,                                 //    GeneratorIntrinsic
+            RewriteGeneratorLambdaExpression,                           //    Generator
             RewriteContinueStatement,                                   //    ContinueStatement
             RewriteDeleteStatement,                                     //    DeleteStatement
             RewriteDeleteUnboundExpression,                             //    DeleteUnboundExpression
@@ -88,15 +87,19 @@ namespace Microsoft.Scripting.Ast {
             RewriteEmptyStatement,                                      //    EmptyStatement
             RewriteIntrinsicExpression,                                 //    EnvironmentExpression
             RewriteExpressionStatement,                                 //    ExpressionStatement
+            RewriteVariableExpression,                                  //    GlobalVariable
             RewriteLabeledStatement,                                    //    LabeledStatement
+            RewriteVariableExpression,                                  //    LocalVariable
             RewriteLoopStatement,                                       //    LoopStatement
             RewriteMemberAssignment,                                    //    MemberAssignment
             RewriteMemberExpression,                                    //    MemberExpression
             RewriteNewArrayExpression,                                  //    NewArrayExpression
             RewriteUnaryExpression,                                     //    OnesComplement
+            RewriteVariableExpression,                                  //    Parameter
             RewriteReturnStatement,                                     //    ReturnStatement
             RewriteScopeStatement,                                      //    ScopeStatement
             RewriteSwitchStatement,                                     //    SwitchStatement
+            RewriteVariableExpression,                                  //    TemporaryVariable
             RewriteThrowStatement,                                      //    ThrowStatement
             RewriteTryStatement,                                        //    TryStatement
             RewriteUnboundAssignment,                                   //    UnboundAssignment
