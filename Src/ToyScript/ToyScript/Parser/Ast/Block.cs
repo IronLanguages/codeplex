@@ -32,7 +32,7 @@ namespace ToyScript.Parser.Ast {
             for (int i = 0; i < statements.Length; i++) {
                 statements[i] = _statements[i].Generate(tg);
             }
-            return Ast.Block(Span, statements);
+            return Ast.Block(statements);
         }
     }
 }

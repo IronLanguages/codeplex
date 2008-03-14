@@ -20,6 +20,9 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Provides hosting to DLR. Forwards DLR requests to the ScriptHost. 
+    /// </summary>
     internal sealed class ScriptHostProxy : DynamicRuntimeHostingProvider {
         private readonly ScriptHost/*!*/ _host;
 
@@ -32,17 +35,13 @@ namespace Microsoft.Scripting.Hosting {
             get { return _host.PlatformAdaptationLayer; }
         }
 
-        public override IList<string/*!*/>/*!*/ SourceUnitResolutionPath {
-            get { return _host.SourceUnitResolutionPath; }
-        }
-
         public override SourceUnit TryGetSourceFileUnit(LanguageContext/*!*/ language, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
-            ScriptSource result = _host.TryGetSourceFileUnit(_host.Runtime.GetEngine(language), path, encoding, kind);
+            ScriptSource result = _host.TryGetSourceFile(_host.Runtime.GetEngine(language), path, encoding, kind);
             return (result != null) ? result.SourceUnit : null;
         }
 
-        public override SourceUnit ResolveSourceFileUnit(string/*!*/ name) {
-            ScriptSource result = _host.ResolveSourceFileUnit(name);
+        public override SourceUnit/*!*/ ResolveSourceFileUnit(string/*!*/ name) {
+            ScriptSource result = _host.ResolveSourceFile(name);
             return (result != null) ? result.SourceUnit : null;
         }
     }

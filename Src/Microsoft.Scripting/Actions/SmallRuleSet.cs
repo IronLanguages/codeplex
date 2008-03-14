@@ -157,65 +157,6 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-#if DEBUG
-        private string StubName {
-            get {
-                Walker w = new Walker();
-                w.WalkNode(_rules[0].Target);
-                if (w.Name.Length > 1000) {
-                    return w.Name.Substring(0, 1000);
-                }
-                return w.Name;
-            }
-
-        }
-
-        class Walker : Ast.Walker {
-            public string Name = "_stub_";
-
-            protected internal override bool Walk(MethodCallExpression node) {
-                if (Name == "_stub_") {
-                    Name = node.Method.ReflectedType + "." + node.Method.Name;
-                }
-                return false;
-            }
-
-            protected internal override bool Walk(NewExpression node) {
-                if (Name == "_stub_") {
-                    Name = node.Constructor.DeclaringType + "..ctor";
-                }
-                return false;
-            }
-
-            protected internal override bool Walk(ThrowStatement node) {
-                if (Name == "_stub_") {
-                    NewExpression ne = node.Exception as NewExpression;
-                    MethodCallExpression callExpr;
-
-                    if (ne != null) {
-                        Name = "Error##" + ne.Constructor.DeclaringType.Name;
-                        foreach (Expression arg in ne.Arguments) {
-                            AddArgument(arg);
-                        }
-                    } else if ((callExpr = (node.Exception as MethodCallExpression)) != null) {
-                        Name = "Error##" + callExpr.Method.ReflectedType + "." + callExpr.Method.Name;
-                        foreach (Expression arg in callExpr.Arguments) {
-                            AddArgument(arg);
-                        }
-                    }
-                }
-                return base.Walk(node);
-            }
-
-            private void AddArgument(Expression arg) {
-                ConstantExpression ce = arg as ConstantExpression;
-                if (ce != null) {
-                    Name += ce.Value == null ? "(null)" : ce.Value.ToString().Replace('.', '_').Replace('+', '_');
-                }
-            }
-        }
-#else
         private const string StubName = "_stub_";
-#endif
     }
 }

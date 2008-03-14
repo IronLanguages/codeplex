@@ -91,8 +91,9 @@ SLOW_LIST = [
 
 #tests we do not wish to run. These should be in the "Tests" directory
 EXCLUDE_LIST = [
-                "test_traceback.py", #has a bug
-                "test_dllsite.py", #disabled for 2.0 branch
+                "test_traceback.py",  #CodePlex 11116
+                "test_dllsite.py",    #disabled for 2.0 branch
+                "test_cominterop.py", #Merlin 393974 - word fails under ""
                 ]
 
 #List of extra tests in "Tests" which do not follow the "test_*.py" pattern.

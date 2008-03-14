@@ -140,7 +140,8 @@ def ensure_future_present(path):
     write_to_file(futureFile, 
     '''division=1
 with_statement=1
-generators=1''')
+generators=1
+absolute_import=1''')
         
 def clean_directory(path):
     for f in nt.listdir(path):

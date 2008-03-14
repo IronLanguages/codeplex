@@ -136,4 +136,49 @@ def test_class_name():
     AreEqual(SWF.TextBox().__class__.__name__, "TextBox")
 
 
+def test_cp9908():
+    from System.Windows.Forms import Panel
+    from System.Windows.Forms.Layout import LayoutEngine
+    
+    class LE(LayoutEngine):
+        def Layout(self, parent, eventArgs):
+            LayoutEngine.Layout(self, parent, eventArgs)
+            
+            
+    le = LE()
+    
+    class P(Panel):
+        @property
+        def get_LayoutEngine(self): return le
+        #LayoutEngine = property(lambda self: le)
+
+        
+    p = P()
+    Assert(str(p.get_LayoutEngine).startswith("<LE object at 0x"))
+    AreEqual(p.get_LayoutEngine, le)
+    #CodePlex 9908 - this lambda should return le, not throw a TypeError
+    AssertError(TypeError, lambda: p.LayoutEngine)
+    
+def test_cp13405():
+    from System.Windows.Forms import PropertyGrid, DockStyle, Form
+    grid = PropertyGrid()
+    grid.Dock = DockStyle.Fill
+    form = Form()
+    form.Controls.Add(grid)
+    form.Show()
+    class PropertyExample(object):
+        def __init__(self, X):
+            self._X = X
+        def _getX(self): return self._X
+        def _setX(self, value): self._X = value
+        X = property(_getX, _setX)
+
+    example = PropertyExample(3)
+    try:
+        grid.SelectedObject = example
+        AssertUnreachable("CodePlex 13405 seems to have been fixed!  Remove me")
+    except NotImplementedError, e:
+        pass
+
+
 run_test(__name__)

@@ -139,19 +139,21 @@ namespace IronPython.Modules {
             return PythonContext.GetContext(context).DomainManager.PAL.LoadAssembly(name);
         }
 
-        public static object Use(CodeContext context, string/*!*/ name) {
+        public static object Use(CodeContext/*!*/ context, string/*!*/ name) {
             Contract.RequiresNotNull(context, "context");
 
             if (name == null) {
                 throw new ArgumentTypeException("Use: arg 1 must be a string");
             }
 
-            object res = context.LanguageContext.DomainManager.UseModule(name);
-            if (res == null) {
+            try {
+                return context.LanguageContext.DomainManager.UseModule(name);
+            } catch (AmbiguousFileNameException e) {
+                throw new ArgumentException(String.Format("found multiple modules of the same name '{0}' to use: '{1}' and '{2}'", 
+                    name, e.FirstPath, e.SecondPath));
+            } catch (FileNotFoundException) {
                 throw new ArgumentException(String.Format("couldn't find module {0} to use", name));
             }
-
-            return res;
         }
 
         public static object/*!*/ Use(CodeContext/*!*/ context, string/*!*/ path, string/*!*/ language) {

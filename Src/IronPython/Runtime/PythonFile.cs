@@ -699,10 +699,10 @@ namespace IronPython.Runtime {
 
         // Write the data in the input string to the output stream. No newline conversion is performed.
         public override int Write(string/*!*/ data) {
-            int count = data.Length;
-            for (int i = 0; i < count; i++)
-                _stream.WriteByte((byte)data[i]);
-            return count;
+            byte[] bytes = PythonAsciiEncoding.Instance.GetBytes(data);
+            Debug.Assert(bytes.Length == data.Length);
+            _stream.Write(bytes, 0, bytes.Length);
+            return bytes.Length;
         }
 
         // Flush any buffered data to the file.

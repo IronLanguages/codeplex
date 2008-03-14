@@ -303,6 +303,42 @@ namespace IronPython.Runtime.Types {
                 AddProtocolMethod(Symbols.GetDescriptor, "GetMethod");
                 // TODO: Set & delete
             }
+
+            // add __getattribute__ / __setattr__ / __delattr__
+            List<MethodInfo> opMethods = GetDeclaredOperatorMethod(type, "GetCustomMember");
+            if (opMethods != null) {
+                AddProtocolMethod(Symbols.GetAttribute, FunctionType.None, opMethods.ToArray());
+            }
+
+            opMethods = GetDeclaredOperatorMethod(type, "SetMemberAfter");
+            if (opMethods != null) {
+                AddProtocolMethod(Symbols.SetAttr, FunctionType.None, opMethods.ToArray());
+            }
+
+            opMethods = GetDeclaredOperatorMethod(type, "DeleteMember");
+            if (opMethods != null) {
+                AddProtocolMethod(Symbols.DelAttr, FunctionType.None, opMethods.ToArray());
+            }
+        }
+
+        private static List<MethodInfo> GetDeclaredOperatorMethod(Type type, string name) {
+            MemberInfo[] members = type.GetMember(name, BindingFlags.Public | BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.Instance);
+            List<MethodInfo> getattributeMethods = null;
+
+            foreach (MemberInfo mi in members) {
+                if (mi.MemberType == MemberTypes.Method) {
+                    MethodInfo method = (MethodInfo)mi;
+
+                    if (method.IsSpecialName) {
+                        if (getattributeMethods == null) {
+                            getattributeMethods = new List<MethodInfo>();
+                        }
+
+                        getattributeMethods.Add(method);
+                    }
+                }
+            }
+            return getattributeMethods;
         }
 
         /// <summary>
@@ -626,9 +662,6 @@ namespace IronPython.Runtime.Types {
             res[typeof(Complex64)] = "complex";
             res[typeof(PythonType)] = "type";
             res[typeof(Scope)] = "module";
-            res[typeof(SymbolDictionary)] = "dict";
-            res[typeof(CustomSymbolDictionary)] = "dict";
-            res[typeof(BaseSymbolDictionary)] = "dict";
             res[typeof(ClassMethodDescriptor)] = "method_descriptor";
             res[typeof(ValueType)] = "ValueType";   // just hiding it's methods in the inheritance hierarchy
             res[typeof(TypeGroup)] = "type-collision";

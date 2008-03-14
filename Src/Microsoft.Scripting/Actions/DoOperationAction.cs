@@ -66,6 +66,9 @@ namespace Microsoft.Scripting.Actions {
                     case Operators.Positive:
                     case Operators.AbsoluteValue:
                     case Operators.Not:
+
+                    // Added for COM support...
+                    case Operators.Documentation:
                         return true;                    
                 }
                 return false;

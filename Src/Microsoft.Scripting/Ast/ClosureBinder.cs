@@ -17,19 +17,19 @@ using System;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// The ClosureBinder resolves variable references across code blocks.
+    /// The ClosureBinder resolves variable references across lambdas.
     /// </summary>
     class ClosureBinder : VariableBinder {
         /// <summary>
         /// ClosureBinder entry point.
         /// </summary>
-        internal static AnalyzedTree Bind(CodeBlock ast) {
+        internal static AnalyzedTree Bind(LambdaExpression ast) {
             ClosureBinder cb = new ClosureBinder();
-            // Collect the code blocks
+            // Collect the lambdas
             cb.WalkNode(ast);
             cb.BindTheScopes();
 
-            return new AnalyzedTree(cb.Blocks, cb.Infos);
+            return new AnalyzedTree(cb.Lambdas, cb.Infos);
         }
 
         /// <summary>
@@ -46,17 +46,17 @@ namespace Microsoft.Scripting.Ast {
         // to verify this condition.
         protected internal override bool Walk(ReturnStatement node) {
             if (Stack.Count == 0) {
-                throw InvalidReturnStatement("Return outside of code block", node);
+                throw InvalidReturnStatement("Return outside of a lambda", node);
             }
 
-            Type returnType = Stack.Peek().CodeBlock.ReturnType;
+            Type returnType = Stack.Peek().Lambda.ReturnType;
 
             if (node.Expression != null) {
                 if (!returnType.IsAssignableFrom(node.Expression.Type)) {
                     throw InvalidReturnStatement("Invalid type of return expression value", node);
                 }
             } else {
-                // return without expression can be only from code block with void return type
+                // return without expression can be only from lambda with void return type
                 if (returnType != typeof(void)) {
                     throw InvalidReturnStatement("Missing return expression", node);
                 }

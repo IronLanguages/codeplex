@@ -16,20 +16,12 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     public class DispMethod : DispCallable {
         [CLSCompliant(false)]
         public DispMethod(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {
-        }
-
-        public object CallAsProperty(CodeContext context) {
-            return UnoptimizedInvoke(context, SymbolId.EmptySymbols);
         }
     }
 }

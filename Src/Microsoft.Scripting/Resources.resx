@@ -117,8 +117,8 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AmbigiousModule" xml:space="preserve">
-    <value>ambigious module resolution, could be {0} or {1}</value>
+  <data name="AmbiguousFileName" xml:space="preserve">
+    <value>File name is ambiguous; more files are matching the same name (including '{0}' and '{1}')</value>
   </data>
   <data name="BindingTarget_BindingFailed" xml:space="preserve">
     <value>An expression cannot be produced because the method binding was unsuccessful.</value>

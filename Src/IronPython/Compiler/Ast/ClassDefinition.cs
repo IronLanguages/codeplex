@@ -140,14 +140,14 @@ namespace IronPython.Compiler.Ast {
                 returnStmt
             );
 
-            MSAst.CodeBlock block = body.Block.MakeLambda();
+            MSAst.LambdaExpression block = body.Block.MakeLambda();
             MSAst.Expression classDef = Ast.Call(
                 AstGenerator.GetHelperMethod("MakeClass"),
                 Ast.CodeContext(),
                 Ast.Constant(SymbolTable.IdToString(_name)),
                 bases,
                 Ast.Constant(FindSelfNames()),
-                Ast.CodeBlockExpression(block, false)             //TODO typing is messed up
+                Ast.CodeBlockExpression(block, typeof(IronPython.Runtime.Calls.CallTarget0))
             );
 
             return Ast.Statement(

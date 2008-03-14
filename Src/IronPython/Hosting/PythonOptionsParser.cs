@@ -141,7 +141,6 @@ namespace IronPython.Hosting {
                     _engineOptions.WarningFilters.Add(PopNextArg());
                     break;
 
-                case "-X:PreferComDispatch": _engineOptions.PreferComDispatchOverTypeInfo = true; break;
                 case "-":
                     PushArgBack();
                     _engineOptions.Arguments = PopRemainingArgs();
@@ -176,7 +175,6 @@ namespace IronPython.Hosting {
                 { "-W arg",                 "Warning control (arg is action:message:category:module:lineno)" },
 
                 { "-X:MaxRecursion",        "Set the maximum recursion level" },
-                { "-X:PreferComDispatch",   "Enable direct support for IDispatch COM objects" },    
             };
 
             // Append the Python-specific options and the standard options

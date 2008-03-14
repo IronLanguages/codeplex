@@ -37,6 +37,7 @@ for s in dir(et):
         exec 'def test_Engine_%s(): getattr(et, "%s")()' % (s, s)
 
 #Rowan Work Item 312902
+@disabled("The ProfileDrivenCompilation feature is removed from DLR")
 def test_deferred_compilation():
     save1 = IronPythonTest.TestHelpers.GetContext().Options.InterpretedMode
     save2 = IronPythonTest.TestHelpers.GetContext().Options.ProfileDrivenCompilation

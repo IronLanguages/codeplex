@@ -105,7 +105,10 @@ namespace IronPython.Runtime.Types {
             IAttributesCollection fastDict = (IAttributesCollection)_vars;
 
             Builder.AddSlot(Symbols.Name, new PythonTypeValueSlot(_name));
-            Builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(fastDict[Symbols.Module]));
+            object moduleValue;
+            if (fastDict.TryGetValue(Symbols.Module, out moduleValue)) {
+                Builder.AddSlot(Symbols.Module, new PythonTypeValueSlot(moduleValue));
+            }
 
             if (fastDict.ContainsKey(Symbols.Slots)) {
                 HasSlots = true;
@@ -424,7 +427,7 @@ namespace IronPython.Runtime.Types {
         }
 
         private static object NewDict() {
-            return new SymbolDictionary();
+            return PythonDictionary.MakeSymbolDictionary();
         }
 
         private void ValidateSupportedInheritance() {
@@ -549,7 +552,7 @@ namespace IronPython.Runtime.Types {
             Builder.SetBases(newbs);
             Builder.SetResolutionOrder(Mro.Calculate(Builder.UnfinishedType, newbs));
 
-            InitializeCustomAttributeAccess(newDict, baseCustomizer, setCustomizer, deleteCustomizer);
+            InitializeCustomAttributeAccess(newDict, newbs, baseCustomizer, setCustomizer, deleteCustomizer);
 
             if (mixedOldNew) {
                 // if we have a mix of old-style & new style classes we need to add
@@ -576,15 +579,28 @@ namespace IronPython.Runtime.Types {
             return mixedOldNew;
         }
 
-        private void InitializeCustomAttributeAccess(IAttributesCollection newDict, TryGetMemberCustomizer baseCustomizer, SetMemberCustomizer setCustomizer, DeleteMemberCustomizer deleteCustomizer) {
+        private void InitializeCustomAttributeAccess(IAttributesCollection newDict, List<PythonType> bases, TryGetMemberCustomizer baseCustomizer, SetMemberCustomizer setCustomizer, DeleteMemberCustomizer deleteCustomizer) {
             object value;
             if (newDict.TryGetValue(Symbols.GetAttribute, out value)) {
                 CustomAttributeInfo info = new CustomAttributeInfo(value);
                 Builder.SetCustomBoundGetter(info.HookedGetAttribute);
                 newDict[Symbols.GetAttribute] = new PythonTypeGetAttributeSlot(Builder.UnfinishedType, info, Symbols.GetAttribute);
                 Builder.SetHasGetAttribute(true);
-            } else if (baseCustomizer != null) {
-                Builder.SetCustomBoundGetter(baseCustomizer);
+            } else {
+                foreach (PythonType pt in bases) {
+                    PythonTypeSlot pts;
+                    if (pt.TryResolveSlot(DefaultContext.Default, Symbols.GetAttribute, out pts)) {
+                        BuiltinMethodDescriptor bmd = pts as BuiltinMethodDescriptor;
+                        if (bmd == null || bmd.DeclaringType != typeof(object)) {
+                            Builder.SetHasGetAttribute(true);
+                            break;
+                        }
+                    }
+                }
+
+                if (baseCustomizer != null) {
+                    Builder.SetCustomBoundGetter(baseCustomizer);
+                }
             }
 
             if (newDict.TryGetValue(Symbols.SetAttr, out value)) {

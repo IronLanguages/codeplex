@@ -38,6 +38,10 @@ namespace IronPython.Runtime {
             }
         }
 
+        public override void Add(SymbolId key, object value) {
+            Scope.SetName(key, value);
+        }
+
         public override bool Contains(object key) {
             foreach (Scope scope in GetVisibleScopes()) {
                 if (ScopeContains(key, scope)) {
@@ -47,21 +51,15 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        private static bool ScopeContains(object key, Scope scope) {
-            string strKey = key as string;
-            if (strKey != null) {
-                if (scope.ContainsName(SymbolTable.StringToId(strKey))) {
-                    return true;
-                }
-            } else {
-                object dummy;
-                if (scope.TryGetObjectName(DefaultContext.DefaultPythonContext, key, out dummy)) {
+        public override bool Contains(SymbolId key) {
+            foreach (Scope scope in GetVisibleScopes()) {
+                if (scope.ContainsName(key)) {
                     return true;
                 }
             }
             return false;
         }
-
+        
         public override bool Remove(object key) {
             foreach (Scope scope in GetVisibleScopes()) {
                 string strKey = key as string;
@@ -78,7 +76,6 @@ namespace IronPython.Runtime {
         }
 
         public override bool TryGetValue(object key, out object value) {
-
             foreach (Scope scope in GetVisibleScopes()) {
                 string strKey = key as string;
                 if (strKey != null) {
@@ -86,6 +83,17 @@ namespace IronPython.Runtime {
                         return true;
                     }
                 } else if (scope.TryGetObjectName(DefaultContext.DefaultPythonContext, key, out value)) {
+                    return true;
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
+        public override bool TryGetValue(SymbolId key, out object value) {
+            foreach (Scope scope in GetVisibleScopes()) {
+                if (scope.TryGetName(key, out value)) {
                     return true;
                 }
             }
@@ -121,5 +129,20 @@ namespace IronPython.Runtime {
         }
 
         protected abstract IEnumerable<Scope>/*!*/ GetVisibleScopes();
+
+        private static bool ScopeContains(object key, Scope scope) {
+            string strKey = key as string;
+            if (strKey != null) {
+                if (scope.ContainsName(SymbolTable.StringToId(strKey))) {
+                    return true;
+                }
+            } else {
+                object dummy;
+                if (scope.TryGetObjectName(DefaultContext.DefaultPythonContext, key, out dummy)) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

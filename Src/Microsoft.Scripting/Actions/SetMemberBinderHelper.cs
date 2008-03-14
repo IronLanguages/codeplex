@@ -20,13 +20,13 @@ using System.Diagnostics;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Utils;
 
-    public class SetMemberBinderHelper<T> :
+    public sealed class SetMemberBinderHelper<T> :
         MemberBinderHelper<T, SetMemberAction> {
         private bool _isStatic;
 
@@ -47,6 +47,12 @@ namespace Microsoft.Scripting.Actions {
 
             if (Target is ICustomMembers) {
                 MakeSetCustomMemberRule();
+
+#if !SILVERLIGHT
+            } else if (StrongBoxType == null && ComDispatch.ComObject.Is__ComObject(targetType)) {
+                AddToBody(ComDispatch.ComObject.GetTargetForSetMember(Rule, Binder, Action));
+#endif
+
             } else {
                 MakeSetMemberRule(targetType);
             }
@@ -79,7 +85,7 @@ namespace Microsoft.Scripting.Actions {
                     case TrackerTypes.TypeGroup:
                     case TrackerTypes.Type:
                     case TrackerTypes.Constructor: MakeReadOnlyMemberError(type); break;
-                    case TrackerTypes.Event: MakeEventValidation(members); break;
+                    case TrackerTypes.Event: AddToBody(Binder.MakeEventValidation(Rule, members).MakeErrorForRule(Rule, Binder)); break;
                     case TrackerTypes.Field: MakeFieldRule(type, members); break;
                     case TrackerTypes.Property: MakePropertyRule(type, members); break;
                     case TrackerTypes.All:
@@ -95,24 +101,6 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 AddToBody(Rule.MakeError(error));
             }
-        }
-
-        protected virtual StandardRule<T> MakeEventValidation(MemberGroup members) {
-            EventTracker ev = (EventTracker)members[0];
-
-            // handles in place addition of events - this validates the user did the right thing, probably too Python specific.
-            AddToBody(
-                Rule.MakeReturn(
-                    Binder,
-                    Ast.Call(
-                        typeof(BinderOps).GetMethod("SetEvent"),
-                        Ast.RuntimeConstant(ev),
-                        Rule.Parameters[1]
-                    )
-                )
-            );
-
-            return Rule;
         }
 
         private void MakePropertyRule(Type targetType, MemberGroup properties) {

@@ -189,6 +189,9 @@ compile_tests = [
     ("def a(x):\n    def b():\n        print x\n    del x", "can not delete variable 'x' referenced in nested scope", 2),
     ("if 1:\nfoo()\n", "expected an indented block", 2),
     ("'abc'.1", "invalid syntax", 1),
+    ("'abc'.1L", "invalid syntax", 1),
+    ("'abc'.1j", "invalid syntax", 1),
+    ("'abc'.0xFFFF", "invalid syntax", 1),
     ("'abc' 1L", "invalid syntax", 1),
     ("'abc' 1.0", "invalid syntax", 1),
     ("'abc' 0j", "invalid syntax", 1),
@@ -201,22 +204,16 @@ compile_tests = [
     ('def f():\n    a = yield 3 = yield 4', "can't assign to yield expression", 2),
     ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
     ('(2,3) = (3,4)', "can't assign to literal", 1),
+    #CodePlex 15428
+    #("'abc'.", "invalid syntax", 1),
 ]
 
 if is_cli:
     # different error messages, ok
     for test in compile_tests:
         run_compile_test(*test)
-
+        
 AreEqual(float(repr(2.5)), 2.5)
-
-# empty expression after yield are added in 2.5 with Pep 342.
-#CodePlex Work Item 10642
-#Once this gets fixed, this test will fail and must be updated.  In short,
-#the following should not throw a SyntaxError:
-def foo(n=0):
-    while True:
-        yield
 
 AreEqual(eval("1, 2, 3,"), (1, 2, 3))
 
@@ -341,7 +338,6 @@ AreEqual(C._C__x, 10)
 AreEqual(C.___.__y, 20)
 AreEqual(C.D._D__z, 30)
 
-
 #Hit negative case of 'sublist' in http://www.python.org/doc/2.5.1/ref/grammar.txt.
 AssertError(SyntaxError, compile, "def f((1)): pass", "", "exec")
 
@@ -389,6 +385,27 @@ def test_multiline_compound_stmts():
             Assert(False, "multiline_compound stmt test did not raise exception. test = " + test)
 
 test_multiline_compound_stmts()
+
+# Generators cannot have return statements with values in them. SyntaxError is thrown in those cases.
+def test_generator_with_nonempty_return():
+    tests = [
+        "def f():\n     return 42\n     yield 3",
+        "def f():\n     yield 42\n     return 3",
+        "def f():\n     yield 42\n     return None",
+        "def f():\n     if True:\n          return 42\n     yield 42",
+        "def f():\n     try:\n          return 42\n     finally:\n          yield 23"
+        ]
+
+    for test in tests:
+        #Merlin 148614 - Change it to AssertErrorWithMessage once bug is fixed.
+        AssertErrorWithPartialMessage(SyntaxError, "'return' with argument inside generator", compile, test, "", "exec")
+        
+    #Verify that when there is no return value error is not thrown.
+    def f():
+        yield 42
+        return
+    
+test_generator_with_nonempty_return()
 
 # compile function which returns from finally, but does not yield from finally.
 c = compile("def f():\n    try:\n        pass\n    finally:\n        return 1", "", "exec")

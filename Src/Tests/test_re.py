@@ -72,8 +72,15 @@ def test_sanity_re():
     #split
     AreEqual(re.split("(abc){1}", ""), [''])
     AreEqual(re.split("(abc){1}", "abcxyz"), ['', 'abc', 'xyz'])
+    #maxsplit
     AreEqual(re.split("(abc){1}", "abc", 0), ['', 'abc', ''])
-    AreEqual(re.split("(abc){1}", "abc", maxsplit=0), ['', 'abc', ''])
+    for i in xrange(3):
+        AreEqual(re.split("(abc){1}", "abc", maxsplit=i), ['', 'abc', ''])
+        AreEqual(re.split("(abc){1}", "", maxsplit=i), [''])
+        AreEqual(re.split("(abc){1}", "abcxyz", maxsplit=i), ['', 'abc', 'xyz'])
+    AreEqual(re.split("(abc){1}", "abcxyzabc", maxsplit=0), ['', 'abc', 'xyz', 'abc', ''])
+    AreEqual(re.split("(abc){1}", "abcxyzabc", maxsplit=1), ['', 'abc', 'xyzabc'])
+    AreEqual(re.split("(abc){1}", "abcxyzabc", maxsplit=2), ['', 'abc', 'xyz', 'abc', ''])
     
     #findall
     AreEqual(re.findall("(abc){1}", ""), [])
@@ -91,6 +98,12 @@ def test_sanity_re():
     rex = re.compile("foo")
     for m in rex.finditer("this is a foo and a foo bar"):
         AreEqual((m.pos, m.endpos), (0, 27))
+    for m in rex.finditer(""):
+        AreEqual((m.pos, m.endpos), (0, 1))
+    for m in rex.finditer("abc"):
+        AreEqual((m.pos, m.endpos), (0, 4))
+    for m in rex.finditer("foo foo foo foo foo"):
+        AreEqual((m.pos, m.endpos), (0, 19))
     
     #sub
     AreEqual(re.sub("(abc){1}", "9", "abcd"), "9d")
@@ -153,6 +166,7 @@ def test_sanity_re_pattern():
     AreEqual(pattern.split("abcxyz"), ['', 'abc', 'xyz'])
     AreEqual(pattern.split("abc", 0), ['', 'abc', ''])
     AreEqual(pattern.split("abc", maxsplit=0), ['', 'abc', ''])
+    AreEqual(pattern.split("abcxyzabc", maxsplit=1), ['', 'abc', 'xyzabc'])
     
     #findall
     AreEqual(pattern.findall(""), [])
@@ -686,5 +700,33 @@ def test_empty_split():
     for expr, result in cases:
         AreEqual(re.split(":*", expr), result)
 
+@skip("win32", "silverlight")
+def test_cp15298():
+    import time
+    tmin_compiled = 100
+    tmin_string   = 100
+    regex = "^" + "\d\.\d\.\d \(IronPython \d\.\d(\.\d)? ((Alpha )|(Beta )|())\(\d\.\d\.\d\.\d{3,4}\) on \.NET \d(\.\d{1,5}){3}\)" * 15 + "$"
+    match_str = "2.5.0 (IronPython 2.0 Beta (2.0.0.1000) on .NET 2.0.50727.1433)" * 15
+    compiled_regex = re.compile(regex)
+    
+    for i in xrange(100):
+    
+        t0 = time.time()
+        for i in xrange(250):
+            retval = compiled_regex.match(match_str)
+        t1 = time.time()
+        Assert(retval != None)
+        if t1-t0 < tmin_compiled:
+            tmin_compiled = t1-t0
+            
+        t0 = time.time()
+        for i in xrange(250):
+            retval = re.match(regex, match_str)
+        t1 = time.time()
+        Assert(retval != None)
+        if t1-t0 < tmin_string:
+            tmin_string = t1-t0    
+
+    Assert(tmin_compiled<=tmin_string, "re.compile(...).match(...) is slower than re.match(..., ...)")
 
 run_test(__name__)

@@ -93,7 +93,6 @@ namespace Microsoft.Scripting.Ast {
             WriteMemberExpression,                  //    MemberExpression
             WriteNewArrayExpression,                //    NewArrayExpression
             WriteUnaryExpression,                   //    OnesComplement
-            WriteIntrinsicExpression,               //    ParamsExpression
             WriteReturnStatement,                   //    ReturnStatement
             WriteScopeStatement,                    //    ScopeStatement
             WriteSwitchStatement,                   //    SwitchStatement

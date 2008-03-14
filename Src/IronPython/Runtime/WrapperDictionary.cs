@@ -23,13 +23,13 @@ using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime {
-    internal sealed class WrapperDictionaryStorage : DictionaryStorage {
+    public class WrapperDictionaryStorage : DictionaryStorage {
         private IAttributesCollection/*!*/ _data;
 
         public WrapperDictionaryStorage(IAttributesCollection/*!*/ data) {
             _data = data;
         }
-
+      
         public override void Add(object key, object value) {
             string strKey = key as string;
             if (strKey != null) {
@@ -39,6 +39,10 @@ namespace IronPython.Runtime {
             }
         }
 
+        public override void Add(SymbolId key, object value) {
+            _data[key] = value;
+        }
+
         public override bool Contains(object key) {
             string strKey = key as string;
             if (strKey != null) {
@@ -46,6 +50,10 @@ namespace IronPython.Runtime {
             } else {
                 return _data.ContainsObjectKey(key);
             }
+        }
+
+        public override bool Contains(SymbolId key) {
+            return _data.ContainsKey(key);
         }
 
         public override bool Remove(object key) {
@@ -64,6 +72,10 @@ namespace IronPython.Runtime {
             } else {
                 return _data.TryGetObjectValue(key, out value);
             }
+        }
+
+        public override bool TryGetValue(SymbolId key, out object value) {
+            return _data.TryGetValue(key, out value);
         }
 
         public override int Count {

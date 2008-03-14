@@ -14,15 +14,37 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace Microsoft.Scripting.Runtime {
+    /// <summary>
+    /// DLR requires any Hosting API provider to implement this class and provide its instance upon Runtime initialization.
+    /// DLR calls on it to perform basic host/system dependent operations.
+    /// </summary>
     [Serializable]
     public abstract class DynamicRuntimeHostingProvider {
+        /// <summary>
+        /// Abstracts system operations that are used by DLR and could potentially be platform specific.
+        /// </summary>
         public abstract PlatformAdaptationLayer/*!*/ PlatformAdaptationLayer { get; }
-        public abstract IList<string/*!*/>/*!*/ SourceUnitResolutionPath { get; }
+
+        /// <summary>
+        /// Gets SourceUnit corresponding to a source file on a specifed path.
+        /// The result is associated with the given language (engine) and encoding.
+        /// The format of the path is host defined.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Engine, path or encoding is a <c>null</c> reference.</exception>
+        /// <returns>Null, if the source file doesn't exist.</returns>
         public abstract SourceUnit TryGetSourceFileUnit(LanguageContext/*!*/ langauge, string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind);
-        public abstract SourceUnit ResolveSourceFileUnit(string name);
+
+        /// <summary>
+        /// Resolves the given name to a source unit.
+        /// </summary>
+        /// <exception cref="FileNotFoundException">No file matches the specified name.</exception>
+        /// <exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
+        /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentException">Name is not valid.</exception>
+        public abstract SourceUnit/*!*/ ResolveSourceFileUnit(string/*!*/ name);
     }
 }

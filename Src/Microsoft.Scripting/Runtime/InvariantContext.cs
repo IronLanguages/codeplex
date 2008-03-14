@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Runtime {
             Binder = new DefaultActionBinder(new CodeContext(new Scope(this), this), Type.EmptyTypes);
         }
 
-        public override Microsoft.Scripting.Ast.CodeBlock ParseSourceCode(CompilerContext context) {
+        public override Microsoft.Scripting.Ast.LambdaExpression ParseSourceCode(CompilerContext context) {
             throw new NotSupportedException();
         }
     }

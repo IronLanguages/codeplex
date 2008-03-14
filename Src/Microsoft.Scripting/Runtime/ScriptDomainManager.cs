@@ -393,12 +393,6 @@ namespace Microsoft.Scripting.Runtime {
 
             return _scopeWrapper.LoadAssembly(assembly);
         }
-
-        public StringComparer/*!*/ PathComparer {
-            get {
-                return StringComparer.Ordinal;
-            }
-        }
         
         /// <summary>
         /// Uses the hosts search path and semantics to resolve the provided name to a SourceUnit.
@@ -409,14 +403,15 @@ namespace Microsoft.Scripting.Runtime {
         /// Returns null if a module could not be found.
         /// </summary>
         /// <param name="name">an opaque parameter which has meaning to the host.  Typically a filename without an extension.</param>
-        public object UseModule(string name) {
+        /// <exception cref="FileNotFoundException">No file matches the specified name.</exception>
+        /// <exception cref="AmbiguousFileNameException">Multiple matching files were found.</exception>
+        /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
+        /// <exception cref="ArgumentException">Name is not valid.</exception>
+        public object UseModule(string/*!*/ name) {
             Contract.RequiresNotNull(name, "name");
             
             SourceUnit source = Host.ResolveSourceFileUnit(name);
-            if (source == null) {
-                return null;
-            }
-        
+            
             // TODO: remove (JS test in MerlinWeb relies on scope reuse)
             object result;
             if (Globals.TryGetName(SymbolTable.StringToId(name), out result)) {

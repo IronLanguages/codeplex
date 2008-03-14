@@ -25,34 +25,34 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// List to store all context statements for further processing - storage allocation
         /// </summary>
-        private List<CodeBlockInfo> _blocks;
+        private List<LambdaInfo> _lambdas;
 
         /// <summary>
-        /// The dictionary of all code blocks and their infos in the tree.
+        /// The dictionary of all lambdas and their infos in the tree.
         /// </summary>
-        private Dictionary<CodeBlock, CodeBlockInfo> _infos;
+        private Dictionary<LambdaExpression, LambdaInfo> _infos;
 
         /// <summary>
-        /// Stack to keep track of the code block nesting.
+        /// Stack to keep track of the lambda nesting.
         /// </summary>
-        private Stack<CodeBlockInfo> _stack;
+        private Stack<LambdaInfo> _stack;
 
-        protected List<CodeBlockInfo> Blocks {
-            get { return _blocks; }
+        protected List<LambdaInfo> Lambdas {
+            get { return _lambdas; }
         }
 
-        protected Dictionary<CodeBlock, CodeBlockInfo> Infos {
+        protected Dictionary<LambdaExpression, LambdaInfo> Infos {
             get { return _infos; }
         }
 
-        protected Stack<CodeBlockInfo> Stack {
+        protected Stack<LambdaInfo> Stack {
             get { return _stack; }
         }
 
-        private Stack<CodeBlockInfo> NonNullStack {
+        private Stack<LambdaInfo> NonNullStack {
             get {
                 if (_stack == null) {
-                    _stack = new Stack<CodeBlockInfo>();
+                    _stack = new Stack<LambdaInfo>();
                 }
                 return _stack;
             }
@@ -86,13 +86,13 @@ namespace Microsoft.Scripting.Ast {
             return true;
         }
 
-        protected internal override bool Walk(CodeBlock node) {
+        protected internal override bool Walk(LambdaExpression node) {
             return Push(node);
         }
 
-        protected internal override void PostWalk(CodeBlock node) {
-            CodeBlockInfo cbi = Pop();
-            Debug.Assert(cbi.CodeBlock == node);
+        protected internal override void PostWalk(LambdaExpression node) {
+            LambdaInfo li = Pop();
+            Debug.Assert(li.Lambda == node);
         }
 
         protected internal override bool Walk(GeneratorCodeBlock node) {
@@ -100,12 +100,12 @@ namespace Microsoft.Scripting.Ast {
         }
 
         protected internal override void PostWalk(GeneratorCodeBlock node) {
-            CodeBlockInfo cbi = Pop();
-            Debug.Assert(cbi.CodeBlock == node);
-            Debug.Assert(cbi.TopTargets == null);
+            LambdaInfo li = Pop();
+            Debug.Assert(li.Lambda == node);
+            Debug.Assert(li.TopTargets == null);
 
             // Build the yield targets and store them in the cbi
-            YieldLabelBuilder.BuildYieldTargets(node, cbi);
+            YieldLabelBuilder.BuildYieldTargets(node, li);
         }
 
         #endregion
@@ -115,40 +115,40 @@ namespace Microsoft.Scripting.Ast {
             _stack.Peek().Reference(variable);
         }
 
-        private bool Push(CodeBlock block) {
+        private bool Push(LambdaExpression lambda) {
             if (_infos == null) {
-                _infos = new Dictionary<CodeBlock, CodeBlockInfo>();
-                _blocks = new List<CodeBlockInfo>();
+                _infos = new Dictionary<LambdaExpression, LambdaInfo>();
+                _lambdas = new List<LambdaInfo>();
             }
 
-            // We've seen this block already
+            // We've seen this lambda already
             // (referenced from multiple CodeBlockExpressions)
-            if (_infos.ContainsKey(block)) {
+            if (_infos.ContainsKey(lambda)) {
                 return false;
             }
 
-            Stack<CodeBlockInfo> stack = NonNullStack;
+            Stack<LambdaInfo> stack = NonNullStack;
 
-            // The parent of the code block is the block currently
+            // The parent of the lambda is the lambda currently
             // on top of the stack, or a null if at top level.
-            CodeBlockInfo parent = stack.Count > 0 ? stack.Peek() : null;
-            CodeBlockInfo cbi = new CodeBlockInfo(block, parent);
+            LambdaInfo parent = stack.Count > 0 ? stack.Peek() : null;
+            LambdaInfo li = new LambdaInfo(lambda, parent);
 
-            // Add the block to the list.
-            // The blocks are added in prefix order so they
+            // Add the lambda to the list.
+            // The lambdas are added in prefix order so they
             // will have to be reversed for name binding
-            _blocks.Add(cbi);
+            _lambdas.Add(li);
 
-            // Remember we saw the block already
-            _infos[block] = cbi;
+            // Remember we saw the lambda already
+            _infos[lambda] = li;
 
             // And push it on the stack.
-            stack.Push(cbi);
+            stack.Push(li);
 
             return true;
         }
 
-        private CodeBlockInfo Pop() {
+        private LambdaInfo Pop() {
             return NonNullStack.Pop();
         }
 
@@ -160,57 +160,57 @@ namespace Microsoft.Scripting.Ast {
         #region Closure resolution
 
         protected void BindTheScopes() {
-            if (_blocks != null) {
-                // Process the blocks in post-order so that
+            if (_lambdas != null) {
+                // Process the lambdas in post-order so that
                 // all children are processed before parent
-                int i = _blocks.Count;
+                int i = _lambdas.Count;
                 while (i-- > 0) {
-                    CodeBlockInfo cbi = _blocks[i];
-                    if (!cbi.CodeBlock.IsGlobal) {
-                        BindCodeBlock(cbi);
+                    LambdaInfo li = _lambdas[i];
+                    if (!li.Lambda.IsGlobal) {
+                        BindLambda(li);
                     }
                 }
             }
         }
 
-        private void BindCodeBlock(CodeBlockInfo block) {
+        private void BindLambda(LambdaInfo lambdaInfo) {
             // If the function is generator or needs custom frame,
             // lift locals to closure
-            CodeBlock cb = block.CodeBlock;
-            if (cb is GeneratorCodeBlock || cb.EmitLocalDictionary) {
-                LiftLocalsToClosure(block);
+            LambdaExpression lambda = lambdaInfo.Lambda;
+            if (lambda is GeneratorCodeBlock || lambda.EmitLocalDictionary) {
+                LiftLocalsToClosure(lambdaInfo);
             }
-            ResolveClosure(block);
+            ResolveClosure(lambdaInfo);
         }
 
-        private static void LiftLocalsToClosure(CodeBlockInfo block) {
+        private static void LiftLocalsToClosure(LambdaInfo lambdaInfo) {
             // Lift all parameters
-            foreach (Variable p in block.CodeBlock.Parameters) {
+            foreach (Variable p in lambdaInfo.Lambda.Parameters) {
                 p.LiftToClosure();
             }
             // Lift all locals
-            foreach (Variable d in block.CodeBlock.Variables) {
+            foreach (Variable d in lambdaInfo.Lambda.Variables) {
                 if (d.Kind == VariableKind.Local) {
                     d.LiftToClosure();
                 }
             }
-            block.HasEnvironment = true;
+            lambdaInfo.HasEnvironment = true;
         }
 
-        private void ResolveClosure(CodeBlockInfo block) {
-            CodeBlock cb = block.CodeBlock;
+        private void ResolveClosure(LambdaInfo li) {
+            LambdaExpression lambda = li.Lambda;
 
-            foreach (VariableReference r in block.References.Values) {
+            foreach (VariableReference r in li.References.Values) {
                 Debug.Assert(r.Variable != null);
 
-                if (r.Variable.Block == cb) {
+                if (r.Variable.Lambda == lambda) {
                     // local reference => no closure
                     continue;
                 }
 
                 // Global variables as local
                 if (r.Variable.Kind == VariableKind.Global ||
-                    (r.Variable.Kind == VariableKind.Local && r.Variable.Block.IsGlobal)) {
+                    (r.Variable.Kind == VariableKind.Local && r.Variable.Lambda.IsGlobal)) {
                     continue;
                 }
 
@@ -219,34 +219,34 @@ namespace Microsoft.Scripting.Ast {
 
                 // Mark all parent scopes between the use and the definition
                 // as closures/environment
-                CodeBlockInfo current = block;
+                LambdaInfo current = li;
                 do {
                     current.IsClosure = true;
 
-                    CodeBlockInfo parent = current.Parent;
+                    LambdaInfo parent = current.Parent;
 
                     if (parent == null) {
                         throw new ArgumentException(
                             String.Format(
                                 "Cannot resolve variable '{0}' " +
-                                "referenced from code block '{1}' " +
-                                "and defined in code block {2}).\n" +
-                                "Is CodeBlock.Parent set correctly?",
+                                "referenced from lambda '{1}' " +
+                                "and defined in lambda {2}).\n" +
+                                "Is LambdaExpression.Parent set correctly?",
                                 SymbolTable.IdToString(r.Variable.Name),
-                                block.CodeBlock.Name ?? "<unnamed>",
-                                r.Variable.Block != null ? (r.Variable.Block.Name ?? "<unnamed>") : "<unknown>"
+                                li.Lambda.Name ?? "<unnamed>",
+                                r.Variable.Lambda != null ? (r.Variable.Lambda.Name ?? "<unnamed>") : "<unknown>"
                             )
                         );
                     }
 
                     parent.HasEnvironment = true;
                     current = parent;
-                } while (current.CodeBlock != r.Variable.Block);
+                } while (current.Lambda != r.Variable.Lambda);
             }
         }
 
-        private CodeBlockInfo GetCodeBlockInfo(CodeBlock block) {
-            return _infos[block];
+        private LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
+            return _infos[lambda];
         }
 
         #endregion

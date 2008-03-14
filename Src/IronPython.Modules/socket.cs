@@ -1654,8 +1654,7 @@ namespace IronPython.Modules {
 
             public _fileobject(CodeContext/*!*/ context, socket socket, string mode, int bufsize)
                 : base(PythonContext.GetContext(context)) {
-                base.__init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);
-                socket._socket.SendBufferSize = socket._socket.ReceiveBufferSize = GetBufferSize(context, bufsize);
+                base.__init__(new NetworkStream(socket._socket), System.Text.Encoding.Default, mode);                
             }
 
             public _fileobject(CodeContext/*!*/ context, object socket)

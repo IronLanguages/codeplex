@@ -22,6 +22,11 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+
+#if !SILVERLIGHT
+using Microsoft.Scripting.Actions.ComDispatch;
+#endif
+
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Math;
 using Microsoft.Scripting.Utils;
@@ -93,6 +98,13 @@ namespace IronPython.Runtime.Calls {
         }
         
         protected StandardRule<T> MakeNewRule(PythonType[] types) {
+
+#if !SILVERLIGHT
+            if (ComObject.Is__ComObject(CompilerHelpers.GetType(_args[0]))) {
+                return null;
+            }
+#endif
+
             if (Operation == Operators.IsCallable) {
                 // This will break in cross-language cases. Eg, if this rule applies to x,
                 // then Python's callable(x) will invoke this rule, but Ruby's callable(x) 
@@ -1812,8 +1824,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal static string MakeUnaryOpErrorMessage(string op, string xType) {
-            return string.Format("unsupported operand type for {1}: '{0}'",
-                                xType, op);
+            return string.Format("unsupported operand type for {1}: '{0}'", xType, op);
         }
 
         private static bool FinishCompareOperation(int cmp, Operators op) {
@@ -1853,7 +1864,7 @@ namespace IronPython.Runtime.Calls {
 
         private StandardRule<T> MakeDocumentationRule(PythonType[] types) {
             StandardRule<T> rule = new StandardRule<T>();
-            rule.Target = Ast.Action.GetMember(Symbols.Doc, typeof(string), rule.Parameters[0]);
+            rule.Target = rule.MakeReturn(Binder, Ast.Action.GetMember(Symbols.Doc, typeof(string), rule.Parameters[0]));
             PythonBinderHelper.MakeTest(rule, types);
             return rule;
         }

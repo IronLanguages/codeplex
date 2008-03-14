@@ -32,7 +32,7 @@ namespace Microsoft.Scripting.Ast {
     // TODO: Should move to Generation?
 
     /// <summary>
-    /// LambdaCompiler is responsible for compiling individual lambda (CodeBlock). The complete tree may
+    /// LambdaCompiler is responsible for compiling individual lambda (LambdaExpression). The complete tree may
     /// contain multiple lambdas, the Compiler class is reponsible for compiling the whole tree, individual
     /// lambdas are then compiled by the LambdaCompiler.
     /// </summary>
@@ -46,18 +46,18 @@ namespace Microsoft.Scripting.Ast {
 
         /// <summary>
         /// The compiler which contains the compilation-wide information
-        /// such as other code blocks and their Compilers.
+        /// such as other lambdas and their Compilers.
         /// </summary>
         private Compiler _compiler;
 
         /// <summary>
-        /// The code block information for the code block being compiled.
+        /// The lambda information for the lambda being compiled.
         /// This may be null in the cases where Compiler is still being
         /// used outside of the purpose of compiling the ASTs (sometimes
         /// it is used to generate odd dynamic method here and there,
         /// those will go away eventually and this field will be required)
         /// </summary>
-        private CodeBlockInfo _info;
+        private LambdaInfo _info;
 
         private readonly ILGen _ilg;
         private CodeGenOptions _options;
@@ -75,7 +75,6 @@ namespace Microsoft.Scripting.Ast {
         // Key slots
         private EnvironmentSlot _environmentSlot;   // reference to function's own environment
         private Slot _contextSlot;                  // code context
-        private Slot _paramsSlot;                   // slot for the parameter array, if any
 
         // Runtime line # tracking
         private Slot _currentLineSlot;              // used to track the current line # at runtime
@@ -110,10 +109,6 @@ namespace Microsoft.Scripting.Ast {
         private const int BranchForReturn = 1;
         private const int BranchForBreak = 2;
         private const int BranchForContinue = 3;
-
-        // This is true if we are emitting code while in an interpreted context.
-        // This flag should always be flowed through to other Compiler objects created from this one.
-        private bool _interpretedMode = false;
 
         private LambdaCompiler(TypeGen typeGen, MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type>/*!*/ paramTypes,
             ConstantPool constantPool, bool closure) {
@@ -163,7 +158,7 @@ namespace Microsoft.Scripting.Ast {
 
         #region Properties
 
-        internal Compiler Compiler {
+        private Compiler Compiler {
             get {
                 return _compiler;
             }
@@ -173,7 +168,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _ilg; }
         }
 
-        internal bool DynamicMethod {
+        private bool DynamicMethod {
             get {
                 return (_options & CodeGenOptions.DynamicMethod) != 0;
             }
@@ -190,7 +185,7 @@ namespace Microsoft.Scripting.Ast {
         /// True if Compiler should store all constants in static fields and emit loads of those fields,
         /// false if constants should be emitted and boxed at runtime.
         /// </summary>
-        internal bool CacheConstants {
+        private bool CacheConstants {
             get {
                 return (_options & CodeGenOptions.CacheConstants) != 0;
             }
@@ -308,21 +303,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal Slot ParamsSlot {
-            get {
-                return _paramsSlot;
-            }
-            set {
-                _paramsSlot = value;
-            }
-        }
-
         internal void SetDebugSymbols(SourceUnit source) {
             SetDebugSymbols(source, _typeGen != null && _typeGen.AssemblyGen.IsDebuggable && source != null &&
                 source.LanguageContext.DomainManager.GlobalOptions.DebugMode);
         }
 
-        internal void SetDebugSymbols(SourceUnit source, bool emitSymbols) {
+        private void SetDebugSymbols(SourceUnit source, bool emitSymbols) {
             Debug.Assert(!emitSymbols || source != null,
                 "Cannot emit symbols w/o source unit.");
             Debug.Assert(!emitSymbols || _typeGen != null && _typeGen.AssemblyGen.IsDebuggable,
@@ -369,33 +355,17 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        /// <summary>
-        /// Returns true if we are attempting to generate code while in interpreted mode;
-        /// this changes some variable scoping behavior.
-        /// 
-        /// TODO: Can this be removed?
-        /// </summary>
-        internal bool InterpretedMode {
-            get {
-                return _interpretedMode;
-            }
-            set {
-                _interpretedMode = value;
-            }
-        }
-
         #endregion
 
         #region Compiler entry point
 
         /// <summary>
         /// Compiler entry point, used by ScriptCode.
-        /// This is used for compiling the toplevel CodeBlock object.
-        /// TODO: Get rid of CallTargetWithContext
+        /// This is used for compiling the toplevel LambdaExpression object.
         /// </summary>
-        internal static CallTargetWithContext0 CompileTopLevelCodeBlock(SourceUnit source, CodeBlock block) {
+        internal static DlrMainCallTarget CompileTopLevelLambda(SourceUnit source, LambdaExpression lambda) {
             // 1. Analyze
-            AnalyzedTree at = AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeLambda(lambda);
 
             // 2. Create the Compiler
             Compiler tc = new Compiler(at);
@@ -405,7 +375,7 @@ namespace Microsoft.Scripting.Ast {
 
             cg.ContextSlot = cg.GetLambdaArgumentSlot(0);
             cg.Allocator = CompilerHelpers.CreateFrameAllocator();
-            cg.InitializeCompilerAndBlock(tc, block);
+            cg.InitializeCompilerAndLambda(tc, lambda);
 
             // 4. Generate code
             cg.EnvironmentSlot = new EnvironmentSlot(
@@ -415,23 +385,23 @@ namespace Microsoft.Scripting.Ast {
                     typeof(Scope).GetProperty("Dict"))
                 );
 
-            CodeBlockInfo cbi = at.GetCbi(block);
-            cg.EmitFunctionImplementation(cbi);
+            LambdaInfo li = at.GetLambdaInfo(lambda);
+            cg.EmitFunctionImplementation(li);
 
             cg.Finish();
 
-            return (CallTargetWithContext0)(object)cg.CreateDelegate(typeof(CallTargetWithContext0));
+            return (DlrMainCallTarget)(object)cg.CreateDelegate(typeof(DlrMainCallTarget));
         }
 
         /// <summary>
         /// Compiler entry point, used by TreeCompiler
         /// </summary>
         /// <typeparam name="T">Type of the delegate to create</typeparam>
-        /// <param name="block">CodeBlock to compile.</param>
+        /// <param name="lambda">LambdaExpression to compile.</param>
         /// <returns>The compiled delegate.</returns>
-        internal static T CompileCodeBlock<T>(CodeBlock block) {
+        internal static T CompileLambda<T>(LambdaExpression lambda) {
             // 1. Analyze
-            AnalyzedTree at = AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeLambda(lambda);
 
             // 2. Create The Compiler
             Compiler tc = new Compiler(at);
@@ -440,17 +410,17 @@ namespace Microsoft.Scripting.Ast {
             List<Type> types;
             List<SymbolId> names;
             string name;
-            ComputeSignature(block, false, out types, out names, out name);
+            ComputeSignature(lambda, out types, out names, out name);
 
             // 4. Create lambda compiler
-            LambdaCompiler c = CreateDynamicLambdaCompiler(name, block.ReturnType, types, null);
+            LambdaCompiler c = CreateDynamicLambdaCompiler(name, lambda.ReturnType, types, null);
             c.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, c);
 
             // 5. Initialize the compiler
-            c.InitializeCompilerAndBlock(tc, block);
+            c.InitializeCompilerAndLambda(tc, lambda);
 
             // 6. Emit
-            EmitBody(c, at.GetCbi(block));
+            EmitBody(c, at.GetLambdaInfo(lambda));
 
             c.Finish();
 
@@ -459,52 +429,52 @@ namespace Microsoft.Scripting.Ast {
         }
 
         /// <summary>
-        /// Compiler entry point, used by OptimizedModuleGenerator and Interpreter
+        /// Compiler entry point, used by OptimizedModuleGenerator
         /// </summary>
-        internal void GenerateCodeBlock(CodeBlock block) {
+        internal void GenerateLambda(LambdaExpression lambda) {
             if (_source == null) {
                 throw new InvalidOperationException("Must have source unit.");
             }
 
             // 1. Analyze
-            AnalyzedTree at = AnalyzeBlock(block);
+            AnalyzedTree at = AnalyzeLambda(lambda);
 
             // 2. Finish initialization
-            InitializeCompilerAndBlock(new Compiler(at), block);
+            InitializeCompilerAndLambda(new Compiler(at), lambda);
 
             // 3. Generate the code.
             EmitStackTraceTryBlockStart();
 
             // 4. Emit the actual body
-            EmitBody(this, at.GetCbi(block));
+            EmitBody(this, at.GetLambdaInfo(lambda));
 
-            string displayName = _source.GetSymbolDocument(block.Start.Line) ?? block.Name;
+            string displayName = _source.GetSymbolDocument(lambda.Start.Line) ?? lambda.Name;
 
-            EmitStackTraceFaultBlock(block.Name, displayName);
+            EmitStackTraceFaultBlock(lambda.Name, displayName);
         }
 
         #endregion
 
-        private static AnalyzedTree AnalyzeBlock(CodeBlock block) {
-            DumpBlock(block);
+        private static AnalyzedTree AnalyzeLambda(LambdaExpression lambda) {
+            DumpBlock(lambda);
 
-            ForestRewriter.Rewrite(block);
-            AnalyzedTree at = ClosureBinder.Bind(block);
-            FlowChecker.Check(block);
+            ForestRewriter.Rewrite(lambda);
+            AnalyzedTree at = ClosureBinder.Bind(lambda);
+            FlowChecker.Check(lambda);
 
-            DumpBlock(block);
+            DumpBlock(lambda);
 
             return at;
         }
 
         [Conditional("DEBUG")]
-        private static void DumpBlock(CodeBlock block) {
+        private static void DumpBlock(LambdaExpression lambda) {
 #if DEBUG
-            AstWriter.Dump(block);
+            AstWriter.Dump(lambda);
 #endif
         }
 
-        internal void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
+        private void PushExceptionBlock(TargetBlockType type, Slot returnFlag) {
             if (_targets.Count == 0) {
                 _targets.Push(new Targets(Targets.NoLabel, Targets.NoLabel, type, returnFlag, null));
             } else {
@@ -675,7 +645,7 @@ namespace Microsoft.Scripting.Ast {
                             _returnBlock.Value.returnValue.EmitSet(this);
                         }
                         // Assert check ensures that those who pushed the block with finallyReturns as null 
-                        // should not yield in their blocks.
+                        // should not yield in their lambdas.
                         Debug.Assert(t.finallyReturns != null);
                         EmitInt(LambdaCompiler.BranchForReturn);
                         t.finallyReturns.EmitSet(this);
@@ -691,7 +661,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitCast(Type from, Type to) {
+        private void EmitCast(Type from, Type to) {
             Contract.RequiresNotNull(from, "from");
             Contract.RequiresNotNull(to, "to");
 
@@ -961,12 +931,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitThis() {
-            if (_method.IsStatic) throw new InvalidOperationException(Resources.InvalidOperation_ThisInStaticMethod);
-            //!!! want to confirm this doesn't have a constant pool too
-            Emit(OpCodes.Ldarg_0);
-        }
-
         internal void EmitTuple(Type tupleType, int count, EmitArrayHelper emit) {
             EmitTuple(tupleType, 0, count, emit);
         }
@@ -1013,6 +977,7 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
+        // Used only by OptimizedModuleGenerator
         internal void EmitArgGet(int index) {
             Contract.Requires(index >= 0 && index < Int32.MaxValue, "index");
 
@@ -1105,7 +1070,7 @@ namespace Microsoft.Scripting.Ast {
         /// Constants will be left on the execution stack as their direct type.
         /// </summary>
         /// <param name="value">Constant to be emitted</param>
-        internal void EmitConstant(object value) {
+        private void EmitConstant(object value) {
             CompilerConstant cc = value as CompilerConstant;
 
             if (cc != null) {
@@ -1169,12 +1134,6 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal void EmitTypeError(string format, params object[] args) {
-            EmitString(String.Format(format, args));
-            EmitCall(typeof(RuntimeHelpers), "SimpleTypeError");
-            Emit(OpCodes.Throw);
-        }
-
         /// <summary>
         /// Returns index-th 'raw' argument on the lambda being compiled.
         /// This includes possible argument at index 0 which is the closure
@@ -1217,10 +1176,8 @@ namespace Microsoft.Scripting.Ast {
 
         /// <summary>
         /// Creates instance of the delegate bound to the code context.
-        /// 
-        /// Used by interpreter.
         /// </summary>
-        internal Delegate CreateDelegateWithContext(Type delegateType, CodeContext context) {
+        private Delegate CreateDelegateWithContext(Type delegateType, CodeContext context) {
             Contract.RequiresNotNull(delegateType, "delegateType");
 
             if (ConstantPool.IsBound) {
@@ -1260,7 +1217,6 @@ namespace Microsoft.Scripting.Ast {
             }
 
             lc.SetDebugSymbols(_source, _emitDebugSymbols);
-            lc.InterpretedMode = _interpretedMode;
 
             return lc;
         }
@@ -1572,15 +1528,15 @@ namespace Microsoft.Scripting.Ast {
             return _info.References[variable].Slot;
         }
 
-        internal void InitializeCompilerAndBlock(Compiler tc, CodeBlock block) {
+        internal void InitializeCompilerAndLambda(Compiler tc, LambdaExpression lambda) {
             Debug.Assert(tc != null);
-            Debug.Assert(block != null);
+            Debug.Assert(lambda != null);
 
             _compiler = tc;
-            _info = GetCbi(block);
+            _info = GetLambdaInfo(lambda);
         }
 
-        internal void InitializeRule(Compiler tc, CodeBlockInfo top) {
+        internal void InitializeRule(Compiler tc, LambdaInfo top) {
             Debug.Assert(tc != null);
             Debug.Assert(top != null);
 
@@ -1588,9 +1544,9 @@ namespace Microsoft.Scripting.Ast {
             _info = top;
         }
 
-        private CodeBlockInfo GetCbi(CodeBlock cb) {
+        private LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
             Debug.Assert(Compiler != null);
-            return Compiler.GetCbi(cb);
+            return Compiler.GetLambdaInfo(lambda);
         }
 
         private TryStatementInfo GetTsi(TryStatement node) {
@@ -1694,7 +1650,7 @@ namespace Microsoft.Scripting.Ast {
 
             if (paramNames != null) {
                 // parameters are index from 1, with constant pool we need to skip the first arg
-                int startIndex = constantPool != null ? 2 : 1;
+                int startIndex = (constantPool != null || closure) ? 2 : 1;
                 for (int i = 0; i < paramNames.Count; i++) {
                     mb.DefineParameter(i + startIndex, ParameterAttributes.None, paramNames[i]);
                 }

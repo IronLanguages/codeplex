@@ -14,6 +14,11 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Reflection;
+
+using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -23,49 +28,78 @@ namespace Microsoft.Scripting.Ast {
     /// requested type.
     /// </summary>
     public sealed class CodeBlockExpression : Expression {
-        private readonly CodeBlock /*!*/ _block;
-        private readonly bool _forceWrapperMethod;
-        private readonly bool _stronglyTyped;
-        private readonly Type _delegateType;
-        
-        internal bool ForceWrapperMethod {
-            get { return _forceWrapperMethod; }
-        }
+        private readonly LambdaExpression /*!*/ _block;
 
-        internal bool IsStronglyTyped {
-            get { return _stronglyTyped; }
-        }
-
-        internal Type DelegateType {
-            get { return _delegateType; }
-        }
-
-        internal CodeBlockExpression(CodeBlock /*!*/ block, bool forceWrapperMethod, bool stronglyTyped, Type delegateType)
-            : base(AstNodeType.CodeBlockExpression, typeof(Delegate)) {
+        internal CodeBlockExpression(LambdaExpression /*!*/ block, Type/*!*/ type)
+            : base(AstNodeType.CodeBlockExpression, type) {
             Assert.NotNull(block);
 
             _block = block;
-            _forceWrapperMethod = forceWrapperMethod;
-            _stronglyTyped = stronglyTyped;
-            _delegateType = delegateType;
         }
 
-        public CodeBlock Block {
+        public LambdaExpression Block {
             get { return _block; }
         }
     }
 
     public static partial class Ast {
-        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper) {
-            return new CodeBlockExpression(block, forceWrapper, false, null);
+        public static CodeBlockExpression CodeBlockExpression(LambdaExpression block, Type type) {
+            Contract.RequiresNotNull(block, "block");
+            Contract.RequiresNotNull(type, "type");
+
+            ValidateDelegateType(block, type);
+
+            return new CodeBlockExpression(block, type);
         }
 
-        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, bool forceWrapper, bool stronglyTyped) {
-            return new CodeBlockExpression(block, forceWrapper, stronglyTyped, null);
+        /// <summary>
+        /// Validates that the delegate type of the lambda
+        /// matches the lambda itself.
+        /// 
+        /// * Return types of the lambda and the delegate must be identical.
+        /// 
+        /// * Without parameter array on the delegate type, the signatures must
+        ///   match perfectly as to count and types of parameters.
+        ///   
+        /// * With parameter array on the delegate type, the common subset of
+        ///   parameters must match
+        /// </summary>
+        private static void ValidateDelegateType(LambdaExpression lambda, Type type) {
+            Contract.Requires(type != typeof(Delegate), "type", "type must not be System.Delegate.");
+            Contract.Requires(TypeUtils.CanAssign(typeof(Delegate), type), "type", "Incorrect delegate type.");
+
+            MethodInfo mi = type.GetMethod("Invoke");
+            Contract.RequiresNotNull(mi, "Delegate must have an 'Invoke' method");
+
+            Contract.Requires(mi.ReturnType == lambda.ReturnType, "type", "Delegate type doesn't match LambdaExpression");
+
+            ParameterInfo[] infos = mi.GetParameters();
+            ReadOnlyCollection<Variable> parameters = lambda.Parameters;
+
+            if (infos.Length > 0 && CompilerHelpers.IsParamArray(infos[infos.Length - 1])) {
+                Contract.Requires(infos.Length - 1 <= parameters.Count, "Delegate and block parameter count mismatch");
+
+                // Parameter array case. The lambda may have more parameters than delegate,
+                // and can also have parameter array as its last parameter, however all of the
+                // parameters upto delegate's parameter array (excluding) must be identical
+
+                ValidateIdenticalParameters(infos, parameters, infos.Length - 1);
+            } else {
+                Contract.Requires(infos.Length == parameters.Count, "Delegate and block parameter count mismatch");
+
+                // No parameter array. The lambda must have identical signature to that of the
+                // delegate, and it may not be marked as parameter array itself.
+                ValidateIdenticalParameters(infos, parameters, infos.Length);
+
+                Contract.Requires(!lambda.ParameterArray, "block", "Parameter array delegate type required for parameter array lambda");
+            }
         }
 
-        public static CodeBlockExpression CodeBlockExpression(CodeBlock block, Type delegateType) {
-            return new CodeBlockExpression(block, false, true, delegateType);
+        private static void ValidateIdenticalParameters(ParameterInfo[] infos, ReadOnlyCollection<Variable> parameters, int count) {
+            Debug.Assert(count <= infos.Length && count <= parameters.Count);
+            while (count-- > 0) {
+                Contract.Requires(infos[count].ParameterType == parameters[count].Type, "type");
+            }
         }
     }
 }

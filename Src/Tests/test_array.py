@@ -19,8 +19,10 @@
 
 from lib.assert_util import *
 
-import System
+if not sys.platform=="win32":
+    import System
 
+@skip("win32")
 def test_sanity():
     # 1-dimension array
     array1 = System.Array.CreateInstance(int, 2)
@@ -88,6 +90,7 @@ def test_sanity():
         AreEqual([x for x in f(array1, 0)], [])
         AreEqual([x for x in f(array1, -10)], [])
 
+@skip("win32")
 def test_slice(): 
     array1 = System.Array.CreateInstance(int, 20)
     for i in range(20): array1[i] = i * i
@@ -104,6 +107,7 @@ def test_slice():
     def f(): array1[::2] = [x * 2 for x in range(11)]
     AssertError(ValueError, f)    
 
+@skip("win32")
 def test_creation():
     t = System.Array
     ti = type(System.Array.CreateInstance(int, 1))
@@ -126,7 +130,7 @@ def _ArrayEqual(a,b):
 ##    int[] lowerBounds
 ##)
 
-@skip('silverlight')
+@skip('silverlight', 'win32')
 def test_nonzero_lowerbound():
     a = System.Array.CreateInstance(int, (5,), (5,))
     for i in xrange(5): a[i] = i
@@ -172,6 +176,7 @@ def test_nonzero_lowerbound():
     AssertError(NotImplementedError, sliceArrayAssign, a, -200, 1)
     AssertError(NotImplementedError, sliceArrayAssign, a, 1, 1)
 
+@skip("win32")
 def test_array_type():
     
     def type_helper(array_type, instance):
@@ -228,9 +233,22 @@ def test_array_type():
     type_helper(str, " ")
     type_helper(str, "abc")
 
-def test_uint_maxval():
+def test_array_array_I():
     import array
-    a = array.array('I', [0xFFFFFFFF])
-    AreEqual(a[0], 4294967295)
+    for x in [  0, 1, 2,
+                (2**8)-2, (2**8)-1, (2**8), (2**8)+1, (2**8)+2,
+                (2**16)-2, (2**16)-1, (2**16), (2**16)+1, (2**16)+2,
+                (2**32)-2, (2**32)-1, 
+                ]:
+                
+        temp_array1 = array.array('I', [x])
+        AreEqual(temp_array1[0], x)
+        
+        temp_array1 = array.array('I', [x, x])
+        AreEqual(temp_array1[0], x)
+        AreEqual(temp_array1[1], x)
+        
+    for x in [  (2**32), (2**32)+1, (2**32)+2 ]:
+        AssertError(OverflowError, array.array, 'I', [x])
     
 run_test(__name__)

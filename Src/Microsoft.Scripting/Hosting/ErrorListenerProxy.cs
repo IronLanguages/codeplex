@@ -20,6 +20,20 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
+
+    /// <summary>
+    /// Bridges ErrorSink and ErrorListener. 
+    /// Errors reported by language compilers to ErrorSink are forwarded to the ErrorListener provided by the host.
+    /// </summary>
+    /// <remarks>
+    /// This proxy is created in the scenario when the compiler is processing a single SourceUnit.
+    /// Therefore it could maintain one to one mapping from SourceUnit to ScriptSource.
+    /// In a case, which shouldn't happen, that the compiler reports an error in a different SourceUnit we just create 
+    /// a new instance of the ScriptSource each time. 
+    /// 
+    /// TODO: Consider compilation of multiple source units and creating a hashtable mapping SourceUnits to ScriptSources
+    /// within the context of compilation unit.
+    /// </remarks>
     internal sealed class ErrorListenerProxySink : ErrorSink {
         private readonly ErrorListener _listener;
         private readonly ScriptSource/*!*/ _source;
@@ -31,6 +45,7 @@ namespace Microsoft.Scripting.Hosting {
 
         public override void Add(SourceUnit sourceUnit, string/*!*/ message, SourceSpan span, int errorCode, Severity severity) {
             if (_listener != null) {
+                
                 ScriptSource scriptSource;
                 if (sourceUnit != _source.SourceUnit) {
                     scriptSource = new ScriptSource(_source.Engine.Runtime.GetEngine(sourceUnit.LanguageContext), sourceUnit);

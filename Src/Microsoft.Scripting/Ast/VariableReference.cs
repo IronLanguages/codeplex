@@ -43,8 +43,8 @@ namespace Microsoft.Scripting.Ast {
             get { return _slot; }
         }
 
-        public void CreateSlot(LambdaCompiler cg, CodeBlockInfo cbi) {
-            _slot = _variable.CreateSlot(cg, cbi);
+        public void CreateSlot(LambdaCompiler cg, LambdaInfo li) {
+            _slot = _variable.CreateSlot(cg, li);
         }
     }
 }

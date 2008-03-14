@@ -25,7 +25,6 @@ namespace Microsoft.Scripting {
         private bool _exceptionDetail;
         private bool _showClrExceptions;
         private bool _interpret;
-        private bool _pdc;
         private bool _perfStats;
 
         /// <summary>
@@ -34,22 +33,6 @@ namespace Microsoft.Scripting {
         public bool InterpretedMode {
             get { return _interpret; }
             set { _interpret = value; }
-        }
-
-        /// <summary>
-        /// Try to selectively emit code to improve performance.
-        /// ProfileDrivenCompilation == true implies InterpretedMode == true.
-        /// </summary>
-        public bool ProfileDrivenCompilation {
-            get {
-                return _pdc;
-            }
-            set {
-                _pdc = value;
-                if (_pdc) {
-                    _interpret = true;
-                }
-            }
         }
 
         /// <summary>

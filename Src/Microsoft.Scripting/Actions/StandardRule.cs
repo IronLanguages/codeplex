@@ -42,7 +42,7 @@ namespace Microsoft.Scripting.Actions {
         internal List<Function<bool>> _validators;  // the list of validates which indicate when the rule is no longer valid
         private bool _error;                        // true if the rule represents an error
 
-        // TODO revisit these fields and their uses when CodeBlock moves down
+        // TODO revisit these fields and their uses when LambdaExpression moves down
         internal Variable[] _paramVariables;        // TODO: Remove me when we can refer to params as expressions
         internal List<Variable> _temps;             // TODO: Remove me when ASTs can have free-floating variables
         internal AnalyzedRule _analyzed;            // TODO: Remove me when the above 2 are gone
@@ -365,7 +365,7 @@ namespace Microsoft.Scripting.Actions {
         /// 
     /// In the current design, a StandardRule is also used to provide a mini binding scope for the
     /// parameters and temporary variables that might be needed by the Test and Target.  This will
-    /// probably change in the future as we unify around the notion of CodeBlocks.
+    /// probably change in the future as we unify around the notion of Lambdas.
     /// </summary>
     /// <typeparam name="T">The type of delegate for the DynamicSites this rule may apply to.</typeparam>
     public class StandardRule<T> : StandardRule {
@@ -476,7 +476,7 @@ namespace Microsoft.Scripting.Actions {
                     _analyzed = RuleBinder.Bind(_test, _target, ReturnType);
                 }
 
-                CodeBlockInfo top = _analyzed.Top;
+                LambdaInfo top = _analyzed.Top;
                 Compiler tc = new Compiler(_analyzed);
 
                 cg.InitializeRule(tc, top);

@@ -702,6 +702,8 @@ def test_event_lifetime():
     
     def test_runner():
         import _weakref
+        global called
+        called = 0
         a = IronPythonTest.Events()
         
         # wire up an event w/ a circular reference
@@ -710,14 +712,16 @@ def test_event_lifetime():
         def foo(): 
             global called
             called += 1
+            
         foo.abc = a
-        
         a.InstanceTest += foo
-        global called
-        called = 0
+        
         a.CallInstance()
-    
         AreEqual(called, 1)
+        
+        ret_val = _weakref.ref(foo)       
+        #Assert(hasattr(ret_val, "abc")) #BUG
+        keep_alive(foo)
         
         # ensure as long as the objects are still alive the event
         # handler remains alive
@@ -728,18 +732,18 @@ def test_event_lifetime():
         a.CallInstance()
         AreEqual(called, 2)
         
-        keep_alive(foo)
-        keep_alive(a)        
-        return _weakref.ref(foo)
+        return ret_val
     
     func_ref = test_runner()
 
     # now all references are dead, the function should be collectible
     import gc
-    gc.collect()
-    AreEqual(func_ref(), None)
+    for i in xrange(10):
+        gc.collect()
     
-        
+    Assert(not hasattr(func_ref, "abc"))
+    AreEqual(func_ref(), None)
+    AreEqual(called, 2)
 
 def test_reflected_event_ops():
     '''

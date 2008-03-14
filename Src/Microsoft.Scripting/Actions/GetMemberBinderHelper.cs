@@ -80,6 +80,13 @@ namespace Microsoft.Scripting.Actions {
                 return Body;
             }
 
+#if !SILVERLIGHT
+            if (StrongBoxType == null && ComDispatch.ComObject.Is__ComObject(type)) {
+                AddToBody(ComDispatch.ComObject.GetTargetForGetMember(Rule, Binder, Action));
+                return Body;
+            }
+#endif
+
             MemberGroup members = Binder.GetMember(Action, type, StringName);
 
             // if lookup failed try the strong-box type if available.
@@ -139,7 +146,7 @@ namespace Microsoft.Scripting.Actions {
             MakeGenericBodyWorker(type, members[0], instance);
         }
 
-        private void MakeGenericBodyWorker(Type type, MemberTracker tracker, Expression instance) {            
+        private void MakeGenericBodyWorker(Type type, MemberTracker tracker, Expression instance) {
             if (!_isStatic) {
                 tracker = tracker.BindToInstance(instance ?? Instance);
             }
@@ -258,6 +265,7 @@ namespace Microsoft.Scripting.Actions {
                 Rule.IsError = true;
             }
         }
+
         #endregion
     }
 }

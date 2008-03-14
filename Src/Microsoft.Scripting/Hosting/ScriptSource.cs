@@ -28,6 +28,9 @@ using System.Threading;
 using System.Runtime.Remoting;
 
 namespace Microsoft.Scripting.Hosting {
+    /// <summary>
+    /// Hosting counterpart for <see cref="SourceUnit"/>.
+    /// </summary>
     public sealed class ScriptSource
 #if !SILVERLIGHT
         : MarshalByRefObject 

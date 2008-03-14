@@ -34,11 +34,6 @@ namespace Microsoft.Scripting.Ast {
             return new IntrinsicExpression(AstNodeType.CodeContextExpression, typeof(CodeContext));
         }
 
-
-        public static Expression Params() {
-            return new IntrinsicExpression(AstNodeType.ParamsExpression, typeof(object[]));
-        }
-
         /// <summary>
         /// Get the generator instance ($gen) passed into the Generator method.
         /// </summary>
@@ -46,8 +41,8 @@ namespace Microsoft.Scripting.Ast {
         /// <remarks>The generator intrinsic is the state variable passed into a generator code block.
         /// Exposing as an intrinsic allows a language to check additional state in the generator, such 
         /// as if the generator should abort, throw, or return an expression from the yield point.</remarks>
-        public static Expression GeneratorInstanceExpression(Type _generator) {
-            return new IntrinsicExpression(AstNodeType.GeneratorIntrinsic, _generator);
+        public static Expression GeneratorInstanceExpression(Type generator) {
+            return new IntrinsicExpression(AstNodeType.GeneratorIntrinsic, generator);
         }
     }
 }

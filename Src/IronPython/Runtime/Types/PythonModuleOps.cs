@@ -89,16 +89,6 @@ namespace IronPython.Runtime.Types {
         }
 
         [PropertyMethod]
-        public static object Get__name__(Scope/*!*/ scope) {
-            return DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetName();
-        }
-
-        [PropertyMethod]
-        public static void Set__name__(Scope/*!*/ scope, object value) {
-            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetName(value);
-        }
-
-        [PropertyMethod]
         public static IAttributesCollection/*!*/ Get__dict__(Scope/*!*/ scope) {
             return new PythonDictionary(new GlobalScopeDictionaryStorage(scope));
         }
@@ -113,18 +103,6 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("can't set attributes of built-in/extension type 'module'");
         }
         
-        [PropertyMethod]
-        public static object Get__file__(Scope/*!*/ scope) {
-            object file = DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).GetFile();
-            if (file == null) throw PythonOps.AttributeError("module has no __file__ attribute");
-            return file;
-        }
-
-        [PropertyMethod]
-        public static void Set__file__(Scope/*!*/ scope, object value) {
-            DefaultContext.DefaultPythonContext.EnsurePythonModule(scope).SetFile(value);
-        }
-
         #endregion
 
         internal static void PopulateModuleDictionary(PythonContext/*!*/ context, IAttributesCollection/*!*/ dict, Type/*!*/ type) {

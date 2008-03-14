@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 
 using Microsoft.Scripting;
@@ -27,13 +28,12 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using System.Text;
-    using IronPython.Runtime.Calls;
 
+    using Ast = Microsoft.Scripting.Ast.Ast;
 
     public delegate bool TryGetMemberCustomizer(CodeContext context, object instance, SymbolId name, out object value);
     public delegate void SetMemberCustomizer(CodeContext context, object instance, SymbolId name, object value);
@@ -611,7 +611,7 @@ namespace IronPython.Runtime.Types {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
                 args = (object[])args.Clone();
                 args[0] = tt;
-                StandardRule<T> rule = new PythonSetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                StandardRule<T> rule = new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
                 rule.Test = Ast.Equal(
                     rule.Parameters[0],
                     Ast.RuntimeConstant(this)
@@ -1019,7 +1019,7 @@ namespace IronPython.Runtime.Types {
             if (sdo != null) {
                 IAttributesCollection iac = sdo.Dict;
                 if (iac == null) {
-                    iac = new SymbolDictionary();
+                    iac = PythonDictionary.MakeSymbolDictionary();
 
                     if ((iac = sdo.SetDict(iac))==null) {
                         return false;
@@ -1058,7 +1058,7 @@ namespace IronPython.Runtime.Types {
             if (sdo != null) {
                 IAttributesCollection iac = sdo.Dict;
                 if (iac == null) {
-                    iac = new SymbolDictionary();
+                    iac = PythonDictionary.MakeSymbolDictionary();
 
                     if ((iac = sdo.SetDict(iac))==null) {
                         return false;
@@ -1185,7 +1185,7 @@ namespace IronPython.Runtime.Types {
         public IAttributesCollection GetMemberDictionary(CodeContext context) {
             Initialize();
 
-            IAttributesCollection iac = new SymbolDictionary();
+            IAttributesCollection iac = PythonDictionary.MakeSymbolDictionary();
             foreach (SymbolId x in _dict.Keys) {             
                 if(x.ToString() == "__dict__") continue;
 

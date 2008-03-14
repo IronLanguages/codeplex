@@ -1034,7 +1034,7 @@ namespace IronPython.Runtime.Types {
         #region ICustomAttributes Members
 
         public IList<object> GetMemberNames(CodeContext context) {
-            SymbolDictionary attrs = new SymbolDictionary(__dict__);
+            PythonDictionary attrs = new PythonDictionary(__dict__);
             OldClass.RecurseAttrHierarchy(this.__class__, attrs);
             return PythonOps.MakeListFromSequence(attrs);
         }
@@ -1291,9 +1291,14 @@ namespace IronPython.Runtime.Types {
         #region Private Implementation Details
 
         private void RecurseAttrHierarchyInt(OldClass oc, IDictionary<SymbolId, object> attrs) {
-            foreach (SymbolId key in oc.__dict__.Keys) {
-                if (!attrs.ContainsKey(key)) {
-                    attrs.Add(key, key);
+            foreach (KeyValuePair<object, object> kvp in oc.__dict__._storage.GetItems()) {
+                string strKey = kvp.Key as string;
+                if (strKey != null) {
+                    SymbolId si = SymbolTable.StringToId(strKey);
+
+                    if (!attrs.ContainsKey(si)) {
+                        attrs.Add(si, si);
+                    }
                 }
             }
             //  recursively get attrs in parent hierarchy
@@ -1345,7 +1350,9 @@ namespace IronPython.Runtime.Types {
         }
 
         private bool TryRawGetAttr(CodeContext context, SymbolId name, out object ret) {
-            if (((IAttributesCollection)__dict__).TryGetValue(name, out ret)) return true;
+            if (__dict__._storage.TryGetValue(name, out ret)) {
+                return true;
+            }
 
             if (__class__.TryLookupSlot(name, out ret)) {
                 ret = __class__.GetOldStyleDescriptor(context, ret, this, __class__);

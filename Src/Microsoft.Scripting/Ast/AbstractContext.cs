@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Ast {
             _binder = binder;
         }
 
-        public void SetupToCodeBlock() {
+        public void SetupToLambda() {
             _variableMap = new Dictionary<Variable, Variable>();
         }
 

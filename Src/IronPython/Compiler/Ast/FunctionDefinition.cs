@@ -284,7 +284,7 @@ namespace IronPython.Compiler.Ast {
 
             bodyGen.Block.Body = body;
 
-            MSAst.CodeBlock code;
+            MSAst.LambdaExpression code;
             if (IsGenerator) {
                 code = bodyGen.Block.MakeGenerator(typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
             } else {
@@ -297,7 +297,8 @@ namespace IronPython.Compiler.Ast {
                 typeof(PythonOps).GetMethod("MakeFunction"),                               // method
                 Ast.CodeContext(),                                                              // 1. Emit CodeContext
                 Ast.Constant(SymbolTable.IdToString(_name)),                                    // 2. FunctionName
-                Ast.CodeBlockExpression(code, flags != FunctionAttributes.None),                // 3. delegate
+                Ast.CodeBlockExpression(code,
+                    GetDelegateType(code, flags != FunctionAttributes.None)),                   // 3. delegate
                 Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
                 Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
                 Ast.Constant(flags),                                                            // 6. flags
@@ -401,6 +402,13 @@ namespace IronPython.Compiler.Ast {
                 }
             }
             walker.PostWalk(this);
+        }
+
+        /// <summary>
+        /// Determines delegate type for the Python function
+        /// </summary>
+        private static Type GetDelegateType(MSAst.LambdaExpression/*!*/ block, bool wrapper) {
+            return PythonCallTargets.GetPythonTargetType(wrapper, block.Parameters.Count);
         }
     }
 }

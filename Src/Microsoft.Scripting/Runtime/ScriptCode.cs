@@ -31,16 +31,16 @@ namespace Microsoft.Scripting {
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
         public static readonly ScriptCode[] EmptyArray = new ScriptCode[0];
 
-        private readonly CodeBlock _code;
+        private readonly LambdaExpression _code;
         private readonly LanguageContext _languageContext;
         private readonly CompilerContext _compilerContext;
 
-        private CallTargetWithContext0 _simpleTarget;
+        private DlrMainCallTarget _simpleTarget;
 
-        private CallTargetWithContext0 _optimizedTarget;
+        private DlrMainCallTarget _optimizedTarget;
         private Scope _optimizedScope;
 
-        internal ScriptCode(CodeBlock code, LanguageContext languageContext, CompilerContext compilerContext) {
+        internal ScriptCode(LambdaExpression code, LanguageContext languageContext, CompilerContext compilerContext) {
             Assert.NotNull(code, languageContext, compilerContext);
             
             _code = code;
@@ -60,7 +60,7 @@ namespace Microsoft.Scripting {
             get { return _compilerContext.SourceUnit; }
         }
 
-        internal CodeBlock CodeBlock {
+        internal LambdaExpression Lambda {
             get {
                 return _code;
             }
@@ -73,7 +73,7 @@ namespace Microsoft.Scripting {
             }
         }
 
-        internal CallTargetWithContext0 OptimizedTarget {
+        internal DlrMainCallTarget OptimizedTarget {
             set {
                 _optimizedTarget = value;
             }
@@ -83,7 +83,7 @@ namespace Microsoft.Scripting {
             if (_simpleTarget == null) {
                 lock (this) { // TODO: mutex object
                     if (_simpleTarget == null) {
-                        _simpleTarget = LambdaCompiler.CompileTopLevelCodeBlock(SourceUnit, _code);
+                        _simpleTarget = LambdaCompiler.CompileTopLevelLambda(SourceUnit, _code);
                     }
                 }
             }
@@ -100,7 +100,7 @@ namespace Microsoft.Scripting {
             bool doEvaluation = tryEvaluate || _languageContext.Options.InterpretedMode;
             if (_simpleTarget == null && _optimizedTarget == null
                 && doEvaluation
-                && Ast.InterpretChecker.CanEvaluate(_code, _languageContext.Options.ProfileDrivenCompilation)) {
+                && Ast.InterpretChecker.CanEvaluate(_code)) {
                 return Interpreter.TopLevelExecute(_code, codeContext);
             }
 

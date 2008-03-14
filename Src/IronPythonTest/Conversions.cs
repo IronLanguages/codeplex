@@ -79,17 +79,16 @@ namespace IronPythonTest {
     }
 
     public class DictConversion {
-        public static IList<int> ToIDictionary(IDictionary dict) {
-            List<int> res = new List<int>();
+        public static IList<object> ToIDictionary(IDictionary dict) {
+            List<object> res = new List<object>();
             foreach (DictionaryEntry de in dict) {
-                res.Add((int)de.Key);
+                res.Add(de.Key);
             }
 
             foreach (DictionaryEntry de in dict) {
-                res.Add((int)de.Value);
+                res.Add(de.Value);
             }
 
-            res.Sort();
             return res;
         }
     }

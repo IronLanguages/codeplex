@@ -2215,7 +2215,21 @@ def test_int_from_long():
     class x(long): pass
     
     for base in (long, x):
-        AreEqual(repr(int(base(1L))), '1')
+        for num, num_repr in [
+                                (long(-2**31-2), '-2147483650L'),
+                                (long(-2**31-1), '-2147483649L'),
+                                (long(-2**31), '-2147483648'),
+                                (long(-2**31+1), '-2147483647'),
+                                (long(-2**31+2), '-2147483646'),
+                                (0L, '0'),
+                                (1L, '1'),
+                                (long(2**31-2), '2147483646'),
+                                (long(2**31-1), '2147483647'),
+                                (long(2**31), '2147483648L'),
+                                (long(2**31+1), '2147483649L'),
+                                ]:
+            AreEqual(repr(int(base(num))), num_repr)
+
 
 def test_float_special_methods():
     AreEqual(float.__lt__(2.0, 3.0), True)

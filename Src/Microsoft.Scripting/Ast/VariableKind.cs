@@ -20,29 +20,29 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Local variable.
         /// 
-        /// Local variables can be referenced from nested CodeBlocks
+        /// Local variables can be referenced from nested lambdas
         /// </summary>
         Local,
 
         /// <summary>
-        /// Parameter to a CodeBlock
+        /// Parameter to a LambdaExpression
         /// 
-        /// Like locals, they can be referenced from nested CodeBlocks
+        /// Like locals, they can be referenced from nested lambdas
         /// </summary>
         Parameter,
 
         /// <summary>
         /// Temporary variable
         /// 
-        /// Temporaries must be contained within the code block
-        /// (cannot be referenced from nested code blocks)
+        /// Temporaries must be contained within the lambda
+        /// (cannot be referenced from nested lambdas)
         /// </summary>
         Temporary,
 
         /// <summary>
         /// Global variable
         /// 
-        /// Should only appear in global (top level) code block.
+        /// Should only appear in global (top level) lambda.
         /// TODO: Pythonism, globals should go away and be handled on Python side only
         /// </summary>
         Global

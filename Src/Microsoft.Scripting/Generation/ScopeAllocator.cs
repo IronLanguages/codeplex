@@ -45,16 +45,16 @@ namespace Microsoft.Scripting.Generation {
         private readonly ScopeAllocator _parent;
         private readonly StorageAllocator _allocator;
 
-        private CodeBlock _block;
+        private LambdaExpression _lambda;
 
         // Slots to access outer scopes. For now this is dictionary, even though list would be better.
         // as soon as ScopeId goes away, make this list or something better.
-        private Dictionary<CodeBlock, Slot> _closureAccess;
+        private Dictionary<LambdaExpression, Slot> _closureAccess;
 
         // Slots to access scopes, including local. The closure access slots are closure specific,
         // and some variables in local scope may need access slot which is different than that
         // for closures
-        private Dictionary<CodeBlock, Slot> _scopeAccess;
+        private Dictionary<LambdaExpression, Slot> _scopeAccess;
 
         private List<Slot> _generatorTemps;
         private int _generatorTempIndex;
@@ -78,29 +78,29 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public CodeBlock Block {
-            get { return _block; }
-            set { _block = value; }
+        public LambdaExpression Lambda {
+            get { return _lambda; }
+            set { _lambda = value; }
         }
 
         public ScopeAllocator Parent {
             get { return _parent; }
         }
 
-        public Slot GetClosureAccessSlot(CodeBlock block) {
-            return GetAccessSlot(block, _closureAccess);
+        public Slot GetClosureAccessSlot(LambdaExpression lambda) {
+            return GetAccessSlot(lambda, _closureAccess);
         }
 
-        public void AddClosureAccessSlot(CodeBlock block, Slot slot) {
-            AddAccessSlot(block, ref _closureAccess, slot);
+        public void AddClosureAccessSlot(LambdaExpression lambda, Slot slot) {
+            AddAccessSlot(lambda, ref _closureAccess, slot);
         }
 
-        public Slot GetScopeAccessSlot(CodeBlock block) {
-            return GetAccessSlot(block, _scopeAccess);
+        public Slot GetScopeAccessSlot(LambdaExpression lambda) {
+            return GetAccessSlot(lambda, _scopeAccess);
         }
 
-        public void AddScopeAccessSlot(CodeBlock block, Slot slot) {
-            AddAccessSlot(block, ref _scopeAccess, slot);
+        public void AddScopeAccessSlot(LambdaExpression lambda, Slot slot) {
+            AddAccessSlot(lambda, ref _scopeAccess, slot);
         }
 
         public void AddGeneratorTemp(Slot slot) {
@@ -116,18 +116,18 @@ namespace Microsoft.Scripting.Generation {
             return _generatorTemps[_generatorTempIndex ++];
         }
 
-        private Slot GetAccessSlot(CodeBlock block, Dictionary<CodeBlock, Slot> slots) {
+        private Slot GetAccessSlot(LambdaExpression lambda, Dictionary<LambdaExpression, Slot> slots) {
             Debug.Assert(slots != null);
-            Debug.Assert(slots.ContainsKey(block));
-            return slots[block];
+            Debug.Assert(slots.ContainsKey(lambda));
+            return slots[lambda];
         }
 
-        private void AddAccessSlot(CodeBlock block, ref Dictionary<CodeBlock, Slot> slots, Slot slot) {
+        private void AddAccessSlot(LambdaExpression lambda, ref Dictionary<LambdaExpression, Slot> slots, Slot slot) {
             if (slots == null) {
-                slots = new Dictionary<CodeBlock, Slot>();
+                slots = new Dictionary<LambdaExpression, Slot>();
             }
-            Debug.Assert(!slots.ContainsKey(block) || slots[block] == slot);
-            slots[block] = slot;
+            Debug.Assert(!slots.ContainsKey(lambda) || slots[lambda] == slot);
+            slots[lambda] = slot;
         }
     }
 }

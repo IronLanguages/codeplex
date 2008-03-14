@@ -22,7 +22,7 @@ using System.Collections.ObjectModel;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
-    /// Generator code block (code block with yield statements).
+    /// Generator lambda (lambda with yield statements).
     /// 
     /// To create the generator, the AST node requires 2 types.
     /// First is the type of the generator object. The code generation will emit code to instantiate
@@ -34,10 +34,10 @@ namespace Microsoft.Scripting.Ast {
     /// The inner function of the generator will have the signature:
     /// bool GetNext(GeneratorType, out object value);
     /// </summary>
-    public sealed class GeneratorCodeBlock : CodeBlock {
+    public sealed class GeneratorCodeBlock : LambdaExpression {
         /// <summary>
         /// The type of the generator instance.
-        /// The CodeBlock will emit code to create a new instance of this type, using constructor:
+        /// The LambdaExpression will emit code to create a new instance of this type, using constructor:
         /// GeneratorType(CodeContext context, Delegate next);
         /// </summary>
         private readonly Type _generator;
@@ -62,7 +62,7 @@ namespace Microsoft.Scripting.Ast {
     }
 
     public static partial class Ast {
-        public static CodeBlock Generator(SourceSpan span, string name, Type generator, Type next, Expression body, Variable[] parameters, Variable[] variables) {
+        public static LambdaExpression Generator(SourceSpan span, string name, Type generator, Type next, Expression body, Variable[] parameters, Variable[] variables) {
             Contract.RequiresNotNull(name, "name");
             Contract.RequiresNotNull(generator, "generator");
             Contract.RequiresNotNull(next, "next");
@@ -71,7 +71,7 @@ namespace Microsoft.Scripting.Ast {
             Contract.RequiresNotNullItems(parameters, "parameters");
             Contract.RequiresNotNullItems(variables, "variables");
 
-            CodeBlock block = new GeneratorCodeBlock(span, name, generator, next, body,
+            LambdaExpression block = new GeneratorCodeBlock(span, name, generator, next, body,
                                                      CollectionUtils.ToReadOnlyCollection(parameters),
                                                      new List<Variable>(variables));
 

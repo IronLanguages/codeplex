@@ -30,6 +30,11 @@ using System.Diagnostics;
 using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Hosting {
+    
+    /// <summary>
+    /// Represents a language in Hosting API. 
+    /// Hosting API counterpart for <see cref="LanguageContext"/>.
+    /// </summary>
     public sealed class ScriptEngine 
 #if !SILVERLIGHT
         : MarshalByRefObject 

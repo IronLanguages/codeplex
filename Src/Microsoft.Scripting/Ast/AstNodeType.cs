@@ -90,7 +90,6 @@ namespace Microsoft.Scripting.Ast {
         MemberExpression,
         NewArrayExpression,
         OnesComplement,
-        ParamsExpression,
         ReturnStatement,
         ScopeStatement,
         SwitchStatement,

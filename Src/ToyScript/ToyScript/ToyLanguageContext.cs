@@ -35,7 +35,7 @@ namespace ToyScript {
             Binder = new ToyBinder(new CodeContext(new Scope(this), this));
         }
 
-        public override MSAst.CodeBlock ParseSourceCode(CompilerContext context) {
+        public override MSAst.LambdaExpression ParseSourceCode(CompilerContext context) {
             ToyParser tp = new ToyParser(context.SourceUnit.GetCode());
 
             switch (context.SourceUnit.Kind) {

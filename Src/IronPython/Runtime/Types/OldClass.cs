@@ -64,7 +64,7 @@ namespace IronPython.Runtime.Types {
         private List<OldClass> _bases;
         private PythonType _type = null;
 
-        public IAttributesCollection __dict__;
+        public PythonDictionary __dict__;
         private int _attrs;  // actually OldClassAttributes - losing type safety for thread safety
         internal object __name__;
 
@@ -73,7 +73,26 @@ namespace IronPython.Runtime.Types {
         private int _optimizedInstanceNamesVersion;
         private SymbolId[] _optimizedInstanceNames;
 
-        public OldClass(string name, PythonTuple bases, IAttributesCollection dict)
+        public static object __new__(CodeContext/*!*/ context, [NotNull]PythonType cls, string name, PythonTuple bases, IAttributesCollection dict) {
+            if (cls != TypeCache.OldClass) throw PythonOps.TypeError("{0} is not a subtype of classobj", PythonTypeOps.GetName(cls));
+
+            if (!dict.ContainsKey(Symbols.Module)) {
+                object moduleValue;
+                if (context.ModuleContext.Scope.TryGetName(Symbols.Name, out moduleValue)) {
+                    dict[Symbols.Module] = moduleValue;
+                }
+            }
+
+            foreach (object o in bases) {
+                if (o is PythonType) {
+                    return PythonOps.MakeClass(context, name, bases._data, String.Empty, dict);
+                }
+            }
+
+            return new OldClass(name, bases, dict, String.Empty);
+        }
+
+        internal OldClass(string name, PythonTuple bases, IAttributesCollection dict)
             : this(name, bases, dict, "") {
         }
 
@@ -83,32 +102,26 @@ namespace IronPython.Runtime.Types {
             Init(name, dict, instanceNames);
         }
 
-        internal OldClass(string name, List<OldClass> bases, IAttributesCollection dict, string instanceNames) {
-            Assert.NotNullItems(bases);
-            _bases = bases;
-            Init(name, dict, instanceNames);
-        }
-
         private void Init(string name, IAttributesCollection dict, string instanceNames) {
             __name__ = name;
 
             InitializeInstanceNames(instanceNames);
 
-            __dict__ = new PythonDictionary(new WrapperDictionaryStorage(dict));
+            __dict__ = dict as PythonDictionary ?? new PythonDictionary(new WrapperDictionaryStorage(dict));
 
-            if (!__dict__.ContainsKey(Symbols.Doc)) {
-                __dict__[Symbols.Doc] = null;
+            if (!__dict__._storage.Contains(Symbols.Doc)) {
+                __dict__._storage.Add(Symbols.Doc, null);
             }
 
-            if (__dict__.ContainsKey(Symbols.Unassign)) {
+            if (__dict__._storage.Contains(Symbols.Unassign)) {
                 HasFinalizer = true;
             }
 
-            if (__dict__.ContainsKey(Symbols.SetAttr)) {
+            if (__dict__._storage.Contains(Symbols.SetAttr)) {
                 HasSetAttr = true;
             }
 
-            if (__dict__.ContainsKey(Symbols.DelAttr)) {
+            if (__dict__._storage.Contains(Symbols.DelAttr)) {
                 HasDelAttr = true;
             }
         }
@@ -117,17 +130,17 @@ namespace IronPython.Runtime.Types {
         private OldClass(SerializationInfo info, StreamingContext context) {
             _bases = (List<OldClass>)info.GetValue("__class__", typeof(List<OldClass>));
             __name__ = info.GetValue("__name__", typeof(object));
-            __dict__ = new SymbolDictionary();
+            __dict__ = new PythonDictionary();
 
             InitializeInstanceNames(""); //TODO should we serialize the optimization data
 
             List<object> keys = (List<object>)info.GetValue("keys", typeof(List<object>));
             List<object> values = (List<object>)info.GetValue("values", typeof(List<object>));
             for (int i = 0; i < keys.Count; i++) {
-                __dict__.AddObjectKey(keys[i], values[i]);
+                __dict__[keys[i]] = values[i];
             }
 
-            if (__dict__.ContainsKey(Symbols.Unassign)) HasFinalizer = true;
+            if (__dict__.has_key("__del__")) HasFinalizer = true;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context")]
@@ -139,15 +152,9 @@ namespace IronPython.Runtime.Types {
 
             List<object> keys = new List<object>();
             List<object> values = new List<object>();
-            foreach (object o in __dict__.Keys) {
-                keys.Add(o);
-                object value;
-
-                bool res = __dict__.TryGetObjectValue(o, out value);
-
-                Debug.Assert(res);
-
-                values.Add(value);
+            foreach (KeyValuePair<object, object> kvp in __dict__._storage.GetItems()) {
+                keys.Add(kvp.Key);
+                values.Add(kvp.Value);
             }
 
             info.AddValue("keys", keys);
@@ -184,7 +191,7 @@ namespace IronPython.Runtime.Types {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1007:UseGenericsWhereAppropriate")]
         public bool TryLookupSlot(SymbolId name, out object ret) {
-            if (__dict__.TryGetValue(name, out ret)) {
+            if (__dict__._storage.TryGetValue(name, out ret)) {
                 return true;
             }
 
@@ -199,7 +206,7 @@ namespace IronPython.Runtime.Types {
         }
 
         internal string FullName {
-            get { return __dict__[Symbols.Module].ToString() + '.' + __name__; }
+            get { return __dict__["__module__"].ToString() + '.' + __name__; }
         }
 
 
@@ -358,13 +365,13 @@ namespace IronPython.Runtime.Types {
                 __name__ = n;
                 return;
             } else if (name == Symbols.Dict) {
-                IAttributesCollection d = value as IAttributesCollection;
+                PythonDictionary d = value as PythonDictionary;
                 if (d == null) throw PythonOps.TypeError("__dict__ must be set to dictionary");
                 __dict__ = d;
                 return;
             }
 
-            __dict__[name] = value;
+            __dict__._storage.Add(name, value);
 
             if (name == Symbols.Unassign) {
                 HasFinalizer = true;
@@ -376,7 +383,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-            if (!__dict__.Remove(name)) {
+            if (!__dict__._storage.Remove(SymbolTable.IdToString(name))) {
                 throw PythonOps.AttributeError("{0} is not a valid attribute", SymbolTable.IdToString(name));
             }
 
@@ -396,9 +403,9 @@ namespace IronPython.Runtime.Types {
         #endregion
 
         internal static void RecurseAttrHierarchy(OldClass oc, IDictionary<object, object> attrs) {
-            foreach (object key in oc.__dict__.Keys) {
-                if (!attrs.ContainsKey(key)) {
-                    attrs.Add(key, key);
+            foreach (KeyValuePair<object, object> kvp in oc.__dict__._storage.GetItems()) {
+                if (!attrs.ContainsKey(kvp.Key)) {
+                    attrs.Add(kvp.Key, kvp.Key);
                 }
             }
 
@@ -413,7 +420,7 @@ namespace IronPython.Runtime.Types {
         #region ICustomMembers Members
 
         public IList<object> GetMemberNames(CodeContext context) {
-            SymbolDictionary attrs = new SymbolDictionary(__dict__);
+            PythonDictionary attrs = new PythonDictionary(__dict__);
             RecurseAttrHierarchy(this, attrs);
             return PythonOps.MakeListFromSequence(attrs);
         }
@@ -650,13 +657,13 @@ namespace IronPython.Runtime.Types {
         }
 
         public void SetDictionary(object value) {
-            IAttributesCollection d = value as IAttributesCollection;
+            PythonDictionary d = value as PythonDictionary;
             if (d == null) throw PythonOps.TypeError("__dict__ must be set to dictionary");
             __dict__ = d;
         }
 
         public void SetNameHelper(SymbolId name, object value) {
-            __dict__[name] = value;
+            __dict__._storage.Add(name, value);
 
             if (name == Symbols.Unassign) {
                 HasFinalizer = true;

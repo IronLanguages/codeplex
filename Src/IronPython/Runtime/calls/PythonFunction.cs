@@ -465,7 +465,7 @@ namespace IronPython.Runtime.Calls {
 
         private IAttributesCollection EnsureDict() {
             if (_dict == null) {
-                _dict = new SymbolDictionary();
+                _dict = new PythonDictionary();
             }
             return _dict;
         }
@@ -1048,17 +1048,10 @@ namespace IronPython.Runtime.Calls {
             /// Fixes up the argument list for the appropriate target delegate type.
             /// </summary>
             private Expression[] GetArgumentsForTargetType(Expression[] exprArgs) {
-                if (_func.Target.GetType() == typeof(CallTargetWithContextN)) {
-                    exprArgs = new Expression[] {
-                        GetContextExpression(),
-                        Ast.NewArrayHelper(typeof(object[]), exprArgs) 
-                    };
-                } else if (_func.Target.GetType() == typeof(CallTargetN)) {
+                if (_func.Target.GetType() == typeof(CallTargetN)) {
                     exprArgs = new Expression[] {
                         Ast.NewArrayHelper(typeof(object[]), exprArgs) 
                     };
-                } else if (NeedsContext) {
-                    exprArgs = ArrayUtils.Insert(GetContextExpression(), exprArgs);
                 }
 
                 return exprArgs;
@@ -1069,13 +1062,6 @@ namespace IronPython.Runtime.Calls {
             /// </summary>
             private UnaryExpression GetFunctionParam() {
                 return Ast.Convert(_rule.Parameters[0], _func.GetType());
-            }
-
-            /// <summary>
-            /// Helper function to get the functions CodeContext.
-            /// </summary>
-            private Expression GetContextExpression() {
-                return Ast.Call(typeof(PythonOps).GetMethod("FunctionGetContext"), GetFunctionParam());
             }
 
             /// <summary>
@@ -1220,21 +1206,6 @@ namespace IronPython.Runtime.Calls {
                 List<Expression> res = new List<Expression>(_init);
                 res.Add(body);
                 return Ast.Block(res);
-            }
-
-            /// <summary>
-            /// Determines if our target method takes CodeContext for it's first parameter (the
-            /// method may be static & closed over the 1st parameter so we also check the 2nd).
-            /// </summary>
-            private bool NeedsContext {
-                get {
-                    ParameterInfo[] pi = _func.Target.Method.GetParameters();
-                    if (pi.Length > 0 && pi[0].ParameterType == typeof(CodeContext) ||
-                        (_func.Target.Target != null && _func.Target.Method.IsStatic && pi.Length > 1 && pi[1].ParameterType == typeof(CodeContext))) {
-                        return true;
-                    }
-                    return false;
-                }
             }
 
             private void MakeUnexpectedKeywordError(Dictionary<SymbolId, Expression> namedArgs) {

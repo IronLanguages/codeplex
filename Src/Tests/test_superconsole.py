@@ -431,6 +431,34 @@ def test_history():
     superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
     verifyResults(getTestOutput()[0], testRegex)
 
+def test_raw_input():
+    '''
+    '''
+    superConsole.SendKeys('outputRedirectStart{(}{)}{ENTER}')
+    superConsole.SendKeys('x = raw_input{(}"foo"{)}{ENTER}')
+    superConsole.SendKeys('{ENTER}')
+    superConsole.SendKeys('print x{ENTER}')
+    
+    superConsole.SendKeys('x = raw_input{(}"foo"{)}{ENTER}')
+    superConsole.SendKeys('abc{ENTER}')
+    superConsole.SendKeys('print x{ENTER}')
+    superConsole.SendKeys('outputRedirectStop{(}{)}{ENTER}')
+    
+    #verification
+    lines = getTestOutput()[0]
+    AreEqual(lines[2], '\n')
+    AreEqual(lines[5], 'abc\n')
+
+def unverified_raw_input():
+    '''
+    Intentionally not checking output on this test (based on
+    CP14456) as redirecting stdout/stderr will hide the bug.
+    '''
+    superConsole.SendKeys('x = raw_input{(}"foo:"{)}{ENTER}')
+    superConsole.SendKeys('{ENTER}')
+#Run this first to corrupt other test cases if it's broken.
+unverified_raw_input()
+    
 #------------------------------------------------------------------------------
 #--__main__
 

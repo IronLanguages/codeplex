@@ -1588,7 +1588,7 @@ namespace IronPython.Modules {
                     if (PythonOps.TryGetBoundAttr(context, inst, Symbols.Dict, out instDict)) {
                         PythonDictionary realDict = instDict as PythonDictionary;
                         if (realDict != null) {
-                            realDict.update(context, arg);
+                            realDict.update(context, dict);
                         } else {
                             object updateCallable;
                             if (PythonOps.TryGetBoundAttr(context, instDict, Symbols.Update, out updateCallable)) {

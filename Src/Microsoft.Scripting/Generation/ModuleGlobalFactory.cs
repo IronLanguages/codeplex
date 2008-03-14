@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public override Slot CreateSlot(SymbolId name, Type type) {
-            return new ModuleGlobalSlot(_storage.CreateSlot(name, typeof(ModuleGlobalWrapper)));
+            return new ModuleGlobalSlot(type, _storage.CreateSlot(name, typeof(ModuleGlobalWrapper)));
         }
 
         public SlotFactory Storage {

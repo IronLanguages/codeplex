@@ -91,7 +91,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.CodeContextExpression:
                 case AstNodeType.EnvironmentExpression:
-                case AstNodeType.ParamsExpression:
                 case AstNodeType.GeneratorIntrinsic:
                     DefaultWalk((IntrinsicExpression)node);
                     break;
@@ -160,7 +159,7 @@ namespace Microsoft.Scripting.Ast {
             DefaultWalk(node);
         }
 
-        public void WalkNode(CodeBlock node) {
+        public void WalkNode(LambdaExpression node) {
             GeneratorCodeBlock gcb = node as GeneratorCodeBlock;
             if (gcb != null) {
                 DefaultWalk(gcb);
@@ -476,8 +475,8 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // CodeBlock
-        private void DefaultWalk(CodeBlock node) {
+        // LambdaExpression
+        private void DefaultWalk(LambdaExpression node) {
             if (Walk(node)) {
                 WalkNode(node.Body);
             }

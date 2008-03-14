@@ -143,7 +143,7 @@ namespace IronPython.Compiler.Ast {
             throw new InvalidOperationException();
         }
 
-        internal MSAst.CodeBlock TransformToAst(CompilerContext context) {
+        internal MSAst.LambdaExpression TransformToAst(CompilerContext context) {
             // Create the ast generator
             // Use the PrintExpression value for the body (global level code)
             string name = context.SourceUnit.HasPath ? context.SourceUnit.Path : "<undefined>";

@@ -22,16 +22,19 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 
 namespace ToyScript.Runtime {
+
+    public delegate object ToyCallTarget(params object[] args);
+
     public class ToyFunction {
-        public static ToyFunction Create(string name, string[] parameterNames, Delegate target) {
+        public static ToyFunction Create(string name, string[] parameterNames, ToyCallTarget target) {
             return new ToyFunction(name, parameterNames, target);
         }
 
         private readonly string _name;
         private readonly string[] _parameterNames;
-        private readonly Delegate _target;
+        private readonly ToyCallTarget _target;
 
-        private ToyFunction(string name, string[] parameterNames, Delegate target) {
+        private ToyFunction(string name, string[] parameterNames, ToyCallTarget target) {
             _name = name;
             _parameterNames = parameterNames;
             _target = target;
@@ -46,15 +49,8 @@ namespace ToyScript.Runtime {
         }
 
         [SpecialName]
-        public object Call(CodeContext context, params object[] arguments) {
-            ParameterInfo[] parameters = _target.Method.GetParameters();
-            if (parameters.Length > arguments.Length) {
-                if ((parameters.Length > 0 && parameters[0].ParameterType == typeof(CodeContext)) ||
-                    (_target.Target != null && _target.Method.IsStatic && parameters.Length > 1 && parameters[1].ParameterType == typeof(CodeContext))) {
-                    arguments = ArrayUtils.Insert<object>(context, arguments);
-                }
-            }
-            return ReflectionUtils.InvokeDelegate(_target, arguments);
+        public object Call(params object[] arguments) {
+            return _target(arguments);
         }
 
         public override string ToString() {

@@ -16,18 +16,17 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
+
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     using Ast = Microsoft.Scripting.Ast.Ast;
@@ -151,8 +150,11 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("IDispatchInvoke"),
                 Ast.ReadDefined(_dispatchPointer),
                 Ast.ReadDefined(_dispId),
-                Ast.Constant(ComTypes.INVOKEKIND.INVOKE_FUNC|
-                             ComTypes.INVOKEKIND.INVOKE_PROPERTYGET), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
+                Ast.Constant(
+                    ((DispCallable)Callable).IsPropertyPut ?
+                        ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT :
+                        ComTypes.INVOKEKIND.INVOKE_FUNC | ComTypes.INVOKEKIND.INVOKE_PROPERTYGET
+                             ), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
                 Ast.ReadDefined(_dispParams),
                 Ast.ReadDefined(_invokeResult),
                 Ast.ReadDefined(excepInfo),
@@ -306,7 +308,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
             //
             // _dispParams.cArgs = <number_of_params>;
-            // _dispParams.cNamedArgs = N;
             //
             expr = Ast.Write(
                 _dispParams,
@@ -314,11 +315,42 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 Ast.Constant(_totalExplicitArgs));
             exprs.Add(expr);
 
-            expr = Ast.Write(
-                _dispParams,
-                typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
-                Ast.Constant(_keywordArgNames.Length));
-            exprs.Add(expr);
+            if (((DispCallable)Callable).IsPropertyPut) {
+                //
+                // dispParams.cNamedArgs = 1;
+                // dispParams.rgdispidNamedArgs = RuntimeHelpers.UnsafeMethods.GetNamedArgsForPropertyPut()
+                //
+                expr = Ast.Write(
+                    _dispParams,
+                    typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
+                    Ast.Constant(1));
+                exprs.Add(expr);
+
+                Variable _propertyPutDispId = Rule.GetTemporary(typeof(int), "propertyPutDispId");
+
+                expr = Ast.Write(
+                    _propertyPutDispId,
+                    Ast.Constant(ComDispIds.DISPID_PROPERTYPUT));
+
+                MethodCallExpression rgdispidNamedArgs = Ast.Call(
+                    typeof(ComRuntimeHelpers.UnsafeMethods).GetMethod("ConvertInt32ByrefToPtr"),
+                    Ast.Read(_propertyPutDispId));
+
+                expr = Ast.Write(
+                    _dispParams,
+                    typeof(ComTypes.DISPPARAMS).GetField("rgdispidNamedArgs"),
+                    rgdispidNamedArgs);
+                exprs.Add(expr);
+            } else {
+                //
+                // _dispParams.cNamedArgs = N;
+                //
+                expr = Ast.Write(
+                    _dispParams,
+                    typeof(ComTypes.DISPPARAMS).GetField("cNamedArgs"),
+                    Ast.Constant(_keywordArgNames.Length));
+                exprs.Add(expr);
+            }
 
             //
             // _dispatchObject = ((DispCallable)this).DispatchObject

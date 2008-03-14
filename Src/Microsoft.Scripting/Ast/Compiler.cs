@@ -19,14 +19,14 @@ using System.Diagnostics;
 namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// The object responsible for compiling the whole tree. The tree may contain multiple lambdas
-    /// (CodeBlocks). Each of the individual lambdas is compiled by the LambdaCompiler.
+    /// Each of the individual lambdas is compiled by the LambdaCompiler.
     /// The LambdaCompilers used to compile the tree are cached inside _compilers dictionary.
     /// </summary>
     class Compiler {
         /// <summary>
-        /// The dictionary of all compilers that are compiling individual code blocks/lambdas.
+        /// The dictionary of all compilers that are compiling individual lambdas.
         /// </summary>
-        private readonly Dictionary<CodeBlock, LambdaCompiler> _compilers = new Dictionary<CodeBlock, LambdaCompiler>();
+        private readonly Dictionary<LambdaExpression, LambdaCompiler> _compilers = new Dictionary<LambdaExpression, LambdaCompiler>();
 
         /// <summary>
         /// Analyzed tree - the binding information etc.
@@ -39,33 +39,33 @@ namespace Microsoft.Scripting.Ast {
         }
 
         /// <summary>
-        /// Returns the Compiler implementing the code block.
-        /// Emits the code block implementation if it hasn't been emitted yet.
+        /// Returns the Compiler implementing the lambda.
+        /// Emits the lambda implementation if it hasn't been emitted yet.
         /// </summary>
-        internal LambdaCompiler ProvideCodeBlockImplementation(LambdaCompiler outer, CodeBlock block, bool closure, bool hasThis) {
-            Debug.Assert(block != null);
+        internal LambdaCompiler ProvideLambdaImplementation(LambdaCompiler outer, LambdaExpression lambda, bool closure) {
+            Debug.Assert(lambda != null);
             LambdaCompiler impl;
 
-            // Emit the code block body if it hasn't been emitted yet
-            if (!_compilers.TryGetValue(block, out impl)) {
-                impl = LambdaCompiler.CreateCodeBlockCompiler(outer, block, closure, hasThis);
-                impl.InitializeCompilerAndBlock(this, block);
-                impl.EmitFunctionImplementation(GetCbi(block));
+            // Emit the lambda body if it hasn't been emitted yet
+            if (!_compilers.TryGetValue(lambda, out impl)) {
+                impl = LambdaCompiler.CreateLambdaCompiler(outer, lambda, closure);
+                impl.InitializeCompilerAndLambda(this, lambda);
+                impl.EmitFunctionImplementation(GetLambdaInfo(lambda));
                 impl.Finish();
 
-                _compilers.Add(block, impl);
+                _compilers.Add(lambda, impl);
             }
 
             return impl;
         }
 
         /// <summary>
-        /// Finds the CodeBlockInfo for the given code block in the
-        /// AnalyzedTree. The code block must be there since the _at
+        /// Finds the LambdaInfo for the given lambda in the
+        /// AnalyzedTree. The lambda must be there since the _at
         /// came out of the analysis of the ast being compiled.
         /// </summary>
-        internal CodeBlockInfo GetCbi(CodeBlock cb) {
-            return _at.GetCbi(cb);
+        internal LambdaInfo GetLambdaInfo(LambdaExpression lambda) {
+            return _at.GetLambdaInfo(lambda);
         }
     }
 }

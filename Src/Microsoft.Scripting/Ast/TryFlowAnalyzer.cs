@@ -73,7 +73,7 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// AST walker to analyze control flow for the try statement code generation.
     /// </summary>
-    class TryFlowAnalyzer : CodeBlockWalker {
+    class TryFlowAnalyzer : LambdaWalker {
         /// <summary>
         /// Tracking the result of the analysis.
         /// </summary>

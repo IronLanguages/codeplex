@@ -18,8 +18,19 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using System.ComponentModel;
 
+// TODO: Move this to a separate namespace to hide it from ordinary hosts?
 namespace Microsoft.Scripting.Hosting {
+
+    /// <summary>
+    /// Advanced APIs for HAPI providers. These methods should not be used by hosts. 
+    /// They are provided for other hosting API implementers that would like to leverage existing HAPI and 
+    /// extend it with language specific functionality, for example. 
+    /// 
+    /// Providers or something like that and move this class there to hide it from the ordinary hosts. 
+    /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static class HostingHelpers {
         public static ScriptDomainManager/*!*/ GetDomainManager(ScriptRuntime/*!*/ runtime) {
             Contract.RequiresNotNull(runtime, "runtime");

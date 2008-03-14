@@ -14,15 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.IO;
-using System.Diagnostics;
 using System.Collections.Generic;
-using Microsoft.Scripting.Shell;
-using Microsoft.Scripting.Generation;
 using System.Globalization;
 using System.Runtime.Serialization;
-using Microsoft.Scripting.Runtime;
+
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Runtime {
@@ -181,6 +178,10 @@ namespace Microsoft.Scripting.Runtime {
 #if DEBUG
                     GlobalOptions.TrackPerformance = true;
 #endif
+                    break;
+
+                case "-X:PreferComDispatch": 
+                    GlobalOptions.PreferComDispatchOverTypeInfo = true; 
                     break;
 
                 case "-X:CachePointersInApartment":

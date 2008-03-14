@@ -51,7 +51,7 @@
     <NoStdLib>true</NoStdLib>
     <NoWarn>618</NoWarn>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Silverlight Release|AnyCPU' ">
     <OutputPath>..\..\Bin\Silverlight Release\</OutputPath>
@@ -62,7 +62,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <SilverlightBuild>true</SilverlightBuild>
-    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight</SilverlightSdkPath>
+    <SilverlightSdkPath>$(ProgramFiles)\Microsoft Silverlight\2.0.30226.2</SilverlightSdkPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <BaseAddress>1933574144</BaseAddress>
@@ -81,7 +81,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\System.dll</HintPath>
     </Reference>
-    <Reference Include="System.Data" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="System.Xml" Condition=" $(SilverlightBuild) != 'true' " />
   </ItemGroup>
   <ItemGroup>
@@ -182,8 +181,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Runtime\Calls\PythonCallTargets.cs" />
     <Compile Include="Runtime\Calls\PythonConvertToBinderHelper.cs" />
-    <Compile Include="Runtime\Calls\PythonSetMemberBinderHelper.cs" />
     <Compile Include="Runtime\CommonDictionaryStorage.cs" />
     <Compile Include="Runtime\DictionaryStorage.cs" />
     <Compile Include="Runtime\Exceptions\AssertionException.Generated.cs" />
@@ -220,8 +219,9 @@
     <Compile Include="Runtime\IParameterSequence.cs" />
     <Compile Include="Runtime\KwCallInfo.cs" />
     <Compile Include="Runtime\MissingParameter.cs" />
-    <Compile Include="Runtime\Types\ComObject.cs" />
+    <Compile Include="Runtime\SymbolIdDictionaryStorage.cs" />
     <Compile Include="Runtime\NameType.cs" />
+    <Compile Include="Runtime\Operations\ComOps.cs" />
     <Compile Include="Runtime\Operations\PythonTypeOps.cs" />
     <Compile Include="Runtime\PythonAsciiEncoding.cs" />
     <Compile Include="Runtime\Attributes.cs" />

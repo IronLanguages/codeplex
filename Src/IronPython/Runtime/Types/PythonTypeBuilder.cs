@@ -20,6 +20,7 @@ using System.Diagnostics;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Calls;
 
 namespace IronPython.Runtime.Types {
     internal delegate void TypeInitializer(PythonTypeBuilder builder);

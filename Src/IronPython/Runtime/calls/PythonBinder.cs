@@ -31,6 +31,12 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
+#if !SILVERLIGHT
+
+using Microsoft.Scripting.Actions.ComDispatch;
+
+#endif
+
 namespace IronPython.Runtime.Calls {
     using Ast = Microsoft.Scripting.Ast.Ast;
     using IronPython.Compiler.Generation;
@@ -56,7 +62,7 @@ namespace IronPython.Runtime.Calls {
                 case DynamicActionKind.GetMember:
                     return new PythonGetMemberBinderHelper<T>(context, (GetMemberAction)action, args).MakeRule();
                 case DynamicActionKind.SetMember:
-                    return new PythonSetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                    return new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
                 case DynamicActionKind.Call:
                     // if call fails Python will try and create an instance as it treats these two operations as the same.
                     StandardRule<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
@@ -224,15 +230,27 @@ namespace IronPython.Runtime.Calls {
             // Python type customization:
             switch (name) {
                 case "__str__":
-                    MethodInfo tostr = type.GetMethod("ToString", Type.EmptyTypes);
-                    if (tostr != null && tostr.DeclaringType != typeof(object)) {
-                        return GetInstanceOpsMethod(type, "ToStringMethod");
+#if !SILVERLIGHT
+                    if (!ComObject.Is__ComObject(type)) {
+#else
+                    if (true) {
+#endif
+                        MethodInfo tostr = type.GetMethod("ToString", Type.EmptyTypes);
+                        if (tostr != null && tostr.DeclaringType != typeof(object)) {
+                            return GetInstanceOpsMethod(type, "ToStringMethod");
+                        }
                     }
                     break;
                 case "__repr__":
-                    if (!typeof(ICodeFormattable).IsAssignableFrom(type) || type.IsInterface) {
-                        // __repr__ for normal .NET types is special, if we have a real __repr__ we'll call it below
-                        return GetInstanceOpsMethod(type, "FancyRepr");
+#if !SILVERLIGHT
+                    if (!ComObject.Is__ComObject(type)) {                    
+#else
+                    if (true) {
+#endif
+                        if (!typeof(ICodeFormattable).IsAssignableFrom(type) || type.IsInterface) {
+                            // __repr__ for normal .NET types is special, if we have a real __repr__ we'll call it below
+                                return GetInstanceOpsMethod(type, "FancyRepr");
+                        }  
                     }
                     break;
                 case "__init__":
@@ -362,6 +380,21 @@ namespace IronPython.Runtime.Calls {
             }
 
             return true;
+        }
+
+        public override ErrorInfo MakeEventValidation(StandardRule rule, MemberGroup members) {
+            EventTracker ev = (EventTracker)members[0];
+
+            return ErrorInfo.FromValueNoError(
+               Ast.Call(
+                   typeof(PythonOps).GetMethod("SlotTrySetValue"),
+                   Ast.CodeContext(),
+                   Ast.RuntimeConstant(PythonTypeOps.GetReflectedEvent(ev)),
+                   Ast.ConvertHelper(rule.Parameters[0], typeof(object)),
+                   Ast.Null(typeof(PythonType)),
+                   Ast.ConvertHelper(rule.Parameters[1], typeof(object))
+               )
+            );
         }
 
         public override ErrorInfo MakeMissingMemberError(Type type, string name) {
@@ -496,7 +529,7 @@ namespace IronPython.Runtime.Calls {
             List<Type> list = new List<Type>();
 
             // Python includes the types themselves so we can use extension properties w/ CodeContext
-            list.Add(t); 
+            list.Add(t);
 
             Type res;
             if (_extTypes.TryGetValue(t, out res)) {

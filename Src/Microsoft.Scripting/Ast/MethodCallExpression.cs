@@ -19,7 +19,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Generation;
 
@@ -207,70 +206,6 @@ namespace Microsoft.Scripting.Ast {
             return false;
         }
 
-        public static Expression/*!*/ ComplexCallHelper(Delegate/*!*/ method, Expression[]/*!*/ arguments) {
-            return ComplexCallHelper(method, arguments, CodeContext());
-        }
-
-        // TODO: codeContextExpression shouldn't be necessary as soon as we get Scope statement rigt
-        public static Expression/*!*/ ComplexCallHelper(Delegate/*!*/ method, Expression[]/*!*/ arguments,
-            Expression/*!*/ codeContextExpression) {
-
-            Contract.RequiresNotNull(method, "method");
-            Contract.RequiresNotNullItems(arguments, "arguments");
-            Contract.RequiresNotNull(codeContextExpression, "codeContextExpression");
-
-            // We prefer to peek inside the delegate and call the target method directly. However, we need to
-            // exclude DynamicMethods since Delegate.Method returns a dummy MethodInfo, and we cannot emit a call to it.
-            bool inlineDelegateCall = true;
-            if (method.Method.DeclaringType == null) {
-                Debug.Assert(method.Method.GetType().FullName == "System.Reflection.Emit.DynamicMethod+RTDynamicMethod");
-                inlineDelegateCall = false;
-            }
-
-            Expression instanceForCall = (method.Target == null) ? null : RuntimeConstant(method.Target);
-
-            ParameterInfo[] parameters = method.Method.GetParameters();
-            if (parameters.Length > 0) {
-                List<Expression> realArgs = new List<Expression>(arguments.Length);
-
-                int paramIndex = 0;
-                if (method.Target != null && method.Method.IsStatic) {
-                    // This is a closed-instance delegate. ie. The target method is a static method with
-                    // a first argument of, say, type T. And the delegate closes over an instance of T.
-                    // In such a case, we have to pass the delegate target as an actual argument
-                    Debug.Assert(parameters[paramIndex].ParameterType.IsAssignableFrom(method.Target.GetType()));
-
-                    if (inlineDelegateCall) {
-                        realArgs.Add(instanceForCall);
-                        instanceForCall = null;
-                    }
-
-                    paramIndex++;
-                }
-
-                // Does the target method expect a CodeContext?
-                if (parameters[paramIndex].ParameterType == typeof(CodeContext)) {
-                    realArgs.Add(codeContextExpression);
-                    paramIndex++;
-                }
-
-                realArgs.AddRange(arguments);
-                arguments = realArgs.ToArray();
-            }
-
-            bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1])
-                || method is CallTargetN || method is CallTargetWithContextN;
-
-            if (inlineDelegateCall) {
-                // Call the target method directly
-                return ComplexCallHelperInternal(instanceForCall, method.Method, parameters, hasParamArray, arguments);
-            } else {
-                // Invoke the delegate object
-                MethodInfo invokeMethod = method.GetType().GetMethod("Invoke");
-                return ComplexCallHelperInternal(RuntimeConstant(method), invokeMethod, invokeMethod.GetParameters(), hasParamArray, arguments);
-            }
-        }
-
         /// <summary>
         /// The complex call helper to create the AST method call node.
         /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
@@ -281,6 +216,8 @@ namespace Microsoft.Scripting.Ast {
             return ComplexCallHelper(null, method, arguments);
         }
 
+        // FxCop is just wrong on this one. "method" is required as MethodInfo by the call to "Call" factory
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
         public static Expression ComplexCallHelper(Expression instance, MethodInfo method, params Expression[] arguments) {
             Contract.RequiresNotNull(method, "method");
             Contract.RequiresNotNullItems(arguments, "arguments");
@@ -288,16 +225,6 @@ namespace Microsoft.Scripting.Ast {
 
             ParameterInfo[] parameters = method.GetParameters();
             bool hasParamArray = parameters.Length > 0 && CompilerHelpers.IsParamArray(parameters[parameters.Length - 1]);
-            return ComplexCallHelperInternal(instance, method, parameters, hasParamArray, arguments);
-        }
-
-        /// <summary>
-        /// The complex call helper to create the AST method call node.
-        /// Will add conversions (Ast.Convert()), deals with default parameter values and params arrays.
-        /// </summary>
-        private static Expression ComplexCallHelperInternal(Expression instance, MethodInfo method, ParameterInfo[] parameters, bool hasParamArray,
-            params Expression[] arguments) {
-            Assert.NotNullItems(parameters);
 
             if (instance != null) {
                 instance = ConvertHelper(instance, method.DeclaringType);
