@@ -36,7 +36,9 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public object Call(CodeContext context, params object[] args) {
-            if (_site == null) _site = DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+            if (!_site.IsInitialized) {
+                _site.EnsureInitialized(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+            }
 
             return _site.Invoke(context, _invoker, args);
         }

@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections.Generic;
@@ -76,32 +76,50 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static PropertyDescriptorCollection GetProperties(object self) {
-            List<PropertyDescriptor> props = new List<PropertyDescriptor>(GetPropertiesImpl(self));
-            return new PropertyDescriptorCollection(props.ToArray());
+            return new PropertyDescriptorCollection(GetPropertiesImpl(self, new Attribute[0]));
         }
 
         public static PropertyDescriptorCollection GetProperties(object self, Attribute[] attributes) {
-            if (attributes == null || attributes.Length == 0) return GetProperties(self);
-            //!!! update when we support attributes on python types
-
-            // you want things w/ attributes?  we don't have attributes!
-            return PropertyDescriptorCollection.Empty;
+            return new PropertyDescriptorCollection(GetPropertiesImpl(self, attributes));
         }
 
-        static IEnumerable<PropertyDescriptor> GetPropertiesImpl(object self) {
+        private static PropertyDescriptor[] GetPropertiesImpl(object self, Attribute[] attributes) {
             List attrNames = Ops.GetAttrNames(DefaultContext.DefaultCLS, self);
+            List<PropertyDescriptor> descrs = new List<PropertyDescriptor>();
             if (attrNames != null) {
                 foreach (object o in attrNames) {
                     string s = o as string;
                     if (s == null) continue;
                     object attrVal = Ops.GetAttr(DefaultContext.DefaultCLS, self, SymbolTable.StringToId(s));
                     Type attrType = (attrVal == null) ? typeof(NoneTypeOps) : attrVal.GetType();
-                    yield return new SuperDynamicObjectPropertyDescriptor(
-                        s,
-                        attrType,
-                        self.GetType());
+
+                    IDescriptor desc = attrVal as IDescriptor;
+                    
+                    if (desc == null || ShouldIncludeProperty(s, desc, attributes)) {
+                        descrs.Add(new SuperDynamicObjectPropertyDescriptor(s, attrType, self.GetType()));
+                    }
                 }
             }
+
+            return descrs.ToArray();
+        }
+
+        private static bool ShouldIncludeProperty(string name, IDescriptor attrSlot, Attribute[] attributes) {
+            bool include = true;
+            foreach (Attribute attr in attributes) {
+                ReflectedProperty rp;
+
+                if ((rp = attrSlot as ReflectedProperty) != null && rp.Info != null) {
+                    include &= rp.Info.IsDefined(attr.GetType(), true);
+                } else if (attr.GetType() != typeof(BrowsableAttribute)) {
+                    // unknown attribute, Python doesn't support attributes, so we
+                    // say this doesn't have that attribute.
+                    include = false;
+                } else if (attrSlot is PythonFunction || attrSlot is Method || attrSlot is BuiltinMethodDescriptor || attrSlot is BuiltinFunction) {
+                    include = false;
+                }
+            }
+            return include;
         }
 
         public static object GetPropertyOwner(object self, PropertyDescriptor pd) {

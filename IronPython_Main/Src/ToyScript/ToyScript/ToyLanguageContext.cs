@@ -32,7 +32,7 @@ using Microsoft.Scripting.Runtime;
 namespace ToyScript {
     public class ToyLanguageContext : LanguageContext {
         public ToyLanguageContext(ScriptDomainManager manager) : base(manager) { 
-            Binder = new ToyBinder(new CodeContext(new Scope(this), this));
+            Binder = new ToyBinder(new CodeContext(new Scope(), this));
         }
 
         public override MSAst.LambdaExpression ParseSourceCode(CompilerContext context) {

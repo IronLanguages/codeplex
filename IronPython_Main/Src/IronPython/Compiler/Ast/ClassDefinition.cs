@@ -112,11 +112,7 @@ namespace IronPython.Compiler.Ast {
 
             // Create the body
             MSAst.Expression bodyStmt = body.Transform(_body);
-            MSAst.Expression modStmt =
-                Ast.Assign(
-                    _modVariable.Variable,
-                    Ast.Read(_modNameVariable.Variable)
-                );
+            MSAst.Expression modStmt = Ast.Assign(_modVariable.Variable, _modNameVariable.Variable);
 
             MSAst.Expression docStmt;
             string doc = ag.GetDocumentation(_body);

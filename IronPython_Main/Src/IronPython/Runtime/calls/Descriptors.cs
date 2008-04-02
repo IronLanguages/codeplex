@@ -90,10 +90,10 @@ namespace IronPython.Runtime.Calls {
             [ParamDictionary]IAttributesCollection dict, params object[] args) {
         }
 
-        public void __init__([DefaultParameterValueAttribute(null)]object fget,
-                        [DefaultParameterValueAttribute(null)]object fset,
-                        [DefaultParameterValueAttribute(null)]object fdel,
-                        [DefaultParameterValueAttribute(null)]object doc) {
+        public void __init__([DefaultParameterValue(null)]object fget,
+                        [DefaultParameterValue(null)]object fset,
+                        [DefaultParameterValue(null)]object fdel,
+                        [DefaultParameterValue(null)]object doc) {
             _fget = fget; _fset = fset; _fdel = fdel;
 
                         

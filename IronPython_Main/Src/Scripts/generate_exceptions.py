@@ -66,14 +66,23 @@ class ExceptionInfo(object):
         
     @property
     def PythonType(self):
-        if self.fields or not self.parent:
+        if not self.parent:
             return 'DynamicHelpers.GetPythonTypeFromType(typeof(%s))' % self.name
         else:
             return self.name
 
+    @property 
+    def ClrType(self):
+        if not self.parent:
+            return 'BaseException'
+        elif self.fields:
+            return '_' + self.name
+        else:
+            return self.name
+    
     @property
     def InternalPythonType(self):
-        if self.fields or not self.parent:
+        if not self.parent:
             return 'PythonExceptions._' + self.name
         else:
             return 'PythonExceptions.' + self.name
@@ -186,7 +195,7 @@ def get_all_exceps(l, curHierarchy):
     return l
 
 ip = clr.LoadAssemblyByPartialName('ironpython')
-ms = clr.LoadAssemblyByPartialName('Microsoft.Scripting')
+ms = clr.LoadAssemblyByPartialName('Microsoft.Scripting.Core')
 sysdll = clr.LoadAssemblyByPartialName('System')
 
 def get_type(name):
@@ -229,10 +238,10 @@ def gen_topython_helper(cw):
     
     for x in allExceps[:-1]:    # skip System.Exception which is last...
         if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
-        if x.fields or x.name == 'BaseException':
-            cw.writeline('if (clrException is %s) return new %s();' % (x.clrException, x.name))
+        if x.fields or x.name == 'BaseException':        
+            cw.writeline('if (clrException is %s) return new _%s();' % (x.clrException, x.name))
         else:
-            cw.writeline('if (clrException is %s) return new %s(%s);' % (x.clrException, x.ConcreteParent.name, x.name))
+            cw.writeline('if (clrException is %s) return new %s(%s);' % (x.clrException, x.ConcreteParent.ClrType, x.name))
         if not x.silverlightSupported: cw.writeline('#endif')
         
     cw.writeline('return new BaseException(Exception);')    
@@ -241,10 +250,10 @@ def gen_topython_helper(cw):
     cw.enter_block("private static System.Exception/*!*/ ToClrHelper(PythonType/*!*/ type, string message)")
     for x in allExceps:
         if not x.silverlightSupported: cw.writeline('#if !SILVERLIGHT')
-        if not x.fields:
-            cw.writeline('if (type == %s) return new %s(message);' % (x.name, x.clrException))
-        else:
-            cw.writeline('if (type == DynamicHelpers.GetPythonTypeFromType(typeof(%s))) return new %s(message);' % (x.name, x.clrException))  
+        #if not x.fields:
+        cw.writeline('if (type == %s) return new %s(message);' % (x.name, x.clrException))
+        #else:
+        #    cw.writeline('if (type == DynamicHelpers.GetPythonTypeFromType(typeof(%s))) return new %s(message);' % (x.name, x.clrException))  
         if not x.silverlightSupported: cw.writeline('#endif')  
     cw.writeline('return new Exception(message);')
     cw.exit_block()
@@ -280,13 +289,12 @@ public class %(name)s : %(supername)s {
 }
 """
 
-def gen_one_exception(cw, e):
+def gen_one_exception(cw, e):    
     supername = getattr(exceptions, e).__bases__[0].__name__
     if not supername in pythonExcs:
         supername = ''
     else:
         supername = supername 
-
     cw.write(CLASS1, name=get_clr_name(e), supername=get_clr_name(supername))
 
 def gen_one_exception_maker(e):
@@ -306,11 +314,25 @@ def gen_one_exception(cw, exception, parent):
     if exception.fields:
         exception.BeginSilverlight(cw)
         
-        cw.writeline('internal static PythonType _%s = CreateSubType(%s, typeof(%s), DefaultExceptionModule, "");' % (exception.name, exception.parent.PythonType, exception.name))
-        cw.writeline('')
+        cw.writeline('[MultiRuntimeAware]')
+        cw.writeline('private static PythonType %sStorage;' % (exception.name, ))
+        cw.enter_block('public static PythonType %s' % (exception.name, ))
+        cw.enter_block('get')
+        cw.enter_block('if (%sStorage == null)' % (exception.name, ))
+        cw.enter_block('lock (typeof(PythonExceptions))')
+        cw.writeline('%sStorage = CreateSubType(%s, typeof(_%s), DefaultExceptionModule, "");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.exit_block() # lock
+        cw.exit_block() # if
+        cw.writeline('return %sStorage;' % (exception.name, ))
+        cw.exit_block()
+        cw.exit_block()
+        cw.writeline()
 
-        cw.writeline('[PythonSystemType("%s"), Serializable]' % exception.name)
-        cw.enter_block('public partial class %s : %s' % (exception.name, exception.ConcreteParent.name))
+        cw.writeline('[PythonSystemType("%s"), PythonHidden, Serializable]' % exception.name)
+        if exception.ConcreteParent.fields:
+            cw.enter_block('public partial class _%s : _%s' % (exception.name, exception.ConcreteParent.name))
+        else:
+            cw.enter_block('public partial class _%s : %s' % (exception.name, exception.ConcreteParent.name))
                 
         for field in exception.fields:
             cw.writeline('private object _%s;' % field)
@@ -318,8 +340,8 @@ def gen_one_exception(cw, exception, parent):
         if exception.fields:
             cw.writeline('')
 
-        cw.writeline('public %s() : base(DynamicHelpers.GetPythonTypeFromType(typeof(%s))) { }' % (exception.name, exception.name))
-        cw.writeline('public %s(PythonType type) : base(type) { }' % (exception.name, ))
+        cw.writeline('public _%s() : base(DynamicHelpers.GetPythonTypeFromType(typeof(_%s))) { }' % (exception.name, exception.name))
+        cw.writeline('public _%s(PythonType type) : base(type) { }' % (exception.name, ))
         cw.writeline('')
         
         cw.enter_block('public new static object __new__(PythonType cls, params object[] args)')
@@ -356,7 +378,19 @@ def gen_one_exception(cw, exception, parent):
         exception.EndSilverlight(cw)
         
     else:
-        cw.writeline('public static readonly PythonType %s = CreateSubType(%s, "%s", "");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.writeline('[MultiRuntimeAware]')
+        cw.writeline('private static PythonType %sStorage;' % (exception.name, ))
+        cw.enter_block('public static PythonType %s' % (exception.name, ))
+        cw.enter_block('get')
+        cw.enter_block('if (%sStorage == null)' % (exception.name, ))
+        cw.enter_block('lock (typeof(PythonExceptions))')
+        cw.writeline('%sStorage = CreateSubType(%s, "%s", "");' % (exception.name, exception.parent.PythonType, exception.name))
+        cw.exit_block() # lock
+        cw.exit_block() # if
+        cw.writeline('return %sStorage;' % (exception.name, ))
+        cw.exit_block()
+        cw.exit_block()
+        cw.writeline()
         
     for child in exception.subclasses:
         gen_one_exception(cw, child, exception)
@@ -383,9 +417,25 @@ def module_gen(cw):
     for child in exceptionHierarchy.subclasses:
         gen_one_exception_module_entry(cw, child, exceptionHierarchy)
 
+def gen_one_exception_builtin_entry(cw, exception, parent):
+    exception.BeginSilverlight(cw)
+
+    cw.enter_block("public static PythonType %s" % (exception.name, ))
+    if exception.fields:
+        cw.write('get { return %s; }' % (exception.InternalPythonType, ))
+    else:
+        cw.write('get { return %s; }' % (exception.InternalPythonType, ))
+    cw.exit_block()
+
+    exception.EndSilverlight(cw)
+
+    for child in exception.subclasses:
+        gen_one_exception_builtin_entry(cw, child, exception)
+
 def builtin_gen(cw):
     for child in exceptionHierarchy.subclasses:
-        gen_one_exception_module_entry(cw, child, exceptionHierarchy)
+        gen_one_exception_builtin_entry(cw, child, exceptionHierarchy)
 
 CodeGenerator("builtin exceptions", builtin_gen).doit()
+
 

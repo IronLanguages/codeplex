@@ -142,7 +142,7 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args)  {
+        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args)  {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                 case DynamicActionKind.SetMember:
@@ -159,7 +159,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private StandardRule<T> MakeConvertToRule<T>(ConvertToAction convertToAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeConvertToRule<T>(ConvertToAction convertToAction, CodeContext context, object[] args) {
             Type toType = convertToAction.ToType;
             if (toType == typeof(int)) {
                 return MakeConvertRuleForCall<T>(context, convertToAction, Symbols.ConvertToInt, "ConvertToInt");
@@ -182,8 +182,8 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private static StandardRule<T> MakeConvertToIEnumerator<T>(CodeContext context, ConvertToAction convertToAction) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeConvertToIEnumerator<T>(CodeContext context, ConvertToAction convertToAction) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
             // build up:
@@ -215,7 +215,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression WrapGenericEnumerator<T>(ConvertToAction convertToAction, StandardRule<T> rule, Expression call) {
+        private static Expression WrapGenericEnumerator<T>(ConvertToAction convertToAction, RuleBuilder<T> rule, Expression call) {
             if (convertToAction.ToType != typeof(IEnumerator)) {
                 // generic enumerator
                 Debug.Assert(convertToAction.ToType.IsGenericType && 
@@ -228,8 +228,8 @@ namespace IronPython.Runtime.Types {
             return call;
         }
 
-        private static StandardRule<T> MakeConvertToIEnumerable<T>(CodeContext context, ConvertToAction convertToAction) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeConvertToIEnumerable<T>(CodeContext context, ConvertToAction convertToAction) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             VariableExpression tmp = rule.GetTemporary(typeof(object), "tmp");
             // build up:
@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeIterRule<T>(CodeContext context, StandardRule<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) {
+        private static Expression MakeIterRule<T>(CodeContext context, RuleBuilder<T> res, SymbolId symbolId, VariableExpression tmp, Expression @else, Expression call) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(res.Parameters[0], typeof(OldInstance)),
@@ -270,8 +270,8 @@ namespace IronPython.Runtime.Types {
             );
         }
 
-        private static StandardRule<T> MakeConvertComplexRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeConvertComplexRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
@@ -286,8 +286,8 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static StandardRule<T> MakeConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
@@ -300,7 +300,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, StandardRule<T> rule, VariableExpression tmp, Expression @else) {
+        private static Expression MakeConvertCallBody<T>(CodeContext context, ConvertToAction convertToAction, SymbolId symbolId, string returner, RuleBuilder<T> rule, VariableExpression tmp, Expression @else) {
             return Ast.IfThenElse(
                 Ast.Call(
                     Ast.Convert(rule.Parameters[0], typeof(OldInstance)),
@@ -322,8 +322,8 @@ namespace IronPython.Runtime.Types {
             );
         }
 
-        private static StandardRule<T> MakeBoolConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeBoolConvertRuleForCall<T>(CodeContext context, ConvertToAction convertToAction) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
 
             // we could get better throughput w/ a more specific rule against our current custom old class but
@@ -378,8 +378,8 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private StandardRule<T> MakeCallRule<T>(CallAction callAction, CodeContext context, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> MakeCallRule<T>(CallAction callAction, CodeContext context, object[] args) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             
             // we could get better throughput w/ a more specific rule against our current custom old class but
@@ -414,7 +414,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private StandardRule<T> MakeMemberRule<T>(MemberAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeMemberRule<T>(MemberAction action, CodeContext context, object[] args) {
             CustomOldClassDictionaryStorage dict = this.Dictionary._storage as CustomOldClassDictionaryStorage;
             if (dict == null || __class__.HasSetAttr) {
                 return MakeDynamicOldInstanceRule<T>(action, context);
@@ -425,7 +425,7 @@ namespace IronPython.Runtime.Types {
                 return MakeDynamicOldInstanceRule<T>(action, context);
             }
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
 
             VariableExpression tmp = rule.GetTemporary(typeof(CustomOldClassDictionaryStorage), "dict");
             Expression tryGetValue = Ast.Call(
@@ -487,8 +487,8 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private StandardRule<T> MakeDynamicOldInstanceRule<T>(MemberAction action, CodeContext context) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> MakeDynamicOldInstanceRule<T>(MemberAction action, CodeContext context) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldInstance));
             Expression instance = Ast.Convert(
                     rule.Parameters[0], typeof(OldInstance));
@@ -547,7 +547,7 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static StandardRule<T> MakeOperationRule<T>(DoOperationAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeOperationRule<T>(DoOperationAction action, CodeContext context, object[] args) {
             switch (action.Operation) {
                 case Operators.GetItem:
                 case Operators.SetItem:

@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Threading;
@@ -675,7 +675,7 @@ namespace IronPython.Runtime.Operations {
             } else if ((es = x as ExtensibleString) != null) {
                 ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
+                ret = ((ExtensibleFloat)x).RichEquals(y);
             } else if (x is byte) {
                 ret = IntOps.Equals((int)(byte)x, y);
             } else if (x is long) {
@@ -747,7 +747,8 @@ namespace IronPython.Runtime.Operations {
                 object res = es.RichEquals(y);
                 if (res != Ops.NotImplemented) return (bool)res;
             } else if (x is ExtensibleFloat) {
-                return FloatOps.EqualsRetBool(((ExtensibleFloat)x).value, y);
+                object res = ((ExtensibleFloat)x).RichEquals(y);
+                if (res != Ops.NotImplemented) return (bool)res;
             } else if (x is byte) {
                 return IntOps.EqualsRetBool((int)(byte)x, y);
             } else if (x is long) {
@@ -822,7 +823,7 @@ namespace IronPython.Runtime.Operations {
             } else if ((es = x as ExtensibleString) != null) {
                 ret = es.RichEquals(y);
             } else if (x is ExtensibleFloat) {
-                ret = FloatOps.Equals(((ExtensibleFloat)x).value, y);
+                ret = ((ExtensibleFloat)x).RichEquals(y);
             } else if (x is byte) {
                 ret = IntOps.Equals((int)(byte)x, y);
             } else if (x is long) {
@@ -894,7 +895,8 @@ namespace IronPython.Runtime.Operations {
                 object ret = es.RichEquals(y);
                 if (ret != Ops.NotImplemented) return (bool)Not(ret);
             } else if (x is ExtensibleFloat) {
-                return !FloatOps.EqualsRetBool(((ExtensibleFloat)x).value, y);
+                object ret = ((ExtensibleFloat)x).RichNotEquals(y);
+                if (ret != Ops.NotImplemented) return (bool)ret;
             } else if (x is byte) {
                 return !IntOps.EqualsRetBool((int)(byte)x, y);
             } else if (x is long) {
@@ -1158,6 +1160,15 @@ namespace IronPython.Runtime.Operations {
             return size0 > size1 ? +1 : -1;
         }
 
+        public static bool EqualArrays(object[] data0, int size0, object[] data1, int size1) {
+            if (size0 != size1) return false;
+
+            for (int i = 0; i < size0; i++) {
+                if (!Ops.EqualRetBool(data0[i], data1[i])) return false;
+            }
+            return true;
+        }
+
         public static object PowerMod(object x, object y, object z) {
             object ret;
             if (z == null) return Ops.Power(x, y);
@@ -1385,8 +1396,7 @@ namespace IronPython.Runtime.Operations {
                 }
                 return CallWithContext(context, func, (object[])largs.ToArray(typeof(object)));
             } else {
-                IFancyCallable ic = func as IFancyCallable;
-                if (ic == null) throw new Exception("this object is not callable with keyword parameters");
+                IFancyCallable ic = func as IFancyCallable;                
 
                 List<object> largs;
 
@@ -1413,7 +1423,11 @@ namespace IronPython.Runtime.Operations {
                     }
                 }
 
-                return ic.Call(context, largs.ToArray(), lnames.ToArray());
+                if (ic != null) {
+                    return ic.Call(context, largs.ToArray(), lnames.ToArray());
+                }
+
+                return GetDynamicType(func).CallOnInstance(func, largs.ToArray(), lnames.ToArray());
             }
         }
 
@@ -2503,6 +2517,10 @@ namespace IronPython.Runtime.Operations {
 
         public static void ThrowUnboundLocalError(string name) {
             throw Ops.UnboundLocalError("local variable '{0}' referenced before assignment", name);
+        }
+
+        public static void EnableWithStatement(ICallerContext context) {
+            context.ContextFlags |= CallerContextAttributes.AllowWithStatement;
         }
     }
 }

@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Reflection;
@@ -618,18 +618,69 @@ namespace IronPython.Runtime.Types {
                     value = new BoundBuiltinFunction(rm, this);
                     return true;
                 case SymbolTable.CallId:
-                    //@todo We should provide a method wrapper object rather than directly returning ourselves
-                    value = this;
+                    value = new TypeCaller(this == TypeCache.DynamicType ? null : this);
                     return true;
                 default:
                     if (TryLookupSlot(context, name, out value)) {
                         value = Ops.GetDescriptor(value, null, this);
                         return true;
-                    }
+                    }                    
                     break;
             }
 
             return false;
+        }
+
+        [PythonType("slot wrapper")]
+        internal class TypeCaller : ICallableWithCallerContext, IFancyCallable {
+            private DynamicType type;
+            public TypeCaller() {
+            }
+
+            public TypeCaller(DynamicType type) {
+                this.type = type;
+            }
+
+            #region ICallableWithCodeContext Members
+
+            public object Call(ICallerContext context, object[] args) {
+                if (type == null) {
+                    return GetTypeArg(args).Call(context, RemoveTypeArg(args));
+                }
+
+                return type.Call(context, args ?? new object [0]);
+            }
+            
+            #endregion
+
+            #region IFancyCallable Members
+
+            public object Call(ICallerContext context, object[] args, string[] names) {
+                if (type == null) {
+                    GetTypeArg(args).Call(context, RemoveTypeArg(args));
+                }
+                return type.Call(context, args ?? new object[0], names);
+            }
+
+            #endregion
+
+            private static object[] RemoveTypeArg(object[] args) {
+                object[] finalArgs = new object[args.Length - 1];
+                Array.Copy(args, 1, finalArgs, 0, args.Length - 1);
+                return finalArgs;
+            }
+
+            private static DynamicType GetTypeArg(object[] args) {
+                if (args == null || args.Length == 0)
+                    throw Ops.TypeError("type.__call__ needs an argument");
+
+                DynamicType dt = args[0] as DynamicType;
+                if (dt == null) {
+                    throw Ops.TypeError("type.__call__ requires a type object but received an {0}",
+                        Ops.StringRepr(Ops.GetDynamicType(args[0])));
+                }
+                return dt;
+            }
         }
 
         public void SetAttr(ICallerContext context, SymbolId name, object value) {

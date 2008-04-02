@@ -513,7 +513,7 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        public RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
                 case DynamicActionKind.GetMember:
                     return MakeGetMemberRule<T>((GetMemberAction)action, context, args);
@@ -530,7 +530,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -538,12 +538,12 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private static StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
             // This rule only handles simple signatures. Fallback on MethodBinder to handle complex signatures 
             // such as keyword args.
             if (!action.Signature.IsSimple) return null; 
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
 
             Expression[] exprArgs = new Expression[args.Length - 1];
             for (int i = 0; i < args.Length - 1; i++) {
@@ -610,8 +610,8 @@ namespace IronPython.Runtime.Types {
             throw PythonOps.TypeError("this constructor takes no arguments");
         }
 
-        private static StandardRule<T> MakeSetMemberRule<T>(SetMemberAction action, CodeContext context, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeSetMemberRule<T>(SetMemberAction action, CodeContext context, object[] args) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldClass));
             Expression call;
 
@@ -674,8 +674,8 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private static StandardRule<T> MakeDelMemberRule<T>(DeleteMemberAction action, CodeContext context, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeDelMemberRule<T>(DeleteMemberAction action, CodeContext context, object[] args) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(OldClass));
             rule.Target = rule.MakeReturn(context.LanguageContext.Binder,
                 Ast.Call(
@@ -688,8 +688,8 @@ namespace IronPython.Runtime.Types {
             return rule;
         }
 
-        private static StandardRule<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context, object[] args) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private static RuleBuilder<T> MakeGetMemberRule<T>(GetMemberAction action, CodeContext context, object[] args) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
 
             rule.MakeTest(typeof(OldClass));
             Expression target;

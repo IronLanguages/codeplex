@@ -321,8 +321,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         private SourceLocation GetExpressionStart(MSAst.Expression expression) {
-            MSAst.ISpan span = expression as MSAst.ISpan;
-            if (span != null) {
+            SourceSpan span;
+            if (expression.Annotations.TryGet(out span)) {
                 return span.Start;
             } else {
                 return SourceLocation.None;
@@ -330,8 +330,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         private SourceLocation GetExpressionEnd(MSAst.Expression expression) {
-            MSAst.ISpan span = expression as MSAst.ISpan;
-            if (span != null) {
+            SourceSpan span;
+            if (expression.Annotations.TryGet(out span)) {
                 return span.End;
             } else {
                 return SourceLocation.None;

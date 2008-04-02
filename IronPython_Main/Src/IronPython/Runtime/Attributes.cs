@@ -48,7 +48,7 @@ namespace IronPython.Runtime {
     /// PythonVersionAttribute is used to decorate methods in the engine with the
     /// Python version starting with which they are present
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
     public class PythonVersionAttribute : Attribute {
 
         private readonly Version version;

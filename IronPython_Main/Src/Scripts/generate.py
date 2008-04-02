@@ -256,10 +256,11 @@ class FileGenerator:
         pass
     
     def generate(self):
+        print "generate",
         if sys.argv.count('checkonly') > 0:
-            print "generate (check-only)", self.filename
-        else:
-            print "generate", self.filename
+            print "(check-only)",
+        print self.filename, "...",
+
         cw = CodeWriter()
         cw.text = self.replacer.replace(CodeWriter(), self.text, self.indent)
         cw.begin_generated(self.generator)
@@ -271,8 +272,9 @@ class FileGenerator:
                 print "different!"
                 sys.exit(1)
             else:
+                print "updated"
                 f = open(self.filename, 'w')
                 f.write(new_text)
                 f.close()
-            
-
+        else:
+            print "ok"

@@ -1,18 +1,18 @@
 
 #####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 from lib.assert_util import *
 
@@ -173,6 +173,37 @@ def test_self_init():
     a = [1, 2, 3]
     list.__init__(a, a)
     AreEqual(a, [])
+    
+if is_cli:
+    def test_list_equality():
+        import clr
+        clr.AddReference('System.Drawing')
+        from System.Drawing import Color
+        AreEqual([Color.Red], [Color.Red])
+        
+def test_list_equality_calls():
+    class MyObject(object):
+        def __init__(self, value):
+            self.value = value
+            self.cmpCalled = False
+        def __cmp__(self, other):
+            self.cmpCalled = True
+            return cmp(self.value, other.value)
+        def __eq__(self, other):
+            MyObject.eqCalled = True
+            return self.value == other.value
+
+    l1 = [MyObject(x) for x in range(10)]
+    l2 = [MyObject(x) for x in range(10)]
+    Assert(l1 == l2)
+    Assert(MyObject.eqCalled)
+    for x in l1 + l2:
+        Assert(not x.cmpCalled)
+    
+def test_list_inplace_add():
+    x = [2,3,4]
+    x += x
+    AreEqual(x, [2,3,4,2,3,4])
 
 ######################################################################
 # Verify behavior of index when the list changes...

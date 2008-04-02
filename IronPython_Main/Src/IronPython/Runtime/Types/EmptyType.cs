@@ -69,8 +69,13 @@ namespace IronPython.Runtime.Types {
     }
 
     public class EllipsisTypeOps : EmptyTypeOps<Ellipsis> {
+        public static Ellipsis Value {
+            get {
+                return Instance ?? EnsureInstance();
+            }
+        }
 
-        internal static Ellipsis CreateInstance() {
+        internal static Ellipsis EnsureInstance() {
             InitOps(0x1e1a6208,
                 new Ellipsis(),
                 "Ellipsis");
@@ -80,8 +85,13 @@ namespace IronPython.Runtime.Types {
     }
 
     public class NotImplementedTypeOps : EmptyTypeOps<NotImplementedType> {
+        public static NotImplementedType Value {
+            get {
+                return Instance ?? EnsureInstance();
+            }
+        }
 
-        internal static NotImplementedType CreateInstance() {
+        internal static NotImplementedType EnsureInstance() {
             InitOps(0x1e1a1e98,
                 new NotImplementedType(),
                 "NotImplemented");

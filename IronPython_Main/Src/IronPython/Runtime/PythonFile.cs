@@ -897,9 +897,9 @@ namespace IronPython.Runtime {
                 if (Environment.OSVersion.Platform == PlatformID.Win32NT && name == "nul") {
                     stream = Stream.Null;
                 } else if (bufsize <= 0) {
-                    stream = PythonContext.GetContext(context).DomainManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare);
+                    stream = PythonContext.GetContext(context).DomainManager.Platform.OpenInputFileStream(name, fmode, faccess, fshare);
                 } else {
-                    stream = PythonContext.GetContext(context).DomainManager.PAL.OpenInputFileStream(name, fmode, faccess, fshare, bufsize);
+                    stream = PythonContext.GetContext(context).DomainManager.Platform.OpenInputFileStream(name, fmode, faccess, fshare, bufsize);
                 }
 
                 if (seekEnd) stream.Seek(0, SeekOrigin.End);
@@ -1026,7 +1026,6 @@ namespace IronPython.Runtime {
 
             _consoleStreamType = type;
             _io = io;
-            _stream = null;
             _mode = (type == ConsoleStreamType.Input) ? "r" : "w";
             _isOpen = true;
             _fileMode = MapFileMode(_mode);
@@ -1123,7 +1122,7 @@ namespace IronPython.Runtime {
                 throw PythonOps.ValueError("I/O operation on closed file");
         }
 
-        public void flush() {
+        public virtual void flush() {
             ThrowIfClosed();
             if (_writer != null) {
                 _writer.Flush();
@@ -1236,7 +1235,7 @@ namespace IronPython.Runtime {
             return Microsoft.Scripting.Math.BigInteger.Create(l);
         }
 
-        public void write(string s) {
+        public virtual void write(string s) {
             PythonStreamWriter writer = GetWriter();
             int bytesWritten = _writer.Write(s);
             if (IsConsole) {

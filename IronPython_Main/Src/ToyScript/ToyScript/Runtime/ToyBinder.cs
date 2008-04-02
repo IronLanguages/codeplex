@@ -29,20 +29,20 @@ namespace ToyScript.Runtime {
             : base(context)  {
         }
 
-        protected override StandardRule<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
-            StandardRule<T> rule = null; 
+        protected override RuleBuilder<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
+            RuleBuilder<T> rule = null; 
             if (action.Kind == DynamicActionKind.DoOperation) {
                 rule = MakeDoRule<T>((DoOperationAction)action, args);
             }
             return rule ?? base.MakeRule<T>(callerContext, action, args);            
         }
 
-        private StandardRule<T> MakeDoRule<T>(DoOperationAction action, object[] args) {
+        private RuleBuilder<T> MakeDoRule<T>(DoOperationAction action, object[] args) {
             if (action.Operation == Operators.Add &&
                 args[0] is string &&
                 args[1] is string) {
 
-                StandardRule<T> rule = new StandardRule<T>();
+                RuleBuilder<T> rule = new RuleBuilder<T>();
 
                 // (arg0 is string && args1 is string)
                 rule.Test = Ast.AndAlso(

@@ -27,11 +27,13 @@ else:
     TryLoadExcelInteropAssembly()
     from Microsoft.Office.Interop import Excel
 
+
 def CreateApplication():
     if preferComDispatch:
-        from System import Type, Activator
-        applicationType = Type.GetTypeFromProgID("Excel.Application")
-        return Activator.CreateInstance(applicationType)
+        import clr
+        import System
+        typelib = clr.LoadTypeLibrary(System.Guid("00020813-0000-0000-C000-000000000046"))
+        return typelib.Excel.Application()
     else:
         return Excel.ApplicationClass()
 
@@ -92,6 +94,49 @@ def test_excel():
         ws = None
         nb = None
         rng = None
+        System.GC.Collect()
+        System.GC.WaitForPendingFinalizers()
+
+        if ex: ex.Quit()
+        else: print "ex is %s" % ex
+
+def test_excel_typelibsupport():
+    if not preferComDispatch:
+        print "skipping test_word_typelibsupoprt - reason: type Lib support is only enabled in PreferComDispatch mode."
+        return
+
+    ex = None
+
+    try: 
+        ex = CreateApplication() 
+
+        typelib = clr.LoadTypeLibrary(ex)
+        AreEqual(typelib.Name, 'Excel')
+        typelib.Excel.__class__
+        Assert('Application' in dir(typelib.Excel))
+        Assert('XlSaveAction' in dir(typelib.Excel))
+        Assert('xlSaveChanges' in dir(typelib.Excel.XlSaveAction))
+        AreEqual(typelib.Excel.XlSaveAction.xlSaveChanges, 1)
+
+        # verify namespace Excel is not yet available
+        try:
+            Excel.__class__
+        except NameError: pass
+        else: Fail("namespace Excel has not been imported yet")
+
+        typelib = clr.AddReferenceToTypeLibrary(ex)
+        try:
+            Excel.__class__
+        except NameError: pass
+        else: Fail("namespace Excel has not been imported yet")
+        
+        import Excel
+        Assert('Application' in dir(Excel))
+        Assert('XlSaveAction' in dir(Excel))
+        Assert('xlSaveChanges' in dir(Excel.XlSaveAction))
+        AreEqual(Excel.XlSaveAction.xlSaveChanges, 1)
+
+    finally:            
         System.GC.Collect()
         System.GC.WaitForPendingFinalizers()
 

@@ -26,7 +26,7 @@ namespace ToyScript.Parser {
     class ToyScope {
         private ToyScope _parent;
         private MSAst.LambdaBuilder _block;
-        private Dictionary<string, MSAst.VariableExpression> _variables = new Dictionary<string, MSAst.VariableExpression>();
+        private Dictionary<string, MSAst.Expression> _variables = new Dictionary<string, MSAst.Expression>();
 
         public ToyScope(string name, ToyScope parent) {
             _block = MSAst.Ast.Lambda(name ?? "<toyblock>", typeof(object));
@@ -49,18 +49,18 @@ namespace ToyScript.Parser {
             }
         }
 
-        public MSAst.VariableExpression CreateParameter(string name) {
-            MSAst.VariableExpression variable = _block.CreateParameter(SymbolTable.StringToId(name), typeof(object));
+        public MSAst.ParameterExpression CreateParameter(string name) {
+            MSAst.ParameterExpression variable = _block.CreateParameter(name, typeof(object));
             _variables[name] = variable;
             return variable;
         }
 
-        public MSAst.VariableExpression GetOrMakeLocal(string name) {
+        public MSAst.Expression GetOrMakeLocal(string name) {
             return GetOrMakeLocal(name, typeof(object));
         }
 
-        public MSAst.VariableExpression GetOrMakeLocal(string name, Type type) {
-            MSAst.VariableExpression variable;
+        public MSAst.Expression GetOrMakeLocal(string name, Type type) {
+            MSAst.Expression variable;
             if (_variables.TryGetValue(name, out variable)) {
                 return variable;
             }
@@ -69,8 +69,8 @@ namespace ToyScript.Parser {
             return variable;
         }
 
-        public MSAst.VariableExpression LookupName(string name) {
-            MSAst.VariableExpression var;
+        public MSAst.Expression LookupName(string name) {
+            MSAst.Expression var;
             if (_variables.TryGetValue(name, out var)) {
                 return var;
             }

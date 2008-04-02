@@ -69,13 +69,13 @@ namespace IronPython.Runtime.Calls {
 
         private static CodeContext/*!*/ CreateDefaultContext(PythonContext/*!*/ context) {
             PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.NoBuiltins);
-            return new CodeContext(globalMod.Scope, context, globalMod);
+            return new CodeContext(globalMod.Scope, context);
         }
 
 
         private static CodeContext/*!*/ CreateDefaultCLSContext(PythonContext/*!*/ context) {
             PythonModule globalMod = context.CreateModule("__builtin__", ModuleOptions.ShowClsMethods | ModuleOptions.NoBuiltins);
-            return new CodeContext(globalMod.Scope, context, globalMod);
+            return new CodeContext(globalMod.Scope, context);
         }
     }
 }

@@ -100,7 +100,7 @@ namespace IronPython.Runtime.Types {
                 return binder.CallInstanceReflected(context, instance, args);
             }
 
-            return binder.CallReflected(context, CallType.None, args);
+            return binder.CallReflected(context, CallTypes.None, args);
         }
 
         public bool CallSetter(CodeContext context, object instance, object[] args, object value) {
@@ -112,7 +112,7 @@ namespace IronPython.Runtime.Types {
                 if (instance != null) {
                     binder.CallInstanceReflected(context, instance, value);
                 } else {
-                    binder.CallReflected(context, CallType.None, value);
+                    binder.CallReflected(context, CallTypes.None, value);
                 }
             } else {
                 args = ArrayUtils.Append(args, value); 
@@ -120,7 +120,7 @@ namespace IronPython.Runtime.Types {
                 if (instance != null) {
                     binder.CallInstanceReflected(context, instance, args);
                 } else {
-                    binder.CallReflected(context, CallType.None, args);
+                    binder.CallReflected(context, CallTypes.None, args);
                 }
             }
 

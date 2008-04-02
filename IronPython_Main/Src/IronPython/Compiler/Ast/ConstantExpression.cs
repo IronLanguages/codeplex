@@ -17,11 +17,11 @@ using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
-using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
     using Ast = Microsoft.Scripting.Ast.Ast;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class ConstantExpression : Expression {
         private readonly object _value;
@@ -42,7 +42,7 @@ namespace IronPython.Compiler.Ast {
                 );
             }
 
-            return Ast.Constant(_value);
+            return AstUtils.Constant(_value);
         }
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {

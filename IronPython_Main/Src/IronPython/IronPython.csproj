@@ -221,6 +221,7 @@
     <Compile Include="Runtime\IParameterSequence.cs" />
     <Compile Include="Runtime\KwCallInfo.cs" />
     <Compile Include="Runtime\MissingParameter.cs" />
+    <Compile Include="Runtime\ModuleDictionaryStorage.cs" />
     <Compile Include="Runtime\SymbolIdDictionaryStorage.cs" />
     <Compile Include="Runtime\NameType.cs" />
     <Compile Include="Runtime\Operations\ComOps.cs" />
@@ -362,8 +363,12 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+    <ProjectReference Include="..\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj">
       <Project>{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}</Project>
+      <Name>Microsoft.Scripting.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Microsoft.Scripting\Microsoft.Scripting.csproj">
+      <Project>{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}</Project>
       <Name>Microsoft.Scripting</Name>
     </ProjectReference>
   </ItemGroup>

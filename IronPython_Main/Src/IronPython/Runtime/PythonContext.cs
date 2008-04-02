@@ -105,7 +105,7 @@ namespace IronPython.Runtime {
 
             InitializeBuiltins();
 
-            _systemState = CreateModule("sys", null, new Scope(this, PythonDictionary.MakeSymbolDictionary()), null, ModuleOptions.NoBuiltins).Scope;
+            _systemState = CreateBuiltinModule("sys", typeof(SysModule), ModuleOptions.NoBuiltins).Scope;
             InitializeSystemState();
 #if SILVERLIGHT
             AddToPath("");
@@ -113,7 +113,7 @@ namespace IronPython.Runtime {
 
             // sys.argv always includes at least one empty string.
             Debug.Assert(PythonOptions.Arguments != null);
-            SetSystemStateValue("argv", PythonOps.MakeList(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments));
+            SetSystemStateValue("argv", new List(PythonOptions.Arguments.Length == 0 ? new object[] { String.Empty } : PythonOptions.Arguments));
 
 #if !SILVERLIGHT // AssemblyResolve
             try {
@@ -266,7 +266,7 @@ namespace IronPython.Runtime {
                 Scope scope = scopeObj as Scope;
                 if (scope != null) {
                     PythonModule module = EnsurePythonModule(scope);
-                    if (DomainManager.PAL.PathComparer.Compare(module.GetFile(), path) == 0) {
+                    if (DomainManager.Platform.PathComparer.Compare(module.GetFile(), path) == 0) {
                         return module;
                     }
                 }
@@ -303,12 +303,12 @@ namespace IronPython.Runtime {
         /// </summary>
         private void InitializeSystemState() {
             // These fields do not get reset on "reload(sys)", we populate them once on startup
-            SetSystemStateValue("argv", PythonOps.MakeList(new object[] { String.Empty }));                
+            SetSystemStateValue("argv", new List(new object[] { String.Empty }));                
             SetSystemStateValue("modules", _modulesDict);
 
             _modulesDict["sys"] = _systemState;
 
-            SetSystemStateValue("path", PythonOps.MakeList());
+            SetSystemStateValue("path", new List(3));
             SetSystemStateValue("ps1", ">>> ");
             SetSystemStateValue("ps1", "... ");
 
@@ -316,8 +316,7 @@ namespace IronPython.Runtime {
 
             SystemExceptionType = SystemExceptionValue = SystemExceptionTraceBack = null;
 
-            // now run the normal initialization which populates all the normal values
-            IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, SystemState.Dict, typeof(SysModule));
+            SysModule.PerformModuleReload(this, _systemState.Dict);
         }
 
         public override LambdaExpression ParseSourceCode(CompilerContext context) {
@@ -585,9 +584,21 @@ namespace IronPython.Runtime {
         }
 
         public PythonModule/*!*/ CreateBuiltinModule(string moduleName, Type type, ModuleOptions options) {
-            PythonDictionary dict = PythonDictionary.MakeSymbolDictionary();
-            IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
-            return CreateModule(moduleName, null, new Scope(this, dict), null, options);
+            PythonDictionary dict = new PythonDictionary(new ModuleDictionaryStorage(type));
+
+            if (type == typeof(Builtin)) {
+                Builtin.PerformModuleReload(this, dict);
+            } else if (type != typeof(SysModule)) { // will be performed by hand later, see InitializeSystemState
+                MethodInfo reload = type.GetMethod("PerformModuleReload");
+                if (reload != null) {
+                    Debug.Assert(reload.IsStatic);
+
+                    reload.Invoke(null, new object[] { this, dict });
+                }
+            }
+
+            //IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
+            return CreateModule(moduleName, null, new Scope(dict), null, options);
         }
 
         public PythonModule/*!*/ CreateModule(string moduleName, ModuleOptions options) {
@@ -606,12 +617,12 @@ namespace IronPython.Runtime {
             Contract.RequiresNotNull(moduleName, "moduleName");
             Contract.RequiresNotNull(globals, "globals");
 
-            return CreateModule(moduleName, fileName, new Scope(this, globals), null, options);
+            return CreateModule(moduleName, fileName, new Scope(globals), null, options);
         }
 
         private PythonModule/*!*/ CreateModule(string moduleName, string fileName, Scope scope, ScriptCode scriptCode, ModuleOptions options) {
             if (scope == null) {
-                scope = new Scope(this, PythonDictionary.MakeSymbolDictionary());
+                scope = new Scope(PythonDictionary.MakeSymbolDictionary());
             }
 
             PythonModule module = CreatePythonModule(moduleName, fileName, scope, options);
@@ -660,8 +671,8 @@ namespace IronPython.Runtime {
             // for a package and we need to set the __path__ variable appropriately
             if (fileName != null && Path.GetFileName(fileName) == "__init__.py") {
                 string dirname = Path.GetDirectoryName(fileName);
-                string dir_path = DomainManager.Host.PlatformAdaptationLayer.GetFullPath(dirname);
-                module.Scope.SetName(ContextId, Symbols.Path, PythonOps.MakeList(dir_path));
+                string dir_path = DomainManager.Platform.GetFullPath(dirname);
+                module.Scope.SetName(Symbols.Path, PythonOps.MakeList(dir_path));
             }
 
             return module;
@@ -688,7 +699,7 @@ namespace IronPython.Runtime {
             }
 
             object name;
-            if (!scope.TryLookupName(this, Symbols.Name, out name) || !(name is string)) {
+            if (!scope.TryLookupName(Symbols.Name, out name) || !(name is string)) {
                 throw PythonOps.SystemError("nameless module");
             }
 
@@ -707,13 +718,13 @@ namespace IronPython.Runtime {
         /// </summary>
         public override bool TryLookupGlobal(CodeContext context, SymbolId name, out object value) {
             object builtins;
-            if (!context.Scope.ModuleScope.TryGetName(this, Symbols.Builtins, out builtins)) {
+            if (!context.Scope.ModuleScope.TryGetName(Symbols.Builtins, out builtins)) {
                 value = null;
                 return false;
             }
 
             Scope scope = builtins as Scope;
-            if (scope != null && scope.TryGetName(context.LanguageContext, name, out value)) return true;
+            if (scope != null && scope.TryGetName(name, out value)) return true;
 
             IAttributesCollection dict = builtins as IAttributesCollection;
             if (dict != null && dict.TryGetValue(name, out value)) return true;
@@ -815,7 +826,7 @@ namespace IronPython.Runtime {
         #endregion
 
         public override void SetScriptSourceSearchPaths(string[] paths) {
-            SetSystemStateValue("path", PythonOps.MakeList(paths));
+            SetSystemStateValue("path", new List(paths));
         }
         
         public override TextWriter GetOutputWriter(bool isErrorOutput) {
@@ -826,7 +837,7 @@ namespace IronPython.Runtime {
             object callable;
 
             try {
-                if (PythonOps.TryGetBoundAttr(_systemState, Symbols.SysExitFunc, out callable)) {
+                if (_systemState.TryGetName(Symbols.SysExitFunc, out callable)) {
                     PythonCalls.Call(callable);
                 }
             } finally {
@@ -1151,10 +1162,14 @@ namespace IronPython.Runtime {
 
         private void InitializeBuiltins() {
             // create the __builtin__ module
-            Scope builtinModule = CreateBuiltinModule("__builtin__", typeof(Builtin), ModuleOptions.NoBuiltins).Scope;
-            _modulesDict["__builtin__"] = builtinModule;
+            PythonDictionary dict = new PythonDictionary(new ModuleDictionaryStorage(typeof(Builtin)));
 
-            CreateBuiltinTable();
+            Builtin.PerformModuleReload(this, dict);
+
+            //IronPython.Runtime.Types.PythonModuleOps.PopulateModuleDictionary(this, dict, type);
+            Scope builtinModule = CreateModule("__builtin__", null, new Scope(dict), null, ModuleOptions.NoBuiltins).Scope;
+
+            _modulesDict["__builtin__"] = builtinModule;
         }
 
         private Dictionary<string, Type> CreateBuiltinTable() {
@@ -1164,7 +1179,7 @@ namespace IronPython.Runtime {
             LoadBuiltins(builtinTable, typeof(PythonContext).Assembly);
 
             // Load builtins from IronPython.Modules
-            Assembly ironPythonModules = DomainManager.PAL.LoadAssembly(GetIronPythonAssembly("IronPython.Modules"));
+            Assembly ironPythonModules = DomainManager.Platform.LoadAssembly(GetIronPythonAssembly("IronPython.Modules"));
             LoadBuiltins(builtinTable, ironPythonModules);
 
             if (Environment.OSVersion.Platform == PlatformID.Unix) {
@@ -1253,7 +1268,7 @@ namespace IronPython.Runtime {
                     // only cache values currently in built-ins, everything else will have
                     // no caching policy and will fall back to the LanguageContext.
                     object value;
-                    if (BuiltinModuleInstance.TryGetName(this, name, out value)) {
+                    if (BuiltinModuleInstance.TryGetName(name, out value)) {
                         _builtinCache[name] = cache = new ModuleGlobalCache(value);
                     }
                 }

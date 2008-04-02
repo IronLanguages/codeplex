@@ -63,7 +63,7 @@ def test_escape_encode():
     '''
     #sanity checks
 
-    #DWF-this function is totally broken
+    #this function is totally broken
     #BUG
     #value, length = codecs.escape_encode("abba")
     #AreEqual(value, "abba")

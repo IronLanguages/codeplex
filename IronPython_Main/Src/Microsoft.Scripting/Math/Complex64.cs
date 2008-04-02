@@ -14,9 +14,6 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using System.Text;
-using System.Collections;
 
 namespace Microsoft.Scripting.Math {
     /// <summary>

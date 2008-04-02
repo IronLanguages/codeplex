@@ -50,12 +50,8 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
-            MSAst.VariableExpression variable;
-
-            MSAst.Expression read;
-            if ((variable = _reference.Variable) != null) {
-                read = Ast.Read(variable);
-            } else {
+            MSAst.Expression read = _reference.Variable;
+            if (read == null) {
                 read = Ast.Read(_name);
             }
 
@@ -71,7 +67,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformSet(AstGenerator ag, SourceSpan span, MSAst.Expression right, Operators op) {
-            MSAst.VariableExpression variable = _reference.Variable;
+            MSAst.Expression variable = _reference.Variable;
             MSAst.Expression assignment;
 
             Type vt = variable != null ? variable.Type : typeof(object);
@@ -93,7 +89,7 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
-            MSAst.VariableExpression variable;
+            MSAst.Expression variable;
             if ((variable = _reference.Variable) != null) {
                 MSAst.Expression del = Ast.Delete(Span, variable);
                 if (!_assigned) {

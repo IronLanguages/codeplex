@@ -44,8 +44,8 @@ namespace IronPython.Runtime.Calls {
             _argument = args[0];
         }
 
-        public StandardRule<T> MakeRule() {
-            StandardRule<T> rule = null;
+        public RuleBuilder<T> MakeRule() {
+            RuleBuilder<T> rule = null;
 
             if (Action.ToType == typeof(bool)) {
                 rule = MakeBoolRule();
@@ -69,13 +69,13 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeGenericWrapperRule(Type fromType, Type wrapperType) {
-            StandardRule<T> rule = null;
+        private RuleBuilder<T> MakeGenericWrapperRule(Type fromType, Type wrapperType) {
+            RuleBuilder<T> rule = null;
 
             if (fromType.IsAssignableFrom(CompilerHelpers.GetType(_argument))) {
                 Type making = wrapperType.MakeGenericType(Action.ToType.GetGenericArguments());
                 
-                rule = new StandardRule<T>();
+                rule = new RuleBuilder<T>();
                 rule.MakeTest(CompilerHelpers.GetType(_argument));
                 rule.Target = rule.MakeReturn(
                     Binder,
@@ -91,8 +91,8 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeArrayRule() {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> MakeArrayRule() {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, DynamicHelpers.GetPythonType(_argument));
             rule.Target = rule.MakeReturn(
                 Binder,
@@ -107,8 +107,8 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeCharRule() {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> MakeCharRule() {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             // we have an implicit conversion to char if the
             // string length == 1, but we can only represent
             // this is implicit via a rule.
@@ -169,9 +169,9 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeBoolRule() {
+        private RuleBuilder<T> MakeBoolRule() {
             Type fromType = CompilerHelpers.GetType(_argument);
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
 
             if (fromType == typeof(None)) {
                 // null is never true
@@ -205,7 +205,7 @@ namespace IronPython.Runtime.Calls {
                 foreach (Type t in fromType.GetInterfaces()) {
                     if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ICollection<>)) {
                         // collections are true if not empty
-                        rule = new StandardRule<T>();
+                        rule = new RuleBuilder<T>();
                         MakeNonZeroPropertyRule(rule, t, "Count");
                         break;
                     }
@@ -216,7 +216,7 @@ namespace IronPython.Runtime.Calls {
             if (rule.Target == null) {
                 // anything non-null that doesn't fall under one of the
                 // above rules is true
-                StandardRule<T> newrule = new ConvertToBinderHelper<T>(Context, Action, new object[] { _argument }).MakeRule();
+                RuleBuilder<T> newrule = new ConvertToBinderHelper<T>(Context, Action, new object[] { _argument }).MakeRule();
                 if (!newrule.IsError) {
                     rule = newrule;
                 } else {
@@ -226,7 +226,7 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private void MakeBigIntegerRule(StandardRule<T> rule, Expression bigInt) {
+        private void MakeBigIntegerRule(RuleBuilder<T> rule, Expression bigInt) {
             rule.Target = 
                 rule.MakeReturn(
                     Binder,
@@ -238,19 +238,19 @@ namespace IronPython.Runtime.Calls {
                 );
         }
         
-        private void MakeComplexRule(StandardRule<T> rule, Expression complex) {            
+        private void MakeComplexRule(RuleBuilder<T> rule, Expression complex) {            
             rule.Target = 
                 rule.MakeReturn(
                     Binder,
                     Ast.Call(
                         typeof(Complex64).GetMethod("op_Inequality", new Type[] { typeof(Complex64), typeof(Complex64) }),
-                        Ast.Constant(new Complex64()),
+                        Utils.Constant(new Complex64()),
                         Ast.ConvertHelper(complex, typeof(Complex64))
                     )
                 );
         }
 
-        private void MakePrimitiveRule(StandardRule<T> rule) {
+        private void MakePrimitiveRule(RuleBuilder<T> rule) {
             object zeroVal = Activator.CreateInstance(CompilerHelpers.GetType(_argument));
             rule.Target = rule.MakeReturn(
                 Binder,
@@ -264,7 +264,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private void MakeEnumRule(StandardRule<T> rule) {
+        private void MakeEnumRule(RuleBuilder<T> rule) {
             Type enumStorageType = Enum.GetUnderlyingType(CompilerHelpers.GetType(_argument));
             object zeroVal = Activator.CreateInstance(enumStorageType);
             rule.Target = rule.MakeReturn(
@@ -279,7 +279,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private void MakeStrongBoxRule(StandardRule<T> rule) {
+        private void MakeStrongBoxRule(RuleBuilder<T> rule) {
             rule.Target = rule.MakeError(
                 Ast.Call(
                     typeof(RuntimeHelpers).GetMethod("SimpleTypeError"),
@@ -288,11 +288,11 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private void MakeICollectionRule(StandardRule<T> rule, Type collectionType) {
+        private void MakeICollectionRule(RuleBuilder<T> rule, Type collectionType) {
             MakeNonZeroPropertyRule(rule, collectionType, "Count");
         }
 
-        private void MakeNonZeroPropertyRule(StandardRule<T> rule, Type collectionType, string propertyName) {
+        private void MakeNonZeroPropertyRule(RuleBuilder<T> rule, Type collectionType, string propertyName) {
             rule.Target = rule.MakeReturn(
                 Binder,
                 Ast.NotEqual(

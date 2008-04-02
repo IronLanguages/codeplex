@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections;
@@ -381,7 +381,7 @@ namespace IronPython.Runtime {
             PythonModule ret = null;
             foreach (object dirname in path) {
                 string str;
-                if (Converter.TryConvertToString(dirname, out str)) {  // ignore non-string
+                if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
                     string pathname = Path.Combine(str, name);
 
                     if (TryLoadPackage(state, fullName, pathname, out ret))
@@ -428,11 +428,12 @@ namespace IronPython.Runtime {
             bool loadSource = File.Exists(source);
 
             if (loadBinary || loadSource) {
-                PythonModule pmod;
+                PythonModule pmod = null;
                 if (loadBinary) {
                     pmod = LoadPreCompiled(state, fullName, binary);
-                    pmod.Filename = binary;
-                } else {
+                }
+
+                if (pmod == null) {
                     pmod = LoadFromSource(state, fullName, source);
                     pmod.Filename = source;
                 }
@@ -454,13 +455,16 @@ namespace IronPython.Runtime {
 
             if (ShouldLoadPreCompiledModule(binary, source)) {
                 pmod = LoadPreCompiled(state, fullName, binary);
-                pmod.Filename = binary;
-            } else if (File.Exists(source)) {
-                pmod = LoadFromSource(state, fullName, source);
-                pmod.Filename = source;
-            } else {
-                ret = null;
-                return false;
+            }
+
+            if (pmod == null) {
+                if (File.Exists(source)) {
+                    pmod = LoadFromSource(state, fullName, source);
+                    pmod.Filename = source;
+                } else {
+                    ret = null;
+                    return false;
+                }
             }
 
             pmod.ModuleName = fullName;
@@ -481,14 +485,26 @@ namespace IronPython.Runtime {
             Assembly asm = Assembly.LoadFile(Path.GetFullPath(fileName));
             Type[] types = asm.GetTypes();
 
-            // TODO: temporary way to make sure this is pre-compiled module
             if (types.Length != 1) {
-                throw Ops.SystemError("{0} is not pre-compiled module; try again after deleting it.", fileName);
+                return null;
             }
 
             Type type = types[0];
-            CompiledModule cm = Activator.CreateInstance(type) as CompiledModule;
-            return cm.Load(fullName, new InitializeModule(cm.Initialize), state);
+            CompiledModule cm = null;
+            try {
+                cm = Activator.CreateInstance(type) as CompiledModule;                
+            } catch (TargetInvocationException) {
+            } catch (MethodAccessException) {
+            } catch (MemberAccessException) {
+            }
+
+            if (cm == null) {
+                return null;
+            }
+
+            PythonModule res = cm.Load(fullName, new InitializeModule(cm.Initialize), state);
+            res.Filename = fileName;
+            return res;
         }
 
         /// <summary>

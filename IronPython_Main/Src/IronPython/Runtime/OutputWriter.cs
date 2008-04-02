@@ -64,6 +64,13 @@ namespace IronPython.Runtime {
         }
 
         public override void Flush() {
+            // avoid creating a site in the common case
+            PythonFile pf = Sink as PythonFile;
+            if (pf != null) {
+                pf.flush();
+                return;
+            }
+
             if (PythonOps.HasAttr(DefaultContext.Default, Sink, SymbolTable.StringToId("flush"))) {
                 PythonOps.Invoke(Sink, SymbolTable.StringToId("flush"));
             }

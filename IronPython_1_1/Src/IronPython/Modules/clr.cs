@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections;
@@ -47,6 +47,10 @@ namespace IronPython.Modules {
 
         #region Public methods
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters can be an already loaded
+Assembly object, a full assembly name, or a partial assembly name. After the
+load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public void AddReference(params object[] references) {
             if (references == null) throw Ops.TypeError("Expected string or Assembly, got NoneType");
 
@@ -55,6 +59,12 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  One or more assembly names can
+be provided.  The assembly is searched for in the directories specified in 
+sys.path and dependencies will be loaded from sys.path as well.  The assembly 
+name should be the filename on disk without a directory specifier and 
+optionally including the .EXE or .DLL extension. After the load the assemblies 
+namespaces and top-level types will be available via import Namespace.")]
         public void AddReferenceToFile(params string[] files) {
             if (files == null) throw Ops.TypeError("Expected string, got NoneType");
 
@@ -63,6 +73,11 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  One or more assembly names can
+be provided which are fully qualified names to the file on disk.  The 
+directory is added to sys.path and AddReferenceToFile is then called. After the 
+load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public void AddReferenceToFileAndPath(params string[] files) {
             if (files == null) throw Ops.TypeError("Expected string, got NoneType");
 
@@ -71,6 +86,9 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are an assembly name. 
+After the load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public void AddReferenceByName(params string[] names) {
             if (names == null) throw Ops.TypeError("Expected string, got NoneType");
 
@@ -79,6 +97,9 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are a partial assembly name. 
+After the load the assemblies namespaces and top-level types will be available via 
+import Namespace.")]
         public void AddReferenceByPartialName(params string[] names) {
             if (names == null) throw Ops.TypeError("Expected string, got NoneType");
 
@@ -87,11 +108,17 @@ namespace IronPython.Modules {
             }
         }
 
+        [Documentation(@"Adds a reference to a .NET assembly.  Parameters are a full path to an. 
+assembly on disk. After the load the assemblies namespaces and top-level types 
+will be available via import Namespace.")]
         public Assembly LoadAssemblyFromFileWithPath(string file) {
             if (file == null) throw Ops.TypeError("LoadAssemblyFromFileWithPath: arg 1 must be a string.");
             return Assembly.LoadFile(file);
         }
 
+        [Documentation(@"Loads an assembly from the specified filename and returns the assembly
+object.  Namespaces or types in the assembly can be accessed directly from 
+the assembly object.")]
         public Assembly LoadAssemblyFromFile(string file) {
             if (file == null) throw Ops.TypeError("Expected string, got NoneType");
 
@@ -116,11 +143,17 @@ namespace IronPython.Modules {
             return null;
         }
 
+        [Documentation(@"Loads an assembly from the specified assembly name and returns the assembly
+object.  Namespaces or types in the assembly can be accessed directly from 
+the assembly object.")]
         public Assembly LoadAssemblyByName(string name) {
             if (name == null) throw Ops.TypeError("LoadAssemblyByName: arg 1 must be a string");
             return Assembly.Load(name);
         }
 
+        [Documentation(@"Loads an assembly from the specified partial assembly name and returns the 
+assembly object.  Namespaces or types in the assembly can be accessed directly 
+from the assembly object.")]
         public Assembly LoadAssemblyByPartialName(string name) {
             if (name == null) throw Ops.TypeError("LoadAssemblyByPartialName: arg 1 must be a string");
 #pragma warning disable 618
@@ -128,10 +161,12 @@ namespace IronPython.Modules {
 #pragma warning restore 618
         }
 
+        [Documentation(@"Provided with a Python type object returns the .NET type object.")]
         public Type GetClrType(Type type) {
             return type;
         }
 
+        [Documentation(@"Provided with a .NET type object returns the Python type object.")]
         public DynamicType GetPythonType(Type t) {
             return Ops.GetDynamicTypeFromType(t);
         }

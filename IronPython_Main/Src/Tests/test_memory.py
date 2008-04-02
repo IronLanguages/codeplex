@@ -95,7 +95,7 @@ for code in t_list:
         # not to measure the memory usage, but still try to peverify the code at the end
         evalTest(2)
     
-e = compile("def f(): return 42", "", "single")
+e = compile("def f(): return 42\n", "", "single")
 names = {}
 eval(e, names)
 AreEqual(names['f'](), 42)

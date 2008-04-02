@@ -14,73 +14,76 @@
  * ***************************************************************************/
 
 using System;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Math;
+
+[assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Ast")]
 
 namespace Microsoft.Scripting.Ast {
-    public sealed class ConstantExpression : Expression {
-        private readonly object _value;
+    public static partial class Utils {
+        public static Expression Constant(object value) {
+            BigInteger bi = value as BigInteger;
 
-        internal ConstantExpression(object value, Type /*!*/ type)
-            : base(AstNodeType.Constant, type) {
-            _value = value;
-        }
-
-        public object Value {
-            get { return _value; }
-        }
-    }
-
-    public static partial class Ast {
-        public static ConstantExpression True() {
-            return new ConstantExpression(true, typeof(bool));
-        }
-
-        public static ConstantExpression False() {
-            return new ConstantExpression(false, typeof(bool));
-        }
-
-        public static ConstantExpression Zero() {
-            return new ConstantExpression(0, typeof(int));
-        }
-
-        public static ConstantExpression Null() {
-            return new ConstantExpression(null, typeof(object));
-        }
-
-        public static ConstantExpression Null(Type type) {
-            Contract.Requires(!type.IsValueType, "type");
-            return new ConstantExpression(null, type);
-        }
-
-        public static ConstantExpression Constant(object value) {
-            return new ConstantExpression(value, value == null ? typeof(object) : value.GetType());
-        }
-
-        public static ConstantExpression Constant(object value, Type type) {
-            Contract.RequiresNotNull(type, "type");
-            if (value == null) {
-                Contract.Requires(!type.IsValueType, "type");
+            if ((object)bi != null) {
+                return BigIntegerConstant(bi);
+            } else if (value is Complex64) {
+                return ComplexConstant((Complex64)value);
             } else {
-                Contract.Requires(TypeUtils.CanAssign(type, value.GetType()), "type");
+                return Ast.Constant(value);
             }
-            return new ConstantExpression(value, type);
         }
 
-        public static ConstantExpression RuntimeConstant(object value) {
-            return new ConstantExpression(new RuntimeConstant(value), value == null ? typeof(object) : value.GetType());
-        }
+        private static Expression BigIntegerConstant(BigInteger value) {
+            int ival;
+            if (value.AsInt32(out ival)) {
+                return Ast.Call(
+                    typeof(BigInteger).GetMethod("Create", new Type[] { typeof(int) }),
+                    Ast.Constant(ival)
+                );
+            }
 
-        /// <summary>
-        /// Wraps the given value in a WeakReference and returns a tree that will retrieve
-        /// the value from the WeakReference.
-        /// </summary>
-        public static MemberExpression WeakConstant(object value) {
-            System.Diagnostics.Debug.Assert(!(value is Expression));
-            return Ast.ReadProperty(
-                Ast.RuntimeConstant(new WeakReference(value)),
-                typeof(WeakReference).GetProperty("Target")
+            long lval;
+            if (value.AsInt64(out lval)) {
+                return Ast.Call(
+                    typeof(BigInteger).GetMethod("Create", new Type[] { typeof(long) }),
+                    Ast.Constant(lval)
+                );
+            }
+
+            return Ast.New(
+                typeof(BigInteger).GetConstructor(new Type[] { typeof(int), typeof(uint[]) }),
+                Ast.Constant((int)value.Sign),
+                CreateUIntArray(value.GetBits())
             );
+        }
+
+        private static Expression CreateUIntArray(uint[] array) {
+            Expression[] init = new Expression[array.Length];
+            for (int i = 0; i < init.Length; i++) {
+                init[i] = Ast.Constant(array[i]);
+            }
+            return Ast.NewArray(typeof(uint[]), init);
+        }
+
+        private static Expression ComplexConstant(Complex64 value) {
+            if (value.Real != 0.0) {
+                if (value.Imag != 0.0) {
+                    return Ast.Call(
+                        typeof(Complex64).GetMethod("Make"),
+                        Ast.Constant(value.Real),
+                        Ast.Constant(value.Imag)
+                    );
+                } else {
+                    return Ast.Call(
+                        typeof(Complex64).GetMethod("MakeReal"),
+                        Ast.Constant(value.Real)
+                    );
+                }
+            } else {
+                return Ast.Call(
+                    typeof(Complex64).GetMethod("MakeImaginary"),
+                    Ast.Constant(value.Imag)
+                );
+            }
         }
     }
 }

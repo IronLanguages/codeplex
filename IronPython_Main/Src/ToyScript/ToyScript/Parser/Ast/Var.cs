@@ -30,7 +30,7 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            MSAst.VariableExpression var = tg.GetOrMakeLocal(_name);
+            MSAst.Expression var = tg.GetOrMakeLocal(_name);
 
             if (_value != null) {
                 return Ast.Statement(

@@ -112,7 +112,7 @@ namespace IronPython.Runtime {
 
         internal object GetName() {
             object result;
-            Scope.TryLookupName(DefaultContext.DefaultPythonContext, Symbols.Name, out result);
+            Scope.TryLookupName(Symbols.Name, out result);
             return result;
         }
 
@@ -122,7 +122,7 @@ namespace IronPython.Runtime {
 
         internal object GetFile() {
             object result;
-            Scope.TryLookupName(DefaultContext.DefaultPythonContext, Symbols.File, out result);
+            Scope.TryLookupName(Symbols.File, out result);
             return result;
         }
 

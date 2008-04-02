@@ -30,7 +30,6 @@ from System.Windows.Controls import *
 from System.Windows.Shapes import *
 from System.Threading import *
 from System.Windows.Threading import *
-from Microsoft.Scripting import ScriptDomainManager
 
 import IronPython
 
@@ -55,7 +54,7 @@ def start():
         are.Set()
         app.Run()
     finally:
-        ScriptDomainManager.CurrentManager.SetCommandDispatcher(None)
+        clr.SetCommandDispatcher(None)
 
 t = Thread(ThreadStart(start))
 t.IsBackground = True
@@ -67,30 +66,30 @@ def DispatchConsoleCommand(consoleCommand):
     if consoleCommand:
         dispatcher.Invoke(DispatcherPriority.Normal, consoleCommand)
 
-ScriptDomainManager.CurrentManager.SetCommandDispatcher(DispatchConsoleCommand)
+clr.SetCommandDispatcher(DispatchConsoleCommand)
 
 def LoadXaml(filename):
     from System.IO import *
     from System.Windows.Markup import XamlReader
     f = FileStream(filename, FileMode.Open, FileAccess.Read)
     try:
-	element = XamlReader.Load(f)
+        element = XamlReader.Load(f)
     finally:
-	f.Close()
+        f.Close()
     return element
-	
+    
 def SetScript(e,s):
     from Pythalon import PythonScript
     e.SetValue(PythonScript.ScriptProperty, s)
-	
+    
 def SaveXaml(filename, element):
     from System.Windows.Markup import XamlWriter
     s = XamlWriter.Save(element)
     try:
-	f = open(filename, "w")
-	f.write(s)
+        f = open(filename, "w")
+        f.write(s)
     finally:
-	f.close()
+        f.close()
 
 
 def Walk(tree):

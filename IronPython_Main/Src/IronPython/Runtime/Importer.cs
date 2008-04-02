@@ -97,13 +97,13 @@ namespace IronPython.Runtime {
                 Scope scope = from as Scope;
                 if (scope != null) {
                     object ret;
-                    if (scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out ret)) {
+                    if (scope.TryGetName(SymbolTable.StringToId(name), out ret)) {
                         return ret;
                     }
 
                     object path;
                     List listPath;
-                    if (scope.TryGetName(context.LanguageContext, Symbols.Path, out path) && (listPath = path as List) != null) {
+                    if (scope.TryGetName(Symbols.Path, out path) && (listPath = path as List) != null) {
                         return ImportNestedModule(context, scope, name, listPath);
                     }
                 } else {
@@ -125,7 +125,7 @@ namespace IronPython.Runtime {
             if (scope != null) {
                 object path;
                 List listPath;
-                if (scope.TryGetName(context.LanguageContext, Symbols.Path, out path) && (listPath = path as List) != null) {
+                if (scope.TryGetName(Symbols.Path, out path) && (listPath = path as List) != null) {
                     return ImportNestedModule(context, scope, name, listPath);
                 }
             }
@@ -358,7 +358,7 @@ namespace IronPython.Runtime {
                 if (parentScope != null) {
                     object objPath;
                     // get its path as a List if it's there
-                    if (parentScope.TryGetName(context.LanguageContext, Symbols.Path, out objPath)) {
+                    if (parentScope.TryGetName(Symbols.Path, out objPath)) {
                         path = objPath as List;
                     }
                 }
@@ -380,7 +380,12 @@ namespace IronPython.Runtime {
 
             // TODO: is this correct?
             module.SetName(name);
-            PythonModuleOps.PopulateModuleDictionary(pc, module.Scope.Dict, type);
+
+            // should be a built-in module which we can reload.
+            Debug.Assert(module.Scope.Dict is PythonDictionary);
+            Debug.Assert(((PythonDictionary)module.Scope.Dict)._storage is ModuleDictionaryStorage);
+
+            ((ModuleDictionaryStorage)((PythonDictionary)module.Scope.Dict)._storage).Reload();
         }
 
         /// <summary>
@@ -480,7 +485,7 @@ namespace IronPython.Runtime {
         private static bool TryGetNestedModule(CodeContext/*!*/ context, Scope/*!*/ scope, string/*!*/ name, out object nested) {
             Assert.NotNull(context, scope, name);
 
-            if (scope.TryGetName(context.LanguageContext, SymbolTable.StringToId(name), out nested)) {
+            if (scope.TryGetName(SymbolTable.StringToId(name), out nested)) {
                 if (nested is Scope) return true;
 
                 // This allows from System.Math import *
@@ -515,12 +520,12 @@ namespace IronPython.Runtime {
 
         private static object FindImportFunction(CodeContext/*!*/ context) {
             object builtin, import;
-            if (!context.Scope.ModuleScope.TryGetName(context.LanguageContext, Symbols.Builtins, out builtin)) {
+            if (!context.Scope.ModuleScope.TryGetName(Symbols.Builtins, out builtin)) {
                 builtin = PythonContext.GetContext(context).BuiltinModuleInstance;
             }
 
             Scope scope = builtin as Scope;
-            if (scope != null && scope.TryGetName(context.LanguageContext, Symbols.Import, out import)) {
+            if (scope != null && scope.TryGetName(Symbols.Import, out import)) {
                 return import;
             }
 
@@ -604,7 +609,7 @@ namespace IronPython.Runtime {
             context.PublishModule(fullName, module);
             bool success = false;
             try {
-                if (executeModule) {
+                if (executeModule) {                    
                     code.Run(module.Scope, module);
                 }
 
@@ -635,9 +640,9 @@ namespace IronPython.Runtime {
             }
 
             foreach (object dirname in path) {
-                string str;
+                string str = dirname as string;
 
-                if (Converter.TryConvertToString(dirname, out str) && str != null) {  // ignore non-string
+                if (str != null || (Converter.TryConvertToString(dirname, out str) && str != null)) {  // ignore non-string
                     object importer;
                     if (!importCache.TryGetValue(str, out importer)) {
                         importCache[str] = importer = FindImporterForPath(context, str);
@@ -713,7 +718,7 @@ namespace IronPython.Runtime {
             // check for a match in the case of the filename, unfortunately we can't do this
             // in Silverlight becauase there's no way to get the original filename.
 
-            PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.PAL;
+            PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.Platform;
             string dir = Path.GetDirectoryName(path);
             if (!pal.DirectoryExists(dir)) {
                 return false;

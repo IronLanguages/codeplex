@@ -600,24 +600,24 @@ function test-dlrmodes($dlrexe)
 	showclrexceptions-helper $dlrexe
 	
 	#------------------------------------------------------------------------------
-	#-- -X:ShowASTs
+	#-- -X:ShowTrees
 	echo ""
-	echo "-X:ShowASTs needs more coverage"
+	echo "-X:ShowTrees needs more coverage"
 	
 	if ($global:IS_DEBUG)
 	{
-		$stuff = dlrexe "-X:ShowASTs" $global:HELLO
+		$stuff = dlrexe "-X:ShowTrees" $global:HELLO
 		#just check to make sure it does not throw for now
 		if (! $?) {show-failure "Failed."; }
 	}
 	
 	#------------------------------------------------------------------------------
-	#-- -X:DumpASTs
-	echo "-X:DumpASTs needs more coverage"
+	#-- -X:DumpTrees
+	echo "-X:DumpTrees needs more coverage"
 
 	if ($global:IS_DEBUG)
 	{
-		$stuff = dlrexe "-X:DumpASTs" $global:HELLO
+		$stuff = dlrexe "-X:DumpTrees" $global:HELLO
 		#just check to make sure it does not throw for now
 		if (! $?) {show-failure "Failed."; }
 	}

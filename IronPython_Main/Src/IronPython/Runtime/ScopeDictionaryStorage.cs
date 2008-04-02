@@ -34,7 +34,7 @@ namespace IronPython.Runtime {
             if (strKey != null) {
                 Scope.SetName(SymbolTable.StringToId(strKey), value);
             } else {
-                Scope.SetObjectName(DefaultContext.Id, key, value, ScopeMemberAttributes.None);
+                Scope.SetObjectName(key, value);
             }
         }
 
@@ -67,7 +67,7 @@ namespace IronPython.Runtime {
                     if (scope.TryRemoveName(SymbolTable.StringToId(strKey))) {
                         return true;
                     }
-                } else if (scope.TryRemoveObjectName(DefaultContext.DefaultPythonContext, key)) {
+                } else if (scope.TryRemoveObjectName(key)) {
                     return true;
                 }
             }
@@ -82,7 +82,7 @@ namespace IronPython.Runtime {
                     if (scope.TryGetName(SymbolTable.StringToId(strKey), out value)) {
                         return true;
                     }
-                } else if (scope.TryGetObjectName(DefaultContext.DefaultPythonContext, key, out value)) {
+                } else if (scope.TryGetObjectName(key, out value)) {
                     return true;
                 }
             }
@@ -119,7 +119,7 @@ namespace IronPython.Runtime {
         }
 
         public override List<KeyValuePair<object, object>> GetItems() {
-            return new List<KeyValuePair<object, object>>(Scope.GetAllItems(DefaultContext.DefaultPythonContext));
+            return new List<KeyValuePair<object, object>>(Scope.GetAllItems());
         }
 
         protected Scope/*!*/ Scope {
@@ -138,7 +138,7 @@ namespace IronPython.Runtime {
                 }
             } else {
                 object dummy;
-                if (scope.TryGetObjectName(DefaultContext.DefaultPythonContext, key, out dummy)) {
+                if (scope.TryGetObjectName(key, out dummy)) {
                     return true;
                 }
             }

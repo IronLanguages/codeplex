@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Text;
@@ -121,6 +121,7 @@ namespace IronPython.Compiler {
         private int indentLevel = 0;
         private int pendingDedents = 0;
         private int pendingNewlines = 1;
+        private bool endContinues;        
 
         // Indentation state used only when we're reporting on inconsistent identation format.
         private StringBuilder[] indentFormat;
@@ -304,6 +305,9 @@ namespace IronPython.Compiler {
                     case '\\':
                         if (PeekChar() == '\n' || PeekChar() == '\r') {
                             NextChar();
+                            if (PeekChar() == -1) {
+                                endContinues = true;
+                            }
                             return Next();
                         } else {
                             return BadChar(ch);
@@ -705,6 +709,16 @@ namespace IronPython.Compiler {
                 if (spaces != current) {
                     ReportSyntaxError("unindent does not match any outer indentation level on line " + this.current.Line.ToString(), ErrorCodes.IndentationError);
                 }
+            }
+        }
+
+        /// <summary>
+        /// True if the last characters in the buffer are a backslash followed by a new line indicating
+        /// that their is an incompletement statement which needs further input to complete.
+        /// </summary>
+        public bool EndContinues {
+            get {
+                return endContinues;
             }
         }
 

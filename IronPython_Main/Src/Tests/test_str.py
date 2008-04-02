@@ -88,6 +88,7 @@ def test_endswith():
         AreEqual("abcdef".endswith("de", x, 5), False)
         AreEqual("abcdef".endswith("de", x, -1), False)
 
+@skip("silverlight") # CoreCLR bug xxxx found in build 30324 from silverlight_w2
 def test_rfind():
     AreEqual("abcdbcda".rfind("cd", 1), 5)
     AreEqual("abcdbcda".rfind("cd", 3), 5)

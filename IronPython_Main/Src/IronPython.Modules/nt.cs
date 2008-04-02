@@ -47,7 +47,7 @@ namespace IronPython.Modules {
 
         public static void chdir([NotNull]string path) {
             if (String.IsNullOrEmpty(path)) {
-                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.EINVAL, "Path cannot be an empty string");
+                throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.EINVAL, "Path cannot be an empty string");
             }
 
             try {
@@ -77,7 +77,7 @@ namespace IronPython.Modules {
         public static readonly PythonType error = Builtin.OSError;
 
         public static void _exit(CodeContext/*!*/ context, int code) {
-            PythonContext.GetContext(context).DomainManager.PAL.TerminateScriptExecution(code);
+            PythonContext.GetContext(context).DomainManager.Platform.TerminateScriptExecution(code);
         }
 
         public static object fdopen(CodeContext/*!*/ context, int fd) {
@@ -629,10 +629,10 @@ namespace IronPython.Modules {
                     sr.size = fi.Length;
                     sr.mode = 0x8000; //@TODO - Set other valid mode types (S_IFCHR, S_IFBLK, S_IFIFO, S_IFLNK, S_IFSOCK) (to the degree that they apply)
                 } else {
-                    throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
+                    throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.ENOENT, "file does not exist: " + path);
                 }
             } catch (ArgumentException) {
-                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.EINVAL, "The path is invalid: " + path);
+                throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.EINVAL, "The path is invalid: " + path);
             } catch (Exception e) {
                 throw ToPythonException(e);
             }
@@ -692,7 +692,7 @@ namespace IronPython.Modules {
             if (path == null) throw new ArgumentNullException("path");
 
             if (!File.Exists(path)) {
-                throw PythonExceptions.CreateThrowable(PythonExceptions._WindowsError, PythonErrorNumber.ENOENT, "The file could not be found for deletion: " + path);
+                throw PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, PythonErrorNumber.ENOENT, "The file could not be found for deletion: " + path);
             }
 
             try {

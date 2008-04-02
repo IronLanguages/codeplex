@@ -62,24 +62,33 @@ namespace IronPython.Runtime.Operations {
         /// <summary> Singleton NotImplemented object of NotImplementedType.  Initialized after type has been created in static constructor </summary>
         public static readonly object NotImplemented;
         public static readonly object Ellipsis;
-        
 
-        private static readonly FastDynamicSite<object, object, int> CompareSite = FastDynamicSite<object, object, int>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+        // start-up code path sites
+        [MultiRuntimeAware]
+        private static FastDynamicSite<object, string, object> _writeSite;
+        private readonly static Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
+
+        // non-startup call sites
+        [MultiRuntimeAware]
+        private static FastDynamicSite<object, object, int> _CompareSite;
         [MultiRuntimeAware]
         private static DynamicSite<object, string, PythonTuple, IAttributesCollection, object> MetaclassSite;
-        private static readonly FastDynamicSite<object, string, object> _writeSite = RuntimeHelpers.CreateSimpleCallSite<object, string, object>(DefaultContext.Default);
-        private static readonly Dictionary<AttrKey, DynamicSite<object, object>> _tryGetMemSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static readonly Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites = new Dictionary<AttrKey, DynamicSite<object, object>>();
-        private static readonly Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites = new Dictionary<AttrKey, DynamicSite<object, object, object>>();
-        private static readonly FastDynamicSite<object, object, object> _getIndexSite = FastDynamicSite<object, object, object>.Create(DefaultContext.Default, DoOperationAction.Make(Operators.GetItem));
-        private static readonly Dictionary<Type, FastDynamicSite<object, string>> _toStrSites = new Dictionary<Type, FastDynamicSite<object, string>>();
-
+        [MultiRuntimeAware]
+        private static Dictionary<AttrKey, DynamicSite<object, object>> _deleteAttrSites;        
+        [MultiRuntimeAware]
+        private static Dictionary<AttrKey, DynamicSite<object, object, object>> _setAttrSites;
+        [MultiRuntimeAware]
+        private static FastDynamicSite<object, object, object> _getIndexSite, EqualSharedSite;
+        [MultiRuntimeAware]
+        private static Dictionary<Type, FastDynamicSite<object, string>> _toStrSites;
         // Site for implementing callable() builtin function and Python.IsCallable.
-        private static readonly DynamicSite<object, bool> _isCallableSites = DynamicSite<object, bool>.Create(DoOperationAction.Make(Operators.IsCallable));
-        private static readonly FastDynamicSite<object, object, object> EqualSharedSite =
-            FastDynamicSite<object, object, object>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
-        private static readonly FastDynamicSite<object, object, bool> EqualBooleanSharedSite =
-            FastDynamicSite<object, object, bool>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
+        [MultiRuntimeAware]
+        private static DynamicSite<object, bool> _isCallableSites;
+        [MultiRuntimeAware]
+        private static FastDynamicSite<object, object, bool> EqualBooleanSharedSite;
+            
+        // Site for implementing dir() builtin function
+        private static DynamicSite<object, IList<object>> _memberNamesSite;
 
         #endregion
 
@@ -88,8 +97,8 @@ namespace IronPython.Runtime.Operations {
 
             MakePythonTypeTable();
                         
-            NotImplemented = NotImplementedTypeOps.CreateInstance();
-            Ellipsis = EllipsisTypeOps.CreateInstance();
+            NotImplemented = NotImplementedTypeOps.EnsureInstance();
+            Ellipsis = EllipsisTypeOps.EnsureInstance();
             NoneTypeOps.InitInstance();
         }
 
@@ -116,6 +125,9 @@ namespace IronPython.Runtime.Operations {
 
 
             // Invoke Operator.IsCallable on the object. 
+            if (!_isCallableSites.IsInitialized) {
+                _isCallableSites.EnsureInitialized(DoOperationAction.Make(Operators.IsCallable));
+            }
             return _isCallableSites.Invoke(context, o);
         }
 
@@ -277,9 +289,14 @@ namespace IronPython.Runtime.Operations {
             object tostr;
             if (TryGetBoundAttr(o, Symbols.String, out tostr)) {
                 FastDynamicSite<object, string> callSite;
+                if (_toStrSites == null) {
+                    Interlocked.CompareExchange(ref _toStrSites,
+                        new Dictionary<Type, FastDynamicSite<object, string>>(),
+                        null);
+                }
                 lock (_toStrSites) {
                     if (!_toStrSites.TryGetValue(o.GetType(), out callSite)) {
-                        _toStrSites[o.GetType()] = callSite = 
+                        _toStrSites[o.GetType()] = callSite =
                             RuntimeHelpers.CreateSimpleCallSite<object, string>(DefaultContext.Default);
                     }
                 }
@@ -671,6 +688,9 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object Equal(object x, object y) {
+            if (!EqualSharedSite.IsInitialized) {
+                EqualSharedSite.EnsureInitialized(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
+            }
             return EqualSharedSite.Invoke(x, y);
         }
 
@@ -679,6 +699,10 @@ namespace IronPython.Runtime.Operations {
             if (x is int && y is int) { return ((int)x) == ((int)y); }
             if (x is double && y is double) { return ((double)x) == ((double)y); }
             if (x is string && y is string) { return ((string)x).Equals((string)y); }
+
+            if (!EqualBooleanSharedSite.IsInitialized) {
+                EqualBooleanSharedSite.EnsureInitialized(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Equals));
+            }
 
             return EqualBooleanSharedSite.Invoke(x, y);
         }
@@ -690,7 +714,11 @@ namespace IronPython.Runtime.Operations {
         public static int Compare(CodeContext/*!*/ context, object x, object y) {
             if (x == y) return 0;
 
-            return CompareSite.Invoke(x, y);
+            if (!_CompareSite.IsInitialized) {
+                _CompareSite.EnsureInitialized(DefaultContext.Default, DoOperationAction.Make(Operators.Compare));
+            }
+
+            return _CompareSite.Invoke(x, y);
         }
 
         public static object CompareEqual(int res) {
@@ -947,7 +975,8 @@ namespace IronPython.Runtime.Operations {
             return DisjointHashComplex(c);
         }
 
-        #region Raw Hash functions for disjoint regions        
+        #region Raw Hash functions for disjoint regions   
+     
         // Bottom level of hashing. 
         // Callers have already done equality comparisons. At this point, we can use any hash technique we want,
         // including calling into Framework or DLR implementations of Object.GetHashCode.
@@ -966,6 +995,7 @@ namespace IronPython.Runtime.Operations {
             Debug.Assert(c.Imag != 0); // if this was float, caller should have delegated to DisjointHashDouble()
             return c.GetHashCode();
         }
+
         #endregion // Raw Hash functions for disjoint regions
 
         /// <summary>
@@ -1216,6 +1246,10 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static object GetIndex(object o, object index) {
+            if (!_getIndexSite.IsInitialized) {
+                _getIndexSite.EnsureInitialized(DefaultContext.Default, DoOperationAction.Make(Operators.GetItem));
+            }
+
             return _getIndexSite.Invoke(o, index);
         }
 
@@ -1354,6 +1388,10 @@ namespace IronPython.Runtime.Operations {
 
         public static void SetAttr(CodeContext/*!*/ context, object o, SymbolId name, object value) {
             DynamicSite<object, object, object> site;
+            if (_setAttrSites == null) {
+                Interlocked.CompareExchange(ref _setAttrSites, new Dictionary<AttrKey, DynamicSite<object, object, object>>(), null);
+            }
+
             lock (_setAttrSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_setAttrSites.TryGetValue(key, out site)) {
@@ -1366,6 +1404,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool TryGetBoundAttr(CodeContext/*!*/ context, object o, SymbolId name, out object ret) {
             DynamicSite<object, object> site;
+
             lock (_tryGetMemSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_tryGetMemSites.TryGetValue(key, out site)) {
@@ -1379,6 +1418,10 @@ namespace IronPython.Runtime.Operations {
 
         public static void DeleteAttr(CodeContext/*!*/ context, object o, SymbolId name) {
             DynamicSite<object, object> site;
+            if (_deleteAttrSites == null) {
+                Interlocked.CompareExchange(ref _deleteAttrSites, new Dictionary<AttrKey, DynamicSite<object, object>>(), null);
+            }
+
             lock (_deleteAttrSites) {
                 AttrKey key = new AttrKey(CompilerHelpers.GetType(o), name);
                 if (!_deleteAttrSites.TryGetValue(key, out site)) {
@@ -1496,17 +1539,27 @@ namespace IronPython.Runtime.Operations {
 
             List res = new List();
 
-            foreach (SymbolId x in DynamicHelpers.GetPythonType(o).GetMemberNames(context, o)) {
-                res.AddNoLock(SymbolTable.IdToString(x));
-            }
-
-#if !SILVERLIGHT
-            if(o != null && ComObject.Is__ComObject(o.GetType())){
-                foreach (SymbolId symbol in ComObject.ObjectToComObject(o).GetMemberNames(context)) {
-                    res.AddNoLock(SymbolTable.IdToString(symbol));
+            if (o is IDynamicObject) {
+                if (!_memberNamesSite.IsInitialized) {
+                    _memberNamesSite.EnsureInitialized(DoOperationAction.Make(Operators.MemberNames));
+                }
+                foreach (object x in _memberNamesSite.Invoke(context, o)) {
+                    res.AddNoLock(x);
                 }
             }
+            else {
+                foreach (SymbolId x in DynamicHelpers.GetPythonType(o).GetMemberNames(context, o)) {
+                    res.AddNoLock(SymbolTable.IdToString(x));
+                }
+
+#if !SILVERLIGHT
+                if (o != null && ComObject.IsGenericComObject(o)) {
+                    foreach (SymbolId symbol in ComObject.ObjectToComObject(o).GetMemberNames(context)) {
+                        res.AddNoLock(SymbolTable.IdToString(symbol));
+                    }
+                }
 #endif
+            }
 
             //!!! ugly, we need to check fro non-SymbolID keys
             IPythonObject dyno = o as IPythonObject;
@@ -1955,7 +2008,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             //Otherwise, if there's a global variable named __metaclass__, it is used.
-            if (context.Scope.ModuleScope.TryLookupName(context.LanguageContext, Symbols.MetaClass, out ret) && ret != null) {
+            if (context.Scope.ModuleScope.TryLookupName(Symbols.MetaClass, out ret) && ret != null) {
                 return ret;
             }
 
@@ -2010,12 +2063,8 @@ namespace IronPython.Runtime.Operations {
         }
 
         private static void EnsureMetaclassSite() {
-            if (MetaclassSite == null) {
-                Interlocked.CompareExchange<DynamicSite<object, string, PythonTuple, IAttributesCollection, object>>(
-                    ref MetaclassSite,
-                    RuntimeHelpers.CreateSimpleCallSite<object, string, PythonTuple, IAttributesCollection, object>(),
-                    null
-                );
+            if (!MetaclassSite.IsInitialized) {
+                MetaclassSite.EnsureInitialized(CallAction.Make(3));
             }
         }
 
@@ -2149,6 +2198,17 @@ namespace IronPython.Runtime.Operations {
                 throw PythonOps.RuntimeError("lost sys.std_out");
             }
 
+            PythonFile pf = f as PythonFile;
+            if (pf != null) {
+                // avoid spinning up a site in the normal case
+                pf.write(text);
+                return;
+            }
+
+            if (!_writeSite.IsInitialized) {
+                _writeSite.EnsureInitialized(DefaultContext.Default, CallAction.Make(1));
+            }
+
             _writeSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, f, Symbols.ConsoleWrite), text);
         }
 
@@ -2169,8 +2229,17 @@ namespace IronPython.Runtime.Operations {
         }
 
         public static bool CheckSoftspace(object f) {
+            PythonFile pf = f as PythonFile;
+            if (pf != null) {
+                // avoid spinning up a site in the common case
+                return pf.softspace;
+            }
+
             object result;
-            if (PythonOps.TryGetBoundAttr(f, Symbols.Softspace, out result)) return PythonOps.IsTrue(result);
+            if (PythonOps.TryGetBoundAttr(f, Symbols.Softspace, out result)) {
+                return PythonOps.IsTrue(result);
+            }
+
             return false;
         }
 
@@ -2314,7 +2383,7 @@ namespace IronPython.Runtime.Operations {
             Scope scope = newmod as Scope;
             if (scope != null) {
                 object all;
-                if (scope.TryGetName(context.LanguageContext, Symbols.All, out all)) {
+                if (scope.TryGetName(Symbols.All, out all)) {
                     IEnumerator exports = PythonOps.GetEnumerator(all);
 
                     while (exports.MoveNext()) {
@@ -2440,9 +2509,10 @@ namespace IronPython.Runtime.Operations {
 
             IAttributesCollection attrLocals = Builtin.GetAttrLocals(context, locals);
 
-            Scope scope = new Scope(context.LanguageContext, new Scope(context.LanguageContext, globals), attrLocals);
+            Scope scope = new Scope(new Scope(globals), attrLocals);
+            scope.SetExtension(context.LanguageContext.ContextId, ((PythonModule)context.ModuleContext).Clone());
 
-            fc.Call(new CodeContext(scope, context.LanguageContext, ((PythonModule)context.ModuleContext).Clone()), scope, tryEvaluate);
+            fc.Call(new CodeContext(scope, context.LanguageContext), scope, tryEvaluate);
         }
 
         #endregion        
@@ -2461,6 +2531,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Exception handling
+
         // The semantics here are:
         // 1. Each thread has a "current exception", which is returned as a tuple by sys.exc_info().
         // 2. The current exception is set on encountering an except block, even if the except block doesn't
@@ -2521,9 +2592,7 @@ namespace IronPython.Runtime.Operations {
         // Called at function exit (like popping). Pass value from SaveCurrentException.
         public static void RestoreCurrentException(Exception clrException) {
             RawException = clrException;
-        }
- 
-
+        } 
 
         public static object CheckException(object exception, object test) {
             Debug.Assert(exception != null);
@@ -2890,7 +2959,7 @@ namespace IronPython.Runtime.Operations {
 
         public static object GetMixedMember(CodeContext/*!*/ context, PythonType type, object instance, SymbolId name) {
             foreach (PythonType t in type.ResolutionOrder) {
-                if (Mro.IsOldStyle(t)) {
+                if (t.IsOldClass) {
                     OldClass oc = (OldClass)ToPythonType(t);
                     object ret;
                     if (oc.__dict__._storage.TryGetValue(name, out ret)) {

@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections.Generic;
@@ -96,7 +96,8 @@ namespace IronPython.Runtime {
             int emptyCount = 0;
 
             foreach (WeakObject<TKey> w in dict.Keys) {
-                if (w.Target != null)
+                TKey tmp;
+                if(w.TryGetTarget(out tmp)) 
                     liveCount++;
                 else
                     emptyCount++;
@@ -107,11 +108,10 @@ namespace IronPython.Runtime {
                 Dictionary<object, TValue> newtable = new Dictionary<object, TValue>(liveCount + liveCount / 4, comparer);
 
                 foreach (WeakObject<TKey> w in dict.Keys) {
-                    object target = w.Target;
-
-                    if (target != null)
+                    TKey target;
+                    if (w.TryGetTarget(out target)) {
                         newtable[w] = dict[w];
-
+                    }
                     GC.KeepAlive(target);
                 }
 
@@ -178,10 +178,14 @@ namespace IronPython.Runtime {
             hashCode = RuntimeHelpers.GetHashCode(obj);
         }
 
-        public T Target {
-            get {
-                return (T)weakReference.Target;
-            }
+        public bool TryGetTarget(out T target) {
+            object res = weakReference.Target;
+            if (res != null) {
+                target = (T)res;
+                return true;
+            }            
+            target = default(T);
+            return false;
         }
 
         public override int GetHashCode() {
@@ -189,7 +193,11 @@ namespace IronPython.Runtime {
         }
 
         public override bool Equals(object obj) {
-            return Target.Equals(obj);
+            T target;
+            if (TryGetTarget(out target)) {
+                return target.Equals(obj);
+            }
+            return false;
         }
     }
 
@@ -197,12 +205,18 @@ namespace IronPython.Runtime {
     sealed class WeakComparer<T> : IEqualityComparer<T> {
         bool IEqualityComparer<T>.Equals(T x, T y) {
             WeakObject<T> wx = x as WeakObject<T>;
-            if (wx != null)
-                x = wx.Target;
+            if (wx != null) {
+                if (!wx.TryGetTarget(out x)) {
+                    return false;
+                }
+            }
 
             WeakObject<T> wy = y as WeakObject<T>;
-            if (wy != null)
-                y = wy.Target;
+            if (wy != null) {
+                if (!wy.TryGetTarget(out y)) {
+                    return false;
+                }
+            }
 
             return Object.Equals(x, y);
         }
@@ -251,8 +265,13 @@ namespace IronPython.Runtime {
         public T GetObjectFromId(int id) {
             object ret;
             if (dict.TryGetValue(id, out ret)) {
-                if (ret is WeakObject<T>) {
-                    return ((WeakObject<T>)ret).Target;
+                WeakObject<T> wt = ret as WeakObject<T>;
+                if(wt != null) {
+                    T tres;
+                    if (wt.TryGetTarget(out tres)) {
+                        return tres;
+                    }
+                    return default(T);
                 }
                 if (ret is T) {
                     return (T)ret;
@@ -266,10 +285,12 @@ namespace IronPython.Runtime {
         public int GetIdFromObject(T value) {
             lock (synchObject) {
                 foreach (KeyValuePair<int, object> kv in dict) {
-                    if (kv.Value is WeakObject<T>) {
-                        object target = ((WeakObject<T>)kv.Value).Target;
-                        if (target != null && target.Equals(value))
+                    WeakObject<T> val = kv.Value as WeakObject<T>;
+                    if (val != null) {
+                        T target;
+                        if (val.TryGetTarget(out target) && target.Equals(value)) {
                             return kv.Key;
+                        }
                     } else if (kv.Value is T) {
                         object target = (T)(kv.Value);
                         if (target.Equals(value))

@@ -132,26 +132,26 @@
   </Target>
 
   <Target Name="TypeSample" Inputs="src\typesamples.cs;src\testsupport.cs" Outputs="$(OutputPath)\$(Prefix)typesamples.dll">
-    <Csc TargetType="library" Sources="src\typesamples.cs;src\testsupport.cs" OutputAssembly="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\typesamples.cs;src\testsupport.cs" OutputAssembly="$(OutputPath)\$(Prefix)typesamples.dll" />
   </Target>
 
   <Target Name="CSManyArea" Inputs="@(AreaCSFile)" Outputs="@(AreaCSFile->'$(OutputPath)\$(Prefix)%(Filename).dll')" DependsOnTargets="TypeSample" >
-    <Csc TargetType="library" Sources="src\fieldtests.cs" OutputAssembly="$(OutputPath)\$(Prefix)fieldtests.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\methodargs.cs" OutputAssembly="$(OutputPath)\$(Prefix)methodargs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\returnvalues.cs" OutputAssembly="$(OutputPath)\$(Prefix)returnvalues.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\operators.cs" OutputAssembly="$(OutputPath)\$(Prefix)operators.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\userdefinedconversions.cs" OutputAssembly="$(OutputPath)\$(Prefix)userdefinedconversions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\delegatedefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)delegatedefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\eventdefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)eventdefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\propertydefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)propertydefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\indexerdefinitionscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\defaultmemberscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)defaultmemberscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Csc TargetType="library" Sources="src\baseclasscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)baseclasscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\fieldtests.cs" OutputAssembly="$(OutputPath)\$(Prefix)fieldtests.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\methodargs.cs" OutputAssembly="$(OutputPath)\$(Prefix)methodargs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\returnvalues.cs" OutputAssembly="$(OutputPath)\$(Prefix)returnvalues.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\operators.cs" OutputAssembly="$(OutputPath)\$(Prefix)operators.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\userdefinedconversions.cs" OutputAssembly="$(OutputPath)\$(Prefix)userdefinedconversions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true"  Sources="src\delegatedefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)delegatedefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true"  Sources="src\eventdefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)eventdefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\propertydefinitions.cs" OutputAssembly="$(OutputPath)\$(Prefix)propertydefinitions.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\indexerdefinitionscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\defaultmemberscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)defaultmemberscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Csc TargetType="library" EmitDebugInformation="true" Sources="src\baseclasscs.cs" OutputAssembly="$(OutputPath)\$(Prefix)baseclasscs.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
   </Target>
   <Target Name="VBManyArea" Inputs="@(AreaVBFile)" Outputs="@(AreaCSFile->'$(OutputPath)\$(Prefix)%(Filename).dll')" DependsOnTargets="TypeSample" >
-    <Vbc TargetType="library" Sources="src\indexerdefinitionsvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionsvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Vbc TargetType="library" Sources="src\defaultmembersvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)defaultmembersvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
-    <Vbc TargetType="library" Sources="src\baseclassvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)baseclassvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Vbc TargetType="library" EmitDebugInformation="true" Sources="src\indexerdefinitionsvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)indexerdefinitionsvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Vbc TargetType="library" EmitDebugInformation="true" Sources="src\defaultmembersvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)defaultmembersvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
+    <Vbc TargetType="library" EmitDebugInformation="true" Sources="src\baseclassvb.vb" OutputAssembly="$(OutputPath)\$(Prefix)baseclassvb.dll"  References="$(OutputPath)\$(Prefix)typesamples.dll" />
   </Target>
 
   <Target Name="BeforeBuild" DependsOnTargets="LoadOrder;ReachType;CSManyArea;VBManyArea" /> 

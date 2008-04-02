@@ -1,17 +1,17 @@
 #####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 boundaries = (None, -7,-2,0,1,6,10)
 steps = (-5,-3,-1,1,5,20)
@@ -31,18 +31,18 @@ group_test=['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q']
 file = open("Tests\\IndiceTest.py", "w")
 file.write("""#####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 from Util.Debug import *
 

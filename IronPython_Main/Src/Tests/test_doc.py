@@ -17,6 +17,7 @@
 
 from lib.assert_util import *
 
+@skip('interactive')
 def test_sanity():
     ## module
     global __doc__

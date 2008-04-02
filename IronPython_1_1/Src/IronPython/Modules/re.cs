@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Text;
@@ -118,7 +118,46 @@ namespace IronPython.Modules {
             RE_Pattern pat = new RE_Pattern(ValidatePattern(pattern), flags);
             ValidateString(@string, "string");
 
-            return pat.FindAll(@string, 0, @string.Length);
+            MatchCollection mc = pat.FindAllWorker(@string, 0, @string.Length);
+            return FixFindAllMatch(pat, mc);
+        }
+
+        private static object FixFindAllMatch(RE_Pattern pat, MatchCollection mc) {
+            object[] matches = new object[mc.Count];
+            int numgrps = pat.re.GetGroupNumbers().Length;
+            for (int i = 0; i < mc.Count; i++) {
+                if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
+                    //  at this point we have more than one group in the pattern;
+                    //  need to return a list of tuples in this case
+
+                    //  for each match item in the matchcollection, create a tuple representing what was matched
+                    //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
+                    //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
+                    //  match (\w+) as indicated by 'x' and so on...
+                    int k = 0;
+                    List<object> tpl = new List<object>();
+                    foreach (Group g in mc[i].Groups) {
+                        //  here also the CLR gives us a "bonus" match as the first item which is the 
+                        //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
+                        //  the first match object...so we'll skip the first item when creating the 
+                        //  tuple
+                        if (k++ != 0) {
+                            tpl.Add(g.Value);
+                        }
+                    }
+                    matches[i] = Tuple.Make(tpl);
+                } else if (numgrps == 2) {
+                    //  at this point we have exactly one group in the pattern (including the "bonus" one given 
+                    //  by the CLR 
+                    //  skip the first match since that contains the entire match and not the group match
+                    //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
+                    //  index and "green" as the (\w+) group match
+                    matches[i] = mc[i].Groups[1].Value;
+                } else {
+                    matches[i] = mc[i].Value;
+                }
+            }
+            return new List(matches);
         }
 
         [PythonName("finditer")]
@@ -215,23 +254,34 @@ namespace IronPython.Modules {
             [PythonName("match")]
             public RE_Match Match(object text) {
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(re.Match(input), this, input, 0);
+                return RE_Match.makeMatch(re.Match(input), this, input, 0, input.Length);
+            }
+
+            private static int FixPosition(string text, int position) {
+                if (position < 0) return 0;
+                if (position > text.Length) return text.Length;
+
+                return position;
             }
 
             [PythonName("match")]
-            public RE_Match Match(object text, int pos) {
+            public RE_Match Match(object text, int pos) {                
                 string input = ValidateString(text, "text");
-                return RE_Match.makeMatch(re.Match(input, pos), this, input, pos);
+                pos = FixPosition(input, pos);
+                return RE_Match.makeMatch(re.Match(input, pos), this, input, pos, input.Length);
             }
 
             [PythonName("match")]
-            public RE_Match Match(object text, [DefaultParameterValue(0)] int pos, int endpos) {
+            public RE_Match Match(object text, [DefaultParameterValue(0)] int pos, int endpos) {                
                 string input = ValidateString(text, "text");
+                pos = FixPosition(input, pos);
+                endpos = FixPosition(input, endpos);
                 return RE_Match.makeMatch(
                     re.Match(input.Substring(0, endpos), pos),
                     this,
                     input,
-                    pos);
+                    pos,
+                    endpos);
             }
 
             [PythonName("search")]
@@ -265,42 +315,8 @@ namespace IronPython.Modules {
             [PythonName("findall")]
             public object FindAll(object @string, int pos, object endpos) {
                 MatchCollection mc = FindAllWorker(ValidateString(@string, "text"), pos, endpos);
-                object[] matches = new object[mc.Count];
-                int numgrps = re.GetGroupNumbers().Length;
-                for (int i = 0; i < mc.Count; i++) {
-                    if (numgrps > 2) { // CLR gives us a "bonus" group of 0 - the entire expression
-                        //  at this point we have more than one group in the pattern;
-                        //  need to return a list of tuples in this case
 
-                        //  for each match item in the matchcollection, create a tuple representing what was matched
-                        //  e.g. findall("(\d+)|(\w+)", "x = 99y") == [('', 'x'), ('99', ''), ('', 'y')]
-                        //  in the example above, ('', 'x') did not match (\d+) as indicated by '' but did 
-                        //  match (\w+) as indicated by 'x' and so on...
-                        int k = 0;
-                        ArrayList tpl = new ArrayList();
-                        foreach (Group g in mc[i].Groups) {
-                            //  here also the CLR gives us a "bonus" match as the first item which is the 
-                            //  group that was actually matched in the tuple e.g. we get 'x', '', 'x' for 
-                            //  the first match object...so we'll skip the first item when creating the 
-                            //  tuple
-                            if (k++ != 0) {
-                                tpl.Add(g.Value);
-                            }
-                        }
-                        matches[i] = Tuple.Make(tpl);
-                    } else if (numgrps == 2) {
-                        //  at this point we have exactly one group in the pattern (including the "bonus" one given 
-                        //  by the CLR 
-                        //  skip the first match since that contains the entire match and not the group match
-                        //  e.g. re.findall(r"(\w+)\s+fish\b", "green fish") will have "green fish" in the 0 
-                        //  index and "green" as the (\w+) group match
-                        matches[i] = mc[i].Groups[1].Value;
-                    } else {
-                        matches[i] = mc[i].Value;
-                    }
-                }
-
-                return new List(matches);
+                return new List(FixFindAllMatch(this, mc));
             }
 
             internal MatchCollection FindAllWorker(string str, int pos, object endpos) {
@@ -348,20 +364,22 @@ namespace IronPython.Modules {
                     int lastPos = 0; // is either start of the string, or first position *after* the last match
                     int nSplits = 0; // how many splits have occurred?
                     foreach (Match m in matches) {
-                        // add substring from lastPos to beginning of current match
-                        result.AddNoLock(theStr.Substring(lastPos, m.Index - lastPos));
-                        // if there are subgroups of the match, add their match or None
-                        if (m.Groups.Count > 1)
-                            for (int i = 1; i < m.Groups.Count; i++)
-                                if (m.Groups[i].Success)
-                                    result.AddNoLock(m.Groups[i].Value);
-                                else
-                                    result.AddNoLock(null);
-                        // update lastPos, nSplits
-                        lastPos = m.Index + m.Length;
-                        nSplits++;
-                        if (nSplits == maxsplit)
-                            break;
+                        if (m.Length > 0) {
+                            // add substring from lastPos to beginning of current match
+                            result.AddNoLock(theStr.Substring(lastPos, m.Index - lastPos));
+                            // if there are subgroups of the match, add their match or None
+                            if (m.Groups.Count > 1)
+                                for (int i = 1; i < m.Groups.Count; i++)
+                                    if (m.Groups[i].Success)
+                                        result.AddNoLock(m.Groups[i].Value);
+                                    else
+                                        result.AddNoLock(null);
+                            // update lastPos, nSplits
+                            lastPos = m.Index + m.Length;
+                            nSplits++;
+                            if (nSplits == maxsplit)
+                                break;
+                        }
                     }
                     // add tail following last match
                     result.AddNoLock(theStr.Substring(lastPos));
@@ -464,8 +482,11 @@ namespace IronPython.Modules {
                         Dict d = new Dict();
                         string[] names = re.GetGroupNames();
                         int[] nums = re.GetGroupNumbers();
-                        for (int i = 1; i < names.Length; i++)
+                        for (int i = 1; i < names.Length; i++) {
+                            if (Char.IsDigit(names[i][0])) continue;    // skip numeric names
+
                             d[names[i]] = nums[i];
+                        }
                         groups = d;
                     }
                     return groups;
@@ -503,6 +524,7 @@ namespace IronPython.Modules {
             private Match m;
             private string text;
             private int lastindex = -1;
+            private int endPos;
 
             #region Internal makers
             internal static RE_Match make(Match m, RE_Pattern pattern, string input) {
@@ -510,8 +532,8 @@ namespace IronPython.Modules {
                 return null;
             }
 
-            internal static RE_Match makeMatch(Match m, RE_Pattern pattern, string input, int offset) {
-                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input);
+            internal static RE_Match makeMatch(Match m, RE_Pattern pattern, string input, int offset, int endPos) {
+                if (m.Success && m.Index == offset) return new RE_Match(m, pattern, input, endPos);
                 return null;
             }
             #endregion
@@ -521,6 +543,12 @@ namespace IronPython.Modules {
                 this.m = m;
                 this.pattern = pattern;
                 this.text = text;
+            }
+            public RE_Match(Match m, RE_Pattern pattern, string text, int endpos) {
+                this.m = m;
+                this.pattern = pattern;
+                this.text = text;
+                this.endPos = endpos;
             }
             #endregion
 
@@ -643,13 +671,20 @@ namespace IronPython.Modules {
                 return GroupDict(null);
             }
 
+            private static bool IsGroupNumber(string name) {
+                foreach (char c in name) {
+                    if (!Char.IsNumber(c)) return false;
+                }
+                return true;
+            }
+
             [PythonName("groupdict")]
             public object GroupDict(object value) {
                 string[] groupNames = this.pattern.re.GetGroupNames();
                 Debug.Assert(groupNames.Length == this.m.Groups.Count);
                 Dict d = new Dict();
                 for (int i = 0; i < groupNames.Length; i++) {
-                    if (groupNames[i] == "0") continue; // python doesn't report this overarching group
+                    if (IsGroupNumber(groupNames[i])) continue; // python doesn't report group numbers
 
                     if (m.Groups[i].Captures.Count != 0) {
                         d[groupNames[i]] = m.Groups[i].Value;
@@ -680,7 +715,7 @@ namespace IronPython.Modules {
             public int EndPosition {
                 [PythonName("endpos")]
                 get {
-                    return m.Index + m.Length;
+                    return endPos;
                 }
             }
 
@@ -694,10 +729,15 @@ namespace IronPython.Modules {
             public object Regs {
                 [PythonName("regs")]
                 get {
-                    // what is this?
-                    return Tuple.MakeTuple(Tuple.MakeTuple(0, 1), Tuple.MakeTuple(0, 1));
+                    object[] res = new object[m.Groups.Count];
+                    for(int i = 0; i<res.Length; i++) {
+                        res[i] = Tuple.MakeTuple(this.Start(i), this.End(i));
+                    }
+                                        
+                    return Tuple.MakeTuple(res);
                 }
             }
+
             public object Pattern {
                 [PythonName("re")]
                 get {
@@ -977,7 +1017,6 @@ namespace IronPython.Modules {
                                 case 'r': sb.Append('\r'); break;
                                 case 't': sb.Append('\t'); break;
                                 case '\\': sb.Append('\\'); break;
-                                case '?': sb.Append('?'); break;
                                 case '\'': sb.Append('\''); break;
                                 case '"': sb.Append('"'); break;
                                 case 'b': sb.Append('\b'); break;

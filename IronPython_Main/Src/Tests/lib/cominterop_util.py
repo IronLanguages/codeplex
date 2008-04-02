@@ -499,9 +499,10 @@ def IsExcelInstalled():
 #------------------------------------------------------------------------------
 def CreateAgentServer():
     if preferComDispatch:
-        from System import Type, Activator
-        agentServerType = Type.GetTypeFromProgID("Agent.Server")
-        return Activator.CreateInstance(agentServerType)
+        import clr
+        from System import Guid
+        typelib = clr.LoadTypeLibrary(Guid("A7B93C73-7B81-11D0-AC5F-00C04FD97575"))
+        return typelib.AgentServerObjects.AgentServer()
     else:
         if not file_exists(agentsvr_path):
             from sys import exit

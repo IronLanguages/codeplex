@@ -55,7 +55,7 @@ namespace IronPython.Runtime.Calls {
             _context = pythonContext;
         }
 
-        private StandardRule<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
+        private RuleBuilder<T> MakeRuleWorker<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             switch (action.Kind) {
                 case DynamicActionKind.DoOperation:
                     return new PythonDoOperationBinderHelper<T>(context, (DoOperationAction)action).MakeRule(args);
@@ -65,14 +65,14 @@ namespace IronPython.Runtime.Calls {
                     return new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
                 case DynamicActionKind.Call:
                     // if call fails Python will try and create an instance as it treats these two operations as the same.
-                    StandardRule<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
+                    RuleBuilder<T> rule = new PythonCallBinderHelper<T>(context, (CallAction)action, args).MakeRule();
                     if (rule == null) {
                         rule = base.MakeRule<T>(context, action, args);
 
                         if (rule.IsError) {
                             // try CreateInstance...
                             CreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((CallAction)action);
-                            StandardRule<T> newRule = GetRule<T>(context, createAct, args);
+                            RuleBuilder<T> newRule = GetRule<T>(context, createAct, args);
                             if (!newRule.IsError) {
                                 return newRule;
                             }
@@ -86,7 +86,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        protected override StandardRule<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
+        protected override RuleBuilder<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
             return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
         }
 
@@ -231,7 +231,7 @@ namespace IronPython.Runtime.Calls {
             switch (name) {
                 case "__str__":
 #if !SILVERLIGHT
-                    if (!ComObject.Is__ComObject(type)) {
+                    if (!ComObject.IsGenericComObjectType(type)) {
 #else
                     if (true) {
 #endif
@@ -243,7 +243,7 @@ namespace IronPython.Runtime.Calls {
                     break;
                 case "__repr__":
 #if !SILVERLIGHT
-                    if (!ComObject.Is__ComObject(type)) {                    
+                    if (!ComObject.IsGenericComObjectType(type)) {                    
 #else
                     if (true) {
 #endif
@@ -382,7 +382,7 @@ namespace IronPython.Runtime.Calls {
             return true;
         }
 
-        public override ErrorInfo MakeEventValidation(StandardRule rule, MemberGroup members) {
+        public override ErrorInfo MakeEventValidation(RuleBuilder rule, MemberGroup members) {
             EventTracker ev = (EventTracker)members[0];
 
             return ErrorInfo.FromValueNoError(
@@ -406,7 +406,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        public override Expression MakeReadOnlyMemberError<T>(StandardRule<T> rule, Type type, string name) {
+        public override Expression MakeReadOnlyMemberError<T>(RuleBuilder<T> rule, Type type, string name) {
             return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),
@@ -420,7 +420,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        public override Expression MakeUndeletableMemberError<T>(StandardRule<T> rule, Type type, string name) {
+        public override Expression MakeUndeletableMemberError<T>(RuleBuilder<T> rule, Type type, string name) {
             return rule.MakeError(
                 Ast.New(
                     typeof(MissingMemberException).GetConstructor(new Type[] { typeof(string) }),

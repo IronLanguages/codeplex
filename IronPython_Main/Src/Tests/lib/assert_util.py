@@ -55,6 +55,7 @@ if not is_silverlight:
         return temp
     
     ironpython_dlls = [
+        "Microsoft.Scripting.Core.dll",
         "Microsoft.Scripting.dll",
         "Microsoft.Scripting.Internal.dll",
         "IronPython.Modules.dll",
@@ -165,6 +166,14 @@ def is_interpreted():
     else:
         return False    
 
+def is_interactive():
+    if not is_silverlight:
+        isInteractive = get_environ_variable("ISINTERACTIVE")
+        if isInteractive != None:
+            return True
+    else:
+	    return False
+
 # test support 
 def Fail(m):  raise AssertionError(m)
 
@@ -248,6 +257,7 @@ if is_silverlight:
     def load_iron_python_test(*args):
         import clr
 
+        clr.AddReference("Microsoft.Scripting.Core")
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
@@ -269,6 +279,7 @@ else:
     def load_iron_python_test(*args):
         import clr
 
+        clr.AddReference("Microsoft.Scripting.Core")
         clr.AddReference("Microsoft.Scripting")
         clr.AddReference("IronPython")
 
@@ -315,7 +326,9 @@ class skip:
         return is_orcas
     def interpreted_test(self):
         return is_interpreted()
-    
+    def interactive_test(self):
+	    return is_interactive()
+	    
     def __call__(self, f):
         #skip questionable tests
         if is_silverlight and 'silverlightbug?' in self.platforms:
@@ -326,7 +339,7 @@ class skip:
                 self.platforms, f.func_name)
             return _do_nothing(msg)
 
-        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted'
+        platforms = 'silverlight', 'cli64', 'orcas', 'interpreted', 'interactive'
         for to_skip in platforms:
             platform_test = getattr(self, to_skip + '_test')
             if to_skip in self.platforms and platform_test():
@@ -366,6 +379,10 @@ def skiptest(*args):
         
     elif is_interpreted() and 'interpreted' in args:
         print '... %s, skipping whole test module under "interpreted" mode...' % sys.platform
+        exit_module()     
+        
+    elif is_interactive() and 'interactive' in args:
+        print '... %s, skipping whole test module under "interactive" mode...' % sys.platform
         exit_module()     
     
     elif is_cli64 and 'cli64' in args:

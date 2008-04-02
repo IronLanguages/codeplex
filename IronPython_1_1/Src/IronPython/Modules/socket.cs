@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections;
@@ -30,6 +30,7 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Exceptions;
+using System.IO;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
@@ -46,7 +47,7 @@ namespace IronPython.Modules {
             + "details, check the docstrings of the functions mentioned.\n"
             + " - s.accept(), s.connect(), and s.connect_ex() do not support timeouts.\n"
             + " - Timeouts in s.sendall() don't work correctly.\n"
-            + " - makefile() and s.dup() are not implemented.\n"
+            + " - s.dup() is not implemented.\n"
             + " - getservbyname() and getservbyport() are not implemented.\n"
             + " - SSL support is not implemented."
             + "\n"
@@ -321,10 +322,8 @@ namespace IronPython.Modules {
                 + "Return a regular file object corresponding to the socket.  The mode\n"
                 + "and bufsize arguments are as for the built-in open() function.")]
             [PythonName("makefile")]
-            public PythonFile MakeFile([DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
-                if (bufSize == -1) bufSize = 8192;
-                socket.SendBufferSize = socket.ReceiveBufferSize = bufSize;
-                return new PythonFile(new NetworkStream(socket), System.Text.Encoding.Default, mode);
+            public PythonFile MakeFile(ICallerContext context, [DefaultParameterValue("r")]string mode, [DefaultParameterValue(8192)]int bufSize) {
+                return new FileObject(context, this, mode, bufSize);
             }
 
             [Documentation("recv(bufsize[, flags]) -> string\n\n"
@@ -706,19 +705,24 @@ namespace IronPython.Modules {
             [DefaultParameterValue((int)ProtocolType.IP)] int proto,
             [DefaultParameterValue((int)SocketFlags.None)] int flags
         ) {
-            int numericPort = 0;
-
-            string sport;
-            if (port is int) {
-                numericPort = (int)port;
-            } else if ((sport = port as string) != null) {
-                if (!Int32.TryParse(sport, out numericPort)) {
-                    // Disabled because GetServiceByName is not implemented
-                    // numericPort = GetServiceByName(sport, null);
-                    throw MakeException(gaierror, "getaddrinfo - invalid port string");
-                }
-            } else if (port == null) {
+            int numericPort;
+            
+            if (port == null) {
                 numericPort = 0;
+            } else if (port is int) {
+                numericPort = (int)port;
+            } else if (port is ExtensibleInt) {
+                numericPort = ((ExtensibleInt)port).value;
+            } else if (port is string) {
+                if (!Int32.TryParse((string)port, out numericPort)) {
+                    // TODO: also should consult GetServiceByName                    
+                    throw MakeException(gaierror, "getaddrinfo failed");
+                }
+            } else if (port is ExtensibleString) {
+                if (!Int32.TryParse(((ExtensibleString)port).Value, out numericPort)) {
+                    // TODO: also should consult GetServiceByName                    
+                    throw MakeException(gaierror, "getaddrinfo failed");
+                }
             } else {
                 throw MakeException(gaierror, "getaddrinfo - invalid port, expected int or str");
             }
@@ -735,6 +739,9 @@ namespace IronPython.Modules {
             if (!Enum.IsDefined(typeof(AddressFamily), addressFamily)) {
                 throw MakeException(gaierror, Tuple.MakeTuple((int)SocketError.AddressFamilyNotSupported, "getaddrinfo failed"));
             }
+
+            // Again, we just validate, but don't actually use protocolType
+            ProtocolType protocolType = (ProtocolType)Enum.ToObject(typeof(ProtocolType), proto);
 
             IPAddress[] ips = HostToAddresses(host, addressFamily);
 
@@ -1315,6 +1322,7 @@ namespace IronPython.Modules {
             if (exception is SocketException) {
                 SocketException se = (SocketException)exception;
                 switch (se.SocketErrorCode) {
+                    case SocketError.NotConnected:  // CPython times out when the socket isn't connected.
                     case SocketError.TimedOut:
                         return MakeException(timeout, se.ErrorCode, se.Message);
                     default:
@@ -1553,6 +1561,121 @@ namespace IronPython.Modules {
         }
 
         #endregion
+
+        class PythonUserSocketStream : Stream {
+            private object _userSocket;
+            private List<string> _data = new List<string>();
+            private int _dataSize, _bufSize;
+
+            public PythonUserSocketStream(object userSocket, int bufferSize) {
+                _userSocket = userSocket;
+                _bufSize = bufferSize;
+            }
+
+            public override bool CanRead {
+                get { return true; }
+            }
+
+            public override bool CanSeek {
+                get { return false; }
+            }
+
+            public override bool CanWrite {
+                get { return true; }
+            }
+
+            public override void Flush() {
+                if (_data.Count > 0) {
+                    StringBuilder res = new StringBuilder();
+                    foreach (string s in _data) {
+                        res.Append(s);
+                    }
+                    Ops.Invoke(_userSocket, SymbolTable.StringToId("sendall"), res.ToString());
+                    _data.Clear();
+                }
+            }
+
+            public override long Length {
+                get { throw new NotImplementedException(); }
+            }
+
+            public override long Position {
+                get {
+                    throw new NotImplementedException();
+                }
+                set {
+                    throw new NotImplementedException();
+                }
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) {
+                int size = count;
+                string data = Ops.Invoke(_userSocket, SymbolTable.StringToId("recv"), count) as string;
+
+                return Encoding.ASCII.GetBytes(data, 0, data.Length, buffer, offset);
+            }
+
+            public override long Seek(long offset, SeekOrigin origin) {
+                throw new NotImplementedException();
+            }
+
+            public override void SetLength(long value) {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count) {
+                string strData = new string(Encoding.ASCII.GetChars(buffer, offset, count));
+                _data.Add(strData);
+                _dataSize += strData.Length;
+                if (_dataSize > _bufSize) {
+                    Flush();
+                }
+            }
+
+            public object Socket {
+                [PythonName("_sock")]
+                get {
+                    return _userSocket;
+                }
+            }
+        }
+
+        [PythonType("_fileobject")]
+        public class FileObject : PythonFile {
+            private const int DefaultBufferSize = 8192;
+            public static object default_bufsize = DefaultBufferSize;
+            public static string name = "<socket>";
+
+            public FileObject(ICallerContext context, SocketObj socket)
+                : this(context, socket, "rb", -1) {
+            }
+
+            public FileObject(ICallerContext context, SocketObj socket, string mode)
+                : this(context, socket, mode, -1) {
+            }
+
+            public FileObject(ICallerContext context, SocketObj socket, string mode, int bufsize)
+                : base(new NetworkStream(socket.socket), context.SystemState.DefaultEncoding, name, mode) {
+                socket.socket.SendBufferSize = socket.socket.ReceiveBufferSize = GetBufferSize(bufsize);
+            }
+
+            public FileObject(ICallerContext context, object socket)
+                : this(context, socket, "rb", -1) {
+            }
+
+            public FileObject(ICallerContext context, object socket, string mode)
+                : this(context, socket, mode, -1) {
+            }
+
+            public FileObject(ICallerContext context, object socket, string mode, int bufsize)
+                : base(new PythonUserSocketStream(socket, GetBufferSize(bufsize)), context.SystemState.DefaultEncoding, name, mode) {
+            }
+
+            private static int GetBufferSize(int size) {
+                if (size == -1) return DefaultBufferSize;
+                return size;
+            }
+        }
 
     }
 }
