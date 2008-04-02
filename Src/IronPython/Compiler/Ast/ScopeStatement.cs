@@ -78,7 +78,7 @@ namespace IronPython.Compiler.Ast {
                     // in the dictionary also that were used for name binding lookups
                     // Do not publish parameters, they will get created separately.
                     if (pv.Scope == this && pv.Kind != VariableKind.Parameter) {
-                        MSAst.VariableExpression var = pv.Transform(ag);
+                        MSAst.Expression var = pv.Transform(ag);
                         if (pv.Unassigned && pv.Kind == VariableKind.Local) {
                             init.Add(
                                 MSAst.Ast.Assign(

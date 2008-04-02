@@ -81,8 +81,8 @@ namespace IronPython.Compiler.Ast {
             set { _variable = value; }
         }
 
-        internal MSAst.VariableExpression Transform(AstGenerator inner) {
-            MSAst.VariableExpression parameter = inner.Block.CreateParameter(Name, typeof(object));
+        internal MSAst.Expression Transform(AstGenerator inner) {
+            MSAst.ParameterExpression parameter = inner.Block.CreateParameter(Name, typeof(object));
             _variable.SetParameter(parameter);
             return parameter;
         }
@@ -117,7 +117,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression stmt = _tuple.TransformSet(
                 inner,
                 Span,
-                Ast.Read(Variable.Variable),
+                Variable.Variable,
                 Operators.None
             );
 

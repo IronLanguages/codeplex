@@ -76,7 +76,7 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
                 case DynamicActionKind.Call: return MakeCallRule<T>((CallAction)action, context, args);
                 case DynamicActionKind.DoOperation: return MakeDoOperationRule<T>((DoOperationAction)action, context, args);
@@ -84,7 +84,7 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch(doOperationAction.Operation) {
                 case Operators.CallSignatures:
                     return PythonDoOperationBinderHelper<T>.MakeCallSignatureRule(context.LanguageContext.Binder, Target.Targets, DynamicHelpers.GetPythonType(args[0]));
@@ -94,7 +94,7 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
             CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(
                 context, 
                 action, 
@@ -102,7 +102,7 @@ namespace IronPython.Runtime.Types {
                 Target.Targets, 
                 Target.Level,
                 Target.IsReversedOperator);
-            StandardRule<T> rule = helper.Rule;
+            RuleBuilder<T> rule = helper.Rule;
             Expression instance = Ast.ReadProperty(
                 Ast.Convert(
                     rule.Parameters[0],
@@ -147,7 +147,7 @@ namespace IronPython.Runtime.Types {
 
             helper.Instance = instance;
 
-            StandardRule<T> newRule = helper.MakeRule();
+            RuleBuilder<T> newRule = helper.MakeRule();
             if (newRule == rule) {
                 // work around ActionOnCall, we should flow the rule in eventually.
                 // For the time being it contains sufficient tests so we don't need

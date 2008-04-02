@@ -33,7 +33,7 @@ namespace IronPython.Runtime.Calls {
         /// </summary>
         private static readonly Dictionary<TypeErrorKey, object> _typeErrorTemplates = new Dictionary<TypeErrorKey, object>();
 
-        public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, StandardRule<T> rule) {
+        public static Expression[] GetCollapsedIndexArguments<T>(DoOperationAction action, object[] args, RuleBuilder<T> rule) {
             int simpleArgCount = (action.Operation == Operators.GetItem || action.Operation == Operators.DeleteItem) ? 2 : 3;
 
             Expression[] exprargs = new Expression[simpleArgCount];
@@ -61,19 +61,19 @@ namespace IronPython.Runtime.Calls {
             return exprargs;
         }
 
-        public static void MakeTest(StandardRule rule, bool templatable, params PythonType[] types) {
+        public static void MakeTest(RuleBuilder rule, bool templatable, params PythonType[] types) {
             rule.Test = MakeTestForTypes(rule, types, templatable, 0);
         }
 
-        public static void MakeTest(StandardRule rule, params PythonType[] types) {
+        public static void MakeTest(RuleBuilder rule, params PythonType[] types) {
             rule.Test = MakeTestForTypes(rule, types, 0);
         }
 
-        public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, int index) {
+        public static Expression MakeTestForTypes(RuleBuilder rule, PythonType[] types, int index) {
             return MakeTestForTypes(rule, types, false, index);
         }
 
-        public static Expression MakeTestForTypes(StandardRule rule, PythonType[] types, bool templatable, int index) {
+        public static Expression MakeTestForTypes(RuleBuilder rule, PythonType[] types, bool templatable, int index) {
             Debug.Assert(rule != null);
             Expression test = MakeTypeTest(rule, types[index], rule.Parameters[index], templatable);
             if (index + 1 < types.Length) {
@@ -90,7 +90,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        public static Expression MakeTypeTest(StandardRule rule, PythonType type, Expression tested, bool templatable) {
+        public static Expression MakeTypeTest(RuleBuilder rule, PythonType type, Expression tested, bool templatable) {
             if (!templatable && (type == null || type.IsNull)) {
                 return Ast.Equal(tested, Ast.Null());
             }
@@ -100,7 +100,7 @@ namespace IronPython.Runtime.Calls {
 
             Expression test;
             if (!templatable) {
-                test = StandardRule.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
+                test = RuleBuilder.MakeTypeTestExpression(type.UnderlyingSystemType, tested);
             } else {
                 test = Ast.Equal(
                     Ast.Call(
@@ -140,7 +140,7 @@ namespace IronPython.Runtime.Calls {
             return test;
         }
 
-        private static Expression GetVersionExpression(StandardRule rule, bool templatable, int version) {
+        private static Expression GetVersionExpression(RuleBuilder rule, bool templatable, int version) {
             Expression verExpr;
             if (!templatable) {
                 verExpr = Ast.Constant(version);
@@ -154,8 +154,8 @@ namespace IronPython.Runtime.Calls {
         /// Produces an error message for the provided message and type names.  The error message should contain
         /// string formatting characters ({0}, {1}, etc...) for each of the type names.
         /// </summary>
-        public static StandardRule<T> TypeError<T>(string message, params PythonType[] types) {
-            StandardRule<T> ret = new StandardRule<T>();
+        public static RuleBuilder<T> TypeError<T>(string message, params PythonType[] types) {
+            RuleBuilder<T> ret = new RuleBuilder<T>();
             MakeTest(ret, true, types);
             Expression[] formatArgs = new Expression[types.Length + 1];
             for (int i = 1; i < formatArgs.Length; i++) {
@@ -177,15 +177,15 @@ namespace IronPython.Runtime.Calls {
                     )
                 );
 
-            TemplatedRuleBuilder<T> builder;
+            RuleBuilder<T> builder;
             lock (_typeErrorTemplates) {
                 object objBuilder;
                 TypeErrorKey tek = new TypeErrorKey(typeof(T), types);
                 if (!_typeErrorTemplates.TryGetValue(tek, out objBuilder)) {
-                    _typeErrorTemplates[tek] = builder = ret.GetTemplateBuilder();
+                    _typeErrorTemplates[tek] = builder = ret;
                 } else {
-                    builder = (TemplatedRuleBuilder<T>)objBuilder;
-                    builder.CopyTemplateToRule(DefaultContext.Default, ret);
+                    builder = (RuleBuilder<T>)objBuilder;
+                    builder.CopyTemplateToRule(ret);
                 }
             }
             return ret;
@@ -251,7 +251,7 @@ namespace IronPython.Runtime.Calls {
         //
         // Various helpers related to calling Python __*__ conversion methods 
         //
-        internal static Expression GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, StandardRule<T> rule) {
+        internal static Expression GetConversionFailedReturnValue<T>(CodeContext context, ConvertToAction convertToAction, RuleBuilder<T> rule) {
             ErrorInfo error = context.LanguageContext.Binder.MakeConversionError(convertToAction.ToType, rule.Parameters[0]);
             Expression failed;
             switch (convertToAction.ResultKind) {
@@ -285,11 +285,11 @@ namespace IronPython.Runtime.Calls {
         }
         
         // Make a rule for objects that have immutable isCallable property (like functions).
-        internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
+        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self, bool isCallable) {
             return BinderHelper.MakeIsCallableRule<T>(context, self, isCallable);
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, VariableExpression tmp) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp) {
             return MakeTryGetTypeMember(rule, dts, tmp,
                 rule.Parameters[0],
                 Ast.ReadProperty(
@@ -301,7 +301,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        internal static MethodCallExpression MakeTryGetTypeMember<T>(StandardRule<T> rule, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) {
+        internal static MethodCallExpression MakeTryGetTypeMember<T>(RuleBuilder<T> rule, PythonTypeSlot dts, VariableExpression tmp, Expression instance, Expression pythonType) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("SlotTryGetBoundValue"),
                 Ast.CodeContext(),
@@ -319,7 +319,7 @@ namespace IronPython.Runtime.Calls {
         // Rule to dynamically check for __call__ attribute.
         // Needed for instances whos call status can change over the lifetime of the instance.
         // For example, if we del(c.__call__) on a oldinstance, it's no longer callable.
-        internal static StandardRule<T> MakeIsCallableRule<T>(CodeContext context, object self) {
+        internal static RuleBuilder<T> MakeIsCallableRule<T>(CodeContext context, object self) {
             // Certain non-python types (encountered during interop) are callable, but don't have 
             // a __call__ attribute. The default base binder also checks these, but since we're overriding
             // the base binder, we check them here.
@@ -329,7 +329,7 @@ namespace IronPython.Runtime.Calls {
                 return MakeIsCallableRule<T>(context, self, true);
             }
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(tSelf);
 
             // Rule is:

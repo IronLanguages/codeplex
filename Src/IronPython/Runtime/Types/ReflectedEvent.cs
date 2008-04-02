@@ -38,7 +38,7 @@ namespace IronPython.Runtime.Types {
     public sealed class ReflectedEvent : PythonTypeSlot, ICodeFormattable {
         private bool _clsOnly;
         private EventInfo/*!*/ _eventInfo;
-        private WeakHash<object, HandlerList/*!*/> _handlerLists;
+        private WeakDictionary<object, HandlerList/*!*/> _handlerLists;
         private static readonly object _staticTarget = new object();
 
         internal ReflectedEvent(EventInfo eventInfo, bool clsOnly) {
@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Types {
 
         private HandlerList/*!*/ GetStubList(object instance) {
             if (_handlerLists == null) {
-                System.Threading.Interlocked.CompareExchange(ref _handlerLists, new WeakHash<object, HandlerList>(), null);
+                System.Threading.Interlocked.CompareExchange(ref _handlerLists, new WeakDictionary<object, HandlerList>(), null);
             }
 
             if (instance == null) {

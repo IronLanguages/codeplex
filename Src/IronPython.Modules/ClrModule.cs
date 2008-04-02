@@ -34,6 +34,10 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Calls;
 
+#if !SILVERLIGHT
+using Microsoft.Scripting.Actions.ComDispatch;
+#endif
+
 [assembly: PythonModule("clr", typeof(IronPython.Modules.ClrModule))]
 namespace IronPython.Modules {
     /// <summary>
@@ -90,6 +94,39 @@ namespace IronPython.Modules {
         }
 
 #if !SILVERLIGHT // files, paths
+
+        public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, object rcw) {
+            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+
+            return ComTypeLibDesc.CreateFromObject(rcw);
+        }
+
+        public static ComTypeLibInfo LoadTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
+            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+
+            return ComTypeLibDesc.CreateFromGuid(typeLibGuid);
+        }
+
+        public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, object rcw) {
+            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+
+            ComTypeLibInfo typeLibInfo;
+            typeLibInfo = ComTypeLibDesc.CreateFromObject(rcw);
+            PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
+        }
+
+        public static void AddReferenceToTypeLibrary(CodeContext/*!*/ context, Guid typeLibGuid) {
+            if (ScriptDomainManager.Options.PreferComDispatchOverTypeInfo == false)
+                throw new InvalidOperationException("this method is only available in ComDispatch mode");
+
+            ComTypeLibInfo typeLibInfo;
+            typeLibInfo = ComTypeLibDesc.CreateFromGuid(typeLibGuid);
+            PublishTypeLibDesc(context, typeLibInfo.TypeLibDesc);
+        }
+
         public static void AddReferenceByPartialName(CodeContext/*!*/ context, params string[] names) {
             if (names == null) throw new ArgumentTypeException("Expected string, got NoneType");
             if (names.Length == 0) throw new ArgumentException("Expected at least one name, got none");
@@ -136,7 +173,7 @@ namespace IronPython.Modules {
                 throw new ArgumentTypeException("LoadAssemblyByName: arg 1 must be a string");
             }
 
-            return PythonContext.GetContext(context).DomainManager.PAL.LoadAssembly(name);
+            return PythonContext.GetContext(context).DomainManager.Platform.LoadAssembly(name);
         }
 
         public static object Use(CodeContext/*!*/ context, string/*!*/ name) {
@@ -241,7 +278,7 @@ namespace IronPython.Modules {
             if (file == null) throw new ArgumentTypeException("Expected string, got NoneType");
 
 #if SILVERLIGHT
-            Assembly asm = context.LanguageContext.DomainManager.PAL.LoadAssemblyFromPath(file);
+            Assembly asm = context.LanguageContext.DomainManager.Platform.LoadAssemblyFromPath(file);
 #else
             Assembly asm = LoadAssemblyFromFile(context, file);
 #endif
@@ -263,6 +300,11 @@ namespace IronPython.Modules {
             }
 
             AddReference(context, asm);
+        }
+
+        private static void PublishTypeLibDesc(CodeContext context, ComTypeLibDesc typeLibDesc) {
+            SymbolId symbol = SymbolTable.StringToId(typeLibDesc.Name);
+            context.LanguageContext.DomainManager.Globals.SetName(symbol, typeLibDesc);
         }
 
 #endif

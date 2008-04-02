@@ -292,7 +292,10 @@ namespace IronPython.Runtime.Types {
             }
 
             protected override DynamicSite<object, object> GetSite(CodeContext context) {
-                return RuntimeHelpers.CreateSimpleCallSite<object, object>(ref _site);
+                if (!_site.IsInitialized) {
+                    _site.EnsureInitialized(CallAction.Make(0));
+                }
+                return _site;
             }
         }
 
@@ -364,7 +367,10 @@ namespace IronPython.Runtime.Types {
             }
 
             protected override DynamicSite<object, object, object> GetSite(CodeContext context) {
-                return RuntimeHelpers.CreateSimpleCallSite(ref _site);
+                if (!_site.IsInitialized) {
+                    _site.EnsureInitialized(CallAction.Make(1));
+                }
+                return _site;
             }
         }
 
@@ -436,7 +442,10 @@ namespace IronPython.Runtime.Types {
             }
 
             protected override DynamicSite<object, object, object, object> GetSite(CodeContext context) {
-                return RuntimeHelpers.CreateSimpleCallSite(ref _site);
+                if (!_site.IsInitialized) {
+                    _site.EnsureInitialized(CallAction.Make(2));
+                }
+                return _site;
             }
         }
         #endregion

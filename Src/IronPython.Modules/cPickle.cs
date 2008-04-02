@@ -428,8 +428,8 @@ namespace IronPython.Modules {
 
             private void Save(CodeContext/*!*/ context, object obj) {
                 if (_persist_id != null) {
-                    if (_persist_site == null) {
-                        _persist_site = RuntimeHelpers.CreateSimpleCallSite<object, object, string>();
+                    if (!_persist_site.IsInitialized) {
+                        _persist_site.EnsureInitialized(CallAction.Make(1));
                     }
                     string res = _persist_site.Invoke(context, _persist_id, obj);
                     if (res != null) {
@@ -1451,7 +1451,8 @@ namespace IronPython.Modules {
             public object find_global(CodeContext/*!*/ context, object module, object attr) {
                 object moduleObject;
                 if (!Importer.TryGetExistingModule(context, Converter.ConvertToString(module), out moduleObject)) {
-                    moduleObject = Builtin.__import__(context, Converter.ConvertToString(module));
+                    Builtin.__import__(context, Converter.ConvertToString(module));
+                    moduleObject = PythonContext.GetContext(context).SystemStateModules[module];
                 }
                 return PythonOps.GetBoundAttr(context, moduleObject, SymbolTable.StringToId(Converter.ConvertToString(attr)));
             }
@@ -1533,8 +1534,8 @@ namespace IronPython.Modules {
             private void LoadBinPersid(CodeContext/*!*/ context) {
                 if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
 
-                if (_pers_site == null) {
-                    _pers_site = RuntimeHelpers.CreateSimpleCallSite<object, object, object>();
+                if (!_pers_site.IsInitialized) {
+                    _pers_site.EnsureInitialized(CallAction.Make(1));
                 }
                 _stack.append(_pers_site.Invoke(context, _pers_loader, _stack.pop()));
             }
@@ -1767,7 +1768,9 @@ namespace IronPython.Modules {
                     throw CannotUnpickle("A load persistent ID instruction is present but no persistent_load function is available");
                 }
 
-                if (_pers_site == null) _pers_site = RuntimeHelpers.CreateSimpleCallSite<object, object, object>();
+                if (!_pers_site.IsInitialized) {
+                    _pers_site.EnsureInitialized(CallAction.Make(1));
+                }
 
                 _stack.append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));
             }

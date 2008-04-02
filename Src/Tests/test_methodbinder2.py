@@ -24,15 +24,18 @@ load_iron_python_test()
 from IronPythonTest.BinderTest import *
 
 class PT_I(I): pass
+
 class PT_C1(C1): pass
+
 class PT_I_int(I): 
     def __int__(self): return 100
 
 class PT_int_old: 
     def __int__(self): return 200
+
 class PT_int_new(object): 
     def __int__(self): return 300
-    
+
 UInt32Max = System.UInt32.MaxValue
 Byte10   = System.Byte.Parse('10')
 SBytem10 = System.SByte.Parse('-10')
@@ -318,15 +321,15 @@ def test_arg_UserDefined():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Derived_Number():
+def test_arg_Derived_Number():
     target = COverloads_Derived_Number()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
 (        None, _merge(_first('M106 '), _second('M102 M103 ')), 'M100 M101 M104 M105 ', '', ),
-(        True, _merge(_first('M100 M101 M103 M106 '), _second('M102 M104 M105 ')), '', '', ),
+(        True, _merge(_first('M100 M103 '), _second('M104 M105 M106 ')), 'M101 M102 ', '', ),
 (        -100, _merge(_first('M100 '), _second('M104 M105 M106 ')), 'M101 M102 M103 ', '', ),
-(        200L, _merge(_first('M103 M106 '), _second('M102 ')), 'M100 M101 M104 M105 ', '', ),
+(        200L, _merge(_first('M106 M105 '), _second('M100 M102 M101 ')), 'M103 M104 ', '', ),
 (      Byte10, _merge(_first('M103 '), _second('M100 M105 M106 ')), 'M101 M102 M104 ', '', ),
-(       12.34, _merge(_first('M103 M105 M106 '), _second('M101 M102 ')), 'M100 M104 ', '', ),
+(       12.34, _merge(_first('M105 M106 '), _second('M101 M102 M100 ')), 'M103 M104 ', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
@@ -343,98 +346,99 @@ def test_arg_Collections():
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Boolean():
+def test_arg_Boolean():
     target = COverloads_Boolean()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        None, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M112 ')), '', '', ),
 (        True, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (       False, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (         100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (  myint(100), _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (        -100, _merge(_first('M100 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
-(   UInt32Max, _merge(_first('M100 '), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 M106 ', '', ),
-(        200L, _merge(_first('M100 '), _second('M108 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(       -200L, _merge(_first('M100 '), _second('M108 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
+(   UInt32Max, _merge(_first('M100 M106 '), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M104 ', '', ),
+(        200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
+(       -200L, _merge(_first('M100 M106 M109 '), _second('M108 M112 M110 M111 ')), 'M101 M102 M103 M104 M105 M107 ', '', ),
 (      Byte10, _merge(_first('M100 '), _second('M101 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 ')), 'M102 ', '', ),
 (    SBytem10, _merge(_first('M100 '), _second('M102 M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M103 M105 M107 ', '', ),
 (     Int1610, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
 (    Int16m20, _merge(_first('M100 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M101 M102 M103 M105 M107 ', '', ),
-(       12.34, _merge(_first('M100 '), _second('M111 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
+(       12.34, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 '), _second('M111 M112 ')), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Byte():
+
+def test_arg_Byte():
     target = COverloads_Byte()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
-(        True, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
-(       False, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
-(         100, _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
-(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
-(        -100, _second('M106 M108 M109 M110 M111 M112 '), 'M100 M102 M103 M104 M105 M107 ', 'M101 ', ),
-(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), 'M100 M102 M103 M104 M106 ', 'M101 ', ),
-(        200L, _merge(_first('M101 '), _second('M108 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(       -200L, _second('M108 M112 '), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', 'M101 ', ),
+(        None, _merge(_first(''), _second('M100 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _merge(_first('M101 M102 M103 M104 M105 M107 '), _second('M100 M106 M108 M109 M110 M112 M111 ')), '', '', ),
+(        False, _merge(_first('M101 M102 M103 M104 M105 M107 '), _second('M100 M106 M108 M109 M110 M112 M111 ')), '', '', ),
+(         100, _merge(_first('M101 M102 M103 M104 M105 M107 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 ', '', ),
+(  myint(100), _merge(_first('M101 M102 M103 M104 M105 M107 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 ', '', ),
+(        -100, _merge(_first(''), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 ', 'M101 M102 M103 M104 M105 M107 ', ),
+(   UInt32Max, _merge(_first(''), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M100 ', 'M101 M102 M103 M104 M106 ', ),
+(        200L, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M109 '), _second('M108 M112 M110 M111 ')), 'M100 ', '', ),
+(       -200L, _merge(_first(''), _second('M108 M112 M110 M111 ')), 'M100 ', 'M101 M102 M103 M104 M105 M106 M107 M109 ', ),
 (      Byte10, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
-(    SBytem10, _second('M102 M104 M106 M108 M109 M110 M111 M112 '), 'M100 M103 M105 M107 ', 'M101 ', ),
-(     Int1610, _merge(_first('M101 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M105 M107 ', '', ),
-(    Int16m20, _second('M104 M106 M108 M109 M110 M111 M112 '), 'M100 M102 M103 M105 M107 ', 'M101 ', ),
-(       12.34, _second('M111 M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
+(    SBytem10, _merge(_first(''), _second('M102 M104 M106 M108 M109 M110 M111 M112 ')), 'M100 ', 'M101 M103 M105 M107 ', ),
+(     Int1610, _merge(_first('M101 M102 M103 M105 M107 '), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M100 ', '', ),
+(    Int16m20, _merge(_first(''), _second('M104 M106 M108 M109 M110 M111 M112 ')), 'M100 ', 'M101 M102 M103 M105 M107 ', ),
+(       12.34, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 '), _second('M100 M111 M112 ')), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Int16():
+def test_arg_Int16():
     target = COverloads_Int16()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
-(        True, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
-(       False, _second('M100 M106 M112 '), 'M101 M102 M103 M104 M105 M107 M108 M109 M110 M111 ', '', ),
-(         100, _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
-(  myint(100), _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
-(        -100, _merge(_first('M101 '), _second('M106 M108 M109 M110 M111 M112 ')), 'M100 M102 M103 M104 M105 M107 ', '', ),
-(   UInt32Max, _second('M105 M107 M108 M109 M110 M111 M112 '), 'M100 M102 M103 M104 M106 ', 'M101 ', ),
-(        200L, _merge(_first('M101 '), _second('M108 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(       -200L, _merge(_first('M101 '), _second('M108 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(      Byte10, _merge(_first('M100 M101 M103 M106 M108 M109 M110 M111 M112 '), _second('M102 ')), 'M104 M105 M107 ', '', ),
+(        None, _merge(_first(''), _second('M100 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _merge(_first('M101 '), _second('M100 M102 M103 M104 M105 M107 M106 M108 M109 M110 M112 M111 ')), '', '', ),
+(       False, _merge(_first('M101 '), _second('M100 M102 M103 M104 M105 M107 M106 M108 M109 M110 M112 M111 ')), '', '', ),
+(         100, _merge(_first('M101 '), _second('M102 M103 M104 M105 M107 M106 M108 M109 M110 M111 M112 ')), 'M100 ', '', ),
+(  myint(100), _merge(_first('M101 '), _second('M102 M103 M104 M105 M107 M106 M108 M109 M110 M111 M112 ')), 'M100 ', '', ),
+(        -100, _merge(_first('M101 '), _second('M103 M106 M108 M109 M110 M111 M112 ')), 'M100 ', 'M102 M104 M105 M107 ', ),
+(   UInt32Max, _merge(_first(''), _second('M105 M107 M108 M109 M110 M111 M112 ')), 'M100 ', 'M101 M102 M103 M104 M106 ', ),
+(        200L, _merge(_first('M101 M106 M109 '), _second('M102 M104 M105 M107 M108 M110 M111 M112 ')), 'M100 ', 'M103 ', ),
+(       -200L, _merge(_first('M101 M106 M109 '), _second('M108 M110 M111 M112 ')), 'M100 ', 'M102 M103 M104 M105 M107 ', ),
+(      Byte10, _merge(_first('M100 M101 M103 M106 M108 M109 M110 M111 M112'), _second('M102 M104 M105 M107 ')), '', '', ),
 (    SBytem10, _merge(_first('M100 M101 M102 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 ')), '', '', ),
 (     Int1610, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (    Int16m20, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
-(       12.34, _second('M111 M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
+(       12.34, _merge(_first('M101 M106 M108 M109 M110 '), _second('M100 M111 M112 M102 M103 M104 M105 M107 ')), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Int32():
+def test_arg_Int32():
     target = COverloads_Int32()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
-(        True, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), '', '', ),
-(       False, _merge(_first('M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 '), _second('M100 M112 ')), '', '', ),
+(        None, _merge(_first(''), _second('M100 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _merge(_first('M101 M102 M103 M104 M105 M107 M106 M108 M109 M110 M112 M111 '), _second('M100 ')), '', '', ),
+(       False, _merge(_first('M101 M102 M103 M104 M105 M107 M106 M108 M109 M110 M112 M111 '), _second('M100 ')), '', '', ),
 (         100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (  myint(100), _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
 (        -100, _first('M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 M112 '), '', '', ),
-(   UInt32Max, _second('M106 M107 M108 M109 M110 M111 M112 '), 'M100 M102 M103 M104 M105 ', 'M101 ', ),
-(        200L, _merge(_first('M101 '), _second('M108 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(       -200L, _merge(_first('M101 '), _second('M108 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M109 M110 M111 ', '', ),
-(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112 '), _second('M102 M104 M105 ')), 'M106 M107 ', '', ),
+(    UInt32Max, _merge(_first(''), _second('M100 M106 M107 M108 M109 M110 M111 M112 ')), '', 'M101 M102 M103 M104 M105 ', ),
+(        200L, _merge(_first('M101 M109 '), _second('M100 M102 M104 M105 M106 M107 M108 M110 M111 M112 ')), '', 'M103 ', ),
+(       -200L, _merge(_first('M101 M109 '), _second('M100 M105 M108 M110 M111 M112 ')), '', 'M102 M103 M104 M106 M107 ', ),
+(      Byte10, _merge(_first('M100 M101 M103 M108 M109 M110 M111 M112'), _second('M102 M104 M105 M106 M107 ')), '', '', ),        
 (    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M103 M105 ')), '', '', ),
 (     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),
 (    Int16m20, _merge(_first('M100 M101 M102 M103 M104 M106 M107 M108 M109 M110 M111 M112 '), _second('M105 ')), '', '', ),
-(       12.34, _merge(_first('M101 '), _second('M111 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M108 M109 M110 ', '', ),
+(       12.34, _merge(_first('M101 M108 M109 M110 '), _second('M100 M106 M111 M112 M102 M103 M104 M105 M107 ')), '', '', ),
     ]:
         _try_arg(target, arg, mapping, funcTypeError, funcOverflowError)
 
-def Xtest_arg_Double():
+def test_arg_Double():
     target = COverloads_Double()
     for (arg, mapping, funcTypeError, funcOverflowError) in [
-(        None, _second('M112 '), 'M100 M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
-(        True, _second('M100 M107 M112 '), 'M101 M102 M103 M104 M105 M106 M108 M109 M110 M111 ', '', ),
-(       False, _second('M100 M107 M112 '), 'M101 M102 M103 M104 M105 M106 M108 M109 M110 M111 ', '', ),
+(        None, _merge(_first(''), _second('M100 M112 ')), 'M101 M102 M103 M104 M105 M106 M107 M108 M109 M110 M111 ', '', ),
+(        True, _merge(_first('M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M100 M107 M109 M111 ')), 'M110 ', '', ),
+(       False, _merge(_first('M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M100 M107 M109 M111 ')), 'M110 ', '', ),
 (         100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
 (  myint(100), _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
 (        -100, _merge(_first('M100 M101 M102 M103 M104 M105 M106 M108 M112 '), _second('M107 M109 M111 ')), 'M110 ', '', ),
 (   UInt32Max, _merge(_first('M100 M101 M102 M103 M104 M105 M107 M112 '), _second('M106 M108 M109 M111 ')), 'M110 ', '', ),
-(        200L, _merge(_first('M101 '), _second('M109 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M108 M110 M111 ', '', ),
-(       -200L, _merge(_first('M101 '), _second('M109 M112 ')), 'M100 M102 M103 M104 M105 M106 M107 M108 M110 M111 ', '', ),
+(        200L, _merge(_first('M101 M100 M102 M103 M104 M105 M106 M107 M108 M109 M110 M112 '), _second('M111 ')), '', '', ),
+(       -200L, _merge(_first('M101 M100 M102 M103 M104 M105 M106 M107 M108 M109 M110 M112 '), _second('M111 ')), '', '', ),
 (      Byte10, _merge(_first('M100 M101 M103 M112 '), _second('M102 M104 M105 M106 M107 M108 M109 M111 ')), 'M110 ', '', ),
 (    SBytem10, _merge(_first('M100 M101 M102 M104 M106 M108 M112 '), _second('M103 M105 M107 M109 M111 ')), 'M110 ', '', ),
 (     Int1610, _merge(_first('M100 M101 M102 M103 M104 M106 M108 M112 '), _second('M105 M107 M109 M111 ')), 'M110 ', '', ),

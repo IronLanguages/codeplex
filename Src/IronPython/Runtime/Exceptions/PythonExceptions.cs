@@ -353,7 +353,7 @@ namespace IronPython.Runtime.Exceptions {
                 get { return DefaultContext.Default.LanguageContext; }
             }
 
-            Microsoft.Scripting.Actions.StandardRule<T> IDynamicObject.GetRule<T>(Microsoft.Scripting.Actions.DynamicAction action, CodeContext context, object[] args) {
+            Microsoft.Scripting.Actions.RuleBuilder<T> IDynamicObject.GetRule<T>(Microsoft.Scripting.Actions.DynamicAction action, CodeContext context, object[] args) {
                 return UserTypeOps.GetRuleHelper<T>(action, context, args);
             }
 
@@ -362,7 +362,7 @@ namespace IronPython.Runtime.Exceptions {
 
         #region Custom Exception Code
 
-        public partial class SyntaxError : BaseException {
+        public partial class _SyntaxError : BaseException {
             public override string ToString() {
                 PythonTuple t = ((PythonTuple)args) as PythonTuple;
                 if (t != null) {
@@ -403,7 +403,7 @@ namespace IronPython.Runtime.Exceptions {
         }
 
 
-        public partial class EnvironmentError : BaseException {
+        public partial class _EnvironmentError : BaseException {
             public override void __init__(params object[] args) {
                 if (args != null) {
                     switch (args.Length) {
@@ -439,7 +439,7 @@ namespace IronPython.Runtime.Exceptions {
         }
 
 #if !SILVERLIGHT
-        public partial class UnicodeDecodeError : BaseException {
+        public partial class _UnicodeDecodeError : BaseException {
             protected internal override void InitializeFromClr(System.Exception/*!*/ exception) {
                 DecoderFallbackException ex = exception as DecoderFallbackException;
                 if (ex != null) {
@@ -456,7 +456,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        public partial class UnicodeEncodeError : BaseException {
+        public partial class _UnicodeEncodeError : BaseException {
             protected internal override void InitializeFromClr(System.Exception/*!*/ exception) {
                 EncoderFallbackException ex = exception as EncoderFallbackException;
                 if (ex != null) {
@@ -468,7 +468,7 @@ namespace IronPython.Runtime.Exceptions {
         }
 #endif
 
-        public partial class SystemExit : BaseException {
+        public partial class _SystemExit : BaseException {
             public override void __init__(params object[] args) {
                 base.__init__(args);
 
@@ -669,13 +669,13 @@ namespace IronPython.Runtime.Exceptions {
         /// Converts the DLR SyntaxErrorException into a Python new-style SyntaxError instance.
         /// </summary>
         private static BaseException/*!*/ SyntaxErrorToPython(SyntaxErrorException/*!*/ e) {
-            PythonExceptions.SyntaxError se;
+            PythonExceptions._SyntaxError se;
             if (e.GetType() == typeof(IndentationException)) {
-                se = new SyntaxError(IndentationError);
+                se = new _SyntaxError(IndentationError);
             } else if (e.GetType() == typeof(TabException)) {
-                se = new SyntaxError(TabError);
+                se = new _SyntaxError(TabError);
             } else {
-                se = new SyntaxError();
+                se = new _SyntaxError();
             }
 
             se.message = e.Message;

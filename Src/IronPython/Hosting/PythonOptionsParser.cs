@@ -63,9 +63,9 @@ namespace IronPython.Hosting {
             base.Parse(args);
 
             PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
-            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = PythonOps.MakeList(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = new List(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
             if (scriptOpt.WarningFilters != null)
-                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = PythonOps.MakeListFromSequence(scriptOpt.WarningFilters);
+                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(scriptOpt.WarningFilters);
 
             PythonFunction.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }

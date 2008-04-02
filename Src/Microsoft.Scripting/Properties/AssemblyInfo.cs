@@ -27,7 +27,7 @@ using System.Security;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("Microsoft.Scripting")]
-[assembly: AssemblyCopyright("? Microsoft Corporation.  All rights reserved.")]
+[assembly: AssemblyCopyright("© Microsoft Corporation.  All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -39,7 +39,7 @@ using System.Security;
 [assembly: CLSCompliant(true)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("cabb8088-1370-43ca-ad47-1c32d3f7bd10")]
+[assembly: Guid("1bbee69c-30c5-41df-8912-b81da6d658c2")]
 
 // Version information for an assembly consists of the following four values:
 //

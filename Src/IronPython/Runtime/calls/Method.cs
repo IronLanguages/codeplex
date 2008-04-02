@@ -256,7 +256,7 @@ namespace IronPython.Runtime.Calls {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             Assert.NotNull(action, context, args);
 
             if (action.Kind == DynamicActionKind.Call) {
@@ -270,7 +270,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -278,8 +278,8 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private StandardRule<T> GetCallRule<T>(CallAction action, CodeContext context) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> GetCallRule<T>(CallAction action, CodeContext context) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(Method));
             
             Expression[] notNullArgs = GetNotNullInstanceArguments(rule);
@@ -308,7 +308,7 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private static Expression[] GetNullInstanceArguments<T>(StandardRule<T> rule, CallAction action) {
+        private static Expression[] GetNullInstanceArguments<T>(RuleBuilder<T> rule, CallAction action) {
             Debug.Assert(rule.Parameters.Count > 1);
 
             Expression[] args = ArrayUtils.MakeArray(rule.Parameters);
@@ -359,7 +359,7 @@ namespace IronPython.Runtime.Calls {
             return args;
         }
 
-        private static Expression CheckSelf<T>(StandardRule<T> rule, Expression self) {
+        private static Expression CheckSelf<T>(RuleBuilder<T> rule, Expression self) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MethodCheckSelf"),
                 Ast.Convert(rule.Parameters[0], typeof(Method)),
@@ -367,7 +367,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private static Expression[] GetNotNullInstanceArguments<T>(StandardRule<T> rule) {
+        private static Expression[] GetNotNullInstanceArguments<T>(RuleBuilder<T> rule) {
             Expression[] args = ArrayUtils.Insert(
                 (Expression)Ast.ReadProperty(
                     Ast.Convert(rule.Parameters[0], typeof(Method)),

@@ -22,8 +22,11 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime.Operations {
     public static partial class PythonCalls {
-        private static readonly DynamicSite<object, object[], object> _splatSite = MakeSplatSite();
-        private static readonly DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite = MakeDictSplatSite();
+        private static readonly DynamicSite<object, object[], object> _splatSite =
+            new DynamicSite<object, object[], object>(MakeSplatAction());
+
+        private static readonly DynamicSite<object, object[], IAttributesCollection, object> _dictSplatSite =
+            new DynamicSite<object, object[], IAttributesCollection, object>(MakeDictSplatAction());
 
         public static object Call(object func, params object[] args) {
             return _splatSite.Invoke(DefaultContext.Default, func, args);
@@ -46,17 +49,15 @@ namespace IronPython.Runtime.Operations {
             return _dictSplatSite.Invoke(DefaultContext.Default, func, args, dict);
         }
 
-        internal static DynamicSite<object, object[], object> MakeSplatSite() {
-            return DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+        internal static DynamicAction MakeSplatAction() {
+            return CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List)));
         }
 
-        internal static DynamicSite<object, object[], IAttributesCollection, object> MakeDictSplatSite() {
-            return DynamicSite<object, object[], IAttributesCollection, object>.Create(
-                CallAction.Make(
-                    new CallSignature(
-                        new ArgumentInfo(ArgumentKind.List),
-                        new ArgumentInfo(ArgumentKind.Dictionary)
-                    )
+        internal static DynamicAction MakeDictSplatAction() {
+            return CallAction.Make(
+                new CallSignature(
+                    new ArgumentInfo(ArgumentKind.List),
+                    new ArgumentInfo(ArgumentKind.Dictionary)
                 )
             );
         }

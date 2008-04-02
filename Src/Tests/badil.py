@@ -16,6 +16,7 @@
 import clr
 import System
 
+clr.AddReference("Microsoft.Scripting.Core")
 clr.AddReference("Microsoft.Scripting")
 clr.AddReference("IronPython")
 

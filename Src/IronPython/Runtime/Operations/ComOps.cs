@@ -32,7 +32,7 @@ namespace IronPython.Runtime.Operations {
                 return __str__inner((ComObject)self);
             }
 
-            if (ComObject.Is__ComObject(self.GetType())) {
+            if (ComObject.IsGenericComObject(self)) {
                 return __str__inner(ComObject.ObjectToComObject(self));
             }
 
@@ -44,7 +44,7 @@ namespace IronPython.Runtime.Operations {
                 return __repr__inner((ComObject)self);
             }
 
-            if (ComObject.Is__ComObject(self.GetType())) {
+            if (ComObject.IsGenericComObject(self)) {
                 return __repr__inner(ComObject.ObjectToComObject(self));
             }
 
@@ -70,7 +70,7 @@ namespace IronPython.Runtime.Operations {
                 return GetMemberNames_inner(context, (ComObject)self);
             }
 
-            if (ComObject.Is__ComObject(self.GetType())) {
+            if (ComObject.IsGenericComObject(self)) {
                 return GetMemberNames_inner(context, ComObject.ObjectToComObject(self));
             }
 

@@ -205,14 +205,14 @@ namespace IronPython.Modules {
             #region Internal implementation details
 
             private void EnsureSplatSite() {
-                if (_splatSite == null) {
-                    _splatSite = PythonCalls.MakeSplatSite();
+                if (!_splatSite.IsInitialized) {
+                    _splatSite.EnsureInitialized(PythonCalls.MakeSplatAction());
                 }
             }
 
             private void EnsureDictSplatSite() {
-                if (_dictSite == null) {
-                    _dictSite = PythonCalls.MakeDictSplatSite();
+                if (!_dictSite.IsInitialized) {
+                    _dictSite.EnsureInitialized(PythonCalls.MakeDictSplatAction());
                 }
             }
 

@@ -12,22 +12,22 @@
  *
  *
  * ***************************************************************************/
+
 using System;
-using System.Collections.Generic;
-using System.Text;
-using IronPython.Hosting;
-using IronPython.Runtime;
-using IronPython.Runtime.Exceptions;
 using System.IO;
-using IronPython.Compiler;
+using System.Reflection;
+
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Microsoft.Scripting.Shell;
-using System.Reflection;
-using IronPython.Runtime.Operations;
-using Microsoft.Scripting.Utils;
-using IronPython.Runtime.Calls;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Shell;
+using Microsoft.Scripting.Utils;
+
+using IronPython.Compiler;
+using IronPython.Runtime;
+using IronPython.Runtime.Calls;
+using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
    
@@ -55,7 +55,7 @@ namespace IronPython.Hosting {
         private string VersionString {
             get {
                 return String.Format("{0} ({1}) on .NET {2}",
-                    DefaultContext.Default.LanguageContext.DisplayName,
+                    _context.DisplayName,
                     Engine.LanguageVersion.ToString(),
                     Environment.Version);
                     
@@ -85,7 +85,7 @@ namespace IronPython.Hosting {
 
         protected override int Run() {
             if (Options.ModuleToRun != null) {
-                CodeContext ctx = new CodeContext(new Scope(_context), _context);
+                CodeContext ctx = new CodeContext(new Scope(), _context);
                 object ret = Importer.ImportModule(ctx, ctx.Scope.ModuleScope.Dict, Options.ModuleToRun, false, -1);
                 if (ret == null) {
                     Console.WriteLine(String.Format("ImportError: No module named {0}", Options.ModuleToRun), Style.Error);
@@ -119,7 +119,7 @@ namespace IronPython.Hosting {
                         Environment.Exit(1);
                     }
 #endif
-                    string fullPath = _context.DomainManager.PAL.GetFullPath(Options.FileName);
+                    string fullPath = _context.DomainManager.Platform.GetFullPath(Options.FileName);
                     _context.AddToPath(Path.GetDirectoryName(fullPath));
                 }
             }
@@ -156,15 +156,15 @@ namespace IronPython.Hosting {
         }
 
         private ScriptScope/*!*/ CreateMainModule() {
-            ModuleOptions trueDiv = (PythonContext.GetPythonOptions(null).DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
-            PythonModule module = DefaultContext.DefaultPythonContext.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule | ModuleOptions.ModuleBuiltins);
+            ModuleOptions trueDiv = (_context.PythonOptions.DivisionOptions == PythonDivisionOptions.New) ? ModuleOptions.TrueDivision : ModuleOptions.None;
+            PythonModule module = _context.CreateModule("__main__", trueDiv | ModuleOptions.PublishModule | ModuleOptions.ModuleBuiltins);
             module.Scope.SetName(Symbols.Doc, null);
             return Engine.CreateScope(module.Scope.Dict);
         }
 
         
         private void InitializePath() {
-            _context.AddToPath(_context.DomainManager.PAL.CurrentDirectory);
+            _context.AddToPath(_context.DomainManager.Platform.CurrentDirectory);
 
 #if !SILVERLIGHT // paths, environment vars
             if (!Options.IgnoreEnvironmentVariables) {
@@ -172,19 +172,19 @@ namespace IronPython.Hosting {
                 if (path != null && path.Length > 0) {
                     string[] paths = path.Split(Path.PathSeparator);
                     foreach (string p in paths) {
-                        DefaultContext.DefaultPythonContext.AddToPath(p);
+                        _context.AddToPath(p);
                     }
                 }
             }
 
             string entry = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             string site = Path.Combine(entry, "Lib");
-            DefaultContext.DefaultPythonContext.AddToPath(site);
+            _context.AddToPath(site);
 
             // add DLLs directory if it exists            
             string dlls = Path.Combine(entry, "DLLs");
             if (Directory.Exists(dlls)) {
-                DefaultContext.DefaultPythonContext.AddToPath(dlls);
+                _context.AddToPath(dlls);
             }
 #endif
         }
@@ -210,7 +210,7 @@ namespace IronPython.Hosting {
                 return;
 
             try {
-                CodeContext ctx = new CodeContext(new Scope(_context), _context);
+                CodeContext ctx = new CodeContext(new Scope(), _context);
                 Importer.ImportModule(ctx, ctx.Scope.ModuleScope.Dict, "site", false, -1);
             } catch (Exception e) {
                 Console.Write(Engine.FormatException(e), Style.Error);
@@ -374,7 +374,7 @@ namespace IronPython.Hosting {
         private int RunFileWorker(string fileName) {
             try {
                 ScriptCode compiledCode;
-                PythonModule module = DefaultContext.DefaultPythonContext.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized | ModuleOptions.ModuleBuiltins, Options.SkipFirstSourceLine, out compiledCode);
+                PythonModule module = _context.CompileModule(fileName, "__main__", ModuleOptions.PublishModule | ModuleOptions.Optimized | ModuleOptions.ModuleBuiltins, Options.SkipFirstSourceLine, out compiledCode);
 
                 if (Options.Introspection) {
                     Module = Engine.CreateScope(module.Scope.Dict);

@@ -28,7 +28,8 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 namespace IronPython.Runtime.Operations {
 
     public static partial class Int32Ops {
-        private static readonly FastDynamicSite<object, object> _intSite = FastDynamicSite<object, object>.Create(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
+        private static readonly FastDynamicSite<object, object> _intSite =
+            new FastDynamicSite<object, object>(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
 
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
@@ -42,7 +43,7 @@ namespace IronPython.Runtime.Operations {
                 if (bi.AsInt32(out res)) {
                     return RuntimeHelpers.Int32ToObject(res);
                 }
-                return o; 
+                return o;
             }
 
             if ((el = o as Extensible<BigInteger>) != null) {
@@ -91,8 +92,13 @@ namespace IronPython.Runtime.Operations {
                 }
             }
 
-            if(o is Enum) {
+            if (o is Enum) {
                 return ((IConvertible)o).ToInt32(null);
+            }
+
+            Extensible<string> es = o as Extensible<string>;
+            if (es != null) {
+                return __new__(null, es.Value, 10);
             }
 
             return _intSite.Invoke(o);
@@ -135,7 +141,7 @@ namespace IronPython.Runtime.Operations {
 
         [StaticExtensionMethod]
         public static object __new__(CodeContext context, PythonType cls, object x) {
-            if (cls == TypeCache.Int32)  return FastNew(x); // TODO: Call site?
+            if (cls == TypeCache.Int32) return FastNew(x); // TODO: Call site?
 
             ValidateType(cls);
 
@@ -329,7 +335,7 @@ namespace IronPython.Runtime.Operations {
         public static object __getnewargs__(CodeContext context, int self) {
             return PythonTuple.MakeTuple(Int32Ops.__new__(context, TypeCache.Int32, self));
         }
-        
+
         public static object __rdivmod__(int x, int y) {
             return __divmod__(y, x);
         }

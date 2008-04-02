@@ -85,12 +85,12 @@ def test_cp12907():
                     ("1", 
                         "exec", []),
                     #CodePlex 12907
-                    #("def f(n):\n    return n*n\nprint f(3)", 
-                    #    "exec", ["9\n"]),
-                    #("if 1:\n    print 1\n", 
-                    #    "single", ["1\n"]),
-                    #("if 1:\n    print 1\n", 
-                    #    "exec", ["1\n"]),
+                    ("def f(n):\n    return n*n\nprint f(3)", 
+                        "exec", ["9\n"]),
+                    ("if 1:\n    print 1\n", 
+                        "single", ["1\n"]),
+                    ("if 1:\n    print 1\n", 
+                        "exec", ["1\n"]),
                 ]
                 
     for test_case, kind, expected in test_list:
@@ -123,6 +123,7 @@ def test_cp12907():
                 ]
                 
     for test_case, kind in bad_test_list:
+        print test_case, kind
         AssertError(SyntaxError, compile, test_case, "", kind, 0x200, 1)
 
 

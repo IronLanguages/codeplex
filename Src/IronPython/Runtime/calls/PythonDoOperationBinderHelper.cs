@@ -47,7 +47,7 @@ namespace IronPython.Runtime.Calls {
             : base(context, action) {
         }
 
-        public StandardRule<T> MakeRule(object[] args) {
+        public RuleBuilder<T> MakeRule(object[] args) {
             // we're using the user defined flag here because there's no DLR custom actions yet.
             if ((Action.Operation & Operators.UserDefinedFlag) != 0) {
                 _disallowCoercion = true;
@@ -90,17 +90,17 @@ namespace IronPython.Runtime.Calls {
         }
 
 
-        private StandardRule<T> MakeRuleForNoMatch(PythonType[] types) {
+        private RuleBuilder<T> MakeRuleForNoMatch(PythonType[] types) {
             // we get the error message w/ {0}, {1} so that TypeError formats it correctly
             return PythonBinderHelper.TypeError<T>(
                    MakeBinaryOpErrorMessage(Operation, "{0}", "{1}"),
                    types);
         }
         
-        protected StandardRule<T> MakeNewRule(PythonType[] types) {
+        protected RuleBuilder<T> MakeNewRule(PythonType[] types) {
 
 #if !SILVERLIGHT
-            if (ComObject.Is__ComObject(CompilerHelpers.GetType(_args[0]))) {
+            if (ComObject.IsGenericComObject(_args[0])) {
                 return null;
             }
 #endif
@@ -141,7 +141,7 @@ namespace IronPython.Runtime.Calls {
             return MakeSimpleRule(types, op);
         }
 
-        internal static StandardRule<T> MakeCallSignatureRule(ActionBinder binder, IList<MethodBase> targets, params PythonType[] types) {
+        internal static RuleBuilder<T> MakeCallSignatureRule(ActionBinder binder, IList<MethodBase> targets, params PythonType[] types) {
             List<string> arrres = new List<string>();
             foreach (MethodBase mb in targets) {
                 StringBuilder res = new StringBuilder();
@@ -178,19 +178,19 @@ namespace IronPython.Runtime.Calls {
                 res.Append(")");
                 arrres.Add(res.ToString());
             }
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
             rule.Target = rule.MakeReturn(binder, Ast.RuntimeConstant(arrres.ToArray()));
             return rule;
         }
 
-        private StandardRule<T> MakeMemberNamesRule(PythonType[] types) {
+        private RuleBuilder<T> MakeMemberNamesRule(PythonType[] types) {
             if (typeof(IMembersList).IsAssignableFrom(types[0].UnderlyingSystemType)) {
                 return null;
             }
 
             IList<SymbolId> names = types[0].GetMemberNames(Context);
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             rule.Target = rule.MakeReturn(
@@ -200,7 +200,7 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private StandardRule<T> MakeSimpleRule(PythonType[] types, Operators oper) {
+        private RuleBuilder<T> MakeSimpleRule(PythonType[] types, Operators oper) {
             SymbolId op, rop;
 
             if (Action.IsInPlace) {
@@ -238,7 +238,7 @@ namespace IronPython.Runtime.Calls {
 
         #region Comparisons
 
-        private StandardRule<T> MakeComparisonRule(PythonType[] types, Operators op) {
+        private RuleBuilder<T> MakeComparisonRule(PythonType[] types, Operators op) {
             if (op == Operators.Compare) {
                 return MakeSortComparisonRule(types, op);
             }
@@ -259,7 +259,7 @@ namespace IronPython.Runtime.Calls {
             SlotOrFunction.GetCombinedTargets(fop, rop, out fop, out rop);
             SlotOrFunction.GetCombinedTargets(cmp, rcmp, out cmp, out rcmp);
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             List<Expression> stmts = new List<Expression>();
@@ -295,7 +295,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Makes the comparison rule which returns an int (-1, 0, 1).  TODO: Better name?
         /// </summary>
-        private StandardRule<T> MakeSortComparisonRule(PythonType[] types, Operators op) {
+        private RuleBuilder<T> MakeSortComparisonRule(PythonType[] types, Operators op) {
             // Python compare semantics: 
             //      if the types are the same invoke __cmp__ first.
             //      If __cmp__ is not defined or the types are different:
@@ -331,7 +331,7 @@ namespace IronPython.Runtime.Calls {
             PythonType yType = types[1];
 
             // now build the rule from the targets.
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             // bail if we're comparing to null and the rhs can't do anything special...
@@ -458,7 +458,7 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            public Expression MakeCall(StandardRule<T> rule, IList<Expression> args) {
+            public Expression MakeCall(RuleBuilder<T> rule, IList<Expression> args) {
                 if (_function != null) {
                     return _function.MakeExpression(rule, args);
                 } else {
@@ -507,7 +507,7 @@ namespace IronPython.Runtime.Calls {
 
             if (TryGetBinder(types, op, SymbolId.Empty, out binder)) {
                 if (binder != null) {
-                    BindingTarget bt = binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
+                    BindingTarget bt = binder.MakeBindingTarget(CallTypes.None, PythonTypeOps.ConvertToTypes(types));
                     if (bt != null && bt.Success) {
                         return new SlotOrFunction(bt);
                     }
@@ -524,7 +524,7 @@ namespace IronPython.Runtime.Calls {
         /// return NotImplemented and allows the caller to modify the expression that
         /// is ultimately returned (e.g. to turn __cmp__ into a bool after a comparison)
         /// </summary>
-        private bool MakeOneCompareGeneric(SlotOrFunction target, StandardRule<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Function<Expression, StandardRule<T>, bool, Expression> returner) {
+        private bool MakeOneCompareGeneric(SlotOrFunction target, RuleBuilder<T> rule, List<Expression> stmts, bool reverse, PythonType[] types, Function<Expression, RuleBuilder<T>, bool, Expression> returner) {
             if (target == null || !target.Success) return true;
 
             VariableExpression tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
@@ -625,11 +625,11 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private Expression MakeCompareReturn(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareReturn(Expression expr, RuleBuilder<T> rule, bool reverse) {
             return rule.MakeReturn(Binder, expr);
         }
 
-        private Expression MakeCompareReverse(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareReverse(Expression expr, RuleBuilder<T> rule, bool reverse) {
             Expression res = expr;
             if (reverse) {
                 res = ReverseCompareValue(expr);
@@ -638,23 +638,23 @@ namespace IronPython.Runtime.Calls {
             return MakeCompareReturn(res, rule, reverse);
         }
 
-        private Expression MakeCompareTest(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareTest(Expression expr, RuleBuilder<T> rule, bool reverse) {
             return MakeCompareReturn(GetCompareTest(expr, reverse), rule, reverse);
         }
 
-        private Expression MakeCompareToZero(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareToZero(Expression expr, RuleBuilder<T> rule, bool reverse) {
             return MakeValueCheck(rule, 0, expr);
         }
 
-        private Expression MakeCompareToOne(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareToOne(Expression expr, RuleBuilder<T> rule, bool reverse) {
             return MakeValueCheck(rule, 1, expr);
         }
 
-        private Expression MakeCompareToNegativeOne(Expression expr, StandardRule<T> rule, bool reverse) {
+        private Expression MakeCompareToNegativeOne(Expression expr, RuleBuilder<T> rule, bool reverse) {
             return MakeValueCheck(rule, -1, expr);
         }
 
-        private Expression MakeValueCheck(StandardRule<T> rule, int val, Expression test) {
+        private Expression MakeValueCheck(RuleBuilder<T> rule, int val, Expression test) {
             if (test.Type != typeof(bool)) {
                 test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
             }
@@ -692,7 +692,7 @@ namespace IronPython.Runtime.Calls {
             return typeof(PythonOps).GetMethod(name);
         }
 
-        private Expression MakeFallbackCompare(StandardRule<T> block) {
+        private Expression MakeFallbackCompare(RuleBuilder<T> block) {
             return block.MakeReturn(Binder,
                 Ast.Call(
                     GetComparisonFallbackMethod(Operation),
@@ -704,10 +704,10 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
 
-        private StandardRule<T> MakeRuleForBinaryOperator(PythonType[] types, Operators oper, BindingTarget fCand, BindingTarget rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
+        private RuleBuilder<T> MakeRuleForBinaryOperator(PythonType[] types, Operators oper, BindingTarget fCand, BindingTarget rCand, PythonTypeSlot fSlot, PythonTypeSlot rSlot) {
             BindingTarget fTarget, rTarget;
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
             List<Expression> stmts = new List<Expression>();
 
@@ -756,7 +756,7 @@ namespace IronPython.Runtime.Calls {
             return rule;
         }
 
-        private Expression DoCoerce(StandardRule<T> rule, Operators op, PythonType[] types, bool reverse) {
+        private Expression DoCoerce(RuleBuilder<T> rule, Operators op, PythonType[] types, bool reverse) {
             return DoCoerce(rule, op, types, reverse, delegate(Expression e) {
                 return e;
             });
@@ -765,7 +765,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// calls __coerce__ for old-style classes and performs the operation if the coercion is successful.
         /// </summary>
-        private Expression DoCoerce(StandardRule<T> rule, Operators op, PythonType[] types, bool reverse, Function<Expression, Expression> returnTransform) {
+        private Expression DoCoerce(RuleBuilder<T> rule, Operators op, PythonType[] types, bool reverse, Function<Expression, Expression> returnTransform) {
             VariableExpression coerceResult = rule.GetTemporary(typeof(object), "coerceResult");
             VariableExpression coerceTuple = rule.GetTemporary(typeof(PythonTuple), "coerceTuple");
 
@@ -778,10 +778,7 @@ namespace IronPython.Runtime.Calls {
                         Ast.Constant(PythonFunction.EnforceRecursion)
                     )
                 );
-                // we can't interpret this rule because in the recursion case
-                // we use too much stack running the same actions over and
-                // over again.
-                rule.CanInterpretTarget = false;
+
                 _testCoerceRecursionCheck = true; 
             }
 
@@ -883,7 +880,7 @@ namespace IronPython.Runtime.Calls {
         /// 
         /// So our job here is to first determine if we're to call a __*slice__ method or
         /// a __*item__ method.  
-        private StandardRule<T> MakeIndexerRule(PythonType[] types) {
+        private RuleBuilder<T> MakeIndexerRule(PythonType[] types) {
             SymbolId item, slice;
             PythonType indexedType = types[0];
             BuiltinFunction itemFunc = null;
@@ -918,7 +915,7 @@ namespace IronPython.Runtime.Calls {
             // call __*slice__ or __*item__
             Expression[] args;
             IndexBuilder builder;
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             if (callSlice) {
                 // we're going to call a __*slice__ method, we pass the args as is.
                 Debug.Assert(IsSlice);
@@ -956,7 +953,7 @@ namespace IronPython.Runtime.Calls {
         /// <summary>
         /// Gets the arguments that need to be provided to __*item__ when we need to pass a slice object.
         /// </summary>
-        private Expression[] GetItemSliceArguments(StandardRule<T> rule, PythonType[] types) {
+        private Expression[] GetItemSliceArguments(RuleBuilder<T> rule, PythonType[] types) {
             Expression[] args;
             if (Operation == Operators.SetSlice) {
                 args = new Expression[] { 
@@ -1057,7 +1054,7 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Adds the target of the call to the rule.
             /// </summary>
-            public abstract void CompleteRuleTarget(StandardRule<T> rule, Expression[] args, Function<bool> customFailure);
+            public abstract void CompleteRuleTarget(RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure);
 
             protected ActionBinder Binder {
                 get { return _binder; }
@@ -1095,7 +1092,7 @@ namespace IronPython.Runtime.Calls {
                 return arguments;
             }
 
-            public override void CompleteRuleTarget(StandardRule<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(RuleBuilder<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
                 Assert.NotNull(args);
                 Assert.NotNullItems(args);
                 Assert.NotNull(rule);
@@ -1107,7 +1104,7 @@ namespace IronPython.Runtime.Calls {
                     PythonNarrowing.IndexOperator);
 
                 Type[] types = CompilerHelpers.GetExpressionTypes(args);
-                BindingTarget target = binder.MakeBindingTarget(CallType.ImplicitInstance, types);
+                BindingTarget target = binder.MakeBindingTarget(CallTypes.ImplicitInstance, types);
 
                 if (target.Success) {
                     Expression call = target.MakeExpression(rule, args);
@@ -1149,7 +1146,7 @@ namespace IronPython.Runtime.Calls {
                 _slot = slot;
             }
 
-            public override void CompleteRuleTarget(StandardRule<T> rule, Expression[] args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure) {
                 VariableExpression callable = rule.GetTemporary(typeof(object), "slot");
 
                 Expression retVal = Ast.Action.Call(
@@ -1186,20 +1183,20 @@ namespace IronPython.Runtime.Calls {
         /// Base class for building a __*item__ or __*slice__ call.
         /// </summary>
         abstract class IndexBuilder {
-            private StandardRule<T> _rule;
+            private RuleBuilder<T> _rule;
             private Callable _callable;
             private PythonType[] _types;
 
-            public IndexBuilder(StandardRule<T> rule, PythonType[] types, Callable callable) {
+            public IndexBuilder(RuleBuilder<T> rule, PythonType[] types, Callable callable) {
                 _rule = rule;
                 _callable = callable;
                 _types = types;
                 PythonBinderHelper.MakeTest(Rule, types);
             }
             
-            public abstract StandardRule<T> MakeRule(Expression[] args);
+            public abstract RuleBuilder<T> MakeRule(Expression[] args);
 
-            protected StandardRule<T> Rule {
+            protected RuleBuilder<T> Rule {
                 get { return _rule; }
             }
 
@@ -1218,11 +1215,11 @@ namespace IronPython.Runtime.Calls {
         class SliceBuilder : IndexBuilder {
             private VariableExpression _lengthVar;        // Nullable<int>, assigned if we need to calculate the length of the object during the call.
 
-            public SliceBuilder(StandardRule<T> rule, PythonType[] types, Callable callable)
+            public SliceBuilder(RuleBuilder<T> rule, PythonType[] types, Callable callable)
                 : base(rule, types, callable) {
             }
 
-            public override StandardRule<T> MakeRule(Expression[] args) {
+            public override RuleBuilder<T> MakeRule(Expression[] args) {
                 // the semantics of simple slicing state that if the value
                 // is less than 0 then the length is added to it.  The default
                 // for unprovided parameters are 0 and maxint.  The callee
@@ -1314,11 +1311,11 @@ namespace IronPython.Runtime.Calls {
         /// Derived IndexBuilder for calling __*item__ methods.
         /// </summary>
         class ItemBuilder : IndexBuilder {
-            public ItemBuilder(StandardRule<T> rule, PythonType[] types, Callable callable)
+            public ItemBuilder(RuleBuilder<T> rule, PythonType[] types, Callable callable)
                 : base(rule, types, callable) {
             }
 
-            public override StandardRule<T> MakeRule(Expression[] args) {                
+            public override RuleBuilder<T> MakeRule(Expression[] args) {                
                 Expression[] tupleArgs = Callable.GetTupleArguments(args);
                 Callable.CompleteRuleTarget(Rule, tupleArgs, delegate() {
                     PythonTypeSlot indexSlot;
@@ -1412,7 +1409,7 @@ namespace IronPython.Runtime.Calls {
         /// Checks to see if any of the index types define __index__ and updates the types to indicate this.  Returns
         /// true if at least one __index__ is found, false otherwise.
         /// </summary>
-        private bool ResolveOperatorIndex(PythonType[] types, StandardRule<T> ret, Expression[] indexArgs) {
+        private bool ResolveOperatorIndex(PythonType[] types, RuleBuilder<T> ret, Expression[] indexArgs) {
             bool foundIndexable = false;
 
             for (int i = 1; i < types.Length; i++) {
@@ -1435,7 +1432,7 @@ namespace IronPython.Runtime.Calls {
             return foundIndexable;
         }                     
 
-        private static Expression GetSetSlice(StandardRule<T> ret) {
+        private static Expression GetSetSlice(RuleBuilder<T> ret) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeSlice"),
                 Ast.ConvertHelper(GetSetParameter(ret, 1), typeof(object)),
@@ -1444,7 +1441,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private static Expression GetGetOrDeleteSlice(StandardRule<T> ret) {
+        private static Expression GetGetOrDeleteSlice(RuleBuilder<T> ret) {
             return Ast.Call(
                 typeof(PythonOps).GetMethod("MakeSlice"),
                 Ast.ConvertHelper(GetGetOrDeleteParameter(ret, 1), typeof(object)),
@@ -1453,14 +1450,14 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private static Expression GetGetOrDeleteParameter(StandardRule<T> ret, int index) {
+        private static Expression GetGetOrDeleteParameter(RuleBuilder<T> ret, int index) {
             if (ret.Parameters.Count > index) {
                 return CheckMissing(ret.Parameters[index]);
             }
             return Ast.Null();
         }
 
-        private static Expression GetSetParameter(StandardRule<T> ret, int index) {
+        private static Expression GetSetParameter(RuleBuilder<T> ret, int index) {
             if (ret.Parameters.Count > (index + 1)) {
                 return CheckMissing(ret.Parameters[index]);
             }
@@ -1485,17 +1482,17 @@ namespace IronPython.Runtime.Calls {
 
         #endregion
 
-        private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse) {
+        private Expression MakeCall(BindingTarget target, RuleBuilder<T> block, bool reverse) {
             return MakeCall(target, block, reverse, null);
         }
 
-        private Expression MakeCall(BindingTarget target, StandardRule<T> block, bool reverse, PythonType[] types) {
+        private Expression MakeCall(BindingTarget target, RuleBuilder<T> block, bool reverse, PythonType[] types) {
             IList<Expression> vars = CheckTypesAndReverse(block, reverse, types);
 
             return target.MakeExpression(block, vars);
         }
 
-        private static IList<Expression> CheckTypesAndReverse(StandardRule<T> block, bool reverse, PythonType[] types) {
+        private static IList<Expression> CheckTypesAndReverse(RuleBuilder<T> block, bool reverse, PythonType[] types) {
             IList<Expression> vars = ReverseArgs(block, reverse, ref types);
 
             // add casts to the known types to avoid full conversions that MakeExpression will emit.
@@ -1515,7 +1512,7 @@ namespace IronPython.Runtime.Calls {
             return vars;
         }
 
-        private static IList<Expression> ReverseArgs(StandardRule<T> block, bool reverse, ref PythonType[] types) {
+        private static IList<Expression> ReverseArgs(RuleBuilder<T> block, bool reverse, ref PythonType[] types) {
             IList<Expression> vars = block.Parameters;
             if (reverse) {
                 Expression[] newVars = new Expression[2];
@@ -1533,7 +1530,7 @@ namespace IronPython.Runtime.Calls {
             return vars;
         }
 
-        private bool MakeOneTarget(BindingTarget target, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
+        private bool MakeOneTarget(BindingTarget target, RuleBuilder<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
             return MakeOneTarget(target,
                 null,
                 block,
@@ -1542,7 +1539,7 @@ namespace IronPython.Runtime.Calls {
                 types);
         }
 
-        private bool MakeOneTarget(BindingTarget target, PythonTypeSlot slotTarget, StandardRule<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
+        private bool MakeOneTarget(BindingTarget target, PythonTypeSlot slotTarget, RuleBuilder<T> block, List<Expression> stmts, bool reverse, PythonType[] types) {
             if (target == null && slotTarget == null) return true;
 
             if (slotTarget != null) {
@@ -1557,7 +1554,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        private Expression MakeSlotCall(PythonTypeSlot/*!*/ slotTarget, StandardRule<T>/*!*/ block, bool reverse) {
+        private Expression MakeSlotCall(PythonTypeSlot/*!*/ slotTarget, RuleBuilder<T>/*!*/ block, bool reverse) {
             Debug.Assert(slotTarget != null);
             Debug.Assert(block != null);
 
@@ -1573,7 +1570,7 @@ namespace IronPython.Runtime.Calls {
             return MakeSlotCallWorker(slotTarget, block, self, other);
         }
 
-        private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, StandardRule<T> block, Expression self, params Expression[] args) {
+        private Expression MakeSlotCallWorker(PythonTypeSlot slotTarget, RuleBuilder<T> block, Expression self, params Expression[] args) {
             VariableExpression callable = block.GetTemporary(typeof(object), "slot");
             return Ast.IfThen(
                 Ast.Call(
@@ -1600,7 +1597,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private Expression CheckNotImplemented(StandardRule<T> block, Expression call) {
+        private Expression CheckNotImplemented(RuleBuilder<T> block, Expression call) {
             VariableExpression tmp = block.GetTemporary(call.Type, "tmp");
 
             Expression notImplCheck = Ast.IfThen(
@@ -1623,7 +1620,7 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
 
-        private Expression MakeUnaryThrow(StandardRule<T> block) {
+        private Expression MakeUnaryThrow(RuleBuilder<T> block) {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForUnaryOp"),
@@ -1633,7 +1630,7 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private Expression MakeBinaryThrow(StandardRule<T> block) {
+        private Expression MakeBinaryThrow(RuleBuilder<T> block) {
             return Ast.Throw(
                 Ast.Call(
                     typeof(PythonOps).GetMethod("TypeErrorForBinaryOp"),
@@ -1673,7 +1670,7 @@ namespace IronPython.Runtime.Calls {
 
         private BindingTarget ComparisonTargetFromBinder(MethodBinder binder, PythonType[] types) {
             if (binder == null) return null;
-            return binder.MakeBindingTarget(CallType.None, PythonTypeOps.ConvertToTypes(types));
+            return binder.MakeBindingTarget(CallTypes.None, PythonTypeOps.ConvertToTypes(types));
         }
 
         private MethodInfo GetComparisonFallbackMethod(Operators op) {
@@ -1841,7 +1838,7 @@ namespace IronPython.Runtime.Calls {
 
         #region Unary Operators
 
-        private StandardRule<T> MakeUnaryRule(PythonType[] types, Operators op) {
+        private RuleBuilder<T> MakeUnaryRule(PythonType[] types, Operators op) {
             if (op == Operators.Not) {
                 return MakeUnaryNotRule(types);
             } else if (op == Operators.Documentation) {
@@ -1855,26 +1852,26 @@ namespace IronPython.Runtime.Calls {
                 return PythonBinderHelper.TypeError<T>(MakeUnaryOpErrorMessage(Action.ToString(), "{0}"), types);
             }
 
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.Target = rule.MakeReturn(Binder, func.MakeCall(rule, rule.Parameters));
             PythonBinderHelper.MakeTest(rule, types);
 
             return rule;
         }
 
-        private StandardRule<T> MakeDocumentationRule(PythonType[] types) {
-            StandardRule<T> rule = new StandardRule<T>();
+        private RuleBuilder<T> MakeDocumentationRule(PythonType[] types) {
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.Target = rule.MakeReturn(Binder, Ast.Action.GetMember(Symbols.Doc, typeof(string), rule.Parameters[0]));
             PythonBinderHelper.MakeTest(rule, types);
             return rule;
         }
 
-        private StandardRule<T> MakeUnaryNotRule(PythonType[] types) {
+        private RuleBuilder<T> MakeUnaryNotRule(PythonType[] types) {
             SlotOrFunction nonzero = GetSlotOrFunction(types, Symbols.NonZero);
             SlotOrFunction length = GetSlotOrFunction(types, Symbols.Length);
 
             Expression notExpr;
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             if (!nonzero.Success && !length.Success) {

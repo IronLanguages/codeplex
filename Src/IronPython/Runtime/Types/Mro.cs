@@ -66,13 +66,6 @@ namespace IronPython.Runtime.Types {
             return Calculate(startingType, new List<PythonType>(bases), false);
         }
 
-        internal static bool IsOldStyle(PythonType dt) {
-            PythonTypeSlot dummy;
-            return dt != TypeCache.Object &&
-                dt.TryLookupSlot(DefaultContext.Default, Symbols.Class, out dummy) &&
-                dummy.GetType() == typeof(PythonTypeValueSlot);   // not an old-style class if the user added __class__
-        }
-
         /// <summary>
         /// </summary>
         public static IList<PythonType> Calculate(PythonType startingType, IList<PythonType> baseTypes, bool forceNewStyle) {
@@ -93,11 +86,11 @@ namespace IronPython.Runtime.Types {
                 // which they appear.
                 int oldSytleCount = 0;
                 foreach (PythonType type in bases) {
-                    if (IsOldStyle(type)) oldSytleCount++;
+                    if (type.IsOldClass) oldSytleCount++;
                 }
 
                 foreach (PythonType dt in bases) {
-                    if (!IsOldStyle(dt)) {
+                    if (!dt.IsOldClass) {
                         mroList.Add(TupleToList(dt.ResolutionOrder));
                     } else if (oldSytleCount == 1 && !forceNewStyle) {
                         mroList.Add(GetOldStyleMro(dt));

@@ -103,7 +103,7 @@ namespace IronPython.Runtime.Calls {
 
             object modName;
             Debug.Assert(context.Scope != null, "null scope?");
-            if (context.Scope.TryLookupName(context.LanguageContext, Symbols.Name, out modName)) {
+            if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
                 _module = modName;
             }
             func_code = new FunctionCode(this);
@@ -515,7 +515,7 @@ namespace IronPython.Runtime.Calls {
             }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch (action.Kind) {
                 case DynamicActionKind.Call:
                     return new FunctionBinderHelper<T>(context, (CallAction)action, this).MakeRule(ArrayUtils.RemoveFirst(args));
@@ -525,7 +525,7 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -535,9 +535,9 @@ namespace IronPython.Runtime.Calls {
             return null;
         }
 
-        private StandardRule<T> MakeCallSignatureRule<T>(CodeContext context) {
+        private RuleBuilder<T> MakeCallSignatureRule<T>(CodeContext context) {
             string data = GetSignatureString();
-            StandardRule<T> rule = new StandardRule<T>();
+            RuleBuilder<T> rule = new RuleBuilder<T>();
             rule.MakeTest(typeof(PythonFunction));
             rule.Target = rule.MakeReturn(
                 context.LanguageContext.Binder,
@@ -568,7 +568,7 @@ namespace IronPython.Runtime.Calls {
         /// <typeparam name="T"></typeparam>
         class FunctionBinderHelper<T> : BinderHelper<T, CallAction> {
             private PythonFunction _func;                           // the function we're calling
-            private StandardRule<T> _rule = new StandardRule<T>();  // the rule we're producing
+            private RuleBuilder<T> _rule = new RuleBuilder<T>();  // the rule we're producing
             private VariableExpression _dict, _params, _paramsLen;            // splatted dictionary & params + the initial length of the params array, null if not provided.
             private List<Expression> _init;                          // a set of initialization code (e.g. creating a list for the params array)
             private Expression _error;                              // a custom error expression if the default needs to be overridden.
@@ -582,7 +582,7 @@ namespace IronPython.Runtime.Calls {
                 _func = function;
             }
 
-            public StandardRule<T> MakeRule(object[] args) {
+            public RuleBuilder<T> MakeRule(object[] args) {
                 //Remove the passed in instance argument if present
                 int instanceIndex = Action.Signature.IndexOf(ArgumentKind.Instance);
                 if (instanceIndex > -1) {

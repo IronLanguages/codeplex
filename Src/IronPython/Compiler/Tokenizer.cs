@@ -80,7 +80,7 @@ namespace IronPython.Compiler {
         private State _state;
 
         // tokenizer properties:
-        private readonly bool _verbatim, _implyDedent;
+        private readonly bool _verbatim, _dontImplyDedent;
         private SourceUnit _sourceUnit;
         private TokenizerBuffer _buffer;
         private ErrorSink _errors;
@@ -150,7 +150,7 @@ namespace IronPython.Compiler {
             : this(errorSink, verbatim, true) {
         }
 
-        public Tokenizer(ErrorSink errorSink, bool verbatim, bool implyDedent) {
+        public Tokenizer(ErrorSink errorSink, bool verbatim, bool dontImplyDedent) {
             Contract.RequiresNotNull(errorSink, "errorSink");
 
             _errors = errorSink;
@@ -158,7 +158,7 @@ namespace IronPython.Compiler {
             _state = new State(null);
             _sourceUnit = null;
             _buffer = null;
-            _implyDedent = implyDedent;
+            _dontImplyDedent = dontImplyDedent;
         }
 
         public void Initialize(SourceUnit sourceUnit) {
@@ -383,10 +383,14 @@ namespace IronPython.Compiler {
 
         private Token ReadEof() {
             _buffer.MarkSingleLineTokenEnd();
-
+            
             if (_state.PendingNewlines-- > 0) {
-                // if the input doesn't end in a EOLN or we're in an indented block then add a newline to the end
-                SetIndent(0, null);
+                if (!_dontImplyDedent) {
+                    // if the input doesn't end in a EOLN or we're in an indented block then add a newline to the end
+                    // but only if we're implying dedents
+                    SetIndent(0, null);
+                }
+
                 return Tokens.NewLineToken;
             } else {
                 return Tokens.EndOfFileToken;
@@ -713,7 +717,7 @@ namespace IronPython.Compiler {
                 return ReadNewlineWithChecks();
 
             int spaces = 0;
-            while (true) {
+            while (true) {                          
                 int ch = NextChar();
 
                 switch (ch) {
@@ -730,14 +734,13 @@ namespace IronPython.Compiler {
                             ch = _buffer.ReadLine();
                             break;
                         }
-
                     case EOF:
+                        // EOF after a new-line, set the spaces back to
+                        // zero and back off the EOF so ReadEof can process it
+                        _buffer.Back();
                         _buffer.MarkMultiLineTokenEnd();
-                        if (_implyDedent) {
-                            SetIndent(0, null);
-                        }
+                        SetIndent(0, null);
                         return true;
-
                     default:
 
                         if (_buffer.ReadEolnOpt(ch) > 0) {
@@ -786,15 +789,16 @@ namespace IronPython.Compiler {
                             ch = _buffer.ReadLine();
                             break;
                         }
-                   
+
                     case EOF:
+                        _buffer.Back();
                         _buffer.MarkMultiLineTokenEnd();
                         SetIndent(0, null);
                         return true;
-                    
+
                     default:
                         if (_buffer.ReadEolnOpt(ch) > 0) {
-                            spaces = 0; 
+                            spaces = 0;
                             sb.Length = 0;
                             break;
                         }

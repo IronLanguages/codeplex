@@ -13,7 +13,8 @@
 #
 #####################################################################################
 
-# COM Interop tests for IronPython
+# Word Interop tests for IronPython
+
 from lib.assert_util import skiptest
 skiptest("win32", "silverlight", "cli64")
 from lib.cominterop_util import *
@@ -86,6 +87,91 @@ def quit_word(wd):
     else: 
         wd.Quit(0)
 
+def create_instance():
+    if preferComDispatch:
+        # load Word's type library
+        typelib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
+        return typelib.Word.Application()
+    else:
+        type = System.Type.GetTypeFromProgID("Word.Application")
+        return System.Activator.CreateInstance(type)
+
+def test_word_typelibsupport():
+    if not preferComDispatch:
+        print "skipping test_word_typelibsupoprt - reason: type Lib support is only enabled in PreferComDispatch mode."
+        return
+
+    # load Word namespace directly from the TypeLib
+    typeLib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
+
+    # we can get some information about he typelib
+    Assert( typeLib.Name == 'Word')
+    Assert( System.String.ToUpper(typeLib.Guid.ToString()) == '00020905-0000-0000-C000-000000000046')
+    # check version information is available and does not throw
+    typeLib.VersionMajor
+    typeLib.VersionMinor
+    # check typeLib exposes only those discoverable methods
+    Assert( dir(typeLib).__len__() == 5 )
+    Assert( 'Word' in dir(typeLib) );
+    Assert( 'Name' in dir(typeLib) );
+    Assert( 'Guid' in dir(typeLib) );
+    Assert( 'VersionMajor' in dir(typeLib) );
+    Assert( 'VersionMinor' in dir(typeLib) );
+
+    # check some coclasses are present in Word's namespace
+    Assert('Application' in dir(typeLib.Word))
+    Assert('Document' in dir(typeLib.Word))
+
+    # check some enums are present in Word's namespace
+    Assert('WdCountry' in dir(typeLib.Word))
+    Assert('WdSaveFormat' in dir(typeLib.Word))
+    Assert('WdXMLNodeType' in dir(typeLib.Word))
+
+    # check we can explore the content of enums
+    Assert('wdFormatXML' in dir(typeLib.Word.WdSaveFormat))
+    Assert('wdUS' in dir(typeLib.Word.WdCountry))
+
+    #check we can access enums' values
+    Assert(typeLib.Word.WdCountry.wdUS == 1)
+
+
+    # verify namespace Word is not yet available
+    try:
+        Word.__class__
+    except NameError: pass
+    else: Fail("namespace Word has not been imported yet")
+
+    # Now let's do above tests but with imported namespace
+    clr.AddReferenceToTypeLibrary(typeLib.Guid)
+
+    # verify namespace Word is not yet available
+    try:
+        Word.__class__
+    except NameError: pass
+    else: Fail("namespace Word has not been imported yet")
+
+    import Word
+
+    # check __class__ extension is available
+    Word.__class__ 
+
+    # check some coclasses are present in Word's namespace
+    Assert('Application' in dir(Word))
+    Assert('Document' in dir(Word))
+
+    # check some expected enums are present in Word's namespace
+    Assert('WdCountry' in dir(Word))
+    Assert('WdSaveFormat' in dir(Word))
+    Assert('WdXMLNodeType' in dir(Word))
+
+    # check we can explore the content of enums
+    Assert('wdFormatXML' in dir(Word.WdSaveFormat))
+    Assert('wdUS' in dir(Word.WdCountry))
+
+    #check we can access enums' values
+    Assert(Word.WdCountry.wdUS == 1)
+
+
 def test_wordevents():
     if isPiaInstalled:
         print "Found PIAs for Word"
@@ -100,11 +186,11 @@ def test_wordevents():
         print "Prefer COM dispatch is required when Word PIA is not installed!!!"
         return
 
-    type = System.Type.GetTypeFromProgID("Word.Application")
     wd = None
     doc = None
     try:
-        wd = System.Activator.CreateInstance(type)
+
+        wd = create_instance()
 
         #wd.Visible = True
         doc = wd.Documents.Add()

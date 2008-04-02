@@ -241,8 +241,7 @@ def run_one_command(*args):
     if res:
         print '%d running %s failed' % (res, ' '.join(args))
         print 'output was', output
-        print 'err', err
-        sys.exit(res)        
+        print 'err', err       
     return output, err, res
 
 def runTestSlow(test_name, mode):

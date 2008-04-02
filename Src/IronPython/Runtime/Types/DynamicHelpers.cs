@@ -23,6 +23,7 @@ using System.Threading;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting;
+using Microsoft.Scripting.Generation;
 
 namespace IronPython.Runtime.Types {
     public static class DynamicHelpers {
@@ -43,9 +44,7 @@ namespace IronPython.Runtime.Types {
             IPythonObject dt = o as IPythonObject;
             if (dt != null) return dt.PythonType;
             
-            if (o == null) return PythonType.NullType;
-
-            return GetPythonTypeFromType(o.GetType());
+            return GetPythonTypeFromType(CompilerHelpers.GetType(o));
         }
 
         public static ReflectedEvent.BoundEvent MakeBoundEvent(ReflectedEvent eventObj, object instance, Type type) {

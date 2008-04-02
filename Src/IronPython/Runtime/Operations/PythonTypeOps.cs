@@ -59,7 +59,7 @@ namespace IronPython.Runtime.Operations {
 
             if (!dict.ContainsKey(Symbols.Module)) {
                 object modName;
-                if (context.Scope.TryLookupName(context.LanguageContext, Symbols.Name, out modName)) {
+                if (context.Scope.TryLookupName(Symbols.Name, out modName)) {
                     dict[Symbols.Module] = modName;
                 }
             }
@@ -127,7 +127,7 @@ namespace IronPython.Runtime.Operations {
             for (int i = 0; i < bases.Count; i++) {
                 PythonType baseType = bases[i];
 
-                if (Mro.IsOldStyle(baseType)) {
+                if (baseType.IsOldClass) {
                     PythonTypeSlot dts;
                     bool success = baseType.TryLookupSlot(context, Symbols.Class, out dts);
                     Debug.Assert(success);
@@ -499,7 +499,7 @@ namespace IronPython.Runtime.Operations {
                 PythonType cdt = dt.ResolutionOrder[i];
                 PythonTypeSlot dts;
                 object value;
-                if (Mro.IsOldStyle(cdt)) {
+                if (cdt.IsOldClass) {
                     OldClass oc = PythonOps.ToPythonType(cdt) as OldClass;
 
                     if (oc != null && oc.TryGetBoundCustomMember(context, Symbols.Init, out value)) {
@@ -548,7 +548,8 @@ namespace IronPython.Runtime.Operations {
 
         private static bool IsRuntimeAssembly(Assembly assembly) {
             if (assembly == typeof(PythonOps).Assembly || // IronPython.dll
-                assembly == typeof(Microsoft.Scripting.Math.BigInteger).Assembly) { // Microsoft.Scripting.dll
+                assembly == typeof(Microsoft.Scripting.Math.BigInteger).Assembly || // Microsoft.Scripting.dll
+                assembly == typeof(Microsoft.Scripting.SymbolId).Assembly) {  // Microsoft.Scripting.Core.dll
                 return true;
             }
 

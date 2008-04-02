@@ -30,7 +30,7 @@ o = VariousParameters()
 def test_0_1_args():
 
     # public void M100() { Flag.Reset(); Flag.Set(10); }
-    f = is_cli and o.M100 or M100
+    f = o.M100
     f()
     AssertErrorWithMessage(TypeError, 'M100() takes no arguments (1 given)', lambda: f(1))
     f(*())
@@ -42,7 +42,7 @@ def test_0_1_args():
     f(*(), **{})
     
     # public void M200(int arg) { Flag.Reset(); Flag.Set(arg); }
-    f = is_cli and o.M200 or M200
+    f = o.M200
     AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (0 given)", lambda: f())
     f(1)
     AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(1, 2))
@@ -63,7 +63,7 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M200() takes exactly 1 argument (2 given)", lambda: f(arg = 1, **{'arg' : 2})) # msg
 
     # public void M201([DefaultParameterValue(20)] int arg) { Flag.Reset(); Flag.Set(arg); }
-    f = is_cli and o.M201 or M201
+    f = o.M201
     f()
     f(1)
     AssertErrorWithMessage(TypeError, 'M201() takes at most 1 argument (2 given)', lambda: f(1, 2))# msg
@@ -87,7 +87,7 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M201() got an unexpected keyword argument 'arg1'", lambda: f(**{ "arg1" : 1}))
 
     # public void M202(params int[] arg) { Flag.Reset(); Flag.Set(arg.Length); }
-    f = is_cli and o.M202 or M202
+    f = o.M202
     f()
     f(1)
     f(1,2)
@@ -100,7 +100,6 @@ def test_0_1_args():
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'arg'", lambda: f(**{'arg': 3}))# msg
     AssertErrorWithMessage(TypeError, "M202() got an unexpected keyword argument 'other'", lambda: f(**{'other': 4}))
 
-@skip("win32")    
 def test_optional():
     #public void M231([Optional] int arg) { Flag.Set(arg); }  // not reset any
     #public void M232([Optional] bool arg) { Flag<bool>.Set(arg); }
@@ -136,7 +135,7 @@ def test_optional():
     o.M237(); AreEqual(Flag[SimpleStruct].Value1.Flag, 0) 
     
     ## testing the argument style
-    f = is_cli and o.M231 or M231
+    f = o.M231
     
     f(*()); Flag.Check(0)
     f(*(2, )); Flag.Check(2)
@@ -151,7 +150,7 @@ def test_optional():
     
 def test_two_args():
     #public void M300(int x, int y) { }
-    f = is_cli and o.M300 or M300
+    f = o.M300
     AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (0 given)", lambda: f())
     AssertErrorWithMessage(TypeError, "M300() takes exactly 2 arguments (1 given)", lambda: f(1))
     f(1, 2)
@@ -195,7 +194,7 @@ def test_two_args():
     
     #public void M350(int x, params int[] y) { }
     
-    f = is_cli and o.M350 or M350
+    f = o.M350
     AssertErrorWithMessage(TypeError, "M350() takes at least 1 argument (0 given)", lambda: f())
     f(1)
     f(1, 2)

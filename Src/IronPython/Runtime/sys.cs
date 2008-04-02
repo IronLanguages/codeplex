@@ -70,7 +70,7 @@ namespace IronPython.Runtime {
 
         public static void exit(object code) {
             if (code == null) {
-                throw new PythonExceptions.SystemExit().InitAndGetClrException();
+                throw new PythonExceptions._SystemExit().InitAndGetClrException();
             } else {
                 PythonTuple pt = code as PythonTuple;
                 if (pt != null && pt.__len__() == 1) {
@@ -78,7 +78,7 @@ namespace IronPython.Runtime {
                 }
 
                 // throw as a python exception here to get the args set.
-                throw new PythonExceptions.SystemExit().InitAndGetClrException(code);
+                throw new PythonExceptions._SystemExit().InitAndGetClrException(code);
             }
         }
 
@@ -163,13 +163,13 @@ namespace IronPython.Runtime {
 
             // !!! These fields do need to be reset on "reload(sys)". However, the initial value is specified by the 
             // engine elsewhere. For now, we initialize them just once to some default value
-            dict[SymbolTable.StringToId("warnoptions")] = PythonOps.MakeList();
+            dict[SymbolTable.StringToId("warnoptions")] = new List(0);
 
             PublishBuiltinModuleNames(context, dict);
             context.SetHostVariables(dict);
 
-            dict[SymbolTable.StringToId("meta_path")] = PythonOps.MakeList();
-            dict[SymbolTable.StringToId("path_hooks")] = PythonOps.MakeList();
+            dict[SymbolTable.StringToId("meta_path")] = new List(0);
+            dict[SymbolTable.StringToId("path_hooks")] = new List(0);
             dict[SymbolTable.StringToId("path_importer_cache")] = new PythonDictionary();
         }
 

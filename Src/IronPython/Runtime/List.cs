@@ -209,7 +209,11 @@ namespace IronPython.Runtime {
             return _size;
         }
 
-        public virtual object __iter__() {
+        public virtual IEnumerator __iter__() {
+            // return type is strongly typed to IEnumerator so that
+            // we can call it w/o requiring an explicit conversion.  If the
+            // user overrides this we'll place a conversion in the wrapper
+            // helper
             return new listiterator(this);
         }
 
@@ -702,9 +706,9 @@ namespace IronPython.Runtime {
             sort(cmp, key, false);
         }
 
-        public void sort([DefaultParameterValueAttribute(null)] object cmp,
-                         [DefaultParameterValueAttribute(null)] object key,
-                         [DefaultParameterValueAttribute(false)] bool reverse) {
+        public void sort([DefaultParameterValue(null)] object cmp,
+                         [DefaultParameterValue(null)] object key,
+                         [DefaultParameterValue(false)] bool reverse) {
             IComparer comparer = (cmp == null) ?
                 (IComparer)new DefaultPythonComparer() :
                 (IComparer)new FunctionComparer(cmp);
@@ -1010,7 +1014,7 @@ namespace IronPython.Runtime {
         #region IEnumerable Members
 
         IEnumerator IEnumerable.GetEnumerator() {
-            return PythonOps.GetEnumerator(__iter__());
+            return __iter__();
         }
 
         #endregion

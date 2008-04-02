@@ -80,7 +80,7 @@ def test_one_out():
             arg.Value = 14
     x = C()
     a = box_int(10)
-    expected = 0  # !!!
+    expected = 10
     AreEqual(f(x, a), None)
     AreEqual(a.Value, 14)
     
@@ -101,7 +101,7 @@ def test_one_out():
     x = C()
     a = box_int(10)
     f(x, a)
-    AreEqual(a.Value, 0)   #!!!
+    AreEqual(a.Value, 10)
 
     class C(IInterface600):
         def m_b(self): return 16    # omit "out" arg
@@ -225,7 +225,7 @@ def test_two_args():
 
     class C(IInterface600):
         def m_h(self, arg1, arg2): 
-            AreEqual(arg1.Value, 0)
+            AreEqual(arg1.Value, 10)
             arg1.Value = arg2.Value + 7
             arg2.Value = 6
             return 5

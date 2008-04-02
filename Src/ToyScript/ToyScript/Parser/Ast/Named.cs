@@ -28,12 +28,11 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            MSAst.VariableExpression variable = GetVariable(tg);
-            return Ast.Read(variable);
+            return GetVariable(tg);
         }
 
         protected internal override MSAst.Expression GenerateAssign(ToyGenerator tg, MSAst.Expression right) {
-            MSAst.VariableExpression variable = GetVariable(tg);
+            MSAst.Expression variable = GetVariable(tg);
 
             return Ast.Assign(
                 variable,
@@ -41,8 +40,8 @@ namespace ToyScript.Parser.Ast {
             );
         }
 
-        private MSAst.VariableExpression GetVariable(ToyGenerator tg) {
-            MSAst.VariableExpression variable = tg.LookupName(_name);
+        private MSAst.Expression GetVariable(ToyGenerator tg) {
+            MSAst.Expression variable = tg.LookupName(_name);
             if (variable == null) {
                 variable = tg.GetOrMakeGlobal(_name);
             }

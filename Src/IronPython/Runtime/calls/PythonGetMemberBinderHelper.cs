@@ -36,7 +36,7 @@ namespace IronPython.Runtime.Calls {
             : base(context, action, args) {
         }
 
-        public StandardRule<T> MakeRule() {
+        public RuleBuilder<T> MakeRule() {
             Type type = CompilerHelpers.GetType(Arguments[0]);
             // we extend None & our standard built-in python types.
             if (type == typeof(None) || PythonTypeCustomizer.IsPythonType(type)) {
@@ -174,7 +174,7 @@ namespace IronPython.Runtime.Calls {
             return target;
         }
 
-        private StandardRule<T> MakePythonTypeRule(PythonTypeSlot slot, PythonType argType, bool clsOnly) {
+        private RuleBuilder<T> MakePythonTypeRule(PythonTypeSlot slot, PythonType argType, bool clsOnly) {
             if (Arguments[0] is ICustomMembers) {
                 Rule.Target = UserTypeOps.MakeCustomMembersGetBody<T>(Context, Action, PythonTypeOps.GetName(argType), Rule);
                 PythonBinderHelper.MakeTest(Rule, argType);
@@ -232,7 +232,7 @@ namespace IronPython.Runtime.Calls {
             return false;
         }
 
-        internal StandardRule<T> InternalRule {
+        internal RuleBuilder<T> InternalRule {
             get {
                 return Rule;
             }

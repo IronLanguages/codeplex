@@ -321,35 +321,11 @@ namespace IronPython.Runtime.Types {
         /// </summary>
         public static event EventHandler<TypeCreatedEventArgs> TypeInitialized {
             add {
-                List<PythonType> inited = new List<PythonType>();
                 lock (_notifications) {
                     _notifications.Add(value);
-
-                    int current = 0;
-                    inited.Add(DynamicHelpers.GetPythonTypeFromType(typeof(object)));
-
-                    while (current < inited.Count) {
-                        PythonType dt = inited[current++];
-
-                        IList<WeakReference> types = dt.SubTypes;
-                        if (types != null) {
-                            foreach (WeakReference wr in types) {
-                                if (wr.IsAlive) {
-                                    PythonType wrtype = (PythonType)wr.Target;
-
-                                    if (wrtype != null) {
-                                        inited.Add(wrtype);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                 }
 
-                foreach (PythonType dt in inited) {
-                    value(typeof(PythonTypeBuilder), new TypeCreatedEventArgs(dt));
-                }
+                value(typeof(PythonTypeBuilder), new TypeCreatedEventArgs(TypeCache.Object));
             }
             remove {
                 lock (_notifications) {

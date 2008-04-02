@@ -61,12 +61,16 @@ namespace IronPython.Compiler.Ast {
             // Temporary variable for the IEnumerator object
             MSAst.VariableExpression enumerator = ag.MakeTemp(SymbolTable.StringToId("foreach_enumerator"), typeof(IEnumerator));
 
-            ag.EnterLoop();
+            // Only the body is "in the loop" for the purposes of break/continue
+            // The "else" clause is outside
+            MSAst.Expression body;
+            MSAst.LabelTarget label = ag.EnterLoop();
             try {
-                return TransformForStatement(ag, enumerator, _list, _left, _body, _else, Span, _header);
+                body = ag.Transform(_body);
             } finally {
                 ag.ExitLoop();
             }
+            return TransformForStatement(ag, enumerator, _list, _left, body, _else, Span, _header, label);
         }
 
         public override void Walk(PythonWalker walker) {
@@ -88,14 +92,9 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal static MSAst.Expression TransformForStatement(AstGenerator ag, MSAst.VariableExpression enumerator,
-                                                    Expression list, Expression left, Statement body,
-                                                    Statement else_, SourceSpan span, SourceLocation header) {
-            return TransformForStatement(ag, enumerator, list, left, ag.Transform(body), else_, span, header);
-        }
-
-        internal static MSAst.Expression TransformForStatement(AstGenerator ag, MSAst.VariableExpression enumerator,
                                                     Expression list, Expression left, MSAst.Expression body,
-                                                    Statement else_, SourceSpan span, SourceLocation header) {
+                                                    Statement else_, SourceSpan span, SourceLocation header,
+                                                    MSAst.LabelTarget loopLabel) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
             MSAst.BoundAssignment init = Ast.Assign(
                 enumerator,
@@ -113,6 +112,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.LoopStatement ls = Ast.Loop(
                 new SourceSpan(left.Start, span.End),
                 left.End,
+                loopLabel,
                 Ast.Call(
                     Ast.Read(enumerator),
                     typeof(IEnumerator).GetMethod("MoveNext")

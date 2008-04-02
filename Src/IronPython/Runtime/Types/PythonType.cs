@@ -87,7 +87,6 @@ namespace IronPython.Runtime.Types {
         private static readonly Dictionary<Type, PythonType> _pythonTypes = new Dictionary<Type, PythonType>();
         internal static PythonType _pythonTypeType = DynamicHelpers.GetPythonTypeFromType(typeof(PythonType));
         private static readonly WeakReference[] _emptyWeakRef = new WeakReference[0];
-        private static PythonType _nullType = DynamicHelpers.GetPythonTypeFromType(typeof(None));
 
         public PythonType(Type underlyingSystemType) {
             _bases = new List<PythonType>(1);
@@ -147,7 +146,9 @@ namespace IronPython.Runtime.Types {
             Initialize();
 
             if (_ctor != null) {
-                if (_ctorSite == null) _ctorSite = DynamicSite<object, object[], object>.Create(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+                if (!_ctorSite.IsInitialized) {
+                    _ctorSite.EnsureInitialized(CallAction.Make(new CallSignature(new ArgumentInfo(ArgumentKind.List))));
+                }
                 return _ctorSite.Invoke(context, _ctor, args);
             }
 #if SILVERLIGHT
@@ -559,7 +560,7 @@ namespace IronPython.Runtime.Types {
             get { return null; }
         }
 
-        public StandardRule<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        public RuleBuilder<T> GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             switch(action.Kind) {
                 case DynamicActionKind.CreateInstance: return GetCreateInstanceAction<T>(action, context, args);
                 case DynamicActionKind.GetMember: return GetGetMemberRule<T>(action, context);
@@ -570,14 +571,14 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> GetCreateInstanceAction<T>(DynamicAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> GetCreateInstanceAction<T>(DynamicAction action, CodeContext context, object[] args) {
             if (IsSystemType) {
                 MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
-                StandardRule<T> rule;
+                RuleBuilder<T> rule;
                 if (ctors.Length > 0) {
                     rule = new CallBinderHelper<T, CallAction>(context, (CallAction)action, args, ctors).MakeRule();
                 } else {
-                    rule = new StandardRule<T>();
+                    rule = new RuleBuilder<T>();
                     rule.Target =
                        rule.MakeError(
                            Ast.New(
@@ -591,7 +592,7 @@ namespace IronPython.Runtime.Types {
             } else {
                 // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
                 // a minimal level of interop until then.
-                StandardRule<T> rule = new StandardRule<T>();
+                RuleBuilder<T> rule = new RuleBuilder<T>();
 
                 // calling NonDefaultNew(context, type, args)
                 Expression call = Ast.ComplexCallHelper(
@@ -606,12 +607,12 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        private StandardRule<T> GetSetMemberRule<T>(DynamicAction action, CodeContext context, params object[] args) {
+        private RuleBuilder<T> GetSetMemberRule<T>(DynamicAction action, CodeContext context, params object[] args) {
             if (IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
                 args = (object[])args.Clone();
                 args[0] = tt;
-                StandardRule<T> rule = new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
+                RuleBuilder<T> rule = new SetMemberBinderHelper<T>(context, (SetMemberAction)action, args).MakeNewRule();
                 rule.Test = Ast.Equal(
                     rule.Parameters[0],
                     Ast.RuntimeConstant(this)
@@ -621,10 +622,10 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> GetGetMemberRule<T>(DynamicAction action, CodeContext context) {
+        private RuleBuilder<T> GetGetMemberRule<T>(DynamicAction action, CodeContext context) {
             if (IsSystemType && !IsPythonType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
-                StandardRule<T> rule = new GetMemberBinderHelper<T>(context, (GetMemberAction)action, new object[] { tt }).MakeNewRule();
+                RuleBuilder<T> rule = new GetMemberBinderHelper<T>(context, (GetMemberAction)action, new object[] { tt }).MakeNewRule();
                 if (rule.IsError && context.LanguageContext.Binder.GetMember(action, UnderlyingSystemType, SymbolTable.IdToString(((GetMemberAction)action).Name)).Count == 0) {
                     // lookup on type
                     tt = MemberTracker.FromMemberInfo(typeof(PythonType));
@@ -640,10 +641,10 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> GetDeleteMemberRule<T>(DynamicAction action, CodeContext context) {
+        private RuleBuilder<T> GetDeleteMemberRule<T>(DynamicAction action, CodeContext context) {
             if (IsSystemType) {
                 MemberTracker tt = MemberTracker.FromMemberInfo(UnderlyingSystemType);
-                StandardRule<T> rule = new DeleteMemberBinderHelper<T>(context, (DeleteMemberAction)action, new object[] { tt }).MakeRule();
+                RuleBuilder<T> rule = new DeleteMemberBinderHelper<T>(context, (DeleteMemberAction)action, new object[] { tt }).MakeRule();
                 rule.Test = Ast.Equal(
                     rule.Parameters[0],
                     Ast.RuntimeConstant(this)
@@ -653,14 +654,14 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> GetCreateInstanceRule<T>(CodeContext context, object[] args, CreateInstanceAction cia) {
+        private RuleBuilder<T> GetCreateInstanceRule<T>(CodeContext context, object[] args, CreateInstanceAction cia) {
             if (IsSystemType) {
                 MethodBase[] ctors = CompilerHelpers.GetConstructors(UnderlyingSystemType);
-                StandardRule<T> rule;
+                RuleBuilder<T> rule;
                 if (ctors.Length > 0) {
                     rule = new CallBinderHelper<T, CallAction>(context, cia, args, ctors).MakeRule();
                 } else {
-                    rule = new StandardRule<T>();
+                    rule = new RuleBuilder<T>();
                     rule.Target =
                        rule.MakeError(
                            Ast.New(
@@ -674,7 +675,7 @@ namespace IronPython.Runtime.Types {
             } else {
                 // TODO: Pull in the Python create logic for this when PythonType moves out of MS.Scripting, this provides
                 // a minimal level of interop until then.
-                StandardRule<T> rule = new StandardRule<T>();
+                RuleBuilder<T> rule = new RuleBuilder<T>();
 
                 // calling NonDefaultNew(context, type, args)
                 Expression call = Ast.ComplexCallHelper(
@@ -1425,7 +1426,9 @@ namespace IronPython.Runtime.Types {
         }
 
         public bool IsNull {
-            get { return Object.ReferenceEquals(this, _nullType); }
+            get { 
+                return UnderlyingSystemType == typeof(None);
+            }
         }
 
         /// <summary>
@@ -1509,12 +1512,6 @@ namespace IronPython.Runtime.Types {
             }
         }
 
-        public static PythonType NullType {
-            get {
-                return _nullType;
-            }
-        }
-
         public bool HasGetAttribute {
             get {
                 return _hasGetAttribute;
@@ -1539,6 +1536,12 @@ namespace IronPython.Runtime.Types {
             }
             set {
                 _oldClass = value;
+            }
+        }
+
+        internal bool IsOldClass {
+            get {
+                return _oldClass != null;
             }
         }
 

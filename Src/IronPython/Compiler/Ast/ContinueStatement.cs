@@ -24,7 +24,7 @@ namespace IronPython.Compiler.Ast {
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
             if (ag.InLoop) {
-                return Ast.Continue(Span);
+                return Ast.Continue(Span, ag.LoopLabel);
             } else {
                 ag.AddError("'continue' not properly in loop", Span);
                 return null;

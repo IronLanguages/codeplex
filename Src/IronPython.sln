@@ -11,7 +11,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonTest", "IronPytho
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IronPythonWindow", "IronPythonWindow\IronPythonWindow.csproj", "{81DA19C7-4FEC-47E7-981B-D9310D549F95}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "Microsoft.Scripting\Microsoft.Scripting.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting.Core", "Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj", "{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Scripting", "Microsoft.Scripting\Microsoft.Scripting.csproj", "{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,6 +99,24 @@ Global
 		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
 		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
 		{2AE75F5A-CD1F-4925-9647-AF4D1C282FB4}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Build Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Build Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Build Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Build Release|Any CPU.Build.0 = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.FxCop|Any CPU.ActiveCfg = FxCop|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.FxCop|Any CPU.Build.0 = FxCop|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Signed Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Signed Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Signed Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Signed Release|Any CPU.Build.0 = Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Debug|Any CPU.ActiveCfg = Silverlight Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Debug|Any CPU.Build.0 = Silverlight Debug|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Release|Any CPU.ActiveCfg = Silverlight Release|Any CPU
+		{EB66B766-6354-4208-A3D4-AACBDCB5C3B3}.Silverlight Release|Any CPU.Build.0 = Silverlight Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

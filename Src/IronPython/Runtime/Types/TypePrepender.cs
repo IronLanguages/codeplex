@@ -36,6 +36,20 @@ namespace IronPython.Runtime.Types {
 
             public BuiltinFunction Ctor;
             public FastDynamicSite<BuiltinFunction, PythonType, object[], object> Site;
+
+            internal void EnsureSite() {
+                if (!Site.IsInitialized) {
+                    Site.EnsureInitialized(
+                        DefaultContext.Default,
+                        CallAction.Make(
+                            new CallSignature(
+                                new ArgumentInfo(ArgumentKind.Simple),
+                                new ArgumentInfo(ArgumentKind.List)
+                            )
+                        )
+                    );
+                }
+            }
         }
 
         public TypePrepender(PythonType dt, PrependerState state) {
@@ -47,23 +61,9 @@ namespace IronPython.Runtime.Types {
         public object Call(CodeContext context, params object[] args) {
             // we've already boxed the args so we'll just call through a splat-site
             // which will do the unsplat for us.
-            if (_state.Site == null) {
-                CreateCallSite();
-            }
 
+            _state.EnsureSite();
             return _state.Site.Invoke(_state.Ctor, _type, args);
-        }
-
-        private void CreateCallSite() {
-            _state.Site = FastDynamicSite<BuiltinFunction, PythonType, object[], object>.Create(
-                DefaultContext.Default,
-                CallAction.Make(
-                    new CallSignature(
-                        new ArgumentInfo(ArgumentKind.Simple),
-                        new ArgumentInfo(ArgumentKind.List)
-                    )
-                )
-            );
         }
 
         [SpecialName]
@@ -71,5 +71,4 @@ namespace IronPython.Runtime.Types {
             return PythonCalls.CallWithKeywordArgs(_state.Ctor, ArrayUtils.Insert((object)_type, args), dict);
         }
     }
-
 }

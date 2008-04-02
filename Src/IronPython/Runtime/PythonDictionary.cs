@@ -369,8 +369,8 @@ namespace IronPython.Runtime {
         public static object fromkeys(CodeContext context, PythonType cls, object seq, object value) {            
             XRange xr = seq as XRange;
             if (xr != null) {
-                if (_fromkeysSite == null) {
-                    _fromkeysSite = RuntimeHelpers.CreateSimpleCallSite<PythonType, object>(DefaultContext.Default);
+                if (!_fromkeysSite.IsInitialized) {
+                    _fromkeysSite.EnsureInitialized(DefaultContext.Default, CallAction.Make(0));
                 }
 
                 int n = xr.__len__();

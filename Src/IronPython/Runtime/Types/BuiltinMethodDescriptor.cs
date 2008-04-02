@@ -113,7 +113,7 @@ namespace IronPython.Runtime.Types {
             get { return DefaultContext.Default.LanguageContext; }
         }
 
-        StandardRule<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
+        RuleBuilder<T> IDynamicObject.GetRule<T>(DynamicAction action, CodeContext context, object[] args) {
             if (action.Kind == DynamicActionKind.Call) {
                 return MakeCallRule<T>((CallAction)action, context, args);
             } else if (action.Kind == DynamicActionKind.DoOperation) {
@@ -122,7 +122,7 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeDoOperationRule<T>(DoOperationAction doOperationAction, CodeContext context, object[] args) {
             switch (doOperationAction.Operation) {
                 case Operators.IsCallable:
                     return PythonBinderHelper.MakeIsCallableRule<T>(context, this, true);
@@ -132,9 +132,9 @@ namespace IronPython.Runtime.Types {
             return null;
         }
 
-        private StandardRule<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
             CallBinderHelper<T, CallAction> helper = new CallBinderHelper<T, CallAction>(context, action, args, Template.Targets, Template.Level, Template.IsReversedOperator);
-            StandardRule<T> rule = helper.MakeRule();
+            RuleBuilder<T> rule = helper.MakeRule();
             if (Template.IsBinaryOperator && rule.IsError && args.Length == 3) { // 1 built-in method descriptor + 2 args
                 // BinaryOperators return NotImplemented on failure.
                 rule.Target = rule.MakeReturn(context.LanguageContext.Binder, Ast.ReadField(null, typeof(PythonOps), "NotImplemented"));

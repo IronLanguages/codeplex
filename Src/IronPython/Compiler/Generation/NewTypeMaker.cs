@@ -323,7 +323,7 @@ namespace IronPython.Compiler.Generation {
                         baseInterfaces.Add(dt.ExtensionType);
                     } else if (IsInstanceType(dt.ExtensionType)) {
                         processing.Enqueue(dt);
-                    } else if (!Mro.IsOldStyle(dt)) {
+                    } else if (!dt.IsOldClass) {
                         curTypeToExtend = null;
                         break;
                     }
@@ -383,7 +383,7 @@ namespace IronPython.Compiler.Generation {
 
         private Type CreateNewType() {
             string name = GetName();
-            _tg = Snippets.Shared.DefineType(TypePrefix + name, _baseType).TypeBuilder;
+            _tg = Snippets.Shared.DefinePublicType(TypePrefix + name, _baseType);
 
             ImplementInterfaces();
 
@@ -1425,6 +1425,9 @@ namespace IronPython.Compiler.Generation {
             // Emit the site invoke
             //
             il.EmitFieldGet(site);
+            PropertyInfo target = siteType.GetProperty("Target");
+            il.EmitPropertyGet(target);
+            il.EmitFieldGet(site);
 
             // Emit the code context
             if (context) {
@@ -1433,8 +1436,9 @@ namespace IronPython.Compiler.Generation {
                 il.EmitPropertyGet(typeof(DefaultContext).GetProperty("Default"));
             }
 
-            if (DynamicSiteHelpers.IsBigTarget(siteType)) {
-                il.EmitTuple(siteType.GetGenericArguments()[0], args.Length + 1, delegate(int index) {
+            if (DynamicSiteHelpers.IsBigTarget(target.PropertyType)) {
+                il.EmitTuple(target.PropertyType.GetGenericArguments()[0],
+                    args.Length + 1, delegate(int index) {
                     if (index == 0) {
                         il.Emit(OpCodes.Ldloc, callTarget);
                     } else {
@@ -1455,7 +1459,7 @@ namespace IronPython.Compiler.Generation {
                 }
             }
 
-            il.EmitCall(siteType, "Invoke");
+            il.EmitCall(target.PropertyType, "Invoke");
 
             foreach (ReturnFixer rf in fixers) {
                 rf.FixReturn(il);

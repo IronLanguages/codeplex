@@ -81,10 +81,6 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
-            return CreateParser(context, options, verbatim, true);
-        }
-
-        public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim, bool implyDedent) {
             Contract.RequiresNotNull(context, "context");
             Contract.RequiresNotNull(options, "options");
 
@@ -106,7 +102,7 @@ namespace IronPython.Compiler {
                 throw;
             }
 
-            Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim, implyDedent);
+            Tokenizer tokenizer = new Tokenizer(context.Errors, verbatim, compilerOptions.DontImplyDedent);
             tokenizer.Initialize(null, reader, SourceLocation.MinValue);
             tokenizer.IndentationInconsistencySeverity = options.IndentationInconsistencySeverity;
 
@@ -1702,7 +1698,10 @@ namespace IronPython.Compiler {
 
                     l.Add(s);
                     if (MaybeEat(TokenKind.Dedent)) break;
-                    if (MaybeEat(TokenKind.EndOfFile)) break;         // error recovery
+                    if (PeekToken().Kind == TokenKind.EndOfFile) {
+                        ReportSyntaxError("unexpected end of file");
+                        break; // error handling
+                    }
                 }
                 Statement[] stmts = l.ToArray();
                 SuiteStatement ret = new SuiteStatement(stmts);

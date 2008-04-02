@@ -166,7 +166,7 @@ namespace IronPython.Modules {
                     } else {
                         // otherwise we're removing from the middle and need to slide the values over...
                         _version++;
-                        
+
                         int start;
                         if (_head >= _tail) {
                             start = 0;
@@ -201,7 +201,7 @@ namespace IronPython.Modules {
                             // and tail just wrapped to the beginning
                             _tail = _data.Length - 1;
                         }
-                    }                    
+                    }
                 }
             }
 
@@ -408,7 +408,7 @@ namespace IronPython.Modules {
             #endregion
 
             #region IEnumerable Members
-            
+
             IEnumerator IEnumerable.GetEnumerator() {
                 return new deque_iterator(this);
             }
@@ -631,7 +631,7 @@ namespace IronPython.Modules {
             }
 
             int ICollection.Count {
-                get { return this._itemCnt;  }
+                get { return this._itemCnt; }
             }
 
             bool ICollection.IsSynchronized {
@@ -642,12 +642,11 @@ namespace IronPython.Modules {
                 get { return this; }
             }
 
-            #endregion           
+            #endregion
         }
 
         [PythonSystemType]
-        public class defaultdict : PythonDictionary
-        {
+        public class defaultdict : PythonDictionary {
             private object _factory;
             private DynamicSite<object, object> _missingSite;
 
@@ -685,8 +684,8 @@ namespace IronPython.Modules {
 
                 if (factory == null) throw PythonOps.KeyError(key);
 
-                if (_missingSite == null) {
-                    _missingSite = RuntimeHelpers.CreateSimpleCallSite<object, object>();
+                if (!_missingSite.IsInitialized) {
+                    _missingSite.EnsureInitialized(CallAction.Make(0));
                 }
 
                 // get the default value, store it in the dictionary and return it

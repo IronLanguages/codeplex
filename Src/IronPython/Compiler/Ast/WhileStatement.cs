@@ -54,18 +54,23 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            ag.EnterLoop();
+            // Only the body is "in the loop" for the purposes of break/continue
+            // The "else" clause is outside
+            MSAst.Expression body;
+            MSAst.LabelTarget label = ag.EnterLoop();
             try {
-                return Ast.While(
-                    Span,
-                    _header,
-                    ag.TransformAndDynamicConvert(_test, typeof(bool)),
-                    ag.Transform(_body),
-                    ag.Transform(_else)
-                );
+                body = ag.Transform(_body);
             } finally {
                 ag.ExitLoop();
             }
+            return Ast.While(
+                Span,
+                _header,
+                label,
+                ag.TransformAndDynamicConvert(_test, typeof(bool)),
+                body,
+                ag.Transform(_else)
+            );
         }
 
         public override void Walk(PythonWalker walker) {

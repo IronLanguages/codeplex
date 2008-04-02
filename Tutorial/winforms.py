@@ -24,7 +24,6 @@ from System.Windows.Forms import Form, Application
 from System.Threading import Thread
 from System.Threading import ThreadStart
 from System.Threading import AutoResetEvent
-from Microsoft.Scripting import ScriptDomainManager
 import IronPython
 
 # We support interactive development of Windows Forms by creating another
@@ -58,7 +57,7 @@ def thread_proc():
     finally:
         # In case thread_proc's thread dies, restore the default IronPython
         # console execution behavior.
-        ScriptDomainManager.CurrentManager.SetCommandDispatcher(None)
+        clr.SetCommandDispatcher(None)
 
 def DispatchConsoleCommand(consoleCommand):
     if consoleCommand:
@@ -74,4 +73,4 @@ t.Start()
 # Don't establish the alternative input execution behavior until the other
 # thread is ready.  Note, 'are' starts out unsignalled.
 are.WaitOne()
-ScriptDomainManager.CurrentManager.SetCommandDispatcher(DispatchConsoleCommand)
+clr.SetCommandDispatcher(DispatchConsoleCommand)

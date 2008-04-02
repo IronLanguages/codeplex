@@ -306,7 +306,7 @@ namespace IronPython.Runtime.Operations {
         /// Provides fast access for object.__getattribute__ by inlining the attribute lookup.
         /// </summary>
         class GetAttributeActionAttribute : ActionOnCallAttribute {
-            public override StandardRule<T> GetRule<T>(CodeContext callerContext, object[] args) {
+            public override RuleBuilder<T> GetRule<T>(CodeContext callerContext, object[] args) {
                 switch (args.Length) {
                     // someObj.__getattribute__(name)
                     case 2: return MakeRule<T>(callerContext, args, ((BoundBuiltinFunction)args[0]).__self__, args[1]);
@@ -316,7 +316,7 @@ namespace IronPython.Runtime.Operations {
                 return null;
             }
 
-            private StandardRule<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
+            private RuleBuilder<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
                 string strAttr = attribute as string;
                 if (strAttr == null) return null;
                 if (self is ICustomMembers || self is IPythonObject) return null;
@@ -326,7 +326,7 @@ namespace IronPython.Runtime.Operations {
                 return MakeGetMemberRule<T>(context, strAttr, selfType, args) ?? CreateCallRule<T>(context, args, strAttr);
             }
 
-            private StandardRule<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, PythonType selfType, object[] args) {
+            private RuleBuilder<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, PythonType selfType, object[] args) {
                 PythonTypeSlot dts;
                 if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
                     PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr), args);                    
@@ -339,8 +339,8 @@ namespace IronPython.Runtime.Operations {
                 return null;
             }
 
-            private StandardRule<T> CreateCallRule<T>(CodeContext context, object[] args, string strAttr) {
-                StandardRule<T> res = new StandardRule<T>();
+            private RuleBuilder<T> CreateCallRule<T>(CodeContext context, object[] args, string strAttr) {
+                RuleBuilder<T> res = new RuleBuilder<T>();
                 res.Test = MakeTest<T>(args, strAttr, res);
                 res.Target = res.MakeReturn(
                     context.LanguageContext.Binder,
@@ -354,7 +354,7 @@ namespace IronPython.Runtime.Operations {
                 return res;
             }
 
-            private static Expression MakeTest<T>(object[] args, string strAttr, StandardRule<T> res) {
+            private static Expression MakeTest<T>(object[] args, string strAttr, RuleBuilder<T> res) {
                 // test is object types + test on the parameter being looked up.  The input name is
                 // either an object or a string so we call the appropriaet overload on string.
                 return Ast.AndAlso(
@@ -367,7 +367,7 @@ namespace IronPython.Runtime.Operations {
                 );
             }
 
-            private Expression GetTargetObject<T>(StandardRule<T> rule, object[] args) {
+            private Expression GetTargetObject<T>(RuleBuilder<T> rule, object[] args) {
                 if (args.Length == 2) {
                     return Ast.ReadProperty(
                         Ast.ConvertHelper(rule.Parameters[0], typeof(BoundBuiltinFunction)),

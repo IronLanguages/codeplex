@@ -35,11 +35,16 @@ namespace IronPython.Compiler {
     public sealed class PythonCompilerOptions : CompilerOptions {
         private PythonLanguageFeatures _languageFeatures;
         private ModuleOptions _module = ModuleOptions.Optimized;
-        private bool _skipFirstLine;
+        private bool _skipFirstLine, _dontImplyIndent;
 
         public PythonLanguageFeatures LanguageFeatures {
             get { return _languageFeatures; }
             set { _languageFeatures = value; }
+        }
+
+        public bool DontImplyDedent {
+            get { return _dontImplyIndent; }
+            set { _dontImplyIndent = value; }
         }
 
         public bool TrueDivision {

@@ -36,7 +36,7 @@ namespace IronPython.Compiler.Ast {
         private List<MSAst.VariableExpression> _temps;
         private readonly CompilerContext _context;
         private readonly bool _print;
-        private int _loopDepth = 0;
+        private readonly Stack<MSAst.LabelTarget> _loopStack = new Stack<MSAst.LabelTarget>();
 
         private bool _generator;
 
@@ -87,16 +87,22 @@ namespace IronPython.Compiler.Ast {
             get { return _generator; }
         }
 
-        public void EnterLoop() {
-            _loopDepth++;
+        public MSAst.LabelTarget EnterLoop() {
+            MSAst.LabelTarget label = Ast.Label();
+            _loopStack.Push(label);
+            return label;
         }
+
         public void ExitLoop() {
-            _loopDepth--;
-            Debug.Assert(_loopDepth >= 0);
+            _loopStack.Pop();
         }
 
         public bool InLoop {
-            get { return _loopDepth > 0; }
+            get { return _loopStack.Count > 0; }
+        }
+
+        public MSAst.LabelTarget LoopLabel {
+            get { return _loopStack.Peek(); }
         }
 
         internal static MSAst.LambdaExpression TransformAst(CompilerContext context, PythonAst ast) {

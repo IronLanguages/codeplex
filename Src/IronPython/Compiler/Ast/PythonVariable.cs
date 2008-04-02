@@ -35,7 +35,7 @@ namespace IronPython.Compiler.Ast {
         private int _index;                 // Index for flow checker
 
         private VariableKind _kind;
-        private MSAst.VariableExpression _variable;
+        private MSAst.Expression _variable;
 
         public PythonVariable(SymbolId name, VariableKind kind, ScopeStatement scope)
             : this(name, typeof(object), kind, scope) {
@@ -97,19 +97,19 @@ namespace IronPython.Compiler.Ast {
             set { _fallback = value; }
         }
 
-        public MSAst.VariableExpression Variable {
+        public MSAst.Expression Variable {
             get {
                 Debug.Assert(_variable != null);
                 return _variable;
             }
         }
 
-        internal void SetParameter(MSAst.VariableExpression parameter) {
+        internal void SetParameter(MSAst.ParameterExpression parameter) {
             Debug.Assert(_variable == null);
             _variable = parameter;
         }
 
-        internal MSAst.VariableExpression Transform(AstGenerator ag) {
+        internal MSAst.Expression Transform(AstGenerator ag) {
             Debug.Assert(_kind != VariableKind.Parameter);
             switch (_kind) {
                 case VariableKind.Global:

@@ -464,13 +464,15 @@ def test_importwinform():
     form.Text = "Hello"
     Assert(form.Text == "Hello")
 
-@skip("silverlight")
-@skip("win32")
-def xtest_copyfrompackages():
+
+#@skip("win32", "silverlight")
+@disabled("Merlin 400941")
+def test_copyfrompackages():
     _f_pkg1 = path_combine(testpath.public_testdir, 'StandAlone\\Packages1.py')
     _f_pkg2 = path_combine(testpath.public_testdir, 'StandAlone\\Packages2.py')
     _f_mod  = path_combine(testpath.public_testdir, 'StandAlone\\ModPath\\IronPythonTest.py')
     write_to_file(_f_pkg1, '''
+
 import sys
 sys.path.append(sys.path[0] + '\\..')
 

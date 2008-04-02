@@ -48,8 +48,8 @@ namespace IronPython.Runtime.Operations {
         public static object __new__(
             CodeContext context, 
             PythonType cls,
-            [DefaultParameterValueAttribute(null)]object real,
-            [DefaultParameterValueAttribute(null)]object imag
+            [DefaultParameterValue(null)]object real,
+            [DefaultParameterValue(null)]object imag
            ) {
             Complex64 real2, imag2;
             real2 = imag2 = new Complex64();
