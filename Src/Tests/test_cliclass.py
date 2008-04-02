@@ -1,17 +1,17 @@
 #####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 """Test cases for class-related features specific to CLI"""
 
@@ -222,19 +222,22 @@ def test_type_descs():
     x = test.GetEvents(b, None)
     Assert(x.Count == 0)
     
-    x = test.GetProperties(b)
-    Assert(x.Count > 0)
+    import System
     
-    Assert(test.TestProperties(b, ['__doc__'], []))
-    b.bazbar = 'hello'
-    Assert(test.TestProperties(b, ['__doc__','bazbar'], []))
-    b.baz = 'goodbye'
-    Assert(test.TestProperties(b, ['__doc__','bazbar', 'baz'], []))
-    delattr(b, 'baz')
-    Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
-    # Check that adding a non-string entry in the dictionary does not cause any grief.
-    b.__dict__[1] = 1;
-    Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
+    for x in [test.GetProperties(b), test.GetProperties(b, (System.ComponentModel.BrowsableAttribute(True), ))]:
+        x = test.GetProperties(b)
+        Assert(x.Count > 0)
+        
+        Assert(test.TestProperties(b, ['__doc__'], []))
+        b.bazbar = 'hello'
+        Assert(test.TestProperties(b, ['__doc__','bazbar'], []))
+        b.baz = 'goodbye'
+        Assert(test.TestProperties(b, ['__doc__','bazbar', 'baz'], []))
+        delattr(b, 'baz')
+        Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
+        # Check that adding a non-string entry in the dictionary does not cause any grief.
+        b.__dict__[1] = 1;
+        Assert(test.TestProperties(b, ['__doc__','bazbar'], ['baz']))
     
     #Assert(test.TestProperties(test, ['GetConverter', 'GetEditor', 'GetEvents', 'GetHashCode'] , []))
     
@@ -456,6 +459,14 @@ End Class
         name = '%s\\vbproptest%f.dll' % (testpath.temporary_dir, r.random())
         x = run_vbc('/target:library vbproptest1.vb "/out:%s"' % name)        
         AreEqual(x, 0)
+        
+        #peverify
+        import nt
+        short_name = "\\" + name.rsplit("\\", 1)[1]
+        if System.IO.File.Exists(nt.getcwd() + short_name):
+            System.IO.File.Delete(nt.getcwd() + short_name)
+        System.IO.File.Copy(name, nt.getcwd() + short_name)
+        
         import clr
         clr.AddReferenceToFileAndPath(name)
         import VbPropertyTest
@@ -602,5 +613,15 @@ def test_virtual_event():
             a.MyRaise()
             AreEqual(UseEvent.Called, False)
 
+def test_float_compare():
+    Assert(System.Single(2) >= System.Single(2))
+    Assert(System.Single(3) >= System.Single(2))
+    Assert(System.Single(2) <= System.Single(2))
+    Assert(System.Single(2) <= System.Single(3))
+    Assert(System.Single(2) == System.Single(2))
+    Assert(System.Single(2) != System.Single(3))
+    Assert(System.Single(3) > System.Single(2))
+    Assert(System.Single(2) < System.Single(3))
+    
 run_test(__name__)
 

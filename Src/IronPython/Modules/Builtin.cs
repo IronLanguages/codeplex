@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Text;
@@ -540,6 +540,7 @@ namespace IronPython.Modules {
             BuiltinFunction bf;
             PythonFunction pf;
             BuiltinMethodDescriptor methodDesc;
+            BoundBuiltinFunction bbf;
             string strVal;
             PythonModule pm;
             OldClass oc;
@@ -616,6 +617,14 @@ namespace IronPython.Modules {
                     if (dt.TryGetSlot(context, SymbolTable.StringToId(name), out value))
                         Help(context, doced, doc, indent + 1, value);
                 }
+            } else if ((bbf = o as BoundBuiltinFunction) != null) {
+                if (indent == 0) doc.AppendFormat("Help on built-in function {0}\n\n", bbf.Target.Name);
+
+                AppendIndent(doc, indent);
+                doc.Append(bbf.Target.Name);
+                doc.Append("(...)\n");
+
+                AppendMultiLine(doc, bbf.Target.Documentation, indent + 1);
             } else if ((methodDesc = o as BuiltinMethodDescriptor) != null) {
                 if (indent == 0) doc.AppendFormat("Help on method-descriptor {0}\n\n", methodDesc.Name);
                 AppendIndent(doc, indent);
@@ -1316,7 +1325,7 @@ namespace IronPython.Modules {
 
             if (module.Filename == null) return Importer.ReloadBuiltin(module);
 
-            PythonModule pmod;
+            PythonModule pmod = null;
 
             bool reloadBinary = false;
             bool binaryLoaded = string.Compare(Path.GetExtension(module.Filename), ".exe", true) == 0;
@@ -1328,7 +1337,9 @@ namespace IronPython.Modules {
 
             if (reloadBinary) {
                 pmod = Importer.LoadPreCompiled(module.SystemState, module.ModuleName, module.Filename);
-            } else {
+            }
+
+            if (pmod == null) {
                 CompilerContext cc = new CompilerContext(module.Filename);
                 Parser parser = Parser.FromFile(module.SystemState, cc);
                 Statement s = parser.ParseFileInput();

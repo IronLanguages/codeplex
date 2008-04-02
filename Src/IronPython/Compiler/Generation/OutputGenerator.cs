@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.IO;
@@ -135,11 +135,7 @@ namespace IronPython.Compiler.Generation {
             cg.EmitFieldGet(typeof(ModuleScope), "__module__");
             cg.ModuleSlot.EmitSet(cg);
 
-            if (context.TrueDivision) {
-                cg.ContextSlot.EmitGet(cg);
-                cg.EmitInt(1);
-                cg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
-            }
+            FlowContext(context, cg, cg.ContextSlot);
 
             Slot dummySlot = null;
             // Emit a try/catch block  for TraceBack support, except for simple return statements
@@ -170,6 +166,19 @@ namespace IronPython.Compiler.Generation {
                 (CompiledCodeDelegate)cg.CreateDelegate(typeof(CompiledCodeDelegate)),
                 staticData);
             return compiledCode;
+        }
+
+        private static void FlowContext(CompilerContext context, CodeGen cg, Slot contextSlot) {
+            if (context.TrueDivision) {
+                contextSlot.EmitGet(cg);
+                cg.EmitInt(1);
+                cg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
+            }
+
+            if (context.AllowWithStatement) {
+                contextSlot.EmitGet(cg);
+                cg.EmitCall(typeof(Ops), "EnableWithStatement");
+            }
         }
 
         public static PythonModule GenerateModule(SystemState state, CompilerContext context, Statement body, string moduleName) {
@@ -301,15 +310,12 @@ namespace IronPython.Compiler.Generation {
         internal static CodeGen GenerateModuleInitialize(CompilerContext context, GlobalSuite gs, TypeGen tg, bool staticTypes, CustomModuleInit customInit) {
             CodeGen ncg = tg.DefineMethodOverride(typeof(CompiledModule).GetMethod("Initialize", BindingFlags.Public | BindingFlags.Instance));
             ncg.Context = context;
+
             ncg.EmitSetTraceBackUpdateStatus(false);
 
             ncg.Names = CodeGen.CreateStaticFieldNamespace(tg);
 
-            if (context.TrueDivision) {
-                ncg.ModuleSlot.EmitGet(ncg);
-                ncg.EmitInt(1);
-                ncg.EmitCall(typeof(ICallerContext), "set_TrueDivision");
-            }
+            FlowContext(context, ncg, ncg.ModuleSlot);
 
             // Add __doc__ and __name__
             ncg.Names.CreateGlobalSlot(SymbolTable.Doc);

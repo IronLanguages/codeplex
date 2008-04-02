@@ -1,42 +1,49 @@
 #####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 from lib.assert_util import *
+if not is_cli:
+    from sys import exit
+    exit(0)
+    
+from System import Environment  
+skipMemoryCheck = '-X:StaticMethods' in Environment.GetCommandLineArgs()
+
 from time import clock
 
 # GetTotalMemory() actually pulls in System
-if is_cli:
-    def evalLoop(N):
-        for i in range(N):
-            func = compile(code, '<>', 'exec')
-            eval(func)
+def evalLoop(N):
+    for i in range(N):
+        func = compile(code, '<>', 'exec')
+        eval(func)
     
-    def evalTest(N):
-        startMem = GetTotalMemory()
-        startTime = clock()
-        evalLoop(N)
-        endTime = clock()
-        endMem = GetTotalMemory()
-        return endMem-startMem
+def evalTest(N):
+    startMem = GetTotalMemory()
+    startTime = clock()
+    evalLoop(N)
+    endTime = clock()
+    endMem = GetTotalMemory()
+    return endMem-startMem
     
-    list = [
+t_list = [
         "if not 1 + 2 == 3: raise AssertionError('Assertion Failed')",
         "(a,b) = (0, 1)",
         "2+"*10 + "2",
     
-        "import sys",
+        "import sys",  
+        
         "from time import clock",
     
         "eval('2+2')",
@@ -75,26 +82,30 @@ if is_cli:
         "def f():pass\nclass C:pass\nf()",
     ]
     
-    for code in list:
-        baseMem = evalTest(10)
-        usedMax = max(10000, 4*baseMem)
+for code in t_list:
+    baseMem = evalTest(10)
+    usedMax = max(10000, 4*baseMem)
+    if not skipMemoryCheck: 
         for repetitions in [100, 500]:
             usedMem = evalTest(repetitions)
             Assert(usedMem < usedMax, "Allocated %i (max %i, base %i) running %s %d times" % (usedMem, usedMax, baseMem, code, repetitions))
+    else:  
+        # not to measure the memory usage, but still try to peverify the code at the end
+        evalTest(2)
     
-    e = compile("def f(): return 42", "", "single")
-    names = {}
-    eval(e, names)
-    AreEqual(names['f'](), 42)
+e = compile("def f(): return 42", "", "single")
+names = {}
+eval(e, names)
+AreEqual(names['f'](), 42)
     
-    code = """
+code = """
 x=2
 def f(y):
     return x+y
 z = f(3)
-    """
-    e = compile(code, "", "exec")
-    names = {}
-    eval(e, names)
-    AreEqual(names['z'], 5)
+"""
+e = compile(code, "", "exec")
+names = {}
+eval(e, names)
+AreEqual(names['z'], 5)
 

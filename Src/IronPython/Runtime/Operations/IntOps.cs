@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Text;
@@ -898,6 +898,12 @@ namespace IronPython.Runtime.Operations {
         }
         internal static object ReverseRightShift(int x, int y) {
             return RightShift(y, x);
+        }
+
+        [PythonName("__int__")]
+        public static object ConvertToInt32(object self) {
+            // 2.4 returns self as an object, 2.5 converts to native int
+            return self;
         }
     }
 }

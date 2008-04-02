@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections;
@@ -185,9 +185,13 @@ namespace IronPython.Runtime {
 
         [PythonName("__iadd__")]
         public virtual object InPlaceAdd(object other) {
-            IEnumerator e = Ops.GetEnumerator(other);
-            while (e.MoveNext()) {
-                Append(e.Current);
+            if (!Object.ReferenceEquals(this, other)) {
+                IEnumerator e = Ops.GetEnumerator(other);
+                while (e.MoveNext()) {
+                    Append(e.Current);
+                }
+            } else {
+                InPlaceMultiply(2);
             }
 
             return this;
@@ -886,6 +890,37 @@ namespace IronPython.Runtime {
             return result;
         }
 
+        private bool EqualsTo(object obj) {
+            List l = obj as List;
+            if (l == null) throw new ArgumentException("expected list");
+
+            CompareUtil.Push(this, obj);
+            try {
+                return EqualToWorker(l);
+            } finally {
+                CompareUtil.Pop(this, obj);
+            }
+        }
+
+        private bool EqualToWorker(List l) {
+            // we need to lock both objects (or copy all of one's data w/ it's lock held, and
+            // then compare, which is bad).  Therefore we have a strong order for locking on 
+            // the lists
+            bool result;
+            if (this.GetHashCode() < l.GetHashCode()) {
+                lock (this) lock (l) result = Ops.EqualArrays(data, size, l.data, l.size);
+            } else if (this.GetHashCode() != l.GetHashCode()) {
+                lock (l) lock (this) result = Ops.EqualArrays(data, size, l.data, l.size);
+            } else {
+                // rare, but possible.  We need a second opinion
+                if (IdDispenser.GetId(this) < IdDispenser.GetId(l))
+                    lock (this) lock (l) result = Ops.EqualArrays(data, size, l.data, l.size);
+                else
+                    lock (l) lock (this) result = Ops.EqualArrays(data, size, l.data, l.size);
+            }
+            return result;
+        }
+
         #region IList Members
 
         public bool IsReadOnly {
@@ -1058,7 +1093,7 @@ namespace IronPython.Runtime {
             if (l == null) return Ops.NotImplemented;
 
             if (l.Count != this.Count) return Ops.FALSE;
-            return Ops.Bool2Object(CompareTo(l) == 0);
+            return Ops.Bool2Object(EqualsTo(l));
         }
 
         [PythonName("__ne__")]

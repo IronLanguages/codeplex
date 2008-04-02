@@ -1,17 +1,17 @@
 #####################################################################################
 #
-#  Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) Microsoft Corporation. 
 #
-#  This source code is subject to terms and conditions of the Shared Source License
-#  for IronPython. A copy of the license can be found in the License.html file
-#  at the root of this distribution. If you can not locate the Shared Source License
-#  for IronPython, please send an email to ironpy@microsoft.com.
-#  By using this source code in any fashion, you are agreeing to be bound by
-#  the terms of the Shared Source License for IronPython.
+# This source code is subject to terms and conditions of the Microsoft Public
+# License. A  copy of the license can be found in the License.html file at the
+# root of this distribution. If  you cannot locate the  Microsoft Public
+# License, please send an email to  dlr@microsoft.com. By using this source
+# code in any fashion, you are agreeing to be bound by the terms of the 
+# Microsoft Public License.
 #
-#  You must not remove this notice, or any other, from this software.
+# You must not remove this notice, or any other, from this software.
 #
-######################################################################################
+#####################################################################################
 
 from lib.assert_util import *
 from lib.type_util import *
@@ -1638,4 +1638,17 @@ def test_fastnew_int():
     AreEqual(int(C5()), -123456789012345678910)
     for x in [C6, C7]:      AssertError(TypeError, int, x())       
 
+
+def test_usertype_call():
+    class F(object):
+        def __call__(self, *args, **kwargs):
+                return args, kwargs
+        
+    f = F()
+    AreEqual(f(*(1,), **{'a':23}), ((1,), {'a': 23}))
+    AreEqual(f(a = 7, *(1,)), ((1,), {'a': 7}))
+
+def test_type_call():
+    AreEqual(list.__call__(), [])
+    AreEqual(list.__call__(sequence='abc'), ['a', 'b', 'c'])
 run_test(__name__)

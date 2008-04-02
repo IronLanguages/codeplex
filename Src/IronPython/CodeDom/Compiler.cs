@@ -1,17 +1,17 @@
-/* **********************************************************************************
+/* ****************************************************************************
  *
- * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Copyright (c) Microsoft Corporation. 
  *
- * This source code is subject to terms and conditions of the Shared Source License
- * for IronPython. A copy of the license can be found in the License.html file
- * at the root of this distribution. If you can not locate the Shared Source License
- * for IronPython, please send an email to ironpy@microsoft.com.
- * By using this source code in any fashion, you are agreeing to be bound by
- * the terms of the Shared Source License for IronPython.
+ * This source code is subject to terms and conditions of the Microsoft Public
+ * License. A  copy of the license can be found in the License.html file at the
+ * root of this distribution. If  you cannot locate the  Microsoft Public
+ * License, please send an email to  dlr@microsoft.com. By using this source
+ * code in any fashion, you are agreeing to be bound by the terms of the 
+ * Microsoft Public License.
  *
  * You must not remove this notice, or any other, from this software.
  *
- * **********************************************************************************/
+ * ***************************************************************************/
 
 using System;
 using System.Collections.Generic;
@@ -114,7 +114,7 @@ namespace IronPython.CodeDom {
                     false,
                     BindingFlags.Public | BindingFlags.CreateInstance | BindingFlags.Instance,
                     null,
-                    new object[] { files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind },
+                    new object[] { files, options.OutputAssembly, options.IncludeDebugInformation, options.ReferencedAssemblies, targetKind, options.MainClass, options.EmbeddedResources},
                     null,
                     null,
                     null);
@@ -292,23 +292,27 @@ namespace IronPython.CodeDom {
         PEFileKinds peKind;
         Assembly compAssm;
         int errorCnt;
+		string mainClass;
+        StringCollection resources;
         List<CompilerError> errors = new List<CompilerError>();
 
         public RemoteCompiler() {
         }
 
-        public RemoteCompiler(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
+        public RemoteCompiler(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind, string mainFile, StringCollection resources) {
             instance = this;
-            Initialize(fileNames, outputAssembly, includeDebug, references, targetKind);
+            Initialize(fileNames, outputAssembly, includeDebug, references, targetKind, mainFile, resources);
         }
 
-        public void Initialize(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind) {
+        public void Initialize(string[] fileNames, string outputAssembly, bool includeDebug, StringCollection references, PEFileKinds targetKind, string mainFile, StringCollection resources) {
             files = fileNames;
             outAsm = outputAssembly;
             if (outAsm == null) outAsm = "assembly.dll";
             debugInfo = includeDebug;
             refs = references;
             peKind = targetKind;
+			mainClass = mainFile;
+            this.resources = resources;
         }
 
         public void DoCompile() {
@@ -317,6 +321,12 @@ namespace IronPython.CodeDom {
             pc.TargetKind = peKind;
             pc.AutoImportAll = true;
             pc.StaticTypes = true;
+			pc.MainFile = mainClass;
+            List<ResourceFile> resource = new List<ResourceFile>();
+            foreach(string s in resources) {
+                resource.Add(new ResourceFile(Path.GetFileName(s), s));
+            }
+            pc.ResourceFiles = resource;
 
             foreach (string s in refs) {
                 pc.ReferencedAssemblies.Add(s);
