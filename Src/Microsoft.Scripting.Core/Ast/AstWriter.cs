@@ -22,6 +22,7 @@ using System.Reflection;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 #if DEBUG
 namespace Microsoft.Scripting.Ast {
@@ -149,15 +150,14 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Write out the given rule's AST (only if ShowRules is enabled)
         /// </summary>
-        internal static void Dump<T>(RuleBuilder<T> rule) {
+        internal static void Dump<T>(Rule<T> rule) {
             if (ScriptDomainManager.Options.ShowRules) {
 #if !SILVERLIGHT
                 ConsoleColor color = Console.ForegroundColor;
                 try {
                     Console.ForegroundColor = GetAstColor();
 #endif
-                    AstWriter.Dump(rule.Test, "Rule.Test", System.Console.Out);
-                    AstWriter.Dump(rule.Target, "Rule.Target", System.Console.Out);
+                    AstWriter.Dump(rule.Binding, "Rule", System.Console.Out);
 #if !SILVERLIGHT
                 } finally {
                     Console.ForegroundColor = color;
@@ -332,7 +332,7 @@ namespace Microsoft.Scripting.Ast {
             } else if ((sma = action as SetMemberAction) != null) {
                 return "SetMember " + SymbolTable.IdToString(sma.Name);
             } else if ((ima = action as InvokeMemberAction) != null) {
-                return "InvokeMember " + ima.Name;
+                return "InvokeMember " + SymbolTable.IdToString(ima.Name);
             } else if ((cta = action as ConvertToAction) != null) {
                 return "ConvertTo " + cta.ToType.ToString();
             } else if ((cla = action as CallAction) != null) {
@@ -345,37 +345,40 @@ namespace Microsoft.Scripting.Ast {
         // ActionExpression
         private static void WriteActionExpression(AstWriter aw, Expression expr) {
             ActionExpression node = (ActionExpression)expr;
-            aw.Out(".action", Flow.Space);
+            aw.WriteCallSite(node, node.Arguments);
+        }
 
-            aw.Out("(");
-            aw.Out(node.Type.Name);
-            aw.Out(")", Flow.Space);
+        private void WriteCallSite(Expression node, params Expression[] arguments) {
+            WriteCallSite(node, (IEnumerable<Expression>)arguments);
+        }
 
-            aw.Out(FormatAction(node.Action));
-            aw.Out("( // " + node.Action.ToString());
-            aw.Indent();
-            aw.NewLine();
-            foreach (Expression arg in node.Arguments) {
-                aw.WalkNode(arg);
-                aw.NewLine();
+        private void WriteCallSite(Expression node, IEnumerable<Expression> arguments) {
+            Out(".site", Flow.Space);
+
+            Out("(");
+            Out(node.Type.Name);
+            Out(")", Flow.Space);
+
+            Out(FormatAction(node.BindingInfo));
+            Out("( // " + node.BindingInfo.ToString());
+            Indent();
+            NewLine();
+            foreach (Expression arg in arguments) {
+                WalkNode(arg);
+                NewLine();
             }
-            aw.Dedent();
-            aw.Out(")");
+            Dedent();
+            Out(")");
         }
-
-        // ArrayIndexAssignment
-        private static void WriteArrayIndexAssignment(AstWriter aw, Expression expr) {
-            ArrayIndexAssignment node = (ArrayIndexAssignment)expr;
-            aw.WalkNode(node.Array);
-            aw.Out("[");
-            aw.WalkNode(node.Index);
-            aw.Out("] = ");
-            aw.WalkNode(node.Value);
-        }
-      
+     
         // BinaryExpression
         private static void WriteBinaryExpression(AstWriter aw, Expression expr) {
             BinaryExpression node = (BinaryExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, node.Left, node.Right);
+                return;
+            }
+
             if (node.NodeType == AstNodeType.ArrayIndex) {
                 aw.WalkNode(node.Left);
                 aw.Out("[");
@@ -413,19 +416,41 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // BoundAssignment
-        private static void WriteBoundAssignment(AstWriter aw, Expression expr) {
-            BoundAssignment node = (BoundAssignment)expr;
-            aw.Out("(.bound " + SymbolTable.IdToString(VariableInfo.GetName(node.Variable)) + ") = ");
+        // WriteAssignmentExpression
+        private static void WriteAssignmentExpression(AstWriter aw, Expression expr) {
+            AssignmentExpression node = (AssignmentExpression)expr;
+            if (node.IsDynamic) {
+                if (node.Expression.NodeType == AstNodeType.MemberExpression) {
+                    MemberExpression getMember = (MemberExpression)node.Expression;
+                    aw.WriteCallSite(node, getMember.Expression, node.Value);
+                } else {
+                    BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+                    aw.WriteCallSite(node, arrayIndex.Left, arrayIndex.Right, node.Value);
+                }
+                return;
+            }
+
+            aw.WalkNode(node.Expression);
+            aw.Out(" = ");
             aw.WalkNode(node.Value);
         }
 
         // VariableExpression
         private static void WriteVariableExpression(AstWriter aw, Expression expr) {
             VariableExpression node = (VariableExpression)expr;
-            aw.Out("(.var ");
+            aw.Out("(.");
+            aw.Out(GetVariableKind(node), Flow.Space);
             aw.Out(SymbolTable.IdToString(node.Name));
             aw.Out(")");
+        }
+
+        private static string GetVariableKind(VariableExpression v) {
+            switch (v.NodeType) {
+                case AstNodeType.TemporaryVariable: return "temp";
+                case AstNodeType.LocalVariable: return "local";
+                case AstNodeType.GlobalVariable: return "global";
+                default: throw new InvalidOperationException();
+            }
         }
 
         // ParameterExpression
@@ -495,12 +520,6 @@ namespace Microsoft.Scripting.Ast {
             aw.Out(Constant(node.Value));
         }
 
-        // DeleteUnboundExpression
-        private static void WriteDeleteUnboundExpression(AstWriter aw, Expression expr) {
-            DeleteUnboundExpression node = (DeleteUnboundExpression)expr;
-            aw.Out(String.Format(".delname({0})", SymbolTable.IdToString(node.Name)));
-        }
-
         // IntrinsicExpression
         private static void WriteIntrinsicExpression(AstWriter aw, Expression expr) {
             switch (expr.NodeType) {
@@ -509,9 +528,6 @@ namespace Microsoft.Scripting.Ast {
                     break;
                 case AstNodeType.GeneratorIntrinsic:
                     aw.Out(".gen_intrinsic");
-                    break;
-                case AstNodeType.EnvironmentExpression:
-                    aw.Out(".env");
                     break;
             }
         }
@@ -527,23 +543,46 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // MemberAssignment
-        private static void WriteMemberAssignment(AstWriter aw, Expression expr) {
-            MemberAssignment node = (MemberAssignment)expr;
-            aw.OutMember(node.Expression, node.Member);
-            aw.Out(" = ");
-            aw.WalkNode(node.Value);
-        }
-
         // MemberExpression
         private static void WriteMemberExpression(AstWriter aw, Expression expr) {
             MemberExpression node = (MemberExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, node.Expression);
+                return;
+            }
             aw.OutMember(node.Expression, node.Member);
+        }
+
+        // InvocationExpression
+        private static void WriteInvocationExpression(AstWriter aw, Expression expr) {
+            InvocationExpression node = (InvocationExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, ArrayUtils.Insert(node.Expression, node.Arguments));
+                return;
+            }
+
+            aw.Out("(");
+            aw.WalkNode(node.Expression);
+            aw.Out(").Invoke(");
+            if (node.Arguments != null && node.Arguments.Count > 0) {
+                aw.NewLine(); aw.Indent();
+                foreach (Expression e in node.Arguments) {
+                    aw.WalkNode(e);
+                    aw.Out(",", Flow.NewLine);
+                }
+                aw.Dedent();
+            }
+            aw.Out(")");
         }
 
         // MethodCallExpression
         private static void WriteMethodCallExpression(AstWriter aw, Expression expr) {
             MethodCallExpression node = (MethodCallExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, ArrayUtils.Insert(node.Instance, node.Arguments));
+                return;
+            }
+
             if (node.Instance != null) {
                 aw.Out("(");
                 aw.WalkNode(node.Instance);
@@ -596,6 +635,11 @@ namespace Microsoft.Scripting.Ast {
         // NewExpression
         private static void WriteNewExpression(AstWriter aw, Expression expr) {
             NewExpression node = (NewExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, node.Arguments);
+                return;
+            }
+
             aw.Out(".new " + node.Type.Name + "(");
             if (node.Arguments != null && node.Arguments.Count > 0) {
                 aw.NewLine(); aw.Indent();
@@ -619,6 +663,11 @@ namespace Microsoft.Scripting.Ast {
         // UnaryExpression
         private static void WriteUnaryExpression(AstWriter aw, Expression expr) {
             UnaryExpression node = (UnaryExpression)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, node.Operand);
+                return;
+            }
+
             switch (node.NodeType) {
                 case AstNodeType.Convert:
                     aw.Out("(" + node.Type.Name + ")");
@@ -635,20 +684,6 @@ namespace Microsoft.Scripting.Ast {
             }
 
             aw.WalkNode(node.Operand);
-        }
-
-        // UnboundAssignment
-        private static void WriteUnboundAssignment(AstWriter aw, Expression expr) {
-            UnboundAssignment node = (UnboundAssignment)expr;
-            aw.Out(SymbolTable.IdToString(node.Name));
-            aw.Out(" := ");
-            aw.WalkNode(node.Value);
-        }
-
-        // UnboundExpression
-        private static void WriteUnboundExpression(AstWriter aw, Expression expr) {
-            UnboundExpression node = (UnboundExpression)expr;
-            aw.Out(".unbound " + SymbolTable.IdToString(node.Name));
         }
 
         // Block
@@ -683,6 +718,11 @@ namespace Microsoft.Scripting.Ast {
         // DeleteStatement
         private static void WriteDeleteStatement(AstWriter aw, Expression expr) {
             DeleteStatement node = (DeleteStatement)expr;
+            if (node.IsDynamic) {
+                aw.WriteCallSite(node, node.Variable);
+                return;
+            }
+
             aw.Out(".del");
             aw.Out(Flow.Space, SymbolTable.IdToString(VariableInfo.GetName(node.Variable)));
             aw.NewLine();
@@ -709,13 +749,6 @@ namespace Microsoft.Scripting.Ast {
         private static void WriteEmptyStatement(AstWriter aw, Expression expr) {
             EmptyStatement node = (EmptyStatement)expr;
             aw.Out("/*empty*/;", Flow.NewLine);
-        }
-
-        // ExpressionStatement
-        private static void WriteExpressionStatement(AstWriter aw, Expression expr) {
-            ExpressionStatement node = (ExpressionStatement)expr;
-            aw.WalkNode(node.Expression);
-            aw.Out(";", Flow.NewLine);
         }
 
         // LabeledStatement
@@ -760,9 +793,7 @@ namespace Microsoft.Scripting.Ast {
         // ScopeStatement
         private static void WriteScopeStatement(AstWriter aw, Expression expr) {
             ScopeStatement node = (ScopeStatement)expr;
-            aw.Out(".scope (");
-            aw.WalkNode(node.Scope);
-            aw.Out(") {", Flow.NewLine);
+            aw.Out(".scope {", Flow.NewLine);
             aw.Indent();
             aw.WalkNode(node.Body);
             aw.Dedent();
@@ -839,6 +870,13 @@ namespace Microsoft.Scripting.Ast {
             aw.Out(";", Flow.NewLine);
         }
 
+        private static void WriteExtensionExpression(AstWriter aw, Expression expr) {
+            aw.Out(".extension ");
+            // print the known node (best we can do)
+            aw.WalkNode(Expression.ReduceToKnown(expr));
+            aw.Out(";", Flow.NewLine);
+        }
+
         private static string GetLambdaInfo(LambdaExpression lambda) {
             string info = lambda.NodeType == AstNodeType.Generator ? ".generator ": ".lambda ";
 
@@ -888,11 +926,7 @@ namespace Microsoft.Scripting.Ast {
             Dedent();
             Out(") {");
             Indent();
-            foreach (VariableExpression v in node.Variables) {
-                Out(Flow.NewLine, ".var", Flow.Space);
-                DumpVariable(v);
-            }
-            Out(Flow.NewLine, "", Flow.NewLine);
+            Out(Flow.NewLine, "");
             WalkNode(node.Body);
             Dedent();
             Out(Flow.NewLine, "}");

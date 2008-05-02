@@ -30,7 +30,8 @@ namespace Microsoft.Scripting.Ast {
             _expression = expression;
         }
 
-        public LabelTarget Label {
+        // TODO: Resolve Label and Expression.Label()
+        new public LabelTarget Label {
             get { return _label; }
         }
 
@@ -40,18 +41,18 @@ namespace Microsoft.Scripting.Ast {
 
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static LabeledStatement Labeled(LabelTarget label, Expression body) {
             return Labeled(SourceSpan.None, label, body);
         }
 
         public static LabeledStatement Labeled(SourceSpan span, LabelTarget label, Expression body) {
-            return Labeled(Annotations(span, span), label, body);
+            return Labeled(Annotate(span, span), label, body);
         }
 
         public static LabeledStatement Labeled(Annotations annotations, LabelTarget label, Expression body) {
-            Contract.RequiresNotNull(label, "label");
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(label, "label");
+            ContractUtils.RequiresNotNull(body, "body");
             return new LabeledStatement(annotations, label, body);
         }
     }

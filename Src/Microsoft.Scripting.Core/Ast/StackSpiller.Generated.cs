@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
             RewriteBinaryExpression,                                    //    ExclusiveOr
             RewriteBinaryExpression,                                    //    GreaterThan
             RewriteBinaryExpression,                                    //    GreaterThanOrEqual
-                                                                        // ** Invoke
+            RewriteInvocationExpression,                                //    Invoke
             RewriteLambdaExpression,                                    //    Lambda
             RewriteBinaryExpression,                                    //    LeftShift
             RewriteBinaryExpression,                                    //    LessThan
@@ -73,25 +73,20 @@ namespace Microsoft.Scripting.Ast {
                                                                         // ** TypeAs
             RewriteTypeBinaryExpression,                                //    TypeIs
             RewriteActionExpression,                                    //    ActionExpression
-            RewriteArrayIndexAssignment,                                //    ArrayIndexAssignment
+            RewriteAssignmentExpression,                                //    Assign
             RewriteBlock,                                               //    Block
-            RewriteBoundAssignment,                                     //    BoundAssignment
             RewriteBreakStatement,                                      //    BreakStatement
             RewriteIntrinsicExpression,                                 //    CodeContextExpression
             RewriteIntrinsicExpression,                                 //    GeneratorIntrinsic
             RewriteGeneratorLambdaExpression,                           //    Generator
             RewriteContinueStatement,                                   //    ContinueStatement
             RewriteDeleteStatement,                                     //    DeleteStatement
-            RewriteDeleteUnboundExpression,                             //    DeleteUnboundExpression
             RewriteDoStatement,                                         //    DoStatement
             RewriteEmptyStatement,                                      //    EmptyStatement
-            RewriteIntrinsicExpression,                                 //    EnvironmentExpression
-            RewriteExpressionStatement,                                 //    ExpressionStatement
             RewriteVariableExpression,                                  //    GlobalVariable
             RewriteLabeledStatement,                                    //    LabeledStatement
             RewriteVariableExpression,                                  //    LocalVariable
             RewriteLoopStatement,                                       //    LoopStatement
-            RewriteMemberAssignment,                                    //    MemberAssignment
             RewriteMemberExpression,                                    //    MemberExpression
             RewriteNewArrayExpression,                                  //    NewArrayExpression
             RewriteUnaryExpression,                                     //    OnesComplement
@@ -101,9 +96,8 @@ namespace Microsoft.Scripting.Ast {
             RewriteVariableExpression,                                  //    TemporaryVariable
             RewriteThrowStatement,                                      //    ThrowStatement
             RewriteTryStatement,                                        //    TryStatement
-            RewriteUnboundAssignment,                                   //    UnboundAssignment
-            RewriteUnboundExpression,                                   //    UnboundExpression
             RewriteYieldStatement,                                      //    YieldStatement
+            RewriteExtensionExpression,                                 //    Extension
 
             // *** END GENERATED CODE ***
 

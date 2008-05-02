@@ -24,7 +24,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     class ByRefReturnBuilder : ReturnBuilder {
         private IList<int> _returnArgs;
@@ -90,12 +90,6 @@ namespace Microsoft.Scripting.Generation {
         private static object GetValue(object[] args, object ret, int index) {
             if (index == -1) return ConvertToObject(ret);
             return ConvertToObject(args[index]);
-        }
-
-        private static Expression GetValue(Expression[] args, Expression ret, int index) {
-            if (index == -1) return ret;
-            Debug.Assert(index < args.Length);
-            return args[index];
         }
 
         public override int CountOutParams {

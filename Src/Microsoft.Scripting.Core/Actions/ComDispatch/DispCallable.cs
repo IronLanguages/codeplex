@@ -25,17 +25,19 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// This represents a bound dispmethod on a IDispatch object.
     /// </summary>
-    public class DispCallable : IDynamicObject {
+    public abstract class DispCallable : IDynamicObject {
+
         private readonly IDispatchObject _dispatch;
         private readonly ComDispatch.ComMethodDesc _methodDesc;
 
         [CLSCompliant(false)]
-        public DispCallable(IDispatchObject dispatch, ComMethodDesc methodDesc) {
+        protected DispCallable(IDispatchObject dispatch, ComMethodDesc methodDesc) {
             _dispatch = dispatch;
             _methodDesc = methodDesc;
         }
@@ -45,16 +47,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return String.Format("<bound dispmethod {0}>", _methodDesc.Name);
         }
 
-        public bool IsPropertyPut {
-            get { return _methodDesc.IsPropertyPut; }
+        public IDispatchObject DispatchObject { 
+            get { return _dispatch; } 
         }
 
-        public bool IsPropertyGet {
-            get { return _methodDesc.IsPropertyGet; }
+        public ComMethodDesc ComMethodDesc {
+            get { return _methodDesc; }
         }
-
-        public IDispatchObject DispatchObject { get { return _dispatch; } }
-        public ComMethodDesc ComMethodDesc { get { return _methodDesc; } }
 
         internal void UpdateByrefArguments(object[] explicitArgs, object[] argsForCall, VarEnumSelector varEnumSelector) {
             VariantBuilder[] variantBuilders = varEnumSelector.VariantBuilders;
@@ -169,7 +168,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return rule;
         }
 
-        private RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
+        private static RuleBuilder<T> MakeCallRule<T>(CallAction action, CodeContext context, object[] args) {
             IDispatchCallBinderHelper<T> helper = new IDispatchCallBinderHelper<T>(context, action, args);
             return helper.MakeRule();
         }

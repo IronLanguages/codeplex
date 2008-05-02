@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class Var : Statement {
         private readonly string _name;
@@ -33,14 +33,12 @@ namespace ToyScript.Parser.Ast {
             MSAst.Expression var = tg.GetOrMakeLocal(_name);
 
             if (_value != null) {
-                return Ast.Statement(
+                return Ast.Assign(
                     Span,
-                    Ast.Assign(
-                        var,
-                        Ast.ConvertHelper(
-                            _value.Generate(tg),
-                            var.Type
-                        )
+                    var,
+                    Ast.ConvertHelper(
+                        _value.Generate(tg),
+                        var.Type
                     )
                 );
             } else {

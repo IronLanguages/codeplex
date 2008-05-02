@@ -198,10 +198,6 @@ namespace IronPython.Runtime.Operations {
             return Compare(x, y) != 0;
         }
 
-        internal static int Compare(double x, double y) {
-            return x.CompareTo(y);
-        }
-
         [SpecialName]
         public static bool LessThan(double x, BigInteger y) {
             return Compare(x, y) < 0;
@@ -320,6 +316,10 @@ namespace IronPython.Runtime.Operations {
         [SpecialName]
         public static float Power(float x, float y) {
             return (float)DoubleOps.Power(x, y);
+        }
+        
+        public static string __str__(float x) {
+            return DoubleOps.__str__(x);
         }
     }
 }

@@ -1066,7 +1066,11 @@ try:
     AreEqual(True,False)
 except NameError:
     pass
-    
-AreEqual(vars().keys().count('__file__'), 1)
+
+@skip("silverlight", "Merlin bug #404247: this test doesn't work when the file is executed from non-Python host (thost)" )
+def test_file():
+    AreEqual(file_var_present, 1)
+
+file_var_present = vars().keys().count('__file__')
 
 run_test(__name__)

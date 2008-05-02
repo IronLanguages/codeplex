@@ -23,7 +23,9 @@ using Microsoft.Scripting.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    class PythonTypeTypeSlot : PythonTypeSlot {
+    public class PythonTypeTypeSlot : PythonTypeSlot {
+        public static string __doc__ = "the object's class";
+
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             if (instance == null) {
                 if (owner == TypeCache.None) {
@@ -42,7 +44,9 @@ namespace IronPython.Runtime.Types {
             if (instance == null) return false;
 
             IPythonObject sdo = instance as IPythonObject;
-            if (sdo == null) return false;
+            if (sdo == null) {
+                throw PythonOps.TypeError("__class__ assignment: only for user defined types");
+            }
 
             PythonType dt = value as PythonType;
             if (dt == null) throw PythonOps.TypeError("__class__ must be set to new-style class, not '{0}' object", DynamicHelpers.GetPythonType(value).Name);

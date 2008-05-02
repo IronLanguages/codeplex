@@ -18,7 +18,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
@@ -31,27 +30,25 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
-#if !SILVERLIGHT
-
-using Microsoft.Scripting.Actions.ComDispatch;
-
-#endif
-
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
+    using System.Threading;
     using IronPython.Compiler.Generation;
 
     public class PythonBinder : ActionBinder {
         private PythonContext/*!*/ _context;
-        [MultiRuntimeAware]
-        private static Dictionary<string, string[]> _memberMapping;
+        private SlotCache/*!*/ _typeMembers = new SlotCache();
+        private SlotCache/*!*/ _resolvedMembers = new SlotCache();
+
         [MultiRuntimeAware]
         private static Dictionary<Type, Type> _extTypes = new Dictionary<Type, Type>();
+        private readonly GetMemberAction EmptyGetMemberAction;
 
         public PythonBinder(PythonContext/*!*/ pythonContext, CodeContext context)
             : base(context) {
-            Contract.RequiresNotNull(pythonContext, "pythonContext");
+            ContractUtils.RequiresNotNull(pythonContext, "pythonContext");
 
+            EmptyGetMemberAction = GetMemberAction.Make(this, String.Empty);
             _context = pythonContext;
         }
 
@@ -72,7 +69,7 @@ namespace IronPython.Runtime.Calls {
                         if (rule.IsError) {
                             // try CreateInstance...
                             CreateInstanceAction createAct = PythonCallBinderHelper<T>.MakeCreateInstanceAction((CallAction)action);
-                            RuleBuilder<T> newRule = GetRule<T>(context, createAct, args);
+                            RuleBuilder<T> newRule = MakeRule<T>(context, createAct, args);
                             if (!newRule.IsError) {
                                 return newRule;
                             }
@@ -87,12 +84,35 @@ namespace IronPython.Runtime.Calls {
         }
 
         protected override RuleBuilder<T> MakeRule<T>(CodeContext/*!*/ context, DynamicAction/*!*/ action, object[]/*!*/ args) {
-            return MakeRuleWorker<T>(context, action, args) ?? base.MakeRule<T>(context, action, args);
+            RuleBuilder<T> rule = null;
+            //
+            // Try IDynamicObject
+            //
+            IDynamicObject ido = args[0] as IDynamicObject;
+            if (ido != null) {
+                rule = ido.GetRule<T>(action, context, args);
+                if (rule != null) {
+                    return rule;
+                }
+            }
+
+            //
+            // Try the Python rules
+            //
+            rule = MakeRuleWorker<T>(context, action, args);
+            if (rule != null) {
+                return rule;
+            }
+
+            //
+            // Fall back on DLR rules
+            //
+            return base.MakeRule<T>(context, action, args);
         }
 
         public override Expression/*!*/ ConvertExpression(Expression/*!*/ expr, Type/*!*/ toType) {
-            Contract.RequiresNotNull(expr, "expr");
-            Contract.RequiresNotNull(toType, "toType");
+            ContractUtils.RequiresNotNull(expr, "expr");
+            ContractUtils.RequiresNotNull(toType, "toType");
 
             Type exprType = expr.Type;
 
@@ -110,7 +130,7 @@ namespace IronPython.Runtime.Calls {
 
             Type visType = CompilerHelpers.GetVisibleType(toType);
             return Ast.Action.ConvertTo(
-                ConvertToAction.Make(visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : ConversionResultKind.ExplicitCast),
+                ConvertToAction.Make(this, visType, visType == typeof(char) ? ConversionResultKind.ImplicitCast : ConversionResultKind.ExplicitCast),
                 expr);
         }
 
@@ -198,9 +218,9 @@ namespace IronPython.Runtime.Calls {
         }
         
         public override ErrorInfo MakeStaticPropertyInstanceAccessError(PropertyTracker/*!*/ tracker, bool isAssignment, IList<Expression/*!*/>/*!*/ parameters) {
-            Contract.RequiresNotNull(tracker, "tracker");
-            Contract.RequiresNotNull(parameters, "parameters");
-            Contract.RequiresNotNullItems(parameters, "parameters");
+            ContractUtils.RequiresNotNull(tracker, "tracker");
+            ContractUtils.RequiresNotNull(parameters, "parameters");
+            ContractUtils.RequiresNotNullItems(parameters, "parameters");
 
             return ErrorInfo.FromException(
                 Ast.Call(
@@ -226,160 +246,25 @@ namespace IronPython.Runtime.Calls {
             return new MemberGroup(trackers);
         }
 
-        public override MemberGroup GetMember(DynamicAction action, Type type, string name) {
-            // Python type customization:
-            switch (name) {
-                case "__str__":
-#if !SILVERLIGHT
-                    if (!ComObject.IsGenericComObjectType(type)) {
-#else
-                    if (true) {
-#endif
-                        MethodInfo tostr = type.GetMethod("ToString", Type.EmptyTypes);
-                        if (tostr != null && tostr.DeclaringType != typeof(object)) {
-                            return GetInstanceOpsMethod(type, "ToStringMethod");
-                        }
-                    }
-                    break;
-                case "__repr__":
-#if !SILVERLIGHT
-                    if (!ComObject.IsGenericComObjectType(type)) {                    
-#else
-                    if (true) {
-#endif
-                        if (!typeof(ICodeFormattable).IsAssignableFrom(type) || type.IsInterface) {
-                            // __repr__ for normal .NET types is special, if we have a real __repr__ we'll call it below
-                                return GetInstanceOpsMethod(type, "FancyRepr");
-                        }  
-                    }
-                    break;
-                case "__init__":
-                    // non-default init would have been handled by the Python binder.
-                    return GetInstanceOpsMethod(type, "DefaultInit", "DefaultInitKW");
-                case "__new__":
-                    return new MemberGroup(type.GetConstructors());
-                case "next":
-                    if (typeof(IEnumerator).IsAssignableFrom(type)) {
-                        return GetInstanceOpsMethod(type, "NextMethod");
-                    }
-                    break;
-                case "__get__":
-                    if (typeof(PythonTypeSlot).IsAssignableFrom(type)) {
-                        return GetInstanceOpsMethod(type, "GetMethod");
-                    }
-                    break;
+        public override MemberGroup/*!*/ GetMember(DynamicAction action, Type type, string name) {
+            // avoid looking in IPythonObject's.  They don't add interesting members that their
+            // base types don't provide and will only slow us down.
+            while (typeof(IPythonObject).IsAssignableFrom(type) && !type.IsDefined(typeof(DynamicBaseTypeAttribute), false)) {
+                type = type.BaseType;
             }
 
+            MemberGroup mg;
+            if (!_resolvedMembers.TryGetCachedMember(type, name, action.Kind == DynamicActionKind.GetMember, out mg)) {
+                mg = TypeInfo.GetMemberAll(
+                    this,
+                    action,
+                    type,
+                    name);
 
-            // normal binding
-            MemberGroup res = base.GetMember(action, type, name);
-            if (res.Count > 0) {
-                lock (NewTypeMaker._overriddenMethods) {
-                    Dictionary<string, List<MethodInfo>> methods;
-                    if (NewTypeMaker._overriddenMethods.TryGetValue(type, out methods)) {
-                        List<MethodInfo> methodList;
-                        if (methods.TryGetValue(name, out methodList)) {
-                            List<MemberTracker> members = new List<MemberTracker>(res.Count + methodList.Count);
-                            members.AddRange(res);
-                            foreach (MethodInfo mi in methodList) {
-                                members.Add(MemberTracker.FromMemberInfo(mi));
-                            }
-                            res = new MemberGroup(members.ToArray());
-                        }
-                    }
-                }
-                return res;
+                _resolvedMembers.CacheSlot(type, name, PythonTypeOps.GetSlot(mg), mg);
             }
 
-            if (type.IsInterface) {
-                foreach (Type t in type.GetInterfaces()) {
-                    res = GetMember(action, t, name);
-                    if (res.Count > 0) {
-                        return res;
-                    }
-                }
-            }
-            
-            // try mapping __*__ methods to .NET method names
-            OperatorMapping opMap;
-            if (PythonExtensionTypeAttribute._pythonOperatorTable.TryGetValue(
-                SymbolTable.StringToId(name),
-                out opMap)) {
-
-                if (IsUnfilterOperator(type, opMap)) {
-                    OperatorInfo opInfo = OperatorInfo.GetOperatorInfo(opMap.Operator);
-                    if (opInfo != null) {
-                        res = base.GetMember(action, type, opInfo.Name);
-                        if (res.Count > 0) {
-                            return res;
-                        }
-
-                        res = base.GetMember(action, type, opInfo.AlternateName);
-                        if (res.Count > 0) {
-                            return res;
-                        }
-                    }
-                }
-            }
-
-            if (_context.DomainManager.GlobalOptions.PrivateBinding) {
-                // in private binding mode Python exposes private members under a mangled name.
-                string header = "_" + type.Name + "__";
-                if (name.StartsWith(header)) {
-                    string memberName = name.Substring(header.Length);
-                    const BindingFlags bf = BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-
-                    res = new MemberGroup(type.GetMember(memberName, bf));
-                    if (res.Count > 0) {
-                        return FilterFieldAndEvent(res);
-                    }
-
-                    res = new MemberGroup(type.GetMember(memberName, BindingFlags.FlattenHierarchy | bf));
-                    if (res.Count > 0) {
-                        return FilterFieldAndEvent(res);
-                    }
-                }
-            }
-
-            // Python exposes protected members as public            
-            res = new MemberGroup(ArrayUtils.FindAll(type.GetMember(name, BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic), ProtectedOnly));
-            if (res.Count > 0) {
-                return res;
-            }
-
-            // try alternate mapping to support backwards compatibility of calling extension methods.
-            EnsureMemberMapping();
-            string[] newNames;
-            if (_memberMapping.TryGetValue(name, out newNames)) {
-                List<MemberTracker> oldRes = new List<MemberTracker>();
-                foreach (string newName in newNames) {
-                    oldRes.AddRange(base.GetMember(action, type, newName));
-                }
-
-                return new MemberGroup(oldRes.ToArray());
-            }
-
-            return res;
-        }
-
-        private static bool IsUnfilterOperator(Type type, OperatorMapping opMap) {
-            if (type == typeof(int)) {
-                // Python doesn't define __eq__ on int, .NET does
-                return opMap.Operator != Operators.Equals;
-            } else if (type == typeof(BigInteger)) {
-                switch(opMap.Operator) {
-                    // Python's big int only defines __cmp__
-                    case Operators.LessThan:
-                    case Operators.GreaterThan:
-                    case Operators.Equals:
-                    case Operators.NotEquals:
-                    case Operators.LessThanOrEqual:
-                    case Operators.GreaterThanOrEqual:
-                        return false;
-                }
-            }
-
-            return true;
+            return mg ?? MemberGroup.EmptyGroup;
         }
 
         public override ErrorInfo MakeEventValidation(RuleBuilder rule, MemberGroup members) {
@@ -434,109 +319,31 @@ namespace IronPython.Runtime.Calls {
             );
         }
 
-        private bool ProtectedOnly(MemberInfo input) {
-            switch (input.MemberType) {
-                case MemberTypes.Method:
-                    return ((MethodInfo)input).IsFamily || ((MethodInfo)input).IsFamilyOrAssembly;
-                case MemberTypes.Property:
-                    MethodInfo mi = ((PropertyInfo)input).GetGetMethod(true);
-                    if (mi != null) return ProtectedOnly(mi);
-                    return false;
-                case MemberTypes.Field:
-                    return ((FieldInfo)input).IsFamily || ((FieldInfo)input).IsFamilyOrAssembly;
-                default:
-                    return false;
-            }
-        }
-
-        /// <summary>
-        /// When private binding is enabled we can have a collision between the private Event
-        /// and private field backing the event.  We filter this out and favor the event.
-        /// 
-        /// This matches the v1.0 behavior of private binding.
-        /// </summary>
-        private MemberGroup FilterFieldAndEvent(MemberGroup members) {
-            TrackerTypes mt = TrackerTypes.None;
-            foreach (MemberTracker mi in members) {
-                mt |= mi.MemberType;
-            }
-
-            if (mt == (TrackerTypes.Event | TrackerTypes.Field)) {
-                List<MemberTracker> res = new List<MemberTracker>();
-                foreach (MemberTracker mi in members) {
-                    if (mi.MemberType == TrackerTypes.Event) {
-                        res.Add(mi);
-                    }
-                }
-                return new MemberGroup(res.ToArray());
-            }
-            return members;
-        }
-
-        private void EnsureMemberMapping() {
-            if (_memberMapping != null) return;
-
-            Dictionary<string, string[]> res = new Dictionary<string, string[]>();
-
-            /* common object ops */
-            AddMapping(res, "GetAttribute", "__getattribute__");
-            AddMapping(res, "DelAttrMethod", "__delattr__");
-            AddMapping(res, "SetAttrMethod", "__setattr__");
-            AddMapping(res, "PythonToString", "__str__");
-            AddMapping(res, "Hash", "__hash__");
-            AddMapping(res, "Reduce", "__reduce__", "__reduce_ex__");
-            AddMapping(res, "CodeRepresentation", "__repr__");
-
-            AddMapping(res, "Add", "append");
-            AddMapping(res, "Contains", "__contains__");
-            AddMapping(res, "CompareTo", "__cmp__");
-            AddMapping(res, "DelIndex", "__delitem__");
-            AddMapping(res, "GetEnumerator", "__iter__");
-            AddMapping(res, "Length", "__len__");
-            AddMapping(res, "Clear", "clear");
-            AddMapping(res, "Clone", "copy");
-            AddMapping(res, "GetIndex", "get");
-            AddMapping(res, "HasKey", "has_key");
-            AddMapping(res, "Insert", "insert");
-            AddMapping(res, "Items", "items");
-            AddMapping(res, "IterItems", "iteritems");
-            AddMapping(res, "IterKeys", "iterkeys");
-            AddMapping(res, "IterValues", "itervalues");
-            AddMapping(res, "Keys", "keys");
-            AddMapping(res, "Pop", "pop");
-            AddMapping(res, "PopItem", "popitem");
-            AddMapping(res, "Remove", "remove");
-            AddMapping(res, "RemoveAt", "pop");
-            AddMapping(res, "SetDefault", "setdefault");
-            AddMapping(res, "ToFloat", "__float__");
-            AddMapping(res, "Values", "values");
-            AddMapping(res, "Update", "update");
-
-            Interlocked.Exchange(ref _memberMapping, res);
-        }
-
-        private void AddMapping(Dictionary<string, string[]> res, string name, params string[] names) {
-            res[name] = names;
-        }
-
         #endregion
 
-        protected override IList<Type> GetExtensionTypes(Type t) {
-            // Ensure that the type is initialized. If ReflectedTypeBuilder.RegisterAlternateBuilder was used,
-            // the alternate builder will get a chance to initialize the type.
-            DynamicHelpers.GetPythonTypeFromType(t);
+        internal IList<Type> GetExtensionTypesInternal(Type t) {
+            List<Type> res = new List<Type>(base.GetExtensionTypes(t));
 
+            Type extType;
+            if (_extTypes.TryGetValue(t, out extType)) {
+                res.Add(extType);
+            }
+
+            return res.ToArray();
+        }
+
+        protected override IList<Type> GetExtensionTypes(Type t) {
             List<Type> list = new List<Type>();
 
             // Python includes the types themselves so we can use extension properties w/ CodeContext
             list.Add(t);
 
-            Type res;
-            if (_extTypes.TryGetValue(t, out res)) {
-                list.Add(res);
-            }
-
             list.AddRange(base.GetExtensionTypes(t));
+
+            Type extType;
+            if (_extTypes.TryGetValue(t, out extType)) {
+                list.Add(extType);
+            }
 
             return list;
         }
@@ -546,6 +353,12 @@ namespace IronPython.Runtime.Calls {
         }
 
         public override Expression ReturnMemberTracker(Type type, MemberTracker memberTracker) {
+            Expression res = ReturnMemberTracker(type, memberTracker, _context.DomainManager.GlobalOptions.PrivateBinding);
+           
+            return res ?? base.ReturnMemberTracker(type, memberTracker);
+        }
+
+        private static Expression ReturnMemberTracker(Type type, MemberTracker memberTracker, bool privateMembers) {
             switch (memberTracker.MemberType) {
                 case TrackerTypes.TypeGroup:
                     return Ast.RuntimeConstant(memberTracker);
@@ -554,7 +367,7 @@ namespace IronPython.Runtime.Calls {
                 case TrackerTypes.Bound:
                     return ReturnBoundTracker((BoundMemberTracker)memberTracker);
                 case TrackerTypes.Property:
-                    return ReturnPropertyTracker((PropertyTracker)memberTracker);
+                    return ReturnPropertyTracker((PropertyTracker)memberTracker, privateMembers);
                 case TrackerTypes.Event:
                     return Ast.Call(
                         typeof(PythonOps).GetMethod("MakeBoundEvent"),
@@ -567,23 +380,167 @@ namespace IronPython.Runtime.Calls {
                 case TrackerTypes.MethodGroup:
                     return ReturnMethodGroup((MethodGroup)memberTracker);
                 case TrackerTypes.Constructor:
-                    ConstructorFunction cf = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, type.GetConstructors());
-                    return Ast.RuntimeConstant(cf);
+                    MethodBase[] ctors = CompilerHelpers.GetConstructors(type);
+                    object val;
+                    if (PythonTypeOps.IsDefaultNew(ctors)) {
+                        if (PythonTypeCustomizer.IsPythonType(type)) {
+                            val = InstanceOps.New;
+                        } else {
+                            val = InstanceOps.NewCls;
+                        }
+                    } else {
+                        val = PythonTypeOps.GetConstructor(type, InstanceOps.NonDefaultNewInst, CompilerHelpers.GetConstructors(type));
+                    }
 
+                    return Ast.RuntimeConstant(val);
+                case TrackerTypes.Custom:
+                    return Ast.RuntimeConstant(((PythonCustomTracker)memberTracker).GetSlot());
             }
-
-            return base.ReturnMemberTracker(type, memberTracker);
+            return null;
         }
 
-        private Expression ReturnFieldTracker(FieldTracker fieldTracker) {
+        /// <summary>
+        /// Gets the PythonBinder associated with tihs CodeContext
+        /// </summary>
+        public static PythonBinder/*!*/ GetBinder(CodeContext/*!*/ context) {
+            return (PythonBinder)PythonContext.GetContext(context).Binder;
+        }
+
+        /// <summary>
+        /// Performs .NET member resolution.  This looks within the given type and also
+        /// includes any extension members.  Base classes and their extension members are 
+        /// not searched.
+        /// </summary>
+        public bool TryLookupSlot(CodeContext/*!*/ context, PythonType/*!*/ type, SymbolId name, out PythonTypeSlot slot) {
+            Debug.Assert(type.IsSystemType);
+
+            string strName = SymbolTable.IdToString(name);
+            Type curType = type.UnderlyingSystemType;
+
+            if (!_typeMembers.TryGetCachedSlot(curType, strName, out slot)) {
+                MemberGroup mg = TypeInfo.GetMember(
+                    this,
+                    GetMemberAction.Make(this, name),
+                    curType,
+                    strName);
+
+                slot = PythonTypeOps.GetSlot(mg);
+
+                _typeMembers.CacheSlot(curType, strName, slot, mg);
+            }
+            
+            if (slot != null && slot.IsVisible(context, type)) {
+                return true;
+            }
+
+            slot = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Performs .NET member resolution.  This looks the type and any base types
+        /// for members.  It also searches for extension members in the type and any base types.
+        /// </summary>
+        public bool TryResolveSlot(CodeContext/*!*/ context, PythonType/*!*/ type, PythonType/*!*/ owner, SymbolId name, out PythonTypeSlot slot) {
+            Debug.Assert(type.IsSystemType);
+
+            string strName = SymbolTable.IdToString(name);
+            Type curType = type.UnderlyingSystemType;
+
+            if (!_resolvedMembers.TryGetCachedSlot(curType, strName, out slot)) {
+                MemberGroup mg = TypeInfo.GetMemberAll(
+                    this,
+                    GetMemberAction.Make(this, strName),
+                    curType,
+                    strName);
+
+                slot = PythonTypeOps.GetSlot(mg);
+
+                _resolvedMembers.CacheSlot(curType, strName, slot, mg);
+            }
+
+            if (slot != null && slot.IsVisible(context, owner)) {                
+                return true;                
+            }             
+
+            slot = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the member names which are defined in this type and any extension members.
+        /// 
+        /// This search does not include members in any subtypes or their extension members.
+        /// </summary>
+        public void LookupMembers(CodeContext/*!*/ context, PythonType/*!*/ type, IAttributesCollection/*!*/ memberNames) {
+            if (!_typeMembers.IsFullyCached(type.UnderlyingSystemType)) {
+                Dictionary<string, KeyValuePair<PythonTypeSlot, MemberGroup>> members = new Dictionary<string, KeyValuePair<PythonTypeSlot, MemberGroup>>();
+
+                foreach (ResolvedMember rm in TypeInfo.GetMembers(
+                    this,
+                    EmptyGetMemberAction,
+                    type.UnderlyingSystemType)) {
+
+                    if (!members.ContainsKey(rm.Name)) {
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member), rm.Member);
+                    }
+                }
+
+                _typeMembers.CacheAll(type.UnderlyingSystemType, members);
+            }
+
+            foreach (KeyValuePair<string, PythonTypeSlot> kvp in _typeMembers.GetAllMembers(type.UnderlyingSystemType)) {
+                PythonTypeSlot slot = kvp.Value;
+                string name = kvp.Key;
+
+                if (slot.IsVisible(context, type)) {
+                    memberNames[SymbolTable.StringToId(name)] = slot;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the member names which are defined in the type and any subtypes.  
+        /// 
+        /// This search includes members in the type and any subtypes as well as extension
+        /// types of the type and its subtypes.
+        /// </summary>
+        public void ResolveMemberNames(CodeContext/*!*/ context, PythonType/*!*/ type, PythonType/*!*/ owner, Dictionary<string, string>/*!*/ memberNames) {
+            if (!_resolvedMembers.IsFullyCached(type.UnderlyingSystemType)) {
+                Dictionary<string, KeyValuePair<PythonTypeSlot, MemberGroup>> members = new Dictionary<string, KeyValuePair<PythonTypeSlot, MemberGroup>>();
+                
+                foreach (ResolvedMember rm in TypeInfo.GetMembersAll(
+                    this,
+                    EmptyGetMemberAction,
+                    type.UnderlyingSystemType)) {
+
+                    if (!members.ContainsKey(rm.Name)) {
+                        members[rm.Name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(PythonTypeOps.GetSlot(rm.Member), rm.Member);
+                    }
+                }
+
+                _resolvedMembers.CacheAll(type.UnderlyingSystemType, members);
+            }
+
+            foreach (KeyValuePair<string, PythonTypeSlot> kvp in _resolvedMembers.GetAllMembers(type.UnderlyingSystemType)) {
+                PythonTypeSlot slot = kvp.Value;
+                string name = kvp.Key;
+
+                if (slot.IsVisible(context, owner)) {
+                    memberNames[name] = name;
+                }
+            }
+        }
+
+        private static Expression ReturnFieldTracker(FieldTracker fieldTracker) {
             return Ast.RuntimeConstant(PythonTypeOps.GetReflectedField(fieldTracker.Field));
         }
 
-        private Expression ReturnMethodGroup(MethodGroup methodGroup) {
-            return Ast.RuntimeConstant(PythonTypeOps.GetMethodIfMethod(GetBuiltinFunction(methodGroup)));
+        private static Expression ReturnMethodGroup(MethodGroup methodGroup) {
+            return Ast.RuntimeConstant(PythonTypeOps.GetFinalSlotForFunction(GetBuiltinFunction(methodGroup)));
         }
 
-        private Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker) {
+        private static Expression ReturnBoundTracker(BoundMemberTracker boundMemberTracker) {
             MemberTracker boundTo = boundMemberTracker.BoundTo;
             switch (boundTo.MemberType) {
                 case TrackerTypes.Property:
@@ -611,41 +568,27 @@ namespace IronPython.Runtime.Calls {
             throw new NotImplementedException();
         }
 
-        private BuiltinFunction GetBuiltinFunction(MethodGroup mg) {
+        private static BuiltinFunction GetBuiltinFunction(MethodGroup mg) {
+            MethodBase[] methods = new MethodBase[mg.Methods.Count];
+            for (int i = 0; i < mg.Methods.Count; i++) {
+                methods[i] = mg.Methods[i].Method;
+            }
             return PythonTypeOps.GetBuiltinFunction(
                 mg.DeclaringType,
                 mg.Methods[0].Name,
-                (mg.ContainsInstance ? FunctionType.Method : FunctionType.None) |
-                (mg.ContainsStatic ? FunctionType.Function : FunctionType.None),
+                (PythonTypeOps.GetMethodFunctionType(mg.DeclaringType, methods) & (~FunctionType.FunctionMethodMask)) |
+                    (mg.ContainsInstance ? FunctionType.Method : FunctionType.None) |
+                    (mg.ContainsStatic ? FunctionType.Function : FunctionType.None),
                 mg.GetMethodBases()
             );            
         }
 
-        private Expression ReturnPropertyTracker(PropertyTracker propertyTracker) {
-            if (propertyTracker.GetIndexParameters().Length > 0) {
-                return Ast.RuntimeConstant(new ReflectedIndexer(((ReflectedPropertyTracker)propertyTracker).Property, NameType.Property));
-            }
-
-            ReflectedPropertyTracker rpt = propertyTracker as ReflectedPropertyTracker;
-            if (rpt != null) {
-                return Ast.RuntimeConstant(new ReflectedProperty(rpt.Property,
-                    IncludePropertyMethod(rpt.GetGetMethod(true)),
-                    IncludePropertyMethod(rpt.GetSetMethod(true)),
-                    NameType.Property));
-            }
-
-            return Ast.RuntimeConstant(new ReflectedExtensionProperty(
-                new ExtensionPropertyInfo(
-                    propertyTracker.DeclaringType,
-                    IncludePropertyMethod(propertyTracker.GetGetMethod(true)) ??
-                        IncludePropertyMethod(propertyTracker.GetSetMethod(true))
-                ),
-                NameType.Property)
-            );
+        private static Expression ReturnPropertyTracker(PropertyTracker propertyTracker, bool privateMembers) {
+            return Ast.RuntimeConstant(PythonTypeOps.GetReflectedProperty(propertyTracker));
         }
 
-        private MethodInfo IncludePropertyMethod(MethodInfo method) {
-            if (_context.DomainManager.GlobalOptions.PrivateBinding) return method;
+        private static MethodInfo IncludePropertyMethod(MethodInfo method, bool privateMembers) {
+            if (privateMembers) return method;
 
             if (method != null) {
                 if (method.IsPrivate || (method.IsAssembly && !method.IsFamilyOrAssembly)) {
@@ -664,6 +607,200 @@ namespace IronPython.Runtime.Calls {
 
         protected override bool AllowKeywordArgumentSetting(MethodBase method) {
             return CompilerHelpers.IsConstructor(method) && !method.DeclaringType.IsDefined(typeof(PythonSystemTypeAttribute), true);
+        }
+
+        internal ScriptDomainManager/*!*/ DomainManager {
+            get {
+                return _context.DomainManager;
+            }
+        }
+
+        /// <summary>
+        /// Provides a cache from Type/name -> PythonTypeSlot and also allows access to
+        /// all members (and remembering whether all members are cached).
+        /// </summary>
+        private class SlotCache {
+            private Dictionary<Type/*!*/, SlotCacheInfo/*!*/> _cachedInfos;
+
+            /// <summary>
+            /// Writes to a cache the result of a type lookup.  Null values are allowed for the slots and they indicate that
+            /// the value does not exist.
+            /// </summary>
+            public void CacheSlot(Type/*!*/ type, string/*!*/ name, PythonTypeSlot slot, MemberGroup/*!*/ memberGroup) {
+                Debug.Assert(type != null); Debug.Assert(name != null);
+
+                EnsureInfo();
+
+                lock (_cachedInfos) {
+                    SlotCacheInfo slots = GetSlotForType(type);
+
+                    if (slots.ResolvedAll && slot == null && memberGroup.Count == 0) {
+                        // nothing to cache, and we know we don't need to cache non-hits.
+                        return;
+                    }
+
+                    slots.Members[name] = new KeyValuePair<PythonTypeSlot,MemberGroup>(slot, memberGroup);
+                }
+            }
+
+            /// <summary>
+            /// Looks up a cached type slot for the specified member and type.  This may return true and return a null slot - that indicates
+            /// that a cached result for a member which doesn't exist has been stored.  Otherwise it returns true if a slot is found or
+            /// false if it is not.
+            /// </summary>
+            public bool TryGetCachedSlot(Type/*!*/ type, string/*!*/ name, out PythonTypeSlot slot) {
+                Debug.Assert(type != null); Debug.Assert(name != null);
+
+                if (_cachedInfos != null) {
+                    lock (_cachedInfos) {
+                        SlotCacheInfo slots;
+                        if (_cachedInfos.TryGetValue(type, out slots) && 
+                            (slots.TryGetSlot(name, out slot) || slots.ResolvedAll)) {
+                            return true;
+                        }
+                    }
+                }
+
+                slot = null;
+                return false;
+            }
+
+            /// <summary>
+            /// Looks up a cached member group for the specified member and type.  This may return true and return a null group - that indicates
+            /// that a cached result for a member which doesn't exist has been stored.  Otherwise it returns true if a group is found or
+            /// false if it is not.
+            /// </summary>
+            public bool TryGetCachedMember(Type/*!*/ type, string/*!*/ name, bool getMemberAction, out MemberGroup/*!*/ group) {
+                Debug.Assert(type != null); Debug.Assert(name != null);
+
+                if (_cachedInfos != null) {
+                    lock (_cachedInfos) {
+                        SlotCacheInfo slots;
+                        if (_cachedInfos.TryGetValue(type, out slots) &&
+                            (slots.TryGetMember(name, out group) || (getMemberAction && slots.ResolvedAll && !TypeInfo.IsBackwardsCompatabileName(name)))) {
+                            return true;
+                        }
+                    }
+                }
+
+                group = MemberGroup.EmptyGroup;
+                return false;
+            }
+
+            /// <summary>
+            /// Checks to see if all members have been populated for the provided type.
+            /// </summary>
+            public bool IsFullyCached(Type/*!*/ type) {
+                if (_cachedInfos != null) {
+                    lock (_cachedInfos) {
+                        SlotCacheInfo info;
+                        if (_cachedInfos.TryGetValue(type, out info)) {
+                            return info.ResolvedAll;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            /// <summary>
+            /// Populates the type with all the provided members and marks the type 
+            /// as being fully cached.
+            /// 
+            /// The dictionary is used for the internal storage and should not be modified after
+            /// providing it to the cache.
+            /// </summary>
+            public void CacheAll(Type/*!*/ type, Dictionary<string/*!*/, KeyValuePair<PythonTypeSlot/*!*/, MemberGroup/*!*/>> members) {
+                Debug.Assert(type != null);
+
+                EnsureInfo();
+
+                lock (_cachedInfos) {
+                    SlotCacheInfo slots = GetSlotForType(type);
+
+                    slots.Members = members;
+                    slots.ResolvedAll = true;
+                }
+            }
+
+            /// <summary>
+            /// Returns an enumerable object which provides access to all the members of the provided type.
+            /// 
+            /// The caller must check that the type is fully cached and populate the cache if it isn't before
+            /// calling this method.
+            /// </summary>
+            public IEnumerable<KeyValuePair<string/*!*/, PythonTypeSlot/*!*/>>/*!*/ GetAllMembers(Type/*!*/ type) {
+                Debug.Assert(type != null);
+
+                SlotCacheInfo info = GetSlotForType(type);
+                Debug.Assert(info.ResolvedAll);
+
+                foreach (KeyValuePair<string, PythonTypeSlot> slot in info.GetAllSlots()) {
+                    if (slot.Value != null) {
+                        yield return slot;
+                    }
+                }
+            }
+
+            private SlotCacheInfo/*!*/ GetSlotForType(Type/*!*/ type) {
+                SlotCacheInfo slots;
+                if (!_cachedInfos.TryGetValue(type, out slots)) {
+                    _cachedInfos[type] = slots = new SlotCacheInfo();
+                }
+                return slots;
+            }
+
+            private void EnsureInfo() {
+                if (_cachedInfos == null) {
+                    Interlocked.CompareExchange(ref _cachedInfos, new Dictionary<Type, SlotCacheInfo>(), null);
+                }
+            }
+
+            private class SlotCacheInfo {
+                public SlotCacheInfo() {
+                    Members = new Dictionary<string/*!*/, KeyValuePair<PythonTypeSlot, MemberGroup/*!*/>>();
+                }
+
+                public void Add(string/*!*/ name, PythonTypeSlot slot, MemberGroup/*!*/ group) {
+                    Debug.Assert(name != null);  Debug.Assert(group != null);
+
+                    Members[name] = new KeyValuePair<PythonTypeSlot, MemberGroup>(slot, group);
+                }
+
+                public bool TryGetSlot(string/*!*/ name, out PythonTypeSlot slot) {
+                    Debug.Assert(name != null);
+
+                    KeyValuePair<PythonTypeSlot, MemberGroup> kvp;
+                    if (Members.TryGetValue(name, out kvp)) {
+                        slot = kvp.Key;
+                        return true;
+                    }
+
+                    slot = null;
+                    return false;
+                }
+
+                public bool TryGetMember(string/*!*/ name, out MemberGroup/*!*/ group) {
+                    Debug.Assert(name != null);
+
+                    KeyValuePair<PythonTypeSlot, MemberGroup> kvp;
+                    if (Members.TryGetValue(name, out kvp)) {
+                        group = kvp.Value;
+                        return true;
+                    }
+
+                    group = MemberGroup.EmptyGroup;
+                    return false;
+                }
+
+                public IEnumerable<KeyValuePair<string/*!*/, PythonTypeSlot>>/*!*/ GetAllSlots() {
+                    foreach (KeyValuePair<string, KeyValuePair<PythonTypeSlot, MemberGroup>> kvp in Members) {
+                        yield return new KeyValuePair<string, PythonTypeSlot>(kvp.Key, kvp.Value.Key);
+                    }
+                }
+
+                public Dictionary<string/*!*/, KeyValuePair<PythonTypeSlot, MemberGroup/*!*/>>/*!*/ Members;
+                public bool ResolvedAll;
+            }
         }
     }
 }

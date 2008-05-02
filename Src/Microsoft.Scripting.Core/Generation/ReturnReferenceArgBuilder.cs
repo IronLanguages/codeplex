@@ -18,7 +18,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.Scripting.Generation {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Ast;
     using Microsoft.Scripting.Actions;
 

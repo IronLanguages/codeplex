@@ -19,6 +19,7 @@ using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
     [Flags]
@@ -33,6 +34,7 @@ namespace IronPython.Runtime {
         AbsoluteImports = 64,
         NoBuiltins = 128,
         ModuleBuiltins = 256,
+        ExecOrEvalCode = 512,
     }
 
     public class PythonModule : ScopeExtension {
@@ -49,8 +51,10 @@ namespace IronPython.Runtime {
         /// <summary>
         /// Copy constructor.
         /// </summary>
-        protected PythonModule(PythonModule module)
-            : base(module) {
+        internal PythonModule(Scope/*!*/ scope, PythonModule/*!*/ module)
+            : base(scope) {
+            Assert.NotNull(module);
+
             _trueDivision = module._trueDivision;
             _withStatement = module._withStatement;
             _isPythonCreatedModule = module._isPythonCreatedModule;
@@ -92,7 +96,7 @@ namespace IronPython.Runtime {
             }
         }
 
-        public bool ShowCLS {
+        public bool ShowCls {
             get {
                 return _showCls;
             }
@@ -103,6 +107,7 @@ namespace IronPython.Runtime {
 
         protected override void ModuleReloading() {
             base.ModuleReloading();
+            _showCls = false;
             _trueDivision = false;
         }
 
@@ -126,8 +131,20 @@ namespace IronPython.Runtime {
             return result;
         }
 
-        internal PythonModule/*!*/ Clone() {
-            return (PythonModule)this.MemberwiseClone();
+        /// <summary>
+        /// Event fired when a module changes.
+        /// </summary>
+        public event EventHandler<ModuleChangeEventArgs> ModuleChanged;
+
+        /// <summary>
+        /// Called by the base class to fire the module change event when the
+        /// module has been modified.
+        /// </summary>
+        internal void OnModuleChange(ModuleChangeEventArgs e) {
+            EventHandler<ModuleChangeEventArgs> handler = ModuleChanged;
+            if (handler != null) {
+                handler(this, e);
+            }
         }
     }
 }

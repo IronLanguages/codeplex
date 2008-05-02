@@ -21,7 +21,6 @@ using System.Reflection.Emit;
 
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
@@ -95,19 +94,14 @@ namespace Microsoft.Scripting.Actions {
 
             MethodInfo mi = typeof(T).GetMethod("Invoke");
             LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(
+                null,  // LambdaExpression
                 StubName,
                 mi.ReturnType,
                 ReflectionUtils.GetParameterTypes(mi.GetParameters()),
                 null    // SourceUnit
             );
 
-            cg.EmitLineInfo = false;
-
-            if (DynamicSiteHelpers.IsFastTarget(typeof(T))) {
-                cg.ContextSlot = new PropertySlot(cg.GetLambdaArgumentSlot(0), typeof(FastCallSite).GetProperty("Context"));
-            } else {
-                cg.ContextSlot = cg.GetLambdaArgumentSlot(1);
-            }
+            cg.ContextSlot = cg.GetLambdaArgumentSlot(1);
 
             foreach (Rule<T> rule in _rules) {
                 rule.Emit(cg);
@@ -124,34 +118,24 @@ namespace Microsoft.Scripting.Actions {
             return (T)(object)cg.CreateDelegate(typeof(T));
         }
 
-        private void EmitNoMatch(LambdaCompiler cg) {
+        private static void EmitNoMatch(LambdaCompiler cg) {
             int count = cg.GetLambdaArgumentSlotCount();
 
             Slot site = cg.GetLambdaArgumentSlot(0);
-            Type real = GetRealSiteType(site.Type);
+            Type real = typeof(CallSite<T>);
             
-            site.EmitGet(cg);
-            cg.Emit(OpCodes.Castclass, real);
+            site.EmitGet(cg.IL);
+            cg.IL.Emit(OpCodes.Castclass, real);
 
             PropertyInfo update = real.GetProperty("Update");
-            cg.EmitPropertyGet(update);
+            cg.IL.EmitPropertyGet(update);
             for (int i = 0; i < count; i++) {
-                cg.GetLambdaArgumentSlot(i).EmitGet(cg);
+                cg.GetLambdaArgumentSlot(i).EmitGet(cg.IL);
             }
-            cg.Emit(OpCodes.Tailcall);
-            cg.EmitCall(update.PropertyType.GetMethod("Invoke"));
-            cg.Emit(OpCodes.Ret);
+            cg.IL.Emit(OpCodes.Tailcall);
+            cg.IL.EmitCall(update.PropertyType.GetMethod("Invoke"));
+            cg.IL.Emit(OpCodes.Ret);
             cg.Finish();
-        }
-
-        private Type GetRealSiteType(Type type) {
-            if (type == typeof(FastCallSite)) {
-                return typeof(FastCallSite<T>);
-            } else if (type == typeof(CallSite)) {
-                return typeof(CallSite<T>);
-            } else {
-                throw new InvalidOperationException("Wrong site type");
-            }
         }
 
         internal DynamicMethod MonomorphicTemplate {

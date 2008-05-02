@@ -15,6 +15,7 @@
 
 using System;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -22,17 +23,20 @@ namespace Microsoft.Scripting.Actions {
         private Type _type;
         private ConversionResultKind _resultKind;
 
-        public static ConvertToAction Make(Type type) {
-            return new ConvertToAction(type, ConversionResultKind.ImplicitCast);
+        public static ConvertToAction Make(ActionBinder binder, Type type) {
+            return Make(binder, type, ConversionResultKind.ImplicitCast);
         }
 
-        public static ConvertToAction Make(Type type, ConversionResultKind resultKind) {
-            return new ConvertToAction(type, resultKind);
+        public static ConvertToAction Make(ActionBinder binder, Type type, ConversionResultKind resultKind) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            ContractUtils.RequiresNotNull(type, "type");
+            return new ConvertToAction(binder, type, resultKind);
         }
 
-        private ConvertToAction(Type type, ConversionResultKind resultKind) { 
-            this._type = type;
-            this._resultKind = resultKind;
+        private ConvertToAction(ActionBinder binder, Type type, ConversionResultKind resultKind)
+            : base(binder) {
+            _type = type;
+            _resultKind = resultKind;
         }
 
         public Type ToType { get { return _type; } }

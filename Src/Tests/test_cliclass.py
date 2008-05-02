@@ -817,25 +817,6 @@ def test_class_property():
     import System
     AreEqual(System.Environment.Version.__class__, System.Version)
 
-@skip("silverlight") # no winforms
-def test_override_createparams():        
-    """verify we can override the CreateParams property and get the expected value from the base class"""
-
-    clr.AddReference("System.Windows.Forms")
-    from System.Windows.Forms import Label, Control
-    
-    for val in [20, 0xffff]:
-        class TransLabel(Label):
-            def get_CreateParams(self):
-                global style
-                cp = Label().CreateParams
-                cp.ExStyle = cp.ExStyle | val
-                style = cp.ExStyle
-                return cp
-            CreateParams = property(fget=get_CreateParams)
-    
-        AreEqual(Control.CreateParams.GetValue(TransLabel() ).ExStyle, style)
-
 def test_null_str():
     """if a .NET type has a bad ToString() implementation that returns null always return String.Empty in Python"""
     AreEqual(str(RudeObjectOverride()), '')

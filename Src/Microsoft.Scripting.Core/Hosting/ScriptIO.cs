@@ -14,13 +14,12 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
-using System.Diagnostics;
-using Microsoft.Scripting.Utils;
 using System.Security.Permissions;
+using System.Text;
+
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -57,8 +56,8 @@ namespace Microsoft.Scripting.Hosting {
         /// <param name="stream">Binary stream to write data to.</param>
         /// <param name="encoding">Encoding used to convert textual data written to the output by the script.</param>
         public void SetOutput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetOutput(stream, new StreamWriter(stream, encoding));
         }
 
@@ -66,33 +65,33 @@ namespace Microsoft.Scripting.Hosting {
         /// Used if the host handles both kinds of data (textual and binary) by itself.
         /// </summary>
         public void SetOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(writer, "writer");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(writer, "writer");
             _io.SetOutput(stream, writer);
         }
 
         public void SetErrorOutput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetErrorOutput(stream, new StreamWriter(stream, encoding));
         }
 
         public void SetErrorOutput(Stream/*!*/ stream, TextWriter/*!*/ writer) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(writer, "writer");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(writer, "writer");
             _io.SetErrorOutput(stream, writer);
         }
 
         public void SetInput(Stream/*!*/ stream, Encoding/*!*/ encoding) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetInput(stream, new StreamReader(stream, encoding), encoding);
         }
 
         public void SetInput(Stream/*!*/ stream, TextReader/*!*/ reader, Encoding/*!*/ encoding) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(reader, "writer");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(reader, "writer");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
             _io.SetInput(stream, reader, encoding);
         }
 

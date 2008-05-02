@@ -30,8 +30,8 @@ namespace Microsoft.Scripting.Utils {
 
         public static TOutput[] ConvertAll<TInput, TOutput>(TInput[] input, Converter<TInput, TOutput> conv) {
 #if SILVERLIGHT
-            Contract.RequiresNotNull(input, "input");
-            Contract.RequiresNotNull(conv, "conv");
+            ContractUtils.RequiresNotNull(input, "input");
+            ContractUtils.RequiresNotNull(conv, "conv");
 
             TOutput[] res = new TOutput[input.Length];
             for (int i = 0; i < input.Length; i++) {
@@ -67,8 +67,8 @@ namespace Microsoft.Scripting.Utils {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1814:PreferJaggedArraysOverMultidimensional", MessageId = "1#")] // TODO: fix
         public static void PrintTable(StringBuilder output, string[,] table) {
-            Contract.RequiresNotNull(output, "output");
-            Contract.RequiresNotNull(table, "table");
+            ContractUtils.RequiresNotNull(output, "output");
+            ContractUtils.RequiresNotNull(table, "table");
 
             int max_width = 0;
             for (int i = 0; i < table.GetLength(0); i++) {
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Utils {
             array = result;
         }
 
-        internal static T[] Copy<T>(T[] array) {
+        public static T[] Copy<T>(T[] array) {
             return (array.Length > 0) ? (T[])array.Clone() : array;
         }
 
@@ -130,7 +130,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] RotateRight<T>(T[] array, int count) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
             if ((count < 0) || (count > array.Length)) throw new ArgumentOutOfRangeException("count");
 
             T[] result = new T[array.Length];
@@ -142,7 +142,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] ShiftRight<T>(T[] array, int count) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             T[] result = new T[array.Length + count];
@@ -151,7 +151,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] ShiftLeft<T>(T[] array, int count) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
             if (count < 0) throw new ArgumentOutOfRangeException("count");
 
             T[] result = new T[array.Length - count];
@@ -180,7 +180,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] Append<T>(T[] array, T item) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
 
             System.Array.Resize<T>(ref array, array.Length + 1);
             array[array.Length - 1] = item;
@@ -192,7 +192,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] AppendRange<T>(T[] array, IList<T> items, int additionalItemCount) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
             if (additionalItemCount < 0) throw new ArgumentOutOfRangeException("additionalItemCount");
 
             int j = array.Length;
@@ -248,7 +248,7 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] RemoveLast<T>(T[] array) {
-            Contract.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
 
             System.Array.Resize(ref array, array.Length - 1);
             return array;
@@ -259,8 +259,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] RemoveAt<T>(T[] array, int indexToRemove) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.Requires(indexToRemove >= 0 && indexToRemove < array.Length, "index");
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.Requires(indexToRemove >= 0 && indexToRemove < array.Length, "index");
 
             T[] result = new T[array.Length - 1];
             if (indexToRemove > 0) {
@@ -278,9 +278,9 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static T[] InsertAt<T>(T[] array, int index, params T[] items) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresNotNull(items, "items");
-            Contract.Requires(index >= 0 && index <= array.Length, "index");
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(items, "items");
+            ContractUtils.Requires(index >= 0 && index <= array.Length, "index");
 
             if (items.Length == 0) {
                 return Copy(array);

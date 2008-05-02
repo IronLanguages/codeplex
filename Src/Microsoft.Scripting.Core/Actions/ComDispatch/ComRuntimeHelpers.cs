@@ -20,12 +20,12 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
@@ -521,7 +521,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 TypeGen type = Snippets.Shared.DefineUnsafeType("Type$IDispatchInvoke", typeof(object));
                 MethodBuilder mb = type.TypeBuilder.DefineMethod("IDispatchInvoke", MethodAttributes.Public | MethodAttributes.Static, typeof(int), paramTypes);
 
-                ILGen method = new ILGen(mb.GetILGenerator());
+                ILGen method = new ILGen(mb.GetILGenerator(), type);
 
                 LocalBuilder functionPtr = method.DeclareLocal(typeof(IntPtr));
 

@@ -102,7 +102,7 @@ namespace IronPython.Compiler {
         public ErrorSink Errors { 
             get { return _errors; } 
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _errors = value; 
             } 
         }
@@ -151,7 +151,7 @@ namespace IronPython.Compiler {
         }
 
         public Tokenizer(ErrorSink errorSink, bool verbatim, bool dontImplyDedent) {
-            Contract.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
 
             _errors = errorSink;
             _verbatim = verbatim;
@@ -162,7 +162,7 @@ namespace IronPython.Compiler {
         }
 
         public void Initialize(SourceUnit sourceUnit) {
-            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
             Initialize(null, sourceUnit.GetReader(), SourceLocation.MinValue, DefaultBufferCapacity);
         }
@@ -172,7 +172,7 @@ namespace IronPython.Compiler {
         }
 
         public void Initialize(object state, SourceUnitReader sourceReader, SourceLocation initialLocation, int bufferCapacity) {
-            Contract.RequiresNotNull(sourceReader, "sourceReader");
+            ContractUtils.RequiresNotNull(sourceReader, "sourceReader");
 
             if (state != null) {
                 if (!(state is State)) throw new ArgumentException();

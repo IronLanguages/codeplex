@@ -28,8 +28,8 @@ using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribut
 namespace IronPython.Runtime.Operations {
 
     public static partial class Int32Ops {
-        private static readonly FastDynamicSite<object, object> _intSite =
-            new FastDynamicSite<object, object>(DefaultContext.Default, ConvertToAction.Make(typeof(int)));
+        private static readonly DynamicSite<object, object> _intSite =
+            new DynamicSite<object, object>(ConvertToAction.Make(DefaultContext.DefaultPythonBinder, typeof(int)));
 
         private static object FastNew(object o) {
             Extensible<BigInteger> el;
@@ -101,7 +101,7 @@ namespace IronPython.Runtime.Operations {
                 return __new__(null, es.Value, 10);
             }
 
-            return _intSite.Invoke(o);
+            return _intSite.Invoke(DefaultContext.Default, o);
         }
 
         [StaticExtensionMethod]
@@ -131,7 +131,7 @@ namespace IronPython.Runtime.Operations {
             for (int i = 0; i < s.Length; i++) {
                 if (Char.IsWhiteSpace(s[i])) continue;
 
-                if (s[i] == '0' && i < s.Length - 1 && s[i + 1] == 'x') {
+                if (s[i] == '0' && i < s.Length - 1 && (s[i + 1] == 'x' || s[i + 1] == 'X')) {
                     s = s.Substring(i + 2);
                 }
                 break;
@@ -159,6 +159,7 @@ namespace IronPython.Runtime.Operations {
         }
 
         #region Binary Operators
+        
         [SpecialName]
         public static object FloorDivide(int x, int y) {
             if (y == -1 && x == Int32.MinValue) {
@@ -354,6 +355,10 @@ namespace IronPython.Runtime.Operations {
 
         public static double __float__(int self) {
             return (double)self;
+        }
+
+        public static int __abs__(int self) {
+            return Math.Abs(self);
         }
 
         public static object __coerce__(CodeContext context, int x, object o) {

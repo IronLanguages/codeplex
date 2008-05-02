@@ -19,6 +19,7 @@ using Microsoft.Scripting.Math;
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Microsoft.Scripting.Ast")]
 
 namespace Microsoft.Scripting.Ast {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1724:TypeNamesShouldNotMatchNamespaces")]
     public static partial class Utils {
         public static Expression Constant(object value) {
             BigInteger bi = value as BigInteger;
@@ -28,30 +29,30 @@ namespace Microsoft.Scripting.Ast {
             } else if (value is Complex64) {
                 return ComplexConstant((Complex64)value);
             } else {
-                return Ast.Constant(value);
+                return Expression.Constant(value);
             }
         }
 
         private static Expression BigIntegerConstant(BigInteger value) {
             int ival;
             if (value.AsInt32(out ival)) {
-                return Ast.Call(
+                return Expression.Call(
                     typeof(BigInteger).GetMethod("Create", new Type[] { typeof(int) }),
-                    Ast.Constant(ival)
+                    Expression.Constant(ival)
                 );
             }
 
             long lval;
             if (value.AsInt64(out lval)) {
-                return Ast.Call(
+                return Expression.Call(
                     typeof(BigInteger).GetMethod("Create", new Type[] { typeof(long) }),
-                    Ast.Constant(lval)
+                    Expression.Constant(lval)
                 );
             }
 
-            return Ast.New(
+            return Expression.New(
                 typeof(BigInteger).GetConstructor(new Type[] { typeof(int), typeof(uint[]) }),
-                Ast.Constant((int)value.Sign),
+                Expression.Constant((int)value.Sign),
                 CreateUIntArray(value.GetBits())
             );
         }
@@ -59,29 +60,29 @@ namespace Microsoft.Scripting.Ast {
         private static Expression CreateUIntArray(uint[] array) {
             Expression[] init = new Expression[array.Length];
             for (int i = 0; i < init.Length; i++) {
-                init[i] = Ast.Constant(array[i]);
+                init[i] = Expression.Constant(array[i]);
             }
-            return Ast.NewArray(typeof(uint[]), init);
+            return Expression.NewArray(typeof(uint[]), init);
         }
 
         private static Expression ComplexConstant(Complex64 value) {
             if (value.Real != 0.0) {
                 if (value.Imag != 0.0) {
-                    return Ast.Call(
+                    return Expression.Call(
                         typeof(Complex64).GetMethod("Make"),
-                        Ast.Constant(value.Real),
-                        Ast.Constant(value.Imag)
+                        Expression.Constant(value.Real),
+                        Expression.Constant(value.Imag)
                     );
                 } else {
-                    return Ast.Call(
+                    return Expression.Call(
                         typeof(Complex64).GetMethod("MakeReal"),
-                        Ast.Constant(value.Real)
+                        Expression.Constant(value.Real)
                     );
                 }
             } else {
-                return Ast.Call(
+                return Expression.Call(
                     typeof(Complex64).GetMethod("MakeImaginary"),
-                    Ast.Constant(value.Imag)
+                    Expression.Constant(value.Imag)
                 );
             }
         }

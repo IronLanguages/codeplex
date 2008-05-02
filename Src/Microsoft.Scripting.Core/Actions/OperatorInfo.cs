@@ -45,6 +45,15 @@ namespace Microsoft.Scripting.Actions {
             return null;
         }
 
+        public static OperatorInfo GetOperatorInfo(string name) {
+            foreach (OperatorInfo info in _infos) {
+                if (info.Name == name || info.AlternateName == name) {
+                    return info;
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// The operator the OperatorInfo provides info for.
         /// </summary>
@@ -111,7 +120,7 @@ namespace Microsoft.Scripting.Actions {
             res.Add(new OperatorInfo(Operators.LessThanOrEqual,     "op_LessThanOrEqual",           "LessThanOrEqual"));        // <=
             res.Add(new OperatorInfo(Operators.InPlaceMultiply,     "op_MultiplicationAssignment",  "InPlaceMultiply"));       // *=
             res.Add(new OperatorInfo(Operators.InPlaceSubtract,     "op_SubtractionAssignment",     "InPlaceSubtract"));       // -=
-            res.Add(new OperatorInfo(Operators.InPlaceExclusiveOr,  "op_ExclusiveOrAssignment",     "InPlaceXor"));            // ^=
+            res.Add(new OperatorInfo(Operators.InPlaceExclusiveOr,  "op_ExclusiveOrAssignment",     "InPlaceExclusiveOr"));            // ^=
             res.Add(new OperatorInfo(Operators.InPlaceLeftShift,    "op_LeftShiftAssignment",       "InPlaceLeftShift"));      // <<=
             res.Add(new OperatorInfo(Operators.InPlaceRightShift,   "op_RightShiftAssignment",      "InPlaceRightShift"));     // >>=
             res.Add(new OperatorInfo(Operators.InPlaceRightShiftUnsigned, "op_UnsignedRightShiftAssignment", "InPlaceUnsignedRightShift"));     // >>=

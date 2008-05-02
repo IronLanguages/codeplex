@@ -25,11 +25,11 @@ namespace Microsoft.Scripting {
         private readonly object[] _annotations;
 
         internal Annotations(IEnumerable<Object> annotations) {
-            Contract.RequiresNotNull(annotations, "annotations");
+            ContractUtils.RequiresNotNull(annotations, "annotations");
             List<object> clone = new List<object>();
 
             foreach (object annotation in annotations) {
-                Contract.RequiresNotNull(annotation, "annotations");
+                ContractUtils.RequiresNotNull(annotation, "annotations");
                 clone.Add(annotation);
             }
             this._annotations = clone.ToArray();
@@ -64,7 +64,7 @@ namespace Microsoft.Scripting {
         /// Creates a clone of annotations and adds the value into the clone
         /// </summary>
         public Annotations Add<T>(T annotation) {
-            Contract.RequiresNotNull(annotation, "annotation");
+            ContractUtils.RequiresNotNull(annotation, "annotation");
 
             object[] newAnnotations = _annotations;
             Array.Resize(ref newAnnotations, _annotations.Length + 1);
@@ -124,8 +124,8 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
-        public static Annotations Annotations(params Object[] items) {
+    public partial class Expression {
+        public static Annotations Annotate(params Object[] items) {
             return new Annotations(items);
         }
     }

@@ -273,7 +273,6 @@ namespace IronPython.Modules {
                 }
             }
 
-            [SpecialName]
             public void __delitem__(object index) {
                 lock (_lockObj) {
                     int realIndex = IndexToSlot(index);
@@ -306,7 +305,6 @@ namespace IronPython.Modules {
                 }
             }
 
-            [SpecialName]
             public object __contains__(object o) {
                 lock (_lockObj) {
                     object res = RuntimeHelpers.False;
@@ -576,12 +574,6 @@ namespace IronPython.Modules {
                 return ((IComparable)this).CompareTo(other) == 0;
             }
 
-            bool IValueEquality.ValueNotEquals(object other) {
-                if (!(other is deque)) return true;
-
-                return ((IComparable)this).CompareTo(other) != 0;
-            }
-
             #endregion
 
             #region Rich Comparison Members
@@ -678,14 +670,13 @@ namespace IronPython.Modules {
                 }
             }
 
-            [SpecialName]
             public object __missing__(CodeContext context, object key) {
                 object factory = _factory;
 
                 if (factory == null) throw PythonOps.KeyError(key);
 
                 if (!_missingSite.IsInitialized) {
-                    _missingSite.EnsureInitialized(CallAction.Make(0));
+                    _missingSite.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 0));
                 }
 
                 // get the default value, store it in the dictionary and return it

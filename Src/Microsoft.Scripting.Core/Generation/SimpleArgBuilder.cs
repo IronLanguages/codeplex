@@ -48,7 +48,7 @@ namespace Microsoft.Scripting.Generation {
 
         public SimpleArgBuilder(int index, Type parameterType, ParameterInfo paramInfo) {
             if (index < 0) throw new ArgumentOutOfRangeException("index");
-            Contract.RequiresNotNull(parameterType, "parameterType");
+            ContractUtils.RequiresNotNull(parameterType, "parameterType");
 
             _index = index;
             _parameterType = parameterType;
@@ -84,7 +84,7 @@ namespace Microsoft.Scripting.Generation {
 
         public override AbstractValue AbstractBuild(AbstractContext context, IList<AbstractValue> parameters) {
             AbstractValue value = parameters[_index];
-            return context.Binder.AbstractExecute(ConvertToAction.Make(_parameterType), new AbstractValue[] { value });
+            return context.Binder.AbstractExecute(ConvertToAction.Make(context.Binder, _parameterType), new AbstractValue[] { value });
         }
 
         public int Index {

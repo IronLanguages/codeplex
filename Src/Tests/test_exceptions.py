@@ -18,7 +18,7 @@ import sys
 
 AreEqual(sys.exc_info(), (None, None, None))
 
-@skip("win32")
+
 def test_exception_line_no_with_finally():
     def f():
         try:
@@ -30,8 +30,9 @@ def test_exception_line_no_with_finally():
         f()
     except Exception, e:
         tb = sys.exc_info()[2]
+        expected = [25, 30]
         while tb:
-            AreEqual(tb.tb_lineno, 25) # adding lines will require an update here
+            AreEqual(tb.tb_lineno, expected.pop()) # adding lines will require an update here
             tb = tb.tb_next
             
 if is_cli or is_silverlight:
@@ -341,8 +342,8 @@ if is_cli or is_silverlight:
             import sys
             if (sys.exc_traceback != None):
                 x = dir(sys.exc_traceback)
-                x.sort()
-                AreEqual(x,  ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'])
+                for name in ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']:
+                    Assert(name in x, name)
                 try:
                     raise "foo", "Msg", sys.exc_traceback
                 except "foo", X:

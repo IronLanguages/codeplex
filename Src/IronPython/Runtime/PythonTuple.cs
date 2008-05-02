@@ -459,10 +459,6 @@ namespace IronPython.Runtime {
             return true;
         }
 
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
-        }
-
         #endregion
 
         #region ICodeFormattable Members

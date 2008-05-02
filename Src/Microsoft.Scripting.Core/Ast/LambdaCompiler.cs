@@ -47,6 +47,8 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// The compiler which contains the compilation-wide information
         /// such as other lambdas and their Compilers.
+        /// 
+        /// TODO: readonly once rules don't depend on mutating this
         /// </summary>
         private Compiler _compiler;
 
@@ -56,29 +58,30 @@ namespace Microsoft.Scripting.Ast {
         /// used outside of the purpose of compiling the ASTs (sometimes
         /// it is used to generate odd dynamic method here and there,
         /// those will go away eventually and this field will be required)
+        /// 
+        /// TODO: readonly once rules don't depend on mutating this
         /// </summary>
         private LambdaInfo _info;
+
+        /// <summary>
+        /// The generator information for the generator being compiled.
+        /// This is null if the current lambda is not a generator
+        /// </summary>
+        private readonly GeneratorInfo _generatorInfo;
 
         private readonly ILGen _ilg;
         private CodeGenOptions _options;
         private readonly TypeGen _typeGen;
-        private ScopeAllocator _allocator;
 
         private readonly MethodBase _method;
-        private MethodInfo _methodToOverride;
 
         private readonly ListStack<Targets> _targets = new ListStack<Targets>();
-        private readonly List<Slot> _freeSlots = new List<Slot>();
 
         private Nullable<ReturnBlock> _returnBlock;
 
         // Key slots
         private EnvironmentSlot _environmentSlot;   // reference to function's own environment
         private Slot _contextSlot;                  // code context
-
-        // Runtime line # tracking
-        private Slot _currentLineSlot;              // used to track the current line # at runtime
-        private int _currentLine;                   // last line number emitted to avoid dupes
 
         /// <summary>
         /// Argument slots
@@ -102,18 +105,22 @@ namespace Microsoft.Scripting.Ast {
 
         private readonly ConstantPool _constantPool;
 
-        private bool _generator;                    // true if emitting generator, false otherwise
-        private Slot _gotoRouter;                   // Slot that stores the number of the label to go to.
+        // true if emitting generator body, false otherwise
+        private bool _generatorBody;
+
+        // Slot that stores the number of the label to go to.
+        private Slot _gotoRouter;
 
         private const int FinallyExitsNormally = 0;
         private const int BranchForReturn = 1;
         private const int BranchForBreak = 2;
         private const int BranchForContinue = 3;
 
-        private LambdaCompiler(TypeGen typeGen, MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type>/*!*/ paramTypes,
+        private LambdaCompiler(Compiler compiler, LambdaExpression lambda,
+            TypeGen typeGen, MethodBase/*!*/ mi, ILGenerator/*!*/ ilg, IList<Type>/*!*/ paramTypes,
             ConstantPool constantPool, bool closure) {
 
-            Contract.Requires(constantPool == null || mi.IsStatic, "constantPool");
+            ContractUtils.Requires(constantPool == null || mi.IsStatic, "constantPool");
 
             _typeGen = typeGen;
             _method = mi;
@@ -121,9 +128,9 @@ namespace Microsoft.Scripting.Ast {
             // Create the ILGen instance, debug or not
 #if !SILVERLIGHT
             if (Snippets.Shared.ILDebug) {
-                _ilg = CreateDebugILGen(ilg, mi, paramTypes);
+                _ilg = CreateDebugILGen(ilg, typeGen, mi, paramTypes);
             } else {
-                _ilg = new ILGen(ilg);
+                _ilg = new ILGen(ilg, typeGen);
             }
 #else
             _ilg = new ILGen(ilg);
@@ -133,7 +140,7 @@ namespace Microsoft.Scripting.Ast {
             int thisOffset = mi.IsStatic ? 0 : 1;
             _argumentSlots = new Slot[paramTypes.Count];
             for (int i = 0; i < _argumentSlots.Length; i++) {
-                _argumentSlots[i] = new ArgSlot(i + thisOffset, paramTypes[i], this);
+                _argumentSlots[i] = new ArgSlot(i + thisOffset, paramTypes[i], _ilg);
             }
 
             // Create/initialize constant pool
@@ -148,7 +155,21 @@ namespace Microsoft.Scripting.Ast {
             // Adjust the lambda vs. raw view of the arguments
             _firstLambdaArgument = (constantPool != null || closure) ? 1 : 0;
 
-            EmitLineInfo = ScriptDomainManager.Options.DynamicStackTraceSupport;
+            // Initialize _info and _compiler
+            if (lambda != null) {
+                if (compiler == null) {
+                    // No compiler, analyze the tree to create one (possibly rewriting lambda)
+                    compiler = new Compiler(AnalyzeLambda(ref lambda));
+                }
+                _info = compiler.GetLambdaInfo(lambda);
+
+                GeneratorLambdaExpression gle = lambda as GeneratorLambdaExpression;
+                if (gle != null) {
+                    _generatorInfo = compiler.GetGeneratorInfo(gle);
+                }
+            }
+            _compiler = compiler;
+
             NoteCompilerCreation(mi);
         }
 
@@ -159,9 +180,11 @@ namespace Microsoft.Scripting.Ast {
         #region Properties
 
         private Compiler Compiler {
-            get {
-                return _compiler;
-            }
+            get { return _compiler; }
+        }
+
+        private LambdaInfo LambdaInfo {
+            get { return _info; }
         }
 
         internal ILGen IL {
@@ -197,24 +220,7 @@ namespace Microsoft.Scripting.Ast {
                 }
             }
         }
-
-        /// <summary>
-        /// True if line information should be tracked during code execution to provide
-        /// runtime line-information in non-debug builds, false otherwise.
-        /// </summary>
-        internal bool EmitLineInfo {
-            get {
-                return (_options & CodeGenOptions.EmitLineInfo) != 0;
-            }
-            set {
-                if (value) {
-                    _options |= CodeGenOptions.EmitLineInfo;
-                } else {
-                    _options &= ~CodeGenOptions.EmitLineInfo;
-                }
-            }
-        }
-
+        
         /// <summary>
         /// Gets the TypeGen object which this Compiler is emitting into.  TypeGen can be
         /// null if the method is a dynamic method.
@@ -241,36 +247,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        // TODO: Remove !!!
-        internal MethodInfo MethodToOverride {
-            get {
-                return _methodToOverride;
-            }
-            set {
-                _methodToOverride = value;
-            }
-        }
-
         /// <summary>
         /// Gets a list which can be used to inject references to objects from IL.  
         /// </summary>
         internal ConstantPool ConstantPool {
             get {
                 return _constantPool;
-            }
-        }
-
-        internal ScopeAllocator Allocator {
-            get {
-                Debug.Assert(_allocator != null);
-                return _allocator;
-            }
-            set { _allocator = value; }
-        }
-
-        internal bool HasAllocator {
-            get {
-                return _allocator != null;
             }
         }
 
@@ -294,7 +276,7 @@ namespace Microsoft.Scripting.Ast {
                 return _contextSlot;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 if (!typeof(CodeContext).IsAssignableFrom(value.Type)) {
                     throw new ArgumentException("ContextSlot must be assignable from CodeContext", "value");
                 }
@@ -334,12 +316,12 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        internal bool IsGenerator {
+        internal bool IsGeneratorBody {
             get {
-                return _generator;
+                return _generatorBody;
             }
             private set {
-                _generator = value;
+                _generatorBody = value;
             }
         }
 
@@ -364,30 +346,14 @@ namespace Microsoft.Scripting.Ast {
         /// This is used for compiling the toplevel LambdaExpression object.
         /// </summary>
         internal static DlrMainCallTarget CompileTopLevelLambda(SourceUnit source, LambdaExpression lambda) {
-            // 1. Analyze
-            AnalyzedTree at = AnalyzeLambda(ref lambda);
-
-            // 2. Create the Compiler
-            Compiler tc = new Compiler(at);
-
-            // 3. Create the lambda compiler
-            LambdaCompiler cg = CreateDynamicLambdaCompiler("Initialize", typeof(object), new Type[] { typeof(CodeContext) }, source);
+            // 1. Create the lambda compiler
+            LambdaCompiler cg = CreateDynamicLambdaCompiler(lambda, "Initialize", typeof(object), new Type[] { typeof(CodeContext) }, source);
 
             cg.ContextSlot = cg.GetLambdaArgumentSlot(0);
-            cg.Allocator = CompilerHelpers.CreateFrameAllocator();
-            cg.InitializeCompilerAndLambda(tc, lambda);
+            cg.SetAllocators(new GlobalNamedAllocator(), new FrameStorageAllocator());
 
-            // 4. Generate code
-            cg.EnvironmentSlot = new EnvironmentSlot(
-                new PropertySlot(
-                    new PropertySlot(cg.ContextSlot,
-                        typeof(CodeContext).GetProperty("Scope")),
-                    typeof(Scope).GetProperty("Dict"))
-                );
-
-            LambdaInfo li = at.GetLambdaInfo(lambda);
-            cg.EmitFunctionImplementation(li);
-
+            // 2. Generate code
+            cg.EmitBody();
             cg.Finish();
 
             return (DlrMainCallTarget)(object)cg.CreateDelegate(typeof(DlrMainCallTarget));
@@ -400,57 +366,23 @@ namespace Microsoft.Scripting.Ast {
         /// <param name="lambda">LambdaExpression to compile.</param>
         /// <returns>The compiled delegate.</returns>
         internal static T CompileLambda<T>(LambdaExpression lambda) {
-            // 1. Analyze
-            AnalyzedTree at = AnalyzeLambda(ref lambda);
-
-            // 2. Create The Compiler
-            Compiler tc = new Compiler(at);
-
-            // 3. Create signature
+            // 1. Create signature
             List<Type> types;
             List<string> names;
             string name;
             ComputeSignature(lambda, out types, out names, out name);
 
-            // 4. Create lambda compiler
-            LambdaCompiler c = CreateDynamicLambdaCompiler(name, lambda.ReturnType, types, null);
-            c.Allocator = CompilerHelpers.CreateLocalStorageAllocator(null, c);
+            // 2. Create lambda compiler
+            LambdaCompiler c = CreateDynamicLambdaCompiler(lambda, name, lambda.ReturnType, types, null);
+            c.SetDefaultAllocators(null);
 
-            // 5. Initialize the compiler
-            c.InitializeCompilerAndLambda(tc, lambda);
-
-            // 6. Emit
-            EmitBody(c, at.GetLambdaInfo(lambda));
+            // 3. Emit
+            c.EmitBody();
 
             c.Finish();
 
-            // 7. Return the delegate.
+            // 4. Return the delegate.
             return (T)(object)c.CreateDelegate(typeof(T));
-        }
-
-        /// <summary>
-        /// Compiler entry point, used by OptimizedModuleGenerator
-        /// </summary>
-        internal void GenerateLambda(LambdaExpression lambda) {
-            if (_source == null) {
-                throw new InvalidOperationException("Must have source unit.");
-            }
-
-            // 1. Analyze
-            AnalyzedTree at = AnalyzeLambda(ref lambda);
-
-            // 2. Finish initialization
-            InitializeCompilerAndLambda(new Compiler(at), lambda);
-
-            // 3. Generate the code.
-            EmitStackTraceTryBlockStart();
-
-            // 4. Emit the actual body
-            EmitBody(this, at.GetLambdaInfo(lambda));
-
-            string displayName = _source.GetSymbolDocument(lambda.Start.Line) ?? lambda.Name;
-
-            EmitStackTraceFaultBlock(lambda.Name, displayName);
         }
 
         #endregion
@@ -459,7 +391,7 @@ namespace Microsoft.Scripting.Ast {
             DumpLambda(lambda);
 
             lambda = StackSpiller.AnalyzeLambda(lambda);
-            AnalyzedTree at = ClosureBinder.Bind(lambda);
+            AnalyzedTree at = LambdaBinder.Bind(lambda);
 
             DumpLambda(lambda);
 
@@ -480,10 +412,6 @@ namespace Microsoft.Scripting.Ast {
                 Targets t = _targets.Peek();
                 _targets.Push(new Targets(t.BreakLabel, t.ContinueLabel, type, returnFlag ?? t.FinallyReturns, null));
             }
-        }
-
-        private void PushTryBlock() {
-            PushExceptionBlock(TargetBlockType.Try, null);
         }
 
         private void PushTargets(Label? breakTarget, Label? continueTarget, LabelTarget label) {
@@ -529,7 +457,7 @@ namespace Microsoft.Scripting.Ast {
                 case TargetBlockType.Normal:
                 case TargetBlockType.LoopInFinally:
                     if (t.BreakLabel.HasValue)
-                        Emit(OpCodes.Br, t.BreakLabel.Value);
+                        _ilg.Emit(OpCodes.Br, t.BreakLabel.Value);
                     else
                         throw new InvalidOperationException();
                     break;
@@ -542,29 +470,30 @@ namespace Microsoft.Scripting.Ast {
                             break;
                         }
 
-                        if (_targets[i].BlockType == TargetBlockType.LoopInFinally)
+                        if (_targets[i].BlockType == TargetBlockType.LoopInFinally ||
+                            !_targets[i].BreakLabel.HasValue)
                             break;
                     }
 
                     if (finallyIndex == -1) {
                         if (t.BreakLabel.HasValue)
-                            Emit(OpCodes.Leave, t.BreakLabel.Value);
+                            _ilg.Emit(OpCodes.Leave, t.BreakLabel.Value);
                         else
                             throw new InvalidOperationException();
                     } else {
                         if (!_targets[finallyIndex].LeaveLabel.HasValue)
-                            _targets[finallyIndex].LeaveLabel = DefineLabel();
+                            _targets[finallyIndex].LeaveLabel = _ilg.DefineLabel();
 
-                        EmitInt(LambdaCompiler.BranchForBreak);
-                        _targets[finallyIndex].FinallyReturns.EmitSet(this);
+                        _ilg.EmitInt(LambdaCompiler.BranchForBreak);
+                        _targets[finallyIndex].FinallyReturns.EmitSet(_ilg);
 
-                        Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
+                        _ilg.Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
                     }
                     break;
                 case TargetBlockType.Finally:
-                    EmitInt(LambdaCompiler.BranchForBreak);
-                    t.FinallyReturns.EmitSet(this);
-                    Emit(OpCodes.Endfinally);
+                    _ilg.EmitInt(LambdaCompiler.BranchForBreak);
+                    t.FinallyReturns.EmitSet(_ilg);
+                    _ilg.Emit(OpCodes.Endfinally);
                     break;
             }
         }
@@ -576,7 +505,7 @@ namespace Microsoft.Scripting.Ast {
                 case TargetBlockType.Normal:
                 case TargetBlockType.LoopInFinally:
                     if (t.ContinueLabel.HasValue)
-                        Emit(OpCodes.Br, t.ContinueLabel.Value);
+                        _ilg.Emit(OpCodes.Br, t.ContinueLabel.Value);
                     else
                         throw new InvalidOperationException();
                     break;
@@ -584,14 +513,14 @@ namespace Microsoft.Scripting.Ast {
                 case TargetBlockType.Else:
                 case TargetBlockType.Catch:
                     if (t.ContinueLabel.HasValue)
-                        Emit(OpCodes.Leave, t.ContinueLabel.Value);
+                        _ilg.Emit(OpCodes.Leave, t.ContinueLabel.Value);
                     else
                         throw new InvalidOperationException();
                     break;
                 case TargetBlockType.Finally:
-                    EmitInt(LambdaCompiler.BranchForContinue);
-                    t.FinallyReturns.EmitSet(this);
-                    Emit(OpCodes.Endfinally);
+                    _ilg.EmitInt(LambdaCompiler.BranchForContinue);
+                    t.FinallyReturns.EmitSet(_ilg);
+                    _ilg.Emit(OpCodes.Endfinally);
                     break;
             }
         }
@@ -601,7 +530,7 @@ namespace Microsoft.Scripting.Ast {
             switch (BlockType) {
                 default:
                 case TargetBlockType.Normal:
-                    Emit(OpCodes.Ret);
+                    _ilg.Emit(OpCodes.Ret);
                     break;
                 case TargetBlockType.Catch:
                 case TargetBlockType.Try:
@@ -617,23 +546,23 @@ namespace Microsoft.Scripting.Ast {
                     EnsureReturnBlock();
                     Debug.Assert(_returnBlock.HasValue);
                     if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
-                        _returnBlock.Value.returnValue.EmitSet(this);
+                        _returnBlock.Value.returnValue.EmitSet(_ilg);
                     }
 
                     if (finallyIndex == -1) {
                         // emit the real return
-                        Emit(OpCodes.Leave, _returnBlock.Value.returnStart);
+                        _ilg.Emit(OpCodes.Leave, _returnBlock.Value.returnStart);
                     } else {
                         // need to leave into the inner most finally block,
                         // the finally block will fall through and check
                         // the return value.
                         if (!_targets[finallyIndex].LeaveLabel.HasValue)
-                            _targets[finallyIndex].LeaveLabel = DefineLabel();
+                            _targets[finallyIndex].LeaveLabel = _ilg.DefineLabel();
 
-                        EmitInt(LambdaCompiler.BranchForReturn);
-                        _targets[finallyIndex].FinallyReturns.EmitSet(this);
+                        _ilg.EmitInt(LambdaCompiler.BranchForReturn);
+                        _targets[finallyIndex].FinallyReturns.EmitSet(_ilg);
 
-                        Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
+                        _ilg.Emit(OpCodes.Leave, _targets[finallyIndex].LeaveLabel.Value);
                     }
                     break;
                 case TargetBlockType.LoopInFinally:
@@ -641,14 +570,14 @@ namespace Microsoft.Scripting.Ast {
                         Targets t = _targets.Peek();
                         EnsureReturnBlock();
                         if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
-                            _returnBlock.Value.returnValue.EmitSet(this);
+                            _returnBlock.Value.returnValue.EmitSet(_ilg);
                         }
                         // Assert check ensures that those who pushed the block with finallyReturns as null 
                         // should not yield in their lambdas.
                         Debug.Assert(t.FinallyReturns != null);
-                        EmitInt(LambdaCompiler.BranchForReturn);
-                        t.FinallyReturns.EmitSet(this);
-                        Emit(OpCodes.Endfinally);
+                        _ilg.EmitInt(LambdaCompiler.BranchForReturn);
+                        t.FinallyReturns.EmitSet(_ilg);
+                        _ilg.Emit(OpCodes.Endfinally);
                         break;
                     }
             }
@@ -661,8 +590,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitCast(Type from, Type to) {
-            Contract.RequiresNotNull(from, "from");
-            Contract.RequiresNotNull(to, "to");
+            ContractUtils.RequiresNotNull(from, "from");
+            ContractUtils.RequiresNotNull(to, "to");
 
             if (!TryEmitExplicitCast(from, to)) {
                 throw new ArgumentException(String.Format("Cannot cast from '{0}' to '{1}'", from, to));
@@ -696,13 +625,13 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         /// <param name="type"></param>
         internal void EmitBoxing(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
             Debug.Assert(typeof(void).IsValueType);
 
             if (type == typeof(int)) {
-                EmitCall(typeof(RuntimeHelpers), "Int32ToObject");
+                _ilg.EmitCall(typeof(RuntimeHelpers), "Int32ToObject");
             } else if (type == typeof(bool)) {
-                EmitCall(typeof(RuntimeHelpers), "BooleanToObject");
+                _ilg.EmitCall(typeof(RuntimeHelpers), "BooleanToObject");
             } else {
                 _ilg.EmitBoxing(type);
             }
@@ -711,12 +640,12 @@ namespace Microsoft.Scripting.Ast {
         private void EmitReturnValue() {
             EnsureReturnBlock();
             if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
-                _returnBlock.Value.returnValue.EmitGet(this);
+                _returnBlock.Value.returnValue.EmitGet(_ilg);
             }
         }
 
         private void EmitReturn(Expression expr) {
-            if (_generator) {
+            if (IsGeneratorBody) {
                 EmitReturnInGenerator(expr);
             } else {
                 if (expr == null) {
@@ -736,12 +665,12 @@ namespace Microsoft.Scripting.Ast {
         private void EmitReturnInGenerator(Expression expr) {
             EmitSetGeneratorReturnValue(expr);
 
-            EmitInt(0);
+            _ilg.EmitInt(0);
             EmitReturn();
         }
 
         private void EmitYield(Expression expr, YieldTarget target) {
-            Contract.RequiresNotNull(expr, "expr");
+            ContractUtils.RequiresNotNull(expr, "expr");
 
             EmitSetGeneratorReturnValue(expr);
             EmitUpdateGeneratorLocation(target.Index);
@@ -749,48 +678,47 @@ namespace Microsoft.Scripting.Ast {
             // Mark that we are yielding, which will ensure we skip
             // all of the finally bodies that are on the way to exit
 
-            EmitInt(GotoRouterYielding);
-            GotoRouter.EmitSet(this);
+            _ilg.EmitInt(GotoRouterYielding);
+            GotoRouter.EmitSet(_ilg);
 
-            EmitInt(1);
+            _ilg.EmitInt(1);
             EmitReturn();
 
-            MarkLabel(target.EnsureLabel(this));
+            _ilg.MarkLabel(target.EnsureLabel(this));
             // Reached the routing destination, set router to GotoRouterNone
-            EmitInt(GotoRouterNone);
-            GotoRouter.EmitSet(this);
+            _ilg.EmitInt(GotoRouterNone);
+            GotoRouter.EmitSet(_ilg);
         }
 
         private void EmitSetGeneratorReturnValue(Expression expr) {
-            GetLambdaArgumentSlot(1).EmitGet(this);
+            GetLambdaArgumentSlot(1).EmitGet(_ilg);
             EmitExpressionAsObjectOrNull(expr);
-            Emit(OpCodes.Stind_Ref);
+            _ilg.Emit(OpCodes.Stind_Ref);
         }
 
         private void EmitUpdateGeneratorLocation(int index) {
-            GetLambdaArgumentSlot(0).EmitGet(this);
-            EmitInt(index);
-            EmitFieldSet(typeof(Generator).GetField("location"));
+            GetLambdaArgumentSlot(0).EmitGet(_ilg);
+            _ilg.EmitInt(index);
+            _ilg.EmitFieldSet(typeof(Generator).GetField("location"));
         }
 
         private void EmitGetGeneratorLocation() {
-            GetLambdaArgumentSlot(0).EmitGet(this);
-            EmitFieldGet(typeof(Generator), "location");
-        }
-
-        internal void EmitUninitialized() {
-            EmitFieldGet(typeof(Uninitialized), "Instance");
+            GetLambdaArgumentSlot(0).EmitGet(_ilg);
+            _ilg.EmitFieldGet(typeof(Generator), "location");
         }
 
         private void EmitPosition(SourceLocation start, SourceLocation end) {
             if (_emitDebugSymbols) {
 
-                Debug.Assert(start != SourceLocation.Invalid);
-                Debug.Assert(end != SourceLocation.Invalid);
-
-                if (start == SourceLocation.None || end == SourceLocation.None) {
+                if (start == SourceLocation.Invalid || end == SourceLocation.Invalid) {
                     return;
                 }
+
+                if (start == SourceLocation.None || end == SourceLocation.None) {
+                    EmitSequencePointNone();
+                    return;
+                }
+
                 Debug.Assert(start.Line > 0 && end.Line > 0);
 
                 MarkSequencePoint(
@@ -798,10 +726,8 @@ namespace Microsoft.Scripting.Ast {
                     end.Line, end.Column
                 );
 
-                Emit(OpCodes.Nop);
+                _ilg.Emit(OpCodes.Nop);
             }
-
-            EmitCurrentLine(start.Line);
         }
 
         private void EmitSequencePointNone() {
@@ -810,75 +736,18 @@ namespace Microsoft.Scripting.Ast {
                     SourceLocation.None.Line, SourceLocation.None.Column,
                     SourceLocation.None.Line, SourceLocation.None.Column
                 );
+                _ilg.Emit(OpCodes.Nop);
             }
-        }
-
-        internal Slot GetLocalTmp(Type type) {
-            Contract.RequiresNotNull(type, "type");
-
-            for (int i = 0; i < _freeSlots.Count; i++) {
-                Slot slot = _freeSlots[i];
-                if (slot.Type == type) {
-                    _freeSlots.RemoveAt(i);
-                    return slot;
-                }
-            }
-
-            return new LocalSlot(DeclareLocal(type), this);
         }
 
         internal Slot GetNamedLocal(Type type, string name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
-            LocalBuilder lb = DeclareLocal(type);
+            LocalBuilder lb = _ilg.DeclareLocal(type);
             if (_emitDebugSymbols) lb.SetLocalSymInfo(name);
-            return new LocalSlot(lb, this);
-        }
-
-        internal void FreeLocalTmp(Slot slot) {
-            if (slot != null) {
-                Debug.Assert(!_freeSlots.Contains(slot));
-                _freeSlots.Add(slot);
-            }
-        }
-
-        private void EmitGetCurrentLine() {
-            if (_currentLineSlot != null) {
-                _currentLineSlot.EmitGet(this);
-            } else {
-                EmitInt(0);
-            }
-        }
-
-        private void EmitCurrentLine(int line) {
-            if (!EmitLineInfo || _source == null) {
-                return;
-            }
-
-            line = _source.MapLine(line);
-            if (line != _currentLine && line != SourceLocation.None.Line) {
-                EnsureCurrentLineSlot();
-
-                EmitInt(_currentLine = line);
-                _currentLineSlot.EmitSet(this);
-            }
-        }
-
-        private void EmitCurrentLine(Slot line) {
-            if (!EmitLineInfo || _source == null) {
-                return;
-            }
-
-            EnsureCurrentLineSlot();
-            _currentLineSlot.EmitSet(this, line);
-        }
-
-        private void EnsureCurrentLineSlot() {
-            if (_currentLineSlot == null) {
-                _currentLineSlot = GetNamedLocal(typeof(int), "$line");
-            }
-        }
+            return new LocalSlot(lb, _ilg);
+        }        
 
         private void EnsureReturnBlock() {
             if (!_returnBlock.HasValue) {
@@ -887,7 +756,7 @@ namespace Microsoft.Scripting.Ast {
                 if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
                     val.returnValue = GetNamedLocal(CompilerHelpers.GetReturnType(_method), "retval");
                 }
-                val.returnStart = DefineLabel();
+                val.returnStart = _ilg.DefineLabel();
 
                 _returnBlock = val;
             }
@@ -897,27 +766,15 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(_targets.Count == 0);
 
             if (_returnBlock.HasValue) {
-                MarkLabel(_returnBlock.Value.returnStart);
+                _ilg.MarkLabel(_returnBlock.Value.returnStart);
                 if (CompilerHelpers.GetReturnType(_method) != typeof(void)) {
-                    _returnBlock.Value.returnValue.EmitGet(this);
+                    _returnBlock.Value.returnValue.EmitGet(_ilg);
                 }
-                Emit(OpCodes.Ret);
-            }
-
-            if (_methodToOverride != null) {
-                _typeGen.TypeBuilder.DefineMethodOverride((MethodInfo)_method, _methodToOverride);
+                _ilg.Emit(OpCodes.Ret);
             }
 
             if (DynamicMethod) {
                 this.CreateDelegateMethodInfo();
-            }
-        }
-
-        private void EmitEnvironmentOrNull() {
-            if (_environmentSlot != null) {
-                _environmentSlot.EmitGet(this);
-            } else {
-                EmitNull();
             }
         }
 
@@ -951,7 +808,7 @@ namespace Microsoft.Scripting.Ast {
             // fill in emptys with null.
             Type[] genArgs = tupleType.GetGenericArguments();
             for (int i = size; i < genArgs.Length; i++) {
-                EmitNull();
+                _ilg.EmitNull();
             }
 
             EmitTupleNew(tupleType);
@@ -961,7 +818,7 @@ namespace Microsoft.Scripting.Ast {
             ConstructorInfo[] cis = tupleType.GetConstructors();
             foreach (ConstructorInfo ci in cis) {
                 if (ci.GetParameters().Length != 0) {
-                    EmitNew(ci);
+                    _ilg.EmitNew(ci);
                     break;
                 }
             }
@@ -969,49 +826,18 @@ namespace Microsoft.Scripting.Ast {
 
         // Used only by OptimizedModuleGenerator
         internal void EmitArgGet(int index) {
-            Contract.Requires(index >= 0 && index < Int32.MaxValue, "index");
+            ContractUtils.Requires(index >= 0 && index < Int32.MaxValue, "index");
 
             if (_method == null || !_method.IsStatic) {
                 // making room for this
                 index++;
             }
 
-            EmitTrueArgGet(index);
-        }
-
-        /// <summary>
-        /// Emits a symbol id.  
-        /// </summary>
-        internal void EmitSymbolId(SymbolId id) {
-            if (DynamicMethod) {
-                EmitInt(id.Id);
-                EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
-            } else {
-                //TODO - This code is Python-centric, investigate perf issues
-                //around removing it and consider re-adding a generic version
-                //FieldInfo fi = Symbols.GetFieldInfo(id);
-                //if (fi != null) {
-                //    Emit(OpCodes.Ldsfld, fi);
-                //} else {
-                _typeGen.EmitIndirectedSymbol(this, id);
-            }
-        }
-
-        internal void EmitSymbolIdId(SymbolId id) {
-            if (DynamicMethod) {
-                EmitInt(id.Id);
-            } else {
-                EmitSymbolId(id);
-                Slot slot = GetLocalTmp(typeof(SymbolId));
-                slot.EmitSet(this);
-                slot.EmitGetAddr(this);
-                EmitPropertyGet(typeof(SymbolId), "Id");
-                FreeLocalTmp(slot);
-            }
+            _ilg.EmitLoadArg(index);
         }
 
         private void EmitType(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
                 // can't ldtoken on a non-visible type, refer to it via a runtime constant...
@@ -1028,29 +854,29 @@ namespace Microsoft.Scripting.Ast {
         /// cannot be used with virtual/instance methods (delegateFunction must be static method)
         /// </summary>
         private void EmitDelegateConstruction(LambdaCompiler delegateFunction, Type delegateType, bool closure) {
-            Contract.RequiresNotNull(delegateFunction, "delegateFunction");
-            Contract.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(delegateFunction, "delegateFunction");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
             if (delegateFunction.Method is DynamicMethod || delegateFunction.ConstantPool.IsBound) {
                 Slot method = ConstantPool.AddData(delegateFunction.CreateDelegateMethodInfo(), typeof(MethodInfo));
                 Slot data = ConstantPool.AddData(delegateFunction.ConstantPool.Data);
 
-                method.EmitGet(this);                   // method
-                Emit(OpCodes.Ldtoken, delegateType);    // delegate (as RuntimeTypeHandler)
+                method.EmitGet(_ilg);                   // method
+                _ilg.Emit(OpCodes.Ldtoken, delegateType);    // delegate (as RuntimeTypeHandler)
                 EmitCodeContext();                      // CodeContext
-                data.EmitGet(this);                     // constants
-                EmitCall(typeof(RuntimeHelpers).GetMethod("CreateDynamicClosure"));
-                Emit(OpCodes.Castclass, delegateType);
+                data.EmitGet(_ilg);                     // constants
+                _ilg.EmitCall(typeof(RuntimeHelpers).GetMethod("CreateDynamicClosure"));
+                _ilg.Emit(OpCodes.Castclass, delegateType);
             } else {
                 if (closure) {
                     EmitCodeContext();      // CodeContext
-                    EmitNull();             // constant pool
-                    EmitNew(typeof(Closure).GetConstructor(new Type[] { typeof(CodeContext), typeof(object[]) }));
+                    _ilg.EmitNull();             // constant pool
+                    _ilg.EmitNew(typeof(Closure).GetConstructor(new Type[] { typeof(CodeContext), typeof(object[]) }));
                 } else {
-                    EmitNull();
+                    _ilg.EmitNull();
                 }
-                Emit(OpCodes.Ldftn, (MethodInfo)delegateFunction.Method);
-                Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
+                _ilg.Emit(OpCodes.Ldftn, (MethodInfo)delegateFunction.Method);
+                _ilg.Emit(OpCodes.Newobj, (ConstructorInfo)(delegateType.GetMember(".ctor")[0]));
             }
         }
 
@@ -1083,12 +909,12 @@ namespace Microsoft.Scripting.Ast {
 
             string strVal;
             if (value == null) {
-                EmitNull();
+                _ilg.EmitNull();
             } else if ((strVal = value as string) != null) {
-                EmitString(strVal);
+                _ilg.EmitString(strVal);
             } else {
                 Slot s = _typeGen.GetOrMakeConstant(value);
-                s.EmitGet(this);
+                s.EmitGet(_ilg);
             }
         }
 
@@ -1098,11 +924,11 @@ namespace Microsoft.Scripting.Ast {
 
             Type type;
             if (value is SymbolId) {
-                EmitSymbolId((SymbolId)value);
+                IL.EmitSymbolId((SymbolId)value);
             } else if ((type = value as Type) != null) {
                 EmitType(type);
             } else {
-                if (!_ilg.TryEmitConstant(value)) {
+                if (!IL.TryEmitConstant(value)) {
                     EmitConstant(new RuntimeConstant(value));
                 }
             }
@@ -1111,14 +937,14 @@ namespace Microsoft.Scripting.Ast {
         private void EmitCompilerConstantCache(CompilerConstant value) {
             Debug.Assert(value != null);
             Debug.Assert(_typeGen != null);
-            _typeGen.GetOrMakeCompilerConstant(value).EmitGet(this);
+            _typeGen.GetOrMakeCompilerConstant(value).EmitGet(_ilg);
         }
 
         private void EmitCompilerConstantNoCache(CompilerConstant value) {
             Debug.Assert(value != null);
             if (ConstantPool.IsBound) {
                 //TODO cache these so that we use the same slot for the same values
-                _constantPool.AddData(value.Create(), value.Type).EmitGet(this);
+                _constantPool.AddData(value.Create(), value.Type).EmitGet(_ilg);
             } else {
                 value.EmitCreation(IL);
             }
@@ -1134,10 +960,6 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private Slot GetArgumentSlot(int index) {
             return _argumentSlots[index];
-        }
-
-        private int GetArgumentSlotCount() {
-            return _argumentSlots.Length;
         }
 
         /// <summary>
@@ -1168,20 +990,15 @@ namespace Microsoft.Scripting.Ast {
         /// Creates instance of the delegate bound to the code context.
         /// </summary>
         private Delegate CreateDelegateWithContext(Type delegateType, CodeContext context) {
-            Contract.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
 
+            MethodInfo method = CreateDelegateMethodInfo();
             if (ConstantPool.IsBound) {
-                return ReflectionUtils.CreateDelegate(
-                    CreateDelegateMethodInfo(),
-                    delegateType,
-                    new Closure(context, _constantPool.Data));
+                return ReflectionUtils.CreateDelegate(method, delegateType, new Closure(context, _constantPool.Data));
+            } else if (context != null) {
+                return ReflectionUtils.CreateDelegate(method, delegateType, new Closure(context, null));
             } else {
-                MethodInfo method = CreateDelegateMethodInfo();
-                if (context != null) {
-                    return ReflectionUtils.CreateDelegate(method, delegateType, new Closure(context, null));
-                } else {
-                    return ReflectionUtils.CreateDelegate(method, delegateType);
-                }
+                return ReflectionUtils.CreateDelegate(method, delegateType);
             }
         }
 
@@ -1195,15 +1012,15 @@ namespace Microsoft.Scripting.Ast {
         /// (also fake or real), if compiling into a type, it will create compiler linked to
         /// a new (static) method on the same type.
         /// </summary>
-        private LambdaCompiler CreateLambdaCompiler(string name, Type retType, IList<Type> paramTypes, string[] paramNames,
+        private LambdaCompiler CreateLambdaCompiler(LambdaExpression lambda, string name, Type retType, IList<Type> paramTypes, string[] paramNames,
             ConstantPool constantPool, bool closure) {
-            Contract.RequiresNotNullItems(paramTypes, "paramTypes");
+            ContractUtils.RequiresNotNullItems(paramTypes, "paramTypes");
 
             LambdaCompiler lc;
             if (DynamicMethod) {
-                lc = CreateDynamicLambdaCompiler(name, retType, paramTypes, paramNames, constantPool, closure, _source);
+                lc = CreateDynamicLambdaCompiler(_compiler, lambda, name, retType, paramTypes, paramNames, constantPool, closure, _source);
             } else {
-                lc = CreateStaticLambdaCompiler(_typeGen, name, retType, paramTypes, paramNames, constantPool, closure);
+                lc = CreateStaticLambdaCompiler(_compiler, lambda, _typeGen, name, retType, paramTypes, paramNames, constantPool, closure);
             }
 
             lc.SetDebugSymbols(_source, _emitDebugSymbols);
@@ -1216,7 +1033,7 @@ namespace Microsoft.Scripting.Ast {
                 Targets t = _targets.Peek();
                 Debug.Assert(t.BlockType != TargetBlockType.LoopInFinally);
                 if (t.BlockType == TargetBlockType.Finally && t.LeaveLabel.HasValue) {
-                    MarkLabel(t.LeaveLabel.Value);
+                    _ilg.MarkLabel(t.LeaveLabel.Value);
                 }
             }
 
@@ -1238,218 +1055,13 @@ namespace Microsoft.Scripting.Ast {
             }
         }
 
-        #region ILGen forwards - will go away
-
-        private void BeginCatchBlock(Type exceptionType) {
-            _ilg.BeginCatchBlock(exceptionType);
-        }
-
-        private Label BeginExceptionBlock() {
-            return _ilg.BeginExceptionBlock();
-        }
-
-        private void BeginFaultBlock() {
-            _ilg.BeginFaultBlock();
-        }
-
-        private void BeginFinallyBlock() {
-            _ilg.BeginFinallyBlock();
-        }
-
-        internal LocalBuilder DeclareLocal(Type localType) {
-            return _ilg.DeclareLocal(localType);
-        }
-
-        internal Label DefineLabel() {
-            return _ilg.DefineLabel();
-        }
-
-        internal void Emit(OpCode opcode) {
-            _ilg.Emit(opcode);
-        }
-
-        internal void Emit(OpCode opcode, ConstructorInfo con) {
-            _ilg.Emit(opcode, con);
-        }
-
-        internal void Emit(OpCode opcode, FieldInfo field) {
-            _ilg.Emit(opcode, field);
-        }
-
-        internal void Emit(OpCode opcode, int arg) {
-            _ilg.Emit(opcode, arg);
-        }
-
-        internal void Emit(OpCode opcode, Label label) {
-            _ilg.Emit(opcode, label);
-        }
-
-        private void Emit(OpCode opcode, Label[] labels) {
-            _ilg.Emit(opcode, labels);
-        }
-
-        internal void Emit(OpCode opcode, LocalBuilder local) {
-            _ilg.Emit(opcode, local);
-        }
-
-        internal void Emit(OpCode opcode, MethodInfo meth) {
-            _ilg.Emit(opcode, meth);
-        }
-
-#if !SILVERLIGHT
-        internal void Emit(OpCode opcode, SignatureHelper signature) {
-            _ilg.Emit(opcode, signature);
-        }
-#endif
-
-        internal void Emit(OpCode opcode, Type cls) {
-            _ilg.Emit(opcode, cls);
-        }
-
-        internal void MarkLabel(Label loc) {
-            _ilg.MarkLabel(loc);
-        }
-
-        [Conditional("DEBUG")]
-        private void EmitDebugMarker(string marker) {
-            _ilg.EmitDebugWriteLine(marker);
-        }
-
-        internal void EmitTrueArgGet(int index) {
-            _ilg.EmitLoadArg(index);
-        }
-
-        internal void EmitArgAddr(int index) {
-            _ilg.EmitLoadArgAddress(index);
-        }
-
-        internal void EmitPropertyGet(Type type, string name) {
-            _ilg.EmitPropertyGet(type, name);
-        }
-
-        internal void EmitPropertyGet(PropertyInfo pi) {
-            _ilg.EmitPropertyGet(pi);
-        }
-
-        internal void EmitPropertySet(Type type, string name) {
-            _ilg.EmitPropertySet(type, name);
-        }
-
-        internal void EmitPropertySet(PropertyInfo pi) {
-            _ilg.EmitPropertySet(pi);
-        }
-
-        internal void EmitFieldAddress(FieldInfo fi) {
-            _ilg.EmitFieldAddress(fi);
-        }
-
-        private void EmitFieldGet(Type type, String name) {
-            _ilg.EmitFieldGet(type, name);
-        }
-
-        internal void EmitFieldGet(FieldInfo fi) {
-            _ilg.EmitFieldGet(fi);
-        }
-
-        internal void EmitFieldSet(FieldInfo fi) {
-            _ilg.EmitFieldSet(fi);
-        }
-
-        internal void EmitNew(ConstructorInfo ci) {
-            _ilg.EmitNew(ci);
-        }
-
-        internal void EmitNew(Type type, Type[] paramTypes) {
-            _ilg.EmitNew(type, paramTypes);
-        }
-
-        internal void EmitCall(MethodInfo mi) {
-            _ilg.EmitCall(mi);
-        }
-
-        internal void EmitCall(Type type, String name) {
-            _ilg.EmitCall(type, name);
-        }
-
-        private void EmitCall(Type type, String name, Type[] paramTypes) {
-            _ilg.EmitCall(type, name, paramTypes);
-        }
-
-        /// <summary>
-        /// Emits a Ldind* instruction for the appropriate type
-        /// </summary>
-        internal void EmitLoadValueIndirect(Type type) {
-            _ilg.EmitLoadValueIndirect(type);
-        }
-
-        /// <summary>
-        /// Emits a Stind* instruction for the appropriate type.
-        /// </summary>
-        internal void EmitStoreValueIndirect(Type type) {
-            _ilg.EmitStoreValueIndirect(type);
-        }
-
-        /// <summary>
-        /// Emits the Ldelem* instruction for the appropriate type
-        /// </summary>
-        /// <param name="type"></param>
-        private void EmitLoadElement(Type type) {
-            _ilg.EmitLoadElement(type);
-        }
-
-        /// <summary>
-        /// Emits a Stelem* instruction for the appropriate type.
-        /// </summary>
-        internal void EmitStoreElement(Type type) {
-            _ilg.EmitStoreElement(type);
-        }
-
-        private void EmitNull() {
-            _ilg.EmitNull();
-        }
-
-        internal void EmitString(string value) {
-            _ilg.EmitString(value);
-        }
-
-        private void EmitBoolean(bool value) {
-            _ilg.EmitBoolean(value);
-        }
-
-        internal void EmitInt(int value) {
-            _ilg.EmitInt(value);
-        }
-
-        private void EmitMissingValue(Type type) {
-            _ilg.EmitMissingValue(type);
-        }
-
-        /// <summary>
-        /// Emits an array of values of count size.  The items are emitted via the callback
-        /// which is provided with the current item index to emit.
-        /// </summary>
-        private void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
-            Contract.RequiresNotNull(elementType, "elementType");
-            Contract.RequiresNotNull(emit, "emit");
-            Contract.Requires(count >= 0, "count", "Count must be non-negative.");
-
-            _ilg.EmitArray(elementType, count, emit);
-        }
-
-        private void EmitArray(Type arrayType) {
-            Contract.RequiresNotNull(arrayType, "arrayType");
-
-            _ilg.EmitArray(arrayType);
-        }
-
-        #endregion
 
         #region IL Debugging Support
 
 #if !SILVERLIGHT
-        private static DebugILGen/*!*/ CreateDebugILGen(ILGenerator/*!*/ il, MethodBase/*!*/ method, IList<Type>/*!*/ paramTypes) {
+        private static DebugILGen/*!*/ CreateDebugILGen(ILGenerator/*!*/ il, TypeGen tg, MethodBase/*!*/ method, IList<Type>/*!*/ paramTypes) {
             TextWriter txt = new StreamWriter(Snippets.Shared.GetMethodILDumpFile(method));
-            DebugILGen dig = new DebugILGen(il, txt);
+            DebugILGen dig = new DebugILGen(il, tg, txt);
 
             dig.WriteLine(String.Format("{0} {1} (", method.Name, method.Attributes));
             StringBuilder sb = new StringBuilder();
@@ -1467,61 +1079,27 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
-        private bool CanUseFastSite() {
-            // TypeGen is required for fast sites.
-            if (_typeGen == null) {
-                return false;
-            }
-
-            // Fast sites are disabled for dynamic methods
-            if (DynamicMethod) {
-                return false;
-            }
-
-            // Fast sites only possible with global constext
-            if (!(this.ContextSlot is StaticFieldSlot)) {
-                return false;
-            }
-
-            return true;
-        }
-
-        internal Slot CreateDynamicSite(DynamicAction action, Type[] siteTypes, out bool fast) {
-            object site;
-            if (fast = CanUseFastSite()) {
-                // Use fast dynamic site (with cached CodeContext)
-                Type fastSite = DynamicSiteHelpers.MakeFastDynamicSiteType(siteTypes);
-                site = DynamicSiteHelpers.MakeFastSite(null, action, fastSite);
-            } else {
-                Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(siteTypes);
-                site = DynamicSiteHelpers.MakeSite(action, siteType);
-            }
-
+        internal Slot CreateDynamicSite(DynamicAction action, Type[] siteTypes) {
+            Type siteType = DynamicSiteHelpers.MakeDynamicSiteType(siteTypes);
+            object site = DynamicSiteHelpers.MakeSite(action, siteType);
             return ConstantPool.AddData(site);
         }
 
         private Slot GetTemporarySlot(Type type) {
             Slot temp;
 
-            if (IsGenerator) {
-                temp = _allocator.GetGeneratorTemp();
+            if (IsGeneratorBody) {
+                temp = _generatorInfo.NextGeneratorTemp();
                 if (type != typeof(object)) {
                     temp = new CastSlot(temp, type);
                 }
             } else {
-                temp = GetLocalTmp(type);
+                temp = _ilg.GetLocalTmp(type);
             }
             return temp;
         }
 
-        internal void InitializeCompilerAndLambda(Compiler tc, LambdaExpression lambda) {
-            Debug.Assert(tc != null);
-            Debug.Assert(lambda != null);
-
-            _compiler = tc;
-            _info = GetLambdaInfo(lambda);
-        }
-
+        // TODO: remove so _compiler and _info can be readonly
         internal void InitializeRule(Compiler tc, LambdaInfo top) {
             Debug.Assert(tc != null);
             Debug.Assert(top != null);
@@ -1536,15 +1114,30 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private TryStatementInfo GetTsi(TryStatement node) {
-            Debug.Assert(_info != null);
-            return _info.TryGetTsi(node);
+            if (_generatorInfo == null) {
+                return null;
+            }
+            return _generatorInfo.TryGetTsi(node);
         }
 
         private YieldTarget GetYieldTarget(YieldStatement node) {
-            Debug.Assert(_info != null);
-            return _info.TryGetYieldTarget(node);
+            if (_generatorInfo == null) {
+                return null;
+            }
+            return _generatorInfo.TryGetYieldTarget(node);
         }
 
+        internal void SetDefaultAllocators(LambdaCompiler outer) {
+            _info.SetAllocators(
+                outer != null ? outer.LambdaInfo.GlobalAllocator : null,
+                new LocalStorageAllocator(new LocalSlotFactory(this))
+            );
+        }
+
+        internal void SetAllocators(StorageAllocator global, StorageAllocator local) {
+            Debug.Assert(_info != null);
+            _info.SetAllocators(global, local);
+        }
 
         #region IDisposable Members
 
@@ -1566,9 +1159,9 @@ namespace Microsoft.Scripting.Ast {
         /// Dynamic methods created this way don't have named parameters, always get constant pool,
         /// are not closures and don't have debug info attached.
         /// </summary>
-        internal static LambdaCompiler/*!*/ CreateDynamicLambdaCompiler(string/*!*/ name, Type/*!*/ returnType,
+        internal static LambdaCompiler/*!*/ CreateDynamicLambdaCompiler(LambdaExpression lambda, string/*!*/ name, Type/*!*/ returnType,
             IList<Type/*!*/>/*!*/ parameterTypes, SourceUnit source) {
-            return CreateDynamicLambdaCompiler(name, returnType, parameterTypes, null, new ConstantPool(), false, source);
+            return CreateDynamicLambdaCompiler(null, lambda, name, returnType, parameterTypes, null, new ConstantPool(), false, source);
         }
 
         /// <summary>
@@ -1576,7 +1169,7 @@ namespace Microsoft.Scripting.Ast {
         /// method is actually a 'fake' dynamic method and is backed by static type created specifically for
         /// the one method
         /// </summary>
-        private static LambdaCompiler/*!*/ CreateDynamicLambdaCompiler(string/*!*/ methodName, Type/*!*/ returnType,
+        private static LambdaCompiler/*!*/ CreateDynamicLambdaCompiler(Compiler compiler, LambdaExpression lambda, string/*!*/ methodName, Type/*!*/ returnType,
             IList<Type/*!*/>/*!*/ paramTypes, IList<string> paramNames, ConstantPool constantPool, bool closure, SourceUnit source) {
 
             Assert.NotEmpty(methodName);
@@ -1594,19 +1187,18 @@ namespace Microsoft.Scripting.Ast {
             //
             if (Snippets.Shared.SaveSnippets || emitSymbols) {
                 TypeGen typeGen = Snippets.Shared.DefineType(methodName, typeof(object), false, source, false);
-                lc = CreateStaticLambdaCompiler(typeGen, methodName, returnType, paramTypes, paramNames, constantPool, closure);
+                lc = CreateStaticLambdaCompiler(compiler, lambda, typeGen, methodName, returnType, paramTypes, paramNames, constantPool, closure);
 
                 // emit symbols iff we have a source unit (and are in debug mode, see GenerateStaticMethod):
                 lc.SetDebugSymbols(source, emitSymbols);
             } else {
                 Type[] parameterTypes = MakeParameterTypeArray(paramTypes, constantPool, closure);
                 DynamicMethod target = Snippets.Shared.CreateDynamicMethod(methodName, returnType, parameterTypes);
-                lc = new LambdaCompiler(null, target, target.GetILGenerator(), parameterTypes, constantPool, closure);
+                lc = new LambdaCompiler(compiler, lambda, null, target, target.GetILGenerator(), parameterTypes, constantPool, closure);
 
                 // emits line number setting instructions if source unit available:
                 if (debugMode) {
                     lc.SetDebugSymbols(source, false);
-                    lc.EmitLineInfo = true; // TODO: ??
                 }
             }
 
@@ -1622,14 +1214,15 @@ namespace Microsoft.Scripting.Ast {
         /// <summary>
         /// Creates a LambdaCompiler backed by a method on a static type (represented by tg).
         /// </summary>
-        private static LambdaCompiler/*!*/ CreateStaticLambdaCompiler(TypeGen tg, string/*!*/ name, Type/*!*/ retType, IList<Type/*!*/>/*!*/ paramTypes,
+        private static LambdaCompiler/*!*/ CreateStaticLambdaCompiler(Compiler compiler, LambdaExpression lambda, TypeGen tg, string/*!*/ name,
+                                                                      Type/*!*/ retType, IList<Type/*!*/>/*!*/ paramTypes,
                                                                       IList<string> paramNames, ConstantPool constantPool, bool closure) {
             Assert.NotNull(name, retType);
 
             Type[] parameterTypes = MakeParameterTypeArray(paramTypes, constantPool, closure);
 
             MethodBuilder mb = tg.TypeBuilder.DefineMethod(name, CompilerHelpers.PublicStatic, retType, parameterTypes);
-            LambdaCompiler lc = new LambdaCompiler(tg, mb, mb.GetILGenerator(), parameterTypes, constantPool, closure);
+            LambdaCompiler lc = new LambdaCompiler(compiler, lambda, tg, mb, mb.GetILGenerator(), parameterTypes, constantPool, closure);
             if (tg.ContextField != null) {
                 lc.ContextSlot = new StaticFieldSlot(tg.ContextField);
             }
@@ -1648,8 +1241,8 @@ namespace Microsoft.Scripting.Ast {
         /// This creates compiler designed only for type gen.
         /// Once TypeGen removes its dependency on LambdaCompiler, this will go away.
         /// </summary>
-        internal static LambdaCompiler/*!*/ CreateLambdaCompiler(TypeGen/*!*/ tg, MethodBase/*!*/ mb, ILGenerator/*!*/ il, Type/*!*/[]/*!*/ parameterTypes) {
-            LambdaCompiler lc = new LambdaCompiler(tg, mb, il, parameterTypes, null, false);
+        internal static LambdaCompiler/*!*/ CreateLambdaCompiler(Compiler compiler, LambdaExpression lambda, TypeGen/*!*/ tg, MethodBase/*!*/ mb, ILGenerator/*!*/ il, Type/*!*/[]/*!*/ parameterTypes) {
+            LambdaCompiler lc = new LambdaCompiler(compiler, lambda, tg, mb, il, parameterTypes, null, false);
             if (tg.ContextField != null) {
                 lc.ContextSlot = new StaticFieldSlot(tg.ContextField);
             }

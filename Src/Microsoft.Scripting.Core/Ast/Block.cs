@@ -33,9 +33,9 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static Expression Block(List<Expression> expressions) {
-            Contract.RequiresNotNullItems(expressions, "expressions");
+            ContractUtils.RequiresNotNullItems(expressions, "expressions");
 
             if (expressions.Count == 1) {
                 return expressions[0];
@@ -49,8 +49,17 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static Block Block(SourceSpan span, params Expression[] expressions) {
-            Contract.RequiresNotNullItems(expressions, "expressions");
-            return new Block(Annotations(span), CollectionUtils.ToReadOnlyCollection(expressions), typeof(void));
+            ContractUtils.RequiresNotNullItems(expressions, "expressions");
+            return new Block(Annotate(span), CollectionUtils.ToReadOnlyCollection(expressions), typeof(void));
+        }
+
+
+
+        /// <summary>
+        /// Creates a list of expressions whose value is the value of the last expression.
+        /// </summary>
+        public static Block Comma(IList<Expression> expressions) {
+            return Comma(Annotations.Empty, expressions);
         }
 
         /// <summary>
@@ -60,14 +69,15 @@ namespace Microsoft.Scripting.Ast {
             return Comma((IList<Expression>)expressions);
         }
 
-        /// <summary>
-        /// Creates a list of expressions whose value is the value of the last expression.
-        /// </summary>
-        public static Block Comma(IList<Expression> expressions) {
-            Contract.RequiresNotEmpty(expressions, "expressions");
-            Contract.RequiresNotNullItems(expressions, "expressions");
+        public static Block Comma(SourceSpan span, params Expression[] expressions) {
+            return Comma(Annotate(span), (IList<Expression>)expressions);
+        }
 
-            return new Block(Annotations(SourceSpan.None), CollectionUtils.ToReadOnlyCollection(expressions), expressions[expressions.Count - 1].Type);
+        public static Block Comma(Annotations annotations, IList<Expression> expressions) {
+            ContractUtils.RequiresNotEmpty(expressions, "expressions");
+            ContractUtils.RequiresNotNullItems(expressions, "expressions");
+
+            return new Block(annotations, CollectionUtils.ToReadOnlyCollection(expressions), expressions[expressions.Count - 1].Type);
         }
     }
 }

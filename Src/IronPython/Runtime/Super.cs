@@ -21,10 +21,11 @@ using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
+using System.Runtime.CompilerServices;
 
 namespace IronPython.Runtime {
     [PythonSystemType("super")]
-    public class Super : PythonTypeSlot, ICustomMembers {
+    public class Super : PythonTypeSlot, ICodeFormattable {
         private PythonType _thisClass;
         private object _self;
         private object _selfClass;
@@ -71,15 +72,6 @@ namespace IronPython.Runtime {
             get { return _selfClass; }
         }
 
-        public override string ToString() {
-            string selfRepr;
-            if (_self == this)
-                selfRepr = "<super object>";
-            else
-                selfRepr = PythonOps.StringRepr(_self);
-            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(_thisClass), selfRepr);
-        }
-
         public object __get__(object instance, object owner) {
             PythonType selfType = PythonType;
 
@@ -94,16 +86,15 @@ namespace IronPython.Runtime {
 
         #endregion
         
-        #region ICustomMembers Members
+        #region Custom member access
 
-        bool ICustomMembers.TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-            return ((ICustomMembers)this).TryGetBoundCustomMember(context, name, out value);
-        }
-
-        bool ICustomMembers.TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+        [SpecialName]
+        public object GetCustomMember(CodeContext context, string name) {
             // first find where we are in the mro...
             PythonType mroType = _selfClass as PythonType;
 
+            SymbolId symbol = SymbolTable.StringToId(name);
+            object value;
             if (mroType != null) { // can be null if the user does super.__new__
                 IList<PythonType> mro = mroType.ResolutionOrder;
 
@@ -131,32 +122,45 @@ namespace IronPython.Runtime {
                 // above us until we get a hit.
                 lookupType++;
                 while (lookupType < mro.Count) {
-                    if (TryLookupInBase(context, mro[lookupType], name, self, out value))
-                        return true;
+                    
+                    if (TryLookupInBase(context, mro[lookupType], symbol, self, out value))
+                        return value;
 
                     lookupType++;
                 }
             }
 
-            return PythonType.TryGetBoundMember(context, this, name, out value);
+            if (PythonType.TryGetBoundMember(context, this, symbol, out value)) {
+                return value;
+            }
+
+            return OperationFailed.Value;
+        }
+
+        [SpecialName]
+        public void SetMember(CodeContext context, string name, object value) {
+            PythonType.SetMember(context, this, SymbolTable.StringToId(name), value);
+        }
+
+        [SpecialName]
+        public void DeleteCustomMember(CodeContext context, string name) {
+            PythonType.DeleteMember(context, this, SymbolTable.StringToId(name));
         }
 
         private bool TryLookupInBase(CodeContext context, object type, SymbolId name, object self, out object value) {
             PythonType pt = type as PythonType;
 
             PythonTypeSlot dts;
-            object ocObj;
-            if (pt == TypeCache.Object ||
-                !pt.TryLookupSlot(context, Symbols.Class, out dts)) {
+
+            if (pt.OldClass == null) {
                 // new-style class, or reflected type, lookup slot
                 if (pt.TryLookupSlot(context, name, out dts) && 
                     dts.TryGetValue(context, self, DescriptorContext, out value)) {
                     return true;
                 }
-            } else if(dts.TryGetValue(context, null, pt, out ocObj)) {
+            } else {
                 // old-style class, lookup attribute                
-                OldClass dt = ocObj as OldClass;
-                Debug.Assert(dt != null);
+                OldClass dt = pt.OldClass;
 
                 if (PythonOps.TryGetBoundAttr(context, dt, name, out value)) {
                     value = dt.GetOldStyleDescriptor(context, value, self, DescriptorContext);
@@ -180,27 +184,6 @@ namespace IronPython.Runtime {
             }
         }
 
-        void ICustomMembers.SetCustomMember(CodeContext context, SymbolId name, object value) {
-            PythonType.SetMember(context, this, name, value);
-        }
-
-        bool ICustomMembers.DeleteCustomMember(CodeContext context, SymbolId name) {
-            PythonType.DeleteMember(context, this, name);
-            return true;
-        }
-
-        IList<object> IMembersList.GetMemberNames(CodeContext context) {
-            List res = new List();
-            foreach (SymbolId si in PythonType.GetMemberNames(context, this)) {
-                res.AddNoLock(si.ToString());
-            }
-            return res;
-        }
-
-        IDictionary<object, object> ICustomMembers.GetCustomMemberDictionary(CodeContext context) {
-            return PythonType.GetMemberDictionary(context, this).AsObjectKeyedDictionary();
-        }
-
         // TODO needed because ICustomMembers is too hard to implement otherwise.  Let's fix that and get rid of this.
         private PythonType PythonType {
             get {
@@ -220,5 +203,18 @@ namespace IronPython.Runtime {
             value = __get__(instance, owner);
             return true;
         }
+
+        #region ICodeFormattable Members
+
+        public string __repr__(CodeContext context) {
+            string selfRepr;
+            if (_self == this)
+                selfRepr = "<super object>";
+            else
+                selfRepr = PythonOps.StringRepr(_self);
+            return string.Format("<{0}: {1}, {2}>", PythonTypeOps.GetName(this), PythonOps.StringRepr(_thisClass), selfRepr);
+        }
+
+        #endregion
     }
 }

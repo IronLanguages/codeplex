@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class IfStatement : Statement {
         private readonly IfStatementTest[] _tests;
@@ -50,13 +50,11 @@ namespace IronPython.Compiler.Ast {
             while (i-- > 0) {
                 IfStatementTest ist = _tests[i];
 
-                result = Ast.Statement(
+                result = Ast.Condition(
                     new SourceSpan(ist.Start, ist.Header),
-                    result = Ast.Condition(
-                        ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
-                        ag.Transform(ist.Body),
-                        result
-                    )
+                    ag.TransformAndDynamicConvert(ist.Test, typeof(bool)),
+                    ag.Transform(ist.Body),
+                    result
                 );
             }
 

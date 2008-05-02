@@ -13,9 +13,10 @@
 #
 #####################################################################################
 
-
 def test_main(level='full'):
     import sys
+    import operator
+
     old_args = sys.argv
     sys.argv = ['checkonly']
 
@@ -35,16 +36,36 @@ def test_main(level='full'):
         'generate_typecache',
         'generate_comdispatch',
         'generate_tree',
+        'generate_resource_constants',
         ]
     #Merlin 277482
     import System
     if [System.IntPtr.Size==8]:
         generators.remove('generate_ops')
 
+    failures = 0
+
     for gen in generators:
-            print "Running", gen
-            __import__(gen)
-            
+        print "Running", gen
+        g = __import__(gen)
+        one = g.main()
+
+        if operator.isSequenceType(one):
+            failures = reduce(
+                operator.__add__,
+                map(lambda r: 0 if r else 1, one),
+                failures
+            )
+        else:
+            print "    FAIL:", gen, "generator didn't return valid result"
+            failures += 1
+
+    if failures > 0:
+        print "FAIL:", failures, "generator" + ("s" if failures > 1 else "") + " failed"
+        sys.exit(1)
+    else:
+        print "PASS"
+
     sys.argv = old_args
     
 if __name__=="__main__":

@@ -68,10 +68,10 @@ namespace Microsoft.Scripting {
         }
 
         public CompilerContext(SourceUnit/*!*/ sourceUnit, CompilerOptions/*!*/ options, ErrorSink/*!*/ errorSink, ParserSink/*!*/ parserSink) {
-            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
-            Contract.RequiresNotNull(errorSink, "errorSink");
-            Contract.RequiresNotNull(parserSink, "parserSink");
-            Contract.RequiresNotNull(options, "options");
+            ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(parserSink, "parserSink");
+            ContractUtils.RequiresNotNull(options, "options");
 
             _sourceUnit = sourceUnit;
             _options = options;

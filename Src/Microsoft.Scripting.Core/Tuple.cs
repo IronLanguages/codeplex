@@ -75,7 +75,7 @@ namespace Microsoft.Scripting {
         /// (e.g. a Tuple`2 which contains a Tuple`128 and a Tuple`8 if we had a size of 136).
         /// </summary>
         public static Type MakeTupleType(params Type[] types) {
-            Contract.RequiresNotNull(types, "types");
+            ContractUtils.RequiresNotNull(types, "types");
 
             return MakeTupleType(types, 0, types.Length);
         }
@@ -84,7 +84,7 @@ namespace Microsoft.Scripting {
         /// Gets the number of usable slots in the provided Tuple type including slots available in nested tuples.
         /// </summary>
         public static int GetSize(Type tupleType) {
-            Contract.RequiresNotNull(tupleType, "tupleType");
+            ContractUtils.RequiresNotNull(tupleType, "tupleType");
 
             int count = 0;
             lock(_sizeDict) if (_sizeDict.TryGetValue(tupleType, out count)) return count;
@@ -114,8 +114,8 @@ namespace Microsoft.Scripting {
         /// tuple the values are added in their nested forms.
         /// </summary>
         public static Tuple MakeTuple(Type tupleType, params object[] args) {
-            Contract.RequiresNotNull(tupleType, "tupleType");
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(tupleType, "tupleType");
+            ContractUtils.RequiresNotNull(args, "args");
 
             return MakeTuple(tupleType, 0, args.Length, args);
         }
@@ -124,7 +124,7 @@ namespace Microsoft.Scripting {
         /// Gets the values from a tuple including unpacking nested values.
         /// </summary>
         public static object[] GetTupleValues(Tuple tuple) {
-            Contract.RequiresNotNull(tuple, "tuple");
+            ContractUtils.RequiresNotNull(tuple, "tuple");
 
             List<object> res = new List<object>();
 
@@ -137,7 +137,7 @@ namespace Microsoft.Scripting {
         /// Gets the series of properties that needs to be accessed to access a logical item in a potentially nested tuple.
         /// </summary>
         public static IEnumerable<PropertyInfo> GetAccessPath(Type tupleType, int index) {
-            Contract.RequiresNotNull(tupleType, "tupleType");
+            ContractUtils.RequiresNotNull(tupleType, "tupleType");
 
             int size = GetSize(tupleType);
             if (index < 0 || index >= size) throw new ArgumentException("index");

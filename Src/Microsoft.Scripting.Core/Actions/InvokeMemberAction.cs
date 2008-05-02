@@ -14,11 +14,8 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
 
@@ -30,6 +27,7 @@ namespace Microsoft.Scripting.Actions {
         IsCallWithThis = 2      // HasExplicitTarget
     }
 
+    // TODO: rename to match MethodCallExpression
     public class InvokeMemberAction : MemberAction, IEquatable<InvokeMemberAction> {
         private readonly InvokeMemberActionFlags _flags;
         private readonly CallSignature _signature;
@@ -38,14 +36,15 @@ namespace Microsoft.Scripting.Actions {
         public bool HasExplicitTarget { get { return (_flags & InvokeMemberActionFlags.IsCallWithThis) != 0; } }
         public CallSignature Signature { get { return _signature; } }
 
-        protected InvokeMemberAction(SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature)
-            : base(memberName) {
+        protected InvokeMemberAction(ActionBinder binder, SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature)
+            : base(binder, memberName) {
             _flags = flags;
             _signature = signature;
         }
 
-        public static InvokeMemberAction Make(SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature) {
-            return new InvokeMemberAction(memberName, flags, signature);
+        public static InvokeMemberAction Make(ActionBinder binder, SymbolId memberName, InvokeMemberActionFlags flags, CallSignature signature) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new InvokeMemberAction(binder, memberName, flags, signature);
         }
 
         public override DynamicActionKind Kind {

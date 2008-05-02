@@ -16,10 +16,11 @@
 #if !SILVERLIGHT
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.Threading;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -33,10 +34,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// 
     /// </summary>
     public class IDispatchObject {
-        private readonly IDispatch _dispatchObject; // The RCW object
 
-        // This is valid only if ScriptDomainManager.Options.CachePointersInApartment==true
-        private Dictionary<Thread, IntPtr> _dispatchPointersByApartment;
+        private readonly IDispatch _dispatchObject;  // The RCW object
+        private Dictionary<Thread, IntPtr> _dispatchPointersByApartment;  // This is valid only if ScriptDomainManager.Options.CachePointersInApartment==true
+
 
         [CLSCompliant(false)]
         public IDispatchObject(IDispatch rcw) {
@@ -73,6 +74,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public void ReleaseDispatchPointer(IntPtr dispatchPointer) {
             if (ScriptDomainManager.Options.CachePointersInApartment) {
                 // Nothing to do here. This will leak the COM object.

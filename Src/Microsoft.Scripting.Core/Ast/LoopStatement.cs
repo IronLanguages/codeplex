@@ -55,7 +55,7 @@ namespace Microsoft.Scripting.Ast {
             get { return _else; }
         }
 
-         public LabelTarget Label {
+         new public LabelTarget Label {
             get { return _label; }
         }
     }
@@ -64,7 +64,7 @@ namespace Microsoft.Scripting.Ast {
     /// Factory methods.
     /// TODO: review which of these overloads we actually need
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static LoopStatement While(Expression test, Expression body, Expression @else) {
             return Loop(SourceSpan.None, SourceLocation.None, null, test, null, body, @else);
         }
@@ -106,12 +106,12 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static LoopStatement Loop(SourceSpan span, SourceLocation header, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else) {
-            return Loop(Annotations(span, header), label, test, increment, body, @else);
+            return Loop(Annotate(span, header), label, test, increment, body, @else);
         }
  
         public static LoopStatement Loop(Annotations annotations, LabelTarget label, Expression test, Expression increment, Expression body, Expression @else) {
-            Contract.RequiresNotNull(body, "body");
-            Contract.Requires(test == null || test.Type == typeof(bool), "test");
+            ContractUtils.RequiresNotNull(body, "body");
+            ContractUtils.Requires(test == null || test.Type == typeof(bool), "test");
             return new LoopStatement(annotations, label, test, increment, body, @else);
         }
     }

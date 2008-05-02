@@ -15,16 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.Remoting;
 using System.Diagnostics;
-
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
+using System.Runtime.Remoting;
 using System.Security.Permissions;
+
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
 
@@ -618,7 +614,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Helper to unwrap an object - in the future maybe we should validate the current app domain.
         /// </summary>
-        private object GetLocalObject(ObjectHandle oh) {
+        private static object GetLocalObject(ObjectHandle oh) {
             Debug.Assert(oh != null);
 
             return oh.Unwrap();
@@ -627,7 +623,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <summary>
         /// Helper to unwrap multiple objects
         /// </summary>
-        private object[] GetLocalObjects(ObjectHandle[]/*!*/ ohs) {
+        private static object[] GetLocalObjects(ObjectHandle[]/*!*/ ohs) {
             Debug.Assert(ohs != null);
 
             object[] res = new object[ohs.Length];

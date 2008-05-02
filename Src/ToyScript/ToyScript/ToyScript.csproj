@@ -102,11 +102,9 @@
     <Compile Include="Parser\ToyTokenizer.cs" />
     <Compile Include="Runtime\ToyBinder.cs" />
     <Compile Include="ToyCommandLine.cs" />
-    <Compile Include="ToyEngineOptions.cs" />
     <Compile Include="ToyLanguageContext.cs" />
     <Compile Include="Parser\ToyParser.cs" />
     <Compile Include="ToyHelpers.cs" />
-    <Compile Include="Runtime\ToyOptionsParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

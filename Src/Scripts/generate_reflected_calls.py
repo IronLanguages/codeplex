@@ -13,10 +13,9 @@
 #
 #####################################################################################
 
-import generate
 import sys
+from generate import generate
 
-from generate import CodeGenerator, CodeWriter
 MAX_ARGS = 3
 MAX_HELPERS = 7
 TYPE_CODE_TYPES = ['Int16', 'Int32', 'Int64', 'Boolean', 'Char', 'Byte', 'Decimal', 'DateTime', 'Double', 'Single', 'UInt16', 'UInt32', 'UInt64', 'String', 'SByte']
@@ -232,11 +231,14 @@ def gen_slow_caller(cw):
     
 def gen_all(cw):
     gen_reflected_caller(cw)
-    
     gen_action_helpers(cw)
-    
     gen_invoke_helpers(cw)
-    
     gen_slow_caller(cw)
 
-CodeGenerator("Reflected Caller", gen_all).doit()
+def main():
+    return generate(
+        ("Reflected Caller", gen_all),
+    )
+
+if __name__ == "__main__":
+    main()

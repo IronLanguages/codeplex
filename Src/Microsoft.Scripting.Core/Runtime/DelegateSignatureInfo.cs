@@ -14,15 +14,17 @@
  * ***************************************************************************/
 
 using System;
-using System.Text;
-using System.Reflection;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Text;
 
+using Microsoft.Contracts;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
-using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Runtime {
     /// <summary>
@@ -106,7 +108,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             // Create the method
-            LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(ToString(), _returnType, delegateParams, null);
+            LambdaCompiler cg = LambdaCompiler.CreateDynamicLambdaCompiler(null /*LambdaExpression*/, ToString(), _returnType, delegateParams, null);
 
             // Add the space for the delegate target and save the index at which it was placed,
             // most likely zero.
@@ -123,13 +125,75 @@ namespace Microsoft.Scripting.Runtime {
             cg.ContextSlot = context;
 
             // Emit the stub
-            StubGenerator.EmitClrCallStub(cg, target, StubGenerator.CallType.None);
+            EmitClrCallStub(cg, target);
 
             // Finish the method
             MethodInfo method = cg.CreateDelegateMethodInfo();
 
             // Save the constants in the delegate info class
             return new DelegateInfo(method, cg.ConstantPool.Data, targetIndex);
+        }
+
+        /// <summary>
+        /// Generates stub to receive the CLR call and then call the dynamic language code.
+        /// </summary>
+        private void EmitClrCallStub(LambdaCompiler cg, Slot callTarget) {
+            List<ReturnFixer> fixers = new List<ReturnFixer>(0);
+            int argsCount = cg.GetLambdaArgumentSlotCount();
+
+            CallAction action = CallAction.Make(_binder, argsCount);
+
+            // Create strongly typed return type from the site.
+            // This will, among other things, generate tighter code.
+            Type[] siteArguments = CompilerHelpers.MakeRepeatedArray(typeof(object), argsCount + 2);
+            Type result = CompilerHelpers.GetReturnType(cg.Method);
+            if (result != typeof(void)) {
+                siteArguments[argsCount + 1] = result;
+            }
+
+            Slot site = cg.CreateDynamicSite(action, siteArguments);
+            Type siteType = site.Type;
+            PropertyInfo target = siteType.GetProperty("Target");
+
+            site.EmitGet(cg.IL);
+            cg.IL.EmitPropertyGet(target);
+            site.EmitGet(cg.IL);
+
+            // Emit code context 
+            cg.EmitCodeContext();
+
+            if (DynamicSiteHelpers.IsBigTarget(target.PropertyType)) {
+                cg.EmitTuple(
+                    DynamicSiteHelpers.GetTupleTypeFromTarget(target.PropertyType),
+                    argsCount + 1,
+                    delegate(int index) {
+                        if (index == 0) {
+                            callTarget.EmitGet(cg.IL);
+                        } else {
+                            ReturnFixer rf = ReturnFixer.EmitArgument(cg.IL, cg.GetLambdaArgumentSlot(index - 1));
+                            if (rf != null) fixers.Add(rf);
+                        }
+                    }
+                );
+            } else {
+                callTarget.EmitGet(cg.IL);
+
+                for (int i = 0; i < argsCount; i++) {
+                    ReturnFixer rf = ReturnFixer.EmitArgument(cg.IL, cg.GetLambdaArgumentSlot(i));
+                    if (rf != null) fixers.Add(rf);
+                }
+            }
+
+            cg.IL.EmitCall(target.PropertyType, "Invoke");
+
+            foreach (ReturnFixer rf in fixers) {
+                rf.FixReturn(cg.IL);
+            }
+
+            if (result == typeof(void)) {
+                cg.IL.Emit(OpCodes.Pop);
+            }
+            cg.IL.Emit(OpCodes.Ret);
         }
     }
 

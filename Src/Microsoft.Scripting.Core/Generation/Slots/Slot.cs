@@ -34,15 +34,15 @@ namespace Microsoft.Scripting.Generation {
     abstract class Slot {
         private bool _local;
         private Type _knownType;
-        public abstract void EmitGet(LambdaCompiler cg);
-        public abstract void EmitGetAddr(LambdaCompiler cg);
+        public abstract void EmitGet(ILGen cg);
+        public abstract void EmitGetAddr(ILGen cg);
 
         #region emit Set methods
         // Must override at least one of these two methods or get infinite loop
         // 
-        public virtual void EmitSet(LambdaCompiler cg, Slot val) {
-            Contract.RequiresNotNull(val, "val");
-            Contract.RequiresNotNull(cg, "cg");
+        public virtual void EmitSet(ILGen cg, Slot val) {
+            ContractUtils.RequiresNotNull(val, "val");
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             val.EmitGet(cg);
             EmitSet(cg);
@@ -50,8 +50,8 @@ namespace Microsoft.Scripting.Generation {
 
         // This override assumes that the IL stack already holds the value to be assigned from.
         // This default implementation assumes the top of stack is typeof(Object).
-        public virtual void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public virtual void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             // localTmpVal = <top of IL stack>
             Slot localTmpVal = cg.GetLocalTmp(typeof(object));
@@ -73,8 +73,8 @@ namespace Microsoft.Scripting.Generation {
         // Any access to the Slot first checks if it is holding Uninitialized.instance,
         // which means that it should virtually not exist
 
-        public virtual void EmitSetUninitialized(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public virtual void EmitSetUninitialized(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             // Emit the following:
             //     <name> = Uninitialized.instance;
@@ -83,13 +83,13 @@ namespace Microsoft.Scripting.Generation {
             // value-types must override this to deal with boxing.
             Debug.Assert(!Type.IsValueType);
             cg.EmitUninitialized();
-            
-            
+
+
             EmitSet(cg);
         }
 
-        public virtual void EmitDelete(LambdaCompiler cg, SymbolId name) {
-            Contract.RequiresNotNull(cg, "cg");
+        public virtual void EmitDelete(ILGen cg, SymbolId name) {
+            ContractUtils.RequiresNotNull(cg, "cg");
             EmitSetUninitialized(cg);
         }
 

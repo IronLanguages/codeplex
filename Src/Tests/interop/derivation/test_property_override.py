@@ -42,8 +42,8 @@ def test_read_write_interface():
     p.__set__(x, 20)
     AreEqual(p.GetValue(x), 20)
     
-    IProperty10.set_IntProperty(x, 30)
-    AreEqual(IProperty10.get_IntProperty(x), 30)
+    Assert(not hasattr(IProperty10, 'set_IntProperty'))
+    Assert(not hasattr(IProperty10, 'get_IntProperty'))
     
     # negative
     AssertError(TypeError, lambda: p.SetValue(x, 'str'))
@@ -192,8 +192,8 @@ def test_virtual_property():
     Callback.On(x)
     AreEqual(x.Property, 220)
     
-    CProperty30.set_Property(x, 1)
-    AreEqual(21, CProperty30.get_Property(x))
+    Assert(not hasattr(CProperty30, 'set_Property'))
+    Assert(not hasattr(CProperty30, 'get_Property'))
     
     class C(CProperty30):
         def __init__(self):
@@ -212,8 +212,8 @@ def test_virtual_property():
     AreEqual(x.field, 233)
     AreEqual(x.Property, 233)
     
-    CProperty30.set_Property(x, 1)
-    AreEqual(CProperty30.get_Property(x), 21)
+    Assert(not hasattr(CProperty30, 'set_Property'))
+    Assert(not hasattr(CProperty30, 'get_Property'))
     
     del C.Property  # workaround: remove after bug 327528
     C.Property = property(C.get_Property)
@@ -230,19 +230,21 @@ def test_abstract_property():
     class C(CProperty31):
         def __init__(self):
             self.field = 1
-        def get_Property(self): 
+        def get_PropertyX(self): 
             return self.field;
-        def set_Property(self, value):
+        def set_PropertyX(self, value):
             self.field = value + 10
-        Property = property(get_Property, set_Property)
+        Property = property(get_PropertyX, set_PropertyX)
     
     x = C()
     Callback.On(x)
     AreEqual(x.field, 111)
     
     x = C()
-    CProperty31.set_Property(x, 2)
-    AreEqual(12, CProperty31.get_Property(x))
+    Assert(not hasattr(CProperty31, 'get_Property'))
+    Assert(not hasattr(CProperty31, 'set_Property'))
+    Assert(not hasattr(x, 'get_Property'))
+    Assert(not hasattr(x, 'set_Property'))
 
 def test_final_property():
     class C(CProperty32): 
@@ -318,9 +320,9 @@ def test_readonly_writeonly_indexer():
 def test_super_on_property():
     class C(CProperty30):
         def get_Property(self): 
-            return super(C, self).get_Property();
+            return super(C, self).Property
         def set_Property(self, value):
-            super(C, self).set_Property(value + 500)
+            CProperty30.Property.SetValue(self, value + 500)
         Property = property(get_Property, set_Property)
     
     x = C()

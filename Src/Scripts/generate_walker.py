@@ -13,7 +13,7 @@
 #
 #####################################################################################
 
-import generate
+from generate import generate
 import System
 import clr
 
@@ -78,5 +78,11 @@ def gen_python_walker(cw):
 def gen_python_walker_nr(cw):
     gen_walker(cw, get_python_nodes(), "public override", "false")
 
-generate.CodeGenerator("Python AST Walker", gen_python_walker).doit()
-generate.CodeGenerator("Python AST Walker Nonrecursive", gen_python_walker_nr).doit()
+def main():
+    return generate(
+        ("Python AST Walker", gen_python_walker),
+        ("Python AST Walker Nonrecursive", gen_python_walker_nr),
+    )
+
+if __name__=="__main__":
+    main()

@@ -27,7 +27,7 @@ using Microsoft.Scripting.Runtime;
 namespace IronPython.Runtime {
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     [PythonSystemType("xrange")]
-    public class XRange : ISequence, IEnumerable, IEnumerable<int> {
+    public class XRange : ISequence, IEnumerable, IEnumerable<int>, ICodeFormattable {
         private int _start, _stop, _step, _length;
 
         public XRange(int stop) : this(0, stop, 1) { }
@@ -123,18 +123,6 @@ namespace IronPython.Runtime {
             return new XRangeIterator(this);
         }
 
-        public override string ToString() {
-            if (_step == 1) {
-                if (_start == 0) {
-                    return string.Format("xrange({0})", _stop);
-                } else {
-                    return string.Format("xrange({0}, {1})", _start, _stop);
-                }
-            } else {
-                return string.Format("xrange({0}, {1}, {2})", _start, _stop, _step);
-            }
-        }
-
         #region IEnumerable<int> Members
 
         IEnumerator<int> IEnumerable<int>.GetEnumerator() {
@@ -195,5 +183,21 @@ namespace IronPython.Runtime {
 
             #endregion
         }
+
+        #region ICodeFormattable Members
+
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
+            if (_step == 1) {
+                if (_start == 0) {
+                    return string.Format("xrange({0})", _stop);
+                } else {
+                    return string.Format("xrange({0}, {1})", _start, _stop);
+                }
+            } else {
+                return string.Format("xrange({0}, {1}, {2})", _start, _stop, _step);
+            }
+        }
+
+        #endregion
     }
 }

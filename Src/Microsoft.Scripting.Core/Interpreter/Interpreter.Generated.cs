@@ -44,7 +44,7 @@ namespace Microsoft.Scripting.Interpreter {
             InterpretBinaryExpression,                                  //    ExclusiveOr
             InterpretBinaryExpression,                                  //    GreaterThan
             InterpretBinaryExpression,                                  //    GreaterThanOrEqual
-                                                                        // ** Invoke
+            InterpretInvocationExpression,                              //    Invoke
             InterpretLambdaExpression,                                  //    Lambda
             InterpretBinaryExpression,                                  //    LeftShift
             InterpretBinaryExpression,                                  //    LessThan
@@ -74,25 +74,20 @@ namespace Microsoft.Scripting.Interpreter {
                                                                         // ** TypeAs
             InterpretTypeBinaryExpression,                              //    TypeIs
             InterpretActionExpression,                                  //    ActionExpression
-            InterpretArrayIndexAssignment,                              //    ArrayIndexAssignment
+            InterpretAssignmentExpression,                              //    Assign
             InterpretBlock,                                             //    Block
-            InterpretBoundAssignment,                                   //    BoundAssignment
             InterpretBreakStatement,                                    //    BreakStatement
             InterpretIntrinsicExpression,                               //    CodeContextExpression
             InterpretIntrinsicExpression,                               //    GeneratorIntrinsic
             InterpretGeneratorLambdaExpression,                         //    Generator
             InterpretContinueStatement,                                 //    ContinueStatement
             InterpretDeleteStatement,                                   //    DeleteStatement
-            InterpretDeleteUnboundExpression,                           //    DeleteUnboundExpression
             InterpretDoStatement,                                       //    DoStatement
             InterpretEmptyStatement,                                    //    EmptyStatement
-            InterpretIntrinsicExpression,                               //    EnvironmentExpression
-            InterpretExpressionStatement,                               //    ExpressionStatement
             InterpretVariableExpression,                                //    GlobalVariable
             InterpretLabeledStatement,                                  //    LabeledStatement
             InterpretVariableExpression,                                //    LocalVariable
             InterpretLoopStatement,                                     //    LoopStatement
-            InterpretMemberAssignment,                                  //    MemberAssignment
             InterpretMemberExpression,                                  //    MemberExpression
             InterpretNewArrayExpression,                                //    NewArrayExpression
             InterpretUnaryExpression,                                   //    OnesComplement
@@ -102,9 +97,8 @@ namespace Microsoft.Scripting.Interpreter {
             InterpretVariableExpression,                                //    TemporaryVariable
             InterpretThrowStatement,                                    //    ThrowStatement
             InterpretTryStatement,                                      //    TryStatement
-            InterpretUnboundAssignment,                                 //    UnboundAssignment
-            InterpretUnboundExpression,                                 //    UnboundExpression
             InterpretYieldStatement,                                    //    YieldStatement
+            InterpretExtensionExpression,                               //    Extension
 
             // *** END GENERATED CODE ***
 

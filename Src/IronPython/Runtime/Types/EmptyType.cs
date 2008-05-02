@@ -54,7 +54,7 @@ namespace IronPython.Runtime.Types {
     }
 
     public class NoneTypeOps : EmptyTypeOps<object> {
-        public const int NoneHashCode = 0x1e1a2e40;
+        internal const int NoneHashCode = 0x1e1a2e40;
 
         internal static void InitInstance() {
             InitOps(NoneHashCode,
@@ -63,13 +63,15 @@ namespace IronPython.Runtime.Types {
         }
 
 
+        public static readonly string __doc__;
+
         public static string __repr__(None self) {
             return "None";
         }
     }
 
     public class EllipsisTypeOps : EmptyTypeOps<Ellipsis> {
-        public static Ellipsis Value {
+        internal static Ellipsis Value {
             get {
                 return Instance ?? EnsureInstance();
             }
@@ -85,7 +87,7 @@ namespace IronPython.Runtime.Types {
     }
 
     public class NotImplementedTypeOps : EmptyTypeOps<NotImplementedType> {
-        public static NotImplementedType Value {
+        internal static NotImplementedType Value {
             get {
                 return Instance ?? EnsureInstance();
             }
@@ -127,11 +129,6 @@ namespace IronPython.Runtime.Types {
             instance = singletonInstance;
             hash = hashCode;
         }
-        /*
-        [StaticOpsMethod("__init__")]
-        public static void InitMethod(params object[] prms) {
-            // nop
-        }*/
 
         internal static string Name {
             get {

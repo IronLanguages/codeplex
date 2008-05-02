@@ -28,10 +28,10 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     [PythonSystemType("builtin_function_or_method")]
-    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IDynamicObject, ICodeFormattable {
+    public sealed partial class BoundBuiltinFunction : PythonTypeSlot, IDynamicObject, ICodeFormattable, IValueEquality {
         private readonly BuiltinFunction/*!*/ _target;
         private readonly object _instance;
 
@@ -48,6 +48,7 @@ namespace IronPython.Runtime.Types {
 
         #region Object overrides
 
+        [PythonHidden]
         public override bool Equals(object obj) {
             BoundBuiltinFunction other = obj as BoundBuiltinFunction;
             if (other == null) return false;
@@ -55,6 +56,7 @@ namespace IronPython.Runtime.Types {
             return other._instance == _instance && other._target == _target;
         }
 
+        [PythonHidden]
         public override int GetHashCode() {
             return _instance.GetHashCode() ^ _target.GetHashCode();
         }
@@ -225,6 +227,7 @@ namespace IronPython.Runtime.Types {
             }
         }
 
+        [PythonHidden]
         public BuiltinFunctionOverloadMapper/*!*/ Overloads {
             get {
                 return new BuiltinFunctionOverloadMapper(Target, __self__);
@@ -250,6 +253,21 @@ namespace IronPython.Runtime.Types {
             get {
                 return _target;
             }
+        }
+
+        #endregion
+
+        #region IValueEquality Members
+
+        int IValueEquality.GetValueHashCode() {
+            return PythonOps.Hash(_instance) ^ _target.GetHashCode();
+        }
+
+        bool IValueEquality.ValueEquals(object other) {
+            BoundBuiltinFunction bbf = other as BoundBuiltinFunction;
+            if (bbf == null) return false;
+
+            return PythonOps.EqualRetBool(bbf._instance, _instance) && bbf._target == _target;
         }
 
         #endregion

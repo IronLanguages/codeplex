@@ -25,7 +25,7 @@ using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
     using System.Diagnostics;
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class DoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;                                     // arguments we were created with
@@ -318,7 +318,8 @@ namespace Microsoft.Scripting.Actions {
                         typeof(RuntimeHelpers).GetMethod("GetStringMembers"),
                         Ast.Call(
                             Ast.ConvertHelper(_rule.Parameters[0], typeof(IMembersList)),
-                            typeof(IMembersList).GetMethod("GetMemberNames")
+                            typeof(IMembersList).GetMethod("GetMemberNames"),
+                            Ast.CodeContext()
                         )
                     )
                 );
@@ -491,9 +492,9 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private static Expression ConvertIfNeeded(Expression expression, Type type) {
+        private Expression ConvertIfNeeded(Expression expression, Type type) {
             if (expression.Type != type) {
-                return Ast.Action.ConvertTo(type, ConversionResultKind.ExplicitCast, expression);
+                return Ast.Action.ConvertTo(Binder, type, ConversionResultKind.ExplicitCast, expression);
             }
             return expression;
         }

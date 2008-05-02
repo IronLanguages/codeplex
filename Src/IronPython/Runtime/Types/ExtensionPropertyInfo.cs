@@ -52,11 +52,13 @@ namespace IronPython.Runtime.Types {
         }
 
         private int GetEffectiveParameterCount(MethodInfo mi) {
+            int cnt = mi.IsStatic ? 0 : 1;
             ParameterInfo[] pis = mi.GetParameters();
+            cnt += pis.Length;
             if (pis.Length > 0 && pis[0].ParameterType == typeof(CodeContext)) {
-                return pis.Length - 1;
+                return cnt - 1;
             }
-            return pis.Length;
+            return cnt;
         }
 
         public MethodInfo Getter {

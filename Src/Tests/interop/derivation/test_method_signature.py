@@ -71,6 +71,7 @@ def test_one_ref():
 
 global expected
 
+@skip("multiple_execute")
 def test_one_out():
     f = IInterface600.m_b
     
@@ -202,7 +203,8 @@ def test_return_something():
             return 10
     x = C()            
     AreEqual(f(x), None)
-            
+
+@skip("multiple_execute")            
 def test_two_args():
     f = IInterface600.m_g
     class C(IInterface600):

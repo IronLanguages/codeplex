@@ -23,20 +23,20 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class MethodTracker : MemberTracker {
         private readonly MethodInfo _method;
         private readonly bool _isStatic;
 
         internal MethodTracker(MethodInfo method) {
-            Contract.RequiresNotNull(method, "method");
+            ContractUtils.RequiresNotNull(method, "method");
             _method = method;
             _isStatic = method.IsStatic;
         }
 
         internal MethodTracker(MethodInfo method, bool isStatic) {
-            Contract.RequiresNotNull(method, "method");
+            ContractUtils.RequiresNotNull(method, "method");
             _method = method;
             _isStatic = isStatic;
         }
@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Actions {
             return _method.ToString();
         }
 
-        internal override MemberTracker BindToInstance(Expression instance) {
+        public override MemberTracker BindToInstance(Expression instance) {
             if (IsStatic) {
                 return this;
             }
@@ -84,7 +84,7 @@ namespace Microsoft.Scripting.Actions {
             return new BoundMemberTracker(this, instance);
         }
 
-        internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, BindToInstance(instance));
         }
 

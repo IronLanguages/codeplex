@@ -935,5 +935,17 @@ def test_dict_class_dictionary():
         Assert(temp_dict.has_key(expected_key), expected_key)
         
 
+def test_delitem():
+    x = {}
+    x[0,0] = 0
+    del x[0,0]
+    
+    AreEqual(x, {})
+    
+    x[0,0] = 0
+    x.__delitem__((0, 0))
+    AreEqual(x, {})
+    AssertError(KeyError, x.__delitem__, None)
+    AssertError(TypeError, x.__delitem__)
 
 run_test(__name__)

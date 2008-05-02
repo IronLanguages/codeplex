@@ -174,6 +174,7 @@ def test_explicitly_implemented_event():
     #print IInterface.OnAction.Event  # reflected event
     #IInterface.OnAction.Add(t1, TargetClass.s_Double)
 
+@skip("multiple_execute")
 def test_static_event():
     for t1 in [
                     ClassWithStaticEvent, 

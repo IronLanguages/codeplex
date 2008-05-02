@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 import sys
 import clr
@@ -139,14 +137,22 @@ def do_generate(cw):
     for assemName in default_assemblies:
         PrintTypeNames(cw, assemName)
 
-def GenerateAssemblyTypeNames():
+def GetGeneratorList():
     is_orcas = System.Type.GetType("System.Object").Assembly.GetType("System.DateTimeOffset", False) != None
     if is_orcas:
         print "Skipping generate_AssemblyTypeNames on Orcas"
+        return []
+    elif  'checkonly' in sys.argv:
+        # skip checking - even if we're out of date (new types added) the code still does the right thing.
+        # If we are out of date then we shouldn't fail tests.
+        print "Skipping generate_AssemblyTypeNames in check only mode"
+        return []
     else:
-        CodeGenerator("Well-known assembly type names", do_generate).doit()
+        return [("Well-known assembly type names", do_generate)]
 
-# skip checking - even if we're out of date (new types added) the code still does the right thing.  If we
-# are out of date then we shouldn't fail tests.
-if 'checkonly' not in sys.argv:
-    GenerateAssemblyTypeNames()
+def main():
+    return generate(*GetGeneratorList())
+
+if __name__ == "__main__":
+    main()
+

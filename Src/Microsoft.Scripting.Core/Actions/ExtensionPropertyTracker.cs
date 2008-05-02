@@ -86,7 +86,7 @@ namespace Microsoft.Scripting.Actions {
             return new ParameterInfo[0];
         }
 
-        private bool IsStaticProperty(MethodInfo method) {            
+        private static bool IsStaticProperty(MethodInfo method) {            
             return method.IsDefined(typeof(StaticExtensionMethodAttribute), false);
         }
 

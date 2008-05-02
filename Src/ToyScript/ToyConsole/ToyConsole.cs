@@ -20,15 +20,17 @@ using System.Text;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Hosting.Shell;
 
 namespace ToyScript {
     class ToyConsole : ConsoleHost {
-        protected override void Initialize() {
-            base.Initialize();
+        protected override ScriptEngine/*!*/ CreateEngine() {
+            Runtime.LoadAssembly(typeof(string).Assembly);
+            return Runtime.GetEngine(typeof(ToyLanguageContext));
+        }
 
-            Options.ScriptEngine = Environment.GetEngine(typeof(ToyLanguageContext));
-
-            Environment.LoadAssembly(typeof(string).Assembly);
+        protected override CommandLine CreateCommandLine() {
+            return new ToyCommandLine();
         }
 
         [STAThread]

@@ -39,14 +39,14 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static TypeBinaryExpression TypeIs(Expression expression, Type type) {
-            Contract.RequiresNotNull(expression, "expression");
-            Contract.RequiresNotNull(type, "type");
-            Contract.Requires(!type.IsByRef, "type", "type must not be ByRef");
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.Requires(!type.IsByRef, "type", "type must not be ByRef");
 
             if (!type.IsVisible) {
-                throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
+                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, type.FullName));
             }
 
             return new TypeBinaryExpression(AstNodeType.TypeIs, expression, type);

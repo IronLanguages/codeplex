@@ -89,6 +89,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" Condition=" $(SilverlightBuild) != 'true' " />
+    <Reference Include="System.Configuration" Condition=" $(SilverlightBuild) != 'true' " />
     <Reference Include="mscorlib, Version=2.0.5.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e" Condition=" '$(SilverlightBuild)' == 'true' ">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(SilverlightSdkPath)\mscorlib.dll</HintPath>
@@ -103,8 +104,24 @@
     <Compile Include="..\..\Hosts\Silverlight\SilverlightVersion.cs" Condition=" '$(SilverlightBuild)' == 'true' ">
       <Link>Properties\SilverlightVersion.cs</Link>
     </Compile>
+    <Compile Include="Actions\DynamicSite.Generated.cs" />
+    <Compile Include="Actions\CallSiteFactory.Generated.cs" />
     <Compile Include="Ast\ConstantExpression.cs" />
+    <Compile Include="Ast\DeleteUnboundExpression.cs" />
     <Compile Include="Ast\LoopStatement.cs" />
+    <Compile Include="Hosting\Shell\BasicConsole.cs" />
+    <Compile Include="Hosting\Shell\CommandLine.cs" />
+    <Compile Include="Hosting\Shell\ConsoleHost.cs" />
+    <Compile Include="Hosting\Shell\ConsoleHostOptions.cs" />
+    <Compile Include="Hosting\Shell\ConsoleHostOptionsParser.cs" />
+    <Compile Include="Hosting\Shell\ConsoleOptions.cs" />
+    <Compile Include="Hosting\Shell\DefaultOptionsParser.cs" />
+    <Compile Include="Hosting\Shell\IConsole.cs" />
+    <Compile Include="Hosting\Shell\OptionsParser.cs" />
+    <Compile Include="Hosting\Shell\Style.cs" />
+    <Compile Include="Hosting\Shell\SuperConsole.cs" />
+    <Compile Include="Ast\UnboundAssignment.cs" />
+    <Compile Include="Ast\UnboundExpression.cs" />
     <Compile Include="Math\BigInteger.cs" />
     <Compile Include="Math\Complex64.cs" />
     <Compile Include="Math\MathResources.Designer.cs">
@@ -114,6 +131,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SpecSharp.cs" />
+    <Compile Include="Utils\Publisher.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Scripting.Core\Microsoft.Scripting.Core.csproj">

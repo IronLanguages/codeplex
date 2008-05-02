@@ -23,8 +23,8 @@ namespace Microsoft.Scripting.Utils {
     public static class CollectionUtils {
 
         public static void AddRange<T>(ICollection<T> collection, IEnumerable<T> items) {
-            Contract.RequiresNotNull(collection, "collection");
-            Contract.RequiresNotNull(items, "items");
+            ContractUtils.RequiresNotNull(collection, "collection");
+            ContractUtils.RequiresNotNull(items, "items");
 
             List<T> list = collection as List<T>;
             if (list != null) {
@@ -45,7 +45,7 @@ namespace Microsoft.Scripting.Utils {
         public static IEnumerator<TSuper> ToCovariant<T, TSuper>(IEnumerator<T> enumerator)
             where T : TSuper {
 
-            Contract.RequiresNotNull(enumerator, "enumerator");
+            ContractUtils.RequiresNotNull(enumerator, "enumerator");
 
             while (enumerator.MoveNext()) {
                 yield return enumerator.Current;
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Utils {
             private IEnumerable<T> _enumerable;
 
             public CovariantConvertor(IEnumerable<T> enumerable) {
-                Contract.RequiresNotNull(enumerable, "enumerable");
+                ContractUtils.RequiresNotNull(enumerable, "enumerable");
                 _enumerable = enumerable;
             }
 
@@ -95,8 +95,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static bool TrueForAll<T>(IList<T> collection, Predicate<T> predicate) {
-            Contract.RequiresNotNull(collection, "collection");
-            Contract.RequiresNotNull(predicate, "predicate");
+            ContractUtils.RequiresNotNull(collection, "collection");
+            ContractUtils.RequiresNotNull(predicate, "predicate");
 
             foreach (T item in collection) {
                 if (!predicate(item)) return false;
@@ -106,8 +106,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static List<T> GetRange<T>(IList<T> list, int index, int count) {
-            Contract.RequiresNotNull(list, "list");
-            Contract.RequiresArrayRange(list, index, count, "index", "count");
+            ContractUtils.RequiresNotNull(list, "list");
+            ContractUtils.RequiresArrayRange(list, index, count, "index", "count");
 
             List<T> result = new List<T>(count);
             int stop = index + count;
@@ -118,9 +118,9 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void InsertRange<T>(IList<T> collection, int index, IEnumerable<T> items) {
-            Contract.RequiresNotNull(collection, "collection");
-            Contract.RequiresNotNull(items, "items");
-            Contract.RequiresArrayInsertIndex(collection, index, "index");
+            ContractUtils.RequiresNotNull(collection, "collection");
+            ContractUtils.RequiresNotNull(items, "items");
+            ContractUtils.RequiresArrayInsertIndex(collection, index, "index");
 
             List<T> list = collection as List<T>;
             if (list != null) {
@@ -134,8 +134,8 @@ namespace Microsoft.Scripting.Utils {
         }
 
         public static void RemoveRange<T>(IList<T> collection, int index, int count) {
-            Contract.RequiresNotNull(collection, "collection");
-            Contract.RequiresArrayRange(collection, index, count, "index", "count");
+            ContractUtils.RequiresNotNull(collection, "collection");
+            ContractUtils.RequiresArrayRange(collection, index, count, "index", "count");
 
             List<T> list = collection as List<T>;
             if (list != null) {
@@ -147,16 +147,20 @@ namespace Microsoft.Scripting.Utils {
             }
         }
 
-        public static ReadOnlyCollection<T> ToReadOnlyCollection<T>(IList<T> list) {
-            ReadOnlyCollection<T> roc;
-            if (list == null) {
+        public static ReadOnlyCollection<T> ToReadOnlyCollection<T>(IEnumerable<T> enumerable) {
+            ReadOnlyCollection<T> readOnlyCollection;
+            ICollection<T> collection;
+            if (enumerable == null) {
+                // TODO: Linq returns empty collection singleton
                 return null;
-            } else if ((roc = list as ReadOnlyCollection<T>) != null) {
-                return roc;
-            } else {
-                T[] array = new T[list.Count];
-                list.CopyTo(array, 0);
+            } else if ((readOnlyCollection = enumerable as ReadOnlyCollection<T>) != null) {
+                return readOnlyCollection;
+            } else if ((collection = enumerable as ICollection<T>) != null) {
+                T[] array = new T[collection.Count];
+                collection.CopyTo(array, 0);
                 return new ReadOnlyCollection<T>(array);
+            } else {
+                return new ReadOnlyCollection<T>(new List<T>(enumerable));
             }
         }
     }

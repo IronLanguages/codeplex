@@ -20,47 +20,25 @@ using System.Runtime.CompilerServices;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
+using IronPython.Compiler.Generation;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 #if !SILVERLIGHT // finalizers not supported
 
 [assembly: PythonModule("_weakref", typeof(IronPython.Modules.PythonWeakRef))]
 namespace IronPython.Modules {
-    public static class PythonWeakRef {
-        static PythonWeakRef() {
-            PythonType.SetPythonType(typeof(weakproxy),
-                ProxyPythonTypeBuilder.Build(typeof(weakproxy)));
-
-            PythonType.SetPythonType(typeof(weakcallableproxy),
-                ProxyPythonTypeBuilder.Build(typeof(weakcallableproxy)));
-
-            ProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakproxy));
-            CallableProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakcallableproxy));
-        }
-
+    public static partial class PythonWeakRef {
         internal static IWeakReferenceable ConvertToWeakReferenceable(object obj) {
             IWeakReferenceable iwr = obj as IWeakReferenceable;
             if (iwr != null) return iwr;
 
-            // we don't own dynamic type, so we jump through an extra step
-            // to track it's weak references
-            PythonType dt = obj as PythonType;
-            if (dt != null) {
-                PythonTypeContext ctx = dt.GetContextTag(DefaultContext.Id) as PythonTypeContext;
-                if (ctx == null) {
-                    ctx = new PythonTypeContext();
-                    dt.SetContextTag(DefaultContext.Id, ctx);
-                }
-
-                return (PythonTypeContext)ctx;
-            }
             throw PythonOps.TypeError("cannot create weak reference to '{0}' object", PythonOps.GetPythonTypeName(obj));
         }
 
@@ -84,8 +62,8 @@ namespace IronPython.Modules {
             }
         }
 
-        public static readonly PythonType CallableProxyType;
-        public static readonly PythonType ProxyType;
+        public static readonly PythonType CallableProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakcallableproxy));
+        public static readonly PythonType ProxyType = DynamicHelpers.GetPythonTypeFromType(typeof(weakproxy));
         public static readonly PythonType ReferenceType = DynamicHelpers.GetPythonTypeFromType(typeof(@ref));
 
         [PythonSystemType]
@@ -233,10 +211,6 @@ namespace IronPython.Modules {
                 return fResult;
             }
 
-            bool IValueEquality.ValueNotEquals(object other) {
-                return !((IValueEquality)this).ValueEquals(other);
-            }
-
             /// <summary>
             /// Special equals because none of the special cases in Ops.Equals
             /// are applicable here, and the reference equality check breaks some tests.
@@ -260,8 +234,8 @@ namespace IronPython.Modules {
             #endregion            
         }
 
-        [PythonSystemType]
-        public sealed class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, ICustomMembers {
+        [PythonSystemType, DynamicBaseTypeAttribute]
+        public sealed partial class weakproxy : IPythonObject, ICodeFormattable, IProxyObject, IValueEquality, IMembersList {
             WeakHandle target;
 
             #region Python Constructors
@@ -375,7 +349,7 @@ namespace IronPython.Modules {
             #region object overloads
 
             public override string ToString() {
-                return GetObject().ToString();
+                return PythonOps.ToString(GetObject());
             }
 
             #endregion
@@ -393,31 +367,31 @@ namespace IronPython.Modules {
 
             #endregion
 
-            #region ICustomMembers Members
+            #region Custom member access
 
-            public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
-                object o = GetObject();
-                return PythonOps.TryGetBoundAttr(context, o, name, out value);
+            [SpecialName]
+            public object GetCustomMember(CodeContext/*!*/ context, string name) {
+                object value, o = GetObject();
+                if (PythonOps.TryGetBoundAttr(context, o, SymbolTable.StringToId(name), out value)) {
+                    return value;
+                }
+
+                return OperationFailed.Value;
             }
 
-            public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+            [SpecialName]
+            public void SetMember(CodeContext/*!*/ context, string name, object value) {
                 object o = GetObject();
-                return PythonOps.TryGetBoundAttr(context, o, name, out value);
+                PythonOps.SetAttr(context, o, SymbolTable.StringToId(name), value);
             }
 
-            public void SetCustomMember(CodeContext context, SymbolId name, object value) {
+            [SpecialName]
+            public void DeleteMember(CodeContext/*!*/ context, string name) {
                 object o = GetObject();
-                PythonOps.SetAttr(context, o, name, value);
+                PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name));
             }
 
-            public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-                object o = GetObject();
-                PythonOps.DeleteAttr(context, o, name);
-                //TODO: Return the right value here (IP does not need it)
-                return true;
-            }
-
-            public IList<object> GetMemberNames(CodeContext context) {
+            IList<object> IMembersList.GetMemberNames(CodeContext/*!*/ context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
@@ -425,11 +399,6 @@ namespace IronPython.Modules {
                 }
 
                 return PythonOps.GetAttrNames(context, o);
-            }
-
-            public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-                object o = GetObject();
-                return PythonOps.GetAttrDict(context, o);
             }
 
             #endregion
@@ -455,12 +424,6 @@ namespace IronPython.Modules {
                 return PythonOps.EqualRetBool(GetObject(), other);
             }
 
-            bool IValueEquality.ValueNotEquals(object other) {
-                weakproxy wrp = other as weakproxy;
-                if (wrp != null) return !PythonOps.EqualRetBool(GetObject(), wrp.GetObject());
-
-                return PythonSites.NotEqualsRetBool(GetObject(), other);
-            }
             #endregion
 
             public object __nonzero__() {
@@ -472,15 +435,15 @@ namespace IronPython.Modules {
             }
         }
 
-        [PythonSystemType]
-        public sealed class weakcallableproxy :
+        [PythonSystemType, DynamicBaseTypeAttribute]
+        public sealed partial class weakcallableproxy :
             IPythonObject,
             ICodeFormattable,            
             IProxyObject,
             IValueEquality,
-            ICustomMembers {
+            IMembersList {
 
-            private FastDynamicSite<object, object[], object> _site;
+            private DynamicSite<object, object[], object> _site;
             private WeakHandle _target;
 
             #region Python Constructors
@@ -511,7 +474,7 @@ namespace IronPython.Modules {
             private weakcallableproxy(CodeContext context, object target, object callback) {
                 WeakRefHelpers.InitializeWeakRef(this, target, callback);
                 _target = new WeakHandle(target, false);
-                _site = FastDynamicSite<object, object[], object>.Create(context, CallAction.Make(new CallSignature(ArgumentKind.List)));
+                _site = DynamicSite<object, object[], object>.Create(CallAction.Make(DefaultContext.DefaultPythonBinder, new CallSignature(ArgumentKind.List)));
             }
 
             #endregion
@@ -598,7 +561,7 @@ namespace IronPython.Modules {
             #region object overloads
 
             public override string ToString() {
-                return GetObject().ToString();
+                return PythonOps.ToString(GetObject());
             }
 
             #endregion
@@ -617,40 +580,40 @@ namespace IronPython.Modules {
             #endregion
 
             [SpecialName]
-            public object Call(CodeContext context, params object[] args) {
-                return _site.Invoke(GetObject(), args);
+            public object Call(CodeContext/*!*/ context, params object[] args) {
+                return _site.Invoke(context, GetObject(), args);
             }
                         
             [SpecialName]
-            public object Call(CodeContext context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
+            public object Call(CodeContext/*!*/ context, [ParamDictionary] IAttributesCollection dict, params object[] args) {
                 return PythonCalls.CallWithKeywordArgs(GetObject(), args, dict);
             }
 
-            #region ICustomMembers Members
+            #region Custom members access
 
-            public bool TryGetCustomMember(CodeContext context, SymbolId name, out object value) {
+            [SpecialName]
+            public object GetCustomMember(CodeContext/*!*/ context, string name) {
                 object o = GetObject();
-                return PythonOps.TryGetBoundAttr(context, o, name, out value);
+                object value;
+                if (PythonOps.TryGetBoundAttr(context, o, SymbolTable.StringToId(name), out value)) {
+                    return value;
+                }
+                return OperationFailed.Value;
             }
 
-            public bool TryGetBoundCustomMember(CodeContext context, SymbolId name, out object value) {
+            [SpecialName]
+            public void SetMember(CodeContext/*!*/ context, string name, object value) {
                 object o = GetObject();
-                return PythonOps.TryGetBoundAttr(context, o, name, out value);
+                PythonOps.SetAttr(context, o, SymbolTable.StringToId(name), value);
             }
 
-            public void SetCustomMember(CodeContext context, SymbolId name, object value) {
+            [SpecialName]
+            public void DeleteMember(CodeContext/*!*/ context, string name) {
                 object o = GetObject();
-                PythonOps.SetAttr(context, o, name, value);
+                PythonOps.DeleteAttr(context, o, SymbolTable.StringToId(name));
             }
 
-            public bool DeleteCustomMember(CodeContext context, SymbolId name) {
-                object o = GetObject();
-                PythonOps.DeleteAttr(context, o, name);
-                //TODO: Return the right value here (IP does not need it)
-                return true;
-            }
-
-            public IList<object> GetMemberNames(CodeContext context) {
+            IList<object> IMembersList.GetMemberNames(CodeContext/*!*/ context) {
                 object o;
                 if (!TryGetObject(out o)) {
                     // if we've been disconnected return an empty list
@@ -658,11 +621,6 @@ namespace IronPython.Modules {
                 }
 
                 return PythonOps.GetAttrNames(context, o);
-            }
-
-            public IDictionary<object, object> GetCustomMemberDictionary(CodeContext context) {
-                object o = GetObject();
-                return PythonOps.GetAttrDict(context, o);
             }
 
             #endregion
@@ -688,12 +646,6 @@ namespace IronPython.Modules {
                 return PythonOps.EqualRetBool(GetObject(), other);
             }
 
-            bool IValueEquality.ValueNotEquals(object other) {
-                weakcallableproxy wrp = other as weakcallableproxy;
-                if (wrp != null) return !GetObject().Equals(wrp.GetObject());
-
-                return PythonSites.NotEqualsRetBool(GetObject(), other);
-            }
             #endregion
 
             public object __nonzero__() {
@@ -724,23 +676,6 @@ namespace IronPython.Modules {
             name = slotName;
             this.type = targetType;
         }
-
-        #region IDescriptor Members
-
-        public object __get__(object instance, object owner) {
-            if (instance == null) return this;
-
-            IProxyObject proxy = instance as IProxyObject;
-
-            if (proxy == null)
-                throw PythonOps.TypeError("descriptor for {0} object doesn't apply to {1} object",
-                    PythonOps.StringRepr(type.Name),
-                    PythonOps.StringRepr(PythonTypeOps.GetName(instance)));
-
-            return new GenericMethodWrapper(name, proxy);
-        }
-
-        #endregion
 
         #region ICodeFormattable Members
 

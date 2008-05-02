@@ -26,32 +26,45 @@ namespace Microsoft.Scripting.Ast {
     public sealed class VariableExpression : Expression {
         private readonly SymbolId _name;
 
-        private VariableExpression(AstNodeType kind, SymbolId name, Type type)
+        internal VariableExpression(AstNodeType kind, string name, Type type)
             : base(kind, type) {
             Debug.Assert(type != typeof(void));
             Debug.Assert(
                 kind == AstNodeType.LocalVariable ||
                 kind == AstNodeType.TemporaryVariable ||
                 kind == AstNodeType.GlobalVariable);
-            _name = name;
+
+            // TODO: remove conversion to SymbolId, store as System.String
+            SymbolId s = name != null ? SymbolTable.StringToId(name) : SymbolId.Empty;
+            _name = s;
         }
 
         public SymbolId Name {
             get { return _name; }
         }
+    }
 
-        // TODO: move to Ast, fix parameter order to be type, name (matches Linq ParameterExpression)
-        #region Factory methods
+    public partial class Expression {
+        // TODO: Remove
+        public static VariableExpression Read(VariableExpression variable) {
+            ContractUtils.RequiresNotNull(variable, "variable");
+            return variable;
+        }
 
-        public static VariableExpression Local(SymbolId name, Type type) {
+        // TODO: Remove
+        public static VariableExpression ReadDefined(VariableExpression variable) {
+            return Read(variable);
+        }
+
+        public static VariableExpression Local(Type type, string name) {
             return new VariableExpression(AstNodeType.LocalVariable, name, GetNonVoidType(type));
         }
 
-        public static VariableExpression Temporary(SymbolId name, Type type) {
+        public static VariableExpression Temporary(Type type, string name) {
             return new VariableExpression(AstNodeType.TemporaryVariable, name, GetNonVoidType(type));
         }
 
-        public static VariableExpression Global(SymbolId name, Type type) {
+        public static VariableExpression Global(Type type, string name) {
             return new VariableExpression(AstNodeType.GlobalVariable, name, GetNonVoidType(type));
         }
 
@@ -60,26 +73,11 @@ namespace Microsoft.Scripting.Ast {
         // typeof(void) is allowed as the variable type to support this: 
         //
         // temp = CreateVariable(..., expression.Type, ...)
-        // Ast.Assign(temp, expression)
+        // Expression.Assign(temp, expression)
         //
         // where expression.Type is void.
         private static Type GetNonVoidType(Type t) {
             return (t != typeof(void)) ? t : typeof(object);
-        }
-
-        #endregion
-    }
-
-    public static partial class Ast {
-        // TODO: Remove
-        public static VariableExpression Read(VariableExpression variable) {
-            Contract.RequiresNotNull(variable, "variable");
-            return variable;
-        }
-
-        // TODO: Remove
-        public static VariableExpression ReadDefined(VariableExpression variable) {
-            return Read(variable);
         }
     }
 }

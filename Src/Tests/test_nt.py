@@ -116,7 +116,7 @@ def test_environ():
 # startfile
 def test_startfile():
     AssertError(OSError, nt.startfile, "not_exist_file.txt")
-
+    AssertError(WindowsError, nt.startfile, 'test_nt.py', 'bad')
 
 # chdir tests
 def test_chdir():

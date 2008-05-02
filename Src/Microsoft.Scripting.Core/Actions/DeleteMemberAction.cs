@@ -1,20 +1,35 @@
+/* ****************************************************************************
+ *
+ * Copyright (c) Microsoft Corporation. 
+ *
+ * This source code is subject to terms and conditions of the Microsoft Public License. A 
+ * copy of the license can be found in the License.html file at the root of this distribution. If 
+ * you cannot locate the  Microsoft Public License, please send an email to 
+ * dlr@microsoft.com. By using this source code in any fashion, you are agreeing to be bound 
+ * by the terms of the Microsoft Public License.
+ *
+ * You must not remove this notice, or any other, from this software.
+ *
+ *
+ * ***************************************************************************/
+
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class DeleteMemberAction : MemberAction, IEquatable<DeleteMemberAction> {
-        private DeleteMemberAction(SymbolId name)
-            : base(name) {
+        private DeleteMemberAction(ActionBinder binder, SymbolId name)
+            : base(binder, name) {
         }
 
-        public static DeleteMemberAction Make(string name) {
-            return new DeleteMemberAction(SymbolTable.StringToId(name));
+        public static DeleteMemberAction Make(ActionBinder binder, string name) {
+            return Make(binder, SymbolTable.StringToId(name));
         }
 
-        public static DeleteMemberAction Make(SymbolId name) {
-            return new DeleteMemberAction(name);
+        public static DeleteMemberAction Make(ActionBinder binder, SymbolId name) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new DeleteMemberAction(binder, name);
         }
 
         public override DynamicActionKind Kind {

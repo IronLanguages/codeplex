@@ -33,57 +33,16 @@ namespace Microsoft.Scripting.Runtime {
 
         private readonly Scope/*!*/ _scope;
 
-        // TODO: is this meant to be on Scope or for invariant language (i.e. on InvariantScopeExtension)?
-        private bool _showCls;
-
-        // TODO: remove?
-        private CompilerContext _compilerContext;
-
         public Scope/*!*/ Scope {
             get { return _scope; }
         }
 
-        /// <summary>
-        /// Returns the attributes associated with this LanguageContext's code.
-        /// </summary>
-        public virtual bool ShowCls {
-            get {
-                return _showCls;
-            }
-            set {
-                _showCls = value;
-            }
-        }
-
-        /// <summary>
-        /// Returns the optional compiler context associated with this module.
-        /// </summary>
-        public CompilerContext CompilerContext {
-            get {
-                return _compilerContext;
-            }
-            set {
-                _compilerContext = value;
-            }
-        }
-
         public ScopeExtension(Scope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
             _scope = scope;
         }
 
-        /// <summary>
-        /// Copy constructor.
-        /// </summary>
-        protected ScopeExtension(ScopeExtension/*!*/ extension) {
-            Contract.RequiresNotNull(extension, "extension");
-            _scope = extension._scope;
-            _showCls = extension._showCls;
-            _compilerContext = extension._compilerContext;
-        }
-
         internal protected virtual void ModuleReloading() {
-            _showCls = false;
         }
 
         internal protected virtual void ModuleReloaded() {

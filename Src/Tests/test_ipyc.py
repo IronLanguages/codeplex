@@ -364,7 +364,7 @@ def test_compilersinktest():
         ]:
         Assert(st.CompileWithTestSink(s) == 0)
 
-
+@disabled("ResourceFile is not available anymore")
 def test_ip_hosting_resource_file():
     '''
     Test to hit IronPython.Hosting.ResourceFile.

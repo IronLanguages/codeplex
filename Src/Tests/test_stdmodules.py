@@ -44,8 +44,8 @@ def test_cp8678():
     AreEqual(len(expected), len(actual))
     for i in xrange(len(expected)):
         AreEqual(expected[i], actual[i])
-    
-@skip("win32") #No _socket    
+
+@skip("win32", "multiple_execute") #No _socket    
 def test_cp10825():
     import urllib
     temp_url = urllib.urlopen("http://www.microsoft.com")

@@ -31,13 +31,20 @@ namespace Microsoft.Scripting.Generation {
 
     public class ILGen {
         private readonly ILGenerator _ilg;
+        private readonly TypeGen _tg;
+        private readonly List<Slot> _freeSlots = new List<Slot>();
 
         #region Constructor
 
-        public ILGen(ILGenerator ilg) {
-            Contract.RequiresNotNull(ilg, "ilg");
+        public ILGen(ILGenerator ilg) :
+            this(ilg, null) {
+        }
+
+        internal ILGen(ILGenerator ilg, TypeGen tg) {
+            ContractUtils.RequiresNotNull(ilg, "ilg");
 
             _ilg = ilg;
+            _tg = tg;
         }
 
         #endregion
@@ -295,88 +302,10 @@ namespace Microsoft.Scripting.Generation {
 
         #region Simple Macros
 
-        /// <summary>
-        /// Emits a call to Console.WriteLine with the given field as an argument.
-        /// </summary>
-        public void EmitWriteLine(FieldInfo fld) {
-            Contract.RequiresNotNull(fld, "fld");
-            Contract.Requires(!fld.IsStatic, "fld");
-
-            MethodInfo writeLine = typeof(Console).GetMethod("WriteLine", new Type[] { fld.FieldType });
-            if (writeLine == null) {
-                throw new ArgumentException("No Console.WriteLine overload for the field type");
-            }
-
-            Emit(OpCodes.Ldsfld, fld);
-            EmitCall(writeLine);
-        }
-
-        /// <summary>
-        /// Emits a call to Console.WriteLine with the given local variable as an argument.
-        /// </summary>
-        public void EmitWriteLine(LocalBuilder localBuilder) {
-            Contract.RequiresNotNull(localBuilder, "localBuilder");
-
-            MethodInfo writeLine = typeof(Console).GetMethod("WriteLine", new Type[] { localBuilder.LocalType });
-            if (writeLine == null) {
-                throw new ArgumentException("No Console.WriteLine overload for the field type");
-            }
-
-            Emit(OpCodes.Ldloc, localBuilder);
-            EmitCall(writeLine);
-        }
-
-        /// <summary>
-        /// Emits a call to Console.WriteLine with a given string as an argument.
-        /// </summary>
-        public void EmitWriteLine(string value) {
-            Contract.RequiresNotNull(value, "value");
-            Emit(OpCodes.Ldstr, value);
-            EmitCall(typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string)}));
-        }
-
-        /// <summary>
-        /// Emits an instruction to throw an exception.
-        /// </summary>
-        public void ThrowException(Type excType) {
-            Contract.RequiresNotNull(excType != null, "excType");
-            Contract.Requires(excType.IsSubclassOf(typeof(Exception)) || excType == typeof(Exception), "excType");
-
-            ConstructorInfo constructor = excType.GetConstructor(Type.EmptyTypes);
-            Contract.Requires(constructor != null, "No default constructor for the exception");
-
-            EmitNew(constructor);
-            Emit(OpCodes.Throw);
-        }
-
-        public void EmitDebugWriteLine(string message) {
+        [Conditional("DEBUG")]
+        internal void EmitDebugWriteLine(string message) {
             EmitString(message);
             EmitCall(typeof(Debug), "WriteLine", new Type[] { typeof(string) });
-        }
-
-        /// <summary>
-        /// Asserts that the value on top of the stack is not null.
-        /// </summary>
-        public void EmitAssertNotNull() {
-            EmitAssertNotNull("Accessing null reference.");
-        }
-
-        /// <summary>
-        /// asserts the value at the top of the stack is not null
-        /// </summary>
-        public void EmitAssertNotNull(string message) {
-            Emit(OpCodes.Dup);
-            Emit(OpCodes.Ldnull);
-            Emit(OpCodes.Ceq);
-            Emit(OpCodes.Ldc_I4_0);
-            Emit(OpCodes.Ceq);
-
-            if (message == null) {
-                EmitCall(typeof(Debug), "Assert", new Type[] { typeof(bool) });
-            } else {
-                EmitString(message);
-                EmitCall(typeof(Debug), "Assert", new Type[] { typeof(bool), typeof(string) });
-            }
         }
 
         #endregion
@@ -384,7 +313,7 @@ namespace Microsoft.Scripting.Generation {
         #region Instruction helpers
 
         public void EmitLoadArg(int index) {
-            Contract.Requires(index >= 0, "index");
+            ContractUtils.Requires(index >= 0, "index");
 
             switch (index) {
                 case 0:
@@ -410,7 +339,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitLoadArgAddress(int index) {
-            Contract.Requires(index >= 0, "index");
+            ContractUtils.Requires(index >= 0, "index");
 
             if (index <= Byte.MaxValue) {
                 Emit(OpCodes.Ldarga_S, index);
@@ -423,7 +352,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Ldind* instruction for the appropriate type
         /// </summary>
         public void EmitLoadValueIndirect(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int)) {
@@ -457,7 +386,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Stind* instruction for the appropriate type.
         /// </summary>
         public void EmitStoreValueIndirect(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int)) {
@@ -487,7 +416,7 @@ namespace Microsoft.Scripting.Generation {
         /// </summary>
         /// <param name="type"></param>
         public void EmitLoadElement(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(System.SByte)) {
@@ -520,7 +449,7 @@ namespace Microsoft.Scripting.Generation {
         /// Emits a Stelem* instruction for the appropriate type.
         /// </summary>
         public void EmitStoreElement(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(int) || type == typeof(uint)) {
@@ -546,7 +475,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitType(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (!(type is TypeBuilder) && !type.IsGenericParameter && !type.IsVisible) {
                 throw new InvalidOperationException("Cannot emit type");
@@ -557,7 +486,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitUnbox(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
             Emit(OpCodes.Unbox_Any, type);
         }
 
@@ -566,47 +495,47 @@ namespace Microsoft.Scripting.Generation {
         #region Fields, properties and methods
 
         public void EmitPropertyGet(Type type, string name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             PropertyInfo pi = type.GetProperty(name);
-            Contract.Requires(pi != null, "name", "Property doesn't exist on the provided type");
+            ContractUtils.Requires(pi != null, "name", "Property doesn't exist on the provided type");
 
             EmitPropertyGet(pi);
         }
 
         public void EmitPropertyGet(PropertyInfo pi) {
-            Contract.RequiresNotNull(pi, "pi");
+            ContractUtils.RequiresNotNull(pi, "pi");
 
             if (!pi.CanRead) {
-                throw new InvalidOperationException(Resources.CantReadProperty);
+                throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantReadProperty));
             }
 
             EmitCall(pi.GetGetMethod());
         }
 
         public void EmitPropertySet(Type type, string name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             PropertyInfo pi = type.GetProperty(name);
-            Contract.Requires(pi != null, "name", "Property doesn't exist on the provided type");
+            ContractUtils.Requires(pi != null, "name", "Property doesn't exist on the provided type");
 
             EmitPropertySet(pi);
         }
 
         public void EmitPropertySet(PropertyInfo pi) {
-            Contract.RequiresNotNull(pi, "pi");
+            ContractUtils.RequiresNotNull(pi, "pi");
 
             if (!pi.CanWrite) {
-                throw new InvalidOperationException(Resources.CantWriteProperty);
+                throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.CantWriteProperty));
             }
 
             EmitCall(pi.GetSetMethod());
         }
 
         public void EmitFieldAddress(FieldInfo fi) {
-            Contract.RequiresNotNull(fi, "fi");
+            ContractUtils.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Ldsflda, fi);
@@ -616,25 +545,25 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitFieldGet(Type type, String name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             FieldInfo fi = type.GetField(name);
-            Contract.Requires(fi != null, "name", "Field doesn't exist on provided type");
+            ContractUtils.Requires(fi != null, "name", "Field doesn't exist on provided type");
             EmitFieldGet(fi);
         }
 
         public void EmitFieldSet(Type type, String name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             FieldInfo fi = type.GetField(name);
-            Contract.Requires(fi != null, "name", "Field doesn't exist on provided type");
+            ContractUtils.Requires(fi != null, "name", "Field doesn't exist on provided type");
             EmitFieldSet(fi);
         }
-        
+
         public void EmitFieldGet(FieldInfo fi) {
-            Contract.RequiresNotNull(fi, "fi");
+            ContractUtils.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Ldsfld, fi);
@@ -644,7 +573,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitFieldSet(FieldInfo fi) {
-            Contract.RequiresNotNull(fi, "fi");
+            ContractUtils.RequiresNotNull(fi, "fi");
 
             if (fi.IsStatic) {
                 Emit(OpCodes.Stsfld, fi);
@@ -655,10 +584,10 @@ namespace Microsoft.Scripting.Generation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1711:IdentifiersShouldNotHaveIncorrectSuffix")]
         public void EmitNew(ConstructorInfo ci) {
-            Contract.RequiresNotNull(ci, "ci");
+            ContractUtils.RequiresNotNull(ci, "ci");
 
             if (ci.DeclaringType.ContainsGenericParameters) {
-                throw new ArgumentException(String.Format(CultureInfo.CurrentCulture, Resources.IllegalNew_GenericParams, ci.DeclaringType));
+                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.IllegalNew_GenericParams, ci.DeclaringType));
             }
 
             Emit(OpCodes.Newobj, ci);
@@ -666,16 +595,16 @@ namespace Microsoft.Scripting.Generation {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1711:IdentifiersShouldNotHaveIncorrectSuffix")]
         public void EmitNew(Type type, Type[] paramTypes) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(paramTypes, "paramTypes");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(paramTypes, "paramTypes");
 
             ConstructorInfo ci = type.GetConstructor(paramTypes);
-            Contract.Requires(ci != null, "type", "Type doesn't have constructor with a given signature");
+            ContractUtils.Requires(ci != null, "type", "Type doesn't have constructor with a given signature");
             EmitNew(ci);
         }
 
         public void EmitCall(MethodInfo mi) {
-            Contract.RequiresNotNull(mi, "mi");
+            ContractUtils.RequiresNotNull(mi, "mi");
 
             if (mi.IsVirtual && !mi.DeclaringType.IsValueType) {
                 Emit(OpCodes.Callvirt, mi);
@@ -685,26 +614,26 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitCall(Type type, String name) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
 
             if (!type.IsVisible) {
-                throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, type.FullName));
+                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, type.FullName));
             }
 
             MethodInfo mi = type.GetMethod(name);
-            Contract.Requires(mi != null, "type", "Type doesn't have a method with a given name.");
+            ContractUtils.Requires(mi != null, "type", "Type doesn't have a method with a given name.");
 
             EmitCall(mi);
         }
 
         public void EmitCall(Type type, String name, Type[] paramTypes) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(paramTypes, "paramTypes");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(paramTypes, "paramTypes");
 
             MethodInfo mi = type.GetMethod(name, paramTypes);
-            Contract.Requires(mi != null, "type", "Type doesn't have a method with a given name and signature.");
+            ContractUtils.Requires(mi != null, "type", "Type doesn't have a method with a given name and signature.");
 
             EmitCall(mi);
         }
@@ -718,7 +647,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         public void EmitString(string value) {
-            Contract.RequiresNotNull(value, "value");
+            ContractUtils.RequiresNotNull(value, "value");
             Emit(OpCodes.Ldstr, value);
         }
 
@@ -825,9 +754,8 @@ namespace Microsoft.Scripting.Generation {
             Emit(OpCodes.Ldc_R4, value);
         }
 
-        public void EmitConstant(object value) {
+        private void EmitSimpleConstant(object value) {
             if (!TryEmitConstant(value)) {
-                Debug.Assert(value != null);
                 throw new ArgumentException(String.Format("Cannot emit constant {0} ({1})", value, value.GetType()));
             }
         }
@@ -901,6 +829,19 @@ namespace Microsoft.Scripting.Generation {
             return true;
         }
 
+        internal void EmitConstant(object value) {
+            Debug.Assert(!(value is CompilerConstant));
+
+            Type type;
+            if (value is SymbolId) {
+                EmitSymbolId((SymbolId)value);
+            } else if ((type = value as Type) != null) {
+                EmitType(type);
+            } else {
+                EmitSimpleConstant(value);
+            }
+        }
+
         #endregion
 
         #region Conversions
@@ -926,8 +867,8 @@ namespace Microsoft.Scripting.Generation {
         }
 
         private bool TryEmitCast(Type from, Type to, bool implicitOnly) {
-            Contract.RequiresNotNull(from, "from");
-            Contract.RequiresNotNull(to, "to");
+            ContractUtils.RequiresNotNull(from, "from");
+            ContractUtils.RequiresNotNull(to, "to");
 
             // No cast necessary if identical types
             if (from == to) {
@@ -988,7 +929,7 @@ namespace Microsoft.Scripting.Generation {
                     return false;
                 }
                 if (!to.IsVisible) {
-                    throw new ArgumentException(String.Format(Resources.TypeMustBeVisible, to.FullName));
+                    throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.TypeMustBeVisible, to.FullName));
                 }
                 Emit(OpCodes.Castclass, to);
                 return true;
@@ -1074,7 +1015,7 @@ namespace Microsoft.Scripting.Generation {
         /// Boxes the value of the stack. No-op for reference types.
         /// </summary>
         public void EmitBoxing(Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
 
             if (type.IsValueType) {
                 if (type == typeof(void)) {
@@ -1094,14 +1035,14 @@ namespace Microsoft.Scripting.Generation {
         /// The array is strongly typed.
         /// </summary>
         public void EmitArray<T>(IList<T> items) {
-            Contract.RequiresNotNull(items, "items");
+            ContractUtils.RequiresNotNull(items, "items");
 
             EmitInt(items.Count);
             Emit(OpCodes.Newarr, typeof(T));
             for (int i = 0; i < items.Count; i++) {
                 Emit(OpCodes.Dup);
                 EmitInt(i);
-                EmitConstant(items[i]);
+                EmitSimpleConstant(items[i]);
                 EmitStoreElement(typeof(T));
             }
         }
@@ -1111,9 +1052,9 @@ namespace Microsoft.Scripting.Generation {
         /// which is provided with the current item index to emit.
         /// </summary>
         public void EmitArray(Type elementType, int count, EmitArrayHelper emit) {
-            Contract.RequiresNotNull(elementType, "elementType");
-            Contract.RequiresNotNull(emit, "emit");
-            Contract.Requires(count >= 0, "count", "Count must be non-negative.");
+            ContractUtils.RequiresNotNull(elementType, "elementType");
+            ContractUtils.RequiresNotNull(emit, "emit");
+            ContractUtils.Requires(count >= 0, "count", "Count must be non-negative.");
 
             EmitInt(count);
             Emit(OpCodes.Newarr, elementType);
@@ -1133,8 +1074,8 @@ namespace Microsoft.Scripting.Generation {
         /// are already emitted.
         /// </summary>
         public void EmitArray(Type arrayType) {
-            Contract.RequiresNotNull(arrayType, "arrayType");
-            Contract.Requires(arrayType.IsArray, "arrayType", "arryaType must be an array type");
+            ContractUtils.RequiresNotNull(arrayType, "arrayType");
+            ContractUtils.Requires(arrayType.IsArray, "arrayType", "arryaType must be an array type");
 
             int rank = arrayType.GetArrayRank();
             if (rank == 1) {
@@ -1153,8 +1094,8 @@ namespace Microsoft.Scripting.Generation {
         #region Support for emitting constants
 
         public void EmitEnum(object value) {
-            Contract.Requires(value != null, "value");
-            Contract.Requires(value.GetType().IsEnum, "value");
+            ContractUtils.Requires(value != null, "value");
+            ContractUtils.Requires(value.GetType().IsEnum, "value");
 
             switch (((Enum)value).GetTypeCode()) {
                 case TypeCode.Int32:
@@ -1182,7 +1123,7 @@ namespace Microsoft.Scripting.Generation {
                     EmitByte((byte)value);
                     break;
                 default:
-                    throw new NotImplementedException(String.Format(CultureInfo.CurrentCulture, Resources.NotImplemented_EnumEmit, value.GetType(), value));
+                    throw new NotImplementedException(ResourceUtils.GetString(ResourceUtils.NotImplemented_EnumEmit, value.GetType(), value));
             }
         }
 
@@ -1282,6 +1223,10 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
+        internal void EmitUninitialized() {
+            EmitFieldGet(typeof(Microsoft.Scripting.Runtime.Uninitialized), "Instance");
+        }
+
         #endregion
 
         #region Tuples
@@ -1333,7 +1278,48 @@ namespace Microsoft.Scripting.Generation {
                 }
             }
         }
+        #endregion
+
+        #region LocalTemps
+
+        internal Slot GetLocalTmp(Type type) {
+            ContractUtils.RequiresNotNull(type, "type");
+
+            for (int i = 0; i < _freeSlots.Count; i++) {
+                Slot slot = _freeSlots[i];
+                if (slot.Type == type) {
+                    _freeSlots.RemoveAt(i);
+                    return slot;
+                }
+            }
+
+            return new LocalSlot(DeclareLocal(type), this);
+        }
+
+        internal void FreeLocalTmp(Slot slot) {
+            if (slot != null) {
+                Debug.Assert(!_freeSlots.Contains(slot));
+                _freeSlots.Add(slot);
+            }
+        }
 
         #endregion
+
+        #region SynbolId
+
+        /// <summary>
+        /// Emits a symbol id.  
+        /// </summary>
+        internal void EmitSymbolId(SymbolId id) {
+            if (_tg == null) {
+                EmitInt(id.Id);
+                EmitNew(typeof(SymbolId), new Type[] { typeof(int) });
+            } else {
+                _tg.EmitIndirectedSymbol(this, id);
+            }
+        }
+
+        #endregion
+
     }
 }

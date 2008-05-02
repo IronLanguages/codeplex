@@ -29,7 +29,7 @@ namespace IronPython.Compiler.Generation {
     ///     Dictionary-based storage needs to be provided for setting individual members
     ///     Virtual methods exposed to Python need to support checking the types dictionary for invocations
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false, Inherited=false)]
-    public class DynamicBaseTypeAttribute : Attribute {
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple=false, Inherited=true)]
+    public sealed class DynamicBaseTypeAttribute : Attribute {
     }
 }

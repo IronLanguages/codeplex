@@ -14,22 +14,16 @@
  * ***************************************************************************/
 
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Generation;
 
 // TODO: remove HAPI references:
-using Hosting_ScriptEngine = Microsoft.Scripting.Hosting.ScriptEngine;
 using Hosting_EngineTextContentProvider = Microsoft.Scripting.Hosting.EngineTextContentProvider;
 
 namespace Microsoft.Scripting.Runtime {
@@ -47,7 +41,7 @@ namespace Microsoft.Scripting.Runtime {
         private readonly ContextId _id;
 
         protected LanguageContext(ScriptDomainManager/*!*/ domainManager) {
-            Contract.RequiresNotNull(domainManager, "domainManager");
+            ContractUtils.RequiresNotNull(domainManager, "domainManager");
 
             _domainManager = domainManager;
             _id = domainManager.AssignContextId(this);
@@ -96,12 +90,12 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public ScopeExtension/*!*/ GetScopeExtension(Scope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
             return scope.GetExtension(ContextId);
         }
 
         public ScopeExtension/*!*/ EnsureScopeExtension(Scope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
+            ContractUtils.RequiresNotNull(scope, "scope");
             ScopeExtension extension = scope.GetExtension(ContextId);
             
             if (extension == null) {
@@ -145,7 +139,7 @@ namespace Microsoft.Scripting.Runtime {
         /// The default implementation invokes code parsing. 
         /// </summary>
         public virtual void UpdateSourceCodeProperties(CompilerContext/*!*/ context) {
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(context, "context");
 
             LambdaExpression lambda = ParseSourceCode(context);
 
@@ -234,7 +228,7 @@ namespace Microsoft.Scripting.Runtime {
         /// name lookup fails.
         /// </summary>
         protected internal virtual Exception MissingName(SymbolId name) {
-            return new MissingMemberException(String.Format(CultureInfo.CurrentCulture, Resources.NameNotDefined, SymbolTable.IdToString(name)));
+            return new MissingMemberException(ResourceUtils.GetString(ResourceUtils.NameNotDefined, SymbolTable.IdToString(name)));
         }
 
         /// <summary>
@@ -393,17 +387,6 @@ namespace Microsoft.Scripting.Runtime {
 #endif
 
         public virtual TService GetService<TService>(params object[] args) where TService : class {
-            if (typeof(TService) == typeof(IConsole)) {
-                ConsoleOptions options = GetArg<ConsoleOptions>(args, 2, false);
-                if (options.TabCompletion) {
-                    return (TService)(object)CreateSuperConsole(GetArg<CommandLine>(args, 1, false), GetArg<Hosting_ScriptEngine>(args, 0, false), options.ColorfulConsole);
-                } else {
-                    return (TService)(object)new BasicConsole(GetArg<Hosting_ScriptEngine>(args, 0, false), options.ColorfulConsole);
-                }
-            } else if (typeof(TService) == typeof(CommandLine)) {
-                return (TService)(object)new CommandLine();
-            }
-
             return null;
         }
 
@@ -427,10 +410,6 @@ namespace Microsoft.Scripting.Runtime {
             return exception.ToString();
         }
 
-        public virtual TextWriter GetOutputWriter(bool isErrorOutput) {
-            return isErrorOutput ? Console.Error : Console.Out;
-        }
-
         public virtual EngineOptions/*!*/ Options {
             get {
                 return new EngineOptions();
@@ -452,7 +431,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public SourceUnit CreateSnippet(string/*!*/ code, string id, SourceCodeKind kind) {
-            Contract.RequiresNotNull(code, "code");
+            ContractUtils.RequiresNotNull(code, "code");
 
             return CreateSourceUnit(new SourceStringContentProvider(code), id, kind);
         }
@@ -466,8 +445,8 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public SourceUnit CreateFileUnit(string/*!*/ path, Encoding/*!*/ encoding, SourceCodeKind kind) {
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
             
             // TODO: remove hosting reference!!!
             TextContentProvider provider = new Hosting_EngineTextContentProvider(this, new FileStreamContentProvider(DomainManager.Platform, path), encoding);
@@ -475,18 +454,18 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public SourceUnit CreateFileUnit(string/*!*/ path, string/*!*/ content) {
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(content, "content");
+            ContractUtils.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(content, "content");
 
             TextContentProvider provider = new SourceStringContentProvider(content);
             return CreateSourceUnit(provider, path, SourceCodeKind.File);
         }
 
         public SourceUnit/*!*/ CreateSourceUnit(TextContentProvider/*!*/ contentProvider, string path, SourceCodeKind kind) {
-            Contract.RequiresNotNull(contentProvider, "contentProvider");
-            Contract.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
-            Contract.Requires(EnumBounds.IsValid(kind), "kind");
-            Contract.Requires(CanCreateSourceCode);
+            ContractUtils.RequiresNotNull(contentProvider, "contentProvider");
+            ContractUtils.Requires(path == null || path.Length > 0, "path", "Empty string is not a valid path.");
+            ContractUtils.Requires(EnumBounds.IsValid(kind), "kind");
+            ContractUtils.Requires(CanCreateSourceCode);
 
             return new SourceUnit(this, contentProvider, path, kind);
         }
@@ -494,14 +473,6 @@ namespace Microsoft.Scripting.Runtime {
         #endregion
 
         #endregion
-
-        // The advanced console functions are in a special non-inlined function so that 
-        // dependencies are pulled in only if necessary.
-        [MethodImplAttribute(MethodImplOptions.NoInlining)]
-        private static IConsole CreateSuperConsole(CommandLine commandLine, Hosting_ScriptEngine engine, bool isColorful) {
-            Debug.Assert(engine != null);
-            return new SuperConsole(commandLine, engine, isColorful);
-        }
 
         private static T GetArg<T>(object[] arg, int index, bool optional) {
             if (!optional && index >= arg.Length) {
@@ -527,21 +498,18 @@ namespace Microsoft.Scripting.Runtime {
             errorTypeName = exception.GetType().Name;
         }
 
-        private static DynamicSite<object, object> _ExitCodeConvertSite;
-
         internal protected virtual int ExecuteProgram(SourceUnit/*!*/ program) {
-            Contract.RequiresNotNull(program, "program");
+            ContractUtils.RequiresNotNull(program, "program");
 
             ScriptCode compiledCode = program.Compile();
             object returnValue = compiledCode.Run(compiledCode.MakeOptimizedScope());
 
             CodeContext context = new CodeContext(new Scope(), this);
 
-            if (!_ExitCodeConvertSite.IsInitialized) {
-                _ExitCodeConvertSite.EnsureInitialized(ConvertToAction.Make(typeof(int), ConversionResultKind.ExplicitTry));
-            }
+            CallSite<DynamicSiteTarget<object, object>> site =
+                CallSite<DynamicSiteTarget<object, object>>.Create(ConvertToAction.Make(Binder, typeof(int), ConversionResultKind.ExplicitTry));
 
-            object exitCode = _ExitCodeConvertSite.Invoke(context, returnValue);
+            object exitCode = site.Target(site, context, returnValue);
             return (exitCode != null) ? (int)exitCode : 0;
         }
     }

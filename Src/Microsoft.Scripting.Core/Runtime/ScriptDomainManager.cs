@@ -15,7 +15,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -23,8 +22,6 @@ using System.Threading;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
 
@@ -60,7 +57,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public MissingTypeException(string name, Exception e) : 
-            base(String.Format(Resources.MissingType, name), e) {
+            base(ResourceUtils.GetString(ResourceUtils.MissingType, name), e) {
         }
 
 #if !SILVERLIGHT // SerializationInfo
@@ -102,7 +99,7 @@ namespace Microsoft.Scripting.Runtime {
         private static ScriptDomainOptions _options = new ScriptDomainOptions();// TODO: remove or reduce     
 
         public ScriptDomainManager(DynamicRuntimeHostingProvider/*!*/ hostingProvider) {
-            Contract.RequiresNotNull(hostingProvider, "hostingProvider");
+            ContractUtils.RequiresNotNull(hostingProvider, "hostingProvider");
 
             _hostingProvider = hostingProvider;
 
@@ -189,7 +186,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public void RegisterLanguageContext(string assemblyName, string typeName, bool overrideExistingIds, params string[] identifiers) {
-            Contract.RequiresNotNull(identifiers, "identifiers");
+            ContractUtils.RequiresNotNull(identifiers, "identifiers");
 
             LanguageRegistration singleton_desc;
             bool add_singleton_desc = false;
@@ -223,7 +220,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public bool RemoveLanguageMapping(string/*!*/ identifier) {
-            Contract.RequiresNotNull(identifier, "identifier");
+            ContractUtils.RequiresNotNull(identifier, "identifier");
             
             lock (_languageRegistrationLock) {
                 return _languageIds.Remove(identifier);
@@ -238,7 +235,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
         internal LanguageContext/*!*/ GetLanguageContext(Type/*!*/ type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
             if (!type.IsSubclassOf(typeof(LanguageContext))) throw new ArgumentException("Invalid type - should be subclass of LanguageContext"); // TODO
 
             LanguageRegistration desc = null;
@@ -255,7 +252,7 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             // not found, not registered:
-            throw new ArgumentException(Resources.UnknownLanguageProviderType);
+            throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.UnknownLanguageProviderType));
         }
 
         /// <summary>
@@ -296,7 +293,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language context's implementation failed to instantiate.</exception>
         public bool TryGetLanguageContext(string/*!*/ languageId, out LanguageContext languageContext) {
-            Contract.RequiresNotNull(languageId, "languageId");
+            ContractUtils.RequiresNotNull(languageId, "languageId");
 
             bool result;
             LanguageRegistration desc;
@@ -330,7 +327,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         // TODO: separate hashtable for extensions (see CodeDOM config)
-        private bool IsExtensionId(string id) {
+        private static bool IsExtensionId(string id) {
             return id.StartsWith(".");
         }
 
@@ -377,15 +374,17 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        public void SetGlobalsDictionary(IAttributesCollection dictionary) {
-            Contract.RequiresNotNull(dictionary, "dictionary");
+        public void SetGlobalsDictionary(IAttributesCollection/*!*/ dictionary) {
+            ContractUtils.RequiresNotNull(dictionary, "dictionary");
 
             _scopeWrapper.Dict = dictionary;
         }
 
         public event EventHandler<AssemblyLoadedEventArgs> AssemblyLoaded;
 
-        public bool LoadAssembly(Assembly assembly) {
+        public bool LoadAssembly(Assembly/*!*/ assembly) {
+            ContractUtils.RequiresNotNull(assembly, "assembly");
+
             EventHandler<AssemblyLoadedEventArgs> assmLoaded = AssemblyLoaded;
             if (assmLoaded != null) {
                 assmLoaded(this, new AssemblyLoadedEventArgs(assembly));
@@ -408,7 +407,7 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="ArgumentNullException">Name is a <c>null</c> reference.</exception>
         /// <exception cref="ArgumentException">Name is not valid.</exception>
         public object UseModule(string/*!*/ name) {
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(name, "name");
             
             SourceUnit source = Host.ResolveSourceFileUnit(name);
             
@@ -437,8 +436,8 @@ namespace Microsoft.Scripting.Runtime {
         /// <exception cref="MissingTypeException"><paramref name="languageId"/></exception>
         /// <exception cref="InvalidImplementationException">The language provider's implementation failed to instantiate.</exception>
         public Scope UseModule(string/*!*/ path, string/*!*/ languageId) {
-            Contract.RequiresNotNull(path, "path");
-            Contract.RequiresNotNull(languageId, "languageId");
+            ContractUtils.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(languageId, "languageId");
 
             LanguageContext language;
             TryGetLanguageContext(languageId, out language);
@@ -451,6 +450,7 @@ namespace Microsoft.Scripting.Runtime {
             return ExecuteSourceUnit(source);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public Scope/*!*/ ExecuteSourceUnit(SourceUnit/*!*/ source) {
             ScriptCode compiledCode = source.Compile();
             Scope scope = compiledCode.MakeOptimizedScope();
@@ -488,12 +488,13 @@ namespace Microsoft.Scripting.Runtime {
         #region TODO: Options
 
         // TODO: remove or reduce
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public ScriptDomainOptions GlobalOptions {
             get {
                 return _options;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _options = value;
             }
         }
@@ -553,9 +554,6 @@ namespace Microsoft.Scripting.Runtime {
             }
 
             public IAttributesCollection/*!*/ Dict {
-                get {
-                    return _dict;
-                }
                 set {
                     Assert.NotNull(_dict);
 

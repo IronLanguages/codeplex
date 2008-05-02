@@ -113,19 +113,18 @@ def test_sys_drawing():
         AreEqual(type(z), e)
         AreEqual(z.ToString(), str(v))
     
-    AssertError(ValueError, lambda: DaysInt.Mon == DaysShort.Mon)
     AssertError(ValueError, lambda: DaysInt.Mon & DaysShort.Mon)
     AssertError(ValueError, lambda: DaysInt.Mon | DaysShort.Mon)
     AssertError(ValueError, lambda: DaysInt.Mon ^ DaysShort.Mon)
-    AssertError(ValueError, lambda: DaysInt.Mon == 1)
     AssertError(ValueError, lambda: DaysInt.Mon & 1)
     AssertError(ValueError, lambda: DaysInt.Mon | 1)
     AssertError(ValueError, lambda: DaysInt.Mon ^ 1)
     
     def f():
         if DaysInt.Mon == DaysShort.Mon: return True
+        return False
     
-    AssertError(ValueError, f)
+    AreEqual(f(), False)
     
     Assert(not DaysInt.Mon == None)
     Assert(DaysInt.Mon != None)

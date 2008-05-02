@@ -14,18 +14,18 @@
  * ***************************************************************************/
 
 namespace Microsoft.Scripting.Generation {
-    sealed class LocalStorage : Storage {
+    internal sealed class LocalStorage : Storage {
         private Slot _slot;
 
         internal LocalStorage(Slot slot) {
             _slot = slot;
         }
 
-        public override bool RequireAccessSlot {
+        internal override bool RequireAccessSlot {
             get { return false; }
         }
 
-        public override Slot CreateSlot(Slot instance) {
+        internal override Slot CreateSlot(Slot instance) {
             return _slot;
         }
     }

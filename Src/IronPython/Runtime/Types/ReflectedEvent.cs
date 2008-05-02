@@ -28,6 +28,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 using IronPython.Runtime.Calls;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
 
@@ -98,7 +99,13 @@ namespace IronPython.Runtime.Types {
 
         internal override bool IsVisible(CodeContext/*!*/ context, PythonType owner) {
             // events aren't visible w/o importing clr.
-            return !_clsOnly || context.ModuleContext.ShowCls;
+            return !_clsOnly || PythonOps.IsClsVisible(context);
+        }
+
+        internal override bool IsAlwaysVisible {
+            get {
+                return !_clsOnly;
+            }
         }
 
         private HandlerList/*!*/ GetStubList(object instance) {

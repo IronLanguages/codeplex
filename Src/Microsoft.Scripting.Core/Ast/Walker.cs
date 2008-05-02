@@ -71,14 +71,11 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.ActionExpression:
                     DefaultWalk((ActionExpression)node);
                     break;
-                case AstNodeType.ArrayIndexAssignment:
-                    DefaultWalk((ArrayIndexAssignment)node);
-                    break;
                 case AstNodeType.Block:
                     DefaultWalk((Block)node);
                     break;
-                case AstNodeType.BoundAssignment:
-                    DefaultWalk((BoundAssignment)node);
+                case AstNodeType.Assign:
+                    DefaultWalk((AssignmentExpression)node);
                     break;
                 case AstNodeType.GlobalVariable:
                 case AstNodeType.LocalVariable:
@@ -98,7 +95,6 @@ namespace Microsoft.Scripting.Ast {
                     DefaultWalk((GeneratorLambdaExpression)node);
                     break;
                 case AstNodeType.CodeContextExpression:
-                case AstNodeType.EnvironmentExpression:
                 case AstNodeType.GeneratorIntrinsic:
                     DefaultWalk((IntrinsicExpression)node);
                     break;
@@ -108,26 +104,17 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.DeleteStatement:
                     DefaultWalk((DeleteStatement)node);
                     break;
-                case AstNodeType.DeleteUnboundExpression:
-                    DefaultWalk((DeleteUnboundExpression)node);
-                    break;
                 case AstNodeType.DoStatement:
                     DefaultWalk((DoStatement)node);
                     break;
                 case AstNodeType.EmptyStatement:
                     DefaultWalk((EmptyStatement)node);
                     break;
-                case AstNodeType.ExpressionStatement:
-                    DefaultWalk((ExpressionStatement)node);
-                    break;
                 case AstNodeType.LabeledStatement:
                     DefaultWalk((LabeledStatement)node);
                     break;
                 case AstNodeType.LoopStatement:
                     DefaultWalk((LoopStatement)node);
-                    break;
-                case AstNodeType.MemberAssignment:
-                    DefaultWalk((MemberAssignment)node);
                     break;
                 case AstNodeType.MemberExpression:
                     DefaultWalk((MemberExpression)node);
@@ -151,14 +138,11 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.TryStatement:
                     DefaultWalk((TryStatement)node);
                     break;
-                case AstNodeType.UnboundAssignment:
-                    DefaultWalk((UnboundAssignment)node);
-                    break;
-                case AstNodeType.UnboundExpression:
-                    DefaultWalk((UnboundExpression)node);
-                    break;
                 case AstNodeType.YieldStatement:
                     DefaultWalk((YieldStatement)node);
+                    break;
+                case AstNodeType.Invoke:
+                    DefaultWalk((InvocationExpression)node);
                     break;
             }
         }
@@ -193,16 +177,6 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // ArrayIndexAssignment
-        private void DefaultWalk(ArrayIndexAssignment node) {
-            if (Walk(node)) {
-                WalkNode(node.Array);
-                WalkNode(node.Index);
-                WalkNode(node.Value);
-            }
-            PostWalk(node);
-        }
-
         // BinaryExpression
         private void DefaultWalk(BinaryExpression node) {
             if (Walk(node)) {
@@ -212,9 +186,10 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // BoundAssignment
-        private void DefaultWalk(BoundAssignment node) {
+        // AssignmentExpression
+        private void DefaultWalk(AssignmentExpression node) {
             if (Walk(node)) {
+                WalkNode(node.Expression);
                 WalkNode(node.Value);
             }
             PostWalk(node);
@@ -248,24 +223,9 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // DeleteUnboundExpression
-        private void DefaultWalk(DeleteUnboundExpression node) {
-            Walk(node);
-            PostWalk(node);
-        }
-
         // IntrinsicExpression
         private void DefaultWalk(IntrinsicExpression node) {
             Walk(node);
-            PostWalk(node);
-        }
-
-        // MemberAssignment
-        private void DefaultWalk(MemberAssignment node) {
-            if (Walk(node)) {
-                WalkNode(node.Expression);
-                WalkNode(node.Value);
-            }
             PostWalk(node);
         }
 
@@ -281,6 +241,20 @@ namespace Microsoft.Scripting.Ast {
         private void DefaultWalk(MethodCallExpression node) {
             if (Walk(node)) {
                 WalkNode(node.Instance);
+                IList<Expression> args = node.Arguments;
+                if (args != null) {
+                    foreach (Expression e in args) {
+                        WalkNode(e);
+                    }
+                }
+            }
+            PostWalk(node);
+        }
+
+        // InvocationExpression
+        private void DefaultWalk(InvocationExpression node) {
+            if (Walk(node)) {
+                WalkNode(node.Expression);
                 IList<Expression> args = node.Arguments;
                 if (args != null) {
                     foreach (Expression e in args) {
@@ -330,20 +304,6 @@ namespace Microsoft.Scripting.Ast {
             PostWalk(node);
         }
 
-        // UnboundAssignment
-        private void DefaultWalk(UnboundAssignment node) {
-            if (Walk(node)) {
-                WalkNode(node.Value);
-            }
-            PostWalk(node);
-        }
-
-        // UnboundExpression
-        private void DefaultWalk(UnboundExpression node) {
-            Walk(node);
-            PostWalk(node);
-        }
-
         // Block
         private void DefaultWalk(Block node) {
             if (Walk(node)) {
@@ -368,7 +328,9 @@ namespace Microsoft.Scripting.Ast {
 
         // DeleteStatement
         private void DefaultWalk(DeleteStatement node) {
-            Walk(node);
+            if (Walk(node)) {
+                WalkNode(node.Variable);
+            }
             PostWalk(node);
         }
 
@@ -384,14 +346,6 @@ namespace Microsoft.Scripting.Ast {
         // EmptyStatement
         private void DefaultWalk(EmptyStatement node) {
             Walk(node);
-            PostWalk(node);
-        }
-
-        // ExpressionStatement
-        private void DefaultWalk(ExpressionStatement node) {
-            if (Walk(node)) {
-                WalkNode(node.Expression);
-            }
             PostWalk(node);
         }
 
@@ -425,7 +379,6 @@ namespace Microsoft.Scripting.Ast {
         // ScopeStatement
         private void DefaultWalk(ScopeStatement node) {
             if (Walk(node)) {
-                WalkNode(node.Scope);
                 WalkNode(node.Body);
             }
             PostWalk(node);

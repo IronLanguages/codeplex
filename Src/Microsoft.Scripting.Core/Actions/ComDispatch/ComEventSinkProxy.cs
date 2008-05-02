@@ -16,14 +16,12 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Runtime.Remoting.Proxies;
-using System.Reflection;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.InteropServices;
 using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
+using System.Runtime.Remoting.Messaging;
+using System.Runtime.Remoting.Proxies;
 using System.Security.Permissions;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -48,6 +46,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// practice is to use IDistpach.Invoke when calling into event sinks). 
     /// </summary>
     public sealed class ComEventSinkProxy : RealProxy {
+
         private Guid _sinkIid;
         private ComEventSink _sink;
         private static readonly MethodInfo _methodInfoInvokeMember = typeof(ComEventSink).GetMethod("InvokeMember", BindingFlags.Instance | BindingFlags.Public);
@@ -59,8 +58,8 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         public ComEventSinkProxy(ComEventSink sink, Guid sinkIid)
             : base(typeof(ComEventSink)) {
-            this._sink = sink;
-            this._sinkIid = sinkIid;
+            _sink = sink;
+            _sinkIid = sinkIid;
         }
 
         #endregion
@@ -106,7 +105,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
                 try {
                     // InvokeMember(string name, BindingFlags bindingFlags, Binder binder, object target, object[] args, ParameterModifier[] modifiers, CultureInfo culture, string[] namedParameters)
-                    retVal = ((IReflect)this._sink).InvokeMember(
+                    retVal = ((IReflect)_sink).InvokeMember(
                         /*name*/                methodCallMessage.Args[0] as string,
                         /*bindingFlags*/        (BindingFlags)methodCallMessage.Args[1],
                         /*binder*/              methodCallMessage.Args[2] as Binder,
@@ -122,7 +121,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 return new ReturnMessage(retVal, methodCallMessage.Args, methodCallMessage.ArgCount, null, methodCallMessage);
             }
 
-            return RemotingServices.ExecuteMessage(this._sink, methodCallMessage);
+            return RemotingServices.ExecuteMessage(_sink, methodCallMessage);
         }
 
         #endregion

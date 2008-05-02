@@ -14,19 +14,15 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using Microsoft.Scripting;
-using System.IO;
 using System.Diagnostics;
-using Microsoft.Scripting.Generation;
-using System.Text;
-using System.Runtime.Remoting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Runtime;
-using System.Threading;
+using System.IO;
+using System.Reflection;
 using System.Security.Permissions;
+using System.Threading;
+
+using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Hosting {
     /// <summary>
@@ -87,7 +83,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Both Runtime and ScriptHost are collocated in the current app-domain.
         /// </summary>
         public static ScriptRuntime/*!*/ Create(ScriptRuntimeSetup/*!*/ setup) {
-            Contract.RequiresNotNull(setup, "setup");
+            ContractUtils.RequiresNotNull(setup, "setup");
             return CreateInternal(null, setup);
         }
 
@@ -140,7 +136,7 @@ namespace Microsoft.Scripting.Hosting {
         /// Both Runtime and ScriptHost are collocated in the specified app-domain.
         /// </summary>
         public static ScriptRuntime/*!*/ Create(AppDomain/*!*/ domain, ScriptRuntimeSetup/*!*/ setup) {
-            Contract.RequiresNotNull(domain, "domain");
+            ContractUtils.RequiresNotNull(domain, "domain");
             return CreateInternal(domain, setup);
         }
 
@@ -218,11 +214,11 @@ namespace Microsoft.Scripting.Hosting {
         #region Engines
 
         public ScriptEngine/*!*/ GetEngine(string/*!*/ languageId) {
-            Contract.RequiresNotNull(languageId, "languageId");
+            ContractUtils.RequiresNotNull(languageId, "languageId");
 
             ScriptEngine engine;
             if (!TryGetEngine(languageId, out engine)) {
-                throw new ArgumentException(Resources.UnknownLanguageId);
+                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.UnknownLanguageId));
             }
 
             return engine;
@@ -231,11 +227,11 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="ArgumentNullException"></exception>
         public ScriptEngine/*!*/ GetEngineByFileExtension(string/*!*/ extension) {
-            Contract.RequiresNotNull(extension, "extension");
+            ContractUtils.RequiresNotNull(extension, "extension");
 
             ScriptEngine engine;
             if (!TryGetEngineByFileExtension(extension, out engine)) {
-                throw new ArgumentException(Resources.UnknownLanguageId); // TODO: wrong resource
+                throw new ArgumentException(ResourceUtils.GetString(ResourceUtils.UnknownLanguageId)); // TODO: wrong resource
             }
 
             return engine;
@@ -312,7 +308,7 @@ namespace Microsoft.Scripting.Hosting {
         }
         
         public ScriptScope/*!*/ CreateScope(IAttributesCollection/*!*/ dictionary) {
-            Contract.RequiresNotNull(dictionary, "dictionary");
+            ContractUtils.RequiresNotNull(dictionary, "dictionary");
             return InvariantEngine.CreateScope(dictionary);
         }
 
@@ -330,7 +326,7 @@ namespace Microsoft.Scripting.Hosting {
         /// path is empty, contains one or more of the invalid characters defined in GetInvalidPathChars or doesn't have an extension.
         /// </exception>
         public ScriptScope/*!*/ ExecuteFile(string/*!*/ path) {
-            Contract.RequiresNotEmpty(path, "path");
+            ContractUtils.RequiresNotEmpty(path, "path");
             string extension = Path.GetExtension(path);
             
             ScriptEngine engine;
@@ -354,7 +350,7 @@ namespace Microsoft.Scripting.Hosting {
         public ScriptScope Globals {
             get { return _globals; }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
 
                 // TODO: this is wrong, we ignore other parts of the scope here
                 _globals = value;

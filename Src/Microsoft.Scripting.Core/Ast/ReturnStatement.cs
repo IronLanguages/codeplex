@@ -30,7 +30,7 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static ReturnStatement Return() {
             return Return(SourceSpan.None, null);
         }
@@ -40,7 +40,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static ReturnStatement Return(SourceSpan span, Expression expression) {
-            return Return(Annotations(span), expression);
+            return Return(Annotate(span), expression);
         }
 
         public static ReturnStatement Return(Annotations annotations, Expression expression) {

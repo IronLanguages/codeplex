@@ -45,8 +45,8 @@ namespace Microsoft.Scripting.Generation {
             }
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             cg.EmitInt(_index);
@@ -54,8 +54,8 @@ namespace Microsoft.Scripting.Generation {
             else cg.Emit(OpCodes.Ldelem, Type);
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             Slot val = cg.GetLocalTmp(Type);
             val.EmitSet(cg);
@@ -63,9 +63,9 @@ namespace Microsoft.Scripting.Generation {
             cg.FreeLocalTmp(val);
         }
 
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
-            Contract.RequiresNotNull(cg, "cg");
-            Contract.RequiresNotNull(val, "val");
+        public override void EmitSet(ILGen cg, Slot val) {
+            ContractUtils.RequiresNotNull(cg, "cg");
+            ContractUtils.RequiresNotNull(val, "val");
 
             _instance.EmitGet(cg);
             cg.EmitInt(_index);
@@ -73,8 +73,8 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitStoreElement(Type);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
 
             _instance.EmitGet(cg);
             cg.EmitInt(_index);

@@ -301,7 +301,7 @@ def test_is_builtin():
     imp.init_builtin("__builtin__")
     imp.init_builtin("exceptions")
 
-@skip("win32")
+@skip("win32", "multiple_execute")
 def test_sys_path_none_builtins():
     prevPath = sys.path
 
@@ -679,7 +679,8 @@ def test_import_hooks_importer():
         AssertErrorWithMessage(Exception, 'hello', f)
     finally:
         sys.meta_path.remove(mi)
-        
+
+@skip("multiple_execute")        
 def test_import_hooks_loader():
     """loader tests - verify the loader gets the right values, handles errors correctly"""
     global myimpCalled

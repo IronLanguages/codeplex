@@ -26,7 +26,7 @@ namespace Microsoft.Scripting {
         private readonly string _code;
 
         public SourceStringContentProvider(string code) {
-            Contract.RequiresNotNull(code, "code");
+            ContractUtils.RequiresNotNull(code, "code");
 
             _code = code;
         }

@@ -19,7 +19,9 @@ using System.Diagnostics;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    class DispPropertyPut : DispCallable {
+
+    public class DispPropertyPut : DispCallable {
+
         public DispPropertyPut(IDispatchObject dispatch, ComMethodDesc methodDesc)
             : base(dispatch, methodDesc) {
             Debug.Assert(methodDesc.IsPropertyPut);

@@ -29,7 +29,8 @@ root_dir = get_parent_directory(sys.prefix, 2)
 
 source_directories = [
     root_dir + "\\Languages\\IronPython",
-    root_dir + "\\Runtime"
+    root_dir + "\\Runtime",
+    root_dir + "\\..\\..\\ndp\\fx\\src\\Core\\Microsoft\\Scripting"
 ]
 
 START = "#region Generated %s"
@@ -170,8 +171,11 @@ class CodeGenerator:
     def do_generate(self):
         if not self.generators:
             raise "didn't find a match for %s" % self.replacer.name
+            
+        result = []
         for g in self.generators:
-            g.generate()
+            result.append(g.generate())
+        return result
 
     def do_dir(self, dirname):
         for file in listdir(dirname):            
@@ -186,7 +190,7 @@ class CodeGenerator:
             self.do_dir(src_dir)
         for g in self.generators:
             g.collect_info()
-        self.do_generate()
+        return self.do_generate()
 
 class BlockReplacer:
     def __init__(self, name):
@@ -239,6 +243,11 @@ class BlockReplacer:
         res = text[0:indent[1]] + code_text + text[indent[2]:len(text)]
         return res
 
+def save_file(name, text):
+    f = open(name, 'w')
+    f.write(text)
+    f.close()
+
 class FileGenerator:
     def __init__(self, filename, generator, replacer):
         self.filename = filename
@@ -250,11 +259,10 @@ class FileGenerator:
         thefile.close()
         self.indent = self.replacer.match(self.text)
         self.has_match = self.indent is not None
-    
-    
+
     def collect_info(self):
         pass
-    
+
     def generate(self):
         print "generate",
         if sys.argv.count('checkonly') > 0:
@@ -270,11 +278,21 @@ class FileGenerator:
         if self.text != new_text:
             if sys.argv.count('checkonly') > 0:
                 print "different!"
-                sys.exit(1)
+                name = self.filename + ".diff"
+                print "    generated file saved as: " + name
+                save_file(name, new_text)
+                return False
             else:
                 print "updated"
-                f = open(self.filename, 'w')
-                f.write(new_text)
-                f.close()
+                save_file(self.filename, new_text)
         else:
             print "ok"
+
+        return True
+
+def generate(*g):
+    result = []
+    for name, func in g:
+        run = CodeGenerator(name, func).doit()
+        result.extend(run)
+    return result

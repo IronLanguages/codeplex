@@ -34,6 +34,8 @@ using IronPython.Runtime.Types;
 using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 namespace IronPython.Runtime.Calls {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     /// <summary>
     /// Created for a user-defined function.  
     /// </summary>
@@ -73,8 +75,8 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal PythonFunction(CodeContext context, string name, Delegate target, string[] argNames, object[] defaults, FunctionAttributes flags) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(context, "context");
 
             _name = name;
             _argNames = argNames;
@@ -175,7 +177,7 @@ namespace IronPython.Runtime.Calls {
             set { func_dict = value; }
         }
 
-        public IAttributesCollection func_dict {
+        public IAttributesCollection/*!*/ func_dict {
             get { return EnsureDict(); }
             set {
                 if (value == null) throw PythonOps.TypeError("setting function's dictionary to non-dict");
@@ -429,9 +431,7 @@ namespace IronPython.Runtime.Calls {
             }
             list.AddNoLock(SymbolTable.IdToString(Symbols.Module));
 
-            foreach (SymbolId id in TypeCache.Function.GetMemberNames(context, this)) {
-                list.AddNoLockNoDups(id.ToString());
-            }
+            list.extend(TypeCache.Function.GetMemberNames(context, this));
             return list;
         }
 
@@ -465,7 +465,7 @@ namespace IronPython.Runtime.Calls {
 
         private IAttributesCollection EnsureDict() {
             if (_dict == null) {
-                _dict = new PythonDictionary();
+                Interlocked.CompareExchange(ref _dict, (IAttributesCollection)PythonDictionary.MakeSymbolDictionary(), null);
             }
             return _dict;
         }
@@ -1285,10 +1285,6 @@ namespace IronPython.Runtime.Calls {
 
         bool IValueEquality.ValueEquals(object other) {
             return __cmp__(other) == 0;
-        }
-
-        bool IValueEquality.ValueNotEquals(object other) {
-            return __cmp__(other) != 0;
         }
 
         #endregion

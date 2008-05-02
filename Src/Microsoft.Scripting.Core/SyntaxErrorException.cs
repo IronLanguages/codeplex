@@ -44,7 +44,7 @@ namespace Microsoft.Scripting {
 
         public SyntaxErrorException(string message, SourceUnit sourceUnit, SourceSpan span, int errorCode, Severity severity)
             : base(message) {
-            Contract.RequiresNotNull(message, "message");
+            ContractUtils.RequiresNotNull(message, "message");
 
             _span = span;
             _sourceUnit = sourceUnit;
@@ -59,7 +59,7 @@ namespace Microsoft.Scripting {
 
         [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
         public override void GetObjectData(SerializationInfo/*!*/ info, StreamingContext context) {
-            Contract.RequiresNotNull(info, "info");
+            ContractUtils.RequiresNotNull(info, "info");
 
             base.GetObjectData(info, context);
             info.AddValue("Span", _span);

@@ -99,13 +99,15 @@ def test_reflected_extension_property_ops():
     '''
     t_list = [  (complex.__dict__['real'], 'complex', 'float', 'real'),
                 (complex.__dict__['imag'], 'complex', 'float', 'imag'),
-                (object.__dict__['__class__'], 'object', 'type', '__class__'),
                 ]
     
     for stuff, typename, returnType, propName in t_list:
         Assert(stuff.__doc__.startswith("Get: " + returnType + " " + propName + "(" + typename + " self)" + newline), stuff.__doc__)
                 
-        
+                
+def test_class_doc():
+    AreEqual(object.__dict__['__class__'].__doc__, "the object's class")
+    
 def test_prop_doc_only():
     # define a property w/ only the doc
 

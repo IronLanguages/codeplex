@@ -17,15 +17,14 @@ using System;
 using Microsoft.Scripting.Ast;
 
 namespace Microsoft.Scripting.Generation {
-    // TODO: internal
-    abstract class StorageAllocator {
-        public virtual void PrepareForEmit(LambdaCompiler cg) {
+    internal abstract class StorageAllocator {
+        internal virtual void PrepareForEmit(LambdaCompiler cg) {
         }
 
         // TODO: change the parameter to take Variable !!!
-        public abstract Storage AllocateStorage(SymbolId name, Type type);
+        internal abstract Storage AllocateStorage(SymbolId name, Type type);
 
-        public virtual Slot GetAccessSlot(LambdaCompiler cg, LambdaExpression lambda) {
+        internal virtual Slot GetAccessSlot(LambdaCompiler cg) {
             return null;
         }
     }

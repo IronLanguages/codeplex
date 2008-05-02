@@ -18,27 +18,28 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
 
 using Microsoft.Scripting.Ast;
+using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
 
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using Microsoft.Scripting.Runtime;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     class ComObjectWithTypeInfoDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
-        private RuleBuilder<T> _rule = new RuleBuilder<T>();
 
-        internal ComObjectWithTypeInfoDoOperationBinderHelper(CodeContext context, DoOperationAction action)
+        private RuleBuilder<T> _rule = new RuleBuilder<T>();
+        private Type _comType;
+
+        internal ComObjectWithTypeInfoDoOperationBinderHelper(CodeContext context, Type comType, DoOperationAction action)
             : base(context, action) {
+            _comType = comType;
         }
 
         internal RuleBuilder<T> MakeNewRule() {
-            // Since the only way to get this rule in the first place is to pass through the statically defined pre-binders,
-            // the test here essentially redundant.  We need one though, so we'll use the basic type test.
-            _rule.MakeTest(typeof(ComObjectWithTypeInfo));
+
+            _rule.Test = ComObject.MakeComObjectTest(typeof(ComObjectWithTypeInfo), typeof(ComObjectWithTypeInfo).GetProperty("ComType"), _comType, _rule);
             _rule.Target = MakeDoOperationTarget();
 
             return _rule;
@@ -108,6 +109,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 Ast.Write(
                     dispIndexer,
                     Ast.Action.GetMember(
+                        Binder,
                         methodName,
                         typeof(object),
                         _rule.Parameters[0])));
@@ -116,6 +118,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 _rule.MakeReturn(
                     Binder,
                     Ast.Action.Call(
+                        Binder,
                         _rule.ReturnType,
                         ArrayUtils.InsertAt<Expression>((Expression[])ArrayUtils.RemoveFirst(_rule.Parameters), 0, Ast.Read(dispIndexer)))));
 

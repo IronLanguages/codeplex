@@ -18,7 +18,7 @@ using Microsoft.Scripting.Actions;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class While : Statement {
         private readonly Expression _test;
@@ -35,6 +35,7 @@ namespace ToyScript.Parser.Ast {
                 Span,
                 _test.End,
                 Ast.Action.ConvertTo(
+                    tg.Binder,
                     typeof(bool),
                     ConversionResultKind.ExplicitCast,
                     _test.Generate(tg)

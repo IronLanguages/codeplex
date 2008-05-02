@@ -29,7 +29,7 @@ using IronPython.Runtime.Types;
 [assembly: PythonExtensionType(typeof(NamespaceTracker), typeof(ReflectedPackageOps))]
 namespace IronPython.Runtime.Operations {
     public static class ReflectedPackageOps {
-        [PropertyMethod]
+        [SpecialName, PropertyMethod]
         public static object Get__file__(NamespaceTracker self) {
             if (self.PackageAssemblies.Count == 1) {
                 return self.PackageAssemblies[0].FullName;
@@ -53,7 +53,7 @@ namespace IronPython.Runtime.Operations {
             return String.Format("<module '{0}' (CLS module from {1})>", Get__name__(self.Name), self.PackageAssemblies[0].FullName);
         }
 
-        [PropertyMethod]
+        [SpecialName, PropertyMethod]
         public static IAttributesCollection Get__dict__(CodeContext context, NamespaceTracker self) {
             PythonDictionary res = new PythonDictionary();
             foreach (KeyValuePair<object, object> kvp in self) {
@@ -66,7 +66,7 @@ namespace IronPython.Runtime.Operations {
             return res;
         }
 
-        [PropertyMethod]
+        [SpecialName, PropertyMethod]
         public static string Get__name__(CodeContext context, NamespaceTracker self) {
             return Get__name__(self.Name);
         }

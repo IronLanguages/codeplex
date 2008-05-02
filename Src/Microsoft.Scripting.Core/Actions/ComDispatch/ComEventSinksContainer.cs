@@ -17,7 +17,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
@@ -26,11 +25,12 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// This list is usually attached as a custom data for RCW object and 
     /// is finalized whenever RCW is finalized.
     /// </summary>
-    internal class ComEventSinksContainer : List<ComEventSink>, IDisposable {
+    public class ComEventSinksContainer : List<ComEventSink>, IDisposable {
+
         private static readonly object _ComObjectEventSinksKey = (object)2;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2201:DoNotRaiseReservedExceptionTypes")]
-        public static ComEventSinksContainer FromRCW(object rcw, bool createIfNotFound) {
+        public static ComEventSinksContainer FromRuntimeCallableWrapper(object rcw, bool createIfNotFound) {
             // !!! Marshal.Get/SetComObjectData has a LinkDemand for UnmanagedCode which will turn into
             // a full demand. We need to avoid this by making this method SecurityCritical
             object data = Marshal.GetComObjectData(rcw, _ComObjectEventSinksKey);
@@ -56,7 +56,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #region IDisposable Members
 
         public void Dispose() {
-            this.Dispose(true);
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
@@ -70,7 +70,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         ~ComEventSinksContainer() {
-            this.Dispose(false);
+            Dispose(false);
         }
     }
 }

@@ -26,15 +26,13 @@ namespace Microsoft.Scripting.Actions {
 
         // TODO revisit these fields and their uses when LambdaExpression moves down
         private readonly ParameterExpression[] _parameters;             // TODO: Remove me when we can refer to params as expressions
-        private readonly VariableExpression[] _variables;                   // TODO: Remove me when ASTs can have free-floating variables
         internal AnalyzedRule _analyzed;                                // TODO: Remove me when the above 2 are gone
 
-        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters, VariableExpression[] variables) {
+        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters) {
             _binding = binding;
             _validators = validators;
             _template = template;
             _parameters = parameters;
-            _variables = variables ?? new VariableExpression[0];
         }
 
         internal Expression Binding {
@@ -66,22 +64,13 @@ namespace Microsoft.Scripting.Actions {
         internal ParameterExpression[] Parameters {
             get { return _parameters; }
         }
-
-        /// <summary>
-        ///  Gets the temporary variables allocated by this rule.
-        /// </summary>
-        internal VariableExpression[] Variables {
-            get {
-                return _variables;
-            }
-        }
     }
 
     internal class Rule<T> : Rule {
         private SmallRuleSet<T> _monomorphicRuleSet;
 
-        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters, VariableExpression[] variables)
-            : base(binding, validators, template, parameters, variables) {
+        internal Rule(Expression binding, Function<bool>[] validators, object[] template, ParameterExpression[] parameters)
+            : base(binding, validators, template, parameters) {
         }
 
         /// <summary>
@@ -113,19 +102,17 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        private Type ReturnType {
+        private static Type ReturnType {
             get {
                 return typeof(T).GetMethod("Invoke").ReturnType;
             }
         }
 
-        private static int GetFirstParameterIndex() {
-            return DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
-        }
-
+        // First parameter is site, second is code context
+        private const int FirstParameterIndex = 2;
         internal void EnsureAnalyzed() {
             if (_analyzed == null) {
-                AnalyzedRule ar = RuleBinder.Bind(this, ReturnType, GetFirstParameterIndex());
+                AnalyzedRule ar = RuleBinder.Bind(this, ReturnType, FirstParameterIndex);
                 Interlocked.CompareExchange<AnalyzedRule>(ref _analyzed, ar, null);
             }
         }
@@ -140,7 +127,7 @@ namespace Microsoft.Scripting.Actions {
                 Compiler tc = new Compiler(_analyzed);
 
                 cg.InitializeRule(tc, top);
-                top.CreateReferenceSlots(cg);
+                cg.CreateReferenceSlots();
                 cg.EmitExpression(Binding);
             }
         }

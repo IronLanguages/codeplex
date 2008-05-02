@@ -59,11 +59,11 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             return binder.ReturnMemberTracker(type, new BoundMemberTracker(this, instance));
         }
 
-        internal override MemberTracker BindToInstance(Expression instance) {
+        public override MemberTracker BindToInstance(Expression instance) {
             if (IsStatic) {
                 return this;
             }

@@ -19,8 +19,9 @@ using System.Text;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 namespace IronPython.Runtime {
-    class ObjectAttributesAdapter  : IAttributesCollection {
+    class ObjectAttributesAdapter  : DictionaryStorage {
         private object _backing;
+
         public ObjectAttributesAdapter(object backing) {
             _backing = backing;
         }
@@ -30,38 +31,8 @@ namespace IronPython.Runtime {
                 return _backing;
             }
         }
-
+#if FALSE
         #region IAttributesCollection Members
-
-        public void Add(SymbolId name, object value) {
-            PythonOps.SetIndex(_backing, SymbolTable.IdToString(name), value);
-        }
-
-        public bool TryGetValue(SymbolId name, out object value) {
-            string nameStr = SymbolTable.IdToString(name);
-
-            try {
-                value = PythonOps.GetIndex(_backing, nameStr);
-                return true;
-            } catch (KeyNotFoundException) {
-                // return false
-            }
-            value = null;
-            return false;
-        }
-
-        public bool Remove(SymbolId name) {
-            try {
-                PythonOps.DelIndex(_backing, SymbolTable.IdToString(name));
-                return true;
-            } catch (KeyNotFoundException) {
-                return false;
-            }
-        }
-
-        public bool ContainsKey(SymbolId name) {
-            throw new Exception("The method or operation is not implemented.");
-        }
 
         public object this[SymbolId name] {
             get {
@@ -136,5 +107,58 @@ namespace IronPython.Runtime {
         }
 
         #endregion
+#endif
+
+        public override void Add(object key, object value) {
+            PythonOps.SetIndex(_backing, key, value);
+        }
+
+        public override bool Contains(object key) {
+            object dummy;
+            return TryGetValue(key, out dummy);
+        }
+
+        public override bool Remove(object key) {
+            try {
+                PythonOps.DelIndex(_backing, key);
+                return true;
+            } catch (KeyNotFoundException) {
+                return false;
+            }
+        }
+
+        public override bool TryGetValue(object key, out object value) {
+            try {
+                value = PythonOps.GetIndex(_backing, key);
+                return true;
+            } catch (KeyNotFoundException) {
+                // return false
+            }
+            value = null;
+            return false;
+        }
+
+        public override int Count {
+            get { return PythonOps.Length(_backing);  }
+        }
+
+        public override void Clear() {
+            PythonOps.Invoke(_backing, SymbolTable.StringToId("clear"));
+        }
+
+        public override List<KeyValuePair<object, object>> GetItems() {
+            List<KeyValuePair<object, object>> res = new List<KeyValuePair<object, object>>();
+            foreach (object o in Keys) {
+                object val;
+                TryGetValue(o, out val);
+
+                res.Add(new KeyValuePair<object, object>(o, val));            
+            }
+            return res;
+        }
+
+        private ICollection<object> Keys {
+            get { return (ICollection<object>)Converter.Convert(PythonOps.Invoke(_backing, Symbols.Keys), typeof(ICollection<object>)); }
+        }
     }
 }

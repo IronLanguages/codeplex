@@ -46,13 +46,13 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static SwitchCase DefaultCase(Expression body) {
             return DefaultCase(SourceLocation.None, body);
         }
 
         public static SwitchCase DefaultCase(SourceLocation header, Expression body) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
             return new SwitchCase(header, true, 0, body);
         }
 
@@ -61,7 +61,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static SwitchCase SwitchCase(SourceLocation header, int value, Expression body) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
             return new SwitchCase(header, false, value, body);
         }
     }

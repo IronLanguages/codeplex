@@ -33,7 +33,7 @@ namespace Microsoft.Scripting.Generation {
     /// </summary>
     public abstract class OptimizedModuleGenerator {
         private readonly ScriptCode/*!*/ _scriptCode;
-        private ScopeAllocator _allocator;
+        private StorageAllocator _allocator;
         private CodeContext _codeContext;
 
         protected OptimizedModuleGenerator(ScriptCode/*!*/ scriptCode) {
@@ -75,7 +75,7 @@ namespace Microsoft.Scripting.Generation {
             target = (DlrMainCallTarget)compiler.CreateDelegate(typeof(DlrMainCallTarget));
 
             // TODO: clean this up after clarifying dynamic site initialization logic
-            Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(_codeContext, compiler.Method.DeclaringType);
+            Microsoft.Scripting.Actions.DynamicSiteHelpers.InitializeFields(compiler.Method.DeclaringType);
 
             // everything succeeded, commit the results
             _scriptCode.OptimizedTarget = target;
@@ -103,33 +103,21 @@ namespace Microsoft.Scripting.Generation {
         private LambdaCompiler/*!*/ GenerateScriptMethod() {
             _allocator = CreateStorageAllocator(_scriptCode);
             LambdaCompiler compiler = CreateCodeGen(_scriptCode);
-            compiler.Allocator = _allocator;
-
-            // every module can hand it's environment to anything embedded in it.
-            compiler.EnvironmentSlot = new EnvironmentSlot(new PropertySlot(
-                new PropertySlot(compiler.ContextSlot, 
-                    typeof(CodeContext).GetProperty("Scope")),
-                typeof(Scope).GetProperty("Dict"))
-            );
+            compiler.SetAllocators(_allocator, _allocator);
 
             compiler.SetDebugSymbols(_scriptCode.SourceUnit);
-            compiler.GenerateLambda(_scriptCode.Lambda);
+            compiler.EmitBody();
 
             compiler.Finish();
 
             return compiler;
         }
 
-        private ScopeAllocator/*!*/ CreateStorageAllocator(ScriptCode/*!*/ scriptCode) {
-            SlotFactory sf = CreateSlotFactory(scriptCode);
-            ModuleGlobalFactory mgf = new ModuleGlobalFactory(sf);
-            GlobalFieldAllocator gfa = new GlobalFieldAllocator(mgf);
-
-            // Locals and globals are allocated from the same namespace for optimized modules
-            ScopeAllocator global = new ScopeAllocator(null, gfa);
-            return new ScopeAllocator(global, gfa);
+        private GlobalFieldAllocator/*!*/ CreateStorageAllocator(ScriptCode/*!*/ scriptCode) {
+            return new GlobalFieldAllocator(new ModuleGlobalFactory(CreateSlotFactory(scriptCode)));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         protected string/*!*/ MakeDebugName() {
 #if DEBUG
             if (_scriptCode.SourceUnit != null && _scriptCode.SourceUnit.HasPath) {
@@ -142,7 +130,7 @@ namespace Microsoft.Scripting.Generation {
         #region Protected Members
 
         internal abstract LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode);
-        internal abstract IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator);
+        internal abstract IAttributesCollection/*!*/ CreateLanguageDictionary(StorageAllocator/*!*/ allocator);
         internal abstract SlotFactory/*!*/ CreateSlotFactory(ScriptCode/*!*/ scriptCode);
 
         #endregion
@@ -161,7 +149,7 @@ namespace Microsoft.Scripting.Generation {
             return _slotFactory = new TupleSlotFactory(typeof(ModuleGlobalDictionary<>));
         }
 
-        internal override IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator) {
+        internal override IAttributesCollection/*!*/ CreateLanguageDictionary(StorageAllocator/*!*/ allocator) {
             object tuple = _slotFactory.CreateTupleInstance();
 
             IAttributesCollection res = (IAttributesCollection)Activator.CreateInstance(
@@ -174,8 +162,14 @@ namespace Microsoft.Scripting.Generation {
 
         internal override LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
             string methodName = MakeDebugName();
-            LambdaCompiler compiler = LambdaCompiler.CreateDynamicLambdaCompiler(methodName, typeof(object),
-                new Type[] { typeof(CodeContext) }, scriptCode.SourceUnit);
+
+            LambdaCompiler compiler = LambdaCompiler.CreateDynamicLambdaCompiler(
+                scriptCode.Lambda,
+                methodName,
+                typeof(object),
+                new Type[] { typeof(CodeContext) },
+                scriptCode.SourceUnit
+            );
 
             compiler.ContextSlot = compiler.GetLambdaArgumentSlot(0);
             return compiler;
@@ -198,10 +192,10 @@ namespace Microsoft.Scripting.Generation {
             return new StaticFieldSlotFactory(_typeGen);
         }
 
-        internal override IAttributesCollection/*!*/ CreateLanguageDictionary(ScopeAllocator/*!*/ allocator) {
+        internal override IAttributesCollection/*!*/ CreateLanguageDictionary(StorageAllocator/*!*/ allocator) {
             // TODO: Force all dictionaries to share same object data (for multi-module)
 
-            GlobalFieldAllocator gfa = allocator.LocalAllocator as GlobalFieldAllocator;
+            GlobalFieldAllocator gfa = allocator as GlobalFieldAllocator;
             if (gfa != null) {
                 Dictionary<SymbolId, Slot> fields = gfa.Fields;
 
@@ -218,7 +212,7 @@ namespace Microsoft.Scripting.Generation {
         internal override LambdaCompiler/*!*/ CreateCodeGen(ScriptCode/*!*/ scriptCode) {
             Type[] parameterTypes = new Type[] { typeof(CodeContext) };
             MethodBuilder mb = _typeGen.TypeBuilder.DefineMethod("Initialize", CompilerHelpers.PublicStatic, typeof(object), parameterTypes);
-            LambdaCompiler lc = LambdaCompiler.CreateLambdaCompiler(_typeGen, mb, mb.GetILGenerator(), parameterTypes);
+            LambdaCompiler lc = LambdaCompiler.CreateLambdaCompiler(null, scriptCode.Lambda, _typeGen, mb, mb.GetILGenerator(), parameterTypes);
             lc.SetDebugSymbols(scriptCode.SourceUnit);
             return lc;
         }
@@ -245,10 +239,11 @@ namespace Microsoft.Scripting.Generation {
 
         private void MakeInitialization(Dictionary<SymbolId, Slot>/*!*/ fields) {
             _typeGen.TypeBuilder.AddInterfaceImplementation(typeof(IModuleDictionaryInitialization));
-            LambdaCompiler cg = _typeGen.DefineExplicitInterfaceImplementation(typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary"));
+            MethodInfo baseMethod = typeof(IModuleDictionaryInitialization).GetMethod("InitializeModuleDictionary");
+            ILGen cg = _typeGen.DefineExplicitInterfaceImplementation(baseMethod);
 
             Label ok = cg.DefineLabel();
-            cg.ContextSlot.EmitGet(cg);
+            cg.EmitFieldGet(_typeGen.ContextField);
             cg.Emit(OpCodes.Ldnull);
             cg.Emit(OpCodes.Ceq);
             cg.Emit(OpCodes.Brtrue_S, ok);
@@ -256,9 +251,10 @@ namespace Microsoft.Scripting.Generation {
             cg.Emit(OpCodes.Throw);
             cg.MarkLabel(ok);
 
-            // MyModuleDictType.ContextSlot = arg0
-            cg.EmitArgGet(0);
-            cg.ContextSlot.EmitSet(cg);
+            // arg0 -> this
+            // arg1 -> MyModuleDictType.ContextSlot
+            cg.EmitLoadArg(1);
+            cg.EmitFieldSet(_typeGen.ContextField);
 
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 Slot slot = kv.Value;
@@ -266,14 +262,13 @@ namespace Microsoft.Scripting.Generation {
 
                 Debug.Assert(builtin != null);
 
-                cg.EmitArgGet(0);
+                cg.EmitLoadArg(1);
                 cg.EmitSymbolId(kv.Key);
                 builtin.EmitWrapperAddr(cg);
                 cg.EmitCall(typeof(RuntimeHelpers), "InitializeModuleField");
             }
 
             cg.Emit(OpCodes.Ret);
-            cg.Finish();
         }
 
         //
@@ -293,19 +288,22 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeGetMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
-            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
+            MethodInfo baseMethod = typeof(CustomSymbolDictionary).GetMethod("TryGetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance);
+            ILGen cg = _typeGen.DefineMethodOverride(baseMethod);
+
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
 
                 cg.EmitSymbolId(name);
-                cg.EmitArgGet(0);
+                // arg0 -> this
+                cg.EmitLoadArg(1);
                 cg.EmitCall(typeof(SymbolId), "op_Equality");
 
                 Label next = cg.DefineLabel();
                 cg.Emit(OpCodes.Brfalse_S, next);
 
-                cg.EmitArgGet(1);
+                cg.EmitLoadArg(2);
 
                 ModuleGlobalSlot builtin = slot as ModuleGlobalSlot;
                 Debug.Assert(builtin != null);
@@ -323,7 +321,6 @@ namespace Microsoft.Scripting.Generation {
             }
             cg.EmitInt(0);
             cg.Emit(OpCodes.Ret);
-            cg.Finish();
         }
 
         // This generates a method like the following:
@@ -342,33 +339,36 @@ namespace Microsoft.Scripting.Generation {
         //  }
 
         private void MakeSetMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
-            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance));
-            Slot valueSlot = cg.GetLambdaArgumentSlot(1);
+            MethodInfo baseMethod = typeof(CustomSymbolDictionary).GetMethod("TrySetExtraValue", BindingFlags.NonPublic | BindingFlags.Instance);
+            ILGen cg = _typeGen.DefineMethodOverride(baseMethod);
+            Slot valueSlot = new ArgSlot(2, typeof(object), cg);
+
             foreach (KeyValuePair<SymbolId, Slot> kv in fields) {
                 SymbolId name = kv.Key;
                 Slot slot = kv.Value;
 
                 cg.EmitSymbolId(name);
-                cg.EmitArgGet(0);
+                // arg0 -> this
+                cg.EmitLoadArg(1); 
                 cg.EmitCall(typeof(SymbolId), "op_Equality");
 
                 Label next = cg.DefineLabel();
                 cg.Emit(OpCodes.Brfalse_S, next);
 
-                ModuleGlobalSlot builtin = (ModuleGlobalSlot) slot; 
+                ModuleGlobalSlot builtin = (ModuleGlobalSlot)slot;
                 builtin.EmitSetRawFromObject(cg, valueSlot);
+
                 cg.EmitInt(1);
                 cg.Emit(OpCodes.Ret);
                 cg.MarkLabel(next);
             }
             cg.EmitInt(0);
             cg.Emit(OpCodes.Ret);
-            cg.Finish();
         }
 
-        private LambdaCompiler/*!*/ MakeRawKeysMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
+        private ILGen/*!*/ MakeRawKeysMethod(Dictionary<SymbolId, Slot>/*!*/ fields) {
             Slot rawKeysCache = _typeGen.AddStaticField(typeof(SymbolId[]), "ExtraKeysCache");
-            LambdaCompiler init = _typeGen.TypeInitializer;
+            ILGen init = _typeGen.TypeInitializer;
 
             init.EmitInt(fields.Count);
             init.Emit(OpCodes.Newarr, typeof(SymbolId));
@@ -378,18 +378,17 @@ namespace Microsoft.Scripting.Generation {
                 Debug.Assert(current < fields.Count);
                 init.Emit(OpCodes.Dup);
                 init.EmitInt(current++);
-                init.Emit(OpCodes.Ldelema, typeof(SymbolId));
-                init.EmitSymbolIdId(kv.Key);
-                init.Emit(OpCodes.Call, typeof(SymbolId).GetConstructor(new Type[] { typeof(int) }));
+                init.EmitSymbolId(kv.Key);
+                init.EmitStoreElement(typeof(SymbolId));
             }
 
             rawKeysCache.EmitSet(init);
 
-            LambdaCompiler cg = _typeGen.DefineMethodOverride(typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance));
+            MethodInfo baseMethod = typeof(CustomSymbolDictionary).GetMethod("GetExtraKeys", BindingFlags.Public | BindingFlags.Instance);
+            ILGen cg = _typeGen.DefineExplicitInterfaceImplementation(baseMethod);
+
             rawKeysCache.EmitGet(cg);
             cg.Emit(OpCodes.Ret);
-            cg.Finish();
-
             return cg;
         }
     }

@@ -13,12 +13,10 @@
  *
  * ***************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.ComponentModel;
+
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
-using System.ComponentModel;
 
 // TODO: Move this to a separate namespace to hide it from ordinary hosts?
 namespace Microsoft.Scripting.Hosting {
@@ -33,13 +31,18 @@ namespace Microsoft.Scripting.Hosting {
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static class HostingHelpers {
         public static ScriptDomainManager/*!*/ GetDomainManager(ScriptRuntime/*!*/ runtime) {
-            Contract.RequiresNotNull(runtime, "runtime");
+            ContractUtils.RequiresNotNull(runtime, "runtime");
             return runtime.DomainManager;
         }
 
         public static LanguageContext/*!*/ GetLanguageContext(ScriptEngine/*!*/ engine) {
-            Contract.RequiresNotNull(engine, "engine");
+            ContractUtils.RequiresNotNull(engine, "engine");
             return engine.LanguageContext;
+        }
+
+        public static Scope/*!*/ GetScope(ScriptScope/*!*/ scriptScope) {
+            ContractUtils.RequiresNotNull(scriptScope, "scriptScope");
+            return scriptScope.Scope;
         }
     }
 }

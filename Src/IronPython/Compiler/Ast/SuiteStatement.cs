@@ -18,7 +18,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Runtime;
 
     public class SuiteStatement : Statement {
@@ -34,7 +34,16 @@ namespace IronPython.Compiler.Ast {
         } 
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
-            return Ast.Block(ag.Transform(_statements));
+            MSAst.Expression[] stmts = ag.Transform(_statements);
+            foreach (MSAst.Expression stmt in stmts) {
+                if (stmt == null) {
+                    // error was encountered and added to sync, 
+                    // don't return any of the block
+                    return null;
+                }
+            }
+
+            return Ast.Block(stmts);
         }
        
         public override void Walk(PythonWalker walker) {

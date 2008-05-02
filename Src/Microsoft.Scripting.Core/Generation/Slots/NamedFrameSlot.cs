@@ -35,7 +35,7 @@ namespace Microsoft.Scripting.Generation {
             this._name = name;
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
+        public override void EmitGet(ILGen cg) {
             //
             // Emit: RuntimeHelpers.LookupGlobalName(context, name)
             //
@@ -44,12 +44,12 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(typeof(RuntimeHelpers), "LookupGlobalName");
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
+        public override void EmitGetAddr(ILGen cg) {
             //???how bad is it that we can't do this???
             throw new NotImplementedException("address of frame slot");
         }
 
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
+        public override void EmitSet(ILGen cg, Slot val) {
             //
             // Emit: RuntimeHelpers.SetGlobalName(context, name, value)
             //
@@ -59,10 +59,10 @@ namespace Microsoft.Scripting.Generation {
             cg.EmitCall(typeof(RuntimeHelpers), "SetGlobalName");
         }
 
-        public override void EmitSetUninitialized(LambdaCompiler cg) {
+        public override void EmitSetUninitialized(ILGen cg) {
         }
 
-        public override void EmitDelete(LambdaCompiler cg, SymbolId name) {
+        public override void EmitDelete(ILGen cg, SymbolId name) {
             //
             // RuntimeHelpers.DeleteGlobalName(context, name)
             //

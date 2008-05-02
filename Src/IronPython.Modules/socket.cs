@@ -40,6 +40,7 @@ using System.IO;
 using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Runtime;
 
+using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 [assembly: PythonModule("socket", typeof(IronPython.Modules.PythonSocket))]
 namespace IronPython.Modules {
@@ -1558,8 +1559,8 @@ namespace IronPython.Modules {
             private object _userSocket;
             private List<string> _data = new List<string>();
             private int _dataSize, _bufSize;
-            private static readonly FastDynamicSite<object, object, object> _sendAllSite = RuntimeHelpers.CreateSimpleCallSite<object, object, object>(DefaultContext.Default);
-            private static readonly FastDynamicSite<object, object, string> _recvSite = RuntimeHelpers.CreateSimpleCallSite<object, object, string>(DefaultContext.Default);
+            private static readonly DynamicSite<object, object, object> _sendAllSite = CallSiteFactory.CreateSimpleCallSite<object, object, object>(DefaultContext.DefaultPythonBinder);
+            private static readonly DynamicSite<object, object, string> _recvSite = CallSiteFactory.CreateSimpleCallSite<object, object, string>(DefaultContext.DefaultPythonBinder);
 
             public PythonUserSocketStream(object userSocket, int bufferSize) {
                 _userSocket = userSocket;
@@ -1584,7 +1585,7 @@ namespace IronPython.Modules {
                     foreach (string s in _data) {
                         res.Append(s);
                     }
-                    _sendAllSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("sendall")), res.ToString());
+                    _sendAllSite.Invoke(DefaultContext.Default, PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("sendall")), res.ToString());
                     _data.Clear();
                 }
             }
@@ -1604,7 +1605,7 @@ namespace IronPython.Modules {
 
             public override int Read(byte[] buffer, int offset, int count) {
                 int size = count;
-                string data = _recvSite.Invoke(PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("recv")), count);
+                string data = _recvSite.Invoke(DefaultContext.Default, PythonOps.GetBoundAttr(DefaultContext.Default, _userSocket, SymbolTable.StringToId("recv")), count);
 
                 return PythonAsciiEncoding.Instance.GetBytes(data, 0, data.Length, buffer, offset);
             }
@@ -1678,12 +1679,12 @@ namespace IronPython.Modules {
                 return size;
             }
 
-            [PropertyMethod]
+            [SpecialName, PropertyMethod]
             public static object Getdefault_bufsize(CodeContext/*!*/ context) {
                 return PythonContext.GetContext(context).GetModuleState(_defaultBufsizeKey);
             }
 
-            [PropertyMethod]
+            [SpecialName, PropertyMethod]
             public static void Setdefault_bufsize(CodeContext/*!*/ context, object value) {
                 PythonContext.GetContext(context).SetModuleState(_defaultBufsizeKey, value);
             }

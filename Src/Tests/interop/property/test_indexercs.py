@@ -67,11 +67,8 @@ def test_overload1():
     x[4, 5, 6] = 7
     AreEqual(7, x[4, 5, 6])
     
-    x.set_Item(6, 1, 5)
-    AreEqual(x.get_Item(3, 2), 5)
-    
-    x.set_Item(1, 9)
-    AreEqual(x.get_Item(1), 9)
+    Assert(not hasattr(x, 'get_Item'))
+    Assert(not hasattr(x, 'set_Item'))
     
 def test_overload2():
     x = ClassWithIndexerOverloads2()
@@ -101,15 +98,9 @@ def test_basic():
         AreEqual(x['a', 'b', 'cd'], c)
         
         a, b, c = 5, SimpleStruct(6), SimpleClass(7)
-        x.set_Item(2, a)
-        AreEqual(x.get_Item(2), a)
-        
-        x.set_Item(1, 'ip2', b)
-        AreEqual(x.get_Item(21, 'ip').Flag, b.Flag)
-        
-        x.set_Item('iron', 'py', '2', c)
-        AreEqual(x.get_Item('ironpy', '2', ''), c)
-        
+        Assert(not hasattr(x, 'set_Item'))
+        Assert(not hasattr(x, 'get_Item'))
+                
         # bad arg count
         AssertErrorWithMatch(TypeError, "expected int, got tuple", lambda: x[()])
         AssertErrorWithMatch(TypeError, "__getitem__\(\) takes at most 3 arguments \(4 given\)", lambda: x[1, 2, 3, 4])

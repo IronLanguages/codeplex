@@ -21,13 +21,13 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static EmptyStatement Empty() {
             return Empty(SourceSpan.None);
         }
 
         public static EmptyStatement Empty(SourceSpan span) {
-            return new EmptyStatement(Annotations(span));
+            return new EmptyStatement(Annotate(span));
         }
     }
 }

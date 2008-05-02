@@ -16,23 +16,22 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.CompilerServices;
-using Microsoft.Scripting;
-using System.Runtime.InteropServices;
+
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+
     public class BoundDispEvent {
-        object _rcw;
-        Guid _sourceIid;
-        int _dispid;
+
+        private object _rcw;
+        private Guid _sourceIid;
+        private int _dispid;
 
         public BoundDispEvent(object rcw, Guid sourceIid, int dispid) {
-            this._rcw = rcw;
-            this._sourceIid = sourceIid;
-            this._dispid = dispid;
+            _rcw = rcw;
+            _sourceIid = sourceIid;
+            _dispid = dispid;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates"), SpecialName] // TODO: fix
@@ -42,20 +41,20 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         [SpecialName]
         public object InPlaceAdd(CodeContext context, object func) {
-            ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(this._rcw, this._sourceIid, true);
+            ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, true);
 
-            comEventSink.AddHandler(this._dispid, context, func);
+            comEventSink.AddHandler(_dispid, context, func);
             return this;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "context"), SpecialName]
         public object InPlaceSubtract(CodeContext context, object func) {
-            ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(this._rcw, this._sourceIid, false);
+            ComEventSink comEventSink = ComEventSink.FromRuntimeCallableWrapper(_rcw, _sourceIid, false);
             if (comEventSink == null) {
                 throw new System.InvalidOperationException("removing an event handler that is not registered");
             }
 
-            comEventSink.RemoveHandler(this._dispid, func);
+            comEventSink.RemoveHandler(_dispid, func);
             return this;
         }
     }

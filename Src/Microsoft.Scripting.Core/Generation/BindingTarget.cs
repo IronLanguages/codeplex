@@ -100,10 +100,10 @@ namespace Microsoft.Scripting.Generation {
         /// Throws InvalidOperationException if the binding failed.
         /// </summary>
         public Expression/*!*/ MakeExpression(RuleBuilder/*!*/ rule, IList<Expression>/*!*/ parameters) {
-            Contract.RequiresNotNull(parameters, "parameters");
+            ContractUtils.RequiresNotNull(parameters, "parameters");
 
             if (_target == null) {
-                throw new InvalidOperationException(Resources.BindingTarget_BindingFailed);
+                throw new InvalidOperationException(ResourceUtils.GetString(ResourceUtils.BindingTarget_BindingFailed));
             }
 
             return _target.MakeExpression(rule, parameters, ArgumentTests);

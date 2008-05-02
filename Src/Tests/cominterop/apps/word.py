@@ -22,26 +22,13 @@ from lib.cominterop_util import *
 from Microsoft.Win32 import Registry
 from System.IO import File
 
-def IsWordInstalled():
-    word  = None
-    
-    #Office 11 or 12 are both OK for this test. Office 12 is preferred.
-    word = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\12.0\\Word\\InstallRoot")
-    if word==None:
-        word= Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Word\\InstallRoot")
-    
-    #sanity check
-    if word==None:
-        return False
-    
-    #make sure it's really installed on disk
-    word_path = word.GetValue("Path") + "winword.exe"
-    return File.Exists(word_path)
-
 if not IsWordInstalled():
     from sys import exit
     print "Word is not installed.  Cannot run this test!"
     exit(1)
+else:
+    TryLoadWordInteropAssembly()
+    from Microsoft.Office.Interop import Word
 
 #------------------------------------------------------------------------------
 #--HELPERS
@@ -57,6 +44,12 @@ def IsWordPIAInstalled():
 isPiaInstalled = IsWordPIAInstalled();
 
 selection_counter = 0
+
+word = CreateWordApplication()
+# word.Visible = True
+doc = word.Documents.Add()
+
+#------------------------------------------------------------------------------
 
 def wd_selection_change_eventhandler(range):
     global selection_counter
@@ -86,15 +79,6 @@ def quit_word(wd):
         wd.Quit(clr.Reference[System.Object](0))
     else: 
         wd.Quit(0)
-
-def create_instance():
-    if preferComDispatch:
-        # load Word's type library
-        typelib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
-        return typelib.Word.Application()
-    else:
-        type = System.Type.GetTypeFromProgID("Word.Application")
-        return System.Activator.CreateInstance(type)
 
 def test_word_typelibsupport():
     if not preferComDispatch:
@@ -186,44 +170,39 @@ def test_wordevents():
         print "Prefer COM dispatch is required when Word PIA is not installed!!!"
         return
 
-    wd = None
-    doc = None
-    try:
+    doc.Range().Text = "test"
 
-        wd = create_instance()
+    global selection_counter 
+    selection_counter = 0
 
-        #wd.Visible = True
-        doc = wd.Documents.Add()
-        doc.Range().Text = "test"
+    add_wordapp_event(word)
+    get_range(doc, 1, 1).Select()
+    AreEqual(selection_counter, 1)
 
-        global selection_counter 
-        selection_counter = 0
+    add_wordapp_event(word)
+    get_range(doc, 1, 2).Select()
+    AreEqual(selection_counter, 3)
 
-        add_wordapp_event(wd)
-        get_range(doc, 1, 1).Select()
-        AreEqual(selection_counter, 1)
+    remove_wordapp_event(word)
+    get_range(doc, 2, 2).Select()
+    AreEqual(selection_counter, 4)
 
-        add_wordapp_event(wd)
-        get_range(doc, 1, 2).Select()
-        AreEqual(selection_counter, 3)
+    remove_wordapp_event(word)
+    get_range(doc, 2, 3).Select()
+    AreEqual(selection_counter, 4)
 
-        remove_wordapp_event(wd)
-        get_range(doc, 2, 2).Select()
-        AreEqual(selection_counter, 4)
-
-        remove_wordapp_event(wd)
-        get_range(doc, 2, 3).Select()
-        AreEqual(selection_counter, 4)
-
-    finally:
-        
-        # clean up outstanding RCWs 
-        doc = None
-        System.GC.Collect()
-        System.GC.WaitForPendingFinalizers()
-        
-        if wd: quit_word(wd)
-        else: print "wd is %s" % wd
+def test_spellChecker():
+    suggestions = word.GetSpellingSuggestions("waht")
+    Assert(suggestions.Count > 5)
+    # This tests for enumeration support over COM objects
+    suggestions = [s.Name for s in suggestions] 
+    # Check to see that some expected suggestions actually exist
+    Assert("what" in suggestions)
+    Assert("with" in suggestions)
 
 #------------------------------------------------------------------------------
-run_com_test(__name__, __file__)
+try:
+    run_com_test(__name__, __file__)
+finally:
+    quit_word(word)
+

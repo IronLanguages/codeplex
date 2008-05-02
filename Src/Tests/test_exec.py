@@ -328,4 +328,9 @@ def test_set_builtins():
     exec("", g, None)
     Assert('__builtins__' in g.keys())
 
+def test_builtins_type():
+	x, y = {}, {}
+	exec 'abc = 42' in x, y
+	AreEqual(type(x['__builtins__']), dict)
+
 run_test(__name__)

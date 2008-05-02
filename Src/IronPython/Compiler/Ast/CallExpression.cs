@@ -23,7 +23,7 @@ using IronPython.Runtime;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class CallExpression : Expression {
         private readonly Expression _target;
@@ -57,6 +57,16 @@ namespace IronPython.Compiler.Ast {
                 if (nameExpr.Name == Symbols.Vars) return true;
                 if (nameExpr.Name == Symbols.Dir) return true;
                 return false;
+            } else if (_args.Length == 1 && (nameExpr.Name == Symbols.Dir || nameExpr.Name == Symbols.Vars)) {
+                if (_args[0].Name == Symbols.Star || _args[0].Name == Symbols.StarStar) {
+                    // could be splatting empty list or dict resulting in 0-param call which needs context
+                    return true;
+                }
+            } else if (_args.Length == 2 && (nameExpr.Name == Symbols.Dir || nameExpr.Name == Symbols.Vars)) {
+                if (_args[0].Name == Symbols.Star && _args[1].Name == Symbols.StarStar) {
+                    // could be splatting empty list and dict resulting in 0-param call which needs context
+                    return true;
+                }
             } else {
                 if (nameExpr.Name == Symbols.Eval) return true;
                 if (nameExpr.Name == Symbols.ExecFile) return true;
@@ -75,7 +85,7 @@ namespace IronPython.Compiler.Ast {
             }
 
             return Ast.Action.Call(
-                CallAction.Make(new CallSignature(kinds)),
+                CallAction.Make(ag.Binder, new CallSignature(kinds)),
                 type,
                 values
             );

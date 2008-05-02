@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class ExpressionStatement : Statement {
         private readonly Expression _expression;
@@ -32,7 +32,7 @@ namespace ToyScript.Parser.Ast {
         }
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
-            return Ast.Statement(
+            return Ast.Comma(
                 Span,
                 _expression.Generate(tg)
             );

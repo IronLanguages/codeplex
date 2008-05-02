@@ -24,14 +24,14 @@ using IronPython.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class OrExpression : Expression {
         private readonly Expression _left, _right;
 
         public OrExpression(Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(right, "right");
 
             _left = left;
             _right = right;
@@ -55,7 +55,7 @@ namespace IronPython.Compiler.Ast {
             
             return Ast.Condition(
                 Ast.Action.ConvertTo(
-                    ConvertToAction.Make(typeof(bool), ConversionResultKind.ExplicitCast),
+                    ConvertToAction.Make(ag.Binder, typeof(bool), ConversionResultKind.ExplicitCast),
                     Ast.Assign(                        
                         tmp,
                         Ast.ConvertHelper(

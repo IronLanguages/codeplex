@@ -55,7 +55,7 @@ namespace Microsoft.Scripting {
         }
 
         [MultiRuntimeAware]
-        private static int totalEvents = 0;
+        private static int totalEvents;
         private static readonly Dictionary<Categories, Dictionary<string, int>> _events = MakeEventsDictionary();
         private static readonly Dictionary<Categories, int> summaryStats = new Dictionary<Categories, int>();
 

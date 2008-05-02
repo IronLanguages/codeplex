@@ -108,7 +108,7 @@ namespace IronPython.Modules {
                 }
             }
 
-            [PropertyMethod]
+            [SpecialName, PropertyMethod]
             public void Delete__dict__() {
                 throw PythonOps.TypeError("partial's dictionary may not be deleted");
             }

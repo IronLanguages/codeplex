@@ -22,23 +22,29 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     internal class IDispatchComObjectGetMemberBinderHelper<T> : MemberBinderHelper<T, GetMemberAction> {
-        internal IDispatchComObjectGetMemberBinderHelper(CodeContext context, GetMemberAction action, object[] args)
+
+        private ComTypeDesc _wrapperType;
+
+        internal IDispatchComObjectGetMemberBinderHelper(CodeContext context, ComTypeDesc wrapperType, GetMemberAction action, object[] args)
             : base(context, action, args) {
+
+            _wrapperType = wrapperType;
         }
 
         internal RuleBuilder<T> MakeNewRule() {
-            // Since the only way to get this rule in the first place is to pass through the statically defined pre-binders,
-            // the test here essentially redundant.  We need one though, so we'll use the basic type test.
-            Rule.MakeTest(typeof(IDispatchComObject));
+
+            Rule.Test = ComObject.MakeComObjectTest(typeof(IDispatchComObject), typeof(IDispatchComObject).GetProperty("ComTypeDesc"), _wrapperType, Rule);
             Rule.Target = MakeGetMemberTarget();
 
             return Rule;
         }
 
         private Expression MakeGetMemberTarget() {
+
             VariableExpression dispCallable = Rule.GetTemporary(typeof(object), "dispCallable");
             
             // The fallback expression permits us to get at language-specific extensions for
@@ -65,6 +71,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         }
 
         Expression MakeExpressionForLanguageExtensionGetMember() {
+
             MemberGroup members = Binder.GetMember(Action, ComObject.ComObjectType, StringName);
 
             if (members.Count == 0) {
@@ -117,6 +124,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         /// </summary>
         /// <returns></returns>
         private Expression GetFailureStatement(Type type, string memberName) {
+
             return Action.IsNoThrow ?
                        Rule.MakeReturn(
                            Context.LanguageContext.Binder,

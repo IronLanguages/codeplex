@@ -73,6 +73,10 @@ namespace Microsoft.Scripting.Actions {
 
         public override ErrorInfo GetError(ActionBinder binder) {
             return _tracker.GetBoundError(binder, _instance);
-        }               
+        }
+
+        public override Expression SetValue(ActionBinder binder, Type type, Expression value) {
+            return _tracker.SetBoundValue(binder, type, value, _instance);
+        }
     }
 }

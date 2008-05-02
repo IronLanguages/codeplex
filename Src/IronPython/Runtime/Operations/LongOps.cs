@@ -444,11 +444,13 @@ namespace IronPython.Runtime.Operations {
             return self ? BigInteger.One : BigInteger.Zero;
         }
 
-        public static int __cmp__(BigInteger x, BigInteger y) {
+        [SpecialName]
+        public static int Compare(BigInteger x, BigInteger y) {
             return x.CompareTo(y);
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, int y) {
+        [SpecialName]
+        public static int Compare(BigInteger x, int y) {
             int ix;
             if (x.AsInt32(out ix)) {                
                 return ix == y ? 0 : ix > y ? 1 : -1;
@@ -457,7 +459,8 @@ namespace IronPython.Runtime.Operations {
             return BigInteger.Compare(x, y);
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, uint y) {
+        [SpecialName]
+        public static int Compare(BigInteger x, uint y) {
             uint ix;
             if (x.AsUInt32(out ix)) {
                 return ix == y ? 0 : ix > y ? 1 : -1;
@@ -466,20 +469,24 @@ namespace IronPython.Runtime.Operations {
             return BigInteger.Compare(x, y);
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, double y) {
+        [SpecialName]
+        public static int Compare(BigInteger x, double y) {
             return -((int)DoubleOps.Compare(y, x));
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, Extensible<double> y) {
+        [SpecialName]
+        public static int Compare(BigInteger x, Extensible<double> y) {
             return -((int)DoubleOps.Compare(y.Value, x));
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, decimal y) {            
+        [SpecialName]
+        public static int Compare(BigInteger x, decimal y) {            
             return DecimalOps.__cmp__(x, y);
         }
 
-        public static int __cmp__(CodeContext context, BigInteger x, bool y) {
-            return __cmp__(x, y ? 1 : 0);
+        [SpecialName]
+        public static int Compare(BigInteger x, bool y) {
+            return Compare(x, y ? 1 : 0);
         }
 
         public static BigInteger __long__(BigInteger self) {

@@ -73,8 +73,8 @@ namespace IronPython.Runtime.Types {
         private readonly CustomTransformer _custTransform;
 
         public TransformedName(string name, OperatorMapping op, ContextId context) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(op, "op");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(op, "op");
 
             _name = name;
             _context = context;
@@ -82,15 +82,15 @@ namespace IronPython.Runtime.Types {
         }
 
         public TransformedName(string name, ContextId context) {
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(name, "name");
 
             _name = name;
             _context = context;
         }
 
         public TransformedName(string name, CustomTransformer customTransformer, ContextId context) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(customTransformer, "customTransformer");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(customTransformer, "customTransformer");
 
             _name = name;
             _context = context;
@@ -98,7 +98,7 @@ namespace IronPython.Runtime.Types {
         }
 
         public TransformedName(OperatorMapping op, ContextId context) {
-            Contract.RequiresNotNull(op, "op");
+            ContractUtils.RequiresNotNull(op, "op");
 
             _op = op;
             _context = context;

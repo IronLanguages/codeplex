@@ -13,20 +13,26 @@
  *
  * ***************************************************************************/
 
+using Microsoft.Scripting.Utils;
+
 namespace Microsoft.Scripting.Actions {
 
     public class SetMemberAction : MemberAction {
-        public static SetMemberAction Make(string name) {
-            return Make(SymbolTable.StringToId(name));
+        public static SetMemberAction Make(ActionBinder binder, string name) {
+            return Make(binder, SymbolTable.StringToId(name));
         }
 
-        public static SetMemberAction Make(SymbolId name) {
-            return new SetMemberAction(name);
+        public static SetMemberAction Make(ActionBinder binder, SymbolId name) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new SetMemberAction(binder, name);
         }
 
-        private SetMemberAction(SymbolId name) : base(name) { }
+        private SetMemberAction(ActionBinder binder, SymbolId name)
+            : base(binder, name) {
+        }
 
-        public override DynamicActionKind Kind { get { return DynamicActionKind.SetMember; } }
+        public override DynamicActionKind Kind {
+            get { return DynamicActionKind.SetMember; }
+        }
     }
-
 }

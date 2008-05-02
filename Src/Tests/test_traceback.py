@@ -41,7 +41,7 @@ def assert_traceback(expected):
         while tb is not None :
             f = tb.tb_frame
             co = f.f_code
-            filename = co.co_filename
+            filename = co.co_filename.lower()
             name = co.co_name
             tb_list.append((tb.tb_lineno, tb.tb_lasti, filename, name))
             tb = tb.tb_next
@@ -66,7 +66,7 @@ def test_no_traceback():
 FILE="test_traceback.py"
 
 LINE100 = 70
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_catch_others_exception():
     try:
         _raise_exception()
@@ -74,7 +74,7 @@ def test_catch_others_exception():
         assert_traceback([(LINE100 + 2, 0, FILE, 'test_catch_others_exception'), _retb])
 
 LINE110 = 78
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_catch_its_own_exception():
     try:
         raise Exception()
@@ -82,7 +82,7 @@ def test_catch_its_own_exception():
         assert_traceback([(LINE110 + 2, 0, FILE, 'test_catch_its_own_exception')])
 
 LINE120 = 86
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_catch_others_exception_with_finally():
     try:
         _raise_exception_with_finally()
@@ -90,7 +90,7 @@ def test_catch_others_exception_with_finally():
         assert_traceback([(LINE120 + 2, 0, FILE, 'test_catch_others_exception_with_finally'), _rewftb])
 
 LINE130 = 94
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_nested_caught_outside():
     try:
         x = 2
@@ -116,7 +116,7 @@ def test_nested_caught_inside():
         assert_traceback(None)
 
 LINE150 = 120
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_in_except():
     try: 
         _raise_exception()
@@ -137,26 +137,26 @@ class C1:
             _raise_exception()
         except:
             assert_traceback([(LINE160 + 3, 0, FILE, 'M'), _retb])
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_in_method():
     c = C1()
     c.M()
 
 LINE170 = 147
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_when_defining_class():
     class C2(object):
         try: 
             _raise_exception()
         except:
             assert_traceback([(LINE170 + 3, 0, FILE, 'C2'), _retb])
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def throw_when_defining_class_directly():
     class C3(C1):
         _raise_exception()
 
 LINE180 = 160
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_when_defining_class_directly():
     try: 
         throw_when_defining_class_directly()
@@ -165,7 +165,7 @@ def test_throw_when_defining_class_directly():
         (LINE180 - 5, 0, FILE, 'throw_when_defining_class_directly'), 
         (LINE180 - 4, 0, FILE, 'C3'), _retb])
 LINE200 = 169
-@skip("cli", "silverlight") #CodePlex 15334/11116/8291
+
 def test_compiled_code():
     try:
         codeobj = compile('\nraise Exception()', '<mycode>', 'exec')
@@ -178,7 +178,7 @@ def generator_throw_before_yield():
     yield 1
     
 LINE210 = 181
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_before_yield():
     try: 
         for x in generator_throw_before_yield():
@@ -191,7 +191,7 @@ def generator_throw_after_yield():
     _raise_exception()
 
 LINE220 = 194
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_while_yield():
     try: 
         for x in generator_throw_while_yield():
@@ -208,7 +208,7 @@ def generator_yield_inside_try():
         pass
 
 LINE230 = 211
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_yield_inside_try():
     try: 
         for x in generator_yield_inside_try():
@@ -217,7 +217,7 @@ def test_yield_inside_try():
         assert_traceback([(LINE230+3, 0, FILE, 'test_yield_inside_try'), (LINE230-5, 2, 'test_traceback.py', 'generator_yield_inside_try'), _retb])
 
 LINE240 = 221
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_and_throw():
     try:
         _raise_exception()
@@ -228,9 +228,9 @@ def test_throw_and_throw():
     except:
         assert_traceback([(LINE240 + 6, 0, FILE, 'test_throw_and_throw'), _retb])
 LINE250 = 233
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_throw_in_another_file():
-    if is_cli: _f_file = path_combine(testpath.public_testdir, 'foo.py')
+    if is_cli: _f_file = path_combine(get_full_dir_name(testpath.public_testdir), 'foo.py')
     else: _f_file = os.getcwd() + '\\foo.py'
     write_to_file(_f_file, '''
 def another_raise():
@@ -240,7 +240,7 @@ def another_raise():
         import foo
         foo.another_raise()
     except:
-        assert_traceback([(LINE250 + 8, 0, FILE, 'test_throw_in_another_file'), (3, 0, _f_file, 'another_raise')])
+        assert_traceback([(LINE250 + 8, 0, FILE, 'test_throw_in_another_file'), (3, 0, _f_file.lower(), 'another_raise')])
     finally:
         nt.remove(_f_file)
 
@@ -252,7 +252,7 @@ def catch_MyException():
         _raise_exception()
     except MyException:
         assert_traceback([])  # UNREACABLE. THIS TRICK SIMPLIFIES THE CHECK
-@skip("cli", "silverlight") #CodePlex 15334/11116
+
 def test_catch_MyException():
     try:
         catch_MyException()

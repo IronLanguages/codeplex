@@ -21,7 +21,7 @@ using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Generation {
-    sealed class GlobalNamedStorage : Storage {
+    internal sealed class GlobalNamedStorage : Storage {
         private readonly SymbolId _name;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
         private readonly Type _type;
@@ -31,23 +31,23 @@ namespace Microsoft.Scripting.Generation {
             _type = type;
         }
 
-        public override bool RequireAccessSlot {
+        internal override bool RequireAccessSlot {
             get { return true; }
         }
 
-        public override Slot CreateSlot(Slot instance) {
+        internal override Slot CreateSlot(Slot instance) {
             Debug.Assert(typeof(CodeContext).IsAssignableFrom(instance.Type), "wrong instance type");
             return new NamedFrameSlot(instance, _name);
         }
     }
 
-    sealed class GlobalNamedAllocator : StorageAllocator {
-        public override Storage AllocateStorage(SymbolId name, Type type) {
+    internal sealed class GlobalNamedAllocator : StorageAllocator {
+        internal override Storage AllocateStorage(SymbolId name, Type type) {
             return new GlobalNamedStorage(name, type);
         }
     }
 
-    sealed class GlobalFieldStorage : Storage {
+    internal sealed class GlobalFieldStorage : Storage {
         // Storing slot directly as there is no relocation involved
         private readonly Slot _slot;
 
@@ -55,38 +55,38 @@ namespace Microsoft.Scripting.Generation {
             _slot = slot;
         }
 
-        public override bool RequireAccessSlot {
+        internal override bool RequireAccessSlot {
             get { return false; }
         }
 
-        public override Slot CreateSlot(Slot instance) {
+        internal override Slot CreateSlot(Slot instance) {
             return _slot;
         }
     }
 
-    sealed class GlobalFieldAllocator : StorageAllocator {
+    internal sealed class GlobalFieldAllocator : StorageAllocator {
         private readonly SlotFactory _slotFactory;
         private readonly Dictionary<SymbolId, Slot> _fields = new Dictionary<SymbolId, Slot>();
 
-        public GlobalFieldAllocator(SlotFactory sfsf) {
+        internal GlobalFieldAllocator(SlotFactory sfsf) {
             _slotFactory = sfsf;
         }
 
-        public SlotFactory SlotFactory {
+        internal SlotFactory SlotFactory {
             get { return _slotFactory; }
         }
 
-        public Dictionary<SymbolId, Slot> Fields {
+        internal Dictionary<SymbolId, Slot> Fields {
             get {
                 return _fields;
             }
         }
 
-        public override void PrepareForEmit(LambdaCompiler cg) {
+        internal override void PrepareForEmit(LambdaCompiler cg) {
             _slotFactory.PrepareForEmit(cg);
         }
 
-        public override Storage AllocateStorage(SymbolId name, Type type) {
+        internal override Storage AllocateStorage(SymbolId name, Type type) {
             Slot slot;
             if (_fields.TryGetValue(name, out slot)) {
                 // Throw invalid operation - duplicate name on global level

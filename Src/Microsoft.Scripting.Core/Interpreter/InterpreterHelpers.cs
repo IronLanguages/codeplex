@@ -21,10 +21,9 @@ namespace Microsoft.Scripting.Interpreter {
         /// <summary>
         /// Used by interpreter to invoke the dynamic site via the action binder.
         /// </summary>
-        public static object ExecuteRule<T>(ActionBinder ab, CodeContext cc, object[] args, CallSite site) where T : class {
-            T target = default(T);
-            RuleSet<T> rules = EmptyRuleSet<T>.FixedInstance;
-            return ab.UpdateSiteAndExecute<T>(cc, site.Action, args, site, ref target, ref rules);
+        public static object ExecuteRule<T>(DynamicAction action, CodeContext cc, object[] args) where T : class {
+            CallSite<T> site = CallSite<T>.Create(action);
+            return cc.LanguageContext.Binder.UpdateSiteAndExecute<T>(cc, site, args);
         }
     }
 }

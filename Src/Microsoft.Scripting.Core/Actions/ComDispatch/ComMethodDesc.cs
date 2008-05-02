@@ -17,13 +17,15 @@
 
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
+
 using Marshal = System.Runtime.InteropServices.Marshal;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+
     public class ComMethodDesc {
+    
         # region private fields
 
         private readonly bool _hasTypeInfo;
@@ -45,8 +47,13 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         public ComMethodDesc(string name, int dispId)
             : this(dispId) {
             // no ITypeInfo constructor
-            _hasTypeInfo = false;
             _name = name;
+        }
+
+        public ComMethodDesc(string name, int dispId, INVOKEKIND invkind)
+            : this(name, dispId) {
+            _isPropertyGet = (invkind & INVOKEKIND.INVOKE_PROPERTYGET) != 0;
+            _isPropertyPut = (invkind & (INVOKEKIND.INVOKE_PROPERTYPUT | INVOKEKIND.INVOKE_PROPERTYPUTREF)) != 0;
         }
 
         public ComMethodDesc(ITypeInfo typeInfo, FUNCDESC funcDesc)

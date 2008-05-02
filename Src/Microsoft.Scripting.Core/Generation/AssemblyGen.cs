@@ -68,7 +68,7 @@ namespace Microsoft.Scripting.Generation {
         internal AssemblyGen(AssemblyName/*!*/ name, string outDir, string outFileExtension, bool isDebuggable,
             PortableExecutableKinds peKind, ImageFileMachine machine) {
 
-            Contract.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(name, "name");
 
 #if SILVERLIGHT  // AssemblyBuilderAccess.RunAndSave, Environment.CurrentDirectory
             _myAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Run);
@@ -264,8 +264,8 @@ namespace Microsoft.Scripting.Generation {
 
             if (exitCode != 0) {
                 Console.WriteLine("Verification failed w/ exit code {0}: {1}", exitCode, strOut);
-                throw new VerificationException(String.Format(CultureInfo.CurrentCulture, 
-                    Resources.VerificationException,
+                throw new VerificationException(ResourceUtils.GetString(
+                    ResourceUtils.VerificationException,
                     _outFileName, 
                     verifyFile, 
                     strOut ?? ""));
@@ -294,7 +294,7 @@ namespace Microsoft.Scripting.Generation {
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void CopyDirectory(string to, string from) {
+        private static void CopyDirectory(string to, string from) {
             foreach (string filename in Directory.GetFiles(from)) {
                 FileInfo fi = new FileInfo(filename);
                 string toFile = Path.Combine(to, fi.Name);
@@ -315,8 +315,8 @@ namespace Microsoft.Scripting.Generation {
         #endregion
 
         internal TypeBuilder DefinePublicType(string name, Type parent, bool preserveName) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(parent, "parent");
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(parent, "parent");
 
             TypeAttributes attrs = TypeAttributes.Public;
 

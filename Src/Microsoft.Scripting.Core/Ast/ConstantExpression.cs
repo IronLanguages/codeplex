@@ -31,7 +31,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static ConstantExpression True() {
             return new ConstantExpression(true, typeof(bool));
         }
@@ -49,7 +49,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static ConstantExpression Null(Type type) {
-            Contract.Requires(!type.IsValueType, "type");
+            ContractUtils.Requires(!type.IsValueType, "type");
             return new ConstantExpression(null, type);
         }
 
@@ -58,11 +58,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static ConstantExpression Constant(object value, Type type) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
             if (value == null) {
-                Contract.Requires(!type.IsValueType, "type");
+                ContractUtils.Requires(!type.IsValueType, "type");
             } else {
-                Contract.Requires(TypeUtils.CanAssign(type, value.GetType()), "type");
+                ContractUtils.Requires(TypeUtils.CanAssign(type, value.GetType()), "type");
             }
             return new ConstantExpression(value, type);
         }
@@ -77,8 +77,8 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         public static MemberExpression WeakConstant(object value) {
             System.Diagnostics.Debug.Assert(!(value is Expression));
-            return Ast.ReadProperty(
-                Ast.RuntimeConstant(new WeakReference(value)),
+            return Expression.ReadProperty(
+                Expression.RuntimeConstant(new WeakReference(value)),
                 typeof(WeakReference).GetProperty("Target")
             );
         }

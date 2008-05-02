@@ -79,7 +79,6 @@ def test_escape_encode():
     #AreEqual(value, "\\\\a")
     #AreEqual(length, 3)
 
-
 @skip('silverlight')
 def test_register_error():
         '''
@@ -199,8 +198,9 @@ def test_latin_1_encode():
     # so many ways to express latin 1...
     for x in ['iso-8859-1', 'iso8859-1', '8859', 'cp819', 'latin', 'latin1', 'L1']:
         AreEqual('abc'.encode(x), 'abc')
+        
 
-@skip('silverlight')
+@skip('silverlight', "multiple_execute")
 def test_lookup_error():
     '''
     '''
@@ -213,7 +213,7 @@ def test_lookup_error():
     codecs.register_error("some other", garbage_error2)
     AreEqual(codecs.lookup_error("some other"), garbage_error2)
 
-
+@skip("multiple_execute")
 def test_register():
     '''
     TODO: test that functions passed in are actually used
@@ -383,7 +383,7 @@ def test_file_encodings():
         #cleanup
         sys.path.remove(nt.getcwd() + "\\tmp_encodings")           
 
-@skip("silverlight")
+@skip("silverlight", "multiple_execute")
 def test_file_encodings_negative():
     '''
     TODO:

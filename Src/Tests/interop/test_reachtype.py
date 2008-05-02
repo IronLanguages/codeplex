@@ -173,6 +173,7 @@ def test_type_forward1():
     AreEqual(NSwForwardee1.Foo.A, 120)
     AreEqual(NSwForwardee1.Bar.A, -120)
 
+@skip("multiple_execute")    
 def test_type_forward2():    
     add_clr_assemblies("typeforwarder2")
     from NSwForwardee2 import *      

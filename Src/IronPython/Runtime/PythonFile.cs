@@ -27,6 +27,7 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 using System.Diagnostics;
+using IronPython.Runtime.Exceptions;
 
 namespace IronPython.Runtime {
 
@@ -912,7 +913,7 @@ namespace IronPython.Runtime {
         }
 
         public void __init__(CodeContext/*!*/ context, [NotNull]Stream/*!*/ stream) {
-            Contract.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(stream, "stream");
 
             string mode;
             if (stream.CanRead && stream.CanWrite) mode = "w+";
@@ -931,8 +932,8 @@ namespace IronPython.Runtime {
         }
 
         public void __init__([NotNull]Stream/*!*/ stream, [NotNull]Encoding/*!*/ encoding, string name, string mode) {
-            Contract.RequiresNotNull(stream, "stream");
-            Contract.RequiresNotNull(encoding, "encoding");
+            ContractUtils.RequiresNotNull(stream, "stream");
+            ContractUtils.RequiresNotNull(encoding, "encoding");
 
             InternalInitialize(stream, encoding, name, mode, true);
         }
@@ -1226,13 +1227,56 @@ namespace IronPython.Runtime {
         }
 
         public object tell() {
-            if (IsConsole) {
-                throw PythonOps.IOError("Bad file descriptor");
-            }
-
-            long l = (_reader != null) ? _reader.Position : _stream.Position;
+            long l = GetCurrentPosition();
             if (l <= Int32.MaxValue) return l;
             return Microsoft.Scripting.Math.BigInteger.Create(l);
+        }
+
+        private long GetCurrentPosition() {
+            if (_reader != null) {
+                return _reader.Position;
+            }
+            if (_stream != null) {
+                return _stream.Position;
+            }
+
+            throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 9, "Bad file descriptor");
+        }
+
+        /// <summary>
+        /// Truncates the file to the current length as indicated by tell().
+        /// </summary>
+        public void truncate() {
+            flush();
+
+            TruncateWorker(GetCurrentPosition());
+        }
+
+        /// <summary>
+        /// Truncates the file to the specified length.
+        /// </summary>
+        /// <param name="size"></param>
+        public void truncate(long size) {
+            flush();
+
+            TruncateWorker(size);
+        }
+
+        private void TruncateWorker(long size) {
+            if (size < 0) {
+                throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 22, "Invalid argument");
+            }
+
+            FileStream fs = _stream as FileStream;
+            if (fs != null) {
+                if (_mode.Contains("w")) {
+                    fs.SetLength(size);
+                } else {
+                    throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 13, "Permission denied");
+                }
+            } else {
+                throw PythonExceptions.CreateThrowable(PythonExceptions.IOError, 9, "Bad file descriptor");
+            }
         }
 
         public virtual void write(string s) {

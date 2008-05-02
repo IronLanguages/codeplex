@@ -24,7 +24,6 @@ using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using IronPython.Runtime.Exceptions;
 
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {

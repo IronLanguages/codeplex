@@ -15,10 +15,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using System.Diagnostics;
 using System.Reflection.Emit;
+
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Utils {
     public partial class ReflectedCaller {
@@ -153,18 +153,34 @@ namespace Microsoft.Scripting.Utils {
        
         public override object InvokeInstance(object instance, params object[] args) {
             if (_target.IsStatic) {
-                return _target.Invoke(null, args);
+                try {
+                    return _target.Invoke(null, args);
+                } catch (TargetInvocationException e) {
+                    throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                }
             }
 
-            return _target.Invoke(instance, args);
+            try {
+                return _target.Invoke(instance, args);
+            } catch (TargetInvocationException e) {
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
         }
 
         private object InvokeWorker(params object[] args) {
             if (_target.IsStatic) {
-                return _target.Invoke(null, args);
+                try {
+                    return _target.Invoke(null, args);
+                } catch (TargetInvocationException e) {
+                    throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                }
             }
 
-            return _target.Invoke(args[0], GetNonStaticArgs(args));
+            try {
+                return _target.Invoke(args[0], GetNonStaticArgs(args));
+            } catch (TargetInvocationException e) {
+                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+            }
         }
 
         private static object[] GetNonStaticArgs(object[] args) {

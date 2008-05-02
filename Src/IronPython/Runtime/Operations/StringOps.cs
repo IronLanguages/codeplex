@@ -120,10 +120,6 @@ namespace IronPython.Runtime.Operations {
             return false;
         }
 
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
-        }
-
         #endregion
 
         #region ISequence Members
@@ -170,7 +166,7 @@ namespace IronPython.Runtime.Operations {
         internal const int LowestUnicodeValue = 0x7f;
         private static readonly char[] Whitespace = new char[] { ' ', '\t', '\n', '\r', '\f' };
 
-        internal static object FastNew(object context, object x) {
+        internal static object FastNew(CodeContext/*!*/ context, object x) {
             if (x == null) {
                 return "None";
             }
@@ -180,7 +176,7 @@ namespace IronPython.Runtime.Operations {
                 for (int i = 0; i < s.Length; i++) {
                     if (s[i] > '\x80')
                         return StringOps.__new__(
-                            (CodeContext)context,
+                            context,
                             (PythonType)DynamicHelpers.GetPythonTypeFromType(typeof(String)),
                             s,
                             null,
@@ -189,7 +185,18 @@ namespace IronPython.Runtime.Operations {
                 }
                 return s;
             }
-            return PythonOps.ToString(x);
+
+            object value;
+            if (PythonTypeOps.TryInvokeUnaryOperator(context, x, Symbols.String, out value)) {
+                if (value is string || value is Extensible<string>) {
+                    return value;
+                }
+
+                throw PythonOps.TypeError("expected str, got {0} from __str__", DynamicHelpers.GetPythonType(value).Name);
+            }
+
+            // all objects should have __str__, at least we'll pick it up from object.
+            throw new InvalidOperationException("__str__ not defined");
         }
 
         #region Python Constructors
@@ -955,6 +962,22 @@ namespace IronPython.Runtime.Operations {
         }
 
         [SpecialName]
+        [return: MaybeNotImplemented]
+        public static object Mod(object other, string self) {
+            string str = other as string;
+            if (str != null) {
+                return new StringFormatter(str, self).Format();
+            }
+
+            Extensible<string> es = other as Extensible<string>;
+            if (es != null) {
+                return new StringFormatter(es.Value, self).Format();
+            }
+
+            return PythonOps.NotImplemented;
+        }
+
+        [SpecialName]
         public static string Multiply(string s, int count) {
             if (count <= 0) return String.Empty;
             if (count == 1) return s;
@@ -1057,6 +1080,14 @@ namespace IronPython.Runtime.Operations {
                 return PythonTuple.MakeTuple(StringOps.__new__(context, TypeCache.String, (object)self));
             }
             throw PythonOps.TypeErrorForBadInstance("__getnewargs__ requires a 'str' object but received a '{0}'", self);
+        }
+
+        public static string __str__(string self) {
+            return self;
+        }
+
+        public static Extensible<string> __str__(ExtensibleString self) {
+            return self;
         }
 
         #region Internal implementation details
@@ -1566,7 +1597,7 @@ namespace IronPython.Runtime.Operations {
                 //  If the optional second argument sep is absent or None, the words are separated 
                 //  by arbitrary strings of whitespace characters (space, tab, newline, return, formfeed);
                 
-                r = StringUtils.Split(self, seps, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, 
+                r = StringUtils.Split(self, seps, (maxsplit < 0) ? Int32.MaxValue : maxsplit + 1, 
                     (seps == null) ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
 
                 List ret = PythonOps.MakeEmptyList(r.Length);
@@ -1579,7 +1610,7 @@ namespace IronPython.Runtime.Operations {
             if (self == String.Empty) {
                 return SplitEmptyString(separator != null);
             } else {
-                string[] r = StringUtils.Split(self, separator, (maxsplit == -1) ? Int32.MaxValue : maxsplit + 1, StringSplitOptions.None);
+                string[] r = StringUtils.Split(self, separator, (maxsplit < 0) ? Int32.MaxValue : maxsplit + 1, StringSplitOptions.None);
 
                 List ret = PythonOps.MakeEmptyList(r.Length);
                 foreach (string s in r) ret.AddNoLock(s);

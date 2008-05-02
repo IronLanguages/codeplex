@@ -81,6 +81,12 @@ def path_combine(*paths):
         else: 
             p += x + separator
     return p + paths[-1]
+    
+def get_full_dir_name(path):
+    """removes ~# from short file names"""
+    if sys.platform == "win32": return path
+    import System
+    return System.IO.DirectoryInfo(path).FullPath
             
 def ensure_directory_present(path): 
     path = fullpath(path)

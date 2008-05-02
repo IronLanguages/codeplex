@@ -24,6 +24,7 @@ from IronPythonTest.StaticTest import *
 
 allTypes = [Base, OverrideNothing, OverrideAll]
 
+@skip("multiple_execute")
 def test_field():
     # read on class
     AreEqual(Base.Field, 'Base.Field')
@@ -133,6 +134,7 @@ def test_property():
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'Base'", f, o1)
     AssertErrorWithMessage(AttributeError, "cannot delete attribute 'Property' of builtin type 'OverrideAll'", f, o2)
 
+@skip("multiple_execute")
 def test_event():
     lambda1 = lambda : 'FirstString'
     lambda2 = lambda : 'SecondString'

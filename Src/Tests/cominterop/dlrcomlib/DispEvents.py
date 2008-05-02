@@ -91,6 +91,7 @@ def bad_handler_signature_helper(e_trigger, com_event, bad_arg_handlers):
 ONE_HANDLER_COUNT = 0
 ONE_HANDLER_VAL = None
 
+@skip("multiple_execute")
 def test_one_handler():
     
     def one_handler(a):
@@ -163,6 +164,7 @@ def test_one_handler():
 TWO_IDENT_HANDLERS_COUNT = 0
 TWO_IDENT_HANDLERS_VAL = None
 
+@skip("multiple_execute")
 def test_two_ident_handlers():
     
     def two_ident_handlers(a):
@@ -264,6 +266,7 @@ TWO_UNIQUE_HANDLERS_COUNT = 0
 TWO_UNIQUE_HANDLERS_VAL_A = None
 TWO_UNIQUE_HANDLERS_VAL_B = None
 
+@skip("multiple_execute")
 def test_two_unique_handlers():
     def two_unique_handlers_a(a):
         global TWO_UNIQUE_HANDLERS_COUNT
@@ -1061,7 +1064,7 @@ def test_eNullShort_neg_handler_return_values():
     else:
         com_event = com_obj.Event_eNullShort
 
-    for retVal in [None, "", "abc", False, []]:
+    for retVal in [None, "", "abc", []]:
         def bad_handler():
             global HANDLER_CALL_COUNT
             HANDLER_CALL_COUNT+=1
@@ -1070,7 +1073,7 @@ def test_eNullShort_neg_handler_return_values():
         com_event += bad_handler
         
         #Expect this to throw an exception
-        if not preferComDispatch and retVal!=False:  #retVal==False is Merlin 386413
+        if not preferComDispatch:
             AssertError(EnvironmentError, e_trigger)  
         else:
             e_trigger()  #Merlin 384367

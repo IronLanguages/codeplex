@@ -21,14 +21,14 @@ using MSAst = Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Utils;
 
 namespace IronPython.Compiler.Ast {
-    class PythonVariable {
+    internal class PythonVariable {
         private readonly SymbolId _name;
-        private readonly Type _type;
-        private readonly ScopeStatement _scope;
-        private bool _visible = true;       // variable visible to the nested scopes - the default
+        private readonly Type/*!*/ _type;
+        private readonly ScopeStatement/*!*/ _scope;
+
         private bool _deleted;              // del x
-        private bool _unassigned;           // Variable ever referenced without being assigned
-        private bool _uninitialized;        // Variable ever used either uninitialized or after deletion
+        private bool _readBeforeInitialized;
+        private bool _accessedInNestedScope;
 
         private bool _fallback;             // If uninitialized, lookup in builtins
 
@@ -37,11 +37,8 @@ namespace IronPython.Compiler.Ast {
         private VariableKind _kind;
         private MSAst.Expression _variable;
 
-        public PythonVariable(SymbolId name, VariableKind kind, ScopeStatement scope)
-            : this(name, typeof(object), kind, scope) {
-        }
-
-        public PythonVariable(SymbolId name, Type type, VariableKind kind, ScopeStatement scope) {
+        public PythonVariable(SymbolId name, Type/*!*/ type, VariableKind kind, ScopeStatement/*!*/ scope) {
+            Assert.NotNull(type, scope);
             _name = name;
             _type = type;
             _kind = kind;
@@ -65,13 +62,6 @@ namespace IronPython.Compiler.Ast {
             set { _kind = value; }
         }
 
-        internal bool Visible {
-            get { return _visible; }
-        }
-        internal void Hide() {
-            _visible = false;
-        }
-
         internal bool Deleted {
             get { return _deleted; }
             set { _deleted = value; }
@@ -82,14 +72,20 @@ namespace IronPython.Compiler.Ast {
             set { _index = value; }
         }
 
-        public bool Unassigned {
-            get { return _unassigned; }
-            set { _unassigned = value; }
+        /// <summary>
+        /// True iff there is a path in control flow graph on which the variable is used before initialized (assigned or deleted).
+        /// </summary>
+        public bool ReadBeforeInitialized {
+            get { return _readBeforeInitialized; }
+            set { _readBeforeInitialized = value; }
         }
 
-        public bool Uninitialized {
-            get { return _uninitialized; }
-            set { _uninitialized = value; }
+        /// <summary>
+        /// True iff the variable is referred to from the inner scope.
+        /// </summary>
+        public bool AccessedInNestedScope {
+            get { return _accessedInNestedScope; }
+            set { _accessedInNestedScope = value; }
         }
 
         internal bool Fallback {
@@ -114,11 +110,17 @@ namespace IronPython.Compiler.Ast {
             switch (_kind) {
                 case VariableKind.Global:
                     return _variable = ag.Block.CreateGlobalVariable(_name, _type);
+
                 case VariableKind.Local:
+                case VariableKind.HiddenLocal:
+                case VariableKind.GlobalLocal:
                     return _variable = ag.Block.CreateLocalVariable(_name, _type);
+
                 case VariableKind.Temporary:
                     return _variable = ag.Block.CreateTemporaryVariable(_name, _type);
-                default: throw Assert.Unreachable;
+
+                default: 
+                    throw Assert.Unreachable;
             }
         }
     }

@@ -13,7 +13,9 @@
  *
  * ***************************************************************************/
 
+using System;
 using System.Diagnostics;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -21,23 +23,37 @@ namespace Microsoft.Scripting.Ast {
     /// AST node representing deletion of the variable value.
     /// </summary>
     public sealed class DeleteStatement : Expression {
-        private readonly Expression /*!*/ _var;
+        private readonly Expression /*!*/ _expression;
 
-        internal DeleteStatement(Annotations annotations, Expression /*!*/ var)
-            : base(annotations, AstNodeType.DeleteStatement, typeof(void)) {
-            _var = var;
+        // TODO: remove type !!!
+        internal DeleteStatement(Annotations annotations, Expression /*!*/ expression, Type result, DeleteMemberAction bindingInfo)
+            : base(annotations, AstNodeType.DeleteStatement, result, bindingInfo) {
+            if (IsBound) {
+                RequiresBound(expression, "expression");
+            }
+            _expression = expression;
         }
 
         public Expression Variable {
-            get { return _var; }
+            get { return _expression; }
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static DeleteStatement Delete(SourceSpan span, Expression variable) {
-            Contract.RequiresNotNull(variable, "variable");
-            Contract.Requires(variable is VariableExpression || variable is ParameterExpression, "variable", "variable must be VariableExpression or ParameterExpression");
-            return new DeleteStatement(Annotations(span), variable);
+            ContractUtils.RequiresNotNull(variable, "variable");
+            ContractUtils.Requires(variable is VariableExpression || variable is ParameterExpression, "variable", "variable must be VariableExpression or ParameterExpression");
+            return new DeleteStatement(Annotate(span), variable, typeof(void), null);
+        }
+
+        public static DeleteStatement DeleteMember(Expression expression, DeleteMemberAction bindingInfo) {
+            return DeleteMember(Annotations.Empty, expression, bindingInfo);
+        }
+
+        public static DeleteStatement DeleteMember(Annotations annotations, Expression expression, DeleteMemberAction bindingInfo) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
+            return new DeleteStatement(annotations, expression, typeof(object), bindingInfo); // TODO: typeof(void)  !!!
         }
     }
 }

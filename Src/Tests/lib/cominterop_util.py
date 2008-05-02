@@ -477,6 +477,16 @@ def TryLoadExcelInteropAssembly():
             pass
 
 #------------------------------------------------------------------------------
+def TryLoadWordInteropAssembly():
+    try:
+        clr.AddReferenceByName('Microsoft.Office.Interop.Word, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+    except:
+        try:
+            clr.AddReferenceByName('Microsoft.Office.Interop.Word, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
+        except:
+            pass
+
+#------------------------------------------------------------------------------
 def IsExcelInstalled():
     from Microsoft.Win32 import Registry
     from System.IO import File
@@ -495,6 +505,52 @@ def IsExcelInstalled():
     #make sure it's really installed on disk
     excel_path = excel.GetValue("Path") + "excel.exe"
     return File.Exists(excel_path)
+
+#------------------------------------------------------------------------------
+def IsWordInstalled():
+    from Microsoft.Win32 import Registry
+    from System.IO import File
+
+    word  = None
+    
+    #Office 11 or 12 are both OK for this test. Office 12 is preferred.
+    word = Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\12.0\\Word\\InstallRoot")
+    if word==None:
+        word= Registry.LocalMachine.OpenSubKey("Software\\Microsoft\\Office\\11.0\\Word\\InstallRoot")
+    
+    #sanity check
+    if word==None:
+        return False
+    
+    #make sure it's really installed on disk
+    word_path = word.GetValue("Path") + "winword.exe"
+    return File.Exists(word_path)
+
+#------------------------------------------------------------------------------
+def CreateExcelApplication():
+    if preferComDispatch:
+        import clr
+        import System
+        typelib = clr.LoadTypeLibrary(System.Guid("00020813-0000-0000-C000-000000000046"))
+        return typelib.Excel.Application()
+    else:
+        #type = System.Type.GetTypeFromProgID("Excel.Application")
+        #return System.Activator.CreateInstance(type)
+        from Microsoft.Office.Interop import Excel
+        return Excel.ApplicationClass()
+
+#------------------------------------------------------------------------------
+def CreateWordApplication():
+    if preferComDispatch:
+        import clr
+        import System
+        typelib = clr.LoadTypeLibrary(System.Guid("00020905-0000-0000-C000-000000000046"))
+        return typelib.Word.Application()
+    else:
+        #type = System.Type.GetTypeFromProgID("Word.Application")
+        #return System.Activator.CreateInstance(type)
+        from Microsoft.Office.Interop import Word
+        return Word.ApplicationClass()
 
 #------------------------------------------------------------------------------
 def CreateAgentServer():

@@ -77,12 +77,12 @@ namespace IronPython.Runtime {
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object> MakeImportSite() {
             // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return RuntimeHelpers.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>();
+            return CallSiteFactory.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, int, object>(DefaultContext.DefaultPythonBinder);
         }
 
         private static DynamicSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object> MakeOldImportSite() {
             // cant be FastDynamicSite because we need to flow our caller's true context because import is a meta-programming feature.
-            return RuntimeHelpers.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>();
+            return CallSiteFactory.CreateSimpleCallSite<object, string, IAttributesCollection, IAttributesCollection, PythonTuple, object>(DefaultContext.DefaultPythonBinder);
         }
 
         /// <summary>
@@ -118,7 +118,6 @@ namespace IronPython.Runtime {
             }
             throw PythonOps.ImportError("Cannot import name {0}", name);
         }
-
 
         private static object ImportModuleFrom(CodeContext/*!*/ context, object from, string name) {
             Scope scope = from as Scope;
@@ -171,7 +170,7 @@ namespace IronPython.Runtime {
                         // to make the assembly available now.
 
                         if (newmod is NamespaceTracker) {
-                            context.ModuleContext.ShowCls = true;
+                            PythonContext.EnsureModule(context).ShowCls = true;
                         }
                     }
                 }
@@ -210,7 +209,7 @@ namespace IronPython.Runtime {
             }
             return importedScope;
         }
-
+        
         /// <summary>
         /// Interrogates the importing module for __name__ and __path__, which determine
         /// whether the imported module (whose name is 'name') is being imported as nested
@@ -249,12 +248,11 @@ namespace IronPython.Runtime {
 
             // If the module has __path__ (and __path__ is list), nested module is being imported
             // otherwise, importing sibling to the importing module
-
             if (TryGetGlobalValue(globals, Symbols.Path, out attribute) && (path = attribute as List) != null) {
                 // found __path__, importing nested module. The actual name of the nested module
                 // is the name of the mod plus the name of the imported module
-                full = modName + "." + name;
-                return true;
+                full = (StringOps.rsplit(modName, ".", level - 1)[0] as string) + "." + name;
+                return true;                
             }
 
             // importing sibling. The name of the imported module replaces
@@ -457,7 +455,7 @@ namespace IronPython.Runtime {
 
                 NamespaceTracker rp = ret as NamespaceTracker;
                 if (rp != null) {
-                    context.ModuleContext.ShowCls = true;
+                    PythonContext.EnsureModule(context).ShowCls = true;
                 }
 
                 return ret;
@@ -520,7 +518,7 @@ namespace IronPython.Runtime {
 
         private static object FindImportFunction(CodeContext/*!*/ context) {
             object builtin, import;
-            if (!context.Scope.ModuleScope.TryGetName(Symbols.Builtins, out builtin)) {
+            if (!context.GlobalScope.TryGetName(Symbols.Builtins, out builtin)) {
                 builtin = PythonContext.GetContext(context).BuiltinModuleInstance;
             }
 
@@ -544,7 +542,7 @@ namespace IronPython.Runtime {
             if (name == "sys") {
                 return pc.SystemState;
             } else if (name == "clr") {
-                context.ModuleContext.ShowCls = true;
+                PythonContext.EnsureModule(context).ShowCls = true;
                 return pc.ClrModule;
             }
 
@@ -559,9 +557,10 @@ namespace IronPython.Runtime {
 
         private static object ImportReflected(CodeContext/*!*/ context, string/*!*/ name) {
             object ret;
-            if (!PythonContext.GetContext(context).DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
+            PythonContext pc = PythonContext.GetContext(context);
+            if (!pc.DomainManager.Globals.TryGetName(SymbolTable.StringToId(name), out ret)) {
                 try {
-                    ret = PythonContext.GetContext(context).DomainManager.UseModule(name);
+                    ret = pc.DomainManager.UseModule(name);
                 } catch (FileNotFoundException) {
                     return null;
                 } catch (AmbiguousFileNameException e) {
@@ -572,7 +571,7 @@ namespace IronPython.Runtime {
 
             MemberTracker res = ret as MemberTracker;
             if (res != null) {
-                context.ModuleContext.ShowCls = true;
+                PythonContext.EnsureModule(context).ShowCls = true;
                 object realRes = res;
 
                 switch (res.MemberType) {
@@ -609,8 +608,8 @@ namespace IronPython.Runtime {
             context.PublishModule(fullName, module);
             bool success = false;
             try {
-                if (executeModule) {                    
-                    code.Run(module.Scope, module);
+                if (executeModule) {
+                    code.Run(module.Scope);
                 }
 
                 success = true;
@@ -701,19 +700,20 @@ namespace IronPython.Runtime {
         private static PythonModule LoadModuleFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {
             Assert.NotNull(context, name, path);
 
-            if (!PathMatchesFileSystemCasing(context, path)) {
+            string fullPath = GetFullPathAndValidateCase(context, path);
+            if (fullPath == null) {
                 return null;
             }
             
             PythonContext pc = PythonContext.GetContext(context);
-            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, path, pc.DefaultEncoding, SourceCodeKind.File);
+            SourceUnit sourceUnit = pc.DomainManager.Host.TryGetSourceFileUnit(pc, fullPath, pc.DefaultEncoding, SourceCodeKind.File);
             if (sourceUnit == null) {
                 return null;
             }
             return LoadFromSourceUnit(context, sourceUnit, name, sourceUnit.Path);
         }
 
-        private static bool PathMatchesFileSystemCasing(CodeContext context, string path) {
+        private static string GetFullPathAndValidateCase(CodeContext/*!*/ context, string path) {
 #if !SILVERLIGHT
             // check for a match in the case of the filename, unfortunately we can't do this
             // in Silverlight becauase there's no way to get the original filename.
@@ -721,25 +721,24 @@ namespace IronPython.Runtime {
             PlatformAdaptationLayer pal = context.LanguageContext.DomainManager.Platform;
             string dir = Path.GetDirectoryName(path);
             if (!pal.DirectoryExists(dir)) {
-                return false;
+                return null;
             }
 
             try {
                 string file = Path.GetFileName(path);
                 string[] files = pal.GetFiles(dir, file);
-                if (files.Length != 1) {                    
-                    return false;
+
+                if (files.Length != 1 || Path.GetFileName(files[0]) != file) {
+                    return null;
                 }
 
-                Debug.Assert(files[0].Length > file.Length);
-                if (String.Compare(files[0], files[0].Length - file.Length, file, 0, file.Length) != 0) {
-                    return false;
-                }
+                return Path.GetFullPath(files[0]);
             } catch (IOException) {
-                return false;
+                return null;
             }
+#else
+            return path;
 #endif
-            return true;
         }
 
         private static PythonModule LoadPackageFromSource(CodeContext/*!*/ context, string/*!*/ name, string/*!*/ path) {

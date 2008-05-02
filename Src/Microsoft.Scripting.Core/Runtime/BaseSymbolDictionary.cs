@@ -81,10 +81,6 @@ namespace Microsoft.Scripting.Runtime {
             return true;
         }
 
-        public bool ValueNotEquals(object other) {
-            return !ValueEquals(other);
-        }
-
         #endregion          
       
         public static object NullToObj(object o) {

@@ -23,7 +23,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using System.Diagnostics;
 
     /// <summary>
@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal expression builders
 
-        internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
+        protected internal override Expression GetBoundValue(ActionBinder binder, Type type, Expression instance) {
             if (instance != null && IsStatic) {
                 return null;
             }
@@ -123,7 +123,7 @@ namespace Microsoft.Scripting.Actions {
             return MemberTracker.FromMemberInfo(getter).Call(binder, instance);
         }
 
-        internal override ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {
+        public override ErrorInfo GetBoundError(ActionBinder binder, Expression instance) {
             MethodInfo getter = ResolveGetter();
 
             if (getter == null) {
@@ -141,7 +141,7 @@ namespace Microsoft.Scripting.Actions {
             throw new InvalidOperationException();
         }
 
-        internal override MemberTracker BindToInstance(Expression instance) {
+        public override MemberTracker BindToInstance(Expression instance) {
             return new BoundMemberTracker(this, instance);
         }
 

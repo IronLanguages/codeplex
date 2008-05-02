@@ -14,37 +14,29 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
-using System.Diagnostics;
-using Microsoft.Scripting.Utils;
+
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
+    // TODO: rename to match InvocationExpression
     public class CallAction : DynamicAction, IEquatable<CallAction> {
         private readonly CallSignature _signature;
 
-        private static readonly CallAction[] _cached = new CallAction[] { 
-            new CallAction(new CallSignature(0)),
-            new CallAction(new CallSignature(1)),
-            new CallAction(new CallSignature(2)),
-            new CallAction(new CallSignature(3)),
-            new CallAction(new CallSignature(4))
-        };
-
-        protected CallAction(CallSignature callSignature) {
+        protected CallAction(ActionBinder binder, CallSignature callSignature)
+            : base(binder) {
             _signature = callSignature;
         }
 
-        public static CallAction Make(CallSignature signature) {
-            return new CallAction(signature);
+        public static CallAction Make(ActionBinder binder, CallSignature signature) {
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new CallAction(binder, signature);
         }
 
-        public static CallAction Make(int argumentCount) {
-            Contract.Requires(argumentCount >= 0, "argumentCount");
-            if (argumentCount < _cached.Length) return _cached[argumentCount];
-            return new CallAction(new CallSignature(argumentCount));
+        public static CallAction Make(ActionBinder binder, int argumentCount) {
+            ContractUtils.Requires(argumentCount >= 0, "argumentCount");
+            ContractUtils.RequiresNotNull(binder, "binder");
+            return new CallAction(binder, new CallSignature(argumentCount));
         }
 
         public CallSignature Signature {

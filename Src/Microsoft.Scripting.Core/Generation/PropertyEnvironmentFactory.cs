@@ -28,120 +28,74 @@ namespace Microsoft.Scripting.Generation {
     /// 
     /// Used for environments with less than 128 members.
     /// </summary>
-    class PropertyEnvironmentFactory : EnvironmentFactory {
-        private Type _type;
-        private Type _envType;
+    internal class PropertyEnvironmentFactory : EnvironmentFactory {
+        private readonly Type/*!*/ _storageType;
         private int _index;
 
         /// <summary>
         /// Creates a new PropertyEnvironmentFactory backed by the specified type of tuple and
         /// FunctionEnvironment.
         /// </summary>
-        public PropertyEnvironmentFactory(Type tupleType, Type envType) {
-            ValidateTupleType(tupleType);
+        public PropertyEnvironmentFactory(Type/*!*/ storageType) {
+            Assert.NotNull(storageType);
+            ValidateTupleType(storageType);
 
-            _type = tupleType;
-            _envType = envType;
-
-            // 1st entry always points back to our dictionary            
-            _index = 1;
+            _storageType = storageType;
         }
 
-        public override Type EnvironmentType {
-            get { return _envType; }
-        }
-
-        public override Type StorageType {
+        public override Type/*!*/ StorageType {
             get {
-                return _type;
+                return _storageType;
             }
         }
 
-        public override Storage MakeEnvironmentReference(SymbolId name, Type type) {
-            return new PropertyEnvironmentReference(_type, _index++, type);
+        public override Storage/*!*/ MakeEnvironmentReference(SymbolId name, Type/*!*/ variableType) {
+            Assert.NotNull(variableType);
+            return new PropertyEnvironmentReference(_storageType, _index++, variableType);
         }
 
         protected int Index {
             get { return _index; }
-            set { _index = value; }
+            
         }
 
-        public override void EmitStorage(LambdaCompiler cg) {
+        public override void EmitStorage(ILGen cg) {
             cg.EmitNew(StorageType.GetConstructor(Type.EmptyTypes));
-            cg.Emit(OpCodes.Dup);
-            EmitNestedTupleInit(cg, StorageType);
+
+            if (Tuple.GetSize(StorageType) > Tuple.MaxSize) {
+                cg.Emit(OpCodes.Dup);
+                EmitNestedTupleInit(cg, StorageType);
+            }
         }
 
-        private static void EmitNestedTupleInit(LambdaCompiler cg, Type storageType) {
-            if (Tuple.GetSize(storageType) > Tuple.MaxSize) {
-                Slot tmp = cg.GetLocalTmp(storageType);
-                tmp.EmitSet(cg);
+        private static void EmitNestedTupleInit(ILGen cg, Type storageType) {
+            Slot tmp = cg.GetLocalTmp(storageType);
+            tmp.EmitSet(cg);
 
-                Type[] nestedTuples = storageType.GetGenericArguments();
-                for (int i = 0; i < nestedTuples.Length; i++) {
-                    Type t = nestedTuples[i];
-                    if (t.IsSubclassOf(typeof(Tuple))) {
-                        tmp.EmitGet(cg);
+            Type[] nestedTuples = storageType.GetGenericArguments();
+            for (int i = 0; i < nestedTuples.Length; i++) {
+                Type t = nestedTuples[i];
+                if (t.IsSubclassOf(typeof(Tuple))) {
+                    tmp.EmitGet(cg);
 
-                        cg.EmitNew(t.GetConstructor(Type.EmptyTypes));
-                        cg.EmitPropertySet(storageType, String.Format("Item{0:D3}", i));
+                    cg.EmitNew(t.GetConstructor(Type.EmptyTypes));
+                    cg.EmitPropertySet(storageType, String.Format("Item{0:D3}", i));
 
+                    if (Tuple.GetSize(t) > Tuple.MaxSize) {
                         tmp.EmitGet(cg);
                         cg.EmitPropertyGet(storageType, String.Format("Item{0:D3}", i));
 
                         EmitNestedTupleInit(cg, t);
                     }
                 }
-
-                cg.FreeLocalTmp(tmp);
-            } else {
-                int capacity = 0;
-                foreach (Type t in storageType.GetGenericArguments()) {
-                    if (t == typeof(None)) {
-                        break;
-                    }
-                    capacity++;
-                }
-                cg.EmitInt(capacity);
-                cg.EmitCall(typeof(RuntimeHelpers), "UninitializeEnvironmentTuple");
             }
-        }
-
-        public override void EmitNewEnvironment(LambdaCompiler cg) {
-            ConstructorInfo ctor = EnvironmentType.GetConstructor(
-                new Type[] {
-                    StorageType,
-                    typeof(SymbolId[]),
-                });
-
-            // emit: dict.Tuple[.Item000...].Item000 = dict, and then leave dict on the stack
-
-            cg.EmitNew(ctor);
-            cg.Emit(OpCodes.Dup);
-
-            Slot tmp = cg.GetLocalTmp(EnvironmentType);
-            tmp.EmitSet(cg);
-
-            cg.EmitPropertyGet(EnvironmentType, "TupleData");
-
-            PropertyInfo last = null;
-            foreach (PropertyInfo pi in Tuple.GetAccessPath(StorageType, 0)) {
-                if (last != null) {
-                    cg.EmitPropertyGet(last);
-                }
-                last = pi;
-            }
-
-            tmp.EmitGet(cg);
-            cg.EmitPropertySet(last);
 
             cg.FreeLocalTmp(tmp);
         }
 
         public override void EmitGetStorageFromContext(LambdaCompiler cg) {
             cg.EmitCodeContext();
-            cg.EmitPropertyGet(typeof(CodeContext), "Scope");
-            cg.EmitCall(typeof(RuntimeHelpers).GetMethod("GetTupleDictionaryData").MakeGenericMethod(StorageType));
+            cg.IL.EmitCall(typeof(RuntimeHelpers).GetMethod("GetScopeStorage").MakeGenericMethod(StorageType));
         }
 
         public override EnvironmentSlot CreateEnvironmentSlot(LambdaCompiler cg) {

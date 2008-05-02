@@ -32,17 +32,17 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         public static YieldStatement Yield(Expression expression) {
             return Yield(Microsoft.Scripting.Annotations.Empty, expression);
         }
 
         public static YieldStatement Yield(SourceSpan span, Expression expression) {
-            return Yield(Annotations(span), expression);
+            return Yield(Annotate(span), expression);
         }
 
         public static YieldStatement Yield(Annotations annotations, Expression expression) {
-            Contract.Requires(expression != null, "expression");
+            ContractUtils.Requires(expression != null, "expression");
             return new YieldStatement(annotations, expression);
         }
     }

@@ -204,6 +204,7 @@ compile_tests = [
     ('def f():\n    a = yield 3 = yield 4', "can't assign to yield expression", 2),
     ('((yield a), 2,3) = (2,3,4)', "can't assign to yield expression", 1),
     ('(2,3) = (3,4)', "can't assign to literal", 1),
+    ('from import abc', "invalid syntax", 1),
     #CodePlex 15428
     #("'abc'.", "invalid syntax", 1),
 ]

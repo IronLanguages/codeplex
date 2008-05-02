@@ -49,12 +49,12 @@ namespace Microsoft.Scripting.Actions {
         }
         
         public MemberGroup(params MemberTracker[] members) {
-            Contract.RequiresNotNullItems(members, "members");
+            ContractUtils.RequiresNotNullItems(members, "members");
             _members = members;
         }
 
         public MemberGroup(params MemberInfo[] members) {
-            Contract.RequiresNotNullItems(members, "members");
+            ContractUtils.RequiresNotNullItems(members, "members");
 
             MemberTracker[] trackers = new MemberTracker[members.Length];
             for (int i = 0; i < trackers.Length; i++) {

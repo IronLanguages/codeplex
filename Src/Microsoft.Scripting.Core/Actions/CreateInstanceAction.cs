@@ -14,34 +14,22 @@
  * ***************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.Scripting.Ast;
-using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
     public class CreateInstanceAction : CallAction, IEquatable<CreateInstanceAction> {
-        private static readonly CreateInstanceAction[] _cached = new CreateInstanceAction[] { 
-            new CreateInstanceAction(new CallSignature(0)),
-            new CreateInstanceAction(new CallSignature(1)),
-            new CreateInstanceAction(new CallSignature(2)),
-            new CreateInstanceAction(new CallSignature(3)),
-            new CreateInstanceAction(new CallSignature(4))
-        };
-        
-        protected CreateInstanceAction(CallSignature callSignature)
-            : base(callSignature) {
+        protected CreateInstanceAction(ActionBinder binder, CallSignature callSignature)
+            : base(binder, callSignature) {
         }
 
-        public static new CreateInstanceAction Make(CallSignature signature) {
-            return new CreateInstanceAction(signature);
+        public static new CreateInstanceAction Make(ActionBinder binder, CallSignature signature) {
+            return new CreateInstanceAction(binder, signature);
         }
 
-        public static new CreateInstanceAction Make(int argumentCount) {
-            Contract.Requires(argumentCount >= 0, "argumentCount");
-            if (argumentCount < _cached.Length) return _cached[argumentCount];
-            return new CreateInstanceAction(new CallSignature(argumentCount));
+        public static new CreateInstanceAction Make(ActionBinder binder, int argumentCount) {
+            ContractUtils.Requires(argumentCount >= 0, "argumentCount");
+            return new CreateInstanceAction(binder, new CallSignature(argumentCount));
         }
 
         [Confined]

@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class Call : Expression {
         private readonly Expression _target;
@@ -38,10 +38,7 @@ namespace ToyScript.Parser.Ast {
             }
 
             // TODO: Invoke or call?
-            return Ast.Action.Call(
-                typeof(object),
-                arguments
-            );
+            return Ast.Action.Call(tg.Binder, typeof(object), arguments);
         }
     }
 }

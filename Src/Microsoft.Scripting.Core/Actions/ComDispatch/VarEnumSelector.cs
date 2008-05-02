@@ -16,18 +16,14 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
@@ -46,12 +42,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// </summary>
     internal class VarEnumSelector {
 
-        ActionBinder _binder;
-
+        private ActionBinder _binder;
         private VariantBuilder[] _variantBuilders;
         private ReturnBuilder _returnBuilder;
         private bool _isSupportedByFastPath = true;
-
         private static readonly Dictionary<VarEnum, Type> _ComToManagedPrimitiveTypes = CreateComToManagedPrimitiveTypes();
         private static readonly IList<IList<VarEnum>> _ComPrimitiveTypeFamilies = CreateComPrimitiveTypeFamilies();
 

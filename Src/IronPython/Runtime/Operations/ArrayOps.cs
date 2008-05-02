@@ -57,7 +57,7 @@ namespace IronPython.Runtime.Operations {
     public static class ArrayOps {
         #region Python APIs
 
-        [OperatorSlot]
+        [SlotField, SpecialName]
         public static readonly PythonTypeSlot Call = new ArrayCallSlot();
 
 

@@ -120,7 +120,9 @@ namespace IronPython.Runtime {
                                 value = BuiltinFunction.MakeMethod(
                                     name,
                                     ArrayUtils.ConvertAll<MemberInfo, MethodInfo>(members, delegate(MemberInfo mi) { return (MethodInfo)mi; }),
-                                    FunctionType.AlwaysVisible | FunctionType.Function);
+                                    members[0].DeclaringType,
+                                    FunctionType.AlwaysVisible | FunctionType.Function
+                                    );
 
                                 if (publish) {
                                     Add(name, value);

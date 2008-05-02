@@ -13,9 +13,7 @@
 #
 #####################################################################################
 
-import generate
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 class Func:
     def __init__(self, name, args=1, cname=None):
@@ -50,5 +48,10 @@ def gen_funcs(cw):
     for func in funcs:
         func.write(cw)
 
-CodeGenerator("math functions", gen_funcs).doit()
+def main():
+    return generate(
+        ("math functions", gen_funcs)
+    )
 
+if __name__ == "__main__":
+    main()

@@ -49,8 +49,8 @@ namespace Microsoft.Scripting.Actions {
         // not yet been loaded in _typeNames
         internal Dictionary<string, MemberTracker> _dict = new Dictionary<string, MemberTracker>();
 
-        internal List<Assembly> _packageAssemblies = new List<Assembly>();
-        internal Dictionary<Assembly, TypeNames> _typeNames = new Dictionary<Assembly, TypeNames>();
+        internal readonly List<Assembly>/*!*/ _packageAssemblies = new List<Assembly>();
+        internal readonly Dictionary<Assembly, TypeNames>/*!*/ _typeNames = new Dictionary<Assembly, TypeNames>();
 
         private string _fullName; // null for the TopReflectedPackage
         private TopNamespaceTracker _topPackage;
@@ -78,7 +78,8 @@ namespace Microsoft.Scripting.Actions {
 
         #region Internal API Surface
 
-        internal NamespaceTracker GetOrMakeChildPackage(string childName, Assembly assem) {
+        internal NamespaceTracker GetOrMakeChildPackage(string/*!*/ childName, Assembly/*!*/ assem) {
+            Assert.NotNull(childName, assem);
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             Debug.Assert(_packageAssemblies.Contains(assem)); // Parent namespace must contain all the assemblies of the child
 
@@ -100,7 +101,8 @@ namespace Microsoft.Scripting.Actions {
             return MakeChildPackage(childName, assem);
         }
 
-        private NamespaceTracker MakeChildPackage(string childName, Assembly assem) {
+        private NamespaceTracker MakeChildPackage(string/*!*/ childName, Assembly/*!*/ assem) {
+            Assert.NotNull(childName, assem);
             NamespaceTracker rp = new NamespaceTracker();
             rp.SetTopPackage(_topPackage);
             rp._packageAssemblies.Add(assem);
@@ -110,7 +112,8 @@ namespace Microsoft.Scripting.Actions {
             return rp;
         }
 
-        private string GetFullChildName(string childName) {
+        private string GetFullChildName(string/*!*/ childName) {
+            Assert.NotNull(childName);
             Debug.Assert(childName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
             if (_fullName == null) {
                 return childName;
@@ -119,14 +122,16 @@ namespace Microsoft.Scripting.Actions {
             return _fullName + Type.Delimiter + childName;
         }
 
-        private static Type LoadType(Assembly assem, string fullTypeName) {
+        private static Type LoadType(Assembly/*!*/ assem, string/*!*/ fullTypeName) {
+            Assert.NotNull(assem, fullTypeName);
             Type type = assem.GetType(fullTypeName);
             // We should ignore nested types. They will be loaded when the containing type is loaded
             Debug.Assert(!ReflectionUtils.IsNested(type));
             return type;
         }
 
-        internal void AddTypeName(string typeName, Assembly assem) {
+        internal void AddTypeName(string/*!*/ typeName, Assembly/*!*/ assem) {
+            Assert.NotNull(typeName, assem);
             Debug.Assert(typeName.IndexOf(Type.Delimiter) == -1); // This is the simple name, not the full name
 
             if (!_typeNames.ContainsKey(assem)) {
@@ -176,7 +181,9 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected void DiscoverAllTypes(Assembly assem) {
+        protected void DiscoverAllTypes(Assembly/*!*/ assem) {
+            Assert.NotNull(assem);
+
             NamespaceTracker previousPackage = null;
             string previousFullNamespace = String.Empty; // Note that String.Empty is not a valid namespace
 
@@ -203,7 +210,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="assem"></param>
         /// <param name="fullNamespace">Full namespace name. It can be null (for top-level types)</param>
         /// <returns></returns>
-        private NamespaceTracker GetOrMakePackageHierarchy(Assembly assem, string fullNamespace) {
+        private NamespaceTracker GetOrMakePackageHierarchy(Assembly/*!*/ assem, string fullNamespace) {
+            Assert.NotNull(assem);
+
             if (fullNamespace == null) {
                 // null is the top-level namespace
                 return this;
@@ -225,7 +234,9 @@ namespace Microsoft.Scripting.Actions {
         /// 2. Previous calls to GetCustomMemberNames (eg. "from foo import *" in Python) would not have included this type.
         /// 3. This does not deal with new namespaces added to the assembly
         /// </summary>
-        private MemberTracker CheckForUnlistedType(string nameString) {
+        private MemberTracker CheckForUnlistedType(string/*!*/ nameString) {
+            Assert.NotNull(nameString);
+
             string fullTypeName = GetFullChildName(nameString);
             foreach (Assembly assem in _packageAssemblies) {
                 Type type = assem.GetType(fullTypeName, false);
@@ -416,7 +427,7 @@ namespace Microsoft.Scripting.Actions {
 
         #endregion
 
-        public IList<Assembly> PackageAssemblies {
+        public IList<Assembly>/*!*/ PackageAssemblies {
             get {
                 LoadNamespaces();
 
@@ -430,7 +441,8 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
-        protected void SetTopPackage(TopNamespaceTracker pkg) {
+        protected void SetTopPackage(TopNamespaceTracker/*!*/ pkg) {
+            Assert.NotNull(pkg);
             _topPackage = pkg;
         }
 
@@ -540,12 +552,12 @@ namespace Microsoft.Scripting.Actions {
                 RuleBuilder<T> rule = new RuleBuilder<T>();
                 rule.MakeTest(typeof(NamespaceTracker));
                 rule.AddTest(
-                    Ast.Ast.Equal(
-                        Ast.Ast.ReadProperty(
-                            Ast.Ast.Convert(rule.Parameters[0], typeof(NamespaceTracker)),
+                    Ast.Expression.Equal(
+                        Ast.Expression.ReadProperty(
+                            Ast.Expression.Convert(rule.Parameters[0], typeof(NamespaceTracker)),
                             typeof(NamespaceTracker).GetProperty("Id")
                         ),
-                        Ast.Ast.Constant(Id)
+                        Ast.Expression.Constant(Id)
                     )
                 );
 

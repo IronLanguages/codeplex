@@ -15,11 +15,14 @@
 
 using System;
 using System.Reflection;
+using System.Diagnostics;
+using System.Collections.Generic;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
+using IronPython.Runtime.Operations;
 
 namespace IronPython.Runtime.Types {
     /// <summary>
@@ -29,55 +32,41 @@ namespace IronPython.Runtime.Types {
     /// etc...
     /// </summary>
     public abstract class ReflectedGetterSetter : PythonTypeSlot {
-        private readonly MethodInfo _getter, _setter;
-        private readonly PropertyInfo _info;
-        private NameType _nameType;
+        private readonly MethodInfo[]/*!*/ _getter, _setter;
+        private readonly NameType _nameType;
 
-        protected ReflectedGetterSetter(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt) {
-            _info = info;
-            _getter = getter;
-            _setter = setter;
+        protected ReflectedGetterSetter(MethodInfo[]/*!*/ getter, MethodInfo[]/*!*/ setter, NameType nt) {
+            Debug.Assert(getter != null);
+            Debug.Assert(setter != null);
+
+            _getter = RemoveNullEntries(getter);
+            _setter = RemoveNullEntries(setter);
             _nameType = nt;
         }
 
         protected ReflectedGetterSetter(ReflectedGetterSetter from) {
-            _info = from._info;
             _getter = from._getter;
             _setter = from._setter;
             _nameType = from._nameType;
         }
 
-        public virtual string Name {
-            get {
-                if (_info != null) {
-                    return _info.Name;
-                }
-
-                return null;
-            }
+        public abstract string Name {
+            get;                
         }
 
-        public MethodInfo Getter {
+        public abstract Type DeclaringType {
+            get;
+        }
+
+        public MethodInfo[]/*!*/ Getter {
             get {
                 return _getter;
             }
         }
 
-        public MethodInfo Setter {
+        public MethodInfo[]/*!*/ Setter {
             get {
                 return _setter;
-            }
-        }
-
-        public PropertyInfo Info {
-            get {
-                return _info;
-            }
-        }
-
-        public virtual Type DeclaringType {
-            get {
-                return _info.DeclaringType;
             }
         }
 
@@ -88,13 +77,15 @@ namespace IronPython.Runtime.Types {
         }
 
         public object CallGetter(CodeContext context, object instance, object[] args) {
-            if (instance == null && (Getter == null || !Getter.IsStatic)) return this;
+            if (NeedToReturnProperty(instance, Getter)) {
+                return this;
+            }
 
-            if (Getter == null) {
+            if (Getter.Length == 0) {
                 throw new MissingMemberException("unreadable property");
             }
 
-            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Getter });
+            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Getter);
 
             if (instance != null) {                
                 return binder.CallInstanceReflected(context, instance, args);
@@ -103,10 +94,27 @@ namespace IronPython.Runtime.Types {
             return binder.CallReflected(context, CallTypes.None, args);
         }
 
-        public bool CallSetter(CodeContext context, object instance, object[] args, object value) {
-            if (instance == null && (Setter == null || !Setter.IsStatic)) return false;
+        private static bool NeedToReturnProperty(object instance, MethodInfo[] mis) {
+            if (instance == null) {
+                if (mis.Length == 0) {
+                    return true;
+                }
 
-            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, new MethodInfo[] { Setter });
+                foreach (MethodInfo mi in mis) {
+                    if (!mi.IsStatic) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public bool CallSetter(CodeContext context, object instance, object[] args, object value) {
+            if (NeedToReturnProperty(instance, Setter)) {
+                return false;
+            }
+
+            MethodBinder binder = MethodBinder.MakeBinder(context.LanguageContext.Binder, Name, Setter);
 
             if (args.Length == 0) {
                 if (instance != null) {
@@ -128,7 +136,34 @@ namespace IronPython.Runtime.Types {
         }
 
         internal override bool IsVisible(CodeContext context, PythonType owner) {
-            return _nameType == NameType.PythonProperty || context.ModuleContext.ShowCls;
+            return _nameType == NameType.PythonProperty || PythonOps.IsClsVisible(context);
+        }
+
+        internal override bool IsAlwaysVisible {
+            get {
+                return _nameType == NameType.PythonProperty;
+            }
+        }
+
+        private MethodInfo[] RemoveNullEntries(MethodInfo[] mis) {
+            List<MethodInfo> res = null;
+            for(int i = 0; i<mis.Length; i++) {
+                if (mis[i] == null) {
+                    if (res == null) {
+                        res = new List<MethodInfo>();
+                        for (int j = 0; j < i; j++) {
+                            res.Add(mis[j]);
+                        }
+                    }
+                } else if(res != null) {
+                    res.Add(mis[i]);
+                }
+            }
+
+            if (res != null) {
+                return res.ToArray();
+            }
+            return mis;
         }
     }
 }

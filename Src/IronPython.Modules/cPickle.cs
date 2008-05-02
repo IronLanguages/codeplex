@@ -429,7 +429,7 @@ namespace IronPython.Modules {
             private void Save(CodeContext/*!*/ context, object obj) {
                 if (_persist_id != null) {
                     if (!_persist_site.IsInitialized) {
-                        _persist_site.EnsureInitialized(CallAction.Make(1));
+                        _persist_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                     }
                     string res = _persist_site.Invoke(context, _persist_id, obj);
                     if (res != null) {
@@ -443,7 +443,7 @@ namespace IronPython.Modules {
                 } else {                    
                     PickleFunction pickleFunction;
                     PythonType objType = DynamicHelpers.GetPythonType(obj);
-                    if (!dispatchTable.TryGetValue(objType.CanonicalPythonType, out pickleFunction)) {
+                    if (!dispatchTable.TryGetValue(objType, out pickleFunction)) {
                         if (objType.IsSubclassOf(TypeCache.PythonType)) {
                             // treat classes with metaclasses like regular classes
                             pickleFunction = SaveGlobal;
@@ -482,7 +482,7 @@ namespace IronPython.Modules {
             }
 
             private void SaveDict(CodeContext/*!*/ context, object obj) {
-                Debug.Assert(DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.Dict), "arg must be dict");
+                Debug.Assert(DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Dict), "arg must be dict");
                 Debug.Assert(!_memo.Contains(PythonOps.Id(obj)));
                 Memoize(obj);
 
@@ -511,11 +511,11 @@ namespace IronPython.Modules {
 
             private void SaveGlobal(CodeContext/*!*/ context, object obj) {
                 Debug.Assert(
-                    DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.OldClass) ||
-                    DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.Function) ||
-                    DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.BuiltinFunction) ||
-                    DynamicHelpers.GetPythonType(obj).CanonicalPythonType.Equals(TypeCache.PythonType) ||
-                    DynamicHelpers.GetPythonType(obj).CanonicalPythonType.IsSubclassOf(TypeCache.PythonType),
+                    DynamicHelpers.GetPythonType(obj).Equals(TypeCache.OldClass) ||
+                    DynamicHelpers.GetPythonType(obj).Equals(TypeCache.Function) ||
+                    DynamicHelpers.GetPythonType(obj).Equals(TypeCache.BuiltinFunction) ||
+                    DynamicHelpers.GetPythonType(obj).Equals(TypeCache.PythonType) ||
+                    DynamicHelpers.GetPythonType(obj).IsSubclassOf(TypeCache.PythonType),
                     "arg must be classic class, function, built-in function or method, or new-style type"
                 );
 
@@ -1535,7 +1535,7 @@ namespace IronPython.Modules {
                 if (_pers_loader == null) throw CannotUnpickle("cannot unpickle binary persistent ID w/o persistent_load");
 
                 if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(CallAction.Make(1));
+                    _pers_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                 }
                 _stack.append(_pers_site.Invoke(context, _pers_loader, _stack.pop()));
             }
@@ -1769,7 +1769,7 @@ namespace IronPython.Modules {
                 }
 
                 if (!_pers_site.IsInitialized) {
-                    _pers_site.EnsureInitialized(CallAction.Make(1));
+                    _pers_site.EnsureInitialized(CallAction.Make(DefaultContext.DefaultPythonBinder, 1));
                 }
 
                 _stack.append(_pers_site.Invoke(context, _pers_loader, ReadLineNoNewline()));

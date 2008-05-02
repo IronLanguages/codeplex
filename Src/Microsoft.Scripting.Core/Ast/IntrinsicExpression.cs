@@ -24,12 +24,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
-        public static Expression Environment(Type type) {
-            Contract.RequiresNotNull(type, "type");
-            return new IntrinsicExpression(AstNodeType.EnvironmentExpression, type);
-        }
-
+    public partial class Expression {
         public static Expression CodeContext() {
             return new IntrinsicExpression(AstNodeType.CodeContextExpression, typeof(CodeContext));
         }

@@ -17,14 +17,23 @@ using System;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 using IronPython.Hosting;
+using Microsoft.Scripting.Hosting.Shell;
+using IronPython.Runtime;
 
 internal sealed class PythonConsoleHost : ConsoleHost {
 
-    protected override void Initialize() {
-        base.Initialize();
-        this.Options.ScriptEngine = Environment.GetEngineByFileExtension("py");
+    protected override ScriptEngine/*!*/ CreateEngine() {
+        return Runtime.GetEngine(typeof(PythonContext));
     }
-    
+
+    protected override CommandLine/*!*/ CreateCommandLine() {
+        return new PythonCommandLine();
+    }
+
+    protected override OptionsParser/*!*/ CreateOptionsParser() {
+        return new PythonOptionsParser();
+    }
+
     [STAThread]
     static int Main(string[] args) {
         return new PythonConsoleHost().Run(args);

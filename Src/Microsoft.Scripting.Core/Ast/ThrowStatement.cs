@@ -39,7 +39,7 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static ThrowStatement Rethrow() {
             return Throw(SourceSpan.None, null);
         }
@@ -53,12 +53,12 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static ThrowStatement Throw(SourceSpan span, Expression value) {
-            return Throw(Annotations(span), value);
+            return Throw(Annotate(span), value);
         }
 
         public static ThrowStatement Throw(Annotations annotations, Expression value) {
             if (value != null) {
-                Contract.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
+                ContractUtils.Requires(TypeUtils.CanAssign(typeof(Exception), value.Type));
             }
             return new ThrowStatement(annotations, value);
         }

@@ -21,7 +21,6 @@ using System.Threading;
 using System.Reflection;
 using System.Collections;
 
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Actions;
@@ -179,7 +178,9 @@ namespace Microsoft.Scripting.Runtime {
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")] // TODO: fix
         public static Exception StaticAssignmentFromInstanceError(PropertyTracker tracker, bool isAssignment) {
-            return new MissingMemberException(string.Format(isAssignment ? Resources.StaticAssignmentFromInstanceError : Resources.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name));
+            return new MissingMemberException(string.Format(isAssignment ? 
+                                                            ResourceUtils.GetString(ResourceUtils.StaticAssignmentFromInstanceError) : 
+                                                            ResourceUtils.GetString(ResourceUtils.StaticAccessFromInstanceError, tracker.Name, tracker.DeclaringType.Name)));
         }
     }
 }

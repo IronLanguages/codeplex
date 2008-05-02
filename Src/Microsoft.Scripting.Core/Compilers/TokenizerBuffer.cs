@@ -110,17 +110,13 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         public TokenizerBuffer(TextReader source, SourceLocation initialLocation, int initialCapacity, bool multiEolns) {
-            Contract.RequiresNotNull(source, "source");
+            ContractUtils.RequiresNotNull(source, "source");
             if (initialCapacity <= 0) throw new ArgumentOutOfRangeException("initialCapacity");
 
             _source = source;
             _buffer = new char[initialCapacity];
 
-            _start = 0;
-            _end = 0;
-            _position = 0;
             _tokenEnd = -1;
-            _bufferResized = false;
             _multiEolns = multiEolns;
 
             _tokenEndLocation = SourceLocation.Invalid;
@@ -447,6 +443,7 @@ namespace Microsoft.Scripting.Runtime {
         }
 
         [Conditional("DEBUG")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         private void CheckInvariants() {
             Debug.Assert(_buffer.Length >= 1);
 

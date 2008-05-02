@@ -37,7 +37,7 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class PythonDoOperationBinderHelper<T> : BinderHelper<T, DoOperationAction> {
         private object[] _args;
@@ -66,6 +66,12 @@ namespace IronPython.Runtime.Calls {
         public bool IsInPlace {
             get {
                 return CompilerHelpers.InPlaceOperatorToOperator(Operation) != Operators.None;
+            }
+        }
+
+        private ActionBinder PythonBinder {
+            get {
+                return PythonContext.GetContext(Context).Binder;
             }
         }
 
@@ -189,13 +195,21 @@ namespace IronPython.Runtime.Calls {
                 return null;
             }
 
-            IList<SymbolId> names = types[0].GetMemberNames(Context);
+            List names = types[0].GetMemberNames(Context);
+            List<string> strNames = new List<string>();
+            foreach (object o in names) {
+                string s = o as string;
+                if (s != null) {
+                    strNames.Add(s);
+                }
+            }
+
             RuleBuilder<T> rule = new RuleBuilder<T>();
             PythonBinderHelper.MakeTest(rule, types);
 
             rule.Target = rule.MakeReturn(
                 Binder,
-                Ast.RuntimeConstant(SymbolTable.IdsToStrings(names))
+                Ast.RuntimeConstant(strNames)
             );
             return rule;
         }
@@ -207,7 +221,7 @@ namespace IronPython.Runtime.Calls {
                 oper = Action.DirectOperation;
             }
 
-            if (!IsReverseOperator(oper)) {
+            if (!TypeInfo.IsReverseOperator(oper)) {
                 op = Symbols.OperatorToSymbol(oper);
                 rop = Symbols.OperatorToReversedSymbol(oper);
             } else {
@@ -458,7 +472,7 @@ namespace IronPython.Runtime.Calls {
                 }
             }
 
-            public Expression MakeCall(RuleBuilder<T> rule, IList<Expression> args) {
+            public Expression MakeCall(ActionBinder binder, RuleBuilder<T> rule, IList<Expression> args) {
                 if (_function != null) {
                     return _function.MakeExpression(rule, args);
                 } else {
@@ -475,7 +489,7 @@ namespace IronPython.Runtime.Calls {
                                 args[0]
                             )
                         ),
-                        Ast.Action.Call(typeof(object), ArrayUtils.Insert<Expression>(Ast.Read(tmp), ArrayUtils.RemoveFirst(args)))
+                        Ast.Action.Call(binder, typeof(object), ArrayUtils.Insert<Expression>(Ast.Read(tmp), ArrayUtils.RemoveFirst(args)))
                     );
                 }
             }
@@ -528,7 +542,7 @@ namespace IronPython.Runtime.Calls {
             if (target == null || !target.Success) return true;
 
             VariableExpression tmp = rule.GetTemporary(target.ReturnType, "compareRetValue");
-            Expression call = target.MakeCall(rule, CheckTypesAndReverse(rule, reverse, types));
+            Expression call = target.MakeCall(PythonBinder, rule, CheckTypesAndReverse(rule, reverse, types));
             Expression assign = Ast.Assign(tmp, call);
             Expression ret = returner(Ast.ReadDefined(tmp), rule, reverse);
 
@@ -656,7 +670,7 @@ namespace IronPython.Runtime.Calls {
 
         private Expression MakeValueCheck(RuleBuilder<T> rule, int val, Expression test) {
             if (test.Type != typeof(bool)) {
-                test = Ast.Action.ConvertTo(typeof(bool), ConversionResultKind.ExplicitCast, test);
+                test = Ast.Action.ConvertTo(PythonBinder, typeof(bool), ConversionResultKind.ExplicitCast, test);
             }
             return Ast.IfThen(
                 test,
@@ -804,6 +818,7 @@ namespace IronPython.Runtime.Calls {
                                 Ast.Assign(
                                     coerceResult,
                                     slot.MakeCall(
+                                        PythonBinder,
                                         rule,
                                         new Expression[] { self, other }
                                     )
@@ -827,6 +842,7 @@ namespace IronPython.Runtime.Calls {
                             Binder,
                             returnTransform(
                                 Ast.Action.Operator(
+                                    PythonBinder,
                                     op | Operators.UserDefinedFlag,     // TODO: Replace w/ custom action
                                     typeof(object),
                                     reverse ? CoerceTwo(coerceTuple) : CoerceOne(coerceTuple),
@@ -935,7 +951,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             // finally make the rule
-            builder.MakeRule(args);
+            builder.MakeRule(PythonBinder, args);
             return rule;
         }
 
@@ -1054,7 +1070,7 @@ namespace IronPython.Runtime.Calls {
             /// <summary>
             /// Adds the target of the call to the rule.
             /// </summary>
-            public abstract void CompleteRuleTarget(RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure);
+            public abstract void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure);
 
             protected ActionBinder Binder {
                 get { return _binder; }
@@ -1092,19 +1108,19 @@ namespace IronPython.Runtime.Calls {
                 return arguments;
             }
 
-            public override void CompleteRuleTarget(RuleBuilder<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T>/*!*/ rule, Expression/*!*/[]/*!*/ args, Function<bool> customFailure) {
                 Assert.NotNull(args);
                 Assert.NotNullItems(args);
                 Assert.NotNull(rule);
 
-                MethodBinder binder = MethodBinder.MakeBinder(Binder,
+                MethodBinder mb = MethodBinder.MakeBinder(Binder,
                     Name,
                     _bf.Targets,
                     PythonNarrowing.None,
                     PythonNarrowing.IndexOperator);
 
                 Type[] types = CompilerHelpers.GetExpressionTypes(args);
-                BindingTarget target = binder.MakeBindingTarget(CallTypes.ImplicitInstance, types);
+                BindingTarget target = mb.MakeBindingTarget(CallTypes.ImplicitInstance, types);
 
                 if (target.Success) {
                     Expression call = target.MakeExpression(rule, args);
@@ -1146,10 +1162,11 @@ namespace IronPython.Runtime.Calls {
                 _slot = slot;
             }
 
-            public override void CompleteRuleTarget(RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure) {
+            public override void CompleteRuleTarget(ActionBinder binder, RuleBuilder<T> rule, Expression[] args, Function<bool> customFailure) {
                 VariableExpression callable = rule.GetTemporary(typeof(object), "slot");
 
                 Expression retVal = Ast.Action.Call(
+                    binder,
                     typeof(object),
                     ArrayUtils.Insert<Expression>(
                         Ast.Read(callable),
@@ -1194,7 +1211,7 @@ namespace IronPython.Runtime.Calls {
                 PythonBinderHelper.MakeTest(Rule, types);
             }
             
-            public abstract RuleBuilder<T> MakeRule(Expression[] args);
+            public abstract RuleBuilder<T> MakeRule(ActionBinder binder, Expression[] args);
 
             protected RuleBuilder<T> Rule {
                 get { return _rule; }
@@ -1219,7 +1236,7 @@ namespace IronPython.Runtime.Calls {
                 : base(rule, types, callable) {
             }
 
-            public override RuleBuilder<T> MakeRule(Expression[] args) {
+            public override RuleBuilder<T> MakeRule(ActionBinder binder, Expression[] args) {
                 // the semantics of simple slicing state that if the value
                 // is less than 0 then the length is added to it.  The default
                 // for unprovided parameters are 0 and maxint.  The callee
@@ -1247,8 +1264,10 @@ namespace IronPython.Runtime.Calls {
                         // this type defines __index__, otherwise we'd have an ItemBuilder constructing a slice
                         args[i] = MakeIntTest(args[0],
                             Ast.Action.Call(
+                                binder,
                                 typeof(int),
                                 Ast.Action.GetMember(
+                                    binder,
                                     Symbols.Index,
                                     typeof(object),
                                     args[i]
@@ -1267,7 +1286,7 @@ namespace IronPython.Runtime.Calls {
                     );
                 }
 
-                Callable.CompleteRuleTarget(Rule, args, null);
+                Callable.CompleteRuleTarget(binder, Rule, args, null);
                 return Rule;
             }
 
@@ -1315,17 +1334,18 @@ namespace IronPython.Runtime.Calls {
                 : base(rule, types, callable) {
             }
 
-            public override RuleBuilder<T> MakeRule(Expression[] args) {                
+            public override RuleBuilder<T> MakeRule(ActionBinder binder, Expression[] args) {                
                 Expression[] tupleArgs = Callable.GetTupleArguments(args);
-                Callable.CompleteRuleTarget(Rule, tupleArgs, delegate() {
+                Callable.CompleteRuleTarget(binder, Rule, tupleArgs, delegate() {
                     PythonTypeSlot indexSlot;
                     if (args[1].Type != typeof(Slice) && Types[1].TryResolveSlot(DefaultContext.Default, Symbols.Index, out indexSlot)) {
                         args[1] = Ast.Action.Call(
+                            binder,
                             typeof(int),
-                            Ast.Action.GetMember(Symbols.Index, typeof(object), args[1])
+                            Ast.Action.GetMember(binder, Symbols.Index, typeof(object), args[1])
                         );
 
-                        Callable.CompleteRuleTarget(Rule, tupleArgs, null);
+                        Callable.CompleteRuleTarget(binder, Rule, tupleArgs, null);
                         return true;
                     }
                     return false;
@@ -1366,8 +1386,9 @@ namespace IronPython.Runtime.Calls {
                     PythonTypeSlot indexSlot;
                     if (types[i].TryResolveSlot(Context, Symbols.Index, out indexSlot)) {
                         args[i] = Ast.Action.Call(
+                            PythonBinder,
                             typeof(int),
-                            Ast.Action.GetMember(Symbols.Index, typeof(object), args[i])
+                            Ast.Action.GetMember(PythonBinder, Symbols.Index, typeof(object), args[i])
                         );
 
                         callTypes[i] = typeof(int);
@@ -1424,7 +1445,7 @@ namespace IronPython.Runtime.Calls {
                     VariableExpression tmp = ret.GetTemporary(typeof(object), "slotVal");
                     indexArgs[i] = Ast.Comma(
                         PythonBinderHelper.MakeTryGetTypeMember<T>(ret, pts, tmp, indexArgs[i], Ast.RuntimeConstant(types[i])),
-                        Ast.Action.Call(typeof(int), Ast.Read(tmp))
+                        Ast.Action.Call(PythonBinder, typeof(int), Ast.Read(tmp))
                     );
                     types[i] = TypeCache.Int32;
                 }
@@ -1587,6 +1608,7 @@ namespace IronPython.Runtime.Calls {
                 CheckNotImplemented(
                     block,
                     Ast.Action.Call(
+                        PythonBinder,
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Read(callable),
@@ -1853,7 +1875,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.Target = rule.MakeReturn(Binder, func.MakeCall(rule, rule.Parameters));
+            rule.Target = rule.MakeReturn(PythonBinder, func.MakeCall(Binder, rule, rule.Parameters));
             PythonBinderHelper.MakeTest(rule, types);
 
             return rule;
@@ -1861,7 +1883,7 @@ namespace IronPython.Runtime.Calls {
 
         private RuleBuilder<T> MakeDocumentationRule(PythonType[] types) {
             RuleBuilder<T> rule = new RuleBuilder<T>();
-            rule.Target = rule.MakeReturn(Binder, Ast.Action.GetMember(Symbols.Doc, typeof(string), rule.Parameters[0]));
+            rule.Target = rule.MakeReturn(Binder, Ast.Action.GetMember(PythonBinder, Symbols.Doc, typeof(string), rule.Parameters[0]));
             PythonBinderHelper.MakeTest(rule, types);
             return rule;
         }
@@ -1880,7 +1902,7 @@ namespace IronPython.Runtime.Calls {
             } else {
                 SlotOrFunction target = nonzero.Success ? nonzero : length;
 
-                notExpr = target.MakeCall(rule, rule.Parameters);
+                notExpr = target.MakeCall(PythonBinder, rule, rule.Parameters);
 
                 if (nonzero.Success) {
                     // call non-zero and negate it
@@ -1897,7 +1919,7 @@ namespace IronPython.Runtime.Calls {
                     if (notExpr.Type == typeof(int)) {
                         notExpr = Ast.Equal(notExpr, Ast.Zero());
                     } else {
-                        notExpr = Ast.Action.Operator(Operators.Compare, typeof(int), notExpr, Ast.Zero());
+                        notExpr = Ast.Action.Operator(PythonBinder, Operators.Compare, typeof(int), notExpr, Ast.Zero());
                     }
                 }
             }
@@ -1930,10 +1952,6 @@ namespace IronPython.Runtime.Calls {
             get {
                 return (Action.Operation & ~Operators.UserDefinedFlag);
             }
-        }
-        
-        private static bool IsReverseOperator(Operators op) {
-            return op >= Operators.ReverseAdd && op <= Operators.ReverseExclusiveOr;
         }
     }
 }

@@ -180,7 +180,7 @@ def test_elapsed_event_handler():
         
     timer_helper(num_handlers=0, sleep_time=3, event_handlers=good_list)
 
-
+@skip("multiple_execute")
 def test_timer():
     '''
     http://msdn2.microsoft.com/en-us/library/system.timers.timer_members.aspx

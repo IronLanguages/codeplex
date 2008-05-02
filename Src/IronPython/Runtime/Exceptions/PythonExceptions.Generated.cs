@@ -16,10 +16,11 @@
 using System;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Runtime;
 
+using IronPython.Compiler.Generation;
 using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
-using Microsoft.Scripting.Runtime;
 
 // This generated code is updated by the generate_exceptions.py script.
 namespace IronPython.Runtime.Exceptions {
@@ -43,7 +44,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("SystemExit"), PythonHidden, Serializable]
+        [PythonSystemType("SystemExit"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _SystemExit : BaseException {
             private object _code;
 
@@ -217,7 +218,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("EnvironmentError"), PythonHidden, Serializable]
+        [PythonSystemType("EnvironmentError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _EnvironmentError : BaseException {
             private object _errno;
             private object _strerror;
@@ -288,7 +289,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("WindowsError"), PythonHidden, Serializable]
+        [PythonSystemType("WindowsError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _WindowsError : _EnvironmentError {
             private object _winerror;
 
@@ -477,7 +478,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("SyntaxError"), PythonHidden, Serializable]
+        [PythonSystemType("SyntaxError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _SyntaxError : BaseException {
             private object _text;
             private object _print_file_and_line;
@@ -618,7 +619,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeDecodeError"), PythonHidden, Serializable]
+        [PythonSystemType("UnicodeDecodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeDecodeError : BaseException {
             private object _start;
             private object _reason;
@@ -693,7 +694,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeEncodeError"), PythonHidden, Serializable]
+        [PythonSystemType("UnicodeEncodeError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeEncodeError : BaseException {
             private object _start;
             private object _reason;
@@ -766,7 +767,7 @@ namespace IronPython.Runtime.Exceptions {
             }
         }
 
-        [PythonSystemType("UnicodeTranslateError"), PythonHidden, Serializable]
+        [PythonSystemType("UnicodeTranslateError"), PythonHidden, DynamicBaseTypeAttribute, Serializable]
         public partial class _UnicodeTranslateError : BaseException {
             private object _start;
             private object _reason;
@@ -990,7 +991,7 @@ namespace IronPython.Runtime.Exceptions {
             if (clrException is IronPython.Runtime.Exceptions.FloatingPointException) return new BaseException(FloatingPointError);
             if (clrException is IronPython.Runtime.Exceptions.GeneratorExitException) return new BaseException(GeneratorExit);
             if (clrException is IronPython.Runtime.Exceptions.ImportException) return new BaseException(ImportError);
-            if (clrException is Microsoft.Scripting.Shell.KeyboardInterruptException) return new BaseException(KeyboardInterrupt);
+            if (clrException is Microsoft.Scripting.KeyboardInterruptException) return new BaseException(KeyboardInterrupt);
             if (clrException is IronPython.Runtime.Exceptions.LookupException) return new BaseException(LookupError);
             if (clrException is IronPython.Runtime.Exceptions.ReferenceException) return new BaseException(ReferenceError);
             if (clrException is IronPython.Runtime.Exceptions.RuntimeException) return new BaseException(RuntimeError);
@@ -1044,7 +1045,7 @@ namespace IronPython.Runtime.Exceptions {
             if (type == FloatingPointError) return new IronPython.Runtime.Exceptions.FloatingPointException(message);
             if (type == GeneratorExit) return new IronPython.Runtime.Exceptions.GeneratorExitException(message);
             if (type == ImportError) return new IronPython.Runtime.Exceptions.ImportException(message);
-            if (type == KeyboardInterrupt) return new Microsoft.Scripting.Shell.KeyboardInterruptException(message);
+            if (type == KeyboardInterrupt) return new Microsoft.Scripting.KeyboardInterruptException(message);
             if (type == LookupError) return new IronPython.Runtime.Exceptions.LookupException(message);
             if (type == ReferenceError) return new IronPython.Runtime.Exceptions.ReferenceException(message);
             if (type == RuntimeError) return new IronPython.Runtime.Exceptions.RuntimeException(message);

@@ -22,13 +22,15 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using IronPython.Hosting;
 using IronPython.Runtime.Calls;
+using Microsoft.Scripting.Utils;
 
 namespace IronPython.Runtime {
-    sealed class OutputWriter : TextWriter {
-        private PythonContext _context;
-        private bool _isErrorOutput;
+    internal sealed class OutputWriter : TextWriter {
+        private readonly PythonContext _context;
+        private readonly bool _isErrorOutput;
 
-        public OutputWriter(PythonContext context, bool isErrorOutput) {
+        public OutputWriter(PythonContext/*!*/ context, bool isErrorOutput) {
+            Assert.NotNull(context);
             _context = context;
             _isErrorOutput = isErrorOutput;
         }

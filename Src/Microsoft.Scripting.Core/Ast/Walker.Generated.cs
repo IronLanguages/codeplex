@@ -28,9 +28,9 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(ActionExpression node) { return true; }
         protected internal virtual void PostWalk(ActionExpression node) { }
 
-        // ArrayIndexAssignment
-        protected internal virtual bool Walk(ArrayIndexAssignment node) { return true; }
-        protected internal virtual void PostWalk(ArrayIndexAssignment node) { }
+        // AssignmentExpression
+        protected internal virtual bool Walk(AssignmentExpression node) { return true; }
+        protected internal virtual void PostWalk(AssignmentExpression node) { }
 
         // BinaryExpression
         protected internal virtual bool Walk(BinaryExpression node) { return true; }
@@ -39,10 +39,6 @@ namespace Microsoft.Scripting.Ast {
         // Block
         protected internal virtual bool Walk(Block node) { return true; }
         protected internal virtual void PostWalk(Block node) { }
-
-        // BoundAssignment
-        protected internal virtual bool Walk(BoundAssignment node) { return true; }
-        protected internal virtual void PostWalk(BoundAssignment node) { }
 
         // BreakStatement
         protected internal virtual bool Walk(BreakStatement node) { return true; }
@@ -64,10 +60,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(DeleteStatement node) { return true; }
         protected internal virtual void PostWalk(DeleteStatement node) { }
 
-        // DeleteUnboundExpression
-        protected internal virtual bool Walk(DeleteUnboundExpression node) { return true; }
-        protected internal virtual void PostWalk(DeleteUnboundExpression node) { }
-
         // DoStatement
         protected internal virtual bool Walk(DoStatement node) { return true; }
         protected internal virtual void PostWalk(DoStatement node) { }
@@ -76,10 +68,6 @@ namespace Microsoft.Scripting.Ast {
         protected internal virtual bool Walk(EmptyStatement node) { return true; }
         protected internal virtual void PostWalk(EmptyStatement node) { }
 
-        // ExpressionStatement
-        protected internal virtual bool Walk(ExpressionStatement node) { return true; }
-        protected internal virtual void PostWalk(ExpressionStatement node) { }
-
         // GeneratorLambdaExpression
         protected internal virtual bool Walk(GeneratorLambdaExpression node) { return true; }
         protected internal virtual void PostWalk(GeneratorLambdaExpression node) { }
@@ -87,6 +75,10 @@ namespace Microsoft.Scripting.Ast {
         // IntrinsicExpression
         protected internal virtual bool Walk(IntrinsicExpression node) { return true; }
         protected internal virtual void PostWalk(IntrinsicExpression node) { }
+
+        // InvocationExpression
+        protected internal virtual bool Walk(InvocationExpression node) { return true; }
+        protected internal virtual void PostWalk(InvocationExpression node) { }
 
         // LabeledStatement
         protected internal virtual bool Walk(LabeledStatement node) { return true; }
@@ -99,10 +91,6 @@ namespace Microsoft.Scripting.Ast {
         // LoopStatement
         protected internal virtual bool Walk(LoopStatement node) { return true; }
         protected internal virtual void PostWalk(LoopStatement node) { }
-
-        // MemberAssignment
-        protected internal virtual bool Walk(MemberAssignment node) { return true; }
-        protected internal virtual void PostWalk(MemberAssignment node) { }
 
         // MemberExpression
         protected internal virtual bool Walk(MemberExpression node) { return true; }
@@ -151,14 +139,6 @@ namespace Microsoft.Scripting.Ast {
         // UnaryExpression
         protected internal virtual bool Walk(UnaryExpression node) { return true; }
         protected internal virtual void PostWalk(UnaryExpression node) { }
-
-        // UnboundAssignment
-        protected internal virtual bool Walk(UnboundAssignment node) { return true; }
-        protected internal virtual void PostWalk(UnboundAssignment node) { }
-
-        // UnboundExpression
-        protected internal virtual bool Walk(UnboundExpression node) { return true; }
-        protected internal virtual void PostWalk(UnboundExpression node) { }
 
         // VariableExpression
         protected internal virtual bool Walk(VariableExpression node) { return true; }

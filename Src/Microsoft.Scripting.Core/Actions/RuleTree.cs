@@ -129,6 +129,21 @@ namespace Microsoft.Scripting.Actions {
             }
         }
 
+        internal void RemoveRule(Type[] args, Rule<T> rule) {
+            LinkedList<Rule<T>> list = GetRuleList(args);
+            lock (list) {
+                LinkedListNode<Rule<T>> node = list.First;
+                EqualityComparer<Rule<T>> cmp = EqualityComparer<Rule<T>>.Default;
+                while (node != null) {
+                    if (cmp.Equals(node.Value, rule)) {
+                        list.Remove(node);
+                        break;
+                    }
+                    node = node.Next;
+                }
+            }
+        }
+
         private class RuleTable {
             internal Dictionary<Type, RuleTable> NextTable;
             internal LinkedList<Rule<T>> Rules;

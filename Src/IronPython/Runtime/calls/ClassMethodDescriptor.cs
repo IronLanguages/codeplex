@@ -44,18 +44,11 @@ namespace IronPython.Runtime.Calls {
                 if (instance == null) throw PythonOps.TypeError("__get__(None, None) is invalid");
                 owner = DynamicHelpers.GetPythonType(instance);
             } else {
-                PythonType dt = owner as PythonType;
-                if (dt == null) {
-                    throw PythonOps.TypeError("descriptor {0} for type {1} needs a type, not a {2}",
-                        PythonOps.StringRepr(_func.Name),
-                        PythonOps.StringRepr(PythonTypeOps.GetName(_func.DeclaringType)),
-                        PythonOps.StringRepr(PythonTypeOps.GetName(owner)));
-                }
-                if (!dt.IsSubclassOf(TypeCache.Dict)) {
+                if (!owner.IsSubclassOf(DynamicHelpers.GetPythonTypeFromType(_func.DeclaringType))) {
                     throw PythonOps.TypeError("descriptor {0} for type {1} doesn't apply to type {2}",
                         PythonOps.StringRepr(_func.Name),
                         PythonOps.StringRepr(PythonTypeOps.GetName(_func.DeclaringType)),
-                        PythonOps.StringRepr(PythonTypeOps.GetName(dt)));
+                        PythonOps.StringRepr(PythonTypeOps.GetName(owner)));
                 }
             }
             if (instance != null)

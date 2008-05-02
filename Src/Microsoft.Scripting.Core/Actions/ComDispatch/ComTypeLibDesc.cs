@@ -21,7 +21,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     using System.Runtime.InteropServices;
     using Microsoft.Scripting.Generation;
     using Microsoft.Scripting.Runtime;
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using ComTypes = System.Runtime.InteropServices.ComTypes;
 
     public class ComTypeLibDesc : IDynamicObject {
@@ -45,6 +45,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             return String.Format("<type library {0}>", _typeLibName);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public string Documentation {
             get { return String.Empty; }
         }

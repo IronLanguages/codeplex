@@ -35,21 +35,33 @@ namespace IronPython.Runtime.Types {
     /// </summary>
     [PythonSystemType("indexer#")]
     public sealed class ReflectedIndexer : ReflectedGetterSetter {
-        private object _instance;
+        private readonly object _instance;
+        private readonly PropertyInfo/*!*/ _info;
 
         public ReflectedIndexer(PropertyInfo/*!*/ info, NameType nt)
-            : base(info, info.GetGetMethod(), info.GetSetMethod(), nt) {
+            : base(new MethodInfo[] { info.GetGetMethod() }, new MethodInfo[] { info.GetSetMethod() }, nt) {
             Debug.Assert(info != null);
+
+            _info = info;
         }
 
         public ReflectedIndexer(ReflectedIndexer from, object instance)
             : base(from) {
-            this._instance = instance;
+            _instance = instance;
+            _info = from._info;
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
             value = new ReflectedIndexer(this, instance);
             return true;
+        }
+
+        public override Type DeclaringType {
+            get { return _info.DeclaringType; }
+        }
+
+        public override string Name {
+            get { return _info.Name; }
         }
 
         #region Public APIs

@@ -21,8 +21,8 @@ using System.Diagnostics;
 using System.Collections.Generic;
 
 using Microsoft.Scripting;
-using Microsoft.Scripting.Shell;
 using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting.Hosting.Shell;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
@@ -33,20 +33,12 @@ using IronPython.Runtime.Operations;
 
 namespace IronPython.Hosting {
 
-    sealed class PythonOptionsParser : OptionsParser {
-        private readonly PythonContext/*!*/ _context;
-
+    public sealed class PythonOptionsParser : OptionsParser {
         private PythonConsoleOptions _consoleOptions;
         private PythonEngineOptions _engineOptions;
 
         public override ConsoleOptions ConsoleOptions { get { return _consoleOptions; } set { _consoleOptions = (PythonConsoleOptions)value; } } 
         public override EngineOptions EngineOptions { get { return _engineOptions; } set { _engineOptions = (PythonEngineOptions)value; } }
-
-        public PythonOptionsParser(PythonContext/*!*/ context)
-            : base(context) {
-            Assert.NotNull(context);
-            _context = context;
-        }
 
         public override ConsoleOptions GetDefaultConsoleOptions() {
             return new PythonConsoleOptions();
@@ -56,23 +48,25 @@ namespace IronPython.Hosting {
             return new PythonEngineOptions();
         }
 
-        public override void Parse(string[] args) {
+        public override void Parse(string/*!*/[]/*!*/ args) {
             if (_consoleOptions == null) _consoleOptions = new PythonConsoleOptions();
-            if (_engineOptions == null) _engineOptions = _context.PythonOptions; // TODO: CLONE?
+            if (_engineOptions == null) _engineOptions = new PythonEngineOptions();
 
             base.Parse(args);
 
+            // TODO: this should be done by PythonContext ctor, but we need the hosting configuration for languages implemented first:
+            PythonContext context = (PythonContext)HostingHelpers.GetLanguageContext(Engine);
             PythonEngineOptions scriptOpt = (PythonEngineOptions)EngineOptions;
-            _context.SystemState.Dict[SymbolTable.StringToId("argv")] = new List(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
+            context.SystemState.Dict[SymbolTable.StringToId("argv")] = new List(scriptOpt.Arguments.Length == 0 ? new object[] { String.Empty } : scriptOpt.Arguments);
             if (scriptOpt.WarningFilters != null)
-                _context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(scriptOpt.WarningFilters);
+                context.SystemState.Dict[SymbolTable.StringToId("warnoptions")] = new List(scriptOpt.WarningFilters);
 
             PythonFunction.SetRecursionLimit(_engineOptions.MaximumRecursion);
         }
 
         /// <exception cref="Exception">On error.</exception>
         protected override void ParseArgument(string arg) {
-            Contract.RequiresNotNull(arg, "arg");
+            ContractUtils.RequiresNotNull(arg, "arg");
 
             Debug.Assert(_consoleOptions != null && _engineOptions != null);
 

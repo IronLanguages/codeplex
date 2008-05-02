@@ -75,18 +75,17 @@ using Microsoft.Scripting;
  * 
  * More details on the bits.
  * 
- * First bit:
- *  1 .. value is definitely assigned (initialized and != Uninitialized.instance)
- *  0 .. value may be uninitialized or set to Uninitialized.instance
- * Second bit:
- *  1 .. is definitely initialized  (including definitely initialized to Uninitialized.instance)
- *  0 .. may be uninitialized
+ * First bit (variable is assigned a value):
+ *  1 .. variable is definitely assigned to a value
+ *  0 .. variable is not assigned to a value at this point (it could have been deleted or just not assigned yet)
+ * Second bit (variable is assigned a value or is deleted):
+ *  1 .. variable is definitely initialized (either by a value or by deletion)
+ *  0 .. variable is not initialized at this point (neither assigned nor deleted)
  * 
- * In combination:
+ * Valid combinations:
  *  11 .. initialized
- *  10 .. invalid
  *  01 .. deleted
- *  00 .. may be uninitialized
+ *  00 .. may not be initialized
  */
 
 namespace IronPython.Compiler.Ast {
@@ -102,6 +101,16 @@ namespace IronPython.Compiler.Ast {
             return false;
         }
 
+        public override bool Walk(MemberExpression node) {
+            node.Walk(_fc);
+            return false;
+        }
+
+        public override bool Walk(IndexExpression node) {
+            node.Walk(_fc);
+            return false;
+        }
+        
         public override bool Walk(ParenthesisExpression node) {
             return true;
         }
@@ -110,6 +119,10 @@ namespace IronPython.Compiler.Ast {
             return true;
         }
 
+        public override bool Walk(ListExpression node) {
+            return true;
+        }
+        
         public override bool Walk(Parameter node) {
             _fc.Define(node.Name);
             return true;
@@ -126,7 +139,7 @@ namespace IronPython.Compiler.Ast {
         public FlowDeleter(FlowChecker fc) {
             _fc = fc;
         }
-
+ 
         public override bool Walk(NameExpression node) {
             _fc.Delete(node.Name);
             return false;
@@ -169,11 +182,26 @@ namespace IronPython.Compiler.Ast {
                     SymbolTable.IdToString(binding.Key),
                     bits.Get(index) ? "*" : "-",
                     bits.Get(index + 1) ? "-" : "*");
-                if (binding.Value.Unassigned)
+                if (binding.Value.ReadBeforeInitialized)
                     sb.Append("#");
             }
             sb.Append('}');
             Debug.WriteLine(sb.ToString());
+        }
+
+        private void SetAssigned(PythonVariable/*!*/ variable, bool value) {
+            _bits.Set(variable.Index * 2, value);
+        }
+
+        private void SetInitialized(PythonVariable/*!*/ variable, bool value) {
+            _bits.Set(variable.Index * 2 + 1, value);
+        }
+        private bool IsAssigned(PythonVariable/*!*/ variable) {
+            return _bits.Get(variable.Index * 2);
+        }
+
+        private bool IsInitialized(PythonVariable/*!*/ variable) {
+            return _bits.Get(variable.Index * 2 + 1);
         }
 
         public static void Check(ScopeStatement scope) {
@@ -186,18 +214,16 @@ namespace IronPython.Compiler.Ast {
         public void Define(SymbolId name) {
             PythonVariable binding;
             if (_variables.TryGetValue(name, out binding)) {
-                int index = binding.Index * 2;
-                _bits.Set(index, true);      // is assigned
-                _bits.Set(index + 1, true);  // cannot be unassigned
+                SetAssigned(binding, true);
+                SetInitialized(binding, true);
             }
         }
 
         public void Delete(SymbolId name) {
             PythonVariable binding;
             if (_variables.TryGetValue(name, out binding)) {
-                int index = binding.Index * 2;
-                _bits.Set(index, false);     // is not initialized
-                _bits.Set(index + 1, true);  // is assigned (to Uninitialized.instance)
+                SetAssigned(binding, false);
+                SetInitialized(binding, true);
             }
         }
 
@@ -237,15 +263,10 @@ namespace IronPython.Compiler.Ast {
         public override bool Walk(NameExpression node) {
             PythonVariable binding;
             if (_variables.TryGetValue(node.Name, out binding)) {
-                int index = binding.Index * 2;
-                bool defined = _bits.Get(index);
-                node.Assigned = defined;
-                if (!defined) {
-                    binding.Uninitialized = true;
-                }
-                if (!_bits.Get(index + 1)) {
-                    // Found an unbound use of the name => need to initialize to Uninitialized.instance
-                    binding.Unassigned = true;
+                node.Assigned = IsAssigned(binding);
+
+                if (!IsInitialized(binding)) {
+                    binding.ReadBeforeInitialized = true;
                 }
             }
             return true;
@@ -280,9 +301,14 @@ namespace IronPython.Compiler.Ast {
         // ClassDef
         public override bool Walk(ClassDefinition node) {
             if (_scope == node) {
+                // the class body is being analyzed, go deep:
                 return true;
             } else {
+                // analyze the class definition itself (it is visited while analyzing parent scope):
                 Define(node.Name);
+                foreach (Expression e in node.Bases) {
+                    e.Walk(this);
+                }
                 return false;
             }
         }
@@ -343,12 +369,19 @@ namespace IronPython.Compiler.Ast {
         // FuncDef
         public override bool Walk(FunctionDefinition node) {
             if (node == _scope) {
-                foreach (Parameter e in node.Parameters) {
-                    e.Walk(_fdef);
+                // the function body is being analyzed, go deep:
+                foreach (Parameter p in node.Parameters) {
+                    p.Walk(_fdef);
                 }
                 return true;
             } else {
+                // analyze the function definition itself (it is visited while analyzing parent scope):
                 Define(node.Name);
+                foreach (Parameter p in node.Parameters) {
+                    if (p.DefaultValue != null) {
+                        p.DefaultValue.Walk(this);
+                    }
+                } 
                 return false;
             }
         }

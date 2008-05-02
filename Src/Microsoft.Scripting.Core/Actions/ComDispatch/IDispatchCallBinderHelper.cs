@@ -29,30 +29,32 @@ using Microsoft.Scripting.Utils;
 using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Creates a rule for calling a COM method using IDispatch::Invoke
     /// </summary>
     /// <typeparam name="T">Type of the DynamicSite</typeparam>
     public class IDispatchCallBinderHelper<T> :  CallBinderHelper<T, CallAction> {
-        VarEnumSelector _varEnumSelector;
-        MethodBinderContext _methodBinderContext;
-        SymbolId[] _keywordArgNames;
-        int _totalExplicitArgs; // Includes the individial elements of ArgumentKind.Dictionary (if any)
 
-        VariableExpression _dispatchObject;
-        VariableExpression _dispatchPointer;
-        VariableExpression _dispId;
-        VariableExpression _dispParams;
-        VariableExpression _paramVariants;
-        VariableExpression _invokeResult;
-        VariableExpression _returnValue;
-        VariableExpression _dispIdsOfKeywordArgsPinned;
+        private VarEnumSelector _varEnumSelector;
+        private MethodBinderContext _methodBinderContext;
+        private SymbolId[] _keywordArgNames;
+        private int _totalExplicitArgs; // Includes the individial elements of ArgumentKind.Dictionary (if any)
+
+        private VariableExpression _dispatchObject;
+        private VariableExpression _dispatchPointer;
+        private VariableExpression _dispId;
+        private VariableExpression _dispParams;
+        private VariableExpression _paramVariants;
+        private VariableExpression _invokeResult;
+        private VariableExpression _returnValue;
+        private VariableExpression _dispIdsOfKeywordArgsPinned;
 
         public IDispatchCallBinderHelper(CodeContext context, CallAction action, object[] args)
             : base(context, action, args) {
-            Contract.RequiresNotNull(args, "args");
+            ContractUtils.RequiresNotNull(args, "args");
             if (args.Length < 1) {
                 throw new ArgumentException("Must receive at least one argument, the target to call", "args");
             }
@@ -63,7 +65,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             _methodBinderContext = new MethodBinderContext(Binder, Rule);
         }
 
-        private Expression ThisParameter { get { return Rule.Parameters[0]; } }
+        private Expression ThisParameter {
+            get { return Rule.Parameters[0]; }
+        }
 
         private Expression GetDispCallable() {
             return Ast.ConvertHelper(ThisParameter, typeof(DispCallable));
@@ -151,7 +155,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 Ast.ReadDefined(_dispatchPointer),
                 Ast.ReadDefined(_dispId),
                 Ast.Constant(
-                    ((DispCallable)Callable).IsPropertyPut ?
+                    Callable is DispPropertyPut ?
                         ComTypes.INVOKEKIND.INVOKE_PROPERTYPUT :
                         ComTypes.INVOKEKIND.INVOKE_FUNC | ComTypes.INVOKEKIND.INVOKE_PROPERTYGET
                              ), // INVOKE_PROPERTYGET should only be needed for COM objects without typeinfo, where we might have to treat properties as methods
@@ -310,7 +314,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 Ast.Constant(_totalExplicitArgs));
             exprs.Add(expr);
 
-            if (((DispCallable)Callable).IsPropertyPut) {
+            if (Callable is DispPropertyPut) {
                 //
                 // dispParams.cNamedArgs = 1;
                 // dispParams.rgdispidNamedArgs = RuntimeHelpers.UnsafeMethods.GetNamedArgsForPropertyPut()

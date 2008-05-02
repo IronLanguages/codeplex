@@ -29,8 +29,8 @@ namespace Microsoft.Scripting.Utils {
         private readonly T/*!*/[]/*!*/_array;
 
         public ValueArray(T/*!*/[]/*!*/ array) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresNotNullItems(array, "array");
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNullItems(array, "array");
             _array = array;
         }
 

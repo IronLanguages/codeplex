@@ -25,7 +25,7 @@ using Microsoft.Scripting.Runtime;
 
 namespace IronPython.Runtime {
     [PythonSystemType("slice")]
-    public sealed class Slice : IComparable, IValueEquality, ISlice {
+    public sealed class Slice : ICodeFormattable, IComparable, IValueEquality, ISlice {
         private readonly object _start, _stop, _step;
 
         public Slice(object stop) : this(null, stop, null) { }
@@ -79,10 +79,6 @@ namespace IronPython.Runtime {
 
         #region Object overrides
 
-        public override string ToString() {
-            return string.Format("slice({0}, {1}, {2})", PythonOps.StringRepr(_start), PythonOps.StringRepr(_stop), PythonOps.StringRepr(_step));
-        }
-
         public override bool Equals(object obj) {
             Slice s = obj as Slice;
             if (s == null) return false;
@@ -114,7 +110,7 @@ namespace IronPython.Runtime {
 
         #region IValueEquality Members
 
-        public int GetValueHashCode() {
+        int IValueEquality.GetValueHashCode() {
             throw PythonOps.TypeErrorForUnhashableType("slice");
         }
 
@@ -122,12 +118,8 @@ namespace IronPython.Runtime {
         /// slice is sealed so equality doesn't need to be virtual and can be the IValueEquality
         /// interface implementation
         /// </summary>
-        public bool ValueEquals(object other) {
+        bool IValueEquality.ValueEquals(object other) {
             return Equals(other);
-        }
-
-        public bool ValueNotEquals(object other) {
-            return !Equals(other);
         }
 
         #endregion
@@ -148,6 +140,14 @@ namespace IronPython.Runtime {
 
         #endregion
 
+        #region ICodeFormattable Members
+
+        public string/*!*/ __repr__(CodeContext/*!*/ context) {
+            return string.Format("slice({0}, {1}, {2})", PythonOps.StringRepr(_start), PythonOps.StringRepr(_stop), PythonOps.StringRepr(_step));
+        }
+
+        #endregion
+        
         #region Internal Implementation details
 
         internal static void FixSliceArguments(int size, ref int start, ref int stop) {

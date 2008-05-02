@@ -16,21 +16,17 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// This allows passing a COM type by reference, given a StrongBox of the managed type.
@@ -39,6 +35,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// in the two worlds. ReferenceArgBuilder cannot be used as is in such cases
     /// </summary>
     internal class ComReferenceArgBuilder : ReferenceArgBuilder {
+
         private VariableExpression _unmanagedTemp;
 
         internal ComReferenceArgBuilder(int index, Type parameterType)

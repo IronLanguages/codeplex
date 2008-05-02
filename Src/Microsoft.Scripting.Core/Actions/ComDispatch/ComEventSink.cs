@@ -17,15 +17,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
-using System.Reflection;
-using System.Globalization;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Diagnostics;
+using System.Globalization;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+using Microsoft.Scripting.Runtime;
+
+using ComTypes = System.Runtime.InteropServices.ComTypes;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
     /// <summary>
@@ -44,6 +43,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
     /// is bound to the lifetime of the RCW. 
     /// </summary>
     public class ComEventSink : MarshalByRefObject, IReflect, IDisposable {
+
         #region private fields
 
         private Guid _sourceIid;
@@ -83,8 +83,6 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
 
         #endregion
 
-        private const int CONNECT_E_NOCONNECTION = unchecked((int)0x80040200);
-
         #region ctor
 
         private ComEventSink(object rcw, Guid sourceIid) {
@@ -94,10 +92,10 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #endregion
 
         private void Initialize(object rcw, Guid sourceIid) {
-            this._sourceIid = sourceIid;
-            this._adviseCookie = -1;
+            _sourceIid = sourceIid;
+            _adviseCookie = -1;
 
-            Debug.Assert(this._connectionPoint == null, "re-initializing event sink w/o unadvising from connection point");
+            Debug.Assert(_connectionPoint == null, "re-initializing event sink w/o unadvising from connection point");
 
             ComTypes.IConnectionPointContainer cpc = rcw as ComTypes.IConnectionPointContainer;
             if (cpc == null)
@@ -115,7 +113,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #region static methods
 
         public static ComEventSink FromRuntimeCallableWrapper(object rcw, Guid sourceIid, bool createIfNotFound) {
-            List<ComEventSink> comEventSinks = ComEventSinksContainer.FromRCW(rcw, createIfNotFound);
+            List<ComEventSink> comEventSinks = ComEventSinksContainer.FromRuntimeCallableWrapper(rcw, createIfNotFound);
             ComEventSink comEventSink = null;
 
             lock (comEventSinks) {
@@ -195,16 +193,16 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 // If the delegates chain is empty - we can remove 
                 // corresponding ComEvenSinkEntry
                 if (sinkEntry._target == null)
-                    this._comEventSinkMethods.Remove(sinkEntry);
+                    _comEventSinkMethods.Remove(sinkEntry);
 
                 // We can Unadvise from the ConnectionPoint if no more sink entries
                 // are registered for this interface 
                 //(calling Dispose will call IConnectionPoint.Unadvise).
-                if (this._comEventSinkMethods.Count == 0) {
+                if (_comEventSinkMethods.Count == 0) {
                     // notice that we do not remove 
                     // ComEventSinkEntry from the list, we will re-use this data structure
                     // if a new handler needs to be attached.
-                    this.Dispose();
+                    Dispose();
                 }
             }
         }
@@ -285,7 +283,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
             CultureInfo culture, 
             string[] namedParameters) {
 
-            return this.ExecuteHandler(name, args);
+            return ExecuteHandler(name, args);
         }
 
         #endregion
@@ -293,14 +291,14 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         #region IDisposable
 
         public void Dispose() {
-            this.Dispose(true);
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
 
         #endregion
 
         ~ComEventSink() {
-            this.Dispose(false);
+            Dispose(false);
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "disposing")]
@@ -327,7 +325,7 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
                 // the Unadvise is going to throw.  In this case, since we're going away anyway,
                 // we'll ignore the failure and quietly go on our merry way.
                 COMException exCOM = ex as COMException;
-                if (exCOM != null && exCOM.ErrorCode == CONNECT_E_NOCONNECTION) {
+                if (exCOM != null && exCOM.ErrorCode == ComHresults.CONNECT_E_NOCONNECTION) {
                     Debug.Assert(false, "IConnectionPoint::Unadvise returned CONNECT_E_NOCONNECTION.");
                     throw;
                 }

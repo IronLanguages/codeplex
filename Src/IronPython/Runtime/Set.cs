@@ -578,16 +578,12 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
-        }
-
         public bool __eq__(object other) {
             return ((IValueEquality)this).ValueEquals(other);
         }
 
         public bool __ne__(object other) {
-            return ((IValueEquality)this).ValueNotEquals(other);
+            return !((IValueEquality)this).ValueEquals(other);
         }
 
         #endregion
@@ -1004,16 +1000,12 @@ namespace IronPython.Runtime {
             return false;
         }
 
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
-        }
-
         public bool __eq__(object other) {
             return ((IValueEquality)this).ValueEquals(other);
         }
 
         public bool __ne__(object other) {
-            return ((IValueEquality)this).ValueNotEquals(other);
+            return !((IValueEquality)this).ValueEquals(other);
         }
 
         #endregion

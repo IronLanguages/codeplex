@@ -13,10 +13,8 @@
 #
 #####################################################################################
 
-import generate
 import sys
-reload(generate)
-from generate import CodeGenerator, CodeWriter
+from generate import generate
 
 MAX_ARGS = 5
 
@@ -81,8 +79,6 @@ def call_targets(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("public delegate object CallTarget%d(%s);" %
                  (nparams, make_params(nparams)))
-
-CodeGenerator("Python Call Targets", call_targets).doit()
 
 def get_call_type(postfix):
     if postfix == "": return "CallType.None"
@@ -199,24 +195,30 @@ public static object Call(%(params)s) {
 def gen_call_meth(nparams, cw):
     cw.enter_block("public static object CallWithContext(CodeContext context, object func" + gen_args_comma(nparams, ", ") + ")")
     if nparams == 0:
-        cw.write("return _callSite0.Invoke(func);")
+        cw.write("return _callSite0.Invoke(DefaultContext.Default, func);")
     else:
-        cw.write("return _callSite%d.Invoke(func, %s);" % (nparams, gen_args_call(nparams)))
+        cw.write("return _callSite%d.Invoke(DefaultContext.Default, func, %s);" % (nparams, gen_args_call(nparams)))
     cw.exit_block()
     cw.write("")
 
 def gen_python_methods(cw):
     for nparams in range(MAX_ARGS+1):
         types = ', '.join(['object'] * (nparams + 2))
-        cw.write("private static readonly FastDynamicSite<%s> _callSite%d = RuntimeHelpers.CreateSimpleCallSite<%s>(DefaultContext.Default);" % (types, nparams, types ))
+        cw.write("private static readonly DynamicSite<%s> _callSite%d = CallSiteFactory.CreateSimpleCallSite<%s>(DefaultContext.DefaultPythonBinder);" % (types, nparams, types ))
     cw.write("")
     for nparams in range(MAX_ARGS+1):
         gen_call_meth(nparams, cw)
-
-CodeGenerator("Python Call Operations", gen_python_methods).doit()
 
 def gen_python_switch(cw):
     for nparams in range(MAX_ARGS+1):
         cw.write("case %d: return typeof(CallTarget%d);" % (nparams, nparams))
 
-CodeGenerator("Python Call Target Switch", gen_python_switch).doit()
+def main():
+    return generate(
+        ("Python Call Targets", call_targets),
+        ("Python Call Operations", gen_python_methods),
+        ("Python Call Target Switch", gen_python_switch),
+    )
+
+if __name__ == "__main__":
+    main()

@@ -32,11 +32,11 @@ namespace Microsoft.Scripting.Generation {
             _storage = storage;
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
+        public override void EmitGet(ILGen cg) {
             _storage.EmitGet(cg);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
+        public override void EmitGetAddr(ILGen cg) {
             _storage.EmitGetAddr(cg);
         }
 
@@ -44,15 +44,15 @@ namespace Microsoft.Scripting.Generation {
             get { return _storage.Type; }
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
+        public override void EmitSet(ILGen cg) {
             _storage.EmitSet(cg);
         }
 
-        public override void EmitSet(LambdaCompiler cg, Slot val) {
+        public override void EmitSet(ILGen cg, Slot val) {
             _storage.EmitSet(cg, val);
         }
 
-        public virtual void EmitGetDictionary(LambdaCompiler cg) {
+        public virtual void EmitGetDictionary(ILGen cg) {
             _storage.EmitGet(cg);
         }
     }

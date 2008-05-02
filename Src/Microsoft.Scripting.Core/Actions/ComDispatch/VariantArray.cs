@@ -17,8 +17,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {

@@ -21,6 +21,7 @@ using System.Diagnostics;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
+using IronPython.Runtime.Types;
 
 [assembly: PythonModule("xxsubtype", typeof(IronPython.Modules.xxsubtype))]
 namespace IronPython.Modules {
@@ -49,6 +50,15 @@ namespace IronPython.Modules {
 
             public void setstate(int value) {
                 state = value;
+            }
+
+            public static object staticmeth([ParamDictionary]IAttributesCollection dict, params object[] args) {
+                return PythonTuple.MakeTuple(null, PythonTuple.MakeTuple(args), dict);
+            }
+
+            [PythonClassMethod]
+            public static object classmeth(PythonType cls, [ParamDictionary]IAttributesCollection dict, params object[] args) {
+                return PythonTuple.MakeTuple(cls, PythonTuple.MakeTuple(args), dict);
             }
         }
 

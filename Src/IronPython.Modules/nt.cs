@@ -34,6 +34,7 @@ using IronPython.Runtime.Exceptions;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
 using Microsoft.Scripting.Runtime;
+using System.ComponentModel;
 
 [assembly: PythonModule("nt", typeof(IronPython.Modules.PythonNT))]
 namespace IronPython.Modules {
@@ -424,11 +425,17 @@ namespace IronPython.Modules {
             return sb.ToString();
         }
 
-        public static void startfile(string filename) {
+        public static void startfile(string filename, [DefaultParameterValue("open")]string operation) {
             System.Diagnostics.Process process = new System.Diagnostics.Process();
             process.StartInfo.FileName = filename;
             process.StartInfo.UseShellExecute = true;
-            process.Start();
+            process.StartInfo.Verb = operation;
+            try {
+
+                process.Start();
+            } catch (Exception e) {
+                throw ToPythonException(e);
+            }
         }
 
         [PythonSystemType]
@@ -775,6 +782,7 @@ namespace IronPython.Modules {
         public const int P_WAIT = 0;
         public const int P_NOWAIT = 1;
         public const int P_NOWAITO = 3;
+
         // Not implemented:
         // public static object P_OVERLAY = 2;
         // public static object P_DETACH = 4;
@@ -790,26 +798,61 @@ namespace IronPython.Modules {
             }
 
             string message = e.Message;
-            int hr = System.Runtime.InteropServices.Marshal.GetHRForException(e);
-            if ((hr & ~0xfff) == (unchecked((int)0x80070000))) {
-                // Win32 HR, translate HR to Python error code if possible, otherwise
-                // report the HR.
-                switch (hr & 0xfff) {
-                    case ERROR_FILE_EXISTS:
-                        hr = PythonErrorNumber.EEXIST;
-                        break;
-                    case ERROR_ACCESS_DENIED:
-                        hr = PythonErrorNumber.EACCES;
-                        break;                    
+            int errorCode;
+
+            bool isWindowsError = false;
+            Win32Exception winExcep = e as Win32Exception;
+            if (winExcep != null) {
+                errorCode = ToPythonErrorCode(winExcep.NativeErrorCode);
+                message = GetFormattedException(e, errorCode);
+                isWindowsError = true;
+            } else {
+                errorCode = System.Runtime.InteropServices.Marshal.GetHRForException(e);
+                if ((errorCode & ~0xfff) == (unchecked((int)0x80070000))) {
+                    // Win32 HR, translate HR to Python error code if possible, otherwise
+                    // report the HR.
+                    errorCode = ToPythonErrorCode(errorCode & 0xfff);
+                    message = GetFormattedException(e, errorCode);
+                    isWindowsError = true;
                 }
-                message = "[Errno " + hr.ToString() + "] " + e.Message;
             }
 
-            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, hr, message);
+            if (isWindowsError) {
+                return PythonExceptions.CreateThrowable(PythonExceptions.WindowsError, errorCode, message);
+            }
+
+            return PythonExceptions.CreateThrowable(PythonExceptions.OSError, errorCode, message);
         }
 
+        private static string GetFormattedException(Exception e, int hr) {
+            return "[Errno " + hr.ToString() + "] " + e.Message;
+        }
+
+        private static int ToPythonErrorCode(int win32ErrorCode) {
+            switch (win32ErrorCode) {
+                case ERROR_FILE_EXISTS:       return PythonErrorNumber.EEXIST; 
+                case ERROR_ACCESS_DENIED:     return PythonErrorNumber.EACCES; 
+                case ERROR_DLL_NOT_FOUND:
+                case ERROR_FILE_NOT_FOUND:
+                case ERROR_PATH_NOT_FOUND:    return PythonErrorNumber.ENOENT; 
+                case ERROR_CANCELLED:         return PythonErrorNumber.EINTR; 
+                case ERROR_NOT_ENOUGH_MEMORY: return PythonErrorNumber.ENOMEM; 
+                case ERROR_SHARING_VIOLATION: return PythonErrorNumber.EBUSY;  
+                case ERROR_NO_ASSOCIATION:    return PythonErrorNumber.EINVAL; 
+            }
+            return win32ErrorCode;
+        }
+
+        // Win32 error codes
         private const int ERROR_FILE_EXISTS = 80;
-        private const int ERROR_ACCESS_DENIED = 5;
+        private const int ERROR_ACCESS_DENIED = 5; // Access to the specified file is denied. 
+        private const int ERROR_FILE_NOT_FOUND = 2; //The specified file was not found. 
+        private const int ERROR_PATH_NOT_FOUND = 3; // The specified path was not found. 
+        private const int ERROR_NO_ASSOCIATION = 1155; //There is no application associated with the given file name extension. 
+        private const int ERROR_DLL_NOT_FOUND = 1157; // One of the library files necessary to run the application can't be found. 
+        private const int ERROR_CANCELLED = 1223; // The function prompted the user for additional information, but the user canceled the request. 
+        private const int ERROR_NOT_ENOUGH_MEMORY = 8; // There is not enough memory to perform the specified action. 
+        private const int ERROR_SHARING_VIOLATION = 32; //A sharing violation occurred. 
 
         private const int S_IWRITE = 0x80;
         private const int S_IREAD = 0x100;

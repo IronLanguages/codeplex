@@ -63,9 +63,9 @@ namespace IronPython.Compiler {
         #region Construction
 
         private Parser(Tokenizer tokenizer, ErrorSink errorSink, ParserSink parserSink, PythonLanguageFeatures languageFeatures) {
-            Contract.RequiresNotNull(tokenizer, "tokenizer");
-            Contract.RequiresNotNull(errorSink, "errorSink");
-            Contract.RequiresNotNull(parserSink, "parserSink");
+            ContractUtils.RequiresNotNull(tokenizer, "tokenizer");
+            ContractUtils.RequiresNotNull(errorSink, "errorSink");
+            ContractUtils.RequiresNotNull(parserSink, "parserSink");
 
             tokenizer.Errors = new TokenizerErrorSink(this);
 
@@ -81,8 +81,8 @@ namespace IronPython.Compiler {
         }
 
         public static Parser CreateParser(CompilerContext context, PythonEngineOptions options, bool verbatim) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(options, "options");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(options, "options");
 
             PythonCompilerOptions compilerOptions = context.Options as PythonCompilerOptions;
             if (options == null) {
@@ -118,7 +118,7 @@ namespace IronPython.Compiler {
                 return _errors;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _errors = value;
             }
         }
@@ -128,7 +128,7 @@ namespace IronPython.Compiler {
                 return _sink;
             }
             set {
-                Contract.RequiresNotNull(value, "value");
+                ContractUtils.RequiresNotNull(value, "value");
                 _sink = value;
             }
         }
@@ -150,7 +150,7 @@ namespace IronPython.Compiler {
         }
 
         public void Reset(SourceUnit sourceUnit, PythonLanguageFeatures languageFeatures) {
-            Contract.RequiresNotNull(sourceUnit, "sourceUnit");
+            ContractUtils.RequiresNotNull(sourceUnit, "sourceUnit");
 
             _sourceUnit = sourceUnit;
             _languageFeatures = languageFeatures;
@@ -414,7 +414,7 @@ namespace IronPython.Compiler {
         // Given the interactive text input for a compound statement, calculate what the
         // indentation level of the next line should be
         public static int GetNextAutoIndentSize(string text, int autoIndentTabWidth) {
-            Contract.RequiresNotNull(text, "text");
+            ContractUtils.RequiresNotNull(text, "text");
 
             Debug.Assert(text[text.Length - 1] == '\n');
             string[] lines = text.Split(newLineChar);
@@ -918,6 +918,9 @@ namespace IronPython.Compiler {
             if (dotCount > 0) {
                 ret = new RelativeModuleName(names, dotCount);
             } else {
+                if (names.Length == 0) {
+                    ReportSyntaxError(_lookahead.Span.Start, _lookahead.Span.End, "invalid syntax");
+                }
                 ret = new ModuleName(names);
             }
             
@@ -1436,17 +1439,15 @@ namespace IronPython.Compiler {
         }
 
         //Python2.5 -> old_lambdef: 'lambda' [varargslist] ':' old_expression
-        private int oldLambdaCount;
         private Expression FinishOldLambdef() {
-            FunctionDefinition func = ParseLambdaHelperStart(SymbolTable.StringToId("<lambda$" + (oldLambdaCount++) + ">"));
+            FunctionDefinition func = ParseLambdaHelperStart(SymbolId.Empty);
             Expression expr = ParseOldExpression();
             return ParseLambdaHelperEnd(func, expr);
         }
 
         //lambdef: 'lambda' [varargslist] ':' expression
-        private int lambdaCount;
         private Expression FinishLambdef() {
-            FunctionDefinition func = ParseLambdaHelperStart(SymbolTable.StringToId("<lambda$" + (lambdaCount++) + ">"));
+            FunctionDefinition func = ParseLambdaHelperStart(SymbolId.Empty);
             Expression expr = ParseExpression();
             return ParseLambdaHelperEnd(func, expr);
         }
@@ -1757,11 +1758,8 @@ namespace IronPython.Compiler {
             Eat(TokenKind.KeywordElse);
             SourceLocation start = expr.Start;
             Expression falseExpr = ParseExpression();
-            expr.SetLoc(start, GetEnd());
             return new ConditionalExpression(expr, trueExpr, falseExpr);
         }
-
-
 
         // and_test: not_test ('and' not_test)*
         private Expression ParseAndTest() {

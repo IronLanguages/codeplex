@@ -16,6 +16,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
@@ -27,7 +28,7 @@ using IronPython.Runtime.Operations;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Runtime;
 
     public class FunctionDefinition : ScopeStatement {
@@ -42,7 +43,13 @@ namespace IronPython.Compiler.Ast {
         // true if this function can set sys.exc_info(). Only functions with an except block can set that.
         private bool _canSetSysExcInfo;
 
-        private PythonVariable _variable;               // The variable corresponding to the function name
+        private PythonVariable _variable;               // The variable corresponding to the function name or null for lambdas
+
+        public bool IsLambda {
+            get {
+                return _name.IsEmpty;
+            }
+        }
 
         public FunctionDefinition(SymbolId name, Parameter[] parameters, SourceUnit sourceUnit)
             : this(name, parameters, null, sourceUnit) {
@@ -94,6 +101,10 @@ namespace IronPython.Compiler.Ast {
             set { _variable = value; }
         }
 
+        protected override bool ExposesLocalVariables {
+            get { return NeedsLocalsDictionary; }
+        }
+
         private static FunctionAttributes ComputeFlags(Parameter[] parameters) {
             FunctionAttributes fa = FunctionAttributes.None;
             if (parameters != null) {
@@ -137,12 +148,13 @@ namespace IronPython.Compiler.Ast {
             for (ScopeStatement parent = Parent; parent != null; parent = parent.Parent) {
                 if (parent.TryBindOuter(name, out variable)) {
                     IsClosure = true;
+                    variable.AccessedInNestedScope = true;
                     return variable;
                 }
             }
 
             // Unbound variable
-            if (ContainsUnqualifiedExec | ContainsImportStar | NeedsLocalsDictionary) {
+            if (ContainsUnqualifiedExec || ContainsImportStar || NeedsLocalsDictionary) {
                 // If the context contains unqualified exec, new locals can be introduced
                 // We introduce the locals for every free variable to optimize the name based
                 // lookup.
@@ -203,15 +215,22 @@ namespace IronPython.Compiler.Ast {
         }
 
         internal override MSAst.Expression Transform(AstGenerator ag) {
+            Debug.Assert(_variable != null, "Shouldn't be called by lamda expression");
+
             MSAst.Expression function = TransformToFunctionExpression(ag);
-            return Ast.Statement(
-                new SourceSpan(Start, Header),
-                Ast.Assign(_variable.Variable, function)
-            );
+            return Ast.Assign(new SourceSpan(Start, Header), _variable.Variable, function);
         }
 
+        private static int _lambdaId;
+
         internal MSAst.Expression TransformToFunctionExpression(AstGenerator ag) {
-            string name = SymbolTable.IdToString(_name);
+            string name;
+
+            if (IsLambda) {
+                name = "<lambda$" + Interlocked.Increment(ref _lambdaId) + ">";
+            } else {
+                name = SymbolTable.IdToString(_name);
+            }
 
             // Create AST generator to generate the body with
             AstGenerator bodyGen = new AstGenerator(ag, SourceSpan.None, name, IsGenerator, false);
@@ -245,10 +264,6 @@ namespace IronPython.Compiler.Ast {
 
             if (ag.DebugMode) {
                 // add beginning and ending break points for the function.
-                if (statements.Count == 0 || GetExpressionStart(statements[0]) != Body.Start) {
-                    statements.Insert(0, Ast.Empty(new SourceSpan(Body.Start, Body.Start)));
-                }
-
                 if (GetExpressionEnd(statements[statements.Count - 1]) != Body.End) {
                     statements.Add(Ast.Empty(new SourceSpan(Body.End, Body.End)));
                 }
@@ -283,11 +298,22 @@ namespace IronPython.Compiler.Ast {
                 body = s;
             }
 
-            bodyGen.Block.Body = body;
+            bodyGen.Block.Body = bodyGen.WrapScopeStatements(body);
 
             FunctionAttributes flags = ComputeFlags(_parameters);
             MSAst.LambdaExpression code;
             if (IsGenerator) {
+                // in generators the LineNumberUpdated is getting tracked in the
+                // environment and that's not strongly typed.  Therefore we
+                // need to explicitly initialize it to false to get a boxed bool
+                // so we don't later blow up pulling it out. Instead we could
+                // stop using DLR generators or add support for real locals inside
+                // of them.
+                bodyGen.Block.Body = Ast.Block(
+                        Ast.Assign(bodyGen.LineNumberUpdated, Ast.Constant(false)),
+                        Ast.Assign(bodyGen.LineNumberExpression, Ast.Constant(0)),
+                        bodyGen.Block.Body
+                    );
                 code = bodyGen.Block.MakeGenerator(GetDelegateType(_parameters, flags != FunctionAttributes.None), typeof(PythonGenerator), typeof(PythonGenerator.NextTarget));
             } else {
                 code = bodyGen.Block.MakeLambda(GetDelegateType(_parameters, flags != FunctionAttributes.None));
@@ -296,7 +322,7 @@ namespace IronPython.Compiler.Ast {
             MSAst.Expression ret = Ast.Call(
                 typeof(PythonOps).GetMethod("MakeFunction"),                               // method
                 Ast.CodeContext(),                                                              // 1. Emit CodeContext
-                Ast.Constant(SymbolTable.IdToString(_name)),                                    // 2. FunctionName
+                Ast.Constant(name),                                                             // 2. FunctionName
                 code,                                                                           // 3. delegate
                 Ast.NewArray(typeof(string[]), names),                                          // 4. parameter names
                 Ast.NewArray(typeof(object[]), defaults),                                       // 5. default values
@@ -311,6 +337,7 @@ namespace IronPython.Compiler.Ast {
                 for (int i = _decorators.Count - 1; i >= 0; i--) {
                     Expression decorator = _decorators[i];
                     ret = Ast.Action.Call(
+                        ag.Binder,
                         typeof(object),
                         ag.Transform(decorator),
                         ret);
@@ -318,15 +345,6 @@ namespace IronPython.Compiler.Ast {
             }
 
             return ret;
-        }
-
-        private SourceLocation GetExpressionStart(MSAst.Expression expression) {
-            SourceSpan span;
-            if (expression.Annotations.TryGet(out span)) {
-                return span.Start;
-            } else {
-                return SourceLocation.None;
-            }
         }
 
         private SourceLocation GetExpressionEnd(MSAst.Expression expression) {

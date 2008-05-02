@@ -27,7 +27,7 @@ namespace Microsoft.Scripting.Ast {
         private SourceLocation _header;
 
         internal TryStatementBuilder(SourceSpan span, SourceLocation bodyLocation, Expression body) {
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
 
             _try = body;
             _header = bodyLocation;
@@ -43,7 +43,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public TryStatementBuilder Catch(Type type, VariableExpression holder, params Expression[] body) {
-            return Catch(type, holder, Ast.Block(body));
+            return Catch(type, holder, Expression.Block(body));
         }
 
         public TryStatementBuilder Catch(Type type, VariableExpression holder, Expression body) {
@@ -52,8 +52,8 @@ namespace Microsoft.Scripting.Ast {
                 return this;
             }
 
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(body, "body");
 
             if (_finally != null) {
                 throw new InvalidOperationException("Finally already defined");
@@ -63,12 +63,20 @@ namespace Microsoft.Scripting.Ast {
                 _catchBlocks = new List<CatchBlock>();
             }
 
-            _catchBlocks.Add(Ast.Catch(type, holder, body));
+            _catchBlocks.Add(Expression.Catch(type, holder, body));
             return this;
         }
 
+        public TryStatementBuilder Filter(Type type, Expression condition, params Expression[] body) {
+            return Filter(type, null, condition, body);
+        }
+
+        public TryStatementBuilder Filter(Type type, Expression condition, Expression body) {
+            return Filter(type, null, condition, body);
+        }
+
         public TryStatementBuilder Filter(Type type, VariableExpression holder, Expression condition, params Expression[] body) {
-            return Filter(type, holder, condition, Ast.Block(body));
+            return Filter(type, holder, condition, Expression.Block(body));
         }
 
         public TryStatementBuilder Filter(Type type, VariableExpression holder, Expression condition, Expression body) {
@@ -77,27 +85,26 @@ namespace Microsoft.Scripting.Ast {
                 return this;
             }
 
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(condition, "condition");
-            Contract.RequiresNotNull(holder, "holder");
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(condition, "condition");
+            ContractUtils.RequiresNotNull(body, "body");
 
             if (_catchBlocks == null) {
                 _catchBlocks = new List<CatchBlock>();
             }
 
-            _catchBlocks.Add(Ast.Catch(type, holder, Ast.IfThenElse(condition, body, Ast.Rethrow())));
+            _catchBlocks.Add(Expression.Catch(type, holder, Expression.IfThenElse(condition, body, Expression.Rethrow())));
             return this;
         }
 
         public TryStatementBuilder Finally(params Expression[] body) {
-            // we need to skip befor creating Ast.Block (body might be null):
+            // we need to skip befor creating Expression.Block (body might be null):
             if (_skipNext) {
                 _skipNext = false;
                 return this;
             }
 
-            return Finally(Ast.Block(body));
+            return Finally(Expression.Block(body));
         }
 
         public TryStatementBuilder Finally(Expression body) {
@@ -106,7 +113,7 @@ namespace Microsoft.Scripting.Ast {
                 return this;
             }
 
-            Contract.RequiresNotNull(body, "body");
+            ContractUtils.RequiresNotNull(body, "body");
             if (_finally != null) {
                 throw new InvalidOperationException("Finally already defined");
             }
@@ -125,9 +132,9 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static TryStatement ToStatement(TryStatementBuilder builder) {
-            Contract.RequiresNotNull(builder, "builder");
+            ContractUtils.RequiresNotNull(builder, "builder");
             return new TryStatement(
-                Ast.Annotations(builder._span, builder._header),
+                Expression.Annotate(builder._span, builder._header),
                 builder._try,
                 (builder._catchBlocks != null) ? CollectionUtils.ToReadOnlyCollection(builder._catchBlocks.ToArray()) : null,
                 builder._finally
@@ -135,10 +142,10 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
 
         public static TryStatementBuilder Try(params Expression[] body) {
-            return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, Ast.Block(body));
+            return new TryStatementBuilder(SourceSpan.None, SourceLocation.None, Expression.Block(body));
         }
 
         public static TryStatementBuilder Try(Expression body) {
@@ -150,7 +157,7 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public static TryStatementBuilder Try(SourceSpan span, SourceLocation location, params Expression[] body) {
-            return new TryStatementBuilder(span, location, Ast.Block(body));
+            return new TryStatementBuilder(span, location, Expression.Block(body));
         }
 
         public static TryStatement TryCatch(SourceSpan span, SourceLocation header, Expression body, params CatchBlock[] handlers) {
@@ -167,14 +174,14 @@ namespace Microsoft.Scripting.Ast {
 
         public static TryStatement TryCatchFinally(Expression body, CatchBlock[] handlers, Expression @finally) {
             return new TryStatement(
-                Annotations(SourceSpan.None, SourceLocation.None),
+                Annotate(SourceSpan.None, SourceLocation.None),
                 body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
             );
         }
 
         public static TryStatement TryCatchFinally(SourceSpan span, SourceLocation header, Expression body, CatchBlock[] handlers, Expression @finally) {
             return new TryStatement(
-                Annotations(span, header),
+                Annotate(span, header),
                 body, CollectionUtils.ToReadOnlyCollection(handlers), @finally
             );
         }

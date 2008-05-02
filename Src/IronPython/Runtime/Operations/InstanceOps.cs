@@ -28,6 +28,7 @@ using Microsoft.Scripting.Utils;
 using IronPython.Runtime;
 using IronPython.Runtime.Calls;
 using IronPython.Runtime.Types;
+using Microsoft.Scripting.Actions;
 
 namespace IronPython.Runtime.Operations {
     /// <summary>
@@ -71,21 +72,23 @@ namespace IronPython.Runtime.Operations {
         internal static readonly BuiltinFunction NewCls = CreateFunction("__new__", "DefaultNew", "DefaultNewClsKW");
         internal static readonly BuiltinFunction OverloadedNew = CreateFunction("__new__", "OverloadedNewBasic", "OverloadedNewKW", "OverloadedNewClsKW");
         internal static readonly BuiltinFunction NonDefaultNewInst = CreateNonDefaultNew();
-        internal static readonly BuiltinMethodDescriptor Init = CreateInitMethod();
+        [MultiRuntimeAware]
+        internal static BuiltinMethodDescriptor _Init;
 
-        static InstanceOps() {
-            // We create an OpsReflectedType so that the runtime can map back from the function to typeof(PythonType). 
-            ExtensionTypeAttribute.RegisterType(typeof(object), typeof(InstanceOps));
+        internal static BuiltinMethodDescriptor Init {
+            get {
+                if (_Init == null) {
+                    _Init = GetInitMethod();
+                }
+                return _Init;
+            }
         }
+        
 
         internal static BuiltinFunction New {
             get {
                 if (_New == null) {
-                    PythonTypeSlot pts;
-                    TypeCache.Object.TryResolveSlot(DefaultContext.Default, Symbols.NewInst, out pts);
-                    Debug.Assert(pts is BuiltinFunction);
-
-                    _New = (BuiltinFunction)pts;
+                    _New = (BuiltinFunction)PythonTypeOps.GetSlot(TypeInfo.GetExtensionMemberGroup(typeof(object), typeof(ObjectOps).GetMember("__new__")));
                 }
                 return _New;
             }
@@ -128,7 +131,7 @@ namespace IronPython.Runtime.Operations {
 
             object[] finalArgs;
             string[] names;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out finalArgs, out names);
+            GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out finalArgs, out names);
 
             return overloads\u00F8.CallHelper(context, finalArgs, names, null);
         }
@@ -139,7 +142,7 @@ namespace IronPython.Runtime.Operations {
 
             object[] finalArgs;
             string[] names;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, args\u00F8, out finalArgs, out names);
+            GetKeywordArgs(kwargs\u00F8, args\u00F8, out finalArgs, out names);
 
             return overloads\u00F8.CallHelper(context, finalArgs, names, null);
         }
@@ -167,7 +170,7 @@ namespace IronPython.Runtime.Operations {
             if (args\u00F8 == null) args\u00F8 = new object[1];
 
             string []names;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, args\u00F8, out args\u00F8, out names);
+            GetKeywordArgs(kwargs\u00F8, args\u00F8, out args\u00F8, out names);
             return type\u00F8.CreateInstance(context, args\u00F8, names);
         }
 
@@ -178,7 +181,7 @@ namespace IronPython.Runtime.Operations {
 
             string[] names;
             object[] args;
-            TypeHelpers.GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out args, out names);
+            GetKeywordArgs(kwargs\u00F8, ArrayUtils.EmptyObjects, out args, out names);
             return type\u00F8.CreateInstance(context, args, names);
         }
 
@@ -266,7 +269,7 @@ namespace IronPython.Runtime.Operations {
 
         public static bool ValueNotEqualsMethod<T>(T x, [NotNull]T y)
             where T : IValueEquality {
-            return x.ValueNotEquals(y);
+            return !x.ValueEquals(y);
         }
 
         [return: MaybeNotImplemented]
@@ -282,7 +285,7 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return PythonOps.NotImplemented;
 
-            return RuntimeHelpers.BooleanToObject(x.ValueNotEquals(y));
+            return RuntimeHelpers.BooleanToObject(!x.ValueEquals(y));
         }
 
         [return: MaybeNotImplemented]
@@ -298,9 +301,10 @@ namespace IronPython.Runtime.Operations {
             where T : IValueEquality {
             if (!(y is T)) return PythonOps.NotImplemented;
 
-            return RuntimeHelpers.BooleanToObject(x.ValueNotEquals(y));
+            return RuntimeHelpers.BooleanToObject(x.ValueEquals(y));
         }
 
+        // TODO: Remove me
         public static object ValueHashMethod(object x) {
             return ((IValueEquality)x).GetValueHashCode();
         }
@@ -342,12 +346,12 @@ namespace IronPython.Runtime.Operations {
             }
         }
 
-        private static BuiltinMethodDescriptor CreateInitMethod() {
-            MethodBase mb1 = typeof(InstanceOps).GetMethod("DefaultInit");
-            MethodBase mb2 = typeof(InstanceOps).GetMethod("DefaultInitKW");
-            return (BuiltinMethodDescriptor)BuiltinFunction.MakeMethod("__init__",
-                new MethodBase[] { mb1, mb2 },
-                FunctionType.Method | FunctionType.AlwaysVisible | FunctionType.SkipThisCheck | FunctionType.OpsFunction).GetDescriptor();
+        private static BuiltinMethodDescriptor GetInitMethod() {
+            PythonTypeSlot pts;
+            TypeCache.Object.TryResolveSlot(DefaultContext.Default, Symbols.Init, out pts);
+
+            Debug.Assert(pts != null);
+            return (BuiltinMethodDescriptor)pts;
         }
 
         private static BuiltinFunction CreateFunction(string name, params string[] methodNames) {
@@ -355,7 +359,19 @@ namespace IronPython.Runtime.Operations {
             for (int i = 0; i < methods.Length; i++) {
                 methods[i] = typeof(InstanceOps).GetMethod(methodNames[i]);
             }
-            return BuiltinFunction.MakeMethod(name, methods, FunctionType.Function | FunctionType.AlwaysVisible | FunctionType.OpsFunction);
+            return BuiltinFunction.MakeMethod(name, methods, typeof(object), FunctionType.Function | FunctionType.AlwaysVisible | FunctionType.OpsFunction);
+        }
+
+        private static void GetKeywordArgs(IAttributesCollection dict, object[] args, out object[] finalArgs, out string[] names) {
+            finalArgs = new object[args.Length + dict.Count];
+            Array.Copy(args, finalArgs, args.Length);
+            names = new string[dict.Count];
+            int i = 0;
+            foreach (KeyValuePair<object, object> kvp in (IDictionary<object, object>)dict) {
+                names[i] = (string)kvp.Key;
+                finalArgs[i + args.Length] = kvp.Value;
+                i++;
+            }
         }
     }
 }

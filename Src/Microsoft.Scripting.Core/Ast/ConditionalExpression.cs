@@ -23,8 +23,8 @@ namespace Microsoft.Scripting.Ast {
         private readonly Expression/*!*/ _true;
         private readonly Expression/*!*/ _false;
 
-        internal ConditionalExpression(Expression/*!*/ test, Expression/*!*/ ifTrue, Expression/*!*/ ifFalse, Type/*!*/ type)
-            : base(AstNodeType.Conditional, type) {
+        internal ConditionalExpression(Annotations annotations, Expression/*!*/ test, Expression/*!*/ ifTrue, Expression/*!*/ ifFalse, Type/*!*/ type)
+            : base(annotations, AstNodeType.Conditional, type) {
             _test = test;
             _true = ifTrue;
             _false = ifFalse;
@@ -43,16 +43,24 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static ConditionalExpression Condition(Expression test, Expression ifTrue, Expression ifFalse) {
-            Contract.RequiresNotNull(test, "test");
-            Contract.RequiresNotNull(ifTrue, "ifTrue");
-            Contract.RequiresNotNull(ifFalse, "ifFalse");
+            return Condition(Annotations.Empty, test, ifTrue, ifFalse);
+        }
 
-            Contract.Requires(test.Type == typeof(bool), "test", "Test must be bool");
-            Contract.Requires(ifTrue.Type == ifFalse.Type, "ifTrue", "Types must match");
+        public static ConditionalExpression Condition(SourceSpan span, Expression test, Expression ifTrue, Expression ifFalse) {
+            return Condition(Annotate(span), test, ifTrue, ifFalse);
+        }
 
-            return new ConditionalExpression(test, ifTrue, ifFalse, ifTrue.Type);
+        public static ConditionalExpression Condition(Annotations annotations, Expression test, Expression ifTrue, Expression ifFalse) {
+            ContractUtils.RequiresNotNull(test, "test");
+            ContractUtils.RequiresNotNull(ifTrue, "ifTrue");
+            ContractUtils.RequiresNotNull(ifFalse, "ifFalse");
+
+            ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be bool");
+            ContractUtils.Requires(ifTrue.Type == ifFalse.Type, "ifTrue", "Types must match");
+
+            return new ConditionalExpression(annotations, test, ifTrue, ifFalse, ifTrue.Type);
         }
     }
 }

@@ -129,7 +129,7 @@ def test_decorators():
 
 ######################################################################################
 # __getattribute__, __setattr__, __delattr__ on builtins
-
+@skip("multiple_execute")
 def test_meta_attrs():
     if is_cli or is_silverlight:
         import System
@@ -223,7 +223,7 @@ def test_access_checks():
     attr_access(OldStyleClass())
     attr_access(C())
 
-@skip("silverlight")
+@skip("silverlight", "multiple_execute")
 def test_cp13686():
     import toimport
     import sys

@@ -43,20 +43,17 @@ namespace Microsoft.Scripting.Interpreter {
         }
 
         private static object Execute(CodeContext context, LambdaExpression lambda) {
-            try {
-                return DoExecute(context, lambda);
-            } catch (Exception e) {
-#if !SILVERLIGHT
-                MethodBase method = MethodBase.GetCurrentMethod();
-#else
-                MethodBase method = null;
-#endif
-                SourceUnit sourceUnit = context.ModuleContext.CompilerContext.SourceUnit;
-                int line = context.Scope.SourceLocation.Line;
+            return DoExecute(context, lambda);
+        }
 
-                ExceptionHelpers.UpdateStackTrace(context, method, lambda.Name, sourceUnit.GetSymbolDocument(line), sourceUnit.MapLine(line));
-                ExceptionHelpers.AssociateDynamicStackFrames(e);
-                throw ExceptionHelpers.UpdateForRethrow(e);
+        private static CodeContext/*!*/ CreateLocalScope(MethodInfo scopeFactory, CodeContext parent, bool isVisible) {
+            Tuple<None> storage = new Tuple<None>();
+
+            if (scopeFactory != null) {
+                return (CodeContext)InvokeMethod(scopeFactory.MakeGenericMethod(storage.GetType()), null,
+                    storage, SymbolId.EmptySymbols, parent, isVisible);
+            } else {
+                return RuntimeHelpers.CreateLocalScope<Tuple>(storage, SymbolId.EmptySymbols, parent, isVisible);
             }
         }
 
@@ -71,11 +68,11 @@ namespace Microsoft.Scripting.Interpreter {
         /// and (if the delegate had params array), the parameter array, separately.
         /// </summary>
         internal static object InterpretLambda(CodeContext/*!*/ parent, LambdaExpression/*!*/ lambda, object[]/*!*/ args, object[] array) {
-            Contract.Requires(parent != null, "parent");
-            Contract.Requires(lambda != null, "lambda");
-            Contract.Requires(args != null, "args");        // was allocated by the generated delegate
+            ContractUtils.Requires(parent != null, "parent");
+            ContractUtils.Requires(lambda != null, "lambda");
+            ContractUtils.Requires(args != null, "args");        // was allocated by the generated delegate
 
-            CodeContext child = RuntimeHelpers.CreateNestedCodeContext(new SymbolDictionary(), parent, lambda.IsVisible);
+            CodeContext child = CreateLocalScope(lambda.ScopeFactory, parent, lambda.IsVisible);
 
             // First load from args.
             object[] input = args;
@@ -105,7 +102,7 @@ namespace Microsoft.Scripting.Interpreter {
 
         private static int _Interpreted;
 
-        private static Dictionary<LambdaExpression, MethodInfo> _Delegates;
+        private static WeakDictionary<LambdaExpression, MethodInfo> _Delegates;
 
         /// <summary>
         /// Gets the delegate associated with the LambdaExpression.
@@ -114,9 +111,9 @@ namespace Microsoft.Scripting.Interpreter {
         /// </summary>
         private static Delegate GetDelegateForInterpreter(CodeContext context, LambdaExpression node) {
             if (_Delegates == null) {
-                Interlocked.CompareExchange<Dictionary<LambdaExpression, MethodInfo>>(
+                Interlocked.CompareExchange<WeakDictionary<LambdaExpression, MethodInfo>>(
                     ref _Delegates,
-                    new Dictionary<LambdaExpression, MethodInfo>(),
+                    new WeakDictionary<LambdaExpression, MethodInfo>(),
                     null
                 );
             }

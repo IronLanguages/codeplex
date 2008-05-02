@@ -29,17 +29,17 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     class PythonConvertToBinderHelper<T> : BinderHelper<T, ConvertToAction> {
         private object _argument;
 
         public PythonConvertToBinderHelper(CodeContext/*!*/ context, ConvertToAction/*!*/ action, object[]/*!*/ args)
             : base(context, action) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(action, "action");
-            Contract.RequiresNotNull(args, "args");
-            Contract.Requires(args.Length == 1, "args", "must have single object to convert");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(action, "action");
+            ContractUtils.RequiresNotNull(args, "args");
+            ContractUtils.Requires(args.Length == 1, "args", "must have single object to convert");
 
             _argument = args[0];
         }

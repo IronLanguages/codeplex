@@ -24,17 +24,40 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Generation;
 
 namespace ToyScript.Runtime {
+    using Ast = Microsoft.Scripting.Ast.Expression;
+
     class ToyBinder : ActionBinder {
         public ToyBinder(CodeContext context)
-            : base(context)  {
+            : base(context) {
         }
 
         protected override RuleBuilder<T> MakeRule<T>(CodeContext callerContext, DynamicAction action, object[] args) {
-            RuleBuilder<T> rule = null; 
+            RuleBuilder<T> rule = null;
+            //
+            // Try IDynamicObject
+            //
+            IDynamicObject ido = args[0] as IDynamicObject;
+            if (ido != null) {
+                rule = ido.GetRule<T>(action, callerContext, args);
+                if (rule != null) {
+                    return rule;
+                }
+            }
+
+            //
+            // Try ToyScript rules
+            //
             if (action.Kind == DynamicActionKind.DoOperation) {
                 rule = MakeDoRule<T>((DoOperationAction)action, args);
+                if (rule != null) {
+                    return rule;
+                }
             }
-            return rule ?? base.MakeRule<T>(callerContext, action, args);            
+
+            //
+            // Fall back to DLR default rules
+            //
+            return base.MakeRule<T>(callerContext, action, args);
         }
 
         private RuleBuilder<T> MakeDoRule<T>(DoOperationAction action, object[] args) {

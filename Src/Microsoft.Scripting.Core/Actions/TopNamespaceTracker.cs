@@ -36,7 +36,7 @@ namespace Microsoft.Scripting.Actions {
 
         public TopNamespaceTracker(ScriptDomainManager/*!*/ manager)
             : base(null) {
-            Contract.RequiresNotNull(manager, "manager");
+            ContractUtils.RequiresNotNull(manager, "manager");
             SetTopPackage(this);
 
             _manager = manager;
@@ -86,7 +86,9 @@ namespace Microsoft.Scripting.Actions {
         /// <param name="assem"></param>
         /// <returns>true if the assembly was loaded for the first time. 
         /// false if the assembly had already been loaded before</returns>
-        public bool LoadAssembly(Assembly assem) {
+        public bool LoadAssembly(Assembly/*!*/ assem) {
+            ContractUtils.RequiresNotNull(assem, "assem");
+
             lock (this) {
                 if (_packageAssemblies.Contains(assem)) {
                     // The assembly is already loaded. There is nothing more to do
@@ -95,6 +97,9 @@ namespace Microsoft.Scripting.Actions {
 
                 _packageAssemblies.Add(assem);
                 UpdateId();
+#if !SILVERLIGHT // ComObject
+                Microsoft.Scripting.Actions.ComDispatch.ComObjectWithTypeInfo.PublishComTypes(assem);
+#endif
             }
 
             return true;

@@ -34,6 +34,8 @@ namespace IronPython.Runtime.Calls {
         public static CodeContext _default;
         [MultiRuntimeAware]
         public static CodeContext _defaultCLS;
+        [MultiRuntimeAware]
+        public static ActionBinder _defaultBinder;
         
         public static ContextId Id {
             get {
@@ -45,6 +47,12 @@ namespace IronPython.Runtime.Calls {
             get {
                 Debug.Assert(_default != null);
                 return _default;
+            }
+        }
+
+        public static ActionBinder DefaultPythonBinder {
+            get {
+                return _defaultBinder;
             }
         }
 
@@ -63,8 +71,9 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal static void CreateContexts(PythonContext/*!*/ context) {
-            Interlocked.CompareExchange(ref _default, CreateDefaultContext(context), null);
-            Interlocked.CompareExchange(ref _defaultCLS, CreateDefaultCLSContext(context), null);
+            Interlocked.CompareExchange<CodeContext>(ref _default, CreateDefaultContext(context), null);
+            Interlocked.CompareExchange<CodeContext>(ref _defaultCLS, CreateDefaultCLSContext(context), null);
+            Interlocked.CompareExchange<ActionBinder>(ref _defaultBinder, new PythonBinder(context, _default), null);
         }
 
         private static CodeContext/*!*/ CreateDefaultContext(PythonContext/*!*/ context) {

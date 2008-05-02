@@ -37,8 +37,8 @@ namespace Microsoft.Scripting.Runtime {
         private Dictionary<SymbolId, int> _slotDict;
         private int _size;
 
-        public FunctionEnvironmentDictionary(TTuple data, SymbolId[] names) :
-            base(data) {
+        public FunctionEnvironmentDictionary(TTuple data, SymbolId[] names) 
+            : base(data) {
             Extra = names;
         }
 
@@ -93,7 +93,7 @@ namespace Microsoft.Scripting.Runtime {
 
             Dictionary<SymbolId, int> slotDict = new Dictionary<SymbolId, int>();
             for (int index = 0; index < Extra.Length; index++) {
-                slotDict[Extra[index]] = index + 1;
+                slotDict[Extra[index]] = index;
             }
             _slotDict = slotDict;            
         }

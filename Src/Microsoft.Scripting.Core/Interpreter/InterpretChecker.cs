@@ -55,17 +55,13 @@ namespace Microsoft.Scripting.Interpreter {
         protected internal override bool Walk(ActionExpression node) { return Push(); }
         protected internal override void PostWalk(ActionExpression node) { Pop(); }
 
-        // ArrayIndexAssignment
-        protected internal override bool Walk(ArrayIndexAssignment node) { return Push(); }
-        protected internal override void PostWalk(ArrayIndexAssignment node) { Pop(); }
-
         // BinaryExpression
         protected internal override bool Walk(BinaryExpression node) { return Push(); }
         protected internal override void PostWalk(BinaryExpression node) { Pop(); }
 
-        // BoundAssignment
-        protected internal override bool Walk(BoundAssignment node) { return Push(); }
-        protected internal override void PostWalk(BoundAssignment node) { Pop(); }
+        // AssignmentExpression
+        protected internal override bool Walk(AssignmentExpression node) { return Push(); }
+        protected internal override void PostWalk(AssignmentExpression node) { Pop(); }
 
         // VariableExpression
         protected internal override bool Walk(VariableExpression node) { return Push(); }
@@ -103,16 +99,11 @@ namespace Microsoft.Scripting.Interpreter {
             return DisallowControlFlowInExpression();
         }
 
-        // DeleteUnboundExpression
-        protected internal override bool Walk(DeleteUnboundExpression node) { return Push(); }
-        protected internal override void PostWalk(DeleteUnboundExpression node) { Pop(); }
-
         // IntrinsicExpression
         protected internal override bool Walk(IntrinsicExpression node) {
             // No need to push/pop sinte this is a leaf node
             switch (node.NodeType) {
                 case AstNodeType.GeneratorIntrinsic:
-                case AstNodeType.EnvironmentExpression:
                     _ok = false;
                     break;
             }
@@ -123,10 +114,6 @@ namespace Microsoft.Scripting.Interpreter {
         protected internal override bool Walk(LabeledStatement node) {
             return _ok = false;    // Cannot interpret labeled statement yet
         }
-
-        // MemberAssignment
-        protected internal override bool Walk(MemberAssignment node) { return Push(); }
-        protected internal override void PostWalk(MemberAssignment node) { Pop(); }
 
         // MemberExpression
         protected internal override bool Walk(MemberExpression node) { return Push(); }
@@ -156,23 +143,6 @@ namespace Microsoft.Scripting.Interpreter {
         // UnaryExpression
         protected internal override bool Walk(UnaryExpression node) { return Push(); }
         protected internal override void PostWalk(UnaryExpression node) { Pop(); }
-
-        // UnboundAssignment
-        protected internal override bool Walk(UnboundAssignment node) { return Push(); }
-        protected internal override void PostWalk(UnboundAssignment node) { Pop(); }
-
-        // UnboundExpression
-        protected internal override bool Walk(UnboundExpression node) {
-            Push();
-            // Right now, locals() fails for nested functions.
-            // This is a crude test, but at least it errs on the side of disabling evaluation.
-            if (SymbolTable.IdToString(node.Name) == "locals") {
-                _ok = false;
-            }
-
-            return _ok;
-        }
-        protected internal override void PostWalk(UnboundExpression node) { Pop(); }
 
         // YieldStatement
         protected internal override bool Walk(YieldStatement node) {

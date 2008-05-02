@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
     using Microsoft.Scripting.Runtime;
 
     class Binary : Expression {
@@ -55,7 +55,7 @@ namespace ToyScript.Parser.Ast {
                 default:
                     throw new System.InvalidOperationException();
             }
-            return Ast.Action.Operator(op, typeof(object), left, right);
+            return Ast.Action.Operator(tg.Binder, op, typeof(object), left, right);
         }
     }
 }

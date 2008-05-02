@@ -21,7 +21,7 @@ using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class DeleteMemberBinderHelper<T> : MemberBinderHelper<T, DeleteMemberAction> {
         private bool _isStatic;
@@ -73,7 +73,7 @@ namespace Microsoft.Scripting.Actions {
             return Body;
         }
 
-        private Type GetDeclaringMemberType(MemberGroup group) {
+        private static Type GetDeclaringMemberType(MemberGroup group) {
             Type t = typeof(object);
             foreach (MemberTracker mt in group) {
                 if (t.IsAssignableFrom(mt.DeclaringType)) {

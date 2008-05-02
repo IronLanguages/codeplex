@@ -28,16 +28,22 @@ using IronPython.Runtime.Operations;
 using IronPython.Runtime.Types;
 
 namespace IronPython.Runtime.Calls {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     class PythonCallBinderHelper<T> : CallBinderHelper<T, CallAction> {
         private List<Type[]> _testTypes = new List<Type[]>();
-        private bool _canTemplate, _altVersion;
+        private bool _canTemplate;
 
         private static readonly Dictionary<ShareableTemplateKey, RuleBuilder<T>> PythonCallTemplateBuilders = new Dictionary<ShareableTemplateKey, RuleBuilder<T>>();
 
         public PythonCallBinderHelper(CodeContext context, CallAction action, object[] args)
             : base(context, action, args) {
+        }
+
+        private ActionBinder PythonBinder {
+            get {
+                return PythonContext.GetContext(Context).Binder;
+            }
         }
 
         public new RuleBuilder<T> MakeRule() {            
@@ -67,7 +73,7 @@ namespace IronPython.Runtime.Calls {
             GetAdapters(creating, ai, out newAdapter, out initAdapter);
 
             // get the expression for calling __new__
-            Expression createExpr = newAdapter.GetExpression(Binder, Rule);
+            Expression createExpr = newAdapter.GetExpression(Binder, PythonBinder, Rule);
             if (createExpr == null) {
                 Rule.Target = newAdapter.GetError(Binder, Rule);
                 MakeErrorTests(ai);
@@ -250,15 +256,15 @@ namespace IronPython.Runtime.Calls {
                 : base(ai, action) {
             }
 
-            public virtual Expression GetExpression(ActionBinder binder, RuleBuilder<T> rule) {
+            public virtual Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {
                 return Ast.Action.Call(
-                        GetDynamicNewAction(),
+                        GetDynamicNewAction(python),
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
-                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
-                                typeof(PythonType).GetMethod("GetMember"),
+                                typeof(PythonOps).GetMethod("PythonTypeGetMember"),
                                 Ast.CodeContext(),
+                                Ast.Convert(rule.Parameters[0], typeof(PythonType)),
                                 Ast.Null(),
                                 Ast.Constant(Symbols.NewInst)
                             ),                        
@@ -271,8 +277,8 @@ namespace IronPython.Runtime.Calls {
                 throw new InvalidOperationException();
             }
 
-            protected CallAction GetDynamicNewAction() {
-                return CallAction.Make(Action.Signature.InsertArgument(ArgumentInfo.Simple));
+            protected CallAction GetDynamicNewAction(ActionBinder python) {
+                return CallAction.Make(python, Action.Signature.InsertArgument(ArgumentInfo.Simple));
             }
 
             public override object TemplateKey {
@@ -291,7 +297,7 @@ namespace IronPython.Runtime.Calls {
                 _creating = creating;
             }
 
-            public override Expression GetExpression(ActionBinder binder, RuleBuilder<T> rule) {
+            public override Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {
                 BindingTarget target = _creating.IsSystemType ?
                     GetTypeConstructor(binder, _creating, Type.EmptyTypes) :
                     GetTypeConstructor(binder, _creating, new Type[] { typeof(PythonType) });
@@ -322,7 +328,7 @@ namespace IronPython.Runtime.Calls {
                 _ctor = ctor;
             }
 
-            public override Expression GetExpression(ActionBinder binder, RuleBuilder<T> rule) {
+            public override Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {
                 Type[] types = _creating.IsSystemType ? Arguments.Types : ArrayUtils.Insert(typeof(PythonType), Arguments.Types);
 
                 MethodBinder mb = GetMethodBinder(binder);
@@ -367,7 +373,7 @@ namespace IronPython.Runtime.Calls {
                 _ctor = ctor;
             }
 
-            public override Expression GetExpression(ActionBinder binder, RuleBuilder<T> rule) {
+            public override Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {
                 Type[] types = ArrayUtils.Insert(typeof(PythonType), Arguments.Types);
 
                 MethodBinder mb = GetMethodBinder(binder);
@@ -406,9 +412,9 @@ namespace IronPython.Runtime.Calls {
             }
 
 
-            public override Expression GetExpression(ActionBinder binder, RuleBuilder<T> rule) {
+            public override Expression GetExpression(ActionBinder binder, ActionBinder python, RuleBuilder<T> rule) {
                 return Ast.Action.Call(
-                        GetDynamicNewAction(),
+                        GetDynamicNewAction(python),
                         typeof(object),
                         ArrayUtils.Insert<Expression>(
                             Ast.Call(
@@ -606,7 +612,7 @@ namespace IronPython.Runtime.Calls {
         }
 
         internal static CreateInstanceAction MakeCreateInstanceAction(CallAction action) {
-            return CreateInstanceAction.Make(new CallSignature(action.Signature));
+            return CreateInstanceAction.Make(action.Binder, new CallSignature(action.Signature));
         }
 
 
@@ -692,9 +698,7 @@ namespace IronPython.Runtime.Calls {
         /// Creates a test which tests the specific version of the type.
         /// </summary>
         public Expression MakeTypeTestForCreateInstance(PythonType creating, RuleBuilder<T> rule) {
-            _altVersion = creating.Version == PythonType.DynamicVersion;
-            string vername = _altVersion ? "GetAlternateTypeVersion" : "GetTypeVersion";
-            int version = _altVersion ? creating.AlternateVersion : creating.Version;
+            int version = creating.Version;
 
             Expression versionExpr;
             if (_canTemplate) {
@@ -705,7 +709,7 @@ namespace IronPython.Runtime.Calls {
 
             return Ast.Equal(
                 Ast.Call(
-                    typeof(PythonOps).GetMethod(vername),
+                    typeof(PythonOps).GetMethod("GetTypeVersion"),
                     Ast.Convert(rule.Parameters[0], typeof(PythonType))
                 ),
                 versionExpr
@@ -714,13 +718,11 @@ namespace IronPython.Runtime.Calls {
 
         private class ShareableTemplateKey : IEquatable<ShareableTemplateKey> {
             private Type _type;
-            private bool _altVersion;
             private DynamicAction _action;
             private object[] _args;
 
-            public ShareableTemplateKey(DynamicAction action, Type type, bool altVersion, params object[] args) {
+            public ShareableTemplateKey(DynamicAction action, Type type, params object[] args) {
                 _type = type;
-                _altVersion = altVersion;
                 _args = args;
                 _action = action;
             }
@@ -733,7 +735,7 @@ namespace IronPython.Runtime.Calls {
             }
 
             public override int GetHashCode() {
-                int res = _type.GetHashCode() ^ _altVersion.GetHashCode() ^ _action.GetHashCode();
+                int res = _type.GetHashCode() ^ _action.GetHashCode();
                 foreach (object o in _args) {
                     res ^= o.GetHashCode();
                 }
@@ -744,8 +746,7 @@ namespace IronPython.Runtime.Calls {
 
             public bool Equals(ShareableTemplateKey other) {
                 if (other._action == _action &&
-                    other._type == _type &&
-                    other._altVersion == _altVersion) {
+                    other._type == _type) {
                     if (_args.Length == other._args.Length) {
                         for (int i = 0; i < _args.Length; i++) {
                             if (!_args[i].Equals(other._args[i])) {
@@ -768,8 +769,7 @@ namespace IronPython.Runtime.Calls {
             lock (PythonCallTemplateBuilders) {
                 ShareableTemplateKey key =
                     new ShareableTemplateKey(Action,
-                    t.UnderlyingSystemType,
-                    t.Version == PythonType.DynamicVersion,
+                    t.UnderlyingSystemType,                    
                     ArrayUtils.Insert<object>(HasFinalizer(t), templateData));
                 if (!PythonCallTemplateBuilders.TryGetValue(key, out builder)) {
                     PythonCallTemplateBuilders[key] = Rule;

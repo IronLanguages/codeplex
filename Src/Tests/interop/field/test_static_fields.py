@@ -384,6 +384,7 @@ for i in range(len(types)):
     exec("def test_%s_delete_by_instance():   _test_delete_by_instance(types[%s])" % (i, i))
     exec("def test_%s_delete_by_descriptor():   _test_delete_by_descriptor(types[%s])" % (i, i))
 
+@skip("multiple_execute")
 def test_nested():
     for s in [ Struct2, GenericStruct2[int], GenericStruct2[str] ]:
         AreEqual(s.StaticNextField.StaticNextField.StaticNextField.StaticField, 10)

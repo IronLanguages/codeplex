@@ -19,7 +19,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using Operators = Microsoft.Scripting.Runtime.Operators;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class DictionaryExpression : Expression {
         private readonly SliceExpression[] _items;

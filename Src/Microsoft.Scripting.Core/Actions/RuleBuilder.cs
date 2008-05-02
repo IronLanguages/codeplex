@@ -27,7 +27,7 @@ using Microsoft.Scripting.Utils;
 using Microsoft.Contracts;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Rule Builder
@@ -46,7 +46,6 @@ namespace Microsoft.Scripting.Actions {
 
         // TODO revisit these fields and their uses when LambdaExpression moves down
         internal ParameterExpression[] _paramVariables;       // TODO: Remove me when we can refer to params as expressions
-        internal List<VariableExpression> _temps;             // TODO: Remove me when ASTs can have free-floating variables
 
         internal RuleBuilder() { }
 
@@ -92,14 +91,11 @@ namespace Microsoft.Scripting.Actions {
 
         /// <summary>
         /// Allocates a temporary variable for use during the rule.
+        /// TODO: remove
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public VariableExpression GetTemporary(Type type, string name) {
-            if (_temps == null) {
-                _temps = new List<VariableExpression>();
-            }
-            VariableExpression ret = VariableExpression.Temporary(SymbolTable.StringToId(name), type);
-            _temps.Add(ret);
-            return ret;
+            return Expression.Temporary(type, name);
         }
 
         public Expression MakeReturn(ActionBinder binder, Expression expr) {
@@ -160,15 +156,6 @@ namespace Microsoft.Scripting.Actions {
             get { return _paramVariables; }
         }
 
-        /// <summary>
-        ///  Gets the temporary variables allocated by this rule.
-        /// </summary>
-        internal VariableExpression[] TemporaryVariables {
-            get {
-                return _temps == null ? new VariableExpression[] { } : _temps.ToArray();
-            }
-        }
-
         public static Expression MakeTypeTestExpression(Type t, Expression expr) {
             // we must always check for non-sealed types explicitly - otherwise we end up
             // doing fast-path behavior on a subtype which overrides behavior that wasn't
@@ -199,7 +186,7 @@ namespace Microsoft.Scripting.Actions {
         /// Adds a templated constant that can enable code sharing across rules.
         /// </summary>
         public Expression AddTemplatedConstant(Type type, object value) {
-            Contract.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(type, "type");
             if (value != null) {
                 if (!type.IsAssignableFrom(value.GetType())) {
                     throw new ArgumentException("type must be assignable from value");
@@ -264,6 +251,7 @@ namespace Microsoft.Scripting.Actions {
             return MakeTypeTest(type, Parameters[index]);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1822:MarkMembersAsStatic")]
         public Expression MakeTypeTest(Type type, Expression tested) {
             if (type == null || type == typeof(None)) {
                 return Ast.Equal(tested, Ast.Null());
@@ -314,8 +302,11 @@ namespace Microsoft.Scripting.Actions {
     public class RuleBuilder<T> : RuleBuilder {
         private Rule<T> _rule;              // Completed rule
 
+        // 1 - site, 2 - CodeContext
+        private const int FirstParameterIndex = 2;
+
         public RuleBuilder() {
-            int firstParameter = GetFirstParameterIndex();
+            int firstParameter = FirstParameterIndex;
 
             ParameterInfo[] pis = typeof(T).GetMethod("Invoke").GetParameters();
             if (!DynamicSiteHelpers.IsBigTarget(typeof(T))) {
@@ -330,10 +321,6 @@ namespace Microsoft.Scripting.Actions {
             } else {
                 MakeTupleParameters(typeof(T).GetGenericArguments()[0]);
             }
-        }
-
-        private static int GetFirstParameterIndex() {
-            return DynamicSiteHelpers.IsFastTarget(typeof(T)) ? 1 : 2;
         }
 
         private void MakeTupleParameters(Type tupleType) {
@@ -387,7 +374,6 @@ namespace Microsoft.Scripting.Actions {
                 //
                 List<Function<bool>> validators = _validators;
                 List<object> template = _templateData;
-                List<VariableExpression> temps = _temps;
 
                 Rule<T> rule = new Rule<T>(
                     Ast.Condition(
@@ -397,8 +383,7 @@ namespace Microsoft.Scripting.Actions {
                     ),
                     validators != null ? validators.ToArray() : null,
                     template != null ? template.ToArray() : null,
-                    _paramVariables,
-                    temps != null ? temps.ToArray() : null
+                    _paramVariables
                 );
 
                 rule = StackSpiller.AnalyzeRule<T>(rule);
@@ -448,7 +433,7 @@ namespace Microsoft.Scripting.Actions {
         /// Clones the delegate target to create new delegate around it.
         /// The delegates created by the compiler are closed over the instance of Closure class.
         /// </summary>
-        private object CloneData(object data, params object[] newData) {
+        private static object CloneData(object data, params object[] newData) {
             Debug.Assert(data != null);
 
             Closure closure = data as Closure;

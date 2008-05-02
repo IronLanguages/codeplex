@@ -29,7 +29,7 @@ namespace Microsoft.Scripting.Actions {
 
         internal ExtensionMethodTracker(MethodInfo method, bool isStatic, Type declaringType)
             : base(method, isStatic) {
-            Contract.RequiresNotNull(declaringType, "declaringType");
+            ContractUtils.RequiresNotNull(declaringType, "declaringType");
             _declaringType = declaringType;
         }
 

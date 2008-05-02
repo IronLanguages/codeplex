@@ -16,10 +16,12 @@
 #if !SILVERLIGHT // ComObject
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
+
     internal static class ComHresults {
+    
         internal const int S_OK = 0;
-        internal const int E_NOINTERFACE = unchecked((int)0x80004002);
-        internal const int E_FAIL = unchecked((int)0x80004005);
+
+        internal const int CONNECT_E_NOCONNECTION = unchecked((int)0x80040200);
 
         internal const int DISP_E_UNKNOWNINTERFACE = unchecked((int)0x80020001);
         internal const int DISP_E_MEMBERNOTFOUND = unchecked((int)0x80020003);
@@ -35,6 +37,9 @@ namespace Microsoft.Scripting.Actions.ComDispatch {
         internal const int DISP_E_ARRAYISLOCKED = unchecked((int)0x8002000D); // VariantClear
         internal const int DISP_E_BADPARAMCOUNT = unchecked((int)0x8002000E);
         internal const int DISP_E_PARAMNOTOPTIONAL = unchecked((int)0x8002000F);
+
+        internal const int E_NOINTERFACE = unchecked((int)0x80004002);
+        internal const int E_FAIL = unchecked((int)0x80004005);
 
         internal const int TYPE_E_LIBNOTREGISTERED = unchecked((int)0x8002801D);
 

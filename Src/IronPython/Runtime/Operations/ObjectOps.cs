@@ -17,97 +17,159 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using SpecialNameAttribute = System.Runtime.CompilerServices.SpecialNameAttribute;
 
 using Microsoft.Scripting;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Math;
-using Microsoft.Scripting.Actions;
-using Microsoft.Scripting.Generation;
 using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
-using IronPython.Runtime;
 using IronPython.Runtime.Calls;
-using IronPython.Runtime.Types;
 using IronPython.Runtime.Operations;
-
+using IronPython.Runtime.Types;
 
 [assembly: PythonExtensionType(typeof(object), typeof(ObjectOps))]
 namespace IronPython.Runtime.Operations {
-    using Ast = Microsoft.Scripting.Ast.Ast;
-    using IronPython.Runtime.Exceptions;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
+    /// <summary>
+    /// Contains Python extension methods that are added to object
+    /// </summary>
     public static class ObjectOps {
-        // Types for which the pickle module has built-in support (from PEP 307 case 2)
+        /// <summary> Types for which the pickle module has built-in support (from PEP 307 case 2)  </summary>
         [MultiRuntimeAware]
-        private static Dictionary<PythonType, object> nativelyPickleableTypes;
+        private static Dictionary<PythonType, object> _nativelyPickleableTypes;
 
+        /// <summary>
+        /// __class__, a custom slot so that it works for both objects and types.
+        /// </summary>
+        [SlotField]
+        public static PythonTypeSlot __class__ = new PythonTypeTypeSlot();
+
+        /// <summary>
+        /// Removes an attribute from the provided member
+        /// </summary>
+        public static void __delattr__(CodeContext/*!*/ context, object self, string name) {
+            PythonOps.ObjectDeleteAttribute(context, self, SymbolTable.StringToId(name));
+        }
+
+        /// <summary>
+        /// Returns the hash code of the given object
+        /// </summary>
+        public static int __hash__(object self) {
+            if (self == null) return NoneTypeOps.HashCode;
+            return self.GetHashCode();
+        }
+
+        /// <summary>
+        /// Gets the specified attribute from the object without running any custom lookup behavior
+        /// (__getattr__ and __getattribute__)
+        /// </summary>
+        public static object __getattribute__(CodeContext/*!*/ context, object self, string name) {
+            return PythonOps.ObjectGetAttribute(context, self, SymbolTable.StringToId(name));
+        }
+
+        /// <summary>
+        /// Initializes the object.  The base class does nothing.
+        /// </summary>
+        public static void __init__(object self, params object[] args) {
+        }
+
+        /// <summary>
+        /// Initializes the object.  The base class does nothing.
+        /// </summary>
+        public static void __init__(object self, [ParamDictionary] IAttributesCollection kwargs, params object[] args) {
+        }
+
+        /// <summary>
+        /// Creates a new instance of the type
+        /// </summary>
         [StaticExtensionMethod]
-        public static object __new__(CodeContext context, PythonType cls, params object[] args\u00F8) {
-            if (cls == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, params object[] args\u00F8) {
+            if (cls == null) {
+                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+            }
 
             InstanceOps.CheckInitArgs(context, null, args\u00F8, cls);
 
             return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
         }
 
+        /// <summary>
+        /// Creates a new instance of the type
+        /// </summary>
         [StaticExtensionMethod]
-        public static object __new__(CodeContext context, PythonType cls, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
-            if (cls == null) throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+        public static object __new__(CodeContext/*!*/ context, PythonType cls, [ParamDictionary] IAttributesCollection kwargs\u00F8, params object[] args\u00F8) {
+            if (cls == null) {
+                throw PythonOps.TypeError("__new__ expected type object, got {0}", PythonOps.StringRepr(DynamicHelpers.GetPythonType(cls)));
+            }
 
             InstanceOps.CheckInitArgs(context, kwargs\u00F8, args\u00F8, cls);
 
             return cls.CreateInstance(context, ArrayUtils.EmptyObjects);
         }
 
-        [PropertyMethod]
-        public static PythonType Get__class__(object self) {
-            return DynamicHelpers.GetPythonType(self);
+        /// <summary>
+        /// Runs the pickle protocol
+        /// </summary>
+        public static object __reduce__(CodeContext/*!*/ context, object self) {
+            return __reduce_ex__(context, self, 0);
         }
 
-        [PropertyMethod]
-        public static void Set__class__(CodeContext context, object self, object value) {
-            if (!new PythonTypeTypeSlot().TrySetValue(context, self, DynamicHelpers.GetPythonType(self), value)) {
-                throw PythonOps.TypeError("__class__ assignment can only be performed on user defined types");
+        /// <summary>
+        /// Runs the pickle protocol
+        /// </summary>
+        public static object __reduce_ex__(CodeContext/*!*/ context, object self, object protocol) {
+            object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetPythonTypeFromType(typeof(object)), Symbols.Reduce);
+            object myReduce;
+            if (PythonOps.TryGetBoundAttr(context, DynamicHelpers.GetPythonType(self), Symbols.Reduce, out myReduce)) {
+                if (!PythonOps.IsRetBool(myReduce, objectReduce)) {
+                    // A derived class overrode __reduce__ but not __reduce_ex__, so call
+                    // specialized __reduce__ instead of generic __reduce_ex__.
+                    // (see the "The __reduce_ex__ API" section of PEP 307)
+                    return PythonOps.CallWithContext(context, myReduce, self);
+                }
+            }
+
+            if (Converter.ConvertToInt32(protocol) < 2) {
+                return ReduceProtocol0(context, self);
+            } else {
+                return ReduceProtocol2(context, self);
             }
         }
 
+        /// <summary>
+        /// Returns the code representation of the object.  The default implementation returns
+        /// a string which consists of the type and a unique numerical identifier.
+        /// </summary>
         public static string __repr__(object self) {
             return String.Format("<{0} object at {1}>",
                 PythonTypeOps.GetName(DynamicHelpers.GetPythonType(self)),
                 PythonOps.HexId(self));
         }
 
-        [GetAttributeAction]
-        public static object __getattribute__(CodeContext context, object self, string name) {
-            return PythonOps.ObjectGetAttribute(context, self, SymbolTable.StringToId(name));
-        }
-
-        public static void __delattr__(CodeContext context, object self, string name) {
-            PythonOps.ObjectDeleteAttribute(context, self, SymbolTable.StringToId(name));
-        }
-
-        public static void __setattr__(CodeContext context, object self, string name, object value) {
+        /// <summary>
+        /// Sets an attribute on the object without running any custom object defined behavior.
+        /// </summary>
+        public static void __setattr__(CodeContext/*!*/ context, object self, string name, object value) {
             PythonOps.ObjectSetAttribute(context, self, SymbolTable.StringToId(name), value);
         }
 
+        /// <summary>
+        /// Returns a friendly string representation of the object. 
+        /// </summary>
         public static string __str__(object o) {
             return PythonOps.StringRepr(o);
-        }
-
-        public static int __hash__(object self) {
-            if (self == null) return NoneTypeOps.HashCode;
-            return self.GetHashCode();
         }
 
         #region Pickle helpers
 
         // This is a dynamically-initialized property rather than a statically-initialized field
         // to avoid a bootstrapping dependency loop
-        static Dictionary<PythonType, object> NativelyPickleableTypes {
+        private static Dictionary<PythonType, object> NativelyPickleableTypes {
             get {
-                if (nativelyPickleableTypes == null) {
+                if (_nativelyPickleableTypes == null) {
                     Dictionary<PythonType, object> typeDict = new Dictionary<PythonType, object>();
                     typeDict.Add(TypeCache.None, null);
                     typeDict.Add(DynamicHelpers.GetPythonTypeFromType(typeof(bool)), null);
@@ -125,32 +187,9 @@ namespace IronPython.Runtime.Operations {
 
                     // type dict needs to be ensured to be fully initialized before assigning back
                     Thread.MemoryBarrier();
-                    nativelyPickleableTypes = typeDict;
+                    _nativelyPickleableTypes = typeDict;
                 }
-                return nativelyPickleableTypes;
-            }
-        }
-
-        public static object __reduce__(CodeContext context, object self) {
-            return __reduce_ex__(context, self, 0);
-        }
-
-        public static object __reduce_ex__(CodeContext context, object self, object protocol) {
-            object objectReduce = PythonOps.GetBoundAttr(context, DynamicHelpers.GetPythonTypeFromType(typeof(object)), Symbols.Reduce);
-            object myReduce;
-            if (PythonOps.TryGetBoundAttr(context, DynamicHelpers.GetPythonType(self), Symbols.Reduce, out myReduce)) {
-                if (!PythonOps.IsRetBool(myReduce, objectReduce)) {
-                    // A derived class overrode __reduce__ but not __reduce_ex__, so call
-                    // specialized __reduce__ instead of generic __reduce_ex__.
-                    // (see the "The __reduce_ex__ API" section of PEP 307)
-                    return PythonOps.CallWithContext(context, myReduce, self);
-                }
-            }
-
-            if (Converter.ConvertToInt32(protocol) < 2) {
-                return ReduceProtocol0(context, self);
-            } else {
-                return ReduceProtocol2(context, self);
+                return _nativelyPickleableTypes;
             }
         }
 
@@ -188,7 +227,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 2 (new-style instance, protocol 0 or 1)
         /// </summary>
-        private static PythonTuple ReduceProtocol0(CodeContext context, object self) {
+        private static PythonTuple ReduceProtocol0(CodeContext/*!*/ context, object self) {
             // CPython implements this in copy_reg._reduce_ex
 
             PythonType myType = DynamicHelpers.GetPythonType(self); // PEP 307 calls this "D"
@@ -204,7 +243,7 @@ namespace IronPython.Runtime.Operations {
             }
 
             PythonType closestNonPythonBase = FindClosestNonPythonBase(myType); // PEP 307 calls this "B"
-            
+
             object func = PythonContext.GetContext(context).PythonReconstructor;
 
             object funcArgs = PythonTuple.MakeTuple(
@@ -245,7 +284,7 @@ namespace IronPython.Runtime.Operations {
         /// <summary>
         /// Implements the default __reduce_ex__ method as specified by PEP 307 case 3 (new-style instance, protocol 2)
         /// </summary>
-        private static PythonTuple ReduceProtocol2(CodeContext context, object self) {
+        private static PythonTuple ReduceProtocol2(CodeContext/*!*/ context, object self) {
             PythonType myType = DynamicHelpers.GetPythonType(self);
 
             object func, state, listIterator, dictIterator;
@@ -267,7 +306,7 @@ namespace IronPython.Runtime.Operations {
                 funcArgs = new object[] { myType };
             }
 
-            if(!PythonTypeOps.TryInvokeUnaryOperator(context,
+            if (!PythonTypeOps.TryInvokeUnaryOperator(context,
                     self,
                     Symbols.GetState,
                     out state)) {
@@ -300,85 +339,6 @@ namespace IronPython.Runtime.Operations {
             return PythonTuple.MakeTuple(func, PythonTuple.MakeTuple(funcArgs), state, listIterator, dictIterator);
         }
 
-        #endregion
-
-        /// <summary>
-        /// Provides fast access for object.__getattribute__ by inlining the attribute lookup.
-        /// </summary>
-        class GetAttributeActionAttribute : ActionOnCallAttribute {
-            public override RuleBuilder<T> GetRule<T>(CodeContext callerContext, object[] args) {
-                switch (args.Length) {
-                    // someObj.__getattribute__(name)
-                    case 2: return MakeRule<T>(callerContext, args, ((BoundBuiltinFunction)args[0]).__self__, args[1]);
-                    // object.__getattribute__(object, name)                        
-                    case 3: return MakeRule<T>(callerContext, args, args[1], args[2]);
-                }
-                return null;
-            }
-
-            private RuleBuilder<T> MakeRule<T>(CodeContext context, object[] args, object self, object attribute) {
-                string strAttr = attribute as string;
-                if (strAttr == null) return null;
-                if (self is ICustomMembers || self is IPythonObject) return null;
-
-                PythonType selfType = DynamicHelpers.GetPythonType(self);
-
-                return MakeGetMemberRule<T>(context, strAttr, selfType, args) ?? CreateCallRule<T>(context, args, strAttr);
-            }
-
-            private RuleBuilder<T> MakeGetMemberRule<T>(CodeContext context, string strAttr, PythonType selfType, object[] args) {
-                PythonTypeSlot dts;
-                if (selfType.TryResolveSlot(context, SymbolTable.StringToId(strAttr), out dts)) {
-                    PythonGetMemberBinderHelper<T> helper = new PythonGetMemberBinderHelper<T>(context, GetMemberAction.Make(strAttr), args);                    
-                    
-                    if (helper.TryMakeGetMemberRule(selfType, dts, GetTargetObject(helper.InternalRule, args))) {
-                        helper.InternalRule.Test = MakeTest(args, strAttr, helper.InternalRule);
-                        return helper.InternalRule;
-                    }
-                }
-                return null;
-            }
-
-            private RuleBuilder<T> CreateCallRule<T>(CodeContext context, object[] args, string strAttr) {
-                RuleBuilder<T> res = new RuleBuilder<T>();
-                res.Test = MakeTest<T>(args, strAttr, res);
-                res.Target = res.MakeReturn(
-                    context.LanguageContext.Binder,
-                    Ast.Call(
-                        typeof(ObjectOps).GetMethod("__getattribute__"),
-                        Ast.CodeContext(),
-                        Ast.ConvertHelper(GetTargetObject<T>(res, args), typeof(object)),
-                        Ast.Constant(strAttr, typeof(string))
-                    )
-                );
-                return res;
-            }
-
-            private static Expression MakeTest<T>(object[] args, string strAttr, RuleBuilder<T> res) {
-                // test is object types + test on the parameter being looked up.  The input name is
-                // either an object or a string so we call the appropriaet overload on string.
-                return Ast.AndAlso(
-                    PythonBinderHelper.MakeTestForTypes(res, PythonTypeOps.ObjectTypes(args), 0),
-                    Ast.Call(
-                        Ast.Constant(strAttr, typeof(string)),
-                        typeof(string).GetMethod("Equals", new Type[] { res.Parameters[res.ParameterCount - 1].Type }),
-                        res.Parameters[res.ParameterCount - 1]
-                    )
-                );
-            }
-
-            private Expression GetTargetObject<T>(RuleBuilder<T> rule, object[] args) {
-                if (args.Length == 2) {
-                    return Ast.ReadProperty(
-                        Ast.ConvertHelper(rule.Parameters[0], typeof(BoundBuiltinFunction)),
-                        typeof(BoundBuiltinFunction).GetProperty("__self__")
-                    );
-                } else {
-                    Debug.Assert(args.Length == 3);
-                    return rule.Parameters[1];
-                }
-            }
-        }
-
+        #endregion        
     }
 }

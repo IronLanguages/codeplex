@@ -22,7 +22,7 @@ using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Utils;
 
     public class BinaryExpression : Expression {
@@ -30,8 +30,8 @@ namespace IronPython.Compiler.Ast {
         private readonly PythonOperator _op;
 
         public BinaryExpression(PythonOperator op, Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(right, "right");
             if (op == PythonOperator.None) throw new ArgumentException("op");
 
             _op = op;
@@ -98,6 +98,7 @@ namespace IronPython.Compiler.Ast {
 
             // Create binary operation: left <_op> (temp = rleft)
             MSAst.Expression comparison = MakeBinaryOperation(
+                ag,
                 _op,
                 left,
                 Ast.Assign(temp, Ast.Convert(rleft, temp.Type)),
@@ -112,6 +113,7 @@ namespace IronPython.Compiler.Ast {
                 rright = bright.FinishCompare(temp, ag);
             } else {
                 rright = MakeBinaryOperation(
+                    ag,
                     bright.Operator,
                     temp,
                     ag.Transform(bright.Right),
@@ -139,15 +141,15 @@ namespace IronPython.Compiler.Ast {
                 return FinishCompare(left, ag);
             } else {
                 // Simple binary operator.
-                return MakeBinaryOperation(_op, left, ag.Transform(_right), type, Span);
+                return MakeBinaryOperation(ag, _op, left, ag.Transform(_right), type, Span);
             }
         }
 
-        private static MSAst.Expression MakeBinaryOperation(PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
+        private static MSAst.Expression MakeBinaryOperation(AstGenerator ag, PythonOperator op, MSAst.Expression left, MSAst.Expression right, Type type, SourceSpan span) {
             Operators action = PythonOperatorToAction(op);
             if (action != Operators.None) {
                 // Create action expression
-                return Ast.Action.Operator(action, type, left, right);
+                return Ast.Action.Operator(ag.Binder, action, type, left, right);
             } else {
                 // Call helper method
                 return Ast.Call(

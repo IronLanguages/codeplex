@@ -19,6 +19,7 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 using Microsoft.Scripting.Runtime;
 using System.Collections.ObjectModel;
+using System.Reflection;
 
 namespace Microsoft.Scripting.Ast {
     /// <summary>
@@ -46,8 +47,9 @@ namespace Microsoft.Scripting.Ast {
         /// </summary>
         private readonly Type _next;
 
-        internal GeneratorLambdaExpression(Annotations annotations, Type lambdaType, string name, Type generator, Type next, Expression body, ReadOnlyCollection<ParameterExpression> parameters, ReadOnlyCollection<VariableExpression> variables)
-            : base(annotations, AstNodeType.Generator, lambdaType, name, typeof(object), body, parameters, variables, false, true, false, false) {
+        internal GeneratorLambdaExpression(Annotations annotations, Type lambdaType, string name, Type generator, Type next, MethodInfo scopeFactory,
+            Expression body, ReadOnlyCollection<ParameterExpression> parameters, ReadOnlyCollection<VariableExpression> variables)
+            : base(annotations, AstNodeType.Generator, lambdaType, name, typeof(object), scopeFactory, body, parameters, variables, false, true, false, false) {
             _generator = generator;
             _next = next;
         }
@@ -61,21 +63,24 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
-        public static LambdaExpression Generator(SourceSpan span, Type delegateType, string name, Type generatorType, Type next, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
-            Contract.RequiresNotNull(name, "name");
-            Contract.RequiresNotNull(delegateType, "delegateType");
-            Contract.RequiresNotNull(generatorType, "generatorType");
-            Contract.RequiresNotNull(next, "next");
-            Contract.RequiresNotNull(body, "body");
-            Contract.Requires(TypeUtils.CanAssign(typeof(Generator), generatorType), "generatorType", "The generator type must inherit from Generator");
-            Contract.RequiresNotNullItems(parameters, "parameters");
-            Contract.RequiresNotNullItems(variables, "variables");
+    public partial class Expression {
+        public static LambdaExpression Generator(SourceSpan span, Type delegateType, string name, Type generatorType, Type next, 
+            MethodInfo scopeFactory, Expression body, ParameterExpression[] parameters, VariableExpression[] variables) {
+            ContractUtils.RequiresNotNull(name, "name");
+            ContractUtils.RequiresNotNull(delegateType, "delegateType");
+            ContractUtils.RequiresNotNull(generatorType, "generatorType");
+            ContractUtils.RequiresNotNull(next, "next");
+            ContractUtils.RequiresNotNull(body, "body");
+            ContractUtils.Requires(TypeUtils.CanAssign(typeof(Generator), generatorType), "generatorType", "The generator type must inherit from Generator");
+            ContractUtils.RequiresNotNullItems(parameters, "parameters");
+            ContractUtils.RequiresNotNullItems(variables, "variables");
 
+            ValidateScopeFactory(scopeFactory, "scopeFactory");
 
-            LambdaExpression lambda = new GeneratorLambdaExpression(Annotations(span), delegateType, name, generatorType, next, body,
-                                                     CollectionUtils.ToReadOnlyCollection(parameters),
-                                                     CollectionUtils.ToReadOnlyCollection(variables));
+            LambdaExpression lambda = new GeneratorLambdaExpression(
+                Annotate(span), delegateType, name, generatorType, next, scopeFactory,
+                body, CollectionUtils.ToReadOnlyCollection(parameters), CollectionUtils.ToReadOnlyCollection(variables)
+            );
 
             ValidateDelegateType(lambda, delegateType);
 

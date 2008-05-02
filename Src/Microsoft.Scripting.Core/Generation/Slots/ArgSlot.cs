@@ -29,28 +29,28 @@ namespace Microsoft.Scripting.Generation {
         private Type _argType;
         private int _index;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields")] // TODO: fix
-        private LambdaCompiler _codeGen;
+        private ILGen _codeGen;
 
-        public ArgSlot(int index, Type type, LambdaCompiler codeGen) {
+        public ArgSlot(int index, Type type, ILGen codeGen) {
             this._index = index;
             this._argType = type;
             this._codeGen = codeGen;
         }
 
-        public override void EmitGet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
-            cg.EmitTrueArgGet(_index);
+            cg.EmitLoadArg(_index);
         }
 
-        public override void EmitGetAddr(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitGetAddr(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
-            cg.EmitArgAddr(_index);
+            cg.EmitLoadArgAddress(_index);
         }
 
-        public override void EmitSet(LambdaCompiler cg) {
-            Contract.RequiresNotNull(cg, "cg");
+        public override void EmitSet(ILGen cg) {
+            ContractUtils.RequiresNotNull(cg, "cg");
             Debug.Assert(cg == this._codeGen);
             cg.Emit(OpCodes.Starg, _index);
         }

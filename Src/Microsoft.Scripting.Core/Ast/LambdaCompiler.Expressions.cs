@@ -14,14 +14,14 @@
  * ***************************************************************************/
 
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Collections.ObjectModel;
-
-using Microsoft.Scripting.Generation;
-using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Actions;
+using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
     partial class LambdaCompiler {
@@ -69,6 +69,10 @@ namespace Microsoft.Scripting.Ast {
                     Emit((MethodCallExpression)node);
                     break;
 
+                case AstNodeType.Invoke:
+                    Emit((InvocationExpression)node);
+                    break;
+
                 case AstNodeType.Conditional:
                     Emit((ConditionalExpression)node);
                     break;
@@ -96,12 +100,8 @@ namespace Microsoft.Scripting.Ast {
                     Emit((ActionExpression)node);
                     break;
 
-                case AstNodeType.ArrayIndexAssignment:
-                    Emit((ArrayIndexAssignment)node);
-                    break;
-
-                case AstNodeType.BoundAssignment:
-                    Emit((BoundAssignment)node);
+                case AstNodeType.Assign:
+                    Emit((AssignmentExpression)node);
                     break;
 
                 case AstNodeType.GlobalVariable:
@@ -127,18 +127,6 @@ namespace Microsoft.Scripting.Ast {
                     EmitGeneratorIntrinsic();
                     break;
 
-                case AstNodeType.DeleteUnboundExpression:
-                    Emit((DeleteUnboundExpression)node);
-                    break;
-
-                case AstNodeType.EnvironmentExpression:
-                    EmitEnvironmentExpression();
-                    break;
-
-                case AstNodeType.MemberAssignment:
-                    Emit((MemberAssignment)node);
-                    break;
-
                 case AstNodeType.MemberExpression:
                     Emit((MemberExpression)node);
                     break;
@@ -146,14 +134,6 @@ namespace Microsoft.Scripting.Ast {
                 case AstNodeType.NewArrayExpression:
                 case AstNodeType.NewArrayBounds:
                     Emit((NewArrayExpression)node);
-                    break;
-
-                case AstNodeType.UnboundAssignment:
-                    Emit((UnboundAssignment)node);
-                    break;
-
-                case AstNodeType.UnboundExpression:
-                    Emit((UnboundExpression)node);
                     break;
 
                 case AstNodeType.Block:
@@ -178,10 +158,6 @@ namespace Microsoft.Scripting.Ast {
 
                 case AstNodeType.EmptyStatement:
                     Emit((EmptyStatement)node);
-                    break;
-
-                case AstNodeType.ExpressionStatement:
-                    Emit((ExpressionStatement)node);
                     break;
 
                 case AstNodeType.LabeledStatement:
@@ -216,6 +192,7 @@ namespace Microsoft.Scripting.Ast {
                     Emit((YieldStatement)node);
                     break;
 
+                case AstNodeType.Extension: // StackSpiller reduces Extension node type
                 default:
                     throw new InvalidOperationException();
             }
@@ -235,6 +212,11 @@ namespace Microsoft.Scripting.Ast {
         private void Emit(BinaryExpression node) {
             Debug.Assert(node.NodeType != AstNodeType.AndAlso && node.NodeType != AstNodeType.OrElse);
 
+            if (node.IsDynamic) {
+                EmitCallSite(node, node.Left, node.Right);
+                return;
+            }
+
             if (NullableVsNull(node.Left, node.Right)) {
                 EmitExpressionAddress(node.Left, node.Left.Type);
 
@@ -249,7 +231,7 @@ namespace Microsoft.Scripting.Ast {
                 EmitExpression(node.Right);
 
                 if (node.Method != null) {
-                    EmitCall(node.Method);
+                    _ilg.EmitCall(node.Method);
                 } else {
                     GenerateBinaryOperator(node.NodeType, node.Type);
                 }
@@ -257,14 +239,14 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void GenerateNullableBinaryOperator(AstNodeType astNodeType, Type nullableType) {
-            switch(astNodeType) {
+            switch (astNodeType) {
                 case AstNodeType.NotEqual:
-                    EmitPropertyGet(nullableType, "HasValue");
+                    _ilg.EmitPropertyGet(nullableType, "HasValue");
                     break;
                 case AstNodeType.Equal:
-                    EmitPropertyGet(nullableType, "HasValue");
-                    EmitBoolean(false);
-                    Emit(OpCodes.Ceq);
+                    _ilg.EmitPropertyGet(nullableType, "HasValue");
+                    _ilg.EmitBoolean(false);
+                    _ilg.Emit(OpCodes.Ceq);
                     break;
                 default:
                     throw new InvalidOperationException(astNodeType.ToString());
@@ -276,8 +258,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void EmitBooleanOperator(BinaryExpression node, bool isAnd) {
-            Label otherwise = DefineLabel();
-            Label endif = DefineLabel();
+            Label otherwise = _ilg.DefineLabel();
+            Label endif = _ilg.DefineLabel();
 
             // if (_left) 
             EmitBranchFalse(node.Left, otherwise);
@@ -286,21 +268,21 @@ namespace Microsoft.Scripting.Ast {
             if (isAnd) {
                 EmitExpression(node.Right);
             } else {
-                EmitInt(1);
+                _ilg.EmitInt(1);
             }
 
-            Emit(OpCodes.Br, endif);
+            _ilg.Emit(OpCodes.Br, endif);
             // otherwise
-            MarkLabel(otherwise);
+            _ilg.MarkLabel(otherwise);
 
             if (isAnd) {
-                EmitInt(0);
+                _ilg.EmitInt(0);
             } else {
                 EmitExpression(node.Right);
             }
 
             // endif
-            MarkLabel(endif);
+            _ilg.MarkLabel(endif);
             return;
         }
 
@@ -308,67 +290,67 @@ namespace Microsoft.Scripting.Ast {
         private void GenerateBinaryOperator(AstNodeType nodeType, Type type) {
             switch (nodeType) {
                 case AstNodeType.ArrayIndex:
-                    EmitLoadElement(type);
+                    _ilg.EmitLoadElement(type);
                     break;
 
                 case AstNodeType.Equal:
-                    Emit(OpCodes.Ceq);
+                    _ilg.Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.NotEqual:
-                    Emit(OpCodes.Ceq);
-                    EmitInt(0);
-                    Emit(OpCodes.Ceq);
+                    _ilg.Emit(OpCodes.Ceq);
+                    _ilg.EmitInt(0);
+                    _ilg.Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.GreaterThan:
-                    Emit(OpCodes.Cgt);
+                    _ilg.Emit(OpCodes.Cgt);
                     break;
 
                 case AstNodeType.LessThan:
-                    Emit(OpCodes.Clt);
+                    _ilg.Emit(OpCodes.Clt);
                     break;
 
                 case AstNodeType.GreaterThanOrEqual:
-                    Emit(OpCodes.Clt);
-                    EmitInt(0);
-                    Emit(OpCodes.Ceq);
+                    _ilg.Emit(OpCodes.Clt);
+                    _ilg.EmitInt(0);
+                    _ilg.Emit(OpCodes.Ceq);
                     break;
 
                 case AstNodeType.LessThanOrEqual:
-                    Emit(OpCodes.Cgt);
-                    EmitInt(0);
-                    Emit(OpCodes.Ceq);
+                    _ilg.Emit(OpCodes.Cgt);
+                    _ilg.EmitInt(0);
+                    _ilg.Emit(OpCodes.Ceq);
                     break;
                 case AstNodeType.Multiply:
-                    Emit(OpCodes.Mul);
+                    _ilg.Emit(OpCodes.Mul);
                     break;
                 case AstNodeType.Modulo:
-                    Emit(OpCodes.Rem);
+                    _ilg.Emit(OpCodes.Rem);
                     break;
                 case AstNodeType.Add:
-                    Emit(OpCodes.Add);
+                    _ilg.Emit(OpCodes.Add);
                     break;
                 case AstNodeType.Subtract:
-                    Emit(OpCodes.Sub);
+                    _ilg.Emit(OpCodes.Sub);
                     break;
                 case AstNodeType.Divide:
-                    Emit(OpCodes.Div);
+                    _ilg.Emit(OpCodes.Div);
                     break;
                 case AstNodeType.LeftShift:
-                    Emit(OpCodes.Shl);
+                    _ilg.Emit(OpCodes.Shl);
                     break;
                 case AstNodeType.RightShift:
-                    Emit(OpCodes.Shr);
+                    _ilg.Emit(OpCodes.Shr);
                     break;
                 case AstNodeType.And:
-                    Emit(OpCodes.And);
+                    _ilg.Emit(OpCodes.And);
                     break;
                 case AstNodeType.Or:
-                    Emit(OpCodes.Or);
+                    _ilg.Emit(OpCodes.Or);
                     break;
                 case AstNodeType.ExclusiveOr:
-                    Emit(OpCodes.Xor);
+                    _ilg.Emit(OpCodes.Xor);
                     break;
                 default:
                     throw new InvalidOperationException(nodeType.ToString());
@@ -377,9 +359,32 @@ namespace Microsoft.Scripting.Ast {
 
         #endregion
 
+        #region InvocationExpression
+
+        private void Emit(InvocationExpression node) {
+            if (node.IsDynamic) {
+                EmitCallSite(node, ArrayUtils.Insert(node.Expression, node.Arguments));
+                return;
+            }
+
+            // TODO: need a smarter implementation here
+            // (inlining, support quoted lambdas, etc)
+            // see ExpressionCompiler in Linq
+
+            Emit(Expression.Call(node.Expression, node.Expression.Type.GetMethod("Invoke"), node.Arguments));
+        }
+
+        #endregion
+
         #region MethodCallExpression
 
         private void Emit(MethodCallExpression node) {
+            EmitPosition(node.Start, node.End);
+            if (node.IsDynamic) {
+                EmitCallSite(node, ArrayUtils.Insert(node.Instance, node.Arguments));
+                return;
+            }
+
             // Emit instance, if calling an instance method
 
             if (!node.Method.IsStatic) {
@@ -403,7 +408,7 @@ namespace Microsoft.Scripting.Ast {
             }
 
             // Emit the actual call
-            EmitCall(node.Method);
+            _ilg.EmitCall(node.Method);
         }
 
         private void EmitArgument(Expression argument, Type type) {
@@ -417,16 +422,17 @@ namespace Microsoft.Scripting.Ast {
         #endregion
 
         private void Emit(ConditionalExpression node) {
-            Label eoi = DefineLabel();
-            Label next = DefineLabel();
+            EmitPosition(node.Start, node.End);
+            Label eoi = _ilg.DefineLabel();
+            Label next = _ilg.DefineLabel();
             EmitBranchFalse(node.Test, next);
             //Emit(OpCodes.Brfalse, next);
             EmitExpression(node.IfTrue);
             EmitSequencePointNone();
-            Emit(OpCodes.Br, eoi);
-            MarkLabel(next);
+            _ilg.Emit(OpCodes.Br, eoi);
+            _ilg.MarkLabel(next);
             EmitExpression(node.IfFalse);
-            MarkLabel(eoi);
+            _ilg.MarkLabel(eoi);
         }
 
         private void Emit(ConstantExpression node) {
@@ -434,6 +440,13 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(UnaryExpression node) {
+            EmitPosition(node.Start, node.End);
+
+            if (node.IsDynamic) {
+                EmitCallSite(node, node.Operand);
+                return;
+            }
+
             EmitExpression(node.Operand);
 
             switch (node.NodeType) {
@@ -443,17 +456,17 @@ namespace Microsoft.Scripting.Ast {
 
                 case AstNodeType.Not:
                     if (node.Operand.Type == typeof(bool)) {
-                        Emit(OpCodes.Ldc_I4_0);
-                        Emit(OpCodes.Ceq);
+                        _ilg.Emit(OpCodes.Ldc_I4_0);
+                        _ilg.Emit(OpCodes.Ceq);
                     } else {
-                        Emit(OpCodes.Not);
+                        _ilg.Emit(OpCodes.Not);
                     }
                     break;
                 case AstNodeType.Negate:
-                    Emit(OpCodes.Neg);
+                    _ilg.Emit(OpCodes.Neg);
                     break;
                 case AstNodeType.OnesComplement:
-                    Emit(OpCodes.Not);
+                    _ilg.Emit(OpCodes.Not);
                     break;
                 default:
                     throw new NotImplementedException();
@@ -461,21 +474,26 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private void Emit(NewExpression node) {
+            if (node.IsDynamic) {
+                EmitCallSite(node, node.Arguments);
+                return;
+            }
+
             ReadOnlyCollection<Expression> arguments = node.Arguments;
             for (int i = 0; i < arguments.Count; i++) {
                 EmitExpression(arguments[i]);
             }
             if (node.Constructor != null) {
-                EmitNew(node.Constructor);
+                _ilg.EmitNew(node.Constructor);
             } else {
                 Debug.Assert(arguments.Count == 0, "Node with arguments must have a constructor.");
                 Debug.Assert(node.Type.IsValueType, "Only value type may have constructor not set.");
 
-                Slot temp = GetLocalTmp(node.Type);
-                temp.EmitGetAddr(this);
-                Emit(OpCodes.Initobj, node.Type);
-                temp.EmitGet(this);
-                FreeLocalTmp(temp);
+                Slot temp = _ilg.GetLocalTmp(node.Type);
+                temp.EmitGetAddr(_ilg);
+                _ilg.Emit(OpCodes.Initobj, node.Type);
+                temp.EmitGet(_ilg);
+                _ilg.FreeLocalTmp(temp);
             }
         }
 
@@ -487,16 +505,24 @@ namespace Microsoft.Scripting.Ast {
             }
 
             EmitExpressionAsObject(node.Expression);
-            Emit(OpCodes.Isinst, node.TypeOperand);
-            Emit(OpCodes.Ldnull);
-            Emit(OpCodes.Cgt_Un);
+            _ilg.Emit(OpCodes.Isinst, node.TypeOperand);
+            _ilg.Emit(OpCodes.Ldnull);
+            _ilg.Emit(OpCodes.Cgt_Un);
         }
 
-        #region ActionExpression
+        #region dynamic expressions
 
         private void Emit(ActionExpression node) {
-            bool fast;
-            Slot site = CreateDynamicSite(node.Action, GetSiteTypes(node), out fast);
+            EmitPosition(node.Start, node.End);
+            EmitCallSite(node, node.Arguments);
+        }
+
+        private void EmitCallSite(Expression node, params Expression[] arguments) {
+            EmitCallSite(node, (IList<Expression>)arguments);
+        }
+
+        private void EmitCallSite(Expression node, IList<Expression> arguments) {
+            Slot site = CreateDynamicSite(node.BindingInfo, CompilerHelpers.GetSiteTypes(arguments, node.Type));
             Type siteType = site.Type;
 
             PropertyInfo target = siteType.GetProperty("Target");
@@ -505,25 +531,25 @@ namespace Microsoft.Scripting.Ast {
             Debug.Assert(!method.IsStatic);
 
             // Push site for the field load
-            site.EmitGet(this);
+            site.EmitGet(_ilg);
 
             // If we have slow slot, pull into local
             Slot temp = null;
             if (!(site is LocalSlot || site is StaticFieldSlot)) {
-                site = temp = GetLocalTmp(siteType);
-                Emit(OpCodes.Dup);
-                temp.EmitSet(this);
+                site = temp = _ilg.GetLocalTmp(siteType);
+                _ilg.Emit(OpCodes.Dup);
+                temp.EmitSet(_ilg);
             }
 
             // Load the "Target" field of the site - the delegate to invoke
-            EmitPropertyGet(target);
+            _ilg.EmitPropertyGet(target);
 
             // Emit "this" - the site
-            site.EmitGet(this);
+            site.EmitGet(_ilg);
 
             // Free the temp
             if (temp != null) {
-                FreeLocalTmp(temp);
+                _ilg.FreeLocalTmp(temp);
             }
 
             // Do not use these slots, the have been freed
@@ -531,76 +557,70 @@ namespace Microsoft.Scripting.Ast {
 
             ParameterInfo[] parameters = method.GetParameters();
 
-            int first = 1;
+            const int first = 2;
 
-            // Emit code context for unoptimized sites only
-            if (!fast) {
-                EmitCodeContext();
+            // Emit code context
+            EmitCodeContext();
 
-                // skip the CodeContext parameter
-                first = 2;
-            }
-
-            if (parameters.Length < node.Arguments.Count + first) {
+            if (parameters.Length < arguments.Count + first) {
                 // tuple parameters
                 Debug.Assert(parameters.Length == first + 1);
 
                 EmitTuple(
                     DynamicSiteHelpers.GetTupleTypeFromTarget(target.PropertyType),
-                    node.Arguments.Count,
+                    arguments.Count,
                     delegate(int index) {
-                        EmitExpression(node.Arguments[index]);
+                        EmitExpression(arguments[index]);
                     }
                 );
             } else {
                 // Emit the arguments
-                for (int arg = 0; arg < node.Arguments.Count; arg++) {
-                    Debug.Assert(parameters[arg + first].ParameterType == node.Arguments[arg].Type);
-                    EmitExpression(node.Arguments[arg]);
+                for (int arg = 0; arg < arguments.Count; arg++) {
+                    Debug.Assert(parameters[arg + first].ParameterType == arguments[arg].Type);
+                    EmitExpression(arguments[arg]);
                 }
             }
 
             // Emit the site invoke by invoking the Target delegate
-            EmitCall(target.PropertyType.GetMethod("Invoke"));
-        }
-
-        private static Type[] GetSiteTypes(ActionExpression node) {
-            Type[] ret = new Type[node.Arguments.Count + 1];
-            for (int i = 0; i < node.Arguments.Count; i++) {
-                ret[i] = node.Arguments[i].Type;
-            }
-            ret[node.Arguments.Count] = node.Type;
-            return ret;
+            _ilg.EmitCall(target.PropertyType.GetMethod("Invoke"));
         }
 
         #endregion
 
-        private void Emit(ArrayIndexAssignment node) {
+        private void EmitArrayIndexAssignment(AssignmentExpression node) {
+            BinaryExpression arrayIndex = (BinaryExpression)node.Expression;
+
+            if (node.IsDynamic) {
+                EmitCallSite(node, arrayIndex.Left, arrayIndex.Right, node.Value);
+                return;
+            }
+
             EmitExpression(node.Value);
 
             // Save the expression value - order of evaluation is different than that of the Stelem* instruction
-            Slot temp = GetLocalTmp(node.Type);
-            temp.EmitSet(this);
+            Slot temp = _ilg.GetLocalTmp(node.Type);
+            temp.EmitSet(_ilg);
 
             // Emit the array reference
-            EmitExpression(node.Array);
+            EmitExpression(arrayIndex.Left);
             // Emit the index (integer)
-            EmitExpression(node.Index);
+            EmitExpression(arrayIndex.Right);
             // Emit the value
-            temp.EmitGet(this);
+            temp.EmitGet(_ilg);
             // Store it in the array
-            EmitStoreElement(node.Type);
-            temp.EmitGet(this);
-            FreeLocalTmp(temp);
+            _ilg.EmitStoreElement(node.Type);
+            temp.EmitGet(_ilg);
+            _ilg.FreeLocalTmp(temp);
         }
 
-        private void Emit(BoundAssignment node) {
+        private void EmitVariableAssignment(AssignmentExpression node) {
+            EmitPosition(node.Start, node.End);
             if (TypeUtils.IsNullableType(node.Type)) {
                 // Nullable<T> being assigned...
                 if (ConstantCheck.IsConstant(node.Value, null)) {
-                    _info.GetVariableSlot(node.Variable).EmitGetAddr(this);
-                    Emit(OpCodes.Initobj, node.Type);
-                    _info.GetVariableSlot(node.Variable).EmitGet(this);
+                    _info.ReferenceSlots[node.Expression].EmitGetAddr(_ilg);
+                    _ilg.Emit(OpCodes.Initobj, node.Type);
+                    _info.ReferenceSlots[node.Expression].EmitGet(_ilg);
                     return;
                 } else if (node.Type != node.Value.Type) {
                     throw new InvalidOperationException();
@@ -608,16 +628,35 @@ namespace Microsoft.Scripting.Ast {
                 // fall through & emit the store from Nullable<T> -> Nullable<T>
             }
             EmitExpression(node.Value);
-            Emit(OpCodes.Dup);
-            _info.GetVariableSlot(node.Variable).EmitSet(this);
+            _ilg.Emit(OpCodes.Dup);
+            _info.ReferenceSlots[node.Expression].EmitSet(_ilg);
+        }
+
+        private void Emit(AssignmentExpression node) {
+            switch (node.Expression.NodeType) {
+                case AstNodeType.ArrayIndex:
+                    EmitArrayIndexAssignment(node);
+                    return;
+                case AstNodeType.MemberExpression:
+                    EmitMemberAssignment(node);
+                    return;
+                case AstNodeType.Parameter:
+                case AstNodeType.LocalVariable:
+                case AstNodeType.GlobalVariable:
+                case AstNodeType.TemporaryVariable:
+                    EmitVariableAssignment(node);
+                    return;
+                default:
+                    throw new InvalidOperationException("Invalid lvalue for assignment: " + node.Expression.NodeType);
+            }
         }
 
         private void Emit(VariableExpression node) {
-            _info.GetVariableSlot(node).EmitGet(this);
+            _info.ReferenceSlots[node].EmitGet(_ilg);
         }
 
         private void Emit(ParameterExpression node) {
-            _info.GetVariableSlot(node).EmitGet(this);
+            _info.ReferenceSlots[node].EmitGet(_ilg);
         }
 
         private void Emit(LambdaExpression node) {
@@ -628,7 +667,7 @@ namespace Microsoft.Scripting.Ast {
         private void EmitGeneratorIntrinsic() {
             // This is coupled to the codegen in GeneratorLambdaExpression, 
             // which always uses the 1st arg.
-            GetLambdaArgumentSlot(0).EmitGet(this);
+            GetLambdaArgumentSlot(0).EmitGet(_ilg);
         }
 
         internal void EmitCodeContext() {
@@ -636,49 +675,58 @@ namespace Microsoft.Scripting.Ast {
                 throw new InvalidOperationException("ContextSlot not available.");
             }
 
-            ContextSlot.EmitGet(this);
+            ContextSlot.EmitGet(_ilg);
         }
 
-        private void Emit(DeleteUnboundExpression node) {
-            // RuntimeHelpers.RemoveName(CodeContext, name)
-            EmitCodeContext();
-            EmitSymbolId(node.Name);
-            EmitCall(typeof(RuntimeHelpers), "RemoveName");
-        }
+        private void EmitMemberAssignment(AssignmentExpression node) {
+            MemberExpression lvalue = (MemberExpression)node.Expression;
 
-        private void EmitEnvironmentExpression() {
-            EmitEnvironmentOrNull();
-        }
+            if (node.IsDynamic) {
+                EmitCallSite(node, lvalue.Expression, node.Value);
+                return;
+            }
 
-        private void Emit(MemberAssignment node) {
             // emit "this", if any
-            EmitInstance(node.Expression, node.Member.DeclaringType);
+            EmitInstance(lvalue.Expression, lvalue.Member.DeclaringType);
 
-            switch (node.Member.MemberType) {
+            // emit value
+            EmitExpression(node.Value);
+
+            // save the value so we can return it
+            _ilg.Emit(OpCodes.Dup);
+            Slot temp = _ilg.GetLocalTmp(node.Type);
+            temp.EmitSet(_ilg);
+
+            switch (lvalue.Member.MemberType) {
                 case MemberTypes.Field:
-                    EmitExpression(node.Value);
-                    EmitFieldSet((FieldInfo)node.Member);
+                    _ilg.EmitFieldSet((FieldInfo)lvalue.Member);
                     break;
                 case MemberTypes.Property:
-                    EmitExpression(node.Value);
-                    EmitPropertySet((PropertyInfo)node.Member);
+                    _ilg.EmitPropertySet((PropertyInfo)lvalue.Member);
                     break;
                 default:
-                    Debug.Assert(false, "Invalid member type");
-                    break;
+                    throw new InvalidOperationException("Invalid member type: " + lvalue.Member.MemberType);
             }
+
+            temp.EmitGet(_ilg);
+            _ilg.FreeLocalTmp(temp);
         }
 
         private void Emit(MemberExpression node) {
+            if (node.IsDynamic) {
+                EmitCallSite(node, node.Expression);
+                return;
+            }
+
             // emit "this", if any
             EmitInstance(node.Expression, node.Member.DeclaringType);
 
             switch (node.Member.MemberType) {
                 case MemberTypes.Field:
-                    EmitFieldGet((FieldInfo)node.Member);
+                    _ilg.EmitFieldGet((FieldInfo)node.Member);
                     break;
                 case MemberTypes.Property:
-                    EmitPropertyGet((PropertyInfo)node.Member);
+                    _ilg.EmitPropertyGet((PropertyInfo)node.Member);
                     break;
                 default:
                     Debug.Assert(false, "Invalid member type");
@@ -698,7 +746,7 @@ namespace Microsoft.Scripting.Ast {
 
         private void Emit(NewArrayExpression node) {
             if (node.NodeType == AstNodeType.NewArrayExpression) {
-                EmitArray(
+                _ilg.EmitArray(
                     node.Type.GetElementType(),
                     node.Expressions.Count,
                     delegate(int index) {
@@ -710,29 +758,15 @@ namespace Microsoft.Scripting.Ast {
                 for (int i = 0; i < bounds.Count; i++) {
                     EmitExpression(bounds[i]);
                 }
-                EmitArray(node.Type);
+                _ilg.EmitArray(node.Type);
             }
-        }
-
-        private void Emit(UnboundAssignment node) {
-            EmitExpressionAsObject(node.Value);
-            EmitCodeContext();
-            EmitSymbolId(node.Name);
-            EmitCall(typeof(RuntimeHelpers), "SetNameReorder");
-        }
-
-        private void Emit(UnboundExpression node) {
-            // RuntimeHelpers.LookupName(CodeContext, name)
-            EmitCodeContext();
-            EmitSymbolId(node.Name);
-            EmitCall(typeof(RuntimeHelpers), "LookupName");
         }
 
         #region Expression helpers
 
         private void EmitExpressionAsObjectOrNull(Expression node) {
             if (node == null) {
-                Emit(OpCodes.Ldnull);
+                _ilg.Emit(OpCodes.Ldnull);
             } else {
                 EmitExpressionAsObject(node);
             }
@@ -742,7 +776,7 @@ namespace Microsoft.Scripting.Ast {
         private void EmitExpressionAndPop(Expression node) {
             EmitExpression(node);
             if (node.Type != typeof(void)) {
-                Emit(OpCodes.Pop);
+                _ilg.Emit(OpCodes.Pop);
             }
         }
 

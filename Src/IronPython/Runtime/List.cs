@@ -665,7 +665,7 @@ namespace IronPython.Runtime {
 
         private class DefaultPythonComparer : IComparer {
             public static readonly DefaultPythonComparer Instance = new DefaultPythonComparer();
-            private FastDynamicSite<object, object, int> site = FastDynamicSite<object, object, int>.Create(DefaultContext.DefaultCLS, DoOperationAction.Make(Operators.Compare));
+            private DynamicSite<object, object, int> site = DynamicSite<object, object, int>.Create(DoOperationAction.Make(DefaultContext.DefaultPythonBinder, Operators.Compare));
             public DefaultPythonComparer() { }
 
             public int Compare(object x, object y) {
@@ -676,7 +676,7 @@ namespace IronPython.Runtime {
                 //					return xi == yi ? 0 : (xi < yi ? -1 : +1);
                 //				}
 
-                return site.Invoke(x, y);
+                return site.Invoke(DefaultContext.DefaultCLS, x, y);
             }
         }
 
@@ -684,13 +684,13 @@ namespace IronPython.Runtime {
             //??? optimized version when we know we have a Function
             private object cmpfunc;
 
-            private FastDynamicSite<object, object, object, int> FuncSite = 
-                RuntimeHelpers.CreateSimpleCallSite<object, object, object, int>(DefaultContext.Default);
+            private DynamicSite<object, object, object, int> FuncSite = 
+                CallSiteFactory.CreateSimpleCallSite<object, object, object, int>(DefaultContext.DefaultPythonBinder);
 
             public FunctionComparer(object cmpfunc) { this.cmpfunc = cmpfunc; }
 
             public int Compare(object o1, object o2) {
-                return FuncSite.Invoke(cmpfunc, o1, o2);
+                return FuncSite.Invoke(DefaultContext.Default, cmpfunc, o1, o2);
             }
         }
 
@@ -1045,10 +1045,6 @@ namespace IronPython.Runtime {
 
             if (l == null || l.__len__() != this.__len__()) return false;
             return CompareTo(l) == 0;
-        }
-
-        bool IValueEquality.ValueNotEquals(object other) {
-            return !((IValueEquality)this).ValueEquals(other);
         }
 
         #endregion

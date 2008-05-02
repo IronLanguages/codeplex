@@ -16,6 +16,7 @@
 using System;
 using System.Reflection;
 using System.Diagnostics;
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Ast {
@@ -25,7 +26,7 @@ namespace Microsoft.Scripting.Ast {
     /// For instance property/field, Expression must be != null.
     /// </summary>
     public sealed class MemberExpression : Expression {
-        private readonly MemberInfo /*!*/ _member;
+        private readonly MemberInfo _member;
         private readonly Expression _expression;
 
         public MemberInfo Member {
@@ -36,8 +37,11 @@ namespace Microsoft.Scripting.Ast {
             get { return _expression; }
         }
 
-        internal MemberExpression(MemberInfo /*!*/ member, Expression expression, Type type)
-            : base(AstNodeType.MemberExpression, type) {
+        internal MemberExpression(MemberInfo member, Expression expression, Type type, MemberAction bindingInfo)
+            : base(Annotations.Empty, AstNodeType.MemberExpression, type, bindingInfo) {
+            if (IsBound) {
+                RequiresBound(expression, "expression");
+            }
             _member = member;
             _expression = expression;
         }
@@ -46,41 +50,41 @@ namespace Microsoft.Scripting.Ast {
     /// <summary>
     /// Factory methods.
     /// </summary>
-    public static partial class Ast {
+    public partial class Expression {
         internal static void CheckField(FieldInfo info, Expression instance, Expression rightValue) {
-            Contract.RequiresNotNull(info, "field");
-            Contract.Requires((instance == null) == info.IsStatic, "expression",
+            ContractUtils.RequiresNotNull(info, "field");
+            ContractUtils.Requires((instance == null) == info.IsStatic, "expression",
                 "Static field requires null expression, non-static field requires non-null expression.");
-            Contract.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the field");
-            Contract.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", "Incorrect value type for the field");
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the field");
+            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.FieldType, rightValue.Type), "value", "Incorrect value type for the field");
         }
 
         internal static void CheckProperty(PropertyInfo info, Expression instance, Expression rightValue) {
-            Contract.RequiresNotNull(info, "property");
+            ContractUtils.RequiresNotNull(info, "property");
             MethodInfo mi = (rightValue != null) ? info.GetSetMethod() : info.GetGetMethod();
-            Contract.Requires(mi != null, "Property is not readable");
-            Contract.Requires((instance == null) == mi.IsStatic, "expression",
+            ContractUtils.Requires(mi != null, "Property is not readable");
+            ContractUtils.Requires((instance == null) == mi.IsStatic, "expression",
                 "Static property requires null expression, non-static property requires non-null expression.");
-            Contract.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
-            Contract.Requires(rightValue == null || TypeUtils.CanAssign(info.PropertyType, rightValue.Type), "value", "Incorrect value type for the property");
+            ContractUtils.Requires(instance == null || TypeUtils.CanAssign(info.DeclaringType, instance.Type), "expression", "Incorrect instance type for the property");
+            ContractUtils.Requires(rightValue == null || TypeUtils.CanAssign(info.PropertyType, rightValue.Type), "value", "Incorrect value type for the property");
         }
 
         internal static FieldInfo GetFieldChecked(Type type, string field, Expression instance, Expression rightValue) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(field, "field");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(field, "field");
 
             FieldInfo fi = type.GetField(field);
-            Contract.Requires(fi != null, "field", "Type doesn't have the specified field");
+            ContractUtils.Requires(fi != null, "field", "Type doesn't have the specified field");
             CheckField(fi, instance, rightValue);
             return fi;
         }
 
         internal static PropertyInfo GetPropertyChecked(Type type, string property, Expression instance, Expression rightValue) {
-            Contract.RequiresNotNull(type, "type");
-            Contract.RequiresNotNull(property, "property");
+            ContractUtils.RequiresNotNull(type, "type");
+            ContractUtils.RequiresNotNull(property, "property");
 
             PropertyInfo pi = type.GetProperty(property);
-            Contract.Requires(pi != null, "property", "Type doesn't have the specified property");
+            ContractUtils.Requires(pi != null, "property", "Type doesn't have the specified property");
             CheckProperty(pi, instance, rightValue);
             return pi;
         }
@@ -99,7 +103,7 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New instance of Member expression</returns>
         public static MemberExpression ReadField(Expression expression, FieldInfo field) {
             CheckField(field, expression, null);
-            return new MemberExpression(field, expression, field.FieldType);
+            return new MemberExpression(field, expression, field.FieldType, null);
         }
 
         public static MemberExpression ReadProperty(Expression expression, Type type, string property) {
@@ -116,7 +120,17 @@ namespace Microsoft.Scripting.Ast {
         /// <returns>New instance of the MemberExpression.</returns>
         public static MemberExpression ReadProperty(Expression expression, PropertyInfo property) {
             CheckProperty(property, expression, null);
-            return new MemberExpression(property, expression, property.PropertyType);
+            return new MemberExpression(property, expression, property.PropertyType, null);
+        }
+
+        /// <summary>
+        /// A dynamic or unbound get member
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters")]
+        public static MemberExpression GetMember(Expression expression, Type result, GetMemberAction bindingInfo) {
+            ContractUtils.RequiresNotNull(expression, "expression");
+            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
+            return new MemberExpression(null, expression, result, bindingInfo);
         }
     }
 }

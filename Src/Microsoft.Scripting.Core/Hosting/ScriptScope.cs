@@ -76,7 +76,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="NotSupportedException">No language is associated with the scope.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="code"/> is a <c>null</c> reference.</exception>
         public object Execute(string/*!*/ code) {
-            Contract.RequiresNotNull(code, "code");
+            ContractUtils.RequiresNotNull(code, "code");
             if (!CanExecuteCode) throw new NotSupportedException("Cannot execute code on language agnostic scope");
             return _engine.LanguageContext.CreateSnippet(code).Execute(_scope);
         }
@@ -99,7 +99,7 @@ namespace Microsoft.Scripting.Hosting {
         /// <exception cref="NotSupportedException">No language is associated with the scope.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is a <c>null</c> reference.</exception>
         public void IncludeFile(string/*!*/ path) {
-            Contract.RequiresNotNull(path, "path");
+            ContractUtils.RequiresNotNull(path, "path");
             if (!CanExecuteCode) throw new NotSupportedException("Cannot execute code on language agnostic scope");
             
             _engine.LanguageContext.CreateFileUnit(path).Execute(_scope);
@@ -177,7 +177,7 @@ namespace Microsoft.Scripting.Hosting {
         /// </exception>
         /// <exception cref="ArgumentNullException"><paramref name="name"/> or <paramref name="handle"/> is a <c>null</c> reference.</exception>
         public void SetVariable(string/*!*/ name, ObjectHandle/*!*/ handle) {
-            Contract.RequiresNotNull(handle, "handle");
+            ContractUtils.RequiresNotNull(handle, "handle");
             SetVariable(name, handle.Unwrap());
         }
 #endif
@@ -226,24 +226,6 @@ namespace Microsoft.Scripting.Hosting {
                     yield return new KeyValuePair<string, object>(SymbolTable.IdToString(kvp.Key), kvp.Value);
                 }
             }
-        }
-
-        // dynamic behavior of the scope:
-        // TODO: remove? Nessie uses this, but it should be possible to fix Nessie
-
-        [SpecialName, EditorBrowsable(EditorBrowsableState.Never)]
-        public object GetCustomMember(CodeContext context, string name) {
-            return _scope.GetCustomMember(context, name);
-        }
-
-        [SpecialName, EditorBrowsable(EditorBrowsableState.Never)]
-        public void SetMemberAfter(string name, object value) {
-            _scope.SetMemberAfter(name, value);
-        }
-
-        [SpecialName, EditorBrowsable(EditorBrowsableState.Never)]
-        public bool DeleteMember(CodeContext context, string name) {
-            return _scope.DeleteMember(context, name);
         }
 
         #region DebugView

@@ -18,7 +18,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Runtime;
 
     public class ForStatement : Statement {
@@ -96,7 +96,8 @@ namespace IronPython.Compiler.Ast {
                                                     Statement else_, SourceSpan span, SourceLocation header,
                                                     MSAst.LabelTarget loopLabel) {
             // enumerator = PythonOps.GetEnumeratorForIteration(list)
-            MSAst.BoundAssignment init = Ast.Assign(
+            MSAst.AssignmentExpression init = Ast.Assign(
+                list.Span, 
                 enumerator,
                 Ast.Call(
                     AstGenerator.GetHelperMethod("GetEnumeratorForIteration"),
@@ -128,13 +129,17 @@ namespace IronPython.Compiler.Ast {
                         ),
                         Operators.None
                     ),
-                    body
+                    body,
+                    Ast.Block(
+                        SourceSpan.None,
+                        Ast.Assign(ag.LineNumberExpression, Ast.Constant(list.Start.Line))
+                    )
                 ),
                 ag.Transform(else_)
             );
 
             return Ast.Block(
-                Ast.Statement(list.Span, init),
+                init,
                 ls
             );
         }

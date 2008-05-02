@@ -17,7 +17,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace ToyScript.Parser.Ast {
-    using Ast = MSAst.Ast;
+    using Ast = MSAst.Expression;
 
     class Member : Expression {
         private readonly Expression _target;
@@ -31,6 +31,7 @@ namespace ToyScript.Parser.Ast {
 
         protected internal override MSAst.Expression Generate(ToyGenerator tg) {
             return Ast.Action.GetMember(
+                tg.Binder,
                 SymbolTable.StringToId(_member),
                 typeof(object),
                 _target.Generate(tg)

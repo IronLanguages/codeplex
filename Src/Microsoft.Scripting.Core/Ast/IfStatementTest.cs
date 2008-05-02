@@ -55,21 +55,21 @@ namespace Microsoft.Scripting.Ast {
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static IfStatementTest IfCondition(Expression test, Expression body) {
             return IfCondition(SourceSpan.None, SourceLocation.None, test, body);
         }
 
         public static IfStatementTest IfCondition(SourceSpan span, SourceLocation header, Expression test, Expression body) {
-            Contract.RequiresNotNull(test, "test");
-            Contract.RequiresNotNull(body, "body");
-            Contract.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
+            ContractUtils.RequiresNotNull(test, "test");
+            ContractUtils.RequiresNotNull(body, "body");
+            ContractUtils.Requires(test.Type == typeof(bool), "test", "Test must be boolean");
 
             return new IfStatementTest(span.Start, span.End, header, test, body);
         }
 
         public static IfStatementTest[] IfConditions(params IfStatementTest[] tests) {
-            Contract.RequiresNotNullItems(tests, "tests");
+            ContractUtils.RequiresNotNullItems(tests, "tests");
             return tests;
         }
     }

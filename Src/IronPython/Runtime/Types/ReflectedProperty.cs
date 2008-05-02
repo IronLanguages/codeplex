@@ -31,22 +31,56 @@ using System.Runtime.InteropServices;
 namespace IronPython.Runtime.Types {
     [PythonSystemType("property#")]
     public class ReflectedProperty : ReflectedGetterSetter, ICodeFormattable {
+        private readonly PropertyInfo/*!*/ _info;
+
         public ReflectedProperty(PropertyInfo info, MethodInfo getter, MethodInfo setter, NameType nt)
-            : base(info, getter, setter, nt) {
+            : base(new MethodInfo[] { getter }, new MethodInfo[] { setter }, nt) {
+            Debug.Assert(info != null);
+
+            _info = info;
+        }
+
+        public ReflectedProperty(PropertyInfo info, MethodInfo[] getters, MethodInfo[] setters, NameType nt)
+            : base(getters, setters, nt) {
+            Debug.Assert(info != null);
+
+            _info = info;
         }
 
         internal override bool TrySetValue(CodeContext context, object instance, PythonType owner, object value) {
-            if (Setter == null) return false;
+            if (Setter.Length == 0) {
+                return false;
+            }
 
             if (instance == null) {
-                if (Setter.IsStatic && DeclaringType != ((PythonType)owner).UnderlyingSystemType)
-                    return false;
+                foreach (MethodInfo mi in Setter) {
+                    if(mi.IsStatic && DeclaringType != ((PythonType)owner).UnderlyingSystemType) {
+                        return false;
+                    }
+                }
             } else if (instance != null) {
-                if (Setter.IsStatic)
-                    return false;
+                foreach (MethodInfo mi in Setter) {
+                    if (mi.IsStatic) {
+                        return false;
+                    }
+                }
             }
 
             return CallSetter(context, instance, Utils.ArrayUtils.EmptyObjects, value);
+        }
+
+        public override Type DeclaringType {
+            get { return _info.DeclaringType; }
+        }
+
+        public override string Name {
+            get { return _info.Name; }
+        }
+
+        public PropertyInfo Info {
+            get {
+                return _info;
+            }
         }
 
         internal override bool TryGetValue(CodeContext context, object instance, PythonType owner, out object value) {
@@ -62,14 +96,20 @@ namespace IronPython.Runtime.Types {
         }
 
         internal sealed override bool IsVisible(CodeContext context, PythonType owner) {
-            if (context.ModuleContext.ShowCls)
+            if (PythonOps.IsClsVisible(context))
                 return true;
 
             return NameType == NameType.PythonProperty;
         }
 
+        internal override bool IsAlwaysVisible {
+            get {
+                return NameType == NameType.PythonProperty;
+            }
+        }
+
         internal override bool IsSetDescriptor(CodeContext context, PythonType owner) {
-            return Setter != null;
+            return Setter.Length != 0;
         }
 
         #region Public Python APIs
@@ -101,7 +141,7 @@ namespace IronPython.Runtime.Types {
 
         [SpecialName]
         public void __delete__(object instance) {
-            if (Setter != null)
+            if (Setter.Length != 0)
                 throw PythonOps.AttributeErrorForReadonlyAttribute(
                     DynamicHelpers.GetPythonTypeFromType(DeclaringType).Name,
                     SymbolTable.StringToId(Name));

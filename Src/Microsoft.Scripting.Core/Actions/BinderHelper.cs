@@ -26,7 +26,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class BinderHelper {
         internal BinderHelper() { }
@@ -51,8 +51,8 @@ namespace Microsoft.Scripting.Actions {
         private readonly TAction/*!*/ _action;
         
         public BinderHelper(CodeContext/*!*/ context, TAction/*!*/ action) {
-            Contract.RequiresNotNull(context, "context");
-            Contract.RequiresNotNull(action, "action");
+            ContractUtils.RequiresNotNull(context, "context");
+            ContractUtils.RequiresNotNull(action, "action");
 
             _context = context;
             _action = action;

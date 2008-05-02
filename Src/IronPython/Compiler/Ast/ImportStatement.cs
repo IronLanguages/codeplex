@@ -18,7 +18,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     public class ImportStatement : Statement {
         private readonly ModuleName[] _names;
@@ -52,18 +52,16 @@ namespace IronPython.Compiler.Ast {
             for (int i = 0; i < _names.Length; i++) {
                 statements.Add(
                     // _references[i] = PythonOps.Import(<code context>, _names[i])
-                    Ast.Statement(
+                    Ast.Assign(
                         _names[i].Span,
-                        Ast.Assign(
-                            _variables[i].Variable,
-                            Ast.Call(
-                                AstGenerator.GetHelperMethod(                           // helper
-                                    _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
-                                ),
-                                Ast.CodeContext(),                                      // 1st arg - code context
-                                Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
-                                Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
-                            )
+                        _variables[i].Variable,
+                        Ast.Call(
+                            AstGenerator.GetHelperMethod(                           // helper
+                                _asNames[i] == SymbolId.Empty ? "ImportTop" : "ImportBottom"
+                            ),
+                            Ast.CodeContext(),                                      // 1st arg - code context
+                            Ast.Constant(_names[i].MakeString()),                   // 2nd arg - module name
+                            Ast.Constant(_forceAbsolute ? 0 : -1)                   // 3rd arg - absolute or relative imports
                         )
                     )
                 );

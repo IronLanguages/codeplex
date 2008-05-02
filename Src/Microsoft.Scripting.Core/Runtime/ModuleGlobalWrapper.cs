@@ -70,7 +70,7 @@ namespace Microsoft.Scripting.Runtime {
                 object value;
                 // HACK: Shouldn't look in the GlobalScope here, but need to until JSGlobalObject
                 // unifies w/ module dictionary.
-                if (_context.Scope.ModuleScope.TryGetName(_context.LanguageContext, _name, out value)) {
+                if (_context.GlobalScope.TryGetName(_context.LanguageContext, _name, out value)) {
                     return value;
                 }
 
@@ -102,7 +102,7 @@ namespace Microsoft.Scripting.Runtime {
             }
         }
 
-        private string GetStringDisplay(object val) {
+        private static string GetStringDisplay(object val) {
             return val == null ? "(null)" : val.ToString();
         }
 

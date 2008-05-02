@@ -26,7 +26,7 @@ using Microsoft.Scripting.Runtime;
 using Microsoft.Scripting.Utils;
 
 namespace Microsoft.Scripting.Actions {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// Builds a rule for a GetMemberAction.  Supports all built-in .NET members, ICustomMembers, the OperatorMethod 
@@ -123,6 +123,7 @@ namespace Microsoft.Scripting.Actions {
                 case TrackerTypes.Field:                
                 case TrackerTypes.Property:
                 case TrackerTypes.Constructor:
+                case TrackerTypes.Custom:
                     MakeGenericBody(type, members); 
                     break;
                 case TrackerTypes.All:     

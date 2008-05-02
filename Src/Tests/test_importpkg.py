@@ -209,8 +209,8 @@ def compileAndRef(name, filename, *args):
         AreEqual(run_csc("/nologo /t:library " + ' '.join(args) + " /out:\"" + sys.exec_prefix + "\"\\" + name +".dll \"" + filename + "\""), 0)
         clr.AddReference(name)
 
-@skip("silverlight")
-@skip("win32")
+
+@skip("silverlight", "multiple_execute", "win32")
 def test_c1cs():
     """verify re-loading an assembly causes the new type to show up"""
     if not has_csc(): 
@@ -235,8 +235,7 @@ def test_c1cs():
     # ideally we would delete c1.dll, c2.dll here so as to keep them from cluttering up
     # /Public; however, they need to be present for the peverify pass.
 
-@skip("silverlight")
-@skip("win32")
+@skip("silverlight", "multiple_execute", "win32")
 def test_c2cs():
     """verify generic types & non-generic types mixed in the same namespace can 
     successfully be used"""
@@ -673,7 +672,7 @@ def test___import___and_packages():
         nt.unlink(_f_pkg_y)
         nt.unlink(_f_y)
 
-@skip("silverlight")
+@skip("silverlight", "multiple_execute")
 def test_relative_imports():
     try:
         mod_backup = dict(sys.modules)
@@ -771,8 +770,8 @@ sys.test4 = __import__("y", {}, {'__name__' : 'the_dir2.x.y'}).a
         nt.unlink(_f_x_y)
         nt.unlink(_f_y)
         nt.unlink(_f_test)
-    
-@skip("silverlight")
+
+@skip("silverlight", "multiple_execute")
 def test_package_back_patching():
     """when importing a package item the package should be updated with the child"""
     try:

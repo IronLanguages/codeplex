@@ -181,23 +181,6 @@ namespace Microsoft.Scripting.Math {
             return new Complex64(real, imag);
         }
 
-        public static Complex64 Mod(Complex64 x, Complex64 y) {
-            return x % y;
-        }
-
-        public static Complex64 operator %(Complex64 x, Complex64 y) {
-            if (object.ReferenceEquals(x, null)) {
-                throw new ArgumentException(MathResources.InvalidArgument, "x");
-            }
-            if (object.ReferenceEquals(y, null)) {
-                throw new ArgumentException(MathResources.InvalidArgument, "y");
-            }
-
-            if (y == 0) throw new DivideByZeroException();
-
-            throw new NotImplementedException();
-        }
-
         public static Complex64 Negate(Complex64 x) {
             return -x;
         }

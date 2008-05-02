@@ -20,7 +20,7 @@ using MSAst = Microsoft.Scripting.Ast;
 using IronPython.Runtime.Operations;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class ConstantExpression : Expression {

@@ -16,38 +16,40 @@
 #if !SILVERLIGHT // ComObject
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using ComTypes = System.Runtime.InteropServices.ComTypes;
 
-using Microsoft.Scripting;
-using Microsoft.Scripting.Runtime;
-using Microsoft.Scripting.Utils;
-using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Ast;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Actions.ComDispatch {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    
+    using Ast = Microsoft.Scripting.Ast.Expression;
 
     /// <summary>
     /// VariantBuilder handles packaging of arguments into a Variant for a call to IDispatch.Invoke
     /// </summary>
     internal class VariantBuilder {
-        ArgBuilder _builder;
-        int _variantIndex;
-        VarEnum _targetComType;
+
+        private ArgBuilder _builder;
+        private int _variantIndex;
+        private VarEnum _targetComType;
 
         internal VariantBuilder(VarEnum targetComType, ArgBuilder builder) {
             _targetComType = targetComType;
             _builder = builder;
         }
 
-        internal ArgBuilder ArgBuilder { get { return _builder; } }
+        internal ArgBuilder ArgBuilder {
+            get { return _builder; }
+        }
 
-        internal bool IsByRef { get { return (_targetComType & VarEnum.VT_BYREF) != 0; } }
+        internal bool IsByRef {
+            get { return (_targetComType & VarEnum.VT_BYREF) != 0; }
+        }
 
         internal List<Expression> WriteArgumentVariant(
             MethodBinderContext context, 

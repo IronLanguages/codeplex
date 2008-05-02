@@ -28,19 +28,16 @@ namespace Microsoft.Scripting {
     /// contexts. Hosting API counterpart for this class is <c>CompiledCode</c>.
     /// </summary>
     public class ScriptCode {
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Security", "CA2105:ArrayFieldsShouldNotBeReadOnly")]
-        public static readonly ScriptCode[] EmptyArray = new ScriptCode[0];
-
-        private readonly LambdaExpression _code;
-        private readonly LanguageContext _languageContext;
-        private readonly CompilerContext _compilerContext;
+        private readonly LambdaExpression/*!*/ _code;
+        private readonly LanguageContext/*!*/ _languageContext;
+        private readonly CompilerContext/*!*/ _compilerContext;
 
         private DlrMainCallTarget _simpleTarget;
 
         private DlrMainCallTarget _optimizedTarget;
         private Scope _optimizedScope;
 
-        internal ScriptCode(LambdaExpression code, LanguageContext languageContext, CompilerContext compilerContext) {
+        internal ScriptCode(LambdaExpression/*!*/ code, LanguageContext/*!*/ languageContext, CompilerContext/*!*/ compilerContext) {
             Assert.NotNull(code, languageContext, compilerContext);
             
             _code = code;
@@ -48,19 +45,19 @@ namespace Microsoft.Scripting {
             _compilerContext = compilerContext;
         }
 
-        public LanguageContext LanguageContext {
+        public LanguageContext/*!*/ LanguageContext {
             get { return _languageContext; }
         }
 
-        public CompilerContext CompilerContext {
+        public CompilerContext/*!*/ CompilerContext {
             get { return _compilerContext; }
         }
 
-        public SourceUnit SourceUnit {
+        public SourceUnit/*!*/ SourceUnit {
             get { return _compilerContext.SourceUnit; }
         }
 
-        internal LambdaExpression Lambda {
+        internal LambdaExpression/*!*/ Lambda {
             get {
                 return _code;
             }
@@ -89,46 +86,40 @@ namespace Microsoft.Scripting {
             }
         }
 
-        private object Run(CodeContext codeContext, bool tryEvaluate) {
+        public object Run(Scope/*!*/ scope) {
+            return Run(scope, false);
+        }
+
+        public object Run(Scope/*!*/ scope, bool tryEvaluate) {
+            ContractUtils.RequiresNotNull(scope, "scope");
+
+            ScopeExtension scopeExtension = _languageContext.EnsureScopeExtension(scope.ModuleScope);
             
-            codeContext.ModuleContext.CompilerContext =_compilerContext;
+            scope.ModuleScope.CompilerContext = _compilerContext;
 
             // Python only: assigns TrueDivision from _compilerContext to codeContext.ModuleContext
-            _languageContext.ModuleContextEntering(codeContext.ModuleContext);
+            _languageContext.ModuleContextEntering(scopeExtension);
 
+            return Run(new CodeContext(scope, _languageContext), tryEvaluate);
+        }
+
+        public object Run(CodeContext/*!*/ context, bool tryEvaluate) {
+            ContractUtils.RequiresNotNull(context, "context");
 
             bool doEvaluation = tryEvaluate || _languageContext.Options.InterpretedMode;
             if (_simpleTarget == null && _optimizedTarget == null
                 && doEvaluation
                 && Interpreter.InterpretChecker.CanEvaluate(_code)) {
-                return Interpreter.Interpreter.TopLevelExecute(_code, codeContext);
+
+                return Interpreter.Interpreter.TopLevelExecute(_code, context);
             }
 
-            if (codeContext.Scope == _optimizedScope) { // flag on scope - "IsOptimized"?
-                // TODO: why do we create a code context here?
-                return _optimizedTarget(new CodeContext(_optimizedScope, _languageContext, codeContext.ModuleContext));
+            if (context.GlobalScope == _optimizedScope) {
+                return _optimizedTarget(context);
             }
 
             EnsureCompiled();
-            return _simpleTarget(codeContext);
-        }
-
-        public object Run(Scope/*!*/ scope) {
-            Contract.RequiresNotNull(scope, "scope");
-
-            ScopeExtension scopeExtension = _languageContext.EnsureScopeExtension(scope);
-            return Run(new CodeContext(scope, _languageContext, scopeExtension), false);
-        }
-
-        public object Run(Scope/*!*/ scope, ScopeExtension/*!*/ moduleContext) {
-            return Run(scope, moduleContext, false);
-        }
-
-        public object Run(Scope/*!*/ scope, ScopeExtension/*!*/ moduleContext, bool tryEvaluate) {
-            Contract.RequiresNotNull(scope, "scope");
-            Contract.RequiresNotNull(moduleContext, "moduleContext");
-
-            return Run(new CodeContext(scope, _languageContext, moduleContext), tryEvaluate);
+            return _simpleTarget(context);
         }
 
         [Confined]

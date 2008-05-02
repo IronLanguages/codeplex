@@ -23,7 +23,7 @@ using Microsoft.Scripting;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
     using Microsoft.Scripting.Utils;
 
     public class ClassDefinition : ScopeStatement {
@@ -80,13 +80,20 @@ namespace IronPython.Compiler.Ast {
             set { _modNameVariable = value; }
         }
 
+        protected override bool ExposesLocalVariables {
+            get { return true; }
+        }
+
         internal override PythonVariable BindName(PythonNameBinder binder, SymbolId name) {
             PythonVariable variable;
 
             // Python semantics: The variables bound local in the class
             // scope are accessed by name - the dictionary behavior of classes
             if (TryGetVariable(name, out variable)) {
-                return variable.Kind == VariableKind.Local ? null : variable;
+                return variable.Kind == VariableKind.Local 
+                    || variable.Kind == VariableKind.GlobalLocal 
+                    || variable.Kind == VariableKind.HiddenLocal 
+                     ? null : variable;
             }
 
             // Try to bind in outer scopes
@@ -130,12 +137,14 @@ namespace IronPython.Compiler.Ast {
 
             body.Block.Dictionary = true;
             body.Block.Visible = false;
-            body.Block.Body = Ast.Block(
-                Ast.Block(init),
-                modStmt,
-                docStmt,
-                bodyStmt,
-                returnStmt
+            body.Block.Body = body.WrapScopeStatements(
+                Ast.Block(
+                    Ast.Block(init),
+                    modStmt,
+                    docStmt,
+                    bodyStmt,
+                    returnStmt
+                )
             );
 
             MSAst.LambdaExpression lambda = body.Block.MakeLambda(typeof(IronPython.Runtime.Calls.CallTarget0));
@@ -148,10 +157,7 @@ namespace IronPython.Compiler.Ast {
                 lambda
             );
 
-            return Ast.Statement(
-                new SourceSpan(Start, Header),
-                Ast.Assign(_variable.Variable, classDef)
-            );
+            return Ast.Assign(new SourceSpan(Start, Header), _variable.Variable, classDef);
         }
 
         public override void Walk(PythonWalker walker) {

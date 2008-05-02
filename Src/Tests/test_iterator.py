@@ -98,4 +98,18 @@ def test_itertools_same_value():
     x = iter(range(4))
     AreEqual([(i,j) for i,j in izip(x,x)], [(0, 1), (2, 3)])
 
+def test_itertools_islice_end():
+    """islice shouldn't consume values after the limit specified by step"""
+    from itertools import izip, islice
+    
+    # create a zipped iterator w/ odd number of values...
+    it = izip([2,3,4], [4,5,6])
+    
+    # slice in 2, turn that into a list...
+    list(islice(it, 2))
+    
+    # we should still have the last value still present
+    for x in it: 
+        AreEqual(x, (4,6))                
+        
 run_test(__name__)

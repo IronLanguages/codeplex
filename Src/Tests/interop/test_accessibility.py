@@ -110,18 +110,18 @@ def test_access_outside():
         AssertError(AttributeError, lambda: x.remove_private_static_event)
         AssertError(AttributeError, lambda: x.set_internal_static_property)
         AssertError(AttributeError, lambda: x.add_internal_static_event)
-        x.set_protected_static_property
+        AssertError(AttributeError, lambda: x.set_protected_static_property)
+        AssertError(AttributeError, lambda: x.get_public_static_property)
         x.add_protected_static_event
-        x.get_public_static_property
         x.remove_public_static_event
 
         AssertError(AttributeError, lambda: x.set_private_instance_property)
         AssertError(AttributeError, lambda: x.add_private_instance_event)
         AssertError(AttributeError, lambda: x.get_internal_instance_property)
         AssertError(AttributeError, lambda: x.remove_internal_instance_event)
-        x.get_protected_instance_property
+        AssertError(AttributeError, lambda: x.get_protected_instance_property)
+        AssertError(AttributeError, lambda: x.set_public_instance_property)
         x.remove_protected_instance_event
-        x.set_public_instance_property
         x.add_public_instance_event
         
     def f(*arg): pass
@@ -146,12 +146,12 @@ def test_access_outside():
     # you may find it a bit surprising 
     # also assign it a string, not int
     
-    print C1.public_static_field
+    C1.public_static_field
     C1.public_static_field = "this is python"
-    print C1.public_static_field 
+    C1.public_static_field 
     
     C1.method = 1
-    print C1.method
+    C1.method
     
     C2.private_static_field = "this is python!"   
     AreEqual(C2.private_static_field, "this is python!")
@@ -179,9 +179,9 @@ class PythonDerivedType2(PythonType2): pass
 def test_reflected_type():
     for C in [CliClass, DerivedCliClass]:
         #print C.internal_static_field
-        print C.protected_static_field
+        C.protected_static_field
         
         x = C()
-        print x.protected_instance_field
+        x.protected_instance_field
 
 run_test(__name__)

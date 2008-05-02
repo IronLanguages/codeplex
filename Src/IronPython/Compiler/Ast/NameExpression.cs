@@ -20,7 +20,8 @@ using Microsoft.Scripting.Runtime;
 using MSAst = Microsoft.Scripting.Ast;
 
 namespace IronPython.Compiler.Ast {
-    using Ast = Microsoft.Scripting.Ast.Ast;
+    using Ast = Microsoft.Scripting.Ast.Expression;
+    using AstUtils = Microsoft.Scripting.Ast.Utils;
 
     public class NameExpression : Expression {
         private readonly SymbolId _name;
@@ -52,7 +53,7 @@ namespace IronPython.Compiler.Ast {
         internal override MSAst.Expression Transform(AstGenerator ag, Type type) {
             MSAst.Expression read = _reference.Variable;
             if (read == null) {
-                read = Ast.Read(_name);
+                read = AstUtils.Read(_name);
             }
 
             if (!_assigned) {
@@ -73,19 +74,17 @@ namespace IronPython.Compiler.Ast {
             Type vt = variable != null ? variable.Type : typeof(object);
 
             if (op != Operators.None) {
-                right = Ast.Action.Operator(op, vt, Transform(ag, vt),  right);
+                right = Ast.Action.Operator(ag.Binder, op, vt, Transform(ag, vt),  right);
             }
 
             if (variable != null) {
                 assignment = Ast.Assign(variable, AstGenerator.ConvertIfNeeded(right, variable.Type));
             } else {
-                assignment = Ast.Assign(_name, right);
+                assignment = AstUtils.Assign(_name, right);
             }
 
-            return Ast.Statement(
-                span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None,
-                Ast.Void(assignment)
-            );
+            SourceSpan aspan = span.IsValid ? new SourceSpan(Span.Start, span.End) : SourceSpan.None;
+            return Ast.Block(aspan, assignment);
         }
 
         internal override MSAst.Expression TransformDelete(AstGenerator ag) {
@@ -100,7 +99,7 @@ namespace IronPython.Compiler.Ast {
                 }
                 return del;
             } else {
-                return Ast.Statement(Span, Ast.Delete(_name));
+                return AstUtils.Delete(Span, _name);
             }
         }
 

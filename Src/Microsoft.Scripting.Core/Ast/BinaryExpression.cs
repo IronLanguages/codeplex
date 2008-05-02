@@ -20,16 +20,26 @@ using System.Diagnostics;
 using Microsoft.Scripting.Utils;
 
 // TODO: Remove dependency
+using Microsoft.Scripting.Actions;
 using Microsoft.Scripting.Generation;
+using Microsoft.Scripting.Runtime;
 
 namespace Microsoft.Scripting.Ast {
     public sealed class BinaryExpression : Expression {
-        private readonly Expression /*!*/ _left;
-        private readonly Expression /*!*/ _right;
+        private readonly Expression/*!*/ _left;
+        private readonly Expression/*!*/ _right;
         private readonly MethodInfo _method;
 
-        internal BinaryExpression(AstNodeType nodeType, Expression /*!*/ left, Expression /*!*/ right, Type /*!*/ type, MethodInfo method)
-            : base(nodeType, type) {
+        internal BinaryExpression(AstNodeType nodeType, Expression/*!*/ left, Expression/*!*/ right, Type type, MethodInfo method)
+            : this(nodeType, Annotations.Empty, left, right, type, method, null) {
+        }
+
+        internal BinaryExpression(AstNodeType nodeType, Annotations annotations, Expression/*!*/ left, Expression/*!*/ right, Type type, MethodInfo method, DynamicAction bindingInfo)
+            : base(annotations, nodeType, type, bindingInfo) {
+            if (IsBound) {
+                RequiresBound(left, "left");
+                RequiresBound(right, "right");
+            }
             _left = left;
             _right = right;
             _method = method;
@@ -44,13 +54,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         public MethodInfo Method {
-            get {
-                return _method;
-            }
+            get { return _method; }
         }
     }
 
-    public static partial class Ast {
+    public partial class Expression {
         public static BinaryExpression Equal(Expression left, Expression right) {
             return Equality(AstNodeType.Equal, "op_Equality", left, right);
         }
@@ -62,8 +70,8 @@ namespace Microsoft.Scripting.Ast {
         private static BinaryExpression Equality(AstNodeType nodeType, string opName, Expression left, Expression right) {
             Debug.Assert(nodeType == AstNodeType.Equal || nodeType == AstNodeType.NotEqual);
 
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(right, "right");
 
             // Numeric types and objects are easy
             if (left.Type == right.Type && (TypeUtils.IsNumeric(left.Type) || left.Type == typeof(object))) {
@@ -84,14 +92,6 @@ namespace Microsoft.Scripting.Ast {
             }
 
             throw new ArgumentException(String.Format("Equality operation not defined for {0} and {1}", left.Type.Name, right.Type.Name));
-        }
-
-        private static BinaryExpression UserDefinedBinaryOperator(AstNodeType nodeType, string opName, Expression left, Expression right) {
-            MethodInfo method = GetUserDefinedBinaryOperator(opName, left.Type, right.Type);
-            if (method != null) {
-                return new BinaryExpression(nodeType, left, right, method.ReturnType, method);
-            }
-            return null;
         }
 
         private static BinaryExpression UserDefinedBinaryOperator(AstNodeType nodeType, string opName, Type result, Expression left, Expression right) {
@@ -158,11 +158,11 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static BinaryExpression LogicalBinary(AstNodeType nodeType, Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
-            Contract.Requires(TypeUtils.IsBool(left.Type), "left");
-            Contract.Requires(TypeUtils.IsBool(right.Type), "right");
-            Contract.Requires(left.Type == right.Type);
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(right, "right");
+            ContractUtils.Requires(TypeUtils.IsBool(left.Type), "left");
+            ContractUtils.Requires(TypeUtils.IsBool(right.Type), "right");
+            ContractUtils.Requires(left.Type == right.Type);
 
             return new BinaryExpression(nodeType, left, right, typeof(bool), null);
         }
@@ -186,7 +186,7 @@ namespace Microsoft.Scripting.Ast {
         /// Generalized AND semantics.
         /// </summary>
         public static Expression CoalesceTrue(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
-            Contract.RequiresNotNull(isTrue, "isTrue");
+            ContractUtils.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, false, out temp);
         }
 
@@ -196,31 +196,31 @@ namespace Microsoft.Scripting.Ast {
         /// Generalized OR semantics.
         /// </summary>
         public static Expression CoalesceFalse(Expression left, Expression right, MethodInfo isTrue, out VariableExpression temp) {
-            Contract.RequiresNotNull(isTrue, "isTrue");
+            ContractUtils.RequiresNotNull(isTrue, "isTrue");
             return CoalesceInternal(left, right, isTrue, true, out temp);
         }
 
         private static Expression CoalesceInternal(Expression left, Expression right, MethodInfo isTrue, bool isReverse, out VariableExpression temp) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(right, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(right, "right");
 
             // A bit too strict, but on a safe side.
-            Contract.Requires(left.Type == right.Type, "Expression types must match");
+            ContractUtils.Requires(left.Type == right.Type, "Expression types must match");
 
-            temp = VariableExpression.Temporary(SymbolTable.StringToId("tmp_left"), left.Type);
+            temp = Expression.Temporary(left.Type, "tmp_left");
 
             Expression condition;
             if (isTrue != null) {
-                Contract.Requires(isTrue.ReturnType == typeof(bool), "isTrue", "Predicate must return bool.");
+                ContractUtils.Requires(isTrue.ReturnType == typeof(bool), "isTrue", "Predicate must return bool.");
                 ParameterInfo[] parameters = isTrue.GetParameters();
-                Contract.Requires(parameters.Length == 1, "isTrue", "Predicate must take one parameter.");
-                Contract.Requires(isTrue.IsStatic && isTrue.IsPublic, "isTrue", "Predicate must be public and static.");
+                ContractUtils.Requires(parameters.Length == 1, "isTrue", "Predicate must take one parameter.");
+                ContractUtils.Requires(isTrue.IsStatic && isTrue.IsPublic, "isTrue", "Predicate must be public and static.");
 
                 Type pt = parameters[0].ParameterType;
-                Contract.Requires(TypeUtils.CanAssign(pt, left.Type), "left", "Incorrect left expression type");
+                ContractUtils.Requires(TypeUtils.CanAssign(pt, left.Type), "left", "Incorrect left expression type");
                 condition = Call(isTrue, Assign(temp, left));
             } else {
-                Contract.Requires(TypeUtils.CanCompareToNull(left.Type), "left", "Incorrect left expression type");
+                ContractUtils.Requires(TypeUtils.CanCompareToNull(left.Type), "left", "Incorrect left expression type");
                 condition = Equal(Assign(temp, left), Null(left.Type));
             }
 
@@ -249,7 +249,7 @@ namespace Microsoft.Scripting.Ast {
         /// Generalized AND semantics.
         /// </summary>
         public static Expression CoalesceTrue(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
-            Contract.RequiresNotNull(isTrue, "isTrue");
+            ContractUtils.RequiresNotNull(isTrue, "isTrue");
             VariableExpression temp;
             Expression result = CoalesceTrue(left, right, isTrue, out temp);
             builder.AddTemp(temp);
@@ -262,7 +262,7 @@ namespace Microsoft.Scripting.Ast {
         /// Generalized OR semantics.
         /// </summary>
         public static Expression CoalesceFalse(LambdaBuilder builder, Expression left, Expression right, MethodInfo isTrue) {
-            Contract.RequiresNotNull(isTrue, "isTrue");
+            ContractUtils.RequiresNotNull(isTrue, "isTrue");
             VariableExpression temp;
             Expression result = CoalesceFalse(left, right, isTrue, out temp);
             builder.AddTemp(temp);
@@ -270,6 +270,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         #endregion
+
+        #region Arithmetic Expressions
 
         /// <summary>
         /// Adds two arithmetic values of the same type.
@@ -341,24 +343,26 @@ namespace Microsoft.Scripting.Ast {
             return MakeBinaryArithmeticExpression(AstNodeType.ExclusiveOr, left, right);
         }
 
+        #endregion
+
         /// <summary>
         /// Creates a binary expression representing array indexing: array[index]
         /// </summary>
         public static BinaryExpression ArrayIndex(Expression array, Expression index) {
-            Contract.RequiresNotNull(array, "array");
-            Contract.RequiresNotNull(index, "index");
-            Contract.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
+            ContractUtils.RequiresNotNull(array, "array");
+            ContractUtils.RequiresNotNull(index, "index");
+            ContractUtils.Requires(index.Type == typeof(int), "index", "Array index must be an int.");
 
             Type arrayType = array.Type;
-            Contract.Requires(arrayType.IsArray, "array", "Array argument must be array.");
-            Contract.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
+            ContractUtils.Requires(arrayType.IsArray, "array", "Array argument must be array.");
+            ContractUtils.Requires(arrayType.GetArrayRank() == 1, "index", "Incorrect number of indices.");
 
             return new BinaryExpression(AstNodeType.ArrayIndex, array, index, array.Type.GetElementType(), null);
         }
 
         private static BinaryExpression MakeBinaryArithmeticExpression(AstNodeType nodeType, Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(left, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(left, "right");
             if (left.Type != right.Type || !TypeUtils.IsArithmetic(left.Type)) {
                 throw new NotSupportedException(String.Format("{0} only supports identical arithmetic types, got {1} {2}", nodeType, left.Type.Name, right.Type.Name));
             }
@@ -367,8 +371,8 @@ namespace Microsoft.Scripting.Ast {
         }
 
         private static BinaryExpression MakeBinaryComparisonExpression(AstNodeType nodeType, Expression left, Expression right) {
-            Contract.RequiresNotNull(left, "left");
-            Contract.RequiresNotNull(left, "right");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(left, "right");
 
             if (left.Type != right.Type || !TypeUtils.IsNumeric(left.Type)) {
                 throw new NotSupportedException(String.Format("{0} only supports identical numeric types, got {1} {2}", nodeType, left.Type.Name, right.Type.Name));
@@ -376,5 +380,117 @@ namespace Microsoft.Scripting.Ast {
 
             return new BinaryExpression(nodeType, left, right, typeof(bool), null);
         }
+
+        #region dynamic operations
+
+        private static BinaryExpression MakeDynamicBinaryExpression(AstNodeType nodeType, Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo, Operators expectedOp) {
+            ContractUtils.RequiresNotNull(annotations, "annotations");
+            ContractUtils.RequiresNotNull(left, "left");
+            ContractUtils.RequiresNotNull(left, "right");
+            ContractUtils.RequiresNotNull(bindingInfo, "bindingInfo");
+            ContractUtils.Requires(bindingInfo.Operation == expectedOp, "bindingInfo", "operation kind must match node type");
+
+            return new BinaryExpression(nodeType, annotations, left, right, result, null, bindingInfo);
+        }
+
+        public static BinaryExpression ArrayIndex(Annotations annotations, Expression array, Expression index, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.ArrayIndex, annotations, array, index, result, bindingInfo, Operators.GetItem);
+        }
+
+        public static BinaryExpression Equal(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Equal, annotations, left, right, result, bindingInfo, Operators.Equals);
+        }
+
+        public static BinaryExpression NotEqual(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.NotEqual, annotations, left, right, result, bindingInfo, Operators.NotEquals);
+        }
+
+        public static BinaryExpression GreaterThan(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.GreaterThan, annotations, left, right, result, bindingInfo, Operators.GreaterThan);
+        }
+
+        public static BinaryExpression LessThan(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.LessThan, annotations, left, right, result, bindingInfo, Operators.LessThan);
+        }
+
+        public static BinaryExpression GreaterThanEquals(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.GreaterThanOrEqual, annotations, left, right, result, bindingInfo, Operators.GreaterThanOrEqual);
+        }
+
+        public static BinaryExpression LessThanEquals(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.LessThanOrEqual, annotations, left, right, result, bindingInfo, Operators.LessThanOrEqual);
+        }
+
+        /// <summary>
+        /// Adds two arithmetic values of the same type.
+        /// </summary>
+        public static BinaryExpression Add(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Add, annotations, left, right, result, bindingInfo, Operators.Add);
+        }
+
+        /// <summary>
+        /// Subtracts two arithmetic values of the same type.
+        /// </summary>
+        public static BinaryExpression Subtract(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Subtract, annotations, left, right, result, bindingInfo, Operators.Subtract);
+        }
+
+        /// <summary>
+        /// Divides two arithmetic values of the same type.
+        /// </summary>
+        public static BinaryExpression Divide(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Divide, annotations, left, right, result, bindingInfo, Operators.Divide);
+        }
+
+        /// <summary>
+        /// Modulos two arithmetic values of the same type.
+        /// </summary>
+        public static BinaryExpression Modulo(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Modulo, annotations, left, right, result, bindingInfo, Operators.Mod);
+        }
+
+        /// <summary>
+        /// Multiples two arithmetic values of the same type.
+        /// </summary>
+        public static BinaryExpression Multiply(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Multiply, annotations, left, right, result, bindingInfo, Operators.Multiply);
+        }
+
+        /// <summary>
+        /// Left shifts one arithmetic value by another aritmetic value of the same type.
+        /// </summary>
+        public static BinaryExpression LeftShift(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.LeftShift, annotations, left, right, result, bindingInfo, Operators.LeftShift);
+        }
+
+        /// <summary>
+        /// Right shifts one arithmetic value by another aritmetic value of the same type.
+        /// </summary>
+        public static BinaryExpression RightShift(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.RightShift, annotations, left, right, result, bindingInfo, Operators.RightShift);
+        }
+
+        /// <summary>
+        /// Performs bitwise and of two values of the same type.
+        /// </summary>
+        public static BinaryExpression And(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.And, annotations, left, right, result, bindingInfo, Operators.BitwiseAnd);
+        }
+
+        /// <summary>
+        /// Performs bitwise or of two values of the same type.
+        /// </summary>
+        public static BinaryExpression Or(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.Or, annotations, left, right, result, bindingInfo, Operators.BitwiseOr);
+        }
+
+        /// <summary>
+        /// Performs exclusive or of two values of the same type.
+        /// </summary>
+        public static BinaryExpression ExclusiveOr(Annotations annotations, Expression left, Expression right, Type result, DoOperationAction bindingInfo) {
+            return MakeDynamicBinaryExpression(AstNodeType.ExclusiveOr, annotations, left, right, result, bindingInfo, Operators.ExclusiveOr);
+        }
+
+        #endregion
     }
 }
